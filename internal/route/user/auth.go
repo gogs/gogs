@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
@@ -37,7 +37,7 @@ const (
 
 // AutoLogin reads cookie and try to auto-login.
 func AutoLogin(c *context.Context) (bool, error) {
-	if !db.HasEngine {
+	if !database.HasEngine {
 		return false, nil
 	}
 
@@ -56,9 +56,9 @@ func AutoLogin(c *context.Context) (bool, error) {
 		}
 	}()
 
-	u, err := db.Users.GetByUsername(c.Req.Context(), uname)
+	u, err := database.Users.GetByUsername(c.Req.Context(), uname)
 	if err != nil {
-		if !db.IsErrUserNotExist(err) {
+		if !database.IsErrUserNotExist(err) {
 			return false, fmt.Errorf("get user by name: %v", err)
 		}
 		return false, nil
@@ -106,7 +106,7 @@ func Login(c *context.Context) {
 	}
 
 	// Display normal login page
-	loginSources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{OnlyActivated: true})
+	loginSources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -122,7 +122,7 @@ func Login(c *context.Context) {
 	c.Success(LOGIN)
 }
 
-func afterLogin(c *context.Context, u *db.User, remember bool) {
+func afterLogin(c *context.Context, u *database.User, remember bool) {
 	if remember {
 		days := 86400 * conf.Security.LoginRememberDays
 		c.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
@@ -153,7 +153,7 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	loginSources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{OnlyActivated: true})
+	loginSources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -165,13 +165,13 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := db.Users.Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
+	u, err := database.Users.Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
 	if err != nil {
 		switch {
 		case auth.IsErrBadCredentials(err):
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
-		case db.IsErrLoginSourceMismatch(err):
+		case database.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
 
@@ -187,7 +187,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	if !db.TwoFactors.IsEnabled(c.Req.Context(), u.ID) {
+	if !database.TwoFactors.IsEnabled(c.Req.Context(), u.ID) {
 		afterLogin(c, u, f.Remember)
 		return
 	}
@@ -214,7 +214,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	t, err := db.TwoFactors.GetByUserID(c.Req.Context(), userID)
+	t, err := database.TwoFactors.GetByUserID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get two factor by user ID")
 		return
@@ -231,7 +231,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	u, err := db.Users.GetByID(c.Req.Context(), userID)
+	u, err := database.Users.GetByID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
@@ -267,8 +267,8 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	if err := db.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
-		if db.IsTwoFactorRecoveryCodeNotFound(err) {
+	if err := database.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
+		if database.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.RedirectSubpath("/user/login/two_factor_recovery_code")
 		} else {
@@ -277,7 +277,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	u, err := db.Users.GetByID(c.Req.Context(), userID)
+	u, err := database.Users.GetByID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
@@ -335,26 +335,26 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	user, err := db.Users.Create(
+	user, err := database.Users.Create(
 		c.Req.Context(),
 		f.UserName,
 		f.Email,
-		db.CreateUserOptions{
+		database.CreateUserOptions{
 			Password:  f.Password,
 			Activated: !conf.Auth.RequireEmailConfirmation,
 		},
 	)
 	if err != nil {
 		switch {
-		case db.IsErrUserAlreadyExist(err):
+		case database.IsErrUserAlreadyExist(err):
 			c.FormErr("UserName")
 			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f)
-		case db.IsErrEmailAlreadyUsed(err):
+		case database.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
 			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
-		case db.IsErrNameNotAllowed(err):
+		case database.IsErrNameNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), SIGNUP, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -366,12 +366,12 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	// should have a dedicate method to check whether the "user" table is empty.
 	//
 	// Auto-set admin for the only user.
-	if db.Users.Count(c.Req.Context()) == 1 {
+	if database.Users.Count(c.Req.Context()) == 1 {
 		v := true
-		err := db.Users.Update(
+		err := database.Users.Update(
 			c.Req.Context(),
 			user.ID,
-			db.UpdateUserOptions{
+			database.UpdateUserOptions{
 				IsActivated: &v,
 				IsAdmin:     &v,
 			},
@@ -384,7 +384,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 	// Send confirmation email.
 	if conf.Auth.RequireEmailConfirmation && user.ID > 1 {
-		email.SendActivateAccountMail(c.Context, db.NewMailerUser(user))
+		email.SendActivateAccountMail(c.Context, database.NewMailerUser(user))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = user.Email
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
@@ -401,7 +401,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 // parseUserFromCode returns user by username encoded in code.
 // It returns nil if code or username is invalid.
-func parseUserFromCode(code string) (user *db.User) {
+func parseUserFromCode(code string) (user *database.User) {
 	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
 		return nil
 	}
@@ -409,9 +409,9 @@ func parseUserFromCode(code string) (user *db.User) {
 	// Use tail hex username to query user
 	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
-		if user, err = db.Users.GetByUsername(gocontext.TODO(), string(b)); user != nil {
+		if user, err = database.Users.GetByUsername(gocontext.TODO(), string(b)); user != nil {
 			return user
-		} else if !db.IsErrUserNotExist(err) {
+		} else if !database.IsErrUserNotExist(err) {
 			log.Error("Failed to get user by name %q: %v", string(b), err)
 		}
 	}
@@ -420,7 +420,7 @@ func parseUserFromCode(code string) (user *db.User) {
 }
 
 // verify active code when active account
-func verifyUserActiveCode(code string) (user *db.User) {
+func verifyUserActiveCode(code string) (user *database.User) {
 	minutes := conf.Auth.ActivateCodeLives
 
 	if user = parseUserFromCode(code); user != nil {
@@ -436,7 +436,7 @@ func verifyUserActiveCode(code string) (user *db.User) {
 }
 
 // verify active code when active account
-func verifyActiveEmailCode(code, email string) *db.EmailAddress {
+func verifyActiveEmailCode(code, email string) *database.EmailAddress {
 	minutes := conf.Auth.ActivateCodeLives
 
 	if user := parseUserFromCode(code); user != nil {
@@ -445,7 +445,7 @@ func verifyActiveEmailCode(code, email string) *db.EmailAddress {
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			emailAddress, err := db.Users.GetEmail(gocontext.TODO(), user.ID, email, false)
+			emailAddress, err := database.Users.GetEmail(gocontext.TODO(), user.ID, email, false)
 			if err == nil {
 				return emailAddress
 			}
@@ -468,7 +468,7 @@ func Activate(c *context.Context) {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-				email.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
+				email.SendActivateAccountMail(c.Context, database.NewMailerUser(c.User))
 
 				if err := c.Cache.Put(userutil.MailResendCacheKey(c.User.ID), 1, 180); err != nil {
 					log.Error("Failed to put cache key 'mail resend': %v", err)
@@ -484,10 +484,10 @@ func Activate(c *context.Context) {
 	// Verify code.
 	if user := verifyUserActiveCode(code); user != nil {
 		v := true
-		err := db.Users.Update(
+		err := database.Users.Update(
 			c.Req.Context(),
 			user.ID,
-			db.UpdateUserOptions{
+			database.UpdateUserOptions{
 				GenerateNewRands: true,
 				IsActivated:      &v,
 			},
@@ -515,7 +515,7 @@ func ActivateEmail(c *context.Context) {
 
 	// Verify code.
 	if email := verifyActiveEmailCode(code, emailAddr); email != nil {
-		err := db.Users.MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
+		err := database.Users.MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
 		if err != nil {
 			c.Error(err, "activate email")
 			return
@@ -553,9 +553,9 @@ func ForgotPasswdPost(c *context.Context) {
 	emailAddr := c.Query("email")
 	c.Data["Email"] = emailAddr
 
-	u, err := db.Users.GetByEmail(c.Req.Context(), emailAddr)
+	u, err := database.Users.GetByEmail(c.Req.Context(), emailAddr)
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 			c.Data["IsResetSent"] = true
 			c.Success(FORGOT_PASSWORD)
@@ -578,7 +578,7 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	email.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
+	email.SendResetPasswordMail(c.Context, database.NewMailerUser(u))
 	if err = c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
@@ -621,7 +621,7 @@ func ResetPasswdPost(c *context.Context) {
 			return
 		}
 
-		err := db.Users.Update(c.Req.Context(), u.ID, db.UpdateUserOptions{Password: &password})
+		err := database.Users.Update(c.Req.Context(), u.ID, database.UpdateUserOptions{Password: &password})
 		if err != nil {
 			c.Error(err, "update user")
 			return

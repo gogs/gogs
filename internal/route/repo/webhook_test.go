@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/mocks"
 )
 
@@ -23,21 +23,21 @@ func Test_validateWebhook(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		actor    *db.User
-		webhook  *db.Webhook
+		actor    *database.User
+		webhook  *database.Webhook
 		expField string
 		expMsg   string
 		expOK    bool
 	}{
 		{
 			name:    "admin bypass local address check",
-			webhook: &db.Webhook{URL: "https://www.google.com"},
+			webhook: &database.Webhook{URL: "https://www.google.com"},
 			expOK:   true,
 		},
 
 		{
 			name:     "local address not allowed",
-			webhook:  &db.Webhook{URL: "http://localhost:3306"},
+			webhook:  &database.Webhook{URL: "http://localhost:3306"},
 			expField: "PayloadURL",
 			expMsg:   "repo.settings.webhook.url_resolved_to_blocked_local_address",
 			expOK:    false,

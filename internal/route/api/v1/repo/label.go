@@ -11,11 +11,11 @@ import (
 	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 func ListLabels(c *context.APIContext) {
-	labels, err := db.GetLabelsByRepoID(c.Repo.Repository.ID)
+	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get labels by repository ID")
 		return
@@ -29,13 +29,13 @@ func ListLabels(c *context.APIContext) {
 }
 
 func GetLabel(c *context.APIContext) {
-	var label *db.Label
+	var label *database.Label
 	var err error
 	idStr := c.Params(":id")
 	if id := com.StrTo(idStr).MustInt64(); id > 0 {
-		label, err = db.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
+		label, err = database.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
 	} else {
-		label, err = db.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
+		label, err = database.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
 	}
 	if err != nil {
 		c.NotFoundOrError(err, "get label")
@@ -46,12 +46,12 @@ func GetLabel(c *context.APIContext) {
 }
 
 func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
-	label := &db.Label{
+	label := &database.Label{
 		Name:   form.Name,
 		Color:  form.Color,
 		RepoID: c.Repo.Repository.ID,
 	}
-	if err := db.NewLabels(label); err != nil {
+	if err := database.NewLabels(label); err != nil {
 		c.Error(err, "new labels")
 		return
 	}
@@ -59,7 +59,7 @@ func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
 }
 
 func EditLabel(c *context.APIContext, form api.EditLabelOption) {
-	label, err := db.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get label of repository by ID")
 		return
@@ -71,7 +71,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 	if form.Color != nil {
 		label.Color = *form.Color
 	}
-	if err := db.UpdateLabel(label); err != nil {
+	if err := database.UpdateLabel(label); err != nil {
 		c.Error(err, "update label")
 		return
 	}
@@ -79,7 +79,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 }
 
 func DeleteLabel(c *context.APIContext) {
-	if err := db.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+	if err := database.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
 		c.Error(err, "delete label")
 		return
 	}

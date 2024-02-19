@@ -11,7 +11,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 func TriggerTask(c *macaron.Context) {
@@ -26,9 +26,9 @@ func TriggerTask(c *macaron.Context) {
 	username := c.Params(":username")
 	reponame := c.Params(":reponame")
 
-	owner, err := db.Users.GetByUsername(c.Req.Context(), username)
+	owner, err := database.Users.GetByUsername(c.Req.Context(), username)
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			c.Error(http.StatusBadRequest, "Owner does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
@@ -44,9 +44,9 @@ func TriggerTask(c *macaron.Context) {
 		return
 	}
 
-	repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
+	repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 	if err != nil {
-		if db.IsErrRepoNotExist(err) {
+		if database.IsErrRepoNotExist(err) {
 			c.Error(http.StatusBadRequest, "Repository does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
@@ -55,9 +55,9 @@ func TriggerTask(c *macaron.Context) {
 		return
 	}
 
-	pusher, err := db.Users.GetByID(c.Req.Context(), pusherID)
+	pusher, err := database.Users.GetByID(c.Req.Context(), pusherID)
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			c.Error(http.StatusBadRequest, "Pusher does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
@@ -68,7 +68,7 @@ func TriggerTask(c *macaron.Context) {
 
 	log.Trace("TriggerTask: %s/%s@%s by %q", owner.Name, repo.Name, branch, pusher.Name)
 
-	go db.HookQueue.Add(repo.ID)
-	go db.AddTestPullRequestTask(pusher, repo.ID, branch, true)
+	go database.HookQueue.Add(repo.ID)
+	go database.AddTestPullRequestTask(pusher, repo.ID, branch, true)
 	c.Status(http.StatusAccepted)
 }

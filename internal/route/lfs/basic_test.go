@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsutil"
 )
 
@@ -52,7 +52,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
-		c.Map(&db.Repository{Name: "repo"})
+		c.Map(&database.Repository{Name: "repo"})
 		c.Map(lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
 	m.Get("/", basic.serveDownload)
@@ -60,16 +60,16 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 	tests := []struct {
 		name          string
 		content       string
-		mockLFSStore  func() db.LFSStore
+		mockLFSStore  func() database.LFSStore
 		expStatusCode int
 		expHeader     http.Header
 		expBody       string
 	}{
 		{
 			name: "object does not exist",
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
+				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, database.ErrLFSObjectNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusNotFound,
@@ -80,9 +80,9 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 		},
 		{
 			name: "storage not found",
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{Storage: "bad_storage"}, nil)
+				mock.GetObjectByOIDFunc.SetDefaultReturn(&database.LFSObject{Storage: "bad_storage"}, nil)
 				return mock
 			},
 			expStatusCode: http.StatusInternalServerError,
@@ -95,10 +95,10 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 		{
 			name:    "object exists",
 			content: "Hello world!",
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(
-					&db.LFSObject{
+					&database.LFSObject{
 						Size:    12,
 						Storage: s.Storage(),
 					},
@@ -116,7 +116,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			db.SetMockLFSStore(t, test.mockLFSStore())
+			database.SetMockLFSStore(t, test.mockLFSStore())
 
 			s.buf = bytes.NewBufferString(test.content)
 
@@ -153,31 +153,31 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
-		c.Map(&db.Repository{Name: "repo"})
+		c.Map(&database.Repository{Name: "repo"})
 		c.Map(lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
 	m.Put("/", basic.serveUpload)
 
 	tests := []struct {
 		name          string
-		mockLFSStore  func() db.LFSStore
+		mockLFSStore  func() database.LFSStore
 		expStatusCode int
 		expBody       string
 	}{
 		{
 			name: "object already exists",
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{}, nil)
+				mock.GetObjectByOIDFunc.SetDefaultReturn(&database.LFSObject{}, nil)
 				return mock
 			},
 			expStatusCode: http.StatusOK,
 		},
 		{
 			name: "new object",
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
+				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, database.ErrLFSObjectNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusOK,
@@ -185,7 +185,7 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			db.SetMockLFSStore(t, test.mockLFSStore())
+			database.SetMockLFSStore(t, test.mockLFSStore())
 
 			r, err := http.NewRequest("PUT", "/", strings.NewReader("Hello world!"))
 			if err != nil {
@@ -211,14 +211,14 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
-		c.Map(&db.Repository{Name: "repo"})
+		c.Map(&database.Repository{Name: "repo"})
 	})
 	m.Post("/", (&basicHandler{}).serveVerify)
 
 	tests := []struct {
 		name          string
 		body          string
-		mockLFSStore  func() db.LFSStore
+		mockLFSStore  func() database.LFSStore
 		expStatusCode int
 		expBody       string
 	}{
@@ -231,9 +231,9 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 		{
 			name: "object does not exist",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"}`,
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
+				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, database.ErrLFSObjectNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusNotFound,
@@ -242,9 +242,9 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 		{
 			name: "object size mismatch",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"}`,
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{Size: 12}, nil)
+				mock.GetObjectByOIDFunc.SetDefaultReturn(&database.LFSObject{Size: 12}, nil)
 				return mock
 			},
 			expStatusCode: http.StatusBadRequest,
@@ -254,9 +254,9 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 		{
 			name: "object exists",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size":12}`,
-			mockLFSStore: func() db.LFSStore {
+			mockLFSStore: func() database.LFSStore {
 				mock := NewMockLFSStore()
-				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{Size: 12}, nil)
+				mock.GetObjectByOIDFunc.SetDefaultReturn(&database.LFSObject{Size: 12}, nil)
 				return mock
 			},
 			expStatusCode: http.StatusOK,
@@ -265,7 +265,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.mockLFSStore != nil {
-				db.SetMockLFSStore(t, test.mockLFSStore())
+				database.SetMockLFSStore(t, test.mockLFSStore())
 			}
 
 			r, err := http.NewRequest("POST", "/", strings.NewReader(test.body))

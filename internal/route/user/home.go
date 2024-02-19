@@ -14,7 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 const (
@@ -26,12 +26,12 @@ const (
 )
 
 // getDashboardContextUser finds out dashboard is viewing as which context user.
-func getDashboardContextUser(c *context.Context) *db.User {
+func getDashboardContextUser(c *context.Context) *database.User {
 	ctxUser := c.User
 	orgName := c.Params(":org")
 	if len(orgName) > 0 {
 		// Organization.
-		org, err := db.Users.GetByUsername(c.Req.Context(), orgName)
+		org, err := database.Users.GetByUsername(c.Req.Context(), orgName)
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return nil
@@ -40,9 +40,9 @@ func getDashboardContextUser(c *context.Context) *db.User {
 	}
 	c.Data["ContextUser"] = ctxUser
 
-	orgs, err := db.Orgs.List(
+	orgs, err := database.Orgs.List(
 		c.Req.Context(),
-		db.ListOrgsOptions{
+		database.ListOrgsOptions{
 			MemberID:              c.User.ID,
 			IncludePrivateMembers: true,
 		},
@@ -59,15 +59,15 @@ func getDashboardContextUser(c *context.Context) *db.User {
 // retrieveFeeds loads feeds from database by given context user.
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile bool) {
+func retrieveFeeds(c *context.Context, ctxUser *database.User, userID int64, isProfile bool) {
 	afterID := c.QueryInt64("after_id")
 
 	var err error
-	var actions []*db.Action
+	var actions []*database.Action
 	if ctxUser.IsOrganization() {
-		actions, err = db.Actions.ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
+		actions, err = database.Actions.ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
 	} else {
-		actions, err = db.Actions.ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
+		actions, err = database.Actions.ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
 	}
 	if err != nil {
 		c.Error(err, "list actions")
@@ -75,15 +75,15 @@ func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile
 	}
 
 	// Check access of private repositories.
-	feeds := make([]*db.Action, 0, len(actions))
+	feeds := make([]*database.Action, 0, len(actions))
 	unameAvatars := make(map[string]string)
 	for _, act := range actions {
 		// Cache results to reduce queries.
 		_, ok := unameAvatars[act.ActUserName]
 		if !ok {
-			u, err := db.Users.GetByUsername(c.Req.Context(), act.ActUserName)
+			u, err := database.Users.GetByUsername(c.Req.Context(), act.ActUserName)
 			if err != nil {
-				if db.IsErrUserNotExist(err) {
+				if database.IsErrUserNotExist(err) {
 					continue
 				}
 				c.Error(err, "get user by name")
@@ -125,11 +125,11 @@ func Dashboard(c *context.Context) {
 
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
-		collaborateRepos, err := db.Repos.GetByCollaboratorID(c.Req.Context(), c.User.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
+		collaborateRepos, err := database.Repos.GetByCollaboratorID(c.Req.Context(), c.User.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
 		if err != nil {
 			c.Error(err, "get accessible repositories by collaborator")
 			return
-		} else if err = db.RepositoryList(collaborateRepos).LoadAttributes(); err != nil {
+		} else if err = database.RepositoryList(collaborateRepos).LoadAttributes(); err != nil {
 			c.Error(err, "load attributes")
 			return
 		}
@@ -137,7 +137,7 @@ func Dashboard(c *context.Context) {
 	}
 
 	var err error
-	var repos, mirrors []*db.Repository
+	var repos, mirrors []*database.Repository
 	var repoCount int64
 	if ctxUser.IsOrganization() {
 		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, conf.UI.User.RepoPagingNum)
@@ -152,8 +152,8 @@ func Dashboard(c *context.Context) {
 			return
 		}
 	} else {
-		repos, err = db.GetUserRepositories(
-			&db.UserRepoOptions{
+		repos, err = database.GetUserRepositories(
+			&database.UserRepoOptions{
 				UserID:   ctxUser.ID,
 				Private:  true,
 				Page:     1,
@@ -166,7 +166,7 @@ func Dashboard(c *context.Context) {
 		}
 		repoCount = int64(ctxUser.NumRepos)
 
-		mirrors, err = db.GetUserMirrorRepositories(ctxUser.ID)
+		mirrors, err = database.GetUserMirrorRepositories(ctxUser.ID)
 		if err != nil {
 			c.Error(err, "get mirror repositories")
 			return
@@ -176,7 +176,7 @@ func Dashboard(c *context.Context) {
 	c.Data["RepoCount"] = repoCount
 	c.Data["MaxShowRepoNum"] = conf.UI.User.RepoPagingNum
 
-	if err := db.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
+	if err := database.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
 		c.Error(err, "load attributes")
 		return
 	}
@@ -203,21 +203,21 @@ func Issues(c *context.Context) {
 
 	var (
 		sortType   = c.Query("sort")
-		filterMode = db.FILTER_MODE_YOUR_REPOS
+		filterMode = database.FILTER_MODE_YOUR_REPOS
 	)
 
 	// Note: Organization does not have view type and filter mode.
 	if !ctxUser.IsOrganization() {
 		viewType := c.Query("type")
 		types := []string{
-			string(db.FILTER_MODE_YOUR_REPOS),
-			string(db.FILTER_MODE_ASSIGN),
-			string(db.FILTER_MODE_CREATE),
+			string(database.FILTER_MODE_YOUR_REPOS),
+			string(database.FILTER_MODE_ASSIGN),
+			string(database.FILTER_MODE_CREATE),
 		}
 		if !com.IsSliceContainsStr(types, viewType) {
-			viewType = string(db.FILTER_MODE_YOUR_REPOS)
+			viewType = string(database.FILTER_MODE_YOUR_REPOS)
 		}
-		filterMode = db.FilterMode(viewType)
+		filterMode = database.FilterMode(viewType)
 	}
 
 	page := c.QueryInt("page")
@@ -231,9 +231,9 @@ func Issues(c *context.Context) {
 	// Get repositories.
 	var (
 		err         error
-		repos       []*db.Repository
+		repos       []*database.Repository
 		userRepoIDs []int64
-		showRepos   = make([]*db.Repository, 0, 10)
+		showRepos   = make([]*database.Repository, 0, 10)
 	)
 	if ctxUser.IsOrganization() {
 		repos, _, err = ctxUser.GetUserRepositories(c.User.ID, 1, ctxUser.NumRepos)
@@ -242,8 +242,8 @@ func Issues(c *context.Context) {
 			return
 		}
 	} else {
-		repos, err = db.GetUserRepositories(
-			&db.UserRepoOptions{
+		repos, err = database.GetUserRepositories(
+			&database.UserRepoOptions{
 				UserID:   ctxUser.ID,
 				Private:  true,
 				Page:     1,
@@ -260,7 +260,7 @@ func Issues(c *context.Context) {
 	for _, repo := range repos {
 		userRepoIDs = append(userRepoIDs, repo.ID)
 
-		if filterMode != db.FILTER_MODE_YOUR_REPOS {
+		if filterMode != database.FILTER_MODE_YOUR_REPOS {
 			continue
 		}
 
@@ -282,14 +282,14 @@ func Issues(c *context.Context) {
 
 	// Filter repositories if the page shows issues.
 	if !isPullList {
-		userRepoIDs, err = db.FilterRepositoryWithIssues(userRepoIDs)
+		userRepoIDs, err = database.FilterRepositoryWithIssues(userRepoIDs)
 		if err != nil {
 			c.Error(err, "filter repositories with issues")
 			return
 		}
 	}
 
-	issueOptions := &db.IssuesOptions{
+	issueOptions := &database.IssuesOptions{
 		RepoID:   repoID,
 		Page:     page,
 		IsClosed: isShowClosed,
@@ -297,7 +297,7 @@ func Issues(c *context.Context) {
 		SortType: sortType,
 	}
 	switch filterMode {
-	case db.FILTER_MODE_YOUR_REPOS:
+	case database.FILTER_MODE_YOUR_REPOS:
 		// Get all issues from repositories from this user.
 		if userRepoIDs == nil {
 			issueOptions.RepoIDs = []int64{-1}
@@ -305,23 +305,23 @@ func Issues(c *context.Context) {
 			issueOptions.RepoIDs = userRepoIDs
 		}
 
-	case db.FILTER_MODE_ASSIGN:
+	case database.FILTER_MODE_ASSIGN:
 		// Get all issues assigned to this user.
 		issueOptions.AssigneeID = ctxUser.ID
 
-	case db.FILTER_MODE_CREATE:
+	case database.FILTER_MODE_CREATE:
 		// Get all issues created by this user.
 		issueOptions.PosterID = ctxUser.ID
 	}
 
-	issues, err := db.Issues(issueOptions)
+	issues, err := database.Issues(issueOptions)
 	if err != nil {
 		c.Error(err, "list issues")
 		return
 	}
 
 	if repoID > 0 {
-		repo, err := db.GetRepositoryByID(repoID)
+		repo, err := database.GetRepositoryByID(repoID)
 		if err != nil {
 			c.Error(err, "get repository by ID")
 			return
@@ -346,7 +346,7 @@ func Issues(c *context.Context) {
 		}
 	}
 
-	issueStats := db.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
+	issueStats := database.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
 
 	var total int
 	if !isShowClosed {
@@ -374,7 +374,7 @@ func Issues(c *context.Context) {
 }
 
 func ShowSSHKeys(c *context.Context, uid int64) {
-	keys, err := db.ListPublicKeys(uid)
+	keys, err := database.ListPublicKeys(uid)
 	if err != nil {
 		c.Error(err, "list public keys")
 		return
@@ -404,7 +404,7 @@ func showOrgProfile(c *context.Context) {
 	}
 
 	var (
-		repos []*db.Repository
+		repos []*database.Repository
 		count int64
 		err   error
 	)
@@ -417,7 +417,7 @@ func showOrgProfile(c *context.Context) {
 		c.Data["Repos"] = repos
 	} else {
 		showPrivate := c.IsLogged && c.User.IsAdmin
-		repos, err = db.GetUserRepositories(&db.UserRepoOptions{
+		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
 			UserID:   org.ID,
 			Private:  showPrivate,
 			Page:     page,
@@ -428,7 +428,7 @@ func showOrgProfile(c *context.Context) {
 			return
 		}
 		c.Data["Repos"] = repos
-		count = db.CountUserRepositories(org.ID, showPrivate)
+		count = database.CountUserRepositories(org.ID, showPrivate)
 	}
 	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 
@@ -444,7 +444,7 @@ func showOrgProfile(c *context.Context) {
 }
 
 func Email2User(c *context.Context) {
-	u, err := db.Users.GetByEmail(c.Req.Context(), c.Query("email"))
+	u, err := database.Users.GetByEmail(c.Req.Context(), c.Query("email"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by email")
 		return

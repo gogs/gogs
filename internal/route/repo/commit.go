@@ -13,7 +13,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/tool"
 )
@@ -113,8 +113,8 @@ func FileHistory(c *context.Context) {
 
 // tryGetUserByEmail returns a non-nil value if the email is corresponding to an
 // existing user.
-func tryGetUserByEmail(ctx gocontext.Context, email string) *db.User {
-	user, _ := db.Users.GetByEmail(ctx, email)
+func tryGetUserByEmail(ctx gocontext.Context, email string) *database.User {
+	user, _ := database.Users.GetByEmail(ctx, email)
 	return user
 }
 
@@ -189,18 +189,18 @@ func RawDiff(c *context.Context) {
 }
 
 type userCommit struct {
-	User *db.User
+	User *database.User
 	*git.Commit
 }
 
 // matchUsersWithCommitEmails matches existing users using commit author emails.
 func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit) []*userCommit {
-	emailToUsers := make(map[string]*db.User)
+	emailToUsers := make(map[string]*database.User)
 	newCommits := make([]*userCommit, len(oldCommits))
 	for i := range oldCommits {
-		var u *db.User
+		var u *database.User
 		if v, ok := emailToUsers[oldCommits[i].Author.Email]; !ok {
-			u, _ = db.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
+			u, _ = database.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
 			emailToUsers[oldCommits[i].Author.Email] = u
 		} else {
 			u = v

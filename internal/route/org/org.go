@@ -8,7 +8,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 )
 
@@ -29,19 +29,19 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		return
 	}
 
-	org := &db.User{
+	org := &database.User{
 		Name:     f.OrgName,
 		IsActive: true,
-		Type:     db.UserTypeOrganization,
+		Type:     database.UserTypeOrganization,
 	}
 
-	if err := db.CreateOrganization(org, c.User); err != nil {
+	if err := database.CreateOrganization(org, c.User); err != nil {
 		c.Data["Err_OrgName"] = true
 		switch {
-		case db.IsErrUserAlreadyExist(err):
+		case database.IsErrUserAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
-		case db.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), CREATE, &f)
+		case database.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), CREATE, &f)
 		default:
 			c.Error(err, "create organization")
 		}

@@ -18,7 +18,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 const (
@@ -95,7 +95,7 @@ func setup(c *cli.Context, logFile string, connectDB bool) {
 		_ = os.Chdir(conf.WorkDir())
 	}
 
-	if _, err := db.SetEngine(); err != nil {
+	if _, err := database.SetEngine(); err != nil {
 		fail("Internal error", "Failed to set database engine: %v", err)
 	}
 }
@@ -108,28 +108,28 @@ func parseSSHCmd(cmd string) (string, string) {
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
 }
 
-func checkDeployKey(key *db.PublicKey, repo *db.Repository) {
+func checkDeployKey(key *database.PublicKey, repo *database.Repository) {
 	// Check if this deploy key belongs to current repository.
-	if !db.HasDeployKey(key.ID, repo.ID) {
+	if !database.HasDeployKey(key.ID, repo.ID) {
 		fail("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
 	}
 
 	// Update deploy key activity.
-	deployKey, err := db.GetDeployKeyByRepo(key.ID, repo.ID)
+	deployKey, err := database.GetDeployKeyByRepo(key.ID, repo.ID)
 	if err != nil {
 		fail("Internal error", "GetDeployKey: %v", err)
 	}
 
 	deployKey.Updated = time.Now()
-	if err = db.UpdateDeployKey(deployKey); err != nil {
+	if err = database.UpdateDeployKey(deployKey); err != nil {
 		fail("Internal error", "UpdateDeployKey: %v", err)
 	}
 }
 
-var allowedCommands = map[string]db.AccessMode{
-	"git-upload-pack":    db.AccessModeRead,
-	"git-upload-archive": db.AccessModeRead,
-	"git-receive-pack":   db.AccessModeWrite,
+var allowedCommands = map[string]database.AccessMode{
+	"git-upload-pack":    database.AccessModeRead,
+	"git-upload-archive": database.AccessModeRead,
+	"git-receive-pack":   database.AccessModeWrite,
 }
 
 func runServ(c *cli.Context) error {
@@ -162,17 +162,17 @@ func runServ(c *cli.Context) error {
 	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
 	repoName = strings.TrimSuffix(repoName, ".wiki")
 
-	owner, err := db.Users.GetByUsername(ctx, ownerName)
+	owner, err := database.Users.GetByUsername(ctx, ownerName)
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
 		}
 		fail("Internal error", "Failed to get repository owner '%s': %v", ownerName, err)
 	}
 
-	repo, err := db.GetRepositoryByName(owner.ID, repoName)
+	repo, err := database.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
-		if db.IsErrRepoNotExist(err) {
+		if database.IsErrRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		fail("Internal error", "Failed to get repository: %v", err)
@@ -185,19 +185,19 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Prohibit push to mirror repositories.
-	if requestMode > db.AccessModeRead && repo.IsMirror {
+	if requestMode > database.AccessModeRead && repo.IsMirror {
 		fail("Mirror repository is read-only", "")
 	}
 
 	// Allow anonymous (user is nil) clone for public repositories.
-	var user *db.User
+	var user *database.User
 
-	key, err := db.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
+	key, err := database.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
 	if err != nil {
 		fail("Invalid key ID", "Invalid key ID '%s': %v", c.Args()[0], err)
 	}
 
-	if requestMode == db.AccessModeWrite || repo.IsPrivate {
+	if requestMode == database.AccessModeWrite || repo.IsPrivate {
 		// Check deploy key or user key.
 		if key.IsDeployKey() {
 			if key.Mode < requestMode {
@@ -205,20 +205,20 @@ func runServ(c *cli.Context) error {
 			}
 			checkDeployKey(key, repo)
 		} else {
-			user, err = db.Users.GetByKeyID(ctx, key.ID)
+			user, err = database.Users.GetByKeyID(ctx, key.ID)
 			if err != nil {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode := db.Perms.AccessMode(ctx, user.ID, repo.ID,
-				db.AccessModeOptions{
+			mode := database.Perms.AccessMode(ctx, user.ID, repo.ID,
+				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
 				},
 			)
 			if mode < requestMode {
 				clientMessage := _ACCESS_DENIED_MESSAGE
-				if mode >= db.AccessModeRead {
+				if mode >= database.AccessModeRead {
 					clientMessage = "You do not have sufficient authorization for this action"
 				}
 				fail(clientMessage,
@@ -238,13 +238,13 @@ func runServ(c *cli.Context) error {
 
 	// Update user key activity.
 	if key.ID > 0 {
-		key, err := db.GetPublicKeyByID(key.ID)
+		key, err := database.GetPublicKeyByID(key.ID)
 		if err != nil {
 			fail("Internal error", "GetPublicKeyByID: %v", err)
 		}
 
 		key.Updated = time.Now()
-		if err = db.UpdatePublicKey(key); err != nil {
+		if err = database.UpdatePublicKey(key); err != nil {
 			fail("Internal error", "UpdatePublicKey: %v", err)
 		}
 	}
@@ -261,8 +261,8 @@ func runServ(c *cli.Context) error {
 	} else {
 		gitCmd = exec.Command(verb, repoFullName)
 	}
-	if requestMode == db.AccessModeWrite {
-		gitCmd.Env = append(os.Environ(), db.ComposeHookEnvs(db.ComposeHookEnvsOptions{
+	if requestMode == database.AccessModeWrite {
+		gitCmd.Env = append(os.Environ(), database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
 			AuthUser:  user,
 			OwnerName: owner.Name,
 			OwnerSalt: owner.Salt,

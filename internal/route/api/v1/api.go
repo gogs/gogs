@@ -14,7 +14,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/api/v1/admin"
 	"gogs.io/gogs/internal/route/api/v1/misc"
@@ -31,13 +31,13 @@ func repoAssignment() macaron.Handler {
 		reponame := c.Params(":reponame")
 
 		var err error
-		var owner *db.User
+		var owner *database.User
 
 		// Check if the context user is the repository owner.
 		if c.IsLogged && c.User.LowerName == strings.ToLower(username) {
 			owner = c.User
 		} else {
-			owner, err = db.Users.GetByUsername(c.Req.Context(), username)
+			owner, err = database.Users.GetByUsername(c.Req.Context(), username)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return
@@ -45,7 +45,7 @@ func repoAssignment() macaron.Handler {
 		}
 		c.Repo.Owner = owner
 
-		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
+		repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			c.NotFoundOrError(err, "get repository by name")
 			return
@@ -55,10 +55,10 @@ func repoAssignment() macaron.Handler {
 		}
 
 		if c.IsTokenAuth && c.User.IsAdmin {
-			c.Repo.AccessMode = db.AccessModeOwner
+			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = db.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
-				db.AccessModeOptions{
+			c.Repo.AccessMode = database.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
 				},
@@ -91,7 +91,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 
 		var err error
 		if assignOrg {
-			c.Org.Organization, err = db.Users.GetByUsername(c.Req.Context(), c.Params(":orgname"))
+			c.Org.Organization, err = database.Users.GetByUsername(c.Req.Context(), c.Params(":orgname"))
 			if err != nil {
 				c.NotFoundOrError(err, "get organization by name")
 				return
@@ -99,7 +99,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 		}
 
 		if assignTeam {
-			c.Org.Team, err = db.GetTeamByID(c.ParamsInt64(":teamid"))
+			c.Org.Team, err = database.GetTeamByID(c.ParamsInt64(":teamid"))
 			if err != nil {
 				c.NotFoundOrError(err, "get team by ID")
 				return

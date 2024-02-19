@@ -23,7 +23,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/tool"
@@ -35,7 +35,7 @@ type HTTPContext struct {
 	OwnerSalt string
 	RepoID    int64
 	RepoName  string
-	AuthUser  *db.User
+	AuthUser  *database.User
 }
 
 // askCredentials responses HTTP header and status which informs client to provide credentials.
@@ -66,9 +66,9 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := db.Users.GetByUsername(c.Req.Context(), ownerName)
+		owner, err := database.Users.GetByUsername(c.Req.Context(), ownerName)
 		if err != nil {
-			if db.IsErrUserNotExist(err) {
+			if database.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
@@ -77,9 +77,9 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
+		repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
 		if err != nil {
-			if db.IsErrRepoNotExist(err) {
+			if database.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
@@ -124,7 +124,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := db.Users.Authenticate(c.Req.Context(), authUsername, authPassword, -1)
+		authUser, err := database.Users.Authenticate(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
@@ -135,15 +135,15 @@ func HTTPContexter() macaron.Handler {
 		// or password as the token.
 		if authUser == nil {
 			authUser, err = context.AuthenticateByToken(c.Req.Context(), authUsername)
-			if err != nil && !db.IsErrAccessTokenNotExist(err) {
+			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
 				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
-			} else if db.IsErrAccessTokenNotExist(err) {
+			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
 				authUser, err = context.AuthenticateByToken(c.Req.Context(), authPassword)
 				if err != nil {
-					if db.IsErrAccessTokenNotExist(err) {
+					if database.IsErrAccessTokenNotExist(err) {
 						askCredentials(c, http.StatusUnauthorized, "")
 					} else {
 						c.Status(http.StatusInternalServerError)
@@ -152,7 +152,7 @@ func HTTPContexter() macaron.Handler {
 					return
 				}
 			}
-		} else if db.TwoFactors.IsEnabled(c.Req.Context(), authUser.ID) {
+		} else if database.TwoFactors.IsEnabled(c.Req.Context(), authUser.ID) {
 			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
 Please create and use personal access token on user settings page`)
 			return
@@ -160,12 +160,12 @@ Please create and use personal access token on user settings page`)
 
 		log.Trace("[Git] Authenticated user: %s", authUser.Name)
 
-		mode := db.AccessModeWrite
+		mode := database.AccessModeWrite
 		if isPull {
-			mode = db.AccessModeRead
+			mode = database.AccessModeRead
 		}
-		if !db.Perms.Authorize(c.Req.Context(), authUser.ID, repo.ID, mode,
-			db.AccessModeOptions{
+		if !database.Perms.Authorize(c.Req.Context(), authUser.ID, repo.ID, mode,
+			database.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
 			},
@@ -196,7 +196,7 @@ type serviceHandler struct {
 	dir  string
 	file string
 
-	authUser  *db.User
+	authUser  *database.User
 	ownerName string
 	ownerSalt string
 	repoID    int64
@@ -258,7 +258,7 @@ func serviceRPC(h serviceHandler, service string) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	if service == "receive-pack" {
-		cmd.Env = append(os.Environ(), db.ComposeHookEnvs(db.ComposeHookEnvsOptions{
+		cmd.Env = append(os.Environ(), database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
 			AuthUser:  h.authUser,
 			OwnerName: h.ownerName,
 			OwnerSalt: h.ownerSalt,

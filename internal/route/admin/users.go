@@ -12,7 +12,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route"
@@ -30,9 +30,9 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.UserTypeIndividual,
-		Counter:  db.Users.Count,
-		Ranger:   db.Users.List,
+		Type:     database.UserTypeIndividual,
+		Counter:  database.Users.Count,
+		Ranger:   database.Users.List,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
+	sources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
+	sources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -76,7 +76,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		return
 	}
 
-	createUserOpts := db.CreateUserOptions{
+	createUserOpts := database.CreateUserOptions{
 		Password:  f.Password,
 		Activated: true,
 	}
@@ -88,18 +88,18 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		}
 	}
 
-	user, err := db.Users.Create(c.Req.Context(), f.UserName, f.Email, createUserOpts)
+	user, err := database.Users.Create(c.Req.Context(), f.UserName, f.Email, createUserOpts)
 	if err != nil {
 		switch {
-		case db.IsErrUserAlreadyExist(err):
+		case database.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
 			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f)
-		case db.IsErrEmailAlreadyUsed(err):
+		case database.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
-		case db.IsErrNameNotAllowed(err):
+		case database.IsErrNameNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), USER_NEW, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -109,15 +109,15 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 
 	// Send email notification.
 	if f.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context, db.NewMailerUser(user))
+		email.SendRegisterNotifyMail(c.Context, database.NewMailerUser(user))
 	}
 
 	c.Flash.Success(c.Tr("admin.users.new_success", user.Name))
 	c.Redirect(conf.Server.Subpath + "/admin/users/" + strconv.FormatInt(user.ID, 10))
 }
 
-func prepareUserInfo(c *context.Context) *db.User {
-	u, err := db.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
+func prepareUserInfo(c *context.Context) *database.User {
+	u, err := database.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return nil
@@ -125,16 +125,16 @@ func prepareUserInfo(c *context.Context) *db.User {
 	c.Data["User"] = u
 
 	if u.LoginSource > 0 {
-		c.Data["LoginSource"], err = db.LoginSources.GetByID(c.Req.Context(), u.LoginSource)
+		c.Data["LoginSource"], err = database.LoginSources.GetByID(c.Req.Context(), u.LoginSource)
 		if err != nil {
 			c.Error(err, "get login source by ID")
 			return nil
 		}
 	} else {
-		c.Data["LoginSource"] = &db.LoginSource{}
+		c.Data["LoginSource"] = &database.LoginSource{}
 	}
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
+	sources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return nil
@@ -174,7 +174,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		return
 	}
 
-	opts := db.UpdateUserOptions{
+	opts := database.UpdateUserOptions{
 		LoginName:        &f.LoginName,
 		FullName:         &f.FullName,
 		Website:          &f.Website,
@@ -203,9 +203,9 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		opts.Email = &f.Email
 	}
 
-	err := db.Users.Update(c.Req.Context(), u.ID, opts)
+	err := database.Users.Update(c.Req.Context(), u.ID, opts)
 	if err != nil {
-		if db.IsErrEmailAlreadyUsed(err) {
+		if database.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
 		} else {
@@ -220,20 +220,20 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := db.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
+	u, err := database.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
 	}
 
-	if err = db.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
+	if err = database.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
 		switch {
-		case db.IsErrUserOwnRepos(err):
+		case database.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
 			c.JSONSuccess(map[string]any{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
-		case db.IsErrUserHasOrgs(err):
+		case database.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
 			c.JSONSuccess(map[string]any{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),

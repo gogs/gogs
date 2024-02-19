@@ -20,7 +20,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/osutil"
 )
 
@@ -57,7 +57,7 @@ func runBackup(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	conn, err := db.SetEngine()
+	conn, err := database.SetEngine()
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
@@ -95,7 +95,7 @@ func runBackup(c *cli.Context) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = db.DumpDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = database.DumpDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
@@ -127,7 +127,7 @@ func runBackup(c *cli.Context) error {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
 		log.Info("Dumping repositories in %q", conf.Repository.Root)
 		if c.Bool("exclude-mirror-repos") {
-			repos, err := db.GetNonMirrorRepositories()
+			repos, err := database.GetNonMirrorRepositories()
 			if err != nil {
 				log.Fatal("Failed to get non-mirror repositories: %v", err)
 			}

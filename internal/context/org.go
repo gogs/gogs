@@ -10,7 +10,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 type Organization struct {
@@ -18,10 +18,10 @@ type Organization struct {
 	IsMember     bool
 	IsTeamMember bool // Is member of team.
 	IsTeamAdmin  bool // In owner team or team that has admin permission level.
-	Organization *db.User
+	Organization *database.User
 	OrgLink      string
 
-	Team *db.Team
+	Team *database.Team
 }
 
 func HandleOrgAssignment(c *Context, args ...bool) {
@@ -47,7 +47,7 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 	orgName := c.Params(":org")
 
 	var err error
-	c.Org.Organization, err = db.Users.GetByUsername(c.Req.Context(), orgName)
+	c.Org.Organization, err = database.Users.GetByUsername(c.Req.Context(), orgName)
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
 		return
@@ -78,7 +78,7 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 		}
 	} else {
 		// Fake data.
-		c.Data["SignedUser"] = &db.User{}
+		c.Data["SignedUser"] = &database.User{}
 	}
 	if (requireMember && !c.Org.IsMember) ||
 		(requireOwner && !c.Org.IsOwner) {
@@ -131,7 +131,7 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 			return
 		}
 
-		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= db.AccessModeAdmin
+		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= database.AccessModeAdmin
 		c.Data["IsTeamAdmin"] = c.Org.IsTeamAdmin
 		if requireTeamAdmin && !c.Org.IsTeamAdmin {
 			c.NotFound()

@@ -10,7 +10,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 func ListCollaborators(c *context.APIContext) {
@@ -28,9 +28,9 @@ func ListCollaborators(c *context.APIContext) {
 }
 
 func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
-	collaborator, err := db.Users.GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+	collaborator, err := database.Users.GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
 		} else {
 			c.Error(err, "get user by name")
@@ -44,7 +44,7 @@ func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 	}
 
 	if form.Permission != nil {
-		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, db.ParseAccessMode(*form.Permission)); err != nil {
+		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
 			c.Error(err, "change collaboration access mode")
 			return
 		}
@@ -54,9 +54,9 @@ func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 }
 
 func IsCollaborator(c *context.APIContext) {
-	collaborator, err := db.Users.GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+	collaborator, err := database.Users.GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
 		} else {
 			c.Error(err, "get user by name")
@@ -72,9 +72,9 @@ func IsCollaborator(c *context.APIContext) {
 }
 
 func DeleteCollaborator(c *context.APIContext) {
-	collaborator, err := db.Users.GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+	collaborator, err := database.Users.GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
-		if db.IsErrUserNotExist(err) {
+		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
 		} else {
 			c.Error(err, "get user by name")

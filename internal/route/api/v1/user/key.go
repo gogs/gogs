@@ -12,13 +12,13 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/repo"
 )
 
-func GetUserByParamsName(c *context.APIContext, name string) *db.User {
-	user, err := db.Users.GetByUsername(c.Req.Context(), c.Params(name))
+func GetUserByParamsName(c *context.APIContext, name string) *database.User {
+	user, err := database.Users.GetByUsername(c.Req.Context(), c.Params(name))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return nil
@@ -27,7 +27,7 @@ func GetUserByParamsName(c *context.APIContext, name string) *db.User {
 }
 
 // GetUserByParams returns user whose name is presented in URL parameter.
-func GetUserByParams(c *context.APIContext) *db.User {
+func GetUserByParams(c *context.APIContext) *database.User {
 	return GetUserByParamsName(c, ":username")
 }
 
@@ -36,7 +36,7 @@ func composePublicKeysAPILink() string {
 }
 
 func listPublicKeys(c *context.APIContext, uid int64) {
-	keys, err := db.ListPublicKeys(uid)
+	keys, err := database.ListPublicKeys(uid)
 	if err != nil {
 		c.Error(err, "list public keys")
 		return
@@ -64,7 +64,7 @@ func ListPublicKeys(c *context.APIContext) {
 }
 
 func GetPublicKey(c *context.APIContext) {
-	key, err := db.GetPublicKeyByID(c.ParamsInt64(":id"))
+	key, err := database.GetPublicKeyByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get public key by ID")
 		return
@@ -76,13 +76,13 @@ func GetPublicKey(c *context.APIContext) {
 
 // CreateUserPublicKey creates new public key to given user by ID.
 func CreateUserPublicKey(c *context.APIContext, form api.CreateKeyOption, uid int64) {
-	content, err := db.CheckPublicKeyString(form.Key)
+	content, err := database.CheckPublicKeyString(form.Key)
 	if err != nil {
 		repo.HandleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := db.AddPublicKey(uid, form.Title, content)
+	key, err := database.AddPublicKey(uid, form.Title, content)
 	if err != nil {
 		repo.HandleAddKeyError(c, err)
 		return
@@ -96,8 +96,8 @@ func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
 }
 
 func DeletePublicKey(c *context.APIContext) {
-	if err := db.DeletePublicKey(c.User, c.ParamsInt64(":id")); err != nil {
-		if db.IsErrKeyAccessDenied(err) {
+	if err := database.DeletePublicKey(c.User, c.ParamsInt64(":id")); err != nil {
+		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key."))
 		} else {
 			c.Error(err, "delete public key")

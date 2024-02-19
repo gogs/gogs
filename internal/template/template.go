@@ -24,7 +24,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strutil"
@@ -250,8 +250,8 @@ func ActionIcon(opType int) string {
 	}
 }
 
-func ActionContent2Commits(act Actioner) *db.PushCommits {
-	push := db.NewPushCommits()
+func ActionContent2Commits(act Actioner) *database.PushCommits {
+	push := database.NewPushCommits()
 	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
 		log.Error("Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}

@@ -42,7 +42,7 @@ tasks:
   generate-schemadoc:
     desc: Generate database schema documentation
     cmds:
-      - go generate ./internal/db/schemadoc
+      - go generate ./internal/database/schemadoc
 
   generate:
     desc: Run all go:generate commands

@@ -18,7 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
@@ -308,12 +308,12 @@ func Home(c *context.Context) {
 	c.Success(HOME)
 }
 
-func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*db.User, error), tpl string) {
+func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*database.User, error), tpl string) {
 	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
-	pager := paginater.New(total, db.ItemsPerPage, page, 5)
+	pager := paginater.New(total, database.ItemsPerPage, page, 5)
 	c.Data["Page"] = pager
 
 	items, err := getter(pager.Current())

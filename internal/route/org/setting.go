@@ -10,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/user"
 )
@@ -39,15 +39,15 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 	// Check if the organization username (including cases) had been changed
 	if org.Name != f.Name {
-		err := db.Users.ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
+		err := database.Users.ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
 		if err != nil {
 			c.Data["OrgName"] = true
 			var msg string
 			switch {
-			case db.IsErrUserAlreadyExist(err):
+			case database.IsErrUserAlreadyExist(err):
 				msg = c.Tr("form.username_been_taken")
-			case db.IsErrNameNotAllowed(err):
-				msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
+			case database.IsErrNameNotAllowed(err):
+				msg = c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
 			default:
 				c.Error(err, "change organization name")
 				return
@@ -62,7 +62,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
 
-	opts := db.UpdateUserOptions{
+	opts := database.UpdateUserOptions{
 		FullName:    &f.FullName,
 		Website:     &f.Website,
 		Location:    &f.Location,
@@ -71,7 +71,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	if c.User.IsAdmin {
 		opts.MaxRepoCreation = &f.MaxRepoCreation
 	}
-	err := db.Users.Update(c.Req.Context(), c.Org.Organization.ID, opts)
+	err := database.Users.Update(c.Req.Context(), c.Org.Organization.ID, opts)
 	if err != nil {
 		c.Error(err, "update organization")
 		return
@@ -93,7 +93,7 @@ func SettingsAvatar(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	if err := db.Users.DeleteCustomAvatar(c.Req.Context(), c.Org.Organization.ID); err != nil {
+	if err := database.Users.DeleteCustomAvatar(c.Req.Context(), c.Org.Organization.ID); err != nil {
 		c.Flash.Error(err.Error())
 	}
 
@@ -106,7 +106,7 @@ func SettingsDelete(c *context.Context) {
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := db.Users.Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := database.Users.Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
@@ -115,8 +115,8 @@ func SettingsDelete(c *context.Context) {
 			return
 		}
 
-		if err := db.DeleteOrganization(org); err != nil {
-			if db.IsErrUserOwnRepos(err) {
+		if err := database.DeleteOrganization(org); err != nil {
+			if database.IsErrUserOwnRepos(err) {
 				c.Flash.Error(c.Tr("form.org_still_own_repo"))
 				c.Redirect(c.Org.OrgLink + "/settings/delete")
 			} else {

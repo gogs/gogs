@@ -19,7 +19,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/lazyregexp"
@@ -35,7 +35,7 @@ type Context struct {
 	Session session.Store
 
 	Link        string // Current request URL
-	User        *db.User
+	User        *database.User
 	IsLogged    bool
 	IsBasicAuth bool
 	IsTokenAuth bool

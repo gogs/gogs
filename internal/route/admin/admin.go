@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
@@ -119,7 +119,7 @@ func Dashboard(c *context.Context) {
 	c.Data["BuildTime"] = conf.BuildTime
 	c.Data["BuildCommit"] = conf.BuildCommit
 
-	c.Data["Stats"] = db.GetStatistic(c.Req.Context())
+	c.Data["Stats"] = database.GetStatistic(c.Req.Context())
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
@@ -145,25 +145,25 @@ func Operation(c *context.Context) {
 	switch AdminOperation(c.QueryInt("op")) {
 	case CleanInactivateUser:
 		success = c.Tr("admin.dashboard.delete_inactivate_accounts_success")
-		err = db.Users.DeleteInactivated()
+		err = database.Users.DeleteInactivated()
 	case CleanRepoArchives:
 		success = c.Tr("admin.dashboard.delete_repo_archives_success")
-		err = db.DeleteRepositoryArchives()
+		err = database.DeleteRepositoryArchives()
 	case CleanMissingRepos:
 		success = c.Tr("admin.dashboard.delete_missing_repos_success")
-		err = db.DeleteMissingRepositories()
+		err = database.DeleteMissingRepositories()
 	case GitGCRepos:
 		success = c.Tr("admin.dashboard.git_gc_repos_success")
-		err = db.GitGcRepos()
+		err = database.GitGcRepos()
 	case SyncSSHAuthorizedKey:
 		success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
-		err = db.RewriteAuthorizedKeys()
+		err = database.RewriteAuthorizedKeys()
 	case SyncRepositoryHooks:
 		success = c.Tr("admin.dashboard.resync_all_hooks_success")
-		err = db.SyncRepositoryHooks()
+		err = database.SyncRepositoryHooks()
 	case ReinitMissingRepository:
 		success = c.Tr("admin.dashboard.reinit_missing_repos_success")
-		err = db.ReinitMissingRepositories()
+		err = database.ReinitMissingRepositories()
 	}
 
 	if err != nil {

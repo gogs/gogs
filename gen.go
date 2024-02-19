@@ -4,5 +4,5 @@
 
 package main
 
-//go:generate go install golang.org/x/tools/cmd/goimports@v0.1.10
+//go:generate go install golang.org/x/tools/cmd/goimports@v0.17.0
 //go:generate go run github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.7

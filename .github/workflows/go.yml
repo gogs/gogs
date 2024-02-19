@@ -162,7 +162,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...
         env:
           GOGS_DATABASE_TYPE: postgres
           PGPORT: 5432
@@ -188,7 +188,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...
         env:
           GOGS_DATABASE_TYPE: mysql
           MYSQL_USER: root
@@ -211,6 +211,6 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db/...
+        run: go test -shuffle=on -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/database/...
         env:
           GOGS_DATABASE_TYPE: sqlite

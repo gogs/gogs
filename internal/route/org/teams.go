@@ -12,7 +12,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 )
 
@@ -70,10 +70,10 @@ func TeamsAction(c *context.Context) {
 			return
 		}
 		uname := c.Query("uname")
-		var u *db.User
-		u, err = db.Users.GetByUsername(c.Req.Context(), uname)
+		var u *database.User
+		u, err = database.Users.GetByUsername(c.Req.Context(), uname)
 		if err != nil {
-			if db.IsErrUserNotExist(err) {
+			if database.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))
 				c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName)
 			} else {
@@ -87,7 +87,7 @@ func TeamsAction(c *context.Context) {
 	}
 
 	if err != nil {
-		if db.IsErrLastOrgOwner(err) {
+		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
 			log.Error("Action(%s): %v", c.Params(":action"), err)
@@ -117,10 +117,10 @@ func TeamsRepoAction(c *context.Context) {
 	switch c.Params(":action") {
 	case "add":
 		repoName := path.Base(c.Query("repo_name"))
-		var repo *db.Repository
-		repo, err = db.GetRepositoryByName(c.Org.Organization.ID, repoName)
+		var repo *database.Repository
+		repo, err = database.GetRepositoryByName(c.Org.Organization.ID, repoName)
 		if err != nil {
-			if db.IsErrRepoNotExist(err) {
+			if database.IsErrRepoNotExist(err) {
 				c.Flash.Error(c.Tr("org.teams.add_nonexistent_repo"))
 				c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName + "/repositories")
 				return
@@ -145,7 +145,7 @@ func NewTeam(c *context.Context) {
 	c.Data["Title"] = c.Org.Organization.FullName
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["PageIsOrgTeamsNew"] = true
-	c.Data["Team"] = &db.Team{}
+	c.Data["Team"] = &database.Team{}
 	c.Success(TEAM_NEW)
 }
 
@@ -154,11 +154,11 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["PageIsOrgTeamsNew"] = true
 
-	t := &db.Team{
+	t := &database.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        f.TeamName,
 		Description: f.Description,
-		Authorize:   db.ParseAccessMode(f.Permission),
+		Authorize:   database.ParseAccessMode(f.Permission),
 	}
 	c.Data["Team"] = t
 
@@ -167,13 +167,13 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		return
 	}
 
-	if err := db.NewTeam(t); err != nil {
+	if err := database.NewTeam(t); err != nil {
 		c.Data["Err_TeamName"] = true
 		switch {
-		case db.IsErrTeamAlreadyExist(err):
+		case database.IsErrTeamAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
-		case db.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(db.ErrNameNotAllowed).Value()), TEAM_NEW, &f)
+		case database.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), TEAM_NEW, &f)
 		default:
 			c.Error(err, "new team")
 		}
@@ -225,14 +225,14 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 	isAuthChanged := false
 	if !t.IsOwnerTeam() {
 		// Validate permission level.
-		var auth db.AccessMode
+		var auth database.AccessMode
 		switch f.Permission {
 		case "read":
-			auth = db.AccessModeRead
+			auth = database.AccessModeRead
 		case "write":
-			auth = db.AccessModeWrite
+			auth = database.AccessModeWrite
 		case "admin":
-			auth = db.AccessModeAdmin
+			auth = database.AccessModeAdmin
 		default:
 			c.Status(http.StatusUnauthorized)
 			return
@@ -245,10 +245,10 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		}
 	}
 	t.Description = f.Description
-	if err := db.UpdateTeam(t, isAuthChanged); err != nil {
+	if err := database.UpdateTeam(t, isAuthChanged); err != nil {
 		c.Data["Err_TeamName"] = true
 		switch {
-		case db.IsErrTeamAlreadyExist(err):
+		case database.IsErrTeamAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
 		default:
 			c.Error(err, "update team")
@@ -259,7 +259,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 }
 
 func DeleteTeam(c *context.Context) {
-	if err := db.DeleteTeam(c.Org.Team); err != nil {
+	if err := database.DeleteTeam(c.Org.Team); err != nil {
 		c.Flash.Error("DeleteTeam: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("org.teams.delete_team_success"))

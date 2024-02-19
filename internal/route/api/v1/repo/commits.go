@@ -14,7 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 )
 
@@ -120,8 +120,8 @@ func GetReferenceSHA(c *context.APIContext) {
 func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commit, error) {
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
-	author, err := db.Users.GetByEmail(c.Req.Context(), commit.Author.Email)
-	if err != nil && !db.IsErrUserNotExist(err) {
+	author, err := database.Users.GetByEmail(c.Req.Context(), commit.Author.Email)
+	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
 	} else if err == nil {
 		apiAuthor = author.APIFormat()
@@ -131,8 +131,8 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commi
 	if commit.Committer.Email == commit.Author.Email {
 		apiCommitter = apiAuthor
 	} else {
-		committer, err := db.Users.GetByEmail(c.Req.Context(), commit.Committer.Email)
-		if err != nil && !db.IsErrUserNotExist(err) {
+		committer, err := database.Users.GetByEmail(c.Req.Context(), commit.Committer.Email)
+		if err != nil && !database.IsErrUserNotExist(err) {
 			return nil, err
 		} else if err == nil {
 			apiCommitter = committer.APIFormat()
