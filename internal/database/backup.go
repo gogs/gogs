@@ -27,7 +27,7 @@ import (
 // getTableType returns the type name of a table definition without package name,
 // e.g. *database.LFSObject -> LFSObject.
 func getTableType(t any) string {
-	return strings.TrimPrefix(fmt.Sprintf("%T", t), "*db.")
+	return strings.TrimPrefix(fmt.Sprintf("%T", t), "*database.")
 }
 
 // DumpDatabase dumps all data from database to file system in JSON Lines format.
@@ -153,7 +153,7 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 		default:
 		}
 
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
 			if !osutil.IsFile(tableFile) {
@@ -245,7 +245,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 		default:
 		}
 
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
 		tableFile := filepath.Join(dirPath, tableName+".json")
 		if !osutil.IsFile(tableFile) {
 			continue

@@ -21,9 +21,9 @@ mocks:
   # shared interface.
   #
   # By convention, the filename containing generated mocks should be `mocks_test.go`.
-  - filename: internal/db/mocks_test.go
+  - filename: internal/database/mocks_test.go
     sources:
-      - path: gogs.io/gogs/internal/db
+      - path: gogs.io/gogs/internal/database
         interfaces:
           - LoginSourcesStore
           - LoginSourceFilesStore
@@ -34,7 +34,7 @@ mocks:
           - Provider
   - filename: internal/route/lfs/mocks_test.go
     sources:
-      - path: gogs.io/gogs/internal/db
+      - path: gogs.io/gogs/internal/database
         interfaces:
           - LFSStore
           - UsersStore
