@@ -569,14 +569,14 @@ type DeployKey struct {
 	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
 	Name        string
 	Fingerprint string
-	Content     string `xorm:"-" json:"-"`
+	Content     string `xorm:"-" json:"-" gorm:"-"`
 
-	Created           time.Time `xorm:"-" json:"-"`
+	Created           time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-" gorm:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-"`
-	HasUsed           bool `xorm:"-" json:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-" gorm:"-"`
+	HasUsed           bool `xorm:"-" json:"-" gorm:"-"`
 }
 
 func (k *DeployKey) BeforeInsert() {

@@ -19,7 +19,6 @@ import (
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -164,9 +163,8 @@ func TestLoginSources(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(LoginSource), new(User)}
 	db := &loginSources{
-		DB: dbtest.NewDB(t, "loginSources", tables...),
+		DB: newTestDB(t, "loginSources"),
 	}
 
 	for _, tc := range []struct {
@@ -183,7 +181,7 @@ func TestLoginSources(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

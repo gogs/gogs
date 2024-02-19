@@ -28,7 +28,7 @@ type Attachment struct {
 	ReleaseID int64 `xorm:"INDEX"`
 	Name      string
 
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix int64
 }
 

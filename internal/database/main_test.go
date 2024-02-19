@@ -16,6 +16,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/testutil"
 )
 
@@ -50,13 +51,16 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// clearTables removes all rows from given tables.
-func clearTables(t *testing.T, db *gorm.DB, tables ...any) error {
+func newTestDB(t *testing.T, suite string) *gorm.DB {
+	return dbtest.NewDB(t, suite, append(Tables, legacyTables...)...)
+}
+
+func clearTables(t *testing.T, db *gorm.DB) error {
 	if t.Failed() {
 		return nil
 	}
 
-	for _, t := range tables {
+	for _, t := range append(Tables, legacyTables...) {
 		err := db.Where("TRUE").Delete(t).Error
 		if err != nil {
 			return err

@@ -23,18 +23,18 @@ type Milestone struct {
 	RepoID          int64 `xorm:"INDEX"`
 	Name            string
 	Content         string `xorm:"TEXT"`
-	RenderedContent string `xorm:"-" json:"-"`
+	RenderedContent string `xorm:"-" json:"-" gorm:"-"`
 	IsClosed        bool
 	NumIssues       int
 	NumClosedIssues int
-	NumOpenIssues   int  `xorm:"-" json:"-"`
+	NumOpenIssues   int  `xorm:"-" json:"-" gorm:"-"`
 	Completeness    int  // Percentage(1-100).
-	IsOverDue       bool `xorm:"-" json:"-"`
+	IsOverDue       bool `xorm:"-" json:"-" gorm:"-"`
 
-	DeadlineString string    `xorm:"-" json:"-"`
-	Deadline       time.Time `xorm:"-" json:"-"`
+	DeadlineString string    `xorm:"-" json:"-" gorm:"-"`
+	Deadline       time.Time `xorm:"-" json:"-" gorm:"-"`
 	DeadlineUnix   int64
-	ClosedDate     time.Time `xorm:"-" json:"-"`
+	ClosedDate     time.Time `xorm:"-" json:"-" gorm:"-"`
 	ClosedDateUnix int64
 }
 
