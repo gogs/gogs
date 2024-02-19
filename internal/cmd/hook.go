@@ -22,7 +22,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/httplib"
 )
@@ -68,7 +68,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 	setup(c, "pre-receive.log", true)
 
-	isWiki := strings.Contains(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+	isWiki := strings.Contains(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -89,10 +89,10 @@ func runHookPreReceive(c *cli.Context) error {
 		branchName := git.RefShortName(string(fields[2]))
 
 		// Branch protection
-		repoID := com.StrTo(os.Getenv(db.ENV_REPO_ID)).MustInt64()
-		protectBranch, err := db.GetProtectBranchOfRepoByName(repoID, branchName)
+		repoID := com.StrTo(os.Getenv(database.ENV_REPO_ID)).MustInt64()
+		protectBranch, err := database.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
-			if db.IsErrBranchNotExist(err) {
+			if database.IsErrBranchNotExist(err) {
 				continue
 			}
 			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
@@ -105,9 +105,9 @@ func runHookPreReceive(c *cli.Context) error {
 		bypassRequirePullRequest := false
 
 		// Check if user is in whitelist when enabled
-		userID := com.StrTo(os.Getenv(db.ENV_AUTH_USER_ID)).MustInt64()
+		userID := com.StrTo(os.Getenv(database.ENV_AUTH_USER_ID)).MustInt64()
 		if protectBranch.EnableWhitelist {
-			if !db.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
+			if !database.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
 				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
 			}
 
@@ -126,7 +126,7 @@ func runHookPreReceive(c *cli.Context) error {
 
 		// Check force push
 		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
-			RunInDir(db.RepoPath(os.Getenv(db.ENV_REPO_OWNER_NAME), os.Getenv(db.ENV_REPO_NAME)))
+			RunInDir(database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME)))
 		if err != nil {
 			fail("Internal error", "Failed to detect force push: %v", err)
 		} else if len(output) > 0 {
@@ -134,7 +134,7 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")
+	customHooksPath := filepath.Join(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
@@ -145,7 +145,7 @@ func runHookPreReceive(c *cli.Context) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath)
 	}
-	hookCmd.Dir = db.RepoPath(os.Getenv(db.ENV_REPO_OWNER_NAME), os.Getenv(db.ENV_REPO_NAME))
+	hookCmd.Dir = database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
@@ -168,7 +168,7 @@ func runHookUpdate(c *cli.Context) error {
 		fail("First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), "update")
+	customHooksPath := filepath.Join(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), "update")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
@@ -179,7 +179,7 @@ func runHookUpdate(c *cli.Context) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath, args...)
 	}
-	hookCmd.Dir = db.RepoPath(os.Getenv(db.ENV_REPO_OWNER_NAME), os.Getenv(db.ENV_REPO_NAME))
+	hookCmd.Dir = database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
@@ -199,7 +199,7 @@ func runHookPostReceive(c *cli.Context) error {
 	// so we need to setup additional services for email notifications.
 	email.NewContext()
 
-	isWiki := strings.Contains(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+	isWiki := strings.Contains(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -217,24 +217,24 @@ func runHookPostReceive(c *cli.Context) error {
 			continue
 		}
 
-		options := db.PushUpdateOptions{
+		options := database.PushUpdateOptions{
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
 			FullRefspec:  string(fields[2]),
-			PusherID:     com.StrTo(os.Getenv(db.ENV_AUTH_USER_ID)).MustInt64(),
-			PusherName:   os.Getenv(db.ENV_AUTH_USER_NAME),
-			RepoUserName: os.Getenv(db.ENV_REPO_OWNER_NAME),
-			RepoName:     os.Getenv(db.ENV_REPO_NAME),
+			PusherID:     com.StrTo(os.Getenv(database.ENV_AUTH_USER_ID)).MustInt64(),
+			PusherName:   os.Getenv(database.ENV_AUTH_USER_NAME),
+			RepoUserName: os.Getenv(database.ENV_REPO_OWNER_NAME),
+			RepoName:     os.Getenv(database.ENV_REPO_NAME),
 		}
-		if err := db.PushUpdate(options); err != nil {
+		if err := database.PushUpdate(options); err != nil {
 			log.Error("PushUpdate: %v", err)
 		}
 
 		// Ask for running deliver hook and test pull request tasks
 		q := make(url.Values)
 		q.Add("branch", git.RefShortName(options.FullRefspec))
-		q.Add("secret", os.Getenv(db.ENV_REPO_OWNER_SALT_MD5))
-		q.Add("pusher", os.Getenv(db.ENV_AUTH_USER_ID))
+		q.Add("secret", os.Getenv(database.ENV_REPO_OWNER_SALT_MD5))
+		q.Add("pusher", os.Getenv(database.ENV_AUTH_USER_ID))
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
@@ -252,7 +252,7 @@ func runHookPostReceive(c *cli.Context) error {
 		}
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), "post-receive")
+	customHooksPath := filepath.Join(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), "post-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
@@ -263,7 +263,7 @@ func runHookPostReceive(c *cli.Context) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath)
 	}
-	hookCmd.Dir = db.RepoPath(os.Getenv(db.ENV_REPO_OWNER_NAME), os.Getenv(db.ENV_REPO_NAME))
+	hookCmd.Dir = database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr

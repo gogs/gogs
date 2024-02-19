@@ -12,12 +12,12 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
 func ListEmails(c *context.APIContext) {
-	emails, err := db.Users.ListEmails(c.Req.Context(), c.User.ID)
+	emails, err := database.Users.ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "get email addresses")
 		return
@@ -37,10 +37,10 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 
 	apiEmails := make([]*api.Email, 0, len(form.Emails))
 	for _, email := range form.Emails {
-		err := db.Users.AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
+		err := database.Users.AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
 		if err != nil {
-			if db.IsErrEmailAlreadyUsed(err) {
-				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Errorf("email address has been used: %s", err.(db.ErrEmailAlreadyUsed).Email()))
+			if database.IsErrEmailAlreadyUsed(err) {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Errorf("email address has been used: %s", err.(database.ErrEmailAlreadyUsed).Email()))
 			} else {
 				c.Error(err, "add email addresses")
 			}
@@ -64,7 +64,7 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 			return
 		}
 
-		err := db.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
+		err := database.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
 		if err != nil {
 			c.Error(err, "delete email addresses")
 			return

@@ -18,8 +18,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/netutil"
 )
@@ -81,13 +81,13 @@ func Webhooks(c *context.Context, orCtx *orgRepoContext) {
 	c.Data["Types"] = conf.Webhook.Types
 
 	var err error
-	var ws []*db.Webhook
+	var ws []*database.Webhook
 	if orCtx.RepoID > 0 {
 		c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://gogs.io/docs/features/webhook.html")
-		ws, err = db.GetWebhooksByRepoID(orCtx.RepoID)
+		ws, err = database.GetWebhooksByRepoID(orCtx.RepoID)
 	} else {
 		c.Data["Description"] = c.Tr("org.settings.hooks_desc")
-		ws, err = db.GetWebhooksByOrgID(orCtx.OrgID)
+		ws, err = database.GetWebhooksByOrgID(orCtx.OrgID)
 	}
 	if err != nil {
 		c.Error(err, "get webhooks")
@@ -120,7 +120,7 @@ func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.Success(orCtx.TmplNew)
 }
 
-func validateWebhook(l macaron.Locale, w *db.Webhook) (field, msg string, ok bool) {
+func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, ok bool) {
 	// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 	// see https://github.com/gogs/gogs/issues/5366 for details.
 	payloadURL, err := url.Parse(w.URL)
@@ -134,7 +134,7 @@ func validateWebhook(l macaron.Locale, w *db.Webhook) (field, msg string, ok boo
 	return "", "", true
 }
 
-func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
+func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *database.Webhook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
@@ -152,7 +152,7 @@ func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 	if err := w.UpdateEvent(); err != nil {
 		c.Error(err, "update event")
 		return
-	} else if err := db.CreateWebhook(w); err != nil {
+	} else if err := database.CreateWebhook(w); err != nil {
 		c.Error(err, "create webhook")
 		return
 	}
@@ -161,12 +161,12 @@ func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 	c.Redirect(orCtx.Link + "/settings/hooks")
 }
 
-func toHookEvent(f form.Webhook) *db.HookEvent {
-	return &db.HookEvent{
+func toHookEvent(f form.Webhook) *database.HookEvent {
+	return &database.HookEvent{
 		PushOnly:       f.PushOnly(),
 		SendEverything: f.SendEverything(),
 		ChooseEvents:   f.ChooseEvents(),
-		HookEvents: db.HookEvents{
+		HookEvents: database.HookEvents{
 			Create:       f.Create,
 			Delete:       f.Delete,
 			Fork:         f.Fork,
@@ -185,12 +185,12 @@ func WebhooksNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebhoo
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "gogs"
 
-	contentType := db.JSON
-	if db.HookContentType(f.ContentType) == db.FORM {
-		contentType = db.FORM
+	contentType := database.JSON
+	if database.HookContentType(f.ContentType) == database.FORM {
+		contentType = database.FORM
 	}
 
-	w := &db.Webhook{
+	w := &database.Webhook{
 		RepoID:       orCtx.RepoID,
 		OrgID:        orCtx.OrgID,
 		URL:          f.PayloadURL,
@@ -198,7 +198,7 @@ func WebhooksNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebhoo
 		Secret:       f.Secret,
 		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: db.GOGS,
+		HookTaskType: database.GOGS,
 	}
 	validateAndCreateWebhook(c, orCtx, w)
 }
@@ -209,7 +209,7 @@ func WebhooksSlackNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewS
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "slack"
 
-	meta := &db.SlackMeta{
+	meta := &database.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -223,13 +223,13 @@ func WebhooksSlackNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewS
 		return
 	}
 
-	w := &db.Webhook{
+	w := &database.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
-		ContentType:  db.JSON,
+		ContentType:  database.JSON,
 		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: db.SLACK,
+		HookTaskType: database.SLACK,
 		Meta:         string(p),
 		OrgID:        orCtx.OrgID,
 	}
@@ -242,7 +242,7 @@ func WebhooksDiscordNewPost(c *context.Context, orCtx *orgRepoContext, f form.Ne
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "discord"
 
-	meta := &db.SlackMeta{
+	meta := &database.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
@@ -255,13 +255,13 @@ func WebhooksDiscordNewPost(c *context.Context, orCtx *orgRepoContext, f form.Ne
 		return
 	}
 
-	w := &db.Webhook{
+	w := &database.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
-		ContentType:  db.JSON,
+		ContentType:  database.JSON,
 		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: db.DISCORD,
+		HookTaskType: database.DISCORD,
 		Meta:         string(p),
 		OrgID:        orCtx.OrgID,
 	}
@@ -274,27 +274,27 @@ func WebhooksDingtalkNewPost(c *context.Context, orCtx *orgRepoContext, f form.N
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "dingtalk"
 
-	w := &db.Webhook{
+	w := &database.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
-		ContentType:  db.JSON,
+		ContentType:  database.JSON,
 		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: db.DINGTALK,
+		HookTaskType: database.DINGTALK,
 		OrgID:        orCtx.OrgID,
 	}
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func loadWebhook(c *context.Context, orCtx *orgRepoContext) *db.Webhook {
+func loadWebhook(c *context.Context, orCtx *orgRepoContext) *database.Webhook {
 	c.RequireHighlightJS()
 
 	var err error
-	var w *db.Webhook
+	var w *database.Webhook
 	if orCtx.RepoID > 0 {
-		w, err = db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+		w, err = database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	} else {
-		w, err = db.GetWebhookByOrgID(c.Org.Organization.ID, c.ParamsInt64(":id"))
+		w, err = database.GetWebhookByOrgID(c.Org.Organization.ID, c.ParamsInt64(":id"))
 	}
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook")
@@ -303,13 +303,13 @@ func loadWebhook(c *context.Context, orCtx *orgRepoContext) *db.Webhook {
 	c.Data["Webhook"] = w
 
 	switch w.HookTaskType {
-	case db.SLACK:
+	case database.SLACK:
 		c.Data["SlackMeta"] = w.SlackMeta()
 		c.Data["HookType"] = "slack"
-	case db.DISCORD:
+	case database.DISCORD:
 		c.Data["SlackMeta"] = w.SlackMeta()
 		c.Data["HookType"] = "discord"
-	case db.DINGTALK:
+	case database.DINGTALK:
 		c.Data["HookType"] = "dingtalk"
 	default:
 		c.Data["HookType"] = "gogs"
@@ -338,7 +338,7 @@ func WebhooksEdit(c *context.Context, orCtx *orgRepoContext) {
 	c.Success(orCtx.TmplNew)
 }
 
-func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
+func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *database.Webhook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
@@ -356,7 +356,7 @@ func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 	if err := w.UpdateEvent(); err != nil {
 		c.Error(err, "update event")
 		return
-	} else if err := db.UpdateWebhook(w); err != nil {
+	} else if err := database.UpdateWebhook(w); err != nil {
 		c.Error(err, "update webhook")
 		return
 	}
@@ -375,9 +375,9 @@ func WebhooksEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebho
 		return
 	}
 
-	contentType := db.JSON
-	if db.HookContentType(f.ContentType) == db.FORM {
-		contentType = db.FORM
+	contentType := database.JSON
+	if database.HookContentType(f.ContentType) == database.FORM {
+		contentType = database.FORM
 	}
 
 	w.URL = f.PayloadURL
@@ -398,7 +398,7 @@ func WebhooksSlackEditPost(c *context.Context, orCtx *orgRepoContext, f form.New
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&db.SlackMeta{
+	meta, err := jsoniter.Marshal(&database.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -426,7 +426,7 @@ func WebhooksDiscordEditPost(c *context.Context, orCtx *orgRepoContext, f form.N
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&db.SlackMeta{
+	meta, err := jsoniter.Marshal(&database.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
@@ -475,7 +475,7 @@ func TestWebhook(c *context.Context) {
 	if c.Repo.Commit == nil {
 		commitID = git.EmptyID
 		commitMessage = "This is a fake commit"
-		ghost := db.NewGhostUser()
+		ghost := database.NewGhostUser()
 		author = &git.Signature{
 			Name:  ghost.DisplayName(),
 			Email: ghost.Email,
@@ -493,18 +493,18 @@ func TestWebhook(c *context.Context) {
 		committer = c.Repo.Commit.Committer
 
 		// Try to match email with a real user.
-		author, err := db.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Author.Email)
+		author, err := database.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
-		} else if !db.IsErrUserNotExist(err) {
+		} else if !database.IsErrUserNotExist(err) {
 			c.Error(err, "get user by email")
 			return
 		}
 
-		user, err := db.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Committer.Email)
+		user, err := database.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Committer.Email)
 		if err == nil {
 			committerUsername = user.Name
-		} else if !db.IsErrUserNotExist(err) {
+		} else if !database.IsErrUserNotExist(err) {
 			c.Error(err, "get user by email")
 			return
 		}
@@ -545,7 +545,7 @@ func TestWebhook(c *context.Context) {
 		Pusher: apiUser,
 		Sender: apiUser,
 	}
-	if err := db.TestWebhook(c.Repo.Repository, db.HOOK_EVENT_PUSH, p, c.ParamsInt64("id")); err != nil {
+	if err := database.TestWebhook(c.Repo.Repository, database.HOOK_EVENT_PUSH, p, c.ParamsInt64("id")); err != nil {
 		c.Error(err, "test webhook")
 		return
 	}
@@ -555,25 +555,25 @@ func TestWebhook(c *context.Context) {
 }
 
 func RedeliveryWebhook(c *context.Context) {
-	webhook, err := db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	webhook, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook")
 		return
 	}
 
-	hookTask, err := db.GetHookTaskOfWebhookByUUID(webhook.ID, c.Query("uuid"))
+	hookTask, err := database.GetHookTaskOfWebhookByUUID(webhook.ID, c.Query("uuid"))
 	if err != nil {
 		c.NotFoundOrError(err, "get hook task by UUID")
 		return
 	}
 
 	hookTask.IsDelivered = false
-	if err = db.UpdateHookTask(hookTask); err != nil {
+	if err = database.UpdateHookTask(hookTask); err != nil {
 		c.Error(err, "update hook task")
 		return
 	}
 
-	go db.HookQueue.Add(c.Repo.Repository.ID)
+	go database.HookQueue.Add(c.Repo.Repository.ID)
 	c.Flash.Info(c.Tr("repo.settings.webhook.redelivery_success", hookTask.UUID))
 	c.Status(http.StatusOK)
 }
@@ -581,9 +581,9 @@ func RedeliveryWebhook(c *context.Context) {
 func DeleteWebhook(c *context.Context, orCtx *orgRepoContext) {
 	var err error
 	if orCtx.RepoID > 0 {
-		err = db.DeleteWebhookOfRepoByID(orCtx.RepoID, c.QueryInt64("id"))
+		err = database.DeleteWebhookOfRepoByID(orCtx.RepoID, c.QueryInt64("id"))
 	} else {
-		err = db.DeleteWebhookOfOrgByID(orCtx.OrgID, c.QueryInt64("id"))
+		err = database.DeleteWebhookOfOrgByID(orCtx.OrgID, c.QueryInt64("id"))
 	}
 	if err != nil {
 		c.Error(err, "delete webhook")

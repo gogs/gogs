@@ -10,7 +10,7 @@ import (
 	"context"
 	"sync"
 
-	db "gogs.io/gogs/internal/db"
+	db "gogs.io/gogs/internal/database"
 	lfsutil "gogs.io/gogs/internal/lfsutil"
 )
 

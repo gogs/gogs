@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/repoutil"
 )
@@ -191,7 +191,7 @@ func PutContents(c *context.APIContext, r PutContentsRequest) {
 	treePath := c.Params("*")
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
-		db.UpdateRepoFileOptions{
+		database.UpdateRepoFileOptions{
 			OldBranch:   c.Repo.Repository.DefaultBranch,
 			NewBranch:   r.Branch,
 			OldTreeName: treePath,

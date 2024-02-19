@@ -12,7 +12,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
@@ -22,9 +22,9 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 		return
 	}
 
-	_, err := db.LoginSources.GetByID(c.Req.Context(), sourceID)
+	_, err := database.LoginSources.GetByID(c.Req.Context(), sourceID)
 	if err != nil {
-		if db.IsErrLoginSourceNotExist(err) {
+		if database.IsErrLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "get login source by ID")
@@ -39,11 +39,11 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		return
 	}
 
-	user, err := db.Users.Create(
+	user, err := database.Users.Create(
 		c.Req.Context(),
 		form.Username,
 		form.Email,
-		db.CreateUserOptions{
+		database.CreateUserOptions{
 			FullName:    form.FullName,
 			Password:    form.Password,
 			LoginSource: form.SourceID,
@@ -52,9 +52,9 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		},
 	)
 	if err != nil {
-		if db.IsErrUserAlreadyExist(err) ||
-			db.IsErrEmailAlreadyUsed(err) ||
-			db.IsErrNameNotAllowed(err) {
+		if database.IsErrUserAlreadyExist(err) ||
+			database.IsErrEmailAlreadyUsed(err) ||
+			database.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create user")
@@ -65,7 +65,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(user))
+		email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(user))
 	}
 
 	c.JSON(http.StatusCreated, user.APIFormat())
@@ -82,7 +82,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		return
 	}
 
-	opts := db.UpdateUserOptions{
+	opts := database.UpdateUserOptions{
 		LoginSource:      &form.SourceID,
 		LoginName:        &form.LoginName,
 		FullName:         &form.FullName,
@@ -104,9 +104,9 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		opts.Email = &form.Email
 	}
 
-	err := db.Users.Update(c.Req.Context(), u.ID, opts)
+	err := database.Users.Update(c.Req.Context(), u.ID, opts)
 	if err != nil {
-		if db.IsErrEmailAlreadyUsed(err) {
+		if database.IsErrEmailAlreadyUsed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "update user")
@@ -115,7 +115,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 	}
 	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
-	u, err = db.Users.GetByID(c.Req.Context(), u.ID)
+	u, err = database.Users.GetByID(c.Req.Context(), u.ID)
 	if err != nil {
 		c.Error(err, "get user")
 		return
@@ -129,9 +129,9 @@ func DeleteUser(c *context.APIContext) {
 		return
 	}
 
-	if err := db.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
-		if db.IsErrUserOwnRepos(err) ||
-			db.IsErrUserHasOrgs(err) {
+	if err := database.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
+		if database.IsErrUserOwnRepos(err) ||
+			database.IsErrUserHasOrgs(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "delete user")

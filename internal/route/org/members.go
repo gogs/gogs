@@ -10,7 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 const (
@@ -47,27 +47,27 @@ func MembersAction(c *context.Context) {
 			c.NotFound()
 			return
 		}
-		err = db.ChangeOrgUserStatus(org.ID, uid, false)
+		err = database.ChangeOrgUserStatus(org.ID, uid, false)
 	case "public":
 		if c.User.ID != uid && !c.Org.IsOwner {
 			c.NotFound()
 			return
 		}
-		err = db.ChangeOrgUserStatus(org.ID, uid, true)
+		err = database.ChangeOrgUserStatus(org.ID, uid, true)
 	case "remove":
 		if !c.Org.IsOwner {
 			c.NotFound()
 			return
 		}
 		err = org.RemoveMember(uid)
-		if db.IsErrLastOrgOwner(err) {
+		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
 		}
 	case "leave":
 		err = org.RemoveMember(c.User.ID)
-		if db.IsErrLastOrgOwner(err) {
+		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
@@ -97,9 +97,9 @@ func Invitation(c *context.Context) {
 
 	if c.Req.Method == "POST" {
 		uname := c.Query("uname")
-		u, err := db.Users.GetByUsername(c.Req.Context(), uname)
+		u, err := database.Users.GetByUsername(c.Req.Context(), uname)
 		if err != nil {
-			if db.IsErrUserNotExist(err) {
+			if database.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))
 				c.Redirect(c.Org.OrgLink + "/invitations/new")
 			} else {

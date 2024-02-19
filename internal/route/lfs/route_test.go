@@ -16,23 +16,23 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsutil"
 )
 
 func Test_authenticate(t *testing.T) {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
-	m.Get("/", authenticate(), func(w http.ResponseWriter, user *db.User) {
+	m.Get("/", authenticate(), func(w http.ResponseWriter, user *database.User) {
 		_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 	})
 
 	tests := []struct {
 		name                  string
 		header                http.Header
-		mockUsersStore        func() db.UsersStore
-		mockTwoFactorsStore   func() db.TwoFactorsStore
-		mockAccessTokensStore func() db.AccessTokensStore
+		mockUsersStore        func() database.UsersStore
+		mockTwoFactorsStore   func() database.TwoFactorsStore
+		mockAccessTokensStore func() database.AccessTokensStore
 		expStatusCode         int
 		expHeader             http.Header
 		expBody               string
@@ -51,12 +51,12 @@ func Test_authenticate(t *testing.T) {
 			header: http.Header{
 				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
 			},
-			mockUsersStore: func() db.UsersStore {
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
-				mock.AuthenticateFunc.SetDefaultReturn(&db.User{}, nil)
+				mock.AuthenticateFunc.SetDefaultReturn(&database.User{}, nil)
 				return mock
 			},
-			mockTwoFactorsStore: func() db.TwoFactorsStore {
+			mockTwoFactorsStore: func() database.TwoFactorsStore {
 				mock := NewMockTwoFactorsStore()
 				mock.IsEnabledFunc.SetDefaultReturn(true)
 				return mock
@@ -70,14 +70,14 @@ func Test_authenticate(t *testing.T) {
 			header: http.Header{
 				"Authorization": []string{"Basic dXNlcm5hbWU="},
 			},
-			mockUsersStore: func() db.UsersStore {
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
 				mock.AuthenticateFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
 				return mock
 			},
-			mockAccessTokensStore: func() db.AccessTokensStore {
+			mockAccessTokensStore: func() database.AccessTokensStore {
 				mock := NewMockAccessTokensStore()
-				mock.GetBySHA1Func.SetDefaultReturn(nil, db.ErrAccessTokenNotExist{})
+				mock.GetBySHA1Func.SetDefaultReturn(nil, database.ErrAccessTokenNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusUnauthorized,
@@ -93,12 +93,12 @@ func Test_authenticate(t *testing.T) {
 			header: http.Header{
 				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
 			},
-			mockUsersStore: func() db.UsersStore {
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
-				mock.AuthenticateFunc.SetDefaultReturn(&db.User{ID: 1, Name: "unknwon"}, nil)
+				mock.AuthenticateFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockTwoFactorsStore: func() db.TwoFactorsStore {
+			mockTwoFactorsStore: func() database.TwoFactorsStore {
 				mock := NewMockTwoFactorsStore()
 				mock.IsEnabledFunc.SetDefaultReturn(false)
 				return mock
@@ -112,15 +112,15 @@ func Test_authenticate(t *testing.T) {
 			header: http.Header{
 				"Authorization": []string{"Basic dXNlcm5hbWU="},
 			},
-			mockUsersStore: func() db.UsersStore {
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
 				mock.AuthenticateFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
-				mock.GetByIDFunc.SetDefaultReturn(&db.User{ID: 1, Name: "unknwon"}, nil)
+				mock.GetByIDFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockAccessTokensStore: func() db.AccessTokensStore {
+			mockAccessTokensStore: func() database.AccessTokensStore {
 				mock := NewMockAccessTokensStore()
-				mock.GetBySHA1Func.SetDefaultReturn(&db.AccessToken{}, nil)
+				mock.GetBySHA1Func.SetDefaultReturn(&database.AccessToken{}, nil)
 				return mock
 			},
 			expStatusCode: http.StatusOK,
@@ -132,19 +132,19 @@ func Test_authenticate(t *testing.T) {
 			header: http.Header{
 				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
 			},
-			mockUsersStore: func() db.UsersStore {
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
 				mock.AuthenticateFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
-				mock.GetByIDFunc.SetDefaultReturn(&db.User{ID: 1, Name: "unknwon"}, nil)
+				mock.GetByIDFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockAccessTokensStore: func() db.AccessTokensStore {
+			mockAccessTokensStore: func() database.AccessTokensStore {
 				mock := NewMockAccessTokensStore()
-				mock.GetBySHA1Func.SetDefaultHook(func(ctx context.Context, sha1 string) (*db.AccessToken, error) {
+				mock.GetBySHA1Func.SetDefaultHook(func(ctx context.Context, sha1 string) (*database.AccessToken, error) {
 					if sha1 == "password" {
-						return &db.AccessToken{}, nil
+						return &database.AccessToken{}, nil
 					}
-					return nil, db.ErrAccessTokenNotExist{}
+					return nil, database.ErrAccessTokenNotExist{}
 				})
 				return mock
 			},
@@ -156,13 +156,13 @@ func Test_authenticate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.mockUsersStore != nil {
-				db.SetMockUsersStore(t, test.mockUsersStore())
+				database.SetMockUsersStore(t, test.mockUsersStore())
 			}
 			if test.mockTwoFactorsStore != nil {
-				db.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore())
+				database.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore())
 			}
 			if test.mockAccessTokensStore != nil {
-				db.SetMockAccessTokensStore(t, test.mockAccessTokensStore())
+				database.SetMockAccessTokensStore(t, test.mockAccessTokensStore())
 			}
 
 			r, err := http.NewRequest("GET", "/", nil)
@@ -191,60 +191,60 @@ func Test_authorize(t *testing.T) {
 	tests := []struct {
 		name           string
 		authroize      macaron.Handler
-		mockUsersStore func() db.UsersStore
-		mockReposStore func() db.ReposStore
-		mockPermsStore func() db.PermsStore
+		mockUsersStore func() database.UsersStore
+		mockReposStore func() database.ReposStore
+		mockPermsStore func() database.PermsStore
 		expStatusCode  int
 		expBody        string
 	}{
 		{
 			name:      "user does not exist",
-			authroize: authorize(db.AccessModeNone),
-			mockUsersStore: func() db.UsersStore {
+			authroize: authorize(database.AccessModeNone),
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
-				mock.GetByUsernameFunc.SetDefaultReturn(nil, db.ErrUserNotExist{})
+				mock.GetByUsernameFunc.SetDefaultReturn(nil, database.ErrUserNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusNotFound,
 		},
 		{
 			name:      "repository does not exist",
-			authroize: authorize(db.AccessModeNone),
-			mockUsersStore: func() db.UsersStore {
+			authroize: authorize(database.AccessModeNone),
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
-				mock.GetByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*db.User, error) {
-					return &db.User{Name: username}, nil
+				mock.GetByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
 				})
 				return mock
 			},
-			mockReposStore: func() db.ReposStore {
+			mockReposStore: func() database.ReposStore {
 				mock := NewMockReposStore()
-				mock.GetByNameFunc.SetDefaultReturn(nil, db.ErrRepoNotExist{})
+				mock.GetByNameFunc.SetDefaultReturn(nil, database.ErrRepoNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusNotFound,
 		},
 		{
 			name:      "actor is not authorized",
-			authroize: authorize(db.AccessModeWrite),
-			mockUsersStore: func() db.UsersStore {
+			authroize: authorize(database.AccessModeWrite),
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
-				mock.GetByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*db.User, error) {
-					return &db.User{Name: username}, nil
+				mock.GetByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
 				})
 				return mock
 			},
-			mockReposStore: func() db.ReposStore {
+			mockReposStore: func() database.ReposStore {
 				mock := NewMockReposStore()
-				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
-					return &db.Repository{Name: name}, nil
+				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{Name: name}, nil
 				})
 				return mock
 			},
-			mockPermsStore: func() db.PermsStore {
+			mockPermsStore: func() database.PermsStore {
 				mock := NewMockPermsStore()
-				mock.AuthorizeFunc.SetDefaultHook(func(ctx context.Context, userID int64, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
-					return desired <= db.AccessModeRead
+				mock.AuthorizeFunc.SetDefaultHook(func(ctx context.Context, userID int64, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
+					return desired <= database.AccessModeRead
 				})
 				return mock
 			},
@@ -253,25 +253,25 @@ func Test_authorize(t *testing.T) {
 
 		{
 			name:      "actor is authorized",
-			authroize: authorize(db.AccessModeRead),
-			mockUsersStore: func() db.UsersStore {
+			authroize: authorize(database.AccessModeRead),
+			mockUsersStore: func() database.UsersStore {
 				mock := NewMockUsersStore()
-				mock.GetByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*db.User, error) {
-					return &db.User{Name: username}, nil
+				mock.GetByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
 				})
 				return mock
 			},
-			mockReposStore: func() db.ReposStore {
+			mockReposStore: func() database.ReposStore {
 				mock := NewMockReposStore()
-				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
-					return &db.Repository{Name: name}, nil
+				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{Name: name}, nil
 				})
 				return mock
 			},
-			mockPermsStore: func() db.PermsStore {
+			mockPermsStore: func() database.PermsStore {
 				mock := NewMockPermsStore()
-				mock.AuthorizeFunc.SetDefaultHook(func(ctx context.Context, userID int64, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
-					return desired <= db.AccessModeRead
+				mock.AuthorizeFunc.SetDefaultHook(func(ctx context.Context, userID int64, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
+					return desired <= database.AccessModeRead
 				})
 				return mock
 			},
@@ -282,21 +282,21 @@ func Test_authorize(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.mockUsersStore != nil {
-				db.SetMockUsersStore(t, test.mockUsersStore())
+				database.SetMockUsersStore(t, test.mockUsersStore())
 			}
 			if test.mockReposStore != nil {
-				db.SetMockReposStore(t, test.mockReposStore())
+				database.SetMockReposStore(t, test.mockReposStore())
 			}
 			if test.mockPermsStore != nil {
-				db.SetMockPermsStore(t, test.mockPermsStore())
+				database.SetMockPermsStore(t, test.mockPermsStore())
 			}
 
 			m := macaron.New()
 			m.Use(macaron.Renderer())
 			m.Use(func(c *macaron.Context) {
-				c.Map(&db.User{})
+				c.Map(&database.User{})
 			})
-			m.Get("/:username/:reponame", test.authroize, func(w http.ResponseWriter, owner *db.User, repo *db.Repository) {
+			m.Get("/:username/:reponame", test.authroize, func(w http.ResponseWriter, owner *database.User, repo *database.Repository) {
 				fmt.Fprintf(w, "owner.Name: %s, repo.Name: %s", owner.Name, repo.Name)
 			})
 

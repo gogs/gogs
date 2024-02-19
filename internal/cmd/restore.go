@@ -17,7 +17,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/semverutil"
 )
@@ -108,14 +108,14 @@ func runRestore(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	conn, err := db.SetEngine()
+	conn, err := database.SetEngine()
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = db.ImportDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = database.ImportDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 

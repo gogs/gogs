@@ -6,11 +6,11 @@ package admin
 
 import (
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
-func GetRepositoryByParams(c *context.APIContext) *db.Repository {
-	repo, err := db.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
+func GetRepositoryByParams(c *context.APIContext) *database.Repository {
+	repo, err := database.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
 	if err != nil {
 		c.NotFoundOrError(err, "get repository by name")
 		return nil

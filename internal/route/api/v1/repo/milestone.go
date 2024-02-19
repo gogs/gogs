@@ -11,11 +11,11 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 func ListMilestones(c *context.APIContext) {
-	milestones, err := db.GetMilestonesByRepoID(c.Repo.Repository.ID)
+	milestones, err := database.GetMilestonesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get milestones by repository ID")
 		return
@@ -29,7 +29,7 @@ func ListMilestones(c *context.APIContext) {
 }
 
 func GetMilestone(c *context.APIContext) {
-	milestone, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
@@ -43,14 +43,14 @@ func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
 		form.Deadline = &defaultDeadline
 	}
 
-	milestone := &db.Milestone{
+	milestone := &database.Milestone{
 		RepoID:   c.Repo.Repository.ID,
 		Name:     form.Title,
 		Content:  form.Description,
 		Deadline: *form.Deadline,
 	}
 
-	if err := db.NewMilestone(milestone); err != nil {
+	if err := database.NewMilestone(milestone); err != nil {
 		c.Error(err, "new milestone")
 		return
 	}
@@ -58,7 +58,7 @@ func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
 }
 
 func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
-	milestone, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
@@ -79,7 +79,7 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 			c.Error(err, "change status")
 			return
 		}
-	} else if err = db.UpdateMilestone(milestone); err != nil {
+	} else if err = database.UpdateMilestone(milestone); err != nil {
 		c.Error(err, "update milestone")
 		return
 	}
@@ -88,7 +88,7 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 }
 
 func DeleteMilestone(c *context.APIContext) {
-	if err := db.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+	if err := database.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
 		c.Error(err, "delete milestone of repository by ID")
 		return
 	}
