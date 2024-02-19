@@ -19,7 +19,6 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
@@ -85,13 +84,8 @@ func TestUsers(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{
-		new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey), new(OrgUser),
-		new(Watch), new(Star), new(Issue), new(AccessToken), new(Collaboration), new(Action), new(IssueUser),
-		new(Access),
-	}
 	db := &users{
-		DB: dbtest.NewDB(t, "users", tables...),
+		DB: newTestDB(t, "users"),
 	}
 
 	for _, tc := range []struct {
@@ -129,7 +123,7 @@ func TestUsers(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbtest"
 )
 
 func TestPublicKeys(t *testing.T) {
@@ -25,9 +24,8 @@ func TestPublicKeys(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(PublicKey)}
 	db := &publicKeys{
-		DB: dbtest.NewDB(t, "publicKeys", tables...),
+		DB: newTestDB(t, "publicKeys"),
 	}
 
 	for _, tc := range []struct {
@@ -38,7 +36,7 @@ func TestPublicKeys(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -86,9 +85,8 @@ func TestRepos(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(Repository), new(Access), new(Watch), new(User), new(EmailAddress), new(Star)}
 	db := &repos{
-		DB: dbtest.NewDB(t, "repos", tables...),
+		DB: newTestDB(t, "repos"),
 	}
 
 	for _, tc := range []struct {
@@ -108,7 +106,7 @@ func TestRepos(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)
