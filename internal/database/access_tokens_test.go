@@ -98,13 +98,13 @@ func TestAccessTokens(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &accessTokensStore{
-		DB: newTestDB(t, "accessTokensStore"),
+	s := &AccessTokensStore{
+		db: newTestDB(t, "AccessTokensStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *accessTokensStore)
+		test func(t *testing.T, ctx context.Context, s *AccessTokensStore)
 	}{
 		{"Create", accessTokensCreate},
 		{"DeleteByID", accessTokensDeleteByID},
@@ -114,10 +114,10 @@ func TestAccessTokens(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -125,9 +125,9 @@ func TestAccessTokens(t *testing.T) {
 	}
 }
 
-func accessTokensCreate(t *testing.T, ctx context.Context, db *accessTokensStore) {
+func accessTokensCreate(t *testing.T, ctx context.Context, s *AccessTokensStore) {
 	// Create first access token with name "Test"
-	token, err := db.Create(ctx, 1, "Test")
+	token, err := s.Create(ctx, 1, "Test")
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(1), token.UserID)
@@ -135,12 +135,12 @@ func accessTokensCreate(t *testing.T, ctx context.Context, db *accessTokensStore
 	assert.Equal(t, 40, len(token.Sha1), "sha1 length")
 
 	// Get it back and check the Created field
-	token, err = db.GetBySHA1(ctx, token.Sha1)
+	token, err = s.GetBySHA1(ctx, token.Sha1)
 	require.NoError(t, err)
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), token.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), token.Created.UTC().Format(time.RFC3339))
 
 	// Try create second access token with same name should fail
-	_, err = db.Create(ctx, token.UserID, token.Name)
+	_, err = s.Create(ctx, token.UserID, token.Name)
 	wantErr := ErrAccessTokenAlreadyExist{
 		args: errutil.Args{
 			"userID": token.UserID,
@@ -150,25 +150,25 @@ func accessTokensCreate(t *testing.T, ctx context.Context, db *accessTokensStore
 	assert.Equal(t, wantErr, err)
 }
 
-func accessTokensDeleteByID(t *testing.T, ctx context.Context, db *accessTokensStore) {
+func accessTokensDeleteByID(t *testing.T, ctx context.Context, s *AccessTokensStore) {
 	// Create an access token with name "Test"
-	token, err := db.Create(ctx, 1, "Test")
+	token, err := s.Create(ctx, 1, "Test")
 	require.NoError(t, err)
 
 	// Delete a token with mismatched user ID is noop
-	err = db.DeleteByID(ctx, 2, token.ID)
+	err = s.DeleteByID(ctx, 2, token.ID)
 	require.NoError(t, err)
 
 	// We should be able to get it back
-	_, err = db.GetBySHA1(ctx, token.Sha1)
+	_, err = s.GetBySHA1(ctx, token.Sha1)
 	require.NoError(t, err)
 
 	// Now delete this token with correct user ID
-	err = db.DeleteByID(ctx, token.UserID, token.ID)
+	err = s.DeleteByID(ctx, token.UserID, token.ID)
 	require.NoError(t, err)
 
 	// We should get token not found error
-	_, err = db.GetBySHA1(ctx, token.Sha1)
+	_, err = s.GetBySHA1(ctx, token.Sha1)
 	wantErr := ErrAccessTokenNotExist{
 		args: errutil.Args{
 			"sha": token.Sha1,
@@ -177,17 +177,17 @@ func accessTokensDeleteByID(t *testing.T, ctx context.Context, db *accessTokensS
 	assert.Equal(t, wantErr, err)
 }
 
-func accessTokensGetBySHA(t *testing.T, ctx context.Context, db *accessTokensStore) {
+func accessTokensGetBySHA(t *testing.T, ctx context.Context, s *AccessTokensStore) {
 	// Create an access token with name "Test"
-	token, err := db.Create(ctx, 1, "Test")
+	token, err := s.Create(ctx, 1, "Test")
 	require.NoError(t, err)
 
 	// We should be able to get it back
-	_, err = db.GetBySHA1(ctx, token.Sha1)
+	_, err = s.GetBySHA1(ctx, token.Sha1)
 	require.NoError(t, err)
 
 	// Try to get a non-existent token
-	_, err = db.GetBySHA1(ctx, "bad_sha")
+	_, err = s.GetBySHA1(ctx, "bad_sha")
 	wantErr := ErrAccessTokenNotExist{
 		args: errutil.Args{
 			"sha": "bad_sha",
@@ -196,21 +196,21 @@ func accessTokensGetBySHA(t *testing.T, ctx context.Context, db *accessTokensSto
 	assert.Equal(t, wantErr, err)
 }
 
-func accessTokensList(t *testing.T, ctx context.Context, db *accessTokensStore) {
+func accessTokensList(t *testing.T, ctx context.Context, s *AccessTokensStore) {
 	// Create two access tokens for user 1
-	_, err := db.Create(ctx, 1, "user1_1")
+	_, err := s.Create(ctx, 1, "user1_1")
 	require.NoError(t, err)
-	_, err = db.Create(ctx, 1, "user1_2")
+	_, err = s.Create(ctx, 1, "user1_2")
 	require.NoError(t, err)
 
 	// Create one access token for user 2
-	_, err = db.Create(ctx, 2, "user2_1")
+	_, err = s.Create(ctx, 2, "user2_1")
 	require.NoError(t, err)
 
 	// List all access tokens for user 1
-	tokens, err := db.List(ctx, 1)
+	tokens, err := s.List(ctx, 1)
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(tokens), "number of tokens")
+	require.Equal(t, 2, len(tokens), "number of tokens")
 
 	assert.Equal(t, int64(1), tokens[0].UserID)
 	assert.Equal(t, "user1_1", tokens[0].Name)
@@ -219,19 +219,19 @@ func accessTokensList(t *testing.T, ctx context.Context, db *accessTokensStore) 
 	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
-func accessTokensTouch(t *testing.T, ctx context.Context, db *accessTokensStore) {
+func accessTokensTouch(t *testing.T, ctx context.Context, s *AccessTokensStore) {
 	// Create an access token with name "Test"
-	token, err := db.Create(ctx, 1, "Test")
+	token, err := s.Create(ctx, 1, "Test")
 	require.NoError(t, err)
 
 	// Updated field is zero now
 	assert.True(t, token.Updated.IsZero())
 
-	err = db.Touch(ctx, token.ID)
+	err = s.Touch(ctx, token.ID)
 	require.NoError(t, err)
 
 	// Get back from DB should have Updated set
-	token, err = db.GetBySHA1(ctx, token.Sha1)
+	token, err = s.GetBySHA1(ctx, token.Sha1)
 	require.NoError(t, err)
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), token.Updated.UTC().Format(time.RFC3339))
+	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), token.Updated.UTC().Format(time.RFC3339))
 }

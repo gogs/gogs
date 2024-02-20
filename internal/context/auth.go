@@ -106,9 +106,18 @@ func isAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
 }
 
+type AuthStore interface {
+	// GetAccessTokenBySHA1 returns the access token with given SHA1. It returns
+	// database.ErrAccessTokenNotExist when not found.
+	GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.AccessToken, error)
+	// TouchAccessTokenByID updates the updated time of the given access token to
+	// the current time.
+	TouchAccessTokenByID(ctx context.Context, id int64) error
+}
+
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
-func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
+func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
 	if !database.HasEngine {
 		return 0, false
 	}
@@ -132,14 +141,14 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := database.AccessTokens.GetBySHA1(c.Req.Context(), tokenSHA)
+			t, err := store.GetAccessTokenBySHA1(c.Req.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {
 					log.Error("GetAccessTokenBySHA: %v", err)
 				}
 				return 0, false
 			}
-			if err = database.AccessTokens.Touch(c.Req.Context(), t.ID); err != nil {
+			if err = store.TouchAccessTokenByID(c.Req.Context(), t.ID); err != nil {
 				log.Error("Failed to touch access token: %v", err)
 			}
 			return t.UserID, true
@@ -165,12 +174,12 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
+func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
 	if !database.HasEngine {
 		return nil, false, false
 	}
 
-	uid, isTokenAuth := authenticatedUserID(ctx, sess)
+	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
 
 	if uid <= 0 {
 		if conf.Auth.EnableReverseProxyAuthentication {
@@ -235,12 +244,12 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *database.Us
 // AuthenticateByToken attempts to authenticate a user by the given access
 // token. It returns database.ErrAccessTokenNotExist when the access token does not
 // exist.
-func AuthenticateByToken(ctx context.Context, token string) (*database.User, error) {
-	t, err := database.AccessTokens.GetBySHA1(ctx, token)
+func AuthenticateByToken(store AuthStore, ctx context.Context, token string) (*database.User, error) {
+	t, err := store.GetAccessTokenBySHA1(ctx, token)
 	if err != nil {
 		return nil, errors.Wrap(err, "get access token by SHA1")
 	}
-	if err = database.AccessTokens.Touch(ctx, t.ID); err != nil {
+	if err = store.TouchAccessTokenByID(ctx, t.ID); err != nil {
 		// NOTE: There is no need to fail the auth flow if we can't touch the token.
 		log.Error("Failed to touch access token [id: %d]: %v", t.ID, err)
 	}

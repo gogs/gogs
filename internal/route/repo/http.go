@@ -44,7 +44,7 @@ func askCredentials(c *macaron.Context, status int, text string) {
 	c.Error(status, text)
 }
 
-func HTTPContexter() macaron.Handler {
+func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
@@ -134,14 +134,14 @@ func HTTPContexter() macaron.Handler {
 		// If username and password combination failed, try again using either username
 		// or password as the token.
 		if authUser == nil {
-			authUser, err = context.AuthenticateByToken(c.Req.Context(), authUsername)
+			authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authUsername)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
 				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
-				authUser, err = context.AuthenticateByToken(c.Req.Context(), authPassword)
+				authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authPassword)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
 						askCredentials(c, http.StatusUnauthorized, "")

@@ -19,12 +19,14 @@ import (
 	"gogs.io/gogs/internal/lfsutil"
 )
 
-// RegisterRoutes registers LFS routes using given router, and inherits all groups and middleware.
+// RegisterRoutes registers LFS routes using given router, and inherits all
+// groups and middleware.
 func RegisterRoutes(r *macaron.Router) {
 	verifyAccept := verifyHeader("Accept", contentType, http.StatusNotAcceptable)
 	verifyContentTypeJSON := verifyHeader("Content-Type", contentType, http.StatusBadRequest)
 	verifyContentTypeStream := verifyHeader("Content-Type", "application/octet-stream", http.StatusBadRequest)
 
+	store := NewStore()
 	r.Group("", func() {
 		r.Post("/objects/batch", authorize(database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch)
 		r.Group("/objects/basic", func() {
@@ -39,12 +41,12 @@ func RegisterRoutes(r *macaron.Router) {
 				Put(authorize(database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
 			r.Post("/verify", authorize(database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
 		})
-	}, authenticate())
+	}, authenticate(store))
 }
 
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
-func authenticate() macaron.Handler {
+func authenticate(store Store) macaron.Handler {
 	askCredentials := func(w http.ResponseWriter) {
 		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
 		responseJSON(w, http.StatusUnauthorized, responseError{
@@ -74,14 +76,14 @@ func authenticate() macaron.Handler {
 		// If username and password combination failed, try again using either username
 		// or password as the token.
 		if auth.IsErrBadCredentials(err) {
-			user, err = context.AuthenticateByToken(c.Req.Context(), username)
+			user, err = context.AuthenticateByToken(store, c.Req.Context(), username)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				internalServerError(c.Resp)
 				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
-				user, err = context.AuthenticateByToken(c.Req.Context(), password)
+				user, err = context.AuthenticateByToken(store, c.Req.Context(), password)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
 						askCredentials(c.Resp)
