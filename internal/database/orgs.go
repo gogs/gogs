@@ -30,16 +30,16 @@ type OrgsStore interface {
 
 var Orgs OrgsStore
 
-var _ OrgsStore = (*orgs)(nil)
+var _ OrgsStore = (*orgsStore)(nil)
 
-type orgs struct {
+type orgsStore struct {
 	*gorm.DB
 }
 
 // NewOrgsStore returns a persistent interface for orgs with given database
 // connection.
 func NewOrgsStore(db *gorm.DB) OrgsStore {
-	return &orgs{DB: db}
+	return &orgsStore{DB: db}
 }
 
 type ListOrgsOptions struct {
@@ -49,7 +49,7 @@ type ListOrgsOptions struct {
 	IncludePrivateMembers bool
 }
 
-func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error) {
+func (s *orgsStore) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error) {
 	if opts.MemberID <= 0 {
 		return nil, errors.New("MemberID must be greater than 0")
 	}
@@ -64,7 +64,7 @@ func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization
 		[AND org_user.is_public = @includePrivateMembers]
 		ORDER BY org.id ASC
 	*/
-	tx := db.WithContext(ctx).
+	tx := s.WithContext(ctx).
 		Joins(dbutil.Quote("JOIN org_user ON org_user.org_id = %s.id", "user")).
 		Where("org_user.uid = ?", opts.MemberID).
 		Order(dbutil.Quote("%s.id ASC", "user"))
@@ -76,13 +76,13 @@ func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization
 	return orgs, tx.Find(&orgs).Error
 }
 
-func (db *orgs) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {
-	return searchUserByName(ctx, db.DB, UserTypeOrganization, keyword, page, pageSize, orderBy)
+func (s *orgsStore) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {
+	return searchUserByName(ctx, s.DB, UserTypeOrganization, keyword, page, pageSize, orderBy)
 }
 
-func (db *orgs) CountByUser(ctx context.Context, userID int64) (int64, error) {
+func (s *orgsStore) CountByUser(ctx context.Context, userID int64) (int64, error) {
 	var count int64
-	return count, db.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
+	return count, s.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
 }
 
 type Organization = User

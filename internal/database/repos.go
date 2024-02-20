@@ -119,16 +119,16 @@ func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) 
 	}
 }
 
-var _ ReposStore = (*repos)(nil)
+var _ ReposStore = (*reposStore)(nil)
 
-type repos struct {
+type reposStore struct {
 	*gorm.DB
 }
 
 // NewReposStore returns a persistent interface for repositories with given
 // database connection.
 func NewReposStore(db *gorm.DB) ReposStore {
-	return &repos{DB: db}
+	return &reposStore{DB: db}
 }
 
 type ErrRepoAlreadyExist struct {
@@ -157,13 +157,13 @@ type CreateRepoOptions struct {
 	ForkID        int64
 }
 
-func (db *repos) Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error) {
+func (s *reposStore) Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error) {
 	err := isRepoNameAllowed(opts.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.GetByName(ctx, ownerID, opts.Name)
+	_, err = s.GetByName(ctx, ownerID, opts.Name)
 	if err == nil {
 		return nil, ErrRepoAlreadyExist{
 			args: errutil.Args{
@@ -189,7 +189,7 @@ func (db *repos) Create(ctx context.Context, ownerID int64, opts CreateRepoOptio
 		IsFork:        opts.Fork,
 		ForkID:        opts.ForkID,
 	}
-	return repo, db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return repo, s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err = tx.Create(repo).Error
 		if err != nil {
 			return errors.Wrap(err, "create")
@@ -203,7 +203,7 @@ func (db *repos) Create(ctx context.Context, ownerID int64, opts CreateRepoOptio
 	})
 }
 
-func (db *repos) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
+func (s *reposStore) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -214,7 +214,7 @@ func (db *repos) GetByCollaboratorID(ctx context.Context, collaboratorID int64, 
 		LIMIT @limit
 	*/
 	var repos []*Repository
-	return repos, db.WithContext(ctx).
+	return repos, s.WithContext(ctx).
 		Joins("JOIN access ON access.repo_id = repository.id AND access.user_id = ?", collaboratorID).
 		Where("access.mode >= ?", AccessModeRead).
 		Order(orderBy).
@@ -223,7 +223,7 @@ func (db *repos) GetByCollaboratorID(ctx context.Context, collaboratorID int64, 
 		Error
 }
 
-func (db *repos) GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error) {
+func (s *reposStore) GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -238,7 +238,7 @@ func (db *repos) GetByCollaboratorIDWithAccessMode(ctx context.Context, collabor
 		*Repository
 		Mode AccessMode
 	}
-	err := db.WithContext(ctx).
+	err := s.WithContext(ctx).
 		Select("repository.*", "access.mode").
 		Table("repository").
 		Joins("JOIN access ON access.repo_id = repository.id AND access.user_id = ?", collaboratorID).
@@ -275,9 +275,9 @@ func (ErrRepoNotExist) NotFound() bool {
 	return true
 }
 
-func (db *repos) GetByID(ctx context.Context, id int64) (*Repository, error) {
+func (s *reposStore) GetByID(ctx context.Context, id int64) (*Repository, error) {
 	repo := new(Repository)
-	err := db.WithContext(ctx).Where("id = ?", id).First(repo).Error
+	err := s.WithContext(ctx).Where("id = ?", id).First(repo).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrRepoNotExist{errutil.Args{"repoID": id}}
@@ -287,9 +287,9 @@ func (db *repos) GetByID(ctx context.Context, id int64) (*Repository, error) {
 	return repo, nil
 }
 
-func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {
+func (s *reposStore) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {
 	repo := new(Repository)
-	err := db.WithContext(ctx).
+	err := s.WithContext(ctx).
 		Where("owner_id = ? AND lower_name = ?", ownerID, strings.ToLower(name)).
 		First(repo).
 		Error
@@ -307,7 +307,7 @@ func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Re
 	return repo, nil
 }
 
-func (db *repos) recountStars(tx *gorm.DB, userID, repoID int64) error {
+func (s *reposStore) recountStars(tx *gorm.DB, userID, repoID int64) error {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -350,40 +350,40 @@ func (db *repos) recountStars(tx *gorm.DB, userID, repoID int64) error {
 	return nil
 }
 
-func (db *repos) Star(ctx context.Context, userID, repoID int64) error {
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		s := &Star{
+func (s *reposStore) Star(ctx context.Context, userID, repoID int64) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		star := &Star{
 			UserID: userID,
 			RepoID: repoID,
 		}
-		result := tx.FirstOrCreate(s, s)
+		result := tx.FirstOrCreate(star, star)
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "upsert")
 		} else if result.RowsAffected <= 0 {
 			return nil // Relation already exists
 		}
 
-		return db.recountStars(tx, userID, repoID)
+		return s.recountStars(tx, userID, repoID)
 	})
 }
 
-func (db *repos) Touch(ctx context.Context, id int64) error {
-	return db.WithContext(ctx).
+func (s *reposStore) Touch(ctx context.Context, id int64) error {
+	return s.WithContext(ctx).
 		Model(new(Repository)).
 		Where("id = ?", id).
 		Updates(map[string]any{
 			"is_bare":      false,
-			"updated_unix": db.NowFunc().Unix(),
+			"updated_unix": s.NowFunc().Unix(),
 		}).
 		Error
 }
 
-func (db *repos) ListWatches(ctx context.Context, repoID int64) ([]*Watch, error) {
+func (s *reposStore) ListWatches(ctx context.Context, repoID int64) ([]*Watch, error) {
 	var watches []*Watch
-	return watches, db.WithContext(ctx).Where("repo_id = ?", repoID).Find(&watches).Error
+	return watches, s.WithContext(ctx).Where("repo_id = ?", repoID).Find(&watches).Error
 }
 
-func (db *repos) recountWatches(tx *gorm.DB, repoID int64) error {
+func (s *reposStore) recountWatches(tx *gorm.DB, repoID int64) error {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -402,8 +402,8 @@ func (db *repos) recountWatches(tx *gorm.DB, repoID int64) error {
 		Error
 }
 
-func (db *repos) Watch(ctx context.Context, userID, repoID int64) error {
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+func (s *reposStore) Watch(ctx context.Context, userID, repoID int64) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		w := &Watch{
 			UserID: userID,
 			RepoID: repoID,
@@ -415,12 +415,12 @@ func (db *repos) Watch(ctx context.Context, userID, repoID int64) error {
 			return nil // Relation already exists
 		}
 
-		return db.recountWatches(tx, repoID)
+		return s.recountWatches(tx, repoID)
 	})
 }
 
-func (db *repos) HasForkedBy(ctx context.Context, repoID, userID int64) bool {
+func (s *reposStore) HasForkedBy(ctx context.Context, repoID, userID int64) bool {
 	var count int64
-	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
+	s.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
 	return count > 0
 }

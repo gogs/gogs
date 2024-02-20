@@ -180,9 +180,9 @@ func (s *LoginSource) GitHub() *github.Config {
 	return s.Provider.Config().(*github.Config)
 }
 
-var _ LoginSourcesStore = (*loginSources)(nil)
+var _ LoginSourcesStore = (*loginSourcesStore)(nil)
 
-type loginSources struct {
+type loginSourcesStore struct {
 	*gorm.DB
 	files loginSourceFilesStore
 }
@@ -208,8 +208,8 @@ func (err ErrLoginSourceAlreadyExist) Error() string {
 	return fmt.Sprintf("login source already exists: %v", err.args)
 }
 
-func (db *loginSources) Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error) {
-	err := db.WithContext(ctx).Where("name = ?", opts.Name).First(new(LoginSource)).Error
+func (s *loginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error) {
+	err := s.WithContext(ctx).Where("name = ?", opts.Name).First(new(LoginSource)).Error
 	if err == nil {
 		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
 	} else if err != gorm.ErrRecordNotFound {
@@ -226,13 +226,13 @@ func (db *loginSources) Create(ctx context.Context, opts CreateLoginSourceOption
 	if err != nil {
 		return nil, err
 	}
-	return source, db.WithContext(ctx).Create(source).Error
+	return source, s.WithContext(ctx).Create(source).Error
 }
 
-func (db *loginSources) Count(ctx context.Context) int64 {
+func (s *loginSourcesStore) Count(ctx context.Context) int64 {
 	var count int64
-	db.WithContext(ctx).Model(new(LoginSource)).Count(&count)
-	return count + int64(db.files.Len())
+	s.WithContext(ctx).Model(new(LoginSource)).Count(&count)
+	return count + int64(s.files.Len())
 }
 
 type ErrLoginSourceInUse struct {
@@ -248,24 +248,24 @@ func (err ErrLoginSourceInUse) Error() string {
 	return fmt.Sprintf("login source is still used by some users: %v", err.args)
 }
 
-func (db *loginSources) DeleteByID(ctx context.Context, id int64) error {
+func (s *loginSourcesStore) DeleteByID(ctx context.Context, id int64) error {
 	var count int64
-	err := db.WithContext(ctx).Model(new(User)).Where("login_source = ?", id).Count(&count).Error
+	err := s.WithContext(ctx).Model(new(User)).Where("login_source = ?", id).Count(&count).Error
 	if err != nil {
 		return err
 	} else if count > 0 {
 		return ErrLoginSourceInUse{args: errutil.Args{"id": id}}
 	}
 
-	return db.WithContext(ctx).Where("id = ?", id).Delete(new(LoginSource)).Error
+	return s.WithContext(ctx).Where("id = ?", id).Delete(new(LoginSource)).Error
 }
 
-func (db *loginSources) GetByID(ctx context.Context, id int64) (*LoginSource, error) {
+func (s *loginSourcesStore) GetByID(ctx context.Context, id int64) (*LoginSource, error) {
 	source := new(LoginSource)
-	err := db.WithContext(ctx).Where("id = ?", id).First(source).Error
+	err := s.WithContext(ctx).Where("id = ?", id).First(source).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return db.files.GetByID(id)
+			return s.files.GetByID(id)
 		}
 		return nil, err
 	}
@@ -277,9 +277,9 @@ type ListLoginSourceOptions struct {
 	OnlyActivated bool
 }
 
-func (db *loginSources) List(ctx context.Context, opts ListLoginSourceOptions) ([]*LoginSource, error) {
+func (s *loginSourcesStore) List(ctx context.Context, opts ListLoginSourceOptions) ([]*LoginSource, error) {
 	var sources []*LoginSource
-	query := db.WithContext(ctx).Order("id ASC")
+	query := s.WithContext(ctx).Order("id ASC")
 	if opts.OnlyActivated {
 		query = query.Where("is_actived = ?", true)
 	}
@@ -288,11 +288,11 @@ func (db *loginSources) List(ctx context.Context, opts ListLoginSourceOptions) (
 		return nil, err
 	}
 
-	return append(sources, db.files.List(opts)...), nil
+	return append(sources, s.files.List(opts)...), nil
 }
 
-func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) error {
-	err := db.WithContext(ctx).
+func (s *loginSourcesStore) ResetNonDefault(ctx context.Context, dflt *LoginSource) error {
+	err := s.WithContext(ctx).
 		Model(new(LoginSource)).
 		Where("id != ?", dflt.ID).
 		Updates(map[string]any{"is_default": false}).
@@ -301,7 +301,7 @@ func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) 
 		return err
 	}
 
-	for _, source := range db.files.List(ListLoginSourceOptions{}) {
+	for _, source := range s.files.List(ListLoginSourceOptions{}) {
 		if source.File != nil && source.ID != dflt.ID {
 			source.File.SetGeneral("is_default", "false")
 			if err = source.File.Save(); err != nil {
@@ -310,13 +310,13 @@ func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) 
 		}
 	}
 
-	db.files.Update(dflt)
+	s.files.Update(dflt)
 	return nil
 }
 
-func (db *loginSources) Save(ctx context.Context, source *LoginSource) error {
+func (s *loginSourcesStore) Save(ctx context.Context, source *LoginSource) error {
 	if source.File == nil {
-		return db.WithContext(ctx).Save(source).Error
+		return s.WithContext(ctx).Save(source).Error
 	}
 
 	source.File.SetGeneral("name", source.Name)

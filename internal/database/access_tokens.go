@@ -74,9 +74,9 @@ func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-var _ AccessTokensStore = (*accessTokens)(nil)
+var _ AccessTokensStore = (*accessTokensStore)(nil)
 
-type accessTokens struct {
+type accessTokensStore struct {
 	*gorm.DB
 }
 
@@ -93,8 +93,8 @@ func (err ErrAccessTokenAlreadyExist) Error() string {
 	return fmt.Sprintf("access token already exists: %v", err.args)
 }
 
-func (db *accessTokens) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
-	err := db.WithContext(ctx).Where("uid = ? AND name = ?", userID, name).First(new(AccessToken)).Error
+func (s *accessTokensStore) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
+	err := s.WithContext(ctx).Where("uid = ? AND name = ?", userID, name).First(new(AccessToken)).Error
 	if err == nil {
 		return nil, ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": userID, "name": name}}
 	} else if err != gorm.ErrRecordNotFound {
@@ -110,7 +110,7 @@ func (db *accessTokens) Create(ctx context.Context, userID int64, name string) (
 		Sha1:   sha256[:40], // To pass the column unique constraint, keep the length of SHA1.
 		SHA256: sha256,
 	}
-	if err = db.WithContext(ctx).Create(accessToken).Error; err != nil {
+	if err = s.WithContext(ctx).Create(accessToken).Error; err != nil {
 		return nil, err
 	}
 
@@ -119,8 +119,8 @@ func (db *accessTokens) Create(ctx context.Context, userID int64, name string) (
 	return accessToken, nil
 }
 
-func (db *accessTokens) DeleteByID(ctx context.Context, userID, id int64) error {
-	return db.WithContext(ctx).Where("id = ? AND uid = ?", id, userID).Delete(new(AccessToken)).Error
+func (s *accessTokensStore) DeleteByID(ctx context.Context, userID, id int64) error {
+	return s.WithContext(ctx).Where("id = ? AND uid = ?", id, userID).Delete(new(AccessToken)).Error
 }
 
 var _ errutil.NotFound = (*ErrAccessTokenNotExist)(nil)
@@ -144,7 +144,7 @@ func (ErrAccessTokenNotExist) NotFound() bool {
 	return true
 }
 
-func (db *accessTokens) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
+func (s *accessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
 	// No need to waste a query for an empty SHA1.
 	if sha1 == "" {
 		return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
@@ -152,7 +152,7 @@ func (db *accessTokens) GetBySHA1(ctx context.Context, sha1 string) (*AccessToke
 
 	sha256 := cryptoutil.SHA256(sha1)
 	token := new(AccessToken)
-	err := db.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
+	err := s.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
@@ -162,15 +162,15 @@ func (db *accessTokens) GetBySHA1(ctx context.Context, sha1 string) (*AccessToke
 	return token, nil
 }
 
-func (db *accessTokens) List(ctx context.Context, userID int64) ([]*AccessToken, error) {
+func (s *accessTokensStore) List(ctx context.Context, userID int64) ([]*AccessToken, error) {
 	var tokens []*AccessToken
-	return tokens, db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
+	return tokens, s.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
 }
 
-func (db *accessTokens) Touch(ctx context.Context, id int64) error {
-	return db.WithContext(ctx).
+func (s *accessTokensStore) Touch(ctx context.Context, id int64) error {
+	return s.WithContext(ctx).
 		Model(new(AccessToken)).
 		Where("id = ?", id).
-		UpdateColumn("updated_unix", db.NowFunc().Unix()).
+		UpdateColumn("updated_unix", s.NowFunc().Unix()).
 		Error
 }

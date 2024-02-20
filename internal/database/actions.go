@@ -70,19 +70,19 @@ type ActionsStore interface {
 
 var Actions ActionsStore
 
-var _ ActionsStore = (*actions)(nil)
+var _ ActionsStore = (*actionsStore)(nil)
 
-type actions struct {
+type actionsStore struct {
 	*gorm.DB
 }
 
 // NewActionsStore returns a persistent interface for actions with given
 // database connection.
 func NewActionsStore(db *gorm.DB) ActionsStore {
-	return &actions{DB: db}
+	return &actionsStore{DB: db}
 }
 
-func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, afterID int64) *gorm.DB {
+func (s *actionsStore) listByOrganization(ctx context.Context, orgID, actorID, afterID int64) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -102,18 +102,18 @@ func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, after
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
-	return db.WithContext(ctx).
+	return s.WithContext(ctx).
 		Where("user_id = ?", orgID).
-		Where(db.
+		Where(s.
 			// Not apply when afterID is not given
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
-		Where("repo_id IN (?)", db.
+		Where("repo_id IN (?)", s.
 			Select("repository.id").
 			Table("repository").
 			Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
-			Where("team_repo.team_id IN (?)", db.
+			Where("team_repo.team_id IN (?)", s.
 				Select("team_id").
 				Table("team_user").
 				Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
@@ -124,12 +124,12 @@ func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, after
 		Order("id DESC")
 }
 
-func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
+func (s *actionsStore) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
 	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	return actions, db.listByOrganization(ctx, orgID, actorID, afterID).Find(&actions).Error
+	return actions, s.listByOrganization(ctx, orgID, actorID, afterID).Find(&actions).Error
 }
 
-func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {
+func (s *actionsStore) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -141,14 +141,14 @@ func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int6
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
-	return db.WithContext(ctx).
+	return s.WithContext(ctx).
 		Where("user_id = ?", userID).
-		Where(db.
+		Where(s.
 			// Not apply when afterID is not given
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
-		Where(db.
+		Where(s.
 			// Not apply when in not profile page or the user is viewing own profile
 			Where("?", !isProfile || actorID == userID).
 			Or("is_private = ? AND act_user_id = ?", false, userID),
@@ -157,14 +157,14 @@ func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int6
 		Order("id DESC")
 }
 
-func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+func (s *actionsStore) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	return actions, db.listByUser(ctx, userID, actorID, afterID, isProfile).Find(&actions).Error
+	return actions, s.listByUser(ctx, userID, actorID, afterID, isProfile).Find(&actions).Error
 }
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
-func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := NewReposStore(db.DB).ListWatches(ctx, act.RepoID)
+func (s *actionsStore) notifyWatchers(ctx context.Context, act *Action) error {
+	watches, err := NewReposStore(s.DB).ListWatches(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}
@@ -187,16 +187,16 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 		actions = append(actions, clone(watch.UserID))
 	}
 
-	return db.Create(actions).Error
+	return s.Create(actions).Error
 }
 
-func (db *actions) NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error {
+func (s *actionsStore) NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error {
 	opType := ActionCreateRepo
 	if repo.IsFork {
 		opType = ActionForkRepo
 	}
 
-	return db.notifyWatchers(ctx,
+	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
@@ -209,8 +209,8 @@ func (db *actions) NewRepo(ctx context.Context, doer, owner *User, repo *Reposit
 	)
 }
 
-func (db *actions) RenameRepo(ctx context.Context, doer, owner *User, oldRepoName string, repo *Repository) error {
-	return db.notifyWatchers(ctx,
+func (s *actionsStore) RenameRepo(ctx context.Context, doer, owner *User, oldRepoName string, repo *Repository) error {
+	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
@@ -224,8 +224,8 @@ func (db *actions) RenameRepo(ctx context.Context, doer, owner *User, oldRepoNam
 	)
 }
 
-func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, owner *User, repo *Repository, refName string, content []byte) error {
-	return db.notifyWatchers(ctx,
+func (s *actionsStore) mirrorSyncAction(ctx context.Context, opType ActionType, owner *User, repo *Repository, refName string, content []byte) error {
+	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    owner.ID,
 			ActUserName:  owner.Name,
@@ -249,13 +249,13 @@ type MirrorSyncPushOptions struct {
 	Commits     *PushCommits
 }
 
-func (db *actions) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
+func (s *actionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
 	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
-		NewUsersStore(db.DB),
+		NewUsersStore(s.DB),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -288,19 +288,19 @@ func (db *actions) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOption
 		return errors.Wrap(err, "marshal JSON")
 	}
 
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, opts.Owner, opts.Repo, opts.RefName, data)
+	return s.mirrorSyncAction(ctx, ActionMirrorSyncPush, opts.Owner, opts.Repo, opts.RefName, data)
 }
 
-func (db *actions) MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error {
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncCreate, owner, repo, refName, nil)
+func (s *actionsStore) MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error {
+	return s.mirrorSyncAction(ctx, ActionMirrorSyncCreate, owner, repo, refName, nil)
 }
 
-func (db *actions) MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error {
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncDelete, owner, repo, refName, nil)
+func (s *actionsStore) MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error {
+	return s.mirrorSyncAction(ctx, ActionMirrorSyncDelete, owner, repo, refName, nil)
 }
 
-func (db *actions) MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error {
-	return db.notifyWatchers(ctx,
+func (s *actionsStore) MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error {
+	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
@@ -314,8 +314,8 @@ func (db *actions) MergePullRequest(ctx context.Context, doer, owner *User, repo
 	)
 }
 
-func (db *actions) TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error {
-	return db.notifyWatchers(ctx,
+func (s *actionsStore) TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error {
+	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
@@ -487,13 +487,13 @@ type CommitRepoOptions struct {
 	Commits     *PushCommits
 }
 
-func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
-	err := NewReposStore(db.DB).Touch(ctx, opts.Repo.ID)
+func (s *actionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
+	err := NewReposStore(s.DB).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
 
-	pusher, err := NewUsersStore(db.DB).GetByUsername(ctx, opts.PusherName)
+	pusher, err := NewUsersStore(s.DB).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
@@ -536,7 +536,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 		}
 
 		action.OpType = ActionDeleteBranch
-		err = db.notifyWatchers(ctx, action)
+		err = s.notifyWatchers(ctx, action)
 		if err != nil {
 			return errors.Wrap(err, "notify watchers")
 		}
@@ -580,7 +580,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 		}
 
 		action.OpType = ActionCreateBranch
-		err = db.notifyWatchers(ctx, action)
+		err = s.notifyWatchers(ctx, action)
 		if err != nil {
 			return errors.Wrap(err, "notify watchers")
 		}
@@ -589,7 +589,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	}
 
 	commits, err := opts.Commits.APIFormat(ctx,
-		NewUsersStore(db.DB),
+		NewUsersStore(s.DB),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -616,7 +616,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	}
 
 	action.OpType = ActionCommitRepo
-	err = db.notifyWatchers(ctx, action)
+	err = s.notifyWatchers(ctx, action)
 	if err != nil {
 		return errors.Wrap(err, "notify watchers")
 	}
@@ -631,13 +631,13 @@ type PushTagOptions struct {
 	NewCommitID string
 }
 
-func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
-	err := NewReposStore(db.DB).Touch(ctx, opts.Repo.ID)
+func (s *actionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
+	err := NewReposStore(s.DB).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
 
-	pusher, err := NewUsersStore(db.DB).GetByUsername(ctx, opts.PusherName)
+	pusher, err := NewUsersStore(s.DB).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
@@ -672,7 +672,7 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 		}
 
 		action.OpType = ActionDeleteTag
-		err = db.notifyWatchers(ctx, action)
+		err = s.notifyWatchers(ctx, action)
 		if err != nil {
 			return errors.Wrap(err, "notify watchers")
 		}
@@ -696,7 +696,7 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 	}
 
 	action.OpType = ActionPushTag
-	err = db.notifyWatchers(ctx, action)
+	err = s.notifyWatchers(ctx, action)
 	if err != nil {
 		return errors.Wrap(err, "notify watchers")
 	}

@@ -24,23 +24,23 @@ type PublicKeysStore interface {
 
 var PublicKeys PublicKeysStore
 
-var _ PublicKeysStore = (*publicKeys)(nil)
+var _ PublicKeysStore = (*publicKeysStore)(nil)
 
-type publicKeys struct {
+type publicKeysStore struct {
 	*gorm.DB
 }
 
 // NewPublicKeysStore returns a persistent interface for public keys with given
 // database connection.
 func NewPublicKeysStore(db *gorm.DB) PublicKeysStore {
-	return &publicKeys{DB: db}
+	return &publicKeysStore{DB: db}
 }
 
 func authorizedKeysPath() string {
 	return filepath.Join(conf.SSH.RootPath, "authorized_keys")
 }
 
-func (db *publicKeys) RewriteAuthorizedKeys() error {
+func (s *publicKeysStore) RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
@@ -61,7 +61,7 @@ func (db *publicKeys) RewriteAuthorizedKeys() error {
 
 	// NOTE: More recently updated keys are more likely to be used more frequently,
 	// putting them in the earlier lines could speed up the key lookup by SSHD.
-	rows, err := db.Model(&PublicKey{}).Order("updated_unix DESC").Rows()
+	rows, err := s.Model(&PublicKey{}).Order("updated_unix DESC").Rows()
 	if err != nil {
 		return errors.Wrap(err, "iterate public keys")
 	}
@@ -69,7 +69,7 @@ func (db *publicKeys) RewriteAuthorizedKeys() error {
 
 	for rows.Next() {
 		var key PublicKey
-		err = db.ScanRows(rows, &key)
+		err = s.ScanRows(rows, &key)
 		if err != nil {
 			return errors.Wrap(err, "scan rows")
 		}
