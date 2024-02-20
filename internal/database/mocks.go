@@ -32,7 +32,7 @@ func setMockLoginSourcesStore(t *testing.T, mock LoginSourcesStore) {
 	})
 }
 
-func setMockLoginSourceFilesStore(t *testing.T, db *loginSources, mock loginSourceFilesStore) {
+func setMockLoginSourceFilesStore(t *testing.T, db *loginSourcesStore, mock loginSourceFilesStore) {
 	before := db.files
 	db.files = mock
 	t.Cleanup(func() {

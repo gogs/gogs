@@ -84,13 +84,13 @@ func TestUsers(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &users{
-		DB: newTestDB(t, "users"),
+	db := &usersStore{
+		DB: newTestDB(t, "usersStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *users)
+		test func(t *testing.T, ctx context.Context, db *usersStore)
 	}{
 		{"Authenticate", usersAuthenticate},
 		{"ChangeUsername", usersChangeUsername},
@@ -134,7 +134,7 @@ func TestUsers(t *testing.T) {
 	}
 }
 
-func usersAuthenticate(t *testing.T, ctx context.Context, db *users) {
+func usersAuthenticate(t *testing.T, ctx context.Context, db *usersStore) {
 	password := "pa$$word"
 	alice, err := db.Create(ctx, "alice", "alice@example.com",
 		CreateUserOptions{
@@ -229,7 +229,7 @@ func usersAuthenticate(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func usersChangeUsername(t *testing.T, ctx context.Context, db *users) {
+func usersChangeUsername(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(
 		ctx,
 		"alice",
@@ -359,7 +359,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, strings.ToUpper(newUsername), alice.Name)
 }
 
-func usersCount(t *testing.T, ctx context.Context, db *users) {
+func usersCount(t *testing.T, ctx context.Context, db *usersStore) {
 	// Has no user initially
 	got := db.Count(ctx)
 	assert.Equal(t, int64(0), got)
@@ -382,7 +382,7 @@ func usersCount(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, int64(1), got)
 }
 
-func usersCreate(t *testing.T, ctx context.Context, db *users) {
+func usersCreate(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(
 		ctx,
 		"alice",
@@ -430,7 +430,7 @@ func usersCreate(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Updated.UTC().Format(time.RFC3339))
 }
 
-func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, db *users) {
+func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -464,7 +464,7 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, db *users) {
 	assert.False(t, alice.UseCustomAvatar)
 }
 
-func usersDeleteByID(t *testing.T, ctx context.Context, db *users) {
+func usersDeleteByID(t *testing.T, ctx context.Context, db *usersStore) {
 	reposStore := NewReposStore(db.DB)
 
 	t.Run("user still has repository ownership", func(t *testing.T) {
@@ -674,7 +674,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, wantErr, err)
 }
 
-func usersDeleteInactivated(t *testing.T, ctx context.Context, db *users) {
+func usersDeleteInactivated(t *testing.T, ctx context.Context, db *usersStore) {
 	// User with repository ownership should be skipped
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -720,7 +720,7 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, db *users) {
 	require.Len(t, users, 3)
 }
 
-func usersGetByEmail(t *testing.T, ctx context.Context, db *users) {
+func usersGetByEmail(t *testing.T, ctx context.Context, db *usersStore) {
 	t.Run("empty email", func(t *testing.T) {
 		_, err := db.GetByEmail(ctx, "")
 		wantErr := ErrUserNotExist{args: errutil.Args{"email": ""}}
@@ -781,7 +781,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func usersGetByID(t *testing.T, ctx context.Context, db *users) {
+func usersGetByID(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -794,7 +794,7 @@ func usersGetByID(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, wantErr, err)
 }
 
-func usersGetByUsername(t *testing.T, ctx context.Context, db *users) {
+func usersGetByUsername(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -807,7 +807,7 @@ func usersGetByUsername(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, wantErr, err)
 }
 
-func usersGetByKeyID(t *testing.T, ctx context.Context, db *users) {
+func usersGetByKeyID(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -832,7 +832,7 @@ func usersGetByKeyID(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, wantErr, err)
 }
 
-func usersGetMailableEmailsByUsernames(t *testing.T, ctx context.Context, db *users) {
+func usersGetMailableEmailsByUsernames(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 	bob, err := db.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{Activated: true})
@@ -846,7 +846,7 @@ func usersGetMailableEmailsByUsernames(t *testing.T, ctx context.Context, db *us
 	assert.Equal(t, want, got)
 }
 
-func usersIsUsernameUsed(t *testing.T, ctx context.Context, db *users) {
+func usersIsUsernameUsed(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -896,7 +896,7 @@ func usersIsUsernameUsed(t *testing.T, ctx context.Context, db *users) {
 	}
 }
 
-func usersList(t *testing.T, ctx context.Context, db *users) {
+func usersList(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
@@ -929,7 +929,7 @@ func usersList(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, bob.ID, got[1].ID)
 }
 
-func usersListFollowers(t *testing.T, ctx context.Context, db *users) {
+func usersListFollowers(t *testing.T, ctx context.Context, db *usersStore) {
 	john, err := db.Create(ctx, "john", "john@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -960,7 +960,7 @@ func usersListFollowers(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, alice.ID, got[0].ID)
 }
 
-func usersListFollowings(t *testing.T, ctx context.Context, db *users) {
+func usersListFollowings(t *testing.T, ctx context.Context, db *usersStore) {
 	john, err := db.Create(ctx, "john", "john@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -991,7 +991,7 @@ func usersListFollowings(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, alice.ID, got[0].ID)
 }
 
-func usersSearchByName(t *testing.T, ctx context.Context, db *users) {
+func usersSearchByName(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{FullName: "Alice Jordan"})
 	require.NoError(t, err)
 	bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{FullName: "Bob Jordan"})
@@ -1029,7 +1029,7 @@ func usersSearchByName(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func usersUpdate(t *testing.T, ctx context.Context, db *users) {
+func usersUpdate(t *testing.T, ctx context.Context, db *usersStore) {
 	const oldPassword = "Password"
 	alice, err := db.Create(
 		ctx,
@@ -1142,7 +1142,7 @@ func usersUpdate(t *testing.T, ctx context.Context, db *users) {
 	assertValues()
 }
 
-func usersUseCustomAvatar(t *testing.T, ctx context.Context, db *users) {
+func usersUseCustomAvatar(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -1180,7 +1180,7 @@ func TestIsUsernameAllowed(t *testing.T) {
 	}
 }
 
-func usersAddEmail(t *testing.T, ctx context.Context, db *users) {
+func usersAddEmail(t *testing.T, ctx context.Context, db *usersStore) {
 	t.Run("multiple users can add the same unverified email", func(t *testing.T) {
 		alice, err := db.Create(ctx, "alice", "unverified@example.com", CreateUserOptions{})
 		require.NoError(t, err)
@@ -1197,7 +1197,7 @@ func usersAddEmail(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func usersGetEmail(t *testing.T, ctx context.Context, db *users) {
+func usersGetEmail(t *testing.T, ctx context.Context, db *usersStore) {
 	const testUserID = 1
 	const testEmail = "alice@example.com"
 	_, err := db.GetEmail(ctx, testUserID, testEmail, false)
@@ -1229,7 +1229,7 @@ func usersGetEmail(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, testEmail, got.Email)
 }
 
-func usersListEmails(t *testing.T, ctx context.Context, db *users) {
+func usersListEmails(t *testing.T, ctx context.Context, db *usersStore) {
 	t.Run("list emails with primary email", func(t *testing.T) {
 		alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 		require.NoError(t, err)
@@ -1265,7 +1265,7 @@ func usersListEmails(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func usersMarkEmailActivated(t *testing.T, ctx context.Context, db *users) {
+func usersMarkEmailActivated(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -1283,7 +1283,7 @@ func usersMarkEmailActivated(t *testing.T, ctx context.Context, db *users) {
 	assert.NotEqual(t, alice.Rands, gotAlice.Rands)
 }
 
-func usersMarkEmailPrimary(t *testing.T, ctx context.Context, db *users) {
+func usersMarkEmailPrimary(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = db.AddEmail(ctx, alice.ID, "alice2@example.com", false)
@@ -1309,7 +1309,7 @@ func usersMarkEmailPrimary(t *testing.T, ctx context.Context, db *users) {
 	assert.False(t, gotEmail.IsActivated)
 }
 
-func usersDeleteEmail(t *testing.T, ctx context.Context, db *users) {
+func usersDeleteEmail(t *testing.T, ctx context.Context, db *usersStore) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -1325,7 +1325,7 @@ func usersDeleteEmail(t *testing.T, ctx context.Context, db *users) {
 	require.Equal(t, want, got)
 }
 
-func usersFollow(t *testing.T, ctx context.Context, db *users) {
+func usersFollow(t *testing.T, ctx context.Context, db *usersStore) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -1348,7 +1348,7 @@ func usersFollow(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, 1, bob.NumFollowers)
 }
 
-func usersIsFollowing(t *testing.T, ctx context.Context, db *users) {
+func usersIsFollowing(t *testing.T, ctx context.Context, db *usersStore) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -1369,7 +1369,7 @@ func usersIsFollowing(t *testing.T, ctx context.Context, db *users) {
 	assert.False(t, got)
 }
 
-func usersUnfollow(t *testing.T, ctx context.Context, db *users) {
+func usersUnfollow(t *testing.T, ctx context.Context, db *usersStore) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)

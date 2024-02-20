@@ -32,20 +32,20 @@ type NoticesStore interface {
 
 var Notices NoticesStore
 
-var _ NoticesStore = (*notices)(nil)
+var _ NoticesStore = (*noticesStore)(nil)
 
-type notices struct {
+type noticesStore struct {
 	*gorm.DB
 }
 
 // NewNoticesStore returns a persistent interface for system notices with given
 // database connection.
 func NewNoticesStore(db *gorm.DB) NoticesStore {
-	return &notices{DB: db}
+	return &noticesStore{DB: db}
 }
 
-func (db *notices) Create(ctx context.Context, typ NoticeType, desc string) error {
-	return db.WithContext(ctx).Create(
+func (s *noticesStore) Create(ctx context.Context, typ NoticeType, desc string) error {
+	return s.WithContext(ctx).Create(
 		&Notice{
 			Type:        typ,
 			Description: desc,
@@ -53,26 +53,26 @@ func (db *notices) Create(ctx context.Context, typ NoticeType, desc string) erro
 	).Error
 }
 
-func (db *notices) DeleteByIDs(ctx context.Context, ids ...int64) error {
-	return db.WithContext(ctx).Where("id IN (?)", ids).Delete(&Notice{}).Error
+func (s *noticesStore) DeleteByIDs(ctx context.Context, ids ...int64) error {
+	return s.WithContext(ctx).Where("id IN (?)", ids).Delete(&Notice{}).Error
 }
 
-func (db *notices) DeleteAll(ctx context.Context) error {
-	return db.WithContext(ctx).Where("TRUE").Delete(&Notice{}).Error
+func (s *noticesStore) DeleteAll(ctx context.Context) error {
+	return s.WithContext(ctx).Where("TRUE").Delete(&Notice{}).Error
 }
 
-func (db *notices) List(ctx context.Context, page, pageSize int) ([]*Notice, error) {
+func (s *noticesStore) List(ctx context.Context, page, pageSize int) ([]*Notice, error) {
 	notices := make([]*Notice, 0, pageSize)
-	return notices, db.WithContext(ctx).
+	return notices, s.WithContext(ctx).
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Order("id DESC").
 		Find(&notices).
 		Error
 }
 
-func (db *notices) Count(ctx context.Context) int64 {
+func (s *noticesStore) Count(ctx context.Context) int64 {
 	var count int64
-	db.WithContext(ctx).Model(&Notice{}).Count(&count)
+	s.WithContext(ctx).Model(&Notice{}).Count(&count)
 	return count
 }
 
