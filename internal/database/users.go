@@ -146,16 +146,16 @@ type UsersStore interface {
 
 var Users UsersStore
 
-var _ UsersStore = (*users)(nil)
+var _ UsersStore = (*usersStore)(nil)
 
-type users struct {
+type usersStore struct {
 	*gorm.DB
 }
 
 // NewUsersStore returns a persistent interface for users with given database
 // connection.
 func NewUsersStore(db *gorm.DB) UsersStore {
-	return &users{DB: db}
+	return &usersStore{DB: db}
 }
 
 type ErrLoginSourceMismatch struct {
@@ -173,10 +173,10 @@ func (err ErrLoginSourceMismatch) Error() string {
 	return fmt.Sprintf("login source mismatch: %v", err.args)
 }
 
-func (db *users) Authenticate(ctx context.Context, login, password string, loginSourceID int64) (*User, error) {
+func (s *usersStore) Authenticate(ctx context.Context, login, password string, loginSourceID int64) (*User, error) {
 	login = strings.ToLower(login)
 
-	query := db.WithContext(ctx)
+	query := s.WithContext(ctx)
 	if strings.Contains(login, "@") {
 		query = query.Where("email = ?", login)
 	} else {
@@ -244,7 +244,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 		return nil, fmt.Errorf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
-	return db.Create(ctx, extAccount.Name, extAccount.Email,
+	return s.Create(ctx, extAccount.Name, extAccount.Email,
 		CreateUserOptions{
 			FullName:    extAccount.FullName,
 			LoginSource: authSourceID,
@@ -257,13 +257,13 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 	)
 }
 
-func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername string) error {
+func (s *usersStore) ChangeUsername(ctx context.Context, userID int64, newUsername string) error {
 	err := isUsernameAllowed(newUsername)
 	if err != nil {
 		return err
 	}
 
-	if db.IsUsernameUsed(ctx, newUsername, userID) {
+	if s.IsUsernameUsed(ctx, newUsername, userID) {
 		return ErrUserAlreadyExist{
 			args: errutil.Args{
 				"name": newUsername,
@@ -271,12 +271,12 @@ func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername s
 		}
 	}
 
-	user, err := db.GetByID(ctx, userID)
+	user, err := s.GetByID(ctx, userID)
 	if err != nil {
 		return errors.Wrap(err, "get user")
 	}
 
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&User{}).
 			Where("id = ?", user.ID).
 			Updates(map[string]any{
@@ -338,9 +338,9 @@ func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername s
 	})
 }
 
-func (db *users) Count(ctx context.Context) int64 {
+func (s *usersStore) Count(ctx context.Context) int64 {
 	var count int64
-	db.WithContext(ctx).Model(&User{}).Where("type = ?", UserTypeIndividual).Count(&count)
+	s.WithContext(ctx).Model(&User{}).Where("type = ?", UserTypeIndividual).Count(&count)
 	return count
 }
 
@@ -393,13 +393,13 @@ func (err ErrEmailAlreadyUsed) Error() string {
 	return fmt.Sprintf("email has been used: %v", err.args)
 }
 
-func (db *users) Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error) {
+func (s *usersStore) Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error) {
 	err := isUsernameAllowed(username)
 	if err != nil {
 		return nil, err
 	}
 
-	if db.IsUsernameUsed(ctx, username, 0) {
+	if s.IsUsernameUsed(ctx, username, 0) {
 		return nil, ErrUserAlreadyExist{
 			args: errutil.Args{
 				"name": username,
@@ -408,7 +408,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 	}
 
 	email = strings.ToLower(strings.TrimSpace(email))
-	_, err = db.GetByEmail(ctx, email)
+	_, err = s.GetByEmail(ctx, email)
 	if err == nil {
 		return nil, ErrEmailAlreadyUsed{
 			args: errutil.Args{
@@ -446,17 +446,17 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 	}
 	user.Password = userutil.EncodePassword(user.Password, user.Salt)
 
-	return user, db.WithContext(ctx).Create(user).Error
+	return user, s.WithContext(ctx).Create(user).Error
 }
 
-func (db *users) DeleteCustomAvatar(ctx context.Context, userID int64) error {
+func (s *usersStore) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 	_ = os.Remove(userutil.CustomAvatarPath(userID))
-	return db.WithContext(ctx).
+	return s.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
 		Updates(map[string]any{
 			"use_custom_avatar": false,
-			"updated_unix":      db.NowFunc().Unix(),
+			"updated_unix":      s.NowFunc().Unix(),
 		}).
 		Error
 }
@@ -491,8 +491,8 @@ func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has organization membership: %v", err.args)
 }
 
-func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error {
-	user, err := db.GetByID(ctx, userID)
+func (s *usersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error {
+	user, err := s.GetByID(ctx, userID)
 	if err != nil {
 		if IsErrUserNotExist(err) {
 			return nil
@@ -503,14 +503,14 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 	// Double check the user is not a direct owner of any repository and not a
 	// member of any organization.
 	var count int64
-	err = db.WithContext(ctx).Model(&Repository{}).Where("owner_id = ?", userID).Count(&count).Error
+	err = s.WithContext(ctx).Model(&Repository{}).Where("owner_id = ?", userID).Count(&count).Error
 	if err != nil {
 		return errors.Wrap(err, "count repositories")
 	} else if count > 0 {
 		return ErrUserOwnRepos{args: errutil.Args{"userID": userID}}
 	}
 
-	err = db.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
+	err = s.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
 	if err != nil {
 		return errors.Wrap(err, "count organization membership")
 	} else if count > 0 {
@@ -518,7 +518,7 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 	}
 
 	needsRewriteAuthorizedKeys := false
-	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		/*
 			Equivalent SQL for PostgreSQL:
 
@@ -645,7 +645,7 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 	_ = os.Remove(userutil.CustomAvatarPath(userID))
 
 	if needsRewriteAuthorizedKeys {
-		err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+		err = NewPublicKeysStore(s.DB).RewriteAuthorizedKeys()
 		if err != nil {
 			return errors.Wrap(err, `rewrite "authorized_keys" file`)
 		}
@@ -655,15 +655,15 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 
 // NOTE: We do not take context.Context here because this operation in practice
 // could much longer than the general request timeout (e.g. one minute).
-func (db *users) DeleteInactivated() error {
+func (s *usersStore) DeleteInactivated() error {
 	var userIDs []int64
-	err := db.Model(&User{}).Where("is_active = ?", false).Pluck("id", &userIDs).Error
+	err := s.Model(&User{}).Where("is_active = ?", false).Pluck("id", &userIDs).Error
 	if err != nil {
 		return errors.Wrap(err, "get inactivated user IDs")
 	}
 
 	for _, userID := range userIDs {
-		err = db.DeleteByID(context.Background(), userID, true)
+		err = s.DeleteByID(context.Background(), userID, true)
 		if err != nil {
 			// Skip users that may had set to inactivated by admins.
 			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
@@ -672,14 +672,14 @@ func (db *users) DeleteInactivated() error {
 			return errors.Wrapf(err, "delete user with ID %d", userID)
 		}
 	}
-	err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+	err = NewPublicKeysStore(s.DB).RewriteAuthorizedKeys()
 	if err != nil {
 		return errors.Wrap(err, `rewrite "authorized_keys" file`)
 	}
 	return nil
 }
 
-func (*users) recountFollows(tx *gorm.DB, userID, followID int64) error {
+func (*usersStore) recountFollows(tx *gorm.DB, userID, followID int64) error {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -722,12 +722,12 @@ func (*users) recountFollows(tx *gorm.DB, userID, followID int64) error {
 	return nil
 }
 
-func (db *users) Follow(ctx context.Context, userID, followID int64) error {
+func (s *usersStore) Follow(ctx context.Context, userID, followID int64) error {
 	if userID == followID {
 		return nil
 	}
 
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		f := &Follow{
 			UserID:   userID,
 			FollowID: followID,
@@ -739,26 +739,26 @@ func (db *users) Follow(ctx context.Context, userID, followID int64) error {
 			return nil // Relation already exists
 		}
 
-		return db.recountFollows(tx, userID, followID)
+		return s.recountFollows(tx, userID, followID)
 	})
 }
 
-func (db *users) Unfollow(ctx context.Context, userID, followID int64) error {
+func (s *usersStore) Unfollow(ctx context.Context, userID, followID int64) error {
 	if userID == followID {
 		return nil
 	}
 
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Where("user_id = ? AND follow_id = ?", userID, followID).Delete(&Follow{}).Error
 		if err != nil {
 			return errors.Wrap(err, "delete")
 		}
-		return db.recountFollows(tx, userID, followID)
+		return s.recountFollows(tx, userID, followID)
 	})
 }
 
-func (db *users) IsFollowing(ctx context.Context, userID, followID int64) bool {
-	return db.WithContext(ctx).Where("user_id = ? AND follow_id = ?", userID, followID).First(&Follow{}).Error == nil
+func (s *usersStore) IsFollowing(ctx context.Context, userID, followID int64) bool {
+	return s.WithContext(ctx).Where("user_id = ? AND follow_id = ?", userID, followID).First(&Follow{}).Error == nil
 }
 
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
@@ -782,7 +782,7 @@ func (ErrUserNotExist) NotFound() bool {
 	return true
 }
 
-func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
+func (s *usersStore) GetByEmail(ctx context.Context, email string) (*User, error) {
 	if email == "" {
 		return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 	}
@@ -801,10 +801,10 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 		)
 	*/
 	user := new(User)
-	err := db.WithContext(ctx).
+	err := s.WithContext(ctx).
 		Joins(dbutil.Quote("LEFT JOIN email_address ON email_address.uid = %s.id", "user"), true).
 		Where(dbutil.Quote("%s.type = ?", "user"), UserTypeIndividual).
-		Where(db.
+		Where(s.
 			Where(dbutil.Quote("%[1]s.email = ? AND %[1]s.is_active = ?", "user"), email, true).
 			Or("email_address.email = ? AND email_address.is_activated = ?", email, true),
 		).
@@ -819,9 +819,9 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
+func (s *usersStore) GetByID(ctx context.Context, id int64) (*User, error) {
 	user := new(User)
-	err := db.WithContext(ctx).Where("id = ?", id).First(user).Error
+	err := s.WithContext(ctx).Where("id = ?", id).First(user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
@@ -831,9 +831,9 @@ func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
 	return user, nil
 }
 
-func (db *users) GetByUsername(ctx context.Context, username string) (*User, error) {
+func (s *usersStore) GetByUsername(ctx context.Context, username string) (*User, error) {
 	user := new(User)
-	err := db.WithContext(ctx).Where("lower_name = ?", strings.ToLower(username)).First(user).Error
+	err := s.WithContext(ctx).Where("lower_name = ?", strings.ToLower(username)).First(user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
@@ -843,9 +843,9 @@ func (db *users) GetByUsername(ctx context.Context, username string) (*User, err
 	return user, nil
 }
 
-func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
+func (s *usersStore) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
 	user := new(User)
-	err := db.WithContext(ctx).
+	err := s.WithContext(ctx).
 		Joins(dbutil.Quote("JOIN public_key ON public_key.owner_id = %s.id", "user")).
 		Where("public_key.id = ?", keyID).
 		First(user).
@@ -859,29 +859,29 @@ func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
 	return user, nil
 }
 
-func (db *users) GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error) {
+func (s *usersStore) GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error) {
 	emails := make([]string, 0, len(usernames))
-	return emails, db.WithContext(ctx).
+	return emails, s.WithContext(ctx).
 		Model(&User{}).
 		Select("email").
 		Where("lower_name IN (?) AND is_active = ?", usernames, true).
 		Find(&emails).Error
 }
 
-func (db *users) IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool {
+func (s *usersStore) IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool {
 	if username == "" {
 		return false
 	}
-	return db.WithContext(ctx).
+	return s.WithContext(ctx).
 		Select("id").
 		Where("lower_name = ? AND id != ?", strings.ToLower(username), excludeUserId).
 		First(&User{}).
 		Error != gorm.ErrRecordNotFound
 }
 
-func (db *users) List(ctx context.Context, page, pageSize int) ([]*User, error) {
+func (s *usersStore) List(ctx context.Context, page, pageSize int) ([]*User, error) {
 	users := make([]*User, 0, pageSize)
-	return users, db.WithContext(ctx).
+	return users, s.WithContext(ctx).
 		Where("type = ?", UserTypeIndividual).
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Order("id ASC").
@@ -889,7 +889,7 @@ func (db *users) List(ctx context.Context, page, pageSize int) ([]*User, error) 
 		Error
 }
 
-func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
+func (s *usersStore) ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -900,7 +900,7 @@ func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize
 		LIMIT @limit OFFSET @offset
 	*/
 	users := make([]*User, 0, pageSize)
-	return users, db.WithContext(ctx).
+	return users, s.WithContext(ctx).
 		Joins(dbutil.Quote("LEFT JOIN follow ON follow.user_id = %s.id", "user")).
 		Where("follow.follow_id = ?", userID).
 		Limit(pageSize).Offset((page - 1) * pageSize).
@@ -909,7 +909,7 @@ func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize
 		Error
 }
 
-func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
+func (s *usersStore) ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -920,7 +920,7 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 		LIMIT @limit OFFSET @offset
 	*/
 	users := make([]*User, 0, pageSize)
-	return users, db.WithContext(ctx).
+	return users, s.WithContext(ctx).
 		Joins(dbutil.Quote("LEFT JOIN follow ON follow.follow_id = %s.id", "user")).
 		Where("follow.user_id = ?", userID).
 		Limit(pageSize).Offset((page - 1) * pageSize).
@@ -948,8 +948,8 @@ func searchUserByName(ctx context.Context, db *gorm.DB, userType UserType, keywo
 	return users, count, tx.Order(orderBy).Limit(pageSize).Offset((page - 1) * pageSize).Find(&users).Error
 }
 
-func (db *users) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
-	return searchUserByName(ctx, db.DB, UserTypeIndividual, keyword, page, pageSize, orderBy)
+func (s *usersStore) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
+	return searchUserByName(ctx, s.DB, UserTypeIndividual, keyword, page, pageSize, orderBy)
 }
 
 type UpdateUserOptions struct {
@@ -979,9 +979,9 @@ type UpdateUserOptions struct {
 	AvatarEmail *string
 }
 
-func (db *users) Update(ctx context.Context, userID int64, opts UpdateUserOptions) error {
+func (s *usersStore) Update(ctx context.Context, userID int64, opts UpdateUserOptions) error {
 	updates := map[string]any{
-		"updated_unix": db.NowFunc().Unix(),
+		"updated_unix": s.NowFunc().Unix(),
 	}
 
 	if opts.LoginSource != nil {
@@ -1012,7 +1012,7 @@ func (db *users) Update(ctx context.Context, userID int64, opts UpdateUserOption
 		updates["full_name"] = strutil.Truncate(*opts.FullName, 255)
 	}
 	if opts.Email != nil {
-		_, err := db.GetByEmail(ctx, *opts.Email)
+		_, err := s.GetByEmail(ctx, *opts.Email)
 		if err == nil {
 			return ErrEmailAlreadyUsed{args: errutil.Args{"email": *opts.Email}}
 		} else if !IsErrUserNotExist(err) {
@@ -1063,28 +1063,28 @@ func (db *users) Update(ctx context.Context, userID int64, opts UpdateUserOption
 		updates["avatar_email"] = strutil.Truncate(*opts.AvatarEmail, 255)
 	}
 
-	return db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
+	return s.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
 }
 
-func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
+func (s *usersStore) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
 	err := userutil.SaveAvatar(userID, avatar)
 	if err != nil {
 		return errors.Wrap(err, "save avatar")
 	}
 
-	return db.WithContext(ctx).
+	return s.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
 		Updates(map[string]any{
 			"use_custom_avatar": true,
-			"updated_unix":      db.NowFunc().Unix(),
+			"updated_unix":      s.NowFunc().Unix(),
 		}).
 		Error
 }
 
-func (db *users) AddEmail(ctx context.Context, userID int64, email string, isActivated bool) error {
+func (s *usersStore) AddEmail(ctx context.Context, userID int64, email string, isActivated bool) error {
 	email = strings.ToLower(strings.TrimSpace(email))
-	_, err := db.GetByEmail(ctx, email)
+	_, err := s.GetByEmail(ctx, email)
 	if err == nil {
 		return ErrEmailAlreadyUsed{
 			args: errutil.Args{
@@ -1095,7 +1095,7 @@ func (db *users) AddEmail(ctx context.Context, userID int64, email string, isAct
 		return errors.Wrap(err, "check user by email")
 	}
 
-	return db.WithContext(ctx).Create(
+	return s.WithContext(ctx).Create(
 		&EmailAddress{
 			UserID:      userID,
 			Email:       email,
@@ -1125,8 +1125,8 @@ func (ErrEmailNotExist) NotFound() bool {
 	return true
 }
 
-func (db *users) GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error) {
-	tx := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
+func (s *usersStore) GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error) {
+	tx := s.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
 	if needsActivated {
 		tx = tx.Where("is_activated = ?", true)
 	}
@@ -1146,14 +1146,14 @@ func (db *users) GetEmail(ctx context.Context, userID int64, email string, needs
 	return emailAddress, nil
 }
 
-func (db *users) ListEmails(ctx context.Context, userID int64) ([]*EmailAddress, error) {
-	user, err := db.GetByID(ctx, userID)
+func (s *usersStore) ListEmails(ctx context.Context, userID int64) ([]*EmailAddress, error) {
+	user, err := s.GetByID(ctx, userID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get user")
 	}
 
 	var emails []*EmailAddress
-	err = db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&emails).Error
+	err = s.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&emails).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "list emails")
 	}
@@ -1179,9 +1179,9 @@ func (db *users) ListEmails(ctx context.Context, userID int64) ([]*EmailAddress,
 	return emails, nil
 }
 
-func (db *users) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := db.WithContext(ctx).
+func (s *usersStore) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := s.WithContext(ctx).
 			Model(&EmailAddress{}).
 			Where("uid = ? AND email = ?", userID, email).
 			Update("is_activated", true).
@@ -1209,9 +1209,9 @@ func (err ErrEmailNotVerified) Error() string {
 	return fmt.Sprintf("email has not been verified: %v", err.args)
 }
 
-func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email string) error {
+func (s *usersStore) MarkEmailPrimary(ctx context.Context, userID int64, email string) error {
 	var emailAddress EmailAddress
-	err := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
+	err := s.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return ErrEmailNotExist{args: errutil.Args{"email": email}}
@@ -1223,12 +1223,12 @@ func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email strin
 		return ErrEmailNotVerified{args: errutil.Args{"email": email}}
 	}
 
-	user, err := db.GetByID(ctx, userID)
+	user, err := s.GetByID(ctx, userID)
 	if err != nil {
 		return errors.Wrap(err, "get user")
 	}
 
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Make sure the former primary email doesn't disappear.
 		err = tx.FirstOrCreate(
 			&EmailAddress{
@@ -1255,8 +1255,8 @@ func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email strin
 	})
 }
 
-func (db *users) DeleteEmail(ctx context.Context, userID int64, email string) error {
-	return db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).Delete(&EmailAddress{}).Error
+func (s *usersStore) DeleteEmail(ctx context.Context, userID int64, email string) error {
+	return s.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).Delete(&EmailAddress{}).Error
 }
 
 // UserType indicates the type of the user account.

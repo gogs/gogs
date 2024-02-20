@@ -98,13 +98,13 @@ func TestAccessTokens(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &accessTokens{
-		DB: newTestDB(t, "accessTokens"),
+	db := &accessTokensStore{
+		DB: newTestDB(t, "accessTokensStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *accessTokens)
+		test func(t *testing.T, ctx context.Context, db *accessTokensStore)
 	}{
 		{"Create", accessTokensCreate},
 		{"DeleteByID", accessTokensDeleteByID},
@@ -125,7 +125,7 @@ func TestAccessTokens(t *testing.T) {
 	}
 }
 
-func accessTokensCreate(t *testing.T, ctx context.Context, db *accessTokens) {
+func accessTokensCreate(t *testing.T, ctx context.Context, db *accessTokensStore) {
 	// Create first access token with name "Test"
 	token, err := db.Create(ctx, 1, "Test")
 	require.NoError(t, err)
@@ -150,7 +150,7 @@ func accessTokensCreate(t *testing.T, ctx context.Context, db *accessTokens) {
 	assert.Equal(t, wantErr, err)
 }
 
-func accessTokensDeleteByID(t *testing.T, ctx context.Context, db *accessTokens) {
+func accessTokensDeleteByID(t *testing.T, ctx context.Context, db *accessTokensStore) {
 	// Create an access token with name "Test"
 	token, err := db.Create(ctx, 1, "Test")
 	require.NoError(t, err)
@@ -177,7 +177,7 @@ func accessTokensDeleteByID(t *testing.T, ctx context.Context, db *accessTokens)
 	assert.Equal(t, wantErr, err)
 }
 
-func accessTokensGetBySHA(t *testing.T, ctx context.Context, db *accessTokens) {
+func accessTokensGetBySHA(t *testing.T, ctx context.Context, db *accessTokensStore) {
 	// Create an access token with name "Test"
 	token, err := db.Create(ctx, 1, "Test")
 	require.NoError(t, err)
@@ -196,7 +196,7 @@ func accessTokensGetBySHA(t *testing.T, ctx context.Context, db *accessTokens) {
 	assert.Equal(t, wantErr, err)
 }
 
-func accessTokensList(t *testing.T, ctx context.Context, db *accessTokens) {
+func accessTokensList(t *testing.T, ctx context.Context, db *accessTokensStore) {
 	// Create two access tokens for user 1
 	_, err := db.Create(ctx, 1, "user1_1")
 	require.NoError(t, err)
@@ -219,7 +219,7 @@ func accessTokensList(t *testing.T, ctx context.Context, db *accessTokens) {
 	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
-func accessTokensTouch(t *testing.T, ctx context.Context, db *accessTokens) {
+func accessTokensTouch(t *testing.T, ctx context.Context, db *accessTokensStore) {
 	// Create an access token with name "Test"
 	token, err := db.Create(ctx, 1, "Test")
 	require.NoError(t, err)

@@ -50,13 +50,13 @@ func (t *TwoFactor) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-var _ TwoFactorsStore = (*twoFactors)(nil)
+var _ TwoFactorsStore = (*twoFactorsStore)(nil)
 
-type twoFactors struct {
+type twoFactorsStore struct {
 	*gorm.DB
 }
 
-func (db *twoFactors) Create(ctx context.Context, userID int64, key, secret string) error {
+func (s *twoFactorsStore) Create(ctx context.Context, userID int64, key, secret string) error {
 	encrypted, err := cryptoutil.AESGCMEncrypt(cryptoutil.MD5Bytes(key), []byte(secret))
 	if err != nil {
 		return errors.Wrap(err, "encrypt secret")
@@ -71,7 +71,7 @@ func (db *twoFactors) Create(ctx context.Context, userID int64, key, secret stri
 		return errors.Wrap(err, "generate recovery codes")
 	}
 
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(tf).Error
 		if err != nil {
 			return err
@@ -100,9 +100,9 @@ func (ErrTwoFactorNotFound) NotFound() bool {
 	return true
 }
 
-func (db *twoFactors) GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error) {
+func (s *twoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error) {
 	tf := new(TwoFactor)
-	err := db.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
+	err := s.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
@@ -112,9 +112,9 @@ func (db *twoFactors) GetByUserID(ctx context.Context, userID int64) (*TwoFactor
 	return tf, nil
 }
 
-func (db *twoFactors) IsEnabled(ctx context.Context, userID int64) bool {
+func (s *twoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
 	var count int64
-	err := db.WithContext(ctx).Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
+	err := s.WithContext(ctx).Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
 	if err != nil {
 		log.Error("Failed to count two factors [user_id: %d]: %v", userID, err)
 	}

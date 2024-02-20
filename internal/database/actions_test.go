@@ -99,13 +99,13 @@ func TestActions(t *testing.T) {
 
 	ctx := context.Background()
 	t.Parallel()
-	db := &actions{
-		DB: newTestDB(t, "actions"),
+	db := &actionsStore{
+		DB: newTestDB(t, "actionsStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *actions)
+		test func(t *testing.T, ctx context.Context, db *actionsStore)
 	}{
 		{"CommitRepo", actionsCommitRepo},
 		{"ListByOrganization", actionsListByOrganization},
@@ -132,7 +132,7 @@ func TestActions(t *testing.T) {
 	}
 }
 
-func actionsCommitRepo(t *testing.T, ctx context.Context, db *actions) {
+func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -324,7 +324,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actions) {
 	})
 }
 
-func actionsListByOrganization(t *testing.T, ctx context.Context, db *actions) {
+func actionsListByOrganization(t *testing.T, ctx context.Context, db *actionsStore) {
 	if os.Getenv("GOGS_DATABASE_TYPE") != "postgres" {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
@@ -363,14 +363,14 @@ func actionsListByOrganization(t *testing.T, ctx context.Context, db *actions) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := db.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
-				return NewActionsStore(tx).(*actions).listByOrganization(ctx, test.orgID, test.actorID, test.afterID).Find(new(Action))
+				return NewActionsStore(tx).(*actionsStore).listByOrganization(ctx, test.orgID, test.actorID, test.afterID).Find(new(Action))
 			})
 			assert.Equal(t, test.want, got)
 		})
 	}
 }
 
-func actionsListByUser(t *testing.T, ctx context.Context, db *actions) {
+func actionsListByUser(t *testing.T, ctx context.Context, db *actionsStore) {
 	if os.Getenv("GOGS_DATABASE_TYPE") != "postgres" {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
@@ -428,14 +428,14 @@ func actionsListByUser(t *testing.T, ctx context.Context, db *actions) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := db.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
-				return NewActionsStore(tx).(*actions).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile).Find(new(Action))
+				return NewActionsStore(tx).(*actionsStore).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile).Find(new(Action))
 			})
 			assert.Equal(t, test.want, got)
 		})
 	}
 }
 
-func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actions) {
+func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -480,7 +480,7 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actions) {
 	assert.Equal(t, want, got)
 }
 
-func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, db *actions) {
+func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -521,7 +521,7 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, db *actions) {
 	assert.Equal(t, want, got)
 }
 
-func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, db *actions) {
+func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -562,7 +562,7 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, db *actions) {
 	assert.Equal(t, want, got)
 }
 
-func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actions) {
+func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -627,7 +627,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actions) {
 	assert.Equal(t, want, got)
 }
 
-func actionsNewRepo(t *testing.T, ctx context.Context, db *actions) {
+func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -702,7 +702,7 @@ func actionsNewRepo(t *testing.T, ctx context.Context, db *actions) {
 	})
 }
 
-func actionsPushTag(t *testing.T, ctx context.Context, db *actions) {
+func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 	// NOTE: We set a noop mock here to avoid data race with other tests that writes
 	// to the mock server because this function holds a lock.
 	conf.SetMockServer(t, conf.ServerOpts{})
@@ -798,7 +798,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actions) {
 	})
 }
 
-func actionsRenameRepo(t *testing.T, ctx context.Context, db *actions) {
+func actionsRenameRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
@@ -835,7 +835,7 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, db *actions) {
 	assert.Equal(t, want, got)
 }
 
-func actionsTransferRepo(t *testing.T, ctx context.Context, db *actions) {
+func actionsTransferRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	bob, err := NewUsersStore(db.DB).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})

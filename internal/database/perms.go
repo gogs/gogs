@@ -74,16 +74,16 @@ func ParseAccessMode(permission string) AccessMode {
 	}
 }
 
-var _ PermsStore = (*perms)(nil)
+var _ PermsStore = (*permsStore)(nil)
 
-type perms struct {
+type permsStore struct {
 	*gorm.DB
 }
 
 // NewPermsStore returns a persistent interface for permissions with given
 // database connection.
 func NewPermsStore(db *gorm.DB) PermsStore {
-	return &perms{DB: db}
+	return &permsStore{DB: db}
 }
 
 type AccessModeOptions struct {
@@ -91,7 +91,7 @@ type AccessModeOptions struct {
 	Private bool  // Whether the repository is private.
 }
 
-func (db *perms) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
+func (s *permsStore) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
 	if repoID <= 0 {
 		return AccessModeNone
 	}
@@ -111,7 +111,7 @@ func (db *perms) AccessMode(ctx context.Context, userID, repoID int64, opts Acce
 	}
 
 	access := new(Access)
-	err := db.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
+	err := s.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
 			log.Error("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
@@ -121,11 +121,11 @@ func (db *perms) AccessMode(ctx context.Context, userID, repoID int64, opts Acce
 	return access.Mode
 }
 
-func (db *perms) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
-	return desired <= db.AccessMode(ctx, userID, repoID, opts)
+func (s *permsStore) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
+	return desired <= s.AccessMode(ctx, userID, repoID, opts)
 }
 
-func (db *perms) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
+func (s *permsStore) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
 	records := make([]*Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
 		records = append(records, &Access{
@@ -135,7 +135,7 @@ func (db *perms) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[i
 		})
 	}
 
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Where("repo_id = ?", repoID).Delete(new(Access)).Error
 		if err != nil {
 			return err

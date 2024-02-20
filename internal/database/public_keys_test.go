@@ -24,13 +24,13 @@ func TestPublicKeys(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &publicKeys{
-		DB: newTestDB(t, "publicKeys"),
+	db := &publicKeysStore{
+		DB: newTestDB(t, "publicKeysStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *publicKeys)
+		test func(t *testing.T, ctx context.Context, db *publicKeysStore)
 	}{
 		{"RewriteAuthorizedKeys", publicKeysRewriteAuthorizedKeys},
 	} {
@@ -47,7 +47,7 @@ func TestPublicKeys(t *testing.T) {
 	}
 }
 
-func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, db *publicKeys) {
+func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, db *publicKeysStore) {
 	// TODO: Use PublicKeys.Add to replace SQL hack when the method is available.
 	publicKey := &PublicKey{
 		OwnerID:     1,

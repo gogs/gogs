@@ -23,13 +23,13 @@ func TestLFS(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &lfs{
-		DB: newTestDB(t, "lfs"),
+	db := &lfsStore{
+		DB: newTestDB(t, "lfsStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *lfs)
+		test func(t *testing.T, ctx context.Context, db *lfsStore)
 	}{
 		{"CreateObject", lfsCreateObject},
 		{"GetObjectByOID", lfsGetObjectByOID},
@@ -48,7 +48,7 @@ func TestLFS(t *testing.T) {
 	}
 }
 
-func lfsCreateObject(t *testing.T, ctx context.Context, db *lfs) {
+func lfsCreateObject(t *testing.T, ctx context.Context, db *lfsStore) {
 	// Create first LFS object
 	repoID := int64(1)
 	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
@@ -65,7 +65,7 @@ func lfsCreateObject(t *testing.T, ctx context.Context, db *lfs) {
 	assert.Error(t, err)
 }
 
-func lfsGetObjectByOID(t *testing.T, ctx context.Context, db *lfs) {
+func lfsGetObjectByOID(t *testing.T, ctx context.Context, db *lfsStore) {
 	// Create a LFS object
 	repoID := int64(1)
 	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
@@ -82,7 +82,7 @@ func lfsGetObjectByOID(t *testing.T, ctx context.Context, db *lfs) {
 	assert.Equal(t, expErr, err)
 }
 
-func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, db *lfs) {
+func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, db *lfsStore) {
 	// Create two LFS objects
 	repoID := int64(1)
 	oid1 := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")

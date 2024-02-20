@@ -38,20 +38,20 @@ type LFSObject struct {
 	CreatedAt time.Time       `gorm:"not null"`
 }
 
-var _ LFSStore = (*lfs)(nil)
+var _ LFSStore = (*lfsStore)(nil)
 
-type lfs struct {
+type lfsStore struct {
 	*gorm.DB
 }
 
-func (db *lfs) CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
+func (s *lfsStore) CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
 	object := &LFSObject{
 		RepoID:  repoID,
 		OID:     oid,
 		Size:    size,
 		Storage: storage,
 	}
-	return db.WithContext(ctx).Create(object).Error
+	return s.WithContext(ctx).Create(object).Error
 }
 
 type ErrLFSObjectNotExist struct {
@@ -71,9 +71,9 @@ func (ErrLFSObjectNotExist) NotFound() bool {
 	return true
 }
 
-func (db *lfs) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error) {
+func (s *lfsStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error) {
 	object := new(LFSObject)
-	err := db.WithContext(ctx).Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
+	err := s.WithContext(ctx).Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": oid}}
@@ -83,13 +83,13 @@ func (db *lfs) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID
 	return object, err
 }
 
-func (db *lfs) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
+func (s *lfsStore) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
 	if len(oids) == 0 {
 		return []*LFSObject{}, nil
 	}
 
 	objects := make([]*LFSObject, 0, len(oids))
-	err := db.WithContext(ctx).Where("repo_id = ? AND oid IN (?)", repoID, oids).Find(&objects).Error
+	err := s.WithContext(ctx).Where("repo_id = ? AND oid IN (?)", repoID, oids).Find(&objects).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
