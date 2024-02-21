@@ -20,22 +20,16 @@ import (
 	"gogs.io/gogs/internal/lfsutil"
 )
 
-func Test_authenticate(t *testing.T) {
-	m := macaron.New()
-	m.Use(macaron.Renderer())
-	m.Get("/", authenticate(), func(w http.ResponseWriter, user *database.User) {
-		_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
-	})
-
+func TestAuthenticate(t *testing.T) {
 	tests := []struct {
-		name                  string
-		header                http.Header
-		mockUsersStore        func() database.UsersStore
-		mockTwoFactorsStore   func() database.TwoFactorsStore
-		mockAccessTokensStore func() database.AccessTokensStore
-		expStatusCode         int
-		expHeader             http.Header
-		expBody               string
+		name                string
+		header              http.Header
+		mockUsersStore      func() database.UsersStore
+		mockTwoFactorsStore func() database.TwoFactorsStore
+		mockStore           func() *MockStore
+		expStatusCode       int
+		expHeader           http.Header
+		expBody             string
 	}{
 		{
 			name:          "no authorization",
@@ -75,10 +69,10 @@ func Test_authenticate(t *testing.T) {
 				mock.AuthenticateFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
 				return mock
 			},
-			mockAccessTokensStore: func() database.AccessTokensStore {
-				mock := NewMockAccessTokensStore()
-				mock.GetBySHA1Func.SetDefaultReturn(nil, database.ErrAccessTokenNotExist{})
-				return mock
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetAccessTokenBySHA1Func.SetDefaultReturn(nil, database.ErrAccessTokenNotExist{})
+				return mockStore
 			},
 			expStatusCode: http.StatusUnauthorized,
 			expHeader: http.Header{
@@ -118,10 +112,10 @@ func Test_authenticate(t *testing.T) {
 				mock.GetByIDFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockAccessTokensStore: func() database.AccessTokensStore {
-				mock := NewMockAccessTokensStore()
-				mock.GetBySHA1Func.SetDefaultReturn(&database.AccessToken{}, nil)
-				return mock
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetAccessTokenBySHA1Func.SetDefaultReturn(&database.AccessToken{}, nil)
+				return mockStore
 			},
 			expStatusCode: http.StatusOK,
 			expHeader:     http.Header{},
@@ -138,15 +132,15 @@ func Test_authenticate(t *testing.T) {
 				mock.GetByIDFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockAccessTokensStore: func() database.AccessTokensStore {
-				mock := NewMockAccessTokensStore()
-				mock.GetBySHA1Func.SetDefaultHook(func(ctx context.Context, sha1 string) (*database.AccessToken, error) {
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetAccessTokenBySHA1Func.SetDefaultHook(func(_ context.Context, sha1 string) (*database.AccessToken, error) {
 					if sha1 == "password" {
 						return &database.AccessToken{}, nil
 					}
 					return nil, database.ErrAccessTokenNotExist{}
 				})
-				return mock
+				return mockStore
 			},
 			expStatusCode: http.StatusOK,
 			expHeader:     http.Header{},
@@ -161,9 +155,15 @@ func Test_authenticate(t *testing.T) {
 			if test.mockTwoFactorsStore != nil {
 				database.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore())
 			}
-			if test.mockAccessTokensStore != nil {
-				database.SetMockAccessTokensStore(t, test.mockAccessTokensStore())
+			if test.mockStore == nil {
+				test.mockStore = NewMockStore
 			}
+
+			m := macaron.New()
+			m.Use(macaron.Renderer())
+			m.Get("/", authenticate(test.mockStore()), func(w http.ResponseWriter, user *database.User) {
+				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
+			})
 
 			r, err := http.NewRequest("GET", "/", nil)
 			if err != nil {

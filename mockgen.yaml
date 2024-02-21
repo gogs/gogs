@@ -39,6 +39,8 @@ mocks:
           - LFSStore
           - UsersStore
           - TwoFactorsStore
-          - AccessTokensStore
           - ReposStore
           - PermsStore
+      - path: gogs.io/gogs/internal/route/lfs
+        interfaces:
+          - Store

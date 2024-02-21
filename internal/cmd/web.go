@@ -237,9 +237,11 @@ func runWeb(c *cli.Context) error {
 				m.Get("", user.SettingsOrganizations)
 				m.Post("/leave", user.SettingsLeaveOrganization)
 			})
-			m.Combo("/applications").Get(user.SettingsApplications).
-				Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
-			m.Post("/applications/delete", user.SettingsDeleteApplication)
+
+			settingsHandler := user.NewSettingsHandler(user.NewSettingsStore())
+			m.Combo("/applications").Get(settingsHandler.Applications()).
+				Post(bindIgnErr(form.NewAccessToken{}), settingsHandler.ApplicationsPost())
+			m.Post("/applications/delete", settingsHandler.DeleteApplication())
 			m.Route("/delete", "GET,POST", user.SettingsDelete)
 		}, reqSignIn, func(c *context.Context) {
 			c.Data["PageIsUserSettings"] = true
@@ -652,7 +654,7 @@ func runWeb(c *cli.Context) error {
 			SetCookie:      true,
 			Secure:         conf.Server.URL.Scheme == "https",
 		}),
-		context.Contexter(),
+		context.Contexter(context.NewStore()),
 	)
 
 	// ***************************
@@ -666,7 +668,7 @@ func runWeb(c *cli.Context) error {
 			lfs.RegisterRoutes(m.Router)
 		})
 
-		m.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(), repo.HTTP)
+		m.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
 	})
 
 	// ***************************

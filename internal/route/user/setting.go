@@ -6,6 +6,7 @@ package user
 
 import (
 	"bytes"
+	gocontext "context"
 	"encoding/base64"
 	"fmt"
 	"html/template"
@@ -15,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -27,6 +29,18 @@ import (
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
 )
+
+// SettingsHandler is the handler for users settings endpoints.
+type SettingsHandler struct {
+	store SettingsStore
+}
+
+// NewSettingsHandler returns a new SettingsHandler for users settings endpoints.
+func NewSettingsHandler(s SettingsStore) *SettingsHandler {
+	return &SettingsHandler{
+		store: s,
+	}
+}
 
 const (
 	SETTINGS_PROFILE                   = "user/settings/profile"
@@ -580,62 +594,68 @@ func SettingsLeaveOrganization(c *context.Context) {
 	})
 }
 
-func SettingsApplications(c *context.Context) {
-	c.Title("settings.applications")
-	c.PageIs("SettingsApplications")
+func (h *SettingsHandler) Applications() macaron.Handler {
+	return func(c *context.Context) {
+		c.Title("settings.applications")
+		c.PageIs("SettingsApplications")
 
-	tokens, err := database.AccessTokens.List(c.Req.Context(), c.User.ID)
-	if err != nil {
-		c.Errorf(err, "list access tokens")
-		return
-	}
-	c.Data["Tokens"] = tokens
-
-	c.Success(SETTINGS_APPLICATIONS)
-}
-
-func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
-	c.Title("settings.applications")
-	c.PageIs("SettingsApplications")
-
-	if c.HasError() {
-		tokens, err := database.AccessTokens.List(c.Req.Context(), c.User.ID)
+		tokens, err := h.store.ListAccessTokens(c.Req.Context(), c.User.ID)
 		if err != nil {
 			c.Errorf(err, "list access tokens")
 			return
 		}
-
 		c.Data["Tokens"] = tokens
+
 		c.Success(SETTINGS_APPLICATIONS)
-		return
 	}
-
-	t, err := database.AccessTokens.Create(c.Req.Context(), c.User.ID, f.Name)
-	if err != nil {
-		if database.IsErrAccessTokenAlreadyExist(err) {
-			c.Flash.Error(c.Tr("settings.token_name_exists"))
-			c.RedirectSubpath("/user/settings/applications")
-		} else {
-			c.Errorf(err, "new access token")
-		}
-		return
-	}
-
-	c.Flash.Success(c.Tr("settings.generate_token_succees"))
-	c.Flash.Info(t.Sha1)
-	c.RedirectSubpath("/user/settings/applications")
 }
 
-func SettingsDeleteApplication(c *context.Context) {
-	if err := database.AccessTokens.DeleteByID(c.Req.Context(), c.User.ID, c.QueryInt64("id")); err != nil {
-		c.Flash.Error("DeleteAccessTokenByID: " + err.Error())
-	} else {
-		c.Flash.Success(c.Tr("settings.delete_token_success"))
-	}
+func (h *SettingsHandler) ApplicationsPost() macaron.Handler {
+	return func(c *context.Context, f form.NewAccessToken) {
+		c.Title("settings.applications")
+		c.PageIs("SettingsApplications")
 
-	c.JSONSuccess(map[string]any{
-		"redirect": conf.Server.Subpath + "/user/settings/applications",
-	})
+		if c.HasError() {
+			tokens, err := h.store.ListAccessTokens(c.Req.Context(), c.User.ID)
+			if err != nil {
+				c.Errorf(err, "list access tokens")
+				return
+			}
+
+			c.Data["Tokens"] = tokens
+			c.Success(SETTINGS_APPLICATIONS)
+			return
+		}
+
+		t, err := h.store.CreateAccessToken(c.Req.Context(), c.User.ID, f.Name)
+		if err != nil {
+			if database.IsErrAccessTokenAlreadyExist(err) {
+				c.Flash.Error(c.Tr("settings.token_name_exists"))
+				c.RedirectSubpath("/user/settings/applications")
+			} else {
+				c.Errorf(err, "new access token")
+			}
+			return
+		}
+
+		c.Flash.Success(c.Tr("settings.generate_token_succees"))
+		c.Flash.Info(t.Sha1)
+		c.RedirectSubpath("/user/settings/applications")
+	}
+}
+
+func (h *SettingsHandler) DeleteApplication() macaron.Handler {
+	return func(c *context.Context) {
+		if err := h.store.DeleteAccessTokenByID(c.Req.Context(), c.User.ID, c.QueryInt64("id")); err != nil {
+			c.Flash.Error("DeleteAccessTokenByID: " + err.Error())
+		} else {
+			c.Flash.Success(c.Tr("settings.delete_token_success"))
+		}
+
+		c.JSONSuccess(map[string]any{
+			"redirect": conf.Server.Subpath + "/user/settings/applications",
+		})
+	}
 }
 
 func SettingsDelete(c *context.Context) {
@@ -671,4 +691,52 @@ func SettingsDelete(c *context.Context) {
 	}
 
 	c.Success(SETTINGS_DELETE)
+}
+
+// SettingsStore is the data layer carrier for user settings endpoints. This
+// interface is meant to abstract away and limit the exposure of the underlying
+// data layer to the handler through a thin-wrapper.
+type SettingsStore interface {
+	// CreateAccessToken creates a new access token and persist to database. It
+	// returns database.ErrAccessTokenAlreadyExist when an access token with same
+	// name already exists for the user.
+	CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error)
+	// GetAccessTokenBySHA1 returns the access token with given SHA1. It returns
+	// database.ErrAccessTokenNotExist when not found.
+	GetAccessTokenBySHA1(ctx gocontext.Context, sha1 string) (*database.AccessToken, error)
+	// TouchAccessTokenByID updates the updated time of the given access token to
+	// the current time.
+	TouchAccessTokenByID(ctx gocontext.Context, id int64) error
+	// ListAccessTokens returns all access tokens belongs to given user.
+	ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error)
+	// DeleteAccessTokenByID deletes the access token by given ID.
+	DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error
+}
+
+type settingsStore struct{}
+
+// NewSettingsStore returns a new SettingsStore using the global database
+// handle.
+func NewSettingsStore() SettingsStore {
+	return &settingsStore{}
+}
+
+func (*settingsStore) CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error) {
+	return database.Handle.AccessTokens().Create(ctx, userID, name)
+}
+
+func (*settingsStore) GetAccessTokenBySHA1(ctx gocontext.Context, sha1 string) (*database.AccessToken, error) {
+	return database.Handle.AccessTokens().GetBySHA1(ctx, sha1)
+}
+
+func (*settingsStore) TouchAccessTokenByID(ctx gocontext.Context, id int64) error {
+	return database.Handle.AccessTokens().Touch(ctx, id)
+}
+
+func (*settingsStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
+	return database.Handle.AccessTokens().List(ctx, userID)
+}
+
+func (*settingsStore) DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error {
+	return database.Handle.AccessTokens().DeleteByID(ctx, userID, id)
 }

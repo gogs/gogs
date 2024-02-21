@@ -8,14 +8,6 @@ import (
 	"testing"
 )
 
-func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
-	before := AccessTokens
-	AccessTokens = mock
-	t.Cleanup(func() {
-		AccessTokens = before
-	})
-}
-
 func SetMockLFSStore(t *testing.T, mock LFSStore) {
 	before := LFS
 	LFS = mock
