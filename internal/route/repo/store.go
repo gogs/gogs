@@ -25,10 +25,10 @@ func NewStore() Store {
 	return &store{}
 }
 
-func (s *store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.AccessToken, error) {
+func (*store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.AccessToken, error) {
 	return database.Handle.AccessTokens().GetBySHA1(ctx, sha1)
 }
 
-func (s *store) TouchAccessTokenByID(ctx context.Context, id int64) error {
+func (*store) TouchAccessTokenByID(ctx context.Context, id int64) error {
 	return database.Handle.AccessTokens().Touch(ctx, id)
 }

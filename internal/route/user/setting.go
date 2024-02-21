@@ -721,22 +721,22 @@ func NewSettingsStore() SettingsStore {
 	return &settingsStore{}
 }
 
-func (s *settingsStore) CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error) {
+func (*settingsStore) CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error) {
 	return database.Handle.AccessTokens().Create(ctx, userID, name)
 }
 
-func (s *settingsStore) GetAccessTokenBySHA1(ctx gocontext.Context, sha1 string) (*database.AccessToken, error) {
+func (*settingsStore) GetAccessTokenBySHA1(ctx gocontext.Context, sha1 string) (*database.AccessToken, error) {
 	return database.Handle.AccessTokens().GetBySHA1(ctx, sha1)
 }
 
-func (s *settingsStore) TouchAccessTokenByID(ctx gocontext.Context, id int64) error {
+func (*settingsStore) TouchAccessTokenByID(ctx gocontext.Context, id int64) error {
 	return database.Handle.AccessTokens().Touch(ctx, id)
 }
 
-func (s *settingsStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
+func (*settingsStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
 	return database.Handle.AccessTokens().List(ctx, userID)
 }
 
-func (s *settingsStore) DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error {
+func (*settingsStore) DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error {
 	return database.Handle.AccessTokens().DeleteByID(ctx, userID, id)
 }

@@ -71,18 +71,18 @@ type AccessTokensStore interface {
 	ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error)
 }
 
-type settingsStore struct{}
+type accessTokensStore struct{}
 
 // NewAccessTokensStore returns a new AccessTokensStore using the global
 // database handle.
 func NewAccessTokensStore() AccessTokensStore {
-	return &settingsStore{}
+	return &accessTokensStore{}
 }
 
-func (s *settingsStore) CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error) {
+func (*accessTokensStore) CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error) {
 	return database.Handle.AccessTokens().Create(ctx, userID, name)
 }
 
-func (s *settingsStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
+func (*accessTokensStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
 	return database.Handle.AccessTokens().List(ctx, userID)
 }
