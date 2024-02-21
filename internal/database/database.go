@@ -50,8 +50,8 @@ var Tables = []any{
 	new(Notice),
 }
 
-// Init initializes the database with given logger.
-func Init(w logger.Writer) (*gorm.DB, error) {
+// NewConnection returns a new database connection with the given logger.
+func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	level := logger.Info
 	if conf.IsProdMode() {
 		level = logger.Warn
@@ -123,7 +123,6 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	}
 
 	// Initialize stores, sorted in alphabetical order.
-	AccessTokens = &accessTokensStore{DB: db}
 	Actions = NewActionsStore(db)
 	LoginSources = &loginSourcesStore{DB: db, files: sourceFiles}
 	LFS = &lfsStore{DB: db}
@@ -135,4 +134,29 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	Users = NewUsersStore(db)
 
 	return db, nil
+}
+
+type DB struct {
+	db *gorm.DB
+}
+
+// Handle is the global database handle. It could be `nil` during the
+// installation mode.
+//
+// NOTE: Because we need to register all the routes even during the installation
+// mode (which initially has no database configuration), we have to use a global
+// variable since we can't pass a database handler around before it's available.
+//
+// NOTE: It is not guarded by a mutex because it is only written once either
+// during the service start or during the installation process (which is a
+// single-thread process).
+var Handle *DB
+
+// SetHandle updates the global database handle with the given connection.
+func SetHandle(db *gorm.DB) {
+	Handle = &DB{db: db}
+}
+
+func (db *DB) AccessTokens() *AccessTokensStore {
+	return newAccessTokensStore(db.db)
 }

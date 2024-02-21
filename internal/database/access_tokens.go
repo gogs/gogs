@@ -17,28 +17,6 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-// AccessTokensStore is the persistent interface for access tokens.
-type AccessTokensStore interface {
-	// Create creates a new access token and persist to database. It returns
-	// ErrAccessTokenAlreadyExist when an access token with same name already exists
-	// for the user.
-	Create(ctx context.Context, userID int64, name string) (*AccessToken, error)
-	// DeleteByID deletes the access token by given ID.
-	//
-	// 🚨 SECURITY: The "userID" is required to prevent attacker deletes arbitrary
-	// access token that belongs to another user.
-	DeleteByID(ctx context.Context, userID, id int64) error
-	// GetBySHA1 returns the access token with given SHA1. It returns
-	// ErrAccessTokenNotExist when not found.
-	GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error)
-	// List returns all access tokens belongs to given user.
-	List(ctx context.Context, userID int64) ([]*AccessToken, error)
-	// Touch updates the updated time of the given access token to the current time.
-	Touch(ctx context.Context, id int64) error
-}
-
-var AccessTokens AccessTokensStore
-
 // AccessToken is a personal access token.
 type AccessToken struct {
 	ID     int64 `gorm:"primarykey"`
@@ -74,10 +52,13 @@ func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-var _ AccessTokensStore = (*accessTokensStore)(nil)
+// AccessTokensStore is the storage layer for access tokens.
+type AccessTokensStore struct {
+	db *gorm.DB
+}
 
-type accessTokensStore struct {
-	*gorm.DB
+func newAccessTokensStore(db *gorm.DB) *AccessTokensStore {
+	return &AccessTokensStore{db}
 }
 
 type ErrAccessTokenAlreadyExist struct {
@@ -85,19 +66,21 @@ type ErrAccessTokenAlreadyExist struct {
 }
 
 func IsErrAccessTokenAlreadyExist(err error) bool {
-	_, ok := err.(ErrAccessTokenAlreadyExist)
-	return ok
+	return errors.As(err, &ErrAccessTokenAlreadyExist{})
 }
 
 func (err ErrAccessTokenAlreadyExist) Error() string {
 	return fmt.Sprintf("access token already exists: %v", err.args)
 }
 
-func (s *accessTokensStore) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
-	err := s.WithContext(ctx).Where("uid = ? AND name = ?", userID, name).First(new(AccessToken)).Error
+// Create creates a new access token and persist to database. It returns
+// ErrAccessTokenAlreadyExist when an access token with same name already exists
+// for the user.
+func (s *AccessTokensStore) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
+	err := s.db.WithContext(ctx).Where("uid = ? AND name = ?", userID, name).First(new(AccessToken)).Error
 	if err == nil {
 		return nil, ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": userID, "name": name}}
-	} else if err != gorm.ErrRecordNotFound {
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
@@ -110,7 +93,7 @@ func (s *accessTokensStore) Create(ctx context.Context, userID int64, name strin
 		Sha1:   sha256[:40], // To pass the column unique constraint, keep the length of SHA1.
 		SHA256: sha256,
 	}
-	if err = s.WithContext(ctx).Create(accessToken).Error; err != nil {
+	if err = s.db.WithContext(ctx).Create(accessToken).Error; err != nil {
 		return nil, err
 	}
 
@@ -119,8 +102,12 @@ func (s *accessTokensStore) Create(ctx context.Context, userID int64, name strin
 	return accessToken, nil
 }
 
-func (s *accessTokensStore) DeleteByID(ctx context.Context, userID, id int64) error {
-	return s.WithContext(ctx).Where("id = ? AND uid = ?", id, userID).Delete(new(AccessToken)).Error
+// DeleteByID deletes the access token by given ID.
+//
+// 🚨 SECURITY: The "userID" is required to prevent attacker deletes arbitrary
+// access token that belongs to another user.
+func (s *AccessTokensStore) DeleteByID(ctx context.Context, userID, id int64) error {
+	return s.db.WithContext(ctx).Where("id = ? AND uid = ?", id, userID).Delete(new(AccessToken)).Error
 }
 
 var _ errutil.NotFound = (*ErrAccessTokenNotExist)(nil)
@@ -132,8 +119,7 @@ type ErrAccessTokenNotExist struct {
 // IsErrAccessTokenNotExist returns true if the underlying error has the type
 // ErrAccessTokenNotExist.
 func IsErrAccessTokenNotExist(err error) bool {
-	_, ok := errors.Cause(err).(ErrAccessTokenNotExist)
-	return ok
+	return errors.As(errors.Cause(err), &ErrAccessTokenNotExist{})
 }
 
 func (err ErrAccessTokenNotExist) Error() string {
@@ -144,7 +130,9 @@ func (ErrAccessTokenNotExist) NotFound() bool {
 	return true
 }
 
-func (s *accessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
+// GetBySHA1 returns the access token with given SHA1. It returns
+// ErrAccessTokenNotExist when not found.
+func (s *AccessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
 	// No need to waste a query for an empty SHA1.
 	if sha1 == "" {
 		return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
@@ -152,25 +140,26 @@ func (s *accessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*Access
 
 	sha256 := cryptoutil.SHA256(sha1)
 	token := new(AccessToken)
-	err := s.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
-		}
+	err := s.db.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
+	} else if err != nil {
 		return nil, err
 	}
 	return token, nil
 }
 
-func (s *accessTokensStore) List(ctx context.Context, userID int64) ([]*AccessToken, error) {
+// List returns all access tokens belongs to given user.
+func (s *AccessTokensStore) List(ctx context.Context, userID int64) ([]*AccessToken, error) {
 	var tokens []*AccessToken
-	return tokens, s.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
+	return tokens, s.db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
 }
 
-func (s *accessTokensStore) Touch(ctx context.Context, id int64) error {
-	return s.WithContext(ctx).
+// Touch updates the updated time of the given access token to the current time.
+func (s *AccessTokensStore) Touch(ctx context.Context, id int64) error {
+	return s.db.WithContext(ctx).
 		Model(new(AccessToken)).
 		Where("id = ?", id).
-		UpdateColumn("updated_unix", s.NowFunc().Unix()).
+		UpdateColumn("updated_unix", s.db.NowFunc().Unix()).
 		Error
 }

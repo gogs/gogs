@@ -235,7 +235,7 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
 
 // Contexter initializes a classic context for a request.
-func Contexter() macaron.Handler {
+func Contexter(store Store) macaron.Handler {
 	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
 		c := &Context{
 			Context: ctx,
@@ -260,7 +260,7 @@ func Contexter() macaron.Handler {
 		}
 
 		// Get user from session or header when possible
-		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(c.Context, c.Session)
+		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(store, c.Context, c.Session)
 
 		if c.User != nil {
 			c.IsLogged = true

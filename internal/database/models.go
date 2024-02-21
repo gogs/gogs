@@ -178,24 +178,24 @@ func SetEngine() (*gorm.DB, error) {
 			return nil, errors.Wrap(err, "new log writer")
 		}
 	}
-	return Init(gormLogger)
+	return NewConnection(gormLogger)
 }
 
-func NewEngine() (err error) {
+func NewEngine() (*gorm.DB, error) {
 	db, err := SetEngine()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = migrations.Migrate(db); err != nil {
-		return fmt.Errorf("migrate: %v", err)
+		return nil, fmt.Errorf("migrate: %v", err)
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
-		return errors.Wrap(err, "sync tables")
+		return nil, errors.Wrap(err, "sync tables")
 	}
 
-	return nil
+	return db, nil
 }
 
 type Statistic struct {
