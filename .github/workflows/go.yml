@@ -34,8 +34,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          # go-mockgen panics on Go 1.22.x, see https://github.com/derision-test/go-mockgen/issues/51
-          go-version: 1.21.x
+          go-version: 1.22.x
       - name: Install Task
         uses: arduino/setup-task@v2
         with:
