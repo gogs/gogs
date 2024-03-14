@@ -99,13 +99,13 @@ func TestActions(t *testing.T) {
 
 	ctx := context.Background()
 	t.Parallel()
-	db := &actionsStore{
-		DB: newTestDB(t, "actionsStore"),
+	s := &ActionsStore{
+		db: newTestDB(t, "ActionsStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *actionsStore)
+		test func(t *testing.T, ctx context.Context, s *ActionsStore)
 	}{
 		{"CommitRepo", actionsCommitRepo},
 		{"ListByOrganization", actionsListByOrganization},
@@ -121,10 +121,10 @@ func TestActions(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -132,10 +132,10 @@ func TestActions(t *testing.T) {
 	}
 }
 
-func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -149,11 +149,11 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("new commit", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
-		err = db.CommitRepo(ctx,
+		err = s.CommitRepo(ctx,
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -183,7 +183,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -200,7 +200,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 				RefName:      "main",
 				IsPrivate:    false,
 				Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -209,11 +209,11 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("new ref", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
-		err = db.CommitRepo(ctx,
+		err = s.CommitRepo(ctx,
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -243,7 +243,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 2)
 		got[0].ID = 0
@@ -261,7 +261,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 				RefName:      "main",
 				IsPrivate:    false,
 				Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":""}`,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 			{
 				UserID:       alice.ID,
@@ -274,7 +274,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 				RefName:      "main",
 				IsPrivate:    false,
 				Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":""}`,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -284,11 +284,11 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("delete ref", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
-		err = db.CommitRepo(ctx,
+		err = s.CommitRepo(ctx,
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -300,7 +300,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -316,7 +316,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 				RepoName:     repo.Name,
 				RefName:      "main",
 				IsPrivate:    false,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -324,7 +324,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	})
 }
 
-func actionsListByOrganization(t *testing.T, ctx context.Context, db *actionsStore) {
+func actionsListByOrganization(t *testing.T, ctx context.Context, s *ActionsStore) {
 	if os.Getenv("GOGS_DATABASE_TYPE") != "postgres" {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
@@ -362,15 +362,15 @@ func actionsListByOrganization(t *testing.T, ctx context.Context, db *actionsSto
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := db.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
-				return NewActionsStore(tx).(*actionsStore).listByOrganization(ctx, test.orgID, test.actorID, test.afterID).Find(new(Action))
+			got := s.db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+				return newActionsStore(tx).listByOrganization(ctx, test.orgID, test.actorID, test.afterID).Find(new(Action))
 			})
 			assert.Equal(t, test.want, got)
 		})
 	}
 }
 
-func actionsListByUser(t *testing.T, ctx context.Context, db *actionsStore) {
+func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 	if os.Getenv("GOGS_DATABASE_TYPE") != "postgres" {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
@@ -427,18 +427,18 @@ func actionsListByUser(t *testing.T, ctx context.Context, db *actionsStore) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := db.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
-				return NewActionsStore(tx).(*actionsStore).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile).Find(new(Action))
+			got := s.db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+				return newActionsStore(tx).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile).Find(new(Action))
 			})
 			assert.Equal(t, test.want, got)
 		})
 	}
 }
 
-func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -446,7 +446,7 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actionsStore
 	)
 	require.NoError(t, err)
 
-	err = db.MergePullRequest(ctx,
+	err = s.MergePullRequest(ctx,
 		alice,
 		alice,
 		repo,
@@ -457,7 +457,7 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actionsStore
 	)
 	require.NoError(t, err)
 
-	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -473,17 +473,17 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, db *actionsStore
 			RepoName:     repo.Name,
 			IsPrivate:    false,
 			Content:      `1|Fix issue 1`,
-			CreatedUnix:  db.NowFunc().Unix(),
+			CreatedUnix:  s.db.NowFunc().Unix(),
 		},
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
 }
 
-func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -491,14 +491,14 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, db *actionsStore
 	)
 	require.NoError(t, err)
 
-	err = db.MirrorSyncCreate(ctx,
+	err = s.MirrorSyncCreate(ctx,
 		alice,
 		repo,
 		"main",
 	)
 	require.NoError(t, err)
 
-	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -514,17 +514,17 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, db *actionsStore
 			RepoName:     repo.Name,
 			RefName:      "main",
 			IsPrivate:    false,
-			CreatedUnix:  db.NowFunc().Unix(),
+			CreatedUnix:  s.db.NowFunc().Unix(),
 		},
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
 }
 
-func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -532,14 +532,14 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, db *actionsStore
 	)
 	require.NoError(t, err)
 
-	err = db.MirrorSyncDelete(ctx,
+	err = s.MirrorSyncDelete(ctx,
 		alice,
 		repo,
 		"main",
 	)
 	require.NoError(t, err)
 
-	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -555,17 +555,17 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, db *actionsStore
 			RepoName:     repo.Name,
 			RefName:      "main",
 			IsPrivate:    false,
-			CreatedUnix:  db.NowFunc().Unix(),
+			CreatedUnix:  s.db.NowFunc().Unix(),
 		},
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
 }
 
-func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -574,7 +574,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actionsStore) 
 	require.NoError(t, err)
 
 	now := time.Unix(1588568886, 0).UTC()
-	err = db.MirrorSyncPush(ctx,
+	err = s.MirrorSyncPush(ctx,
 		MirrorSyncPushOptions{
 			Owner:       alice,
 			Repo:        repo,
@@ -603,7 +603,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actionsStore) 
 	)
 	require.NoError(t, err)
 
-	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -620,17 +620,17 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, db *actionsStore) 
 			RefName:      "main",
 			IsPrivate:    false,
 			Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
-			CreatedUnix:  db.NowFunc().Unix(),
+			CreatedUnix:  s.db.NowFunc().Unix(),
 		},
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
 }
 
-func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -640,14 +640,14 @@ func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("new repo", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
-		err = db.NewRepo(ctx, alice, alice, repo)
+		err = s.NewRepo(ctx, alice, alice, repo)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -662,7 +662,7 @@ func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 				RepoUserName: alice.Name,
 				RepoName:     repo.Name,
 				IsPrivate:    false,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -671,15 +671,15 @@ func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("fork repo", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
 		repo.IsFork = true
-		err = db.NewRepo(ctx, alice, alice, repo)
+		err = s.NewRepo(ctx, alice, alice, repo)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -694,7 +694,7 @@ func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 				RepoUserName: alice.Name,
 				RepoName:     repo.Name,
 				IsPrivate:    false,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -702,14 +702,14 @@ func actionsNewRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	})
 }
 
-func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
+func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 	// NOTE: We set a noop mock here to avoid data race with other tests that writes
 	// to the mock server because this function holds a lock.
 	conf.SetMockServer(t, conf.ServerOpts{})
 
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -719,11 +719,11 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("new tag", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
-		err = db.PushTag(ctx,
+		err = s.PushTag(ctx,
 			PushTagOptions{
 				Owner:       alice,
 				Repo:        repo,
@@ -734,7 +734,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -750,7 +750,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 				RepoName:     repo.Name,
 				RefName:      "v1.0.0",
 				IsPrivate:    false,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -759,11 +759,11 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 
 	t.Run("delete tag", func(t *testing.T) {
 		t.Cleanup(func() {
-			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
 			require.NoError(t, err)
 		})
 
-		err = db.PushTag(ctx,
+		err = s.PushTag(ctx,
 			PushTagOptions{
 				Owner:       alice,
 				Repo:        repo,
@@ -774,7 +774,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -790,7 +790,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 				RepoName:     repo.Name,
 				RefName:      "v1.0.0",
 				IsPrivate:    false,
-				CreatedUnix:  db.NowFunc().Unix(),
+				CreatedUnix:  s.db.NowFunc().Unix(),
 			},
 		}
 		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
@@ -798,10 +798,10 @@ func actionsPushTag(t *testing.T, ctx context.Context, db *actionsStore) {
 	})
 }
 
-func actionsRenameRepo(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -809,10 +809,10 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	)
 	require.NoError(t, err)
 
-	err = db.RenameRepo(ctx, alice, alice, "oldExample", repo)
+	err = s.RenameRepo(ctx, alice, alice, "oldExample", repo)
 	require.NoError(t, err)
 
-	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -828,19 +828,19 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 			RepoName:     repo.Name,
 			IsPrivate:    false,
 			Content:      "oldExample",
-			CreatedUnix:  db.NowFunc().Unix(),
+			CreatedUnix:  s.db.NowFunc().Unix(),
 		},
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
 }
 
-func actionsTransferRepo(t *testing.T, ctx context.Context, db *actionsStore) {
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	bob, err := NewUsersStore(db.DB).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	bob, err := NewUsersStore(s.db).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(db.DB).Create(ctx,
+	repo, err := NewReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -848,10 +848,10 @@ func actionsTransferRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 	)
 	require.NoError(t, err)
 
-	err = db.TransferRepo(ctx, alice, alice, bob, repo)
+	err = s.TransferRepo(ctx, alice, alice, bob, repo)
 	require.NoError(t, err)
 
-	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -867,7 +867,7 @@ func actionsTransferRepo(t *testing.T, ctx context.Context, db *actionsStore) {
 			RepoName:     repo.Name,
 			IsPrivate:    false,
 			Content:      "alice/example",
-			CreatedUnix:  db.NowFunc().Unix(),
+			CreatedUnix:  s.db.NowFunc().Unix(),
 		},
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
