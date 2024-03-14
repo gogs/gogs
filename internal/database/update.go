@@ -49,8 +49,8 @@ type PushUpdateOptions struct {
 	RepoName     string
 }
 
-// PushUpdate must be called for any push actions in order to
-// generates necessary push action history feeds.
+// PushUpdate must be called for any push actions in order to generate necessary
+// push action history feeds.
 func PushUpdate(opts PushUpdateOptions) (err error) {
 	ctx := context.TODO()
 
@@ -89,7 +89,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 
 	// Push tags
 	if strings.HasPrefix(opts.FullRefspec, git.RefsTags) {
-		err := Actions.PushTag(ctx,
+		err := Handle.Actions().PushTag(ctx,
 			PushTagOptions{
 				Owner:       owner,
 				Repo:        repo,
@@ -127,7 +127,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		}
 	}
 
-	err = Actions.CommitRepo(ctx,
+	err = Handle.Actions().CommitRepo(ctx,
 		CommitRepoOptions{
 			Owner:       owner,
 			Repo:        repo,

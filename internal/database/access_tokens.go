@@ -58,7 +58,7 @@ type AccessTokensStore struct {
 }
 
 func newAccessTokensStore(db *gorm.DB) *AccessTokensStore {
-	return &AccessTokensStore{db}
+	return &AccessTokensStore{db: db}
 }
 
 type ErrAccessTokenAlreadyExist struct {

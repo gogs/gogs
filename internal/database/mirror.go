@@ -361,7 +361,7 @@ func SyncMirrors() {
 
 			// Delete reference
 			if result.newCommitID == gitShortEmptyID {
-				if err = Actions.MirrorSyncDelete(ctx, m.Repo.MustOwner(), m.Repo, result.refName); err != nil {
+				if err = Handle.Actions().MirrorSyncDelete(ctx, m.Repo.MustOwner(), m.Repo, result.refName); err != nil {
 					log.Error("Failed to create action for mirror sync delete [repo_id: %d]: %v", m.RepoID, err)
 				}
 				continue
@@ -370,7 +370,7 @@ func SyncMirrors() {
 			// New reference
 			isNewRef := false
 			if result.oldCommitID == gitShortEmptyID {
-				if err = Actions.MirrorSyncCreate(ctx, m.Repo.MustOwner(), m.Repo, result.refName); err != nil {
+				if err = Handle.Actions().MirrorSyncCreate(ctx, m.Repo.MustOwner(), m.Repo, result.refName); err != nil {
 					log.Error("Failed to create action for mirror sync create [repo_id: %d]: %v", m.RepoID, err)
 					continue
 				}
@@ -419,7 +419,7 @@ func SyncMirrors() {
 				newCommitID = refNewCommit.ID.String()
 			}
 
-			err = Actions.MirrorSyncPush(ctx,
+			err = Handle.Actions().MirrorSyncPush(ctx,
 				MirrorSyncPushOptions{
 					Owner:       m.Repo.MustOwner(),
 					Repo:        m.Repo,

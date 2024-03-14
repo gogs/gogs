@@ -28,61 +28,16 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-// ActionsStore is the persistent interface for actions.
-type ActionsStore interface {
-	// CommitRepo creates actions for pushing commits to the repository. An action
-	// with the type ActionDeleteBranch is created if the push deletes a branch; an
-	// action with the type ActionCommitRepo is created for a regular push. If the
-	// regular push also creates a new branch, then another action with type
-	// ActionCreateBranch is created.
-	CommitRepo(ctx context.Context, opts CommitRepoOptions) error
-	// ListByOrganization returns actions of the organization viewable by the actor.
-	// Results are paginated if `afterID` is given.
-	ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error)
-	// ListByUser returns actions of the user viewable by the actor. Results are
-	// paginated if `afterID` is given. The `isProfile` indicates whether repository
-	// permissions should be considered.
-	ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error)
-	// MergePullRequest creates an action for merging a pull request.
-	MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error
-	// MirrorSyncCreate creates an action for mirror synchronization of a new
-	// reference.
-	MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error
-	// MirrorSyncDelete creates an action for mirror synchronization of a reference
-	// deletion.
-	MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error
-	// MirrorSyncPush creates an action for mirror synchronization of pushed
-	// commits.
-	MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error
-	// NewRepo creates an action for creating a new repository. The action type
-	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
-	// is a fork.
-	NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error
-	// PushTag creates an action for pushing tags to the repository. An action with
-	// the type ActionDeleteTag is created if the push deletes a tag. Otherwise, an
-	// action with the type ActionPushTag is created for a regular push.
-	PushTag(ctx context.Context, opts PushTagOptions) error
-	// RenameRepo creates an action for renaming a repository.
-	RenameRepo(ctx context.Context, doer, owner *User, oldRepoName string, repo *Repository) error
-	// TransferRepo creates an action for transferring a repository to a new owner.
-	TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error
+// ActionsStore is the storage layer for actions.
+type ActionsStore struct {
+	db *gorm.DB
 }
 
-var Actions ActionsStore
-
-var _ ActionsStore = (*actionsStore)(nil)
-
-type actionsStore struct {
-	*gorm.DB
+func newActionsStore(db *gorm.DB) *ActionsStore {
+	return &ActionsStore{db: db}
 }
 
-// NewActionsStore returns a persistent interface for actions with given
-// database connection.
-func NewActionsStore(db *gorm.DB) ActionsStore {
-	return &actionsStore{DB: db}
-}
-
-func (s *actionsStore) listByOrganization(ctx context.Context, orgID, actorID, afterID int64) *gorm.DB {
+func (s *ActionsStore) listByOrganization(ctx context.Context, orgID, actorID, afterID int64) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -102,18 +57,18 @@ func (s *actionsStore) listByOrganization(ctx context.Context, orgID, actorID, a
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
-	return s.WithContext(ctx).
+	return s.db.WithContext(ctx).
 		Where("user_id = ?", orgID).
-		Where(s.
+		Where(s.db.
 			// Not apply when afterID is not given
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
-		Where("repo_id IN (?)", s.
+		Where("repo_id IN (?)", s.db.
 			Select("repository.id").
 			Table("repository").
 			Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
-			Where("team_repo.team_id IN (?)", s.
+			Where("team_repo.team_id IN (?)", s.db.
 				Select("team_id").
 				Table("team_user").
 				Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
@@ -124,12 +79,14 @@ func (s *actionsStore) listByOrganization(ctx context.Context, orgID, actorID, a
 		Order("id DESC")
 }
 
-func (s *actionsStore) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
+// ListByOrganization returns actions of the organization viewable by the actor.
+// Results are paginated if `afterID` is given.
+func (s *ActionsStore) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
 	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
 	return actions, s.listByOrganization(ctx, orgID, actorID, afterID).Find(&actions).Error
 }
 
-func (s *actionsStore) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {
+func (s *ActionsStore) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -141,14 +98,14 @@ func (s *actionsStore) listByUser(ctx context.Context, userID, actorID, afterID 
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
-	return s.WithContext(ctx).
+	return s.db.WithContext(ctx).
 		Where("user_id = ?", userID).
-		Where(s.
+		Where(s.db.
 			// Not apply when afterID is not given
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
-		Where(s.
+		Where(s.db.
 			// Not apply when in not profile page or the user is viewing own profile
 			Where("?", !isProfile || actorID == userID).
 			Or("is_private = ? AND act_user_id = ?", false, userID),
@@ -157,14 +114,17 @@ func (s *actionsStore) listByUser(ctx context.Context, userID, actorID, afterID 
 		Order("id DESC")
 }
 
-func (s *actionsStore) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+// ListByUser returns actions of the user viewable by the actor. Results are
+// paginated if `afterID` is given. The `isProfile` indicates whether repository
+// permissions should be considered.
+func (s *ActionsStore) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
 	return actions, s.listByUser(ctx, userID, actorID, afterID, isProfile).Find(&actions).Error
 }
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
-func (s *actionsStore) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := NewReposStore(s.DB).ListWatches(ctx, act.RepoID)
+func (s *ActionsStore) notifyWatchers(ctx context.Context, act *Action) error {
+	watches, err := NewReposStore(s.db).ListWatches(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}
@@ -187,10 +147,13 @@ func (s *actionsStore) notifyWatchers(ctx context.Context, act *Action) error {
 		actions = append(actions, clone(watch.UserID))
 	}
 
-	return s.Create(actions).Error
+	return s.db.Create(actions).Error
 }
 
-func (s *actionsStore) NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error {
+// NewRepo creates an action for creating a new repository. The action type
+// could be ActionCreateRepo or ActionForkRepo based on whether the repository
+// is a fork.
+func (s *ActionsStore) NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error {
 	opType := ActionCreateRepo
 	if repo.IsFork {
 		opType = ActionForkRepo
@@ -209,7 +172,8 @@ func (s *actionsStore) NewRepo(ctx context.Context, doer, owner *User, repo *Rep
 	)
 }
 
-func (s *actionsStore) RenameRepo(ctx context.Context, doer, owner *User, oldRepoName string, repo *Repository) error {
+// RenameRepo creates an action for renaming a repository.
+func (s *ActionsStore) RenameRepo(ctx context.Context, doer, owner *User, oldRepoName string, repo *Repository) error {
 	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
@@ -224,7 +188,7 @@ func (s *actionsStore) RenameRepo(ctx context.Context, doer, owner *User, oldRep
 	)
 }
 
-func (s *actionsStore) mirrorSyncAction(ctx context.Context, opType ActionType, owner *User, repo *Repository, refName string, content []byte) error {
+func (s *ActionsStore) mirrorSyncAction(ctx context.Context, opType ActionType, owner *User, repo *Repository, refName string, content []byte) error {
 	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    owner.ID,
@@ -249,13 +213,15 @@ type MirrorSyncPushOptions struct {
 	Commits     *PushCommits
 }
 
-func (s *actionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
+// MirrorSyncPush creates an action for mirror synchronization of pushed
+// commits.
+func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
 	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
-		NewUsersStore(s.DB),
+		NewUsersStore(s.db),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -291,15 +257,20 @@ func (s *actionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 	return s.mirrorSyncAction(ctx, ActionMirrorSyncPush, opts.Owner, opts.Repo, opts.RefName, data)
 }
 
-func (s *actionsStore) MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error {
+// MirrorSyncCreate creates an action for mirror synchronization of a new
+// reference.
+func (s *ActionsStore) MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error {
 	return s.mirrorSyncAction(ctx, ActionMirrorSyncCreate, owner, repo, refName, nil)
 }
 
-func (s *actionsStore) MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error {
+// MirrorSyncDelete creates an action for mirror synchronization of a reference
+// deletion.
+func (s *ActionsStore) MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error {
 	return s.mirrorSyncAction(ctx, ActionMirrorSyncDelete, owner, repo, refName, nil)
 }
 
-func (s *actionsStore) MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error {
+// MergePullRequest creates an action for merging a pull request.
+func (s *ActionsStore) MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error {
 	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
@@ -314,7 +285,8 @@ func (s *actionsStore) MergePullRequest(ctx context.Context, doer, owner *User, 
 	)
 }
 
-func (s *actionsStore) TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error {
+// TransferRepo creates an action for transferring a repository to a new owner.
+func (s *ActionsStore) TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error {
 	return s.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
@@ -487,13 +459,18 @@ type CommitRepoOptions struct {
 	Commits     *PushCommits
 }
 
-func (s *actionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
-	err := NewReposStore(s.DB).Touch(ctx, opts.Repo.ID)
+// CommitRepo creates actions for pushing commits to the repository. An action
+// with the type ActionDeleteBranch is created if the push deletes a branch; an
+// action with the type ActionCommitRepo is created for a regular push. If the
+// regular push also creates a new branch, then another action with type
+// ActionCreateBranch is created.
+func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
+	err := NewReposStore(s.db).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
 
-	pusher, err := NewUsersStore(s.DB).GetByUsername(ctx, opts.PusherName)
+	pusher, err := NewUsersStore(s.db).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
@@ -589,7 +566,7 @@ func (s *actionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	}
 
 	commits, err := opts.Commits.APIFormat(ctx,
-		NewUsersStore(s.DB),
+		NewUsersStore(s.db),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -631,13 +608,16 @@ type PushTagOptions struct {
 	NewCommitID string
 }
 
-func (s *actionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
-	err := NewReposStore(s.DB).Touch(ctx, opts.Repo.ID)
+// PushTag creates an action for pushing tags to the repository. An action with
+// the type ActionDeleteTag is created if the push deletes a tag. Otherwise, an
+// action with the type ActionPushTag is created for a regular push.
+func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
+	err := NewReposStore(s.db).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
 
-	pusher, err := NewUsersStore(s.DB).GetByUsername(ctx, opts.PusherName)
+	pusher, err := NewUsersStore(s.db).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
@@ -703,7 +683,7 @@ func (s *actionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 	return nil
 }
 
-// ActionType is the type of an action.
+// ActionType is the type of action.
 type ActionType int
 
 // ⚠️ WARNING: Only append to the end of list to maintain backward compatibility.

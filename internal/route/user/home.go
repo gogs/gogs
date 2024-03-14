@@ -65,9 +65,9 @@ func retrieveFeeds(c *context.Context, ctxUser *database.User, userID int64, isP
 	var err error
 	var actions []*database.Action
 	if ctxUser.IsOrganization() {
-		actions, err = database.Actions.ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
+		actions, err = database.Handle.Actions().ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
 	} else {
-		actions, err = database.Actions.ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
+		actions, err = database.Handle.Actions().ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
 	}
 	if err != nil {
 		c.Error(err, "list actions")
