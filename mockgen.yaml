@@ -36,7 +36,6 @@ mocks:
     sources:
       - path: gogs.io/gogs/internal/database
         interfaces:
-          - LFSStore
           - UsersStore
           - TwoFactorsStore
           - ReposStore

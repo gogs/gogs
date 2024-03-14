@@ -25,6 +25,7 @@ const (
 )
 
 type basicHandler struct {
+	store Store
 	// The default storage backend for uploading new objects.
 	defaultStorage lfsutil.Storage
 	// The list of available storage backends to access objects.
@@ -43,7 +44,7 @@ func (h *basicHandler) Storager(storage lfsutil.Storage) lfsutil.Storager {
 
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
 func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Repository, oid lfsutil.OID) {
-	object, err := database.LFS.GetObjectByOID(c.Req.Context(), repo.ID, oid)
+	object, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, oid)
 	if err != nil {
 		if database.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.Resp, http.StatusNotFound, responseError{
@@ -78,7 +79,7 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository, oid lfsutil.OID) {
 	// NOTE: LFS client will retry upload the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
-	_, err := database.LFS.GetObjectByOID(c.Req.Context(), repo.ID, oid)
+	_, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, oid)
 	if err == nil {
 		// Object exists, drain the request body and we're good.
 		_, _ = io.Copy(io.Discard, c.Req.Request.Body)
@@ -105,7 +106,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 		return
 	}
 
-	err = database.LFS.CreateObject(c.Req.Context(), repo.ID, oid, written, s.Storage())
+	err = h.store.CreateLFSObject(c.Req.Context(), repo.ID, oid, written, s.Storage())
 	if err != nil {
 		// NOTE: It is OK to leave the file when the whole operation failed
 		// with a DB error, a retry on client side can safely overwrite the
@@ -120,7 +121,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 }
 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
-func (*basicHandler) serveVerify(c *macaron.Context, repo *database.Repository) {
+func (h *basicHandler) serveVerify(c *macaron.Context, repo *database.Repository) {
 	var request basicVerifyRequest
 	defer func() { _ = c.Req.Request.Body.Close() }()
 
@@ -139,7 +140,7 @@ func (*basicHandler) serveVerify(c *macaron.Context, repo *database.Repository) 
 		return
 	}
 
-	object, err := database.LFS.GetObjectByOID(c.Req.Context(), repo.ID, request.Oid)
+	object, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, request.Oid)
 	if err != nil {
 		if database.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.Resp, http.StatusNotFound, responseError{
