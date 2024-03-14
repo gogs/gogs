@@ -335,7 +335,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return fmt.Errorf("Commit: %v", err)
 	}
 
-	if err = Actions.MergePullRequest(ctx, doer, pr.Issue.Repo.Owner, pr.Issue.Repo, pr.Issue); err != nil {
+	if err = Handle.Actions().MergePullRequest(ctx, doer, pr.Issue.Repo.Owner, pr.Issue.Repo, pr.Issue); err != nil {
 		log.Error("Failed to create action for merge pull request, pull_request_id: %d, error: %v", pr.ID, err)
 	}
 
