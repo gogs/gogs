@@ -47,13 +47,22 @@ create_volume_subfolder() {
 }
 
 setids() {
-    export USER=git
+    # export USER=$USER_GOGS
     PUID=${PUID:-1000}
     PGID=${PGID:-1000}
     groupmod -o -g "$PGID" $USER
     usermod -o -u "$PUID" $USER
 }
 
+createuser(){
+    export USER=$USER_GOGS
+    # Create git user for Gogs
+    addgroup -S $USER_GOGS
+    adduser -G $USER -H -D -g 'Gogs Git User' $USER -h /data/$USER -s /bin/bash && usermod -p '*' $USER && passwd -u $USER
+    echo "export GOGS_CUSTOM=$GOGS_CUSTOM" >> /etc/profile
+}
+
+createuser
 setids
 cleanup
 create_volume_subfolder

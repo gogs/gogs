@@ -5,4 +5,4 @@ if test -f ./setup; then
     source ./setup
 fi
 
-exec gosu "$USER" /app/gogs/gogs web
+exec gosu "$USER_GOGS" /app/gogs/gogs web

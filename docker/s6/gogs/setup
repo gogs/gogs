@@ -1,13 +1,13 @@
 #!/bin/sh
 
 if ! test -d ~git/.ssh; then
-    gosu "$USER" mkdir -p ~git/.ssh
-    chmod 700 ~git/.ssh
+    gosu "$USER_GOGS" mkdir -p ~$USER_GOGS/.ssh
+    chmod 700 ~$USER_GOGS/.ssh
 fi
 
-if ! test -f ~git/.ssh/environment; then
-    gosu "$USER" echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~git/.ssh/environment
-    chmod 600 ~git/.ssh/environment
+if ! test -f ~$USER_GOGS/.ssh/environment; then
+    gosu "$USER_GOGS" echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~$USER_GOGS/.ssh/environment
+    chmod 600 ~$USER_GOGS/.ssh/environment
 fi
 
 cd /app/gogs || exit 1
@@ -19,4 +19,4 @@ ln -sfn /data/gogs/data ./data
 # Backward Compatibility with Gogs Container v0.6.15
 ln -sfn /data/git /home/git
 
-chmod 0755 /data /data/gogs ~git/
+chmod 0755 /data /data/gogs ~$USER_GOGS/
