@@ -185,7 +185,7 @@ func (s *usersStore) Authenticate(ctx context.Context, login, password string, l
 
 	user := new(User)
 	err := query.First(user).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrap(err, "get user")
 	}
 
@@ -221,7 +221,7 @@ func (s *usersStore) Authenticate(ctx context.Context, login, password string, l
 		createNewUser = true
 	}
 
-	source, err := LoginSources.GetByID(ctx, authSourceID)
+	source, err := newLoginSourcesStore(s.DB, loadedLoginSourceFilesStore).GetByID(ctx, authSourceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get login source")
 	}

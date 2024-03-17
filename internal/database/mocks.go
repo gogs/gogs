@@ -8,22 +8,6 @@ import (
 	"testing"
 )
 
-func setMockLoginSourcesStore(t *testing.T, mock LoginSourcesStore) {
-	before := LoginSources
-	LoginSources = mock
-	t.Cleanup(func() {
-		LoginSources = before
-	})
-}
-
-func setMockLoginSourceFilesStore(t *testing.T, db *loginSourcesStore, mock loginSourceFilesStore) {
-	before := db.files
-	db.files = mock
-	t.Cleanup(func() {
-		db.files = before
-	})
-}
-
 func SetMockPermsStore(t *testing.T, mock PermsStore) {
 	before := Perms
 	Perms = mock

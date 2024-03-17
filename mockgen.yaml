@@ -25,10 +25,8 @@ mocks:
     sources:
       - path: gogs.io/gogs/internal/database
         interfaces:
-          - LoginSourcesStore
-          - LoginSourceFilesStore
-          - LoginSourceFileStore
           - loginSourceFileStore
+          - loginSourceFilesStore
       - path: gogs.io/gogs/internal/auth
         interfaces:
           - Provider
