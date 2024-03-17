@@ -6,6 +6,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,20 +15,6 @@ import (
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/lfsutil"
 )
-
-// LFSStore is the persistent interface for LFS objects.
-type LFSStore interface {
-	// CreateObject creates a LFS object record in database.
-	CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error
-	// GetObjectByOID returns the LFS object with given OID. It returns
-	// ErrLFSObjectNotExist when not found.
-	GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error)
-	// GetObjectsByOIDs returns LFS objects found within "oids". The returned list
-	// could have less elements if some oids were not found.
-	GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error)
-}
-
-var LFS LFSStore
 
 // LFSObject is the relation between an LFS object and a repository.
 type LFSObject struct {
@@ -38,20 +25,24 @@ type LFSObject struct {
 	CreatedAt time.Time       `gorm:"not null"`
 }
 
-var _ LFSStore = (*lfsStore)(nil)
-
-type lfsStore struct {
-	*gorm.DB
+// LFSStore is the storage layer for LFS objects.
+type LFSStore struct {
+	db *gorm.DB
 }
 
-func (s *lfsStore) CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
+func newLFSStore(db *gorm.DB) *LFSStore {
+	return &LFSStore{db: db}
+}
+
+// CreateObject creates an LFS object record in database.
+func (s *LFSStore) CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
 	object := &LFSObject{
 		RepoID:  repoID,
 		OID:     oid,
 		Size:    size,
 		Storage: storage,
 	}
-	return s.WithContext(ctx).Create(object).Error
+	return s.db.WithContext(ctx).Create(object).Error
 }
 
 type ErrLFSObjectNotExist struct {
@@ -59,8 +50,7 @@ type ErrLFSObjectNotExist struct {
 }
 
 func IsErrLFSObjectNotExist(err error) bool {
-	_, ok := err.(ErrLFSObjectNotExist)
-	return ok
+	return errors.As(err, &ErrLFSObjectNotExist{})
 }
 
 func (err ErrLFSObjectNotExist) Error() string {
@@ -71,11 +61,13 @@ func (ErrLFSObjectNotExist) NotFound() bool {
 	return true
 }
 
-func (s *lfsStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error) {
+// GetObjectByOID returns the LFS object with given OID. It returns
+// ErrLFSObjectNotExist when not found.
+func (s *LFSStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error) {
 	object := new(LFSObject)
-	err := s.WithContext(ctx).Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
+	err := s.db.WithContext(ctx).Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": oid}}
 		}
 		return nil, err
@@ -83,14 +75,16 @@ func (s *lfsStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil
 	return object, err
 }
 
-func (s *lfsStore) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
+// GetObjectsByOIDs returns LFS objects found within "oids". The returned list
+// could have fewer elements if some oids were not found.
+func (s *LFSStore) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
 	if len(oids) == 0 {
 		return []*LFSObject{}, nil
 	}
 
 	objects := make([]*LFSObject, 0, len(oids))
-	err := s.WithContext(ctx).Where("repo_id = ? AND oid IN (?)", repoID, oids).Find(&objects).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	err := s.db.WithContext(ctx).Where("repo_id = ? AND oid IN (?)", repoID, oids).Find(&objects).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 	return objects, nil

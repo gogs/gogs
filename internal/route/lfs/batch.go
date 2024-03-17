@@ -19,111 +19,113 @@ import (
 )
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
-func serveBatch(c *macaron.Context, owner *database.User, repo *database.Repository) {
-	var request batchRequest
-	defer c.Req.Request.Body.Close()
-	err := jsoniter.NewDecoder(c.Req.Request.Body).Decode(&request)
-	if err != nil {
-		responseJSON(c.Resp, http.StatusBadRequest, responseError{
-			Message: strutil.ToUpperFirst(err.Error()),
-		})
-		return
-	}
-
-	// NOTE: We only support basic transfer as of now.
-	transfer := transferBasic
-	// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/object/basic
-	baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
-
-	objects := make([]batchObject, 0, len(request.Objects))
-	switch request.Operation {
-	case basicOperationUpload:
-		for _, obj := range request.Objects {
-			var actions batchActions
-			if lfsutil.ValidOID(obj.Oid) {
-				actions = batchActions{
-					Upload: &batchAction{
-						Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
-						Header: map[string]string{
-							// NOTE: git-lfs v2.5.0 sets the Content-Type based on the uploaded file.
-							// This ensures that the client always uses the designated value for the header.
-							"Content-Type": "application/octet-stream",
-						},
-					},
-					Verify: &batchAction{
-						Href: fmt.Sprintf("%s/verify", baseHref),
-					},
-				}
-			} else {
-				actions = batchActions{
-					Error: &batchError{
-						Code:    http.StatusUnprocessableEntity,
-						Message: "Object has invalid oid",
-					},
-				}
-			}
-
-			objects = append(objects, batchObject{
-				Oid:     obj.Oid,
-				Size:    obj.Size,
-				Actions: actions,
-			})
-		}
-
-	case basicOperationDownload:
-		oids := make([]lfsutil.OID, 0, len(request.Objects))
-		for _, obj := range request.Objects {
-			oids = append(oids, obj.Oid)
-		}
-		stored, err := database.LFS.GetObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
+func serveBatch(store Store) macaron.Handler {
+	return func(c *macaron.Context, owner *database.User, repo *database.Repository) {
+		var request batchRequest
+		defer func() { _ = c.Req.Request.Body.Close() }()
+		err := jsoniter.NewDecoder(c.Req.Request.Body).Decode(&request)
 		if err != nil {
-			internalServerError(c.Resp)
-			log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
+			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+				Message: strutil.ToUpperFirst(err.Error()),
+			})
 			return
 		}
-		storedSet := make(map[lfsutil.OID]*database.LFSObject, len(stored))
-		for _, obj := range stored {
-			storedSet[obj.OID] = obj
-		}
 
-		for _, obj := range request.Objects {
-			var actions batchActions
-			if stored := storedSet[obj.Oid]; stored != nil {
-				if stored.Size != obj.Size {
-					actions.Error = &batchError{
-						Code:    http.StatusUnprocessableEntity,
-						Message: "Object size mismatch",
+		// NOTE: We only support basic transfer as of now.
+		transfer := transferBasic
+		// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/object/basic
+		baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
+
+		objects := make([]batchObject, 0, len(request.Objects))
+		switch request.Operation {
+		case basicOperationUpload:
+			for _, obj := range request.Objects {
+				var actions batchActions
+				if lfsutil.ValidOID(obj.Oid) {
+					actions = batchActions{
+						Upload: &batchAction{
+							Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
+							Header: map[string]string{
+								// NOTE: git-lfs v2.5.0 sets the Content-Type based on the uploaded file.
+								// This ensures that the client always uses the designated value for the header.
+								"Content-Type": "application/octet-stream",
+							},
+						},
+						Verify: &batchAction{
+							Href: fmt.Sprintf("%s/verify", baseHref),
+						},
 					}
 				} else {
-					actions.Download = &batchAction{
-						Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
+					actions = batchActions{
+						Error: &batchError{
+							Code:    http.StatusUnprocessableEntity,
+							Message: "Object has invalid oid",
+						},
 					}
 				}
-			} else {
-				actions.Error = &batchError{
-					Code:    http.StatusNotFound,
-					Message: "Object does not exist",
-				}
+
+				objects = append(objects, batchObject{
+					Oid:     obj.Oid,
+					Size:    obj.Size,
+					Actions: actions,
+				})
 			}
 
-			objects = append(objects, batchObject{
-				Oid:     obj.Oid,
-				Size:    obj.Size,
-				Actions: actions,
+		case basicOperationDownload:
+			oids := make([]lfsutil.OID, 0, len(request.Objects))
+			for _, obj := range request.Objects {
+				oids = append(oids, obj.Oid)
+			}
+			stored, err := store.GetLFSObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
+			if err != nil {
+				internalServerError(c.Resp)
+				log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
+				return
+			}
+			storedSet := make(map[lfsutil.OID]*database.LFSObject, len(stored))
+			for _, obj := range stored {
+				storedSet[obj.OID] = obj
+			}
+
+			for _, obj := range request.Objects {
+				var actions batchActions
+				if stored := storedSet[obj.Oid]; stored != nil {
+					if stored.Size != obj.Size {
+						actions.Error = &batchError{
+							Code:    http.StatusUnprocessableEntity,
+							Message: "Object size mismatch",
+						}
+					} else {
+						actions.Download = &batchAction{
+							Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
+						}
+					}
+				} else {
+					actions.Error = &batchError{
+						Code:    http.StatusNotFound,
+						Message: "Object does not exist",
+					}
+				}
+
+				objects = append(objects, batchObject{
+					Oid:     obj.Oid,
+					Size:    obj.Size,
+					Actions: actions,
+				})
+			}
+
+		default:
+			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+				Message: "Operation not recognized",
 			})
+			return
 		}
 
-	default:
-		responseJSON(c.Resp, http.StatusBadRequest, responseError{
-			Message: "Operation not recognized",
+		responseJSON(c.Resp, http.StatusOK, batchResponse{
+			Transfer: transfer,
+			Objects:  objects,
 		})
-		return
 	}
-
-	responseJSON(c.Resp, http.StatusOK, batchResponse{
-		Transfer: transfer,
-		Objects:  objects,
-	})
 }
 
 // batchRequest defines the request payload for the batch endpoint.

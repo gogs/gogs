@@ -124,7 +124,6 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 
 	// Initialize stores, sorted in alphabetical order.
 	LoginSources = &loginSourcesStore{DB: db, files: sourceFiles}
-	LFS = &lfsStore{DB: db}
 	Notices = NewNoticesStore(db)
 	Orgs = NewOrgsStore(db)
 	Perms = NewPermsStore(db)
@@ -162,4 +161,8 @@ func (db *DB) AccessTokens() *AccessTokensStore {
 
 func (db *DB) Actions() *ActionsStore {
 	return newActionsStore(db.db)
+}
+
+func (db *DB) LFS() *LFSStore {
+	return newLFSStore(db.db)
 }
