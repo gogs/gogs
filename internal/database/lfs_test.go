@@ -23,13 +23,13 @@ func TestLFS(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &lfsStore{
-		DB: newTestDB(t, "lfsStore"),
+	s := &LFSStore{
+		db: newTestDB(t, "LFSStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *lfsStore)
+		test func(t *testing.T, ctx context.Context, s *LFSStore)
 	}{
 		{"CreateObject", lfsCreateObject},
 		{"GetObjectByOID", lfsGetObjectByOID},
@@ -37,10 +37,10 @@ func TestLFS(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -48,52 +48,52 @@ func TestLFS(t *testing.T) {
 	}
 }
 
-func lfsCreateObject(t *testing.T, ctx context.Context, db *lfsStore) {
+func lfsCreateObject(t *testing.T, ctx context.Context, s *LFSStore) {
 	// Create first LFS object
 	repoID := int64(1)
 	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
-	err := db.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
+	err := s.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
 	require.NoError(t, err)
 
 	// Get it back and check the CreatedAt field
-	object, err := db.GetObjectByOID(ctx, repoID, oid)
+	object, err := s.GetObjectByOID(ctx, repoID, oid)
 	require.NoError(t, err)
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), object.CreatedAt.UTC().Format(time.RFC3339))
+	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), object.CreatedAt.UTC().Format(time.RFC3339))
 
-	// Try create second LFS object with same oid should fail
-	err = db.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
+	// Try to create second LFS object with same oid should fail
+	err = s.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
 	assert.Error(t, err)
 }
 
-func lfsGetObjectByOID(t *testing.T, ctx context.Context, db *lfsStore) {
+func lfsGetObjectByOID(t *testing.T, ctx context.Context, s *LFSStore) {
 	// Create a LFS object
 	repoID := int64(1)
 	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
-	err := db.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
+	err := s.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
 	require.NoError(t, err)
 
 	// We should be able to get it back
-	_, err = db.GetObjectByOID(ctx, repoID, oid)
+	_, err = s.GetObjectByOID(ctx, repoID, oid)
 	require.NoError(t, err)
 
 	// Try to get a non-existent object
-	_, err = db.GetObjectByOID(ctx, repoID, "bad_oid")
+	_, err = s.GetObjectByOID(ctx, repoID, "bad_oid")
 	expErr := ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": lfsutil.OID("bad_oid")}}
 	assert.Equal(t, expErr, err)
 }
 
-func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, db *lfsStore) {
+func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, s *LFSStore) {
 	// Create two LFS objects
 	repoID := int64(1)
 	oid1 := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
 	oid2 := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64g")
-	err := db.CreateObject(ctx, repoID, oid1, 12, lfsutil.StorageLocal)
+	err := s.CreateObject(ctx, repoID, oid1, 12, lfsutil.StorageLocal)
 	require.NoError(t, err)
-	err = db.CreateObject(ctx, repoID, oid2, 12, lfsutil.StorageLocal)
+	err = s.CreateObject(ctx, repoID, oid2, 12, lfsutil.StorageLocal)
 	require.NoError(t, err)
 
 	// We should be able to get them back and ignore non-existent ones
-	objects, err := db.GetObjectsByOIDs(ctx, repoID, oid1, oid2, "bad_oid")
+	objects, err := s.GetObjectsByOIDs(ctx, repoID, oid1, oid2, "bad_oid")
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(objects), "number of objects")
 

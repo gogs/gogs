@@ -8,14 +8,6 @@ import (
 	"testing"
 )
 
-func SetMockLFSStore(t *testing.T, mock LFSStore) {
-	before := LFS
-	LFS = mock
-	t.Cleanup(func() {
-		LFS = before
-	})
-}
-
 func setMockLoginSourcesStore(t *testing.T, mock LoginSourcesStore) {
 	before := LoginSources
 	LoginSources = mock
