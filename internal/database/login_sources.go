@@ -203,7 +203,7 @@ func (err ErrLoginSourceAlreadyExist) Error() string {
 	return fmt.Sprintf("login source already exists: %v", err.args)
 }
 
-// Create creates a new login source and persist to database. It returns
+// Create creates a new login source and persists it to the database. It returns
 // ErrLoginSourceAlreadyExist when a login source with same name already exists.
 func (s *LoginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error) {
 	err := s.db.WithContext(ctx).Where("name = ?", opts.Name).First(new(LoginSource)).Error
