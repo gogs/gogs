@@ -65,13 +65,13 @@ func TestNotices(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &noticesStore{
-		DB: newTestDB(t, "noticesStore"),
+	s := &NoticesStore{
+		db: newTestDB(t, "NoticesStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *noticesStore)
+		test func(t *testing.T, ctx context.Context, s *NoticesStore)
 	}{
 		{"Create", noticesCreate},
 		{"DeleteByIDs", noticesDeleteByIDs},
@@ -81,10 +81,10 @@ func TestNotices(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -92,19 +92,19 @@ func TestNotices(t *testing.T) {
 	}
 }
 
-func noticesCreate(t *testing.T, ctx context.Context, db *noticesStore) {
-	err := db.Create(ctx, NoticeTypeRepository, "test")
+func noticesCreate(t *testing.T, ctx context.Context, s *NoticesStore) {
+	err := s.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
-	count := db.Count(ctx)
+	count := s.Count(ctx)
 	assert.Equal(t, int64(1), count)
 }
 
-func noticesDeleteByIDs(t *testing.T, ctx context.Context, db *noticesStore) {
-	err := db.Create(ctx, NoticeTypeRepository, "test")
+func noticesDeleteByIDs(t *testing.T, ctx context.Context, s *NoticesStore) {
+	err := s.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
-	notices, err := db.List(ctx, 1, 10)
+	notices, err := s.List(ctx, 1, 10)
 	require.NoError(t, err)
 	ids := make([]int64, 0, len(notices))
 	for _, notice := range notices {
@@ -113,51 +113,51 @@ func noticesDeleteByIDs(t *testing.T, ctx context.Context, db *noticesStore) {
 
 	// Non-existing IDs should be ignored
 	ids = append(ids, 404)
-	err = db.DeleteByIDs(ctx, ids...)
+	err = s.DeleteByIDs(ctx, ids...)
 	require.NoError(t, err)
 
-	count := db.Count(ctx)
+	count := s.Count(ctx)
 	assert.Equal(t, int64(0), count)
 }
 
-func noticesDeleteAll(t *testing.T, ctx context.Context, db *noticesStore) {
-	err := db.Create(ctx, NoticeTypeRepository, "test")
+func noticesDeleteAll(t *testing.T, ctx context.Context, s *NoticesStore) {
+	err := s.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
-	err = db.DeleteAll(ctx)
+	err = s.DeleteAll(ctx)
 	require.NoError(t, err)
 
-	count := db.Count(ctx)
+	count := s.Count(ctx)
 	assert.Equal(t, int64(0), count)
 }
 
-func noticesList(t *testing.T, ctx context.Context, db *noticesStore) {
-	err := db.Create(ctx, NoticeTypeRepository, "test 1")
+func noticesList(t *testing.T, ctx context.Context, s *NoticesStore) {
+	err := s.Create(ctx, NoticeTypeRepository, "test 1")
 	require.NoError(t, err)
-	err = db.Create(ctx, NoticeTypeRepository, "test 2")
+	err = s.Create(ctx, NoticeTypeRepository, "test 2")
 	require.NoError(t, err)
 
-	got1, err := db.List(ctx, 1, 1)
+	got1, err := s.List(ctx, 1, 1)
 	require.NoError(t, err)
 	require.Len(t, got1, 1)
 
-	got2, err := db.List(ctx, 2, 1)
+	got2, err := s.List(ctx, 2, 1)
 	require.NoError(t, err)
 	require.Len(t, got2, 1)
 	assert.True(t, got1[0].ID > got2[0].ID)
 
-	got, err := db.List(ctx, 1, 3)
+	got, err := s.List(ctx, 1, 3)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 }
 
-func noticesCount(t *testing.T, ctx context.Context, db *noticesStore) {
-	count := db.Count(ctx)
+func noticesCount(t *testing.T, ctx context.Context, s *NoticesStore) {
+	count := s.Count(ctx)
 	assert.Equal(t, int64(0), count)
 
-	err := db.Create(ctx, NoticeTypeRepository, "test")
+	err := s.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
-	count = db.Count(ctx)
+	count = s.Count(ctx)
 	assert.Equal(t, int64(1), count)
 }

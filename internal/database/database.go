@@ -123,7 +123,6 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	}
 
 	// Initialize stores, sorted in alphabetical order.
-	Notices = NewNoticesStore(db)
 	Orgs = NewOrgsStore(db)
 	Perms = NewPermsStore(db)
 	Repos = NewReposStore(db)
@@ -172,4 +171,8 @@ var loadedLoginSourceFilesStore loginSourceFilesStore
 
 func (db *DB) LoginSources() *LoginSourcesStore {
 	return newLoginSourcesStore(db.db, loadedLoginSourceFilesStore)
+}
+
+func (db *DB) Notices() *NoticesStore {
+	return newNoticesStore(db.db)
 }
