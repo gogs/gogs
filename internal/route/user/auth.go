@@ -106,7 +106,7 @@ func Login(c *context.Context) {
 	}
 
 	// Display normal login page
-	loginSources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
+	loginSources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -153,7 +153,7 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	loginSources, err := database.LoginSources.List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
+	loginSources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return

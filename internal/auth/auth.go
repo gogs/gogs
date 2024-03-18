@@ -23,6 +23,8 @@ const (
 	PAM         // 4
 	DLDAP       // 5
 	GitHub      // 6
+
+	Mock Type = 999
 )
 
 // Name returns the human-readable name for given authentication type.
@@ -45,8 +47,7 @@ type ErrBadCredentials struct {
 // IsErrBadCredentials returns true if the underlying error has the type
 // ErrBadCredentials.
 func IsErrBadCredentials(err error) bool {
-	_, ok := errors.Cause(err).(ErrBadCredentials)
-	return ok
+	return errors.As(err, &ErrBadCredentials{})
 }
 
 func (err ErrBadCredentials) Error() string {
