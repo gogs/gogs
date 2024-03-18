@@ -25,14 +25,14 @@ func Notices(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminNotices"] = true
 
-	total := database.Notices.Count(c.Req.Context())
+	total := database.Handle.Notices().Count(c.Req.Context())
 	page := c.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	}
 	c.Data["Page"] = paginater.New(int(total), conf.UI.Admin.NoticePagingNum, page, 5)
 
-	notices, err := database.Notices.List(c.Req.Context(), page, conf.UI.Admin.NoticePagingNum)
+	notices, err := database.Handle.Notices().List(c.Req.Context(), page, conf.UI.Admin.NoticePagingNum)
 	if err != nil {
 		c.Error(err, "list notices")
 		return
@@ -53,7 +53,7 @@ func DeleteNotices(c *context.Context) {
 		}
 	}
 
-	if err := database.Notices.DeleteByIDs(c.Req.Context(), ids...); err != nil {
+	if err := database.Handle.Notices().DeleteByIDs(c.Req.Context(), ids...); err != nil {
 		c.Flash.Error("DeleteNoticesByIDs: " + err.Error())
 		c.Status(http.StatusInternalServerError)
 	} else {
@@ -63,7 +63,7 @@ func DeleteNotices(c *context.Context) {
 }
 
 func EmptyNotices(c *context.Context) {
-	if err := database.Notices.DeleteAll(c.Req.Context()); err != nil {
+	if err := database.Handle.Notices().DeleteAll(c.Req.Context()); err != nil {
 		c.Error(err, "delete notices")
 		return
 	}
