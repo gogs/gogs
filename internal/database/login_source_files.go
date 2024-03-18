@@ -52,8 +52,7 @@ type ErrLoginSourceNotExist struct {
 }
 
 func IsErrLoginSourceNotExist(err error) bool {
-	_, ok := err.(ErrLoginSourceNotExist)
-	return ok
+	return errors.As(err, &ErrLoginSourceNotExist{})
 }
 
 func (err ErrLoginSourceNotExist) Error() string {

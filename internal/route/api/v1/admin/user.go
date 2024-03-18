@@ -22,7 +22,7 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 		return
 	}
 
-	_, err := database.LoginSources.GetByID(c.Req.Context(), sourceID)
+	_, err := database.Handle.LoginSources().GetByID(c.Req.Context(), sourceID)
 	if err != nil {
 		if database.IsErrLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
