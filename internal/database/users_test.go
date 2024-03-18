@@ -175,17 +175,19 @@ func usersAuthenticate(t *testing.T, ctx context.Context, db *usersStore) {
 	})
 
 	t.Run("via login source", func(t *testing.T) {
-		mockLoginSources := NewMockLoginSourcesStore()
-		mockLoginSources.GetByIDFunc.SetDefaultHook(func(ctx context.Context, id int64) (*LoginSource, error) {
-			mockProvider := NewMockProvider()
-			mockProvider.AuthenticateFunc.SetDefaultReturn(&auth.ExternalAccount{}, nil)
-			s := &LoginSource{
-				IsActived: true,
-				Provider:  mockProvider,
-			}
-			return s, nil
-		})
-		setMockLoginSourcesStore(t, mockLoginSources)
+		loginSourcesStore := newLoginSourcesStore(db.DB, NewMockLoginSourceFilesStore())
+		loginSource, err := loginSourcesStore.Create(
+			ctx,
+			CreateLoginSourceOptions{
+				Type:      auth.Mock,
+				Name:      "mock-1",
+				Activated: true,
+				Config: mockProviderConfig{
+					ExternalAccount: &auth.ExternalAccount{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		bob, err := db.Create(ctx, "bob", "bob@example.com",
 			CreateUserOptions{
@@ -195,31 +197,30 @@ func usersAuthenticate(t *testing.T, ctx context.Context, db *usersStore) {
 		)
 		require.NoError(t, err)
 
-		user, err := db.Authenticate(ctx, bob.Email, password, 1)
+		user, err := db.Authenticate(ctx, bob.Email, password, loginSource.ID)
 		require.NoError(t, err)
 		assert.Equal(t, bob.Name, user.Name)
 	})
 
 	t.Run("new user via login source", func(t *testing.T) {
-		mockLoginSources := NewMockLoginSourcesStore()
-		mockLoginSources.GetByIDFunc.SetDefaultHook(func(ctx context.Context, id int64) (*LoginSource, error) {
-			mockProvider := NewMockProvider()
-			mockProvider.AuthenticateFunc.SetDefaultReturn(
-				&auth.ExternalAccount{
-					Name:  "cindy",
-					Email: "cindy@example.com",
+		loginSourcesStore := newLoginSourcesStore(db.DB, NewMockLoginSourceFilesStore())
+		loginSource, err := loginSourcesStore.Create(
+			ctx,
+			CreateLoginSourceOptions{
+				Type:      auth.Mock,
+				Name:      "mock-2",
+				Activated: true,
+				Config: mockProviderConfig{
+					ExternalAccount: &auth.ExternalAccount{
+						Name:  "cindy",
+						Email: "cindy@example.com",
+					},
 				},
-				nil,
-			)
-			s := &LoginSource{
-				IsActived: true,
-				Provider:  mockProvider,
-			}
-			return s, nil
-		})
-		setMockLoginSourcesStore(t, mockLoginSources)
+			},
+		)
+		require.NoError(t, err)
 
-		user, err := db.Authenticate(ctx, "cindy", password, 1)
+		user, err := db.Authenticate(ctx, "cindy", password, loginSource.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "cindy", user.Name)
 

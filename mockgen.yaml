@@ -27,6 +27,8 @@ mocks:
         interfaces:
           - loginSourceFileStore
           - loginSourceFilesStore
+  - filename: internal/database/mocks_gen.go
+    sources:
       - path: gogs.io/gogs/internal/auth
         interfaces:
           - Provider

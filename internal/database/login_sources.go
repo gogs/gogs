@@ -64,6 +64,10 @@ func (s *LoginSource) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
+type mockProviderConfig struct {
+	ExternalAccount *auth.ExternalAccount
+}
+
 // AfterFind implements the GORM query hook.
 func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 	s.Created = time.Unix(s.CreatedUnix, 0).Local()
@@ -109,6 +113,16 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 			return err
 		}
 		s.Provider = github.NewProvider(&cfg)
+
+	case auth.Mock:
+		var cfg mockProviderConfig
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		mockProvider := NewMockProvider()
+		mockProvider.AuthenticateFunc.SetDefaultReturn(cfg.ExternalAccount, nil)
+		s.Provider = mockProvider
 
 	default:
 		return fmt.Errorf("unrecognized login source type: %v", s.Type)
