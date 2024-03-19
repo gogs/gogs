@@ -123,7 +123,6 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	}
 
 	// Initialize stores, sorted in alphabetical order.
-	Orgs = NewOrgsStore(db)
 	Perms = NewPermsStore(db)
 	Repos = NewReposStore(db)
 	TwoFactors = &twoFactorsStore{DB: db}
@@ -132,6 +131,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	return db, nil
 }
 
+// DB is the database handler for the storage layer.
 type DB struct {
 	db *gorm.DB
 }
@@ -175,4 +175,8 @@ func (db *DB) LoginSources() *LoginSourcesStore {
 
 func (db *DB) Notices() *NoticesStore {
 	return newNoticesStore(db.db)
+}
+
+func (db *DB) Organizations() *OrganizationsStore {
+	return newOrganizationsStoreStore(db.db)
 }

@@ -21,24 +21,24 @@ func TestOrgs(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &orgsStore{
-		DB: newTestDB(t, "orgsStore"),
+	s := &OrganizationsStore{
+		db: newTestDB(t, "OrganizationsStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *orgsStore)
+		test func(t *testing.T, ctx context.Context, s *OrganizationsStore)
 	}{
 		{"List", orgsList},
-		{"SearchByName", orgsSearchByName},
-		{"CountByUser", orgsCountByUser},
+		{"SearchByName", organizationsSearchByName},
+		{"CountByUser", organizationsCountByUser},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -46,8 +46,8 @@ func TestOrgs(t *testing.T) {
 	}
 }
 
-func orgsList(t *testing.T, ctx context.Context, db *orgsStore) {
-	usersStore := NewUsersStore(db.DB)
+func orgsList(t *testing.T, ctx context.Context, s *OrganizationsStore) {
+	usersStore := NewUsersStore(s.db)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
@@ -58,18 +58,18 @@ func orgsList(t *testing.T, ctx context.Context, db *orgsStore) {
 	require.NoError(t, err)
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = db.Exec(
+	err = s.db.Exec(
 		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
 		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)
 
 	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
-	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org1.ID, false).Error
+	err = s.db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org1.ID, false).Error
 	require.NoError(t, err)
-	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org2.ID, true).Error
+	err = s.db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org2.ID, true).Error
 	require.NoError(t, err)
-	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, bob.ID, org2.ID, true).Error
+	err = s.db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, bob.ID, org2.ID, true).Error
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -104,7 +104,7 @@ func orgsList(t *testing.T, ctx context.Context, db *orgsStore) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := db.List(ctx, test.opts)
+			got, err := s.List(ctx, test.opts)
 			require.NoError(t, err)
 
 			gotOrgNames := make([]string, len(got))
@@ -116,21 +116,21 @@ func orgsList(t *testing.T, ctx context.Context, db *orgsStore) {
 	}
 }
 
-func orgsSearchByName(t *testing.T, ctx context.Context, db *orgsStore) {
+func organizationsSearchByName(t *testing.T, ctx context.Context, s *OrganizationsStore) {
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-	usersStore := NewUsersStore(db.DB)
+	usersStore := NewUsersStore(s.db)
 	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{FullName: "Acme Corp"})
 	require.NoError(t, err)
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{FullName: "Acme Corp 2"})
 	require.NoError(t, err)
-	err = db.Exec(
+	err = s.db.Exec(
 		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
 		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)
 
 	t.Run("search for username org1", func(t *testing.T) {
-		orgs, count, err := db.SearchByName(ctx, "G1", 1, 1, "")
+		orgs, count, err := s.SearchByName(ctx, "G1", 1, 1, "")
 		require.NoError(t, err)
 		require.Len(t, orgs, int(count))
 		assert.Equal(t, int64(1), count)
@@ -138,7 +138,7 @@ func orgsSearchByName(t *testing.T, ctx context.Context, db *orgsStore) {
 	})
 
 	t.Run("search for username org2", func(t *testing.T) {
-		orgs, count, err := db.SearchByName(ctx, "G2", 1, 1, "")
+		orgs, count, err := s.SearchByName(ctx, "G2", 1, 1, "")
 		require.NoError(t, err)
 		require.Len(t, orgs, int(count))
 		assert.Equal(t, int64(1), count)
@@ -146,14 +146,14 @@ func orgsSearchByName(t *testing.T, ctx context.Context, db *orgsStore) {
 	})
 
 	t.Run("search for full name acme", func(t *testing.T) {
-		orgs, count, err := db.SearchByName(ctx, "ACME", 1, 10, "")
+		orgs, count, err := s.SearchByName(ctx, "ACME", 1, 10, "")
 		require.NoError(t, err)
 		require.Len(t, orgs, int(count))
 		assert.Equal(t, int64(2), count)
 	})
 
 	t.Run("search for full name acme ORDER BY id DESC LIMIT 1", func(t *testing.T) {
-		orgs, count, err := db.SearchByName(ctx, "ACME", 1, 1, "id DESC")
+		orgs, count, err := s.SearchByName(ctx, "ACME", 1, 1, "id DESC")
 		require.NoError(t, err)
 		require.Len(t, orgs, 1)
 		assert.Equal(t, int64(2), count)
@@ -161,18 +161,18 @@ func orgsSearchByName(t *testing.T, ctx context.Context, db *orgsStore) {
 	})
 }
 
-func orgsCountByUser(t *testing.T, ctx context.Context, db *orgsStore) {
+func organizationsCountByUser(t *testing.T, ctx context.Context, s *OrganizationsStore) {
 	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
-	err := db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
+	err := s.db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
 	require.NoError(t, err)
-	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 2, 1).Error
+	err = s.db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 2, 1).Error
 	require.NoError(t, err)
 
-	got, err := db.CountByUser(ctx, 1)
+	got, err := s.CountByUser(ctx, 1)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), got)
 
-	got, err = db.CountByUser(ctx, 404)
+	got, err = s.CountByUser(ctx, 404)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), got)
 }

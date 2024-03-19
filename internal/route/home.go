@@ -115,7 +115,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	} else {
 		search := database.Users.SearchByName
 		if opts.Type == database.UserTypeOrganization {
-			search = database.Orgs.SearchByName
+			search = database.Handle.Organizations().SearchByName
 		}
 		users, count, err = search(c.Req.Context(), keyword, page, opts.PageSize, opts.OrderBy)
 		if err != nil {
