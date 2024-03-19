@@ -43,7 +43,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 }
 
 func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
-	orgs, err := database.Orgs.List(
+	orgs, err := database.Handle.Organizations().List(
 		c.Req.Context(),
 		database.ListOrgsOptions{
 			MemberID:              u.ID,
