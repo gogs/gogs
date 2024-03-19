@@ -1491,7 +1491,7 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return Orgs.CountByUser(context.TODO(), u.ID)
+	return Handle.Organizations().CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.

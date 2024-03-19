@@ -40,7 +40,7 @@ func getDashboardContextUser(c *context.Context) *database.User {
 	}
 	c.Data["ContextUser"] = ctxUser
 
-	orgs, err := database.Orgs.List(
+	orgs, err := database.Handle.Organizations().List(
 		c.Req.Context(),
 		database.ListOrgsOptions{
 			MemberID:              c.User.ID,
