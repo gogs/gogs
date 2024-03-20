@@ -71,11 +71,10 @@ func GlobalInit(customConf string) error {
 	if conf.Security.InstallLock {
 		highlight.NewContext()
 		markup.NewSanitizer()
-		db, err := database.NewEngine()
+		err := database.NewEngine()
 		if err != nil {
 			log.Fatal("Failed to initialize ORM engine: %v", err)
 		}
-		database.SetHandle(db)
 		database.HasEngine = true
 
 		database.LoadRepoConfig()
