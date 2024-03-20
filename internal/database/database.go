@@ -128,6 +128,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	TwoFactors = &twoFactorsStore{DB: db}
 	Users = NewUsersStore(db)
 
+	Handle = &DB{db: db}
 	return db, nil
 }
 
@@ -147,11 +148,6 @@ type DB struct {
 // during the service start or during the installation process (which is a
 // single-thread process).
 var Handle *DB
-
-// SetHandle updates the global database handle with the given connection.
-func SetHandle(db *gorm.DB) {
-	Handle = &DB{db: db}
-}
 
 func (db *DB) AccessTokens() *AccessTokensStore {
 	return newAccessTokensStore(db.db)
