@@ -1,8 +1,13 @@
 #!/bin/sh
+if test -n "$USER_GOGS"; then 
+    export USER=$USER_GOGS 
+else
+    export USER=git
+fi
 
 if test -f ./setup; then
     # shellcheck disable=SC2039,SC1091,SC3046
     source ./setup
 fi
 
-exec gosu "$USER_GOGS" /app/gogs/gogs web
+exec gosu "$USER" /app/gogs/gogs web
