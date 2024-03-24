@@ -165,10 +165,10 @@ func reposGetByCollaboratorID(t *testing.T, ctx context.Context, db *reposStore)
 	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
-	permsStore := NewPermsStore(db.DB)
-	err = permsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
+	permissionsStore := newPermissionsStore(db.DB)
+	err = permissionsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
 	require.NoError(t, err)
-	err = permsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{4: AccessModeAdmin})
+	err = permissionsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{4: AccessModeAdmin})
 	require.NoError(t, err)
 
 	t.Run("user 3 is a collaborator of repo1", func(t *testing.T) {
@@ -193,12 +193,12 @@ func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, d
 	repo3, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo3"})
 	require.NoError(t, err)
 
-	permsStore := NewPermsStore(db.DB)
-	err = permsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
+	permissionsStore := newPermissionsStore(db.DB)
+	err = permissionsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
 	require.NoError(t, err)
-	err = permsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{3: AccessModeAdmin, 4: AccessModeWrite})
+	err = permissionsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{3: AccessModeAdmin, 4: AccessModeWrite})
 	require.NoError(t, err)
-	err = permsStore.SetRepoPerms(ctx, repo3.ID, map[int64]AccessMode{4: AccessModeWrite})
+	err = permissionsStore.SetRepoPerms(ctx, repo3.ID, map[int64]AccessMode{4: AccessModeWrite})
 	require.NoError(t, err)
 
 	got, err := db.GetByCollaboratorIDWithAccessMode(ctx, 3)

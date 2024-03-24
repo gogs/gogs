@@ -28,7 +28,7 @@ func RegisterRoutes(r *macaron.Router) {
 
 	store := NewStore()
 	r.Group("", func() {
-		r.Post("/objects/batch", authorize(database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch(store))
+		r.Post("/objects/batch", authorize(store, database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch(store))
 		r.Group("/objects/basic", func() {
 			basic := &basicHandler{
 				store:          store,
@@ -38,9 +38,9 @@ func RegisterRoutes(r *macaron.Router) {
 				},
 			}
 			r.Combo("/:oid", verifyOID()).
-				Get(authorize(database.AccessModeRead), basic.serveDownload).
-				Put(authorize(database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
-			r.Post("/verify", authorize(database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
+				Get(authorize(store, database.AccessModeRead), basic.serveDownload).
+				Put(authorize(store, database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
+			r.Post("/verify", authorize(store, database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
 		})
 	}, authenticate(store))
 }
@@ -104,7 +104,7 @@ func authenticate(store Store) macaron.Handler {
 }
 
 // authorize tries to authorize the user to the context repository with given access mode.
-func authorize(mode database.AccessMode) macaron.Handler {
+func authorize(store Store, mode database.AccessMode) macaron.Handler {
 	return func(c *macaron.Context, actor *database.User) {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
@@ -131,7 +131,7 @@ func authorize(mode database.AccessMode) macaron.Handler {
 			return
 		}
 
-		if !database.Perms.Authorize(c.Req.Context(), actor.ID, repo.ID, mode,
+		if !store.AuthorizeRepositoryAccess(c.Req.Context(), actor.ID, repo.ID, mode,
 			database.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,

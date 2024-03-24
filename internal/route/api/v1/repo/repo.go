@@ -353,7 +353,7 @@ func ListForks(c *context.APIContext) {
 			return
 		}
 
-		accessMode := database.Perms.AccessMode(
+		accessMode := database.Handle.Permissions().AccessMode(
 			c.Req.Context(),
 			c.User.ID,
 			forks[i].ID,
