@@ -26,6 +26,10 @@ type Store interface {
 	// GetLFSObjectsByOIDs returns LFS objects found within "oids". The returned
 	// list could have fewer elements if some oids were not found.
 	GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*database.LFSObject, error)
+
+	// AuthorizeRepositoryAccess returns true if the user has as good as desired
+	// access mode to the repository.
+	AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool
 }
 
 type store struct{}
@@ -53,4 +57,8 @@ func (*store) GetLFSObjectByOID(ctx context.Context, repoID int64, oid lfsutil.O
 
 func (*store) GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*database.LFSObject, error) {
 	return database.Handle.LFS().GetObjectsByOIDs(ctx, repoID, oids...)
+}
+
+func (*store) AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
+	return database.Handle.Permissions().Authorize(ctx, userID, repoID, desired, opts)
 }

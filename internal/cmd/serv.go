@@ -210,7 +210,7 @@ func runServ(c *cli.Context) error {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode := database.Perms.AccessMode(ctx, user.ID, repo.ID,
+			mode := database.Handle.Permissions().AccessMode(ctx, user.ID, repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

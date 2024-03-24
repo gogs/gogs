@@ -8,14 +8,6 @@ import (
 	"testing"
 )
 
-func SetMockPermsStore(t *testing.T, mock PermsStore) {
-	before := Perms
-	Perms = mock
-	t.Cleanup(func() {
-		Perms = before
-	})
-}
-
 func SetMockReposStore(t *testing.T, mock ReposStore) {
 	before := Repos
 	Repos = mock

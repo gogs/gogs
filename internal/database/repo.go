@@ -392,7 +392,7 @@ func (repo *Repository) APIFormatLegacy(permission *api.Permission, user ...*Use
 	if repo.IsFork {
 		p := &api.Permission{Pull: true}
 		if len(user) != 0 {
-			accessMode := Perms.AccessMode(
+			accessMode := Handle.Permissions().AccessMode(
 				context.TODO(),
 				user[0].ID,
 				repo.ID,
@@ -530,7 +530,7 @@ func (repo *Repository) GetAssignees() (_ []*User, err error) {
 // GetAssigneeByID returns the user that has write access of repository by given ID.
 func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
 	ctx := context.TODO()
-	if !Perms.Authorize(
+	if !Handle.Permissions().Authorize(
 		ctx,
 		userID,
 		repo.ID,
@@ -592,7 +592,7 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 }
 
 func (repo *Repository) HasAccess(userID int64) bool {
-	return Perms.Authorize(context.TODO(), userID, repo.ID, AccessModeRead,
+	return Handle.Permissions().Authorize(context.TODO(), userID, repo.ID, AccessModeRead,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,
