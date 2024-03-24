@@ -179,3 +179,7 @@ func (db *DB) Organizations() *OrganizationsStore {
 func (db *DB) Permissions() *PermissionsStore {
 	return newPermissionsStore(db.db)
 }
+
+func (db *DB) PublicKey() *PublicKeysStore {
+	return newPublicKeysStore(db.db)
+}
