@@ -534,7 +534,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, db *usersStore) {
 	require.NoError(t, err)
 	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteByID-tempSSHRootPath")
 	conf.SetMockSSH(t, conf.SSHOpts{RootPath: tempSSHRootPath})
-	err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+	err = newPublicKeysStore(db.DB).RewriteAuthorizedKeys()
 	require.NoError(t, err)
 
 	// Mock issue assignee
