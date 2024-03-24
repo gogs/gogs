@@ -645,7 +645,7 @@ func (s *usersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 	_ = os.Remove(userutil.CustomAvatarPath(userID))
 
 	if needsRewriteAuthorizedKeys {
-		err = NewPublicKeysStore(s.DB).RewriteAuthorizedKeys()
+		err = newPublicKeysStore(s.DB).RewriteAuthorizedKeys()
 		if err != nil {
 			return errors.Wrap(err, `rewrite "authorized_keys" file`)
 		}
@@ -672,7 +672,7 @@ func (s *usersStore) DeleteInactivated() error {
 			return errors.Wrapf(err, "delete user with ID %d", userID)
 		}
 	}
-	err = NewPublicKeysStore(s.DB).RewriteAuthorizedKeys()
+	err = newPublicKeysStore(s.DB).RewriteAuthorizedKeys()
 	if err != nil {
 		return errors.Wrap(err, `rewrite "authorized_keys" file`)
 	}

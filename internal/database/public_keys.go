@@ -15,32 +15,22 @@ import (
 	"gogs.io/gogs/internal/osutil"
 )
 
-// PublicKeysStore is the persistent interface for public keys.
-type PublicKeysStore interface {
-	// RewriteAuthorizedKeys rewrites the "authorized_keys" file under the SSH root
-	// path with all public keys stored in the database.
-	RewriteAuthorizedKeys() error
+// PublicKeysStore is the storage layer for public keys.
+type PublicKeysStore struct {
+	db *gorm.DB
 }
 
-var PublicKeys PublicKeysStore
-
-var _ PublicKeysStore = (*publicKeysStore)(nil)
-
-type publicKeysStore struct {
-	*gorm.DB
-}
-
-// NewPublicKeysStore returns a persistent interface for public keys with given
-// database connection.
-func NewPublicKeysStore(db *gorm.DB) PublicKeysStore {
-	return &publicKeysStore{DB: db}
+func newPublicKeysStore(db *gorm.DB) *PublicKeysStore {
+	return &PublicKeysStore{db: db}
 }
 
 func authorizedKeysPath() string {
 	return filepath.Join(conf.SSH.RootPath, "authorized_keys")
 }
 
-func (s *publicKeysStore) RewriteAuthorizedKeys() error {
+// RewriteAuthorizedKeys rewrites the "authorized_keys" file under the SSH root
+// path with all public keys stored in the database.
+func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
@@ -61,7 +51,7 @@ func (s *publicKeysStore) RewriteAuthorizedKeys() error {
 
 	// NOTE: More recently updated keys are more likely to be used more frequently,
 	// putting them in the earlier lines could speed up the key lookup by SSHD.
-	rows, err := s.Model(&PublicKey{}).Order("updated_unix DESC").Rows()
+	rows, err := s.db.Model(&PublicKey{}).Order("updated_unix DESC").Rows()
 	if err != nil {
 		return errors.Wrap(err, "iterate public keys")
 	}
@@ -69,7 +59,7 @@ func (s *publicKeysStore) RewriteAuthorizedKeys() error {
 
 	for rows.Next() {
 		var key PublicKey
-		err = s.ScanRows(rows, &key)
+		err = s.db.ScanRows(rows, &key)
 		if err != nil {
 			return errors.Wrap(err, "scan rows")
 		}

@@ -24,22 +24,22 @@ func TestPublicKeys(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &publicKeysStore{
-		DB: newTestDB(t, "publicKeysStore"),
+	s := &PublicKeysStore{
+		db: newTestDB(t, "PublicKeysStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *publicKeysStore)
+		test func(t *testing.T, ctx context.Context, s *PublicKeysStore)
 	}{
 		{"RewriteAuthorizedKeys", publicKeysRewriteAuthorizedKeys},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -47,7 +47,7 @@ func TestPublicKeys(t *testing.T) {
 	}
 }
 
-func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, db *publicKeysStore) {
+func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, s *PublicKeysStore) {
 	// TODO: Use PublicKeys.Add to replace SQL hack when the method is available.
 	publicKey := &PublicKey{
 		OwnerID:     1,
@@ -55,11 +55,11 @@ func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, db *publ
 		Fingerprint: "12:f8:7e:78:61:b4:bf:e2:de:24:15:96:4e:d4:72:53",
 		Content:     "test-key-content",
 	}
-	err := db.DB.Create(publicKey).Error
+	err := s.db.Create(publicKey).Error
 	require.NoError(t, err)
 	tempSSHRootPath := filepath.Join(os.TempDir(), "publicKeysRewriteAuthorizedKeys-tempSSHRootPath")
 	conf.SetMockSSH(t, conf.SSHOpts{RootPath: tempSSHRootPath})
-	err = db.RewriteAuthorizedKeys()
+	err = s.RewriteAuthorizedKeys()
 	require.NoError(t, err)
 
 	authorizedKeys, err := os.ReadFile(authorizedKeysPath())
