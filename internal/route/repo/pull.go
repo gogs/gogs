@@ -517,7 +517,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 		headGitRepo = c.Repo.GitRepo
 	}
 
-	if !database.Perms.Authorize(
+	if !database.Handle.Permissions().Authorize(
 		c.Req.Context(),
 		c.User.ID,
 		headRepo.ID,

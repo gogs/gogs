@@ -7,23 +7,10 @@ package database
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 )
-
-// PermsStore is the persistent interface for permissions.
-type PermsStore interface {
-	// AccessMode returns the access mode of given user has to the repository.
-	AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) AccessMode
-	// Authorize returns true if the user has as good as desired access mode to the
-	// repository.
-	Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool
-	// SetRepoPerms does a full update to which users have which level of access to
-	// given repository. Keys of the "accessMap" are user IDs.
-	SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error
-}
-
-var Perms PermsStore
 
 // Access represents the highest access level of a user has to a repository. The
 // only access type that is not in this table is the real owner of a repository.
@@ -74,16 +61,13 @@ func ParseAccessMode(permission string) AccessMode {
 	}
 }
 
-var _ PermsStore = (*permsStore)(nil)
-
-type permsStore struct {
-	*gorm.DB
+// PermissionsStore is the storage layer for repository permissions.
+type PermissionsStore struct {
+	db *gorm.DB
 }
 
-// NewPermsStore returns a persistent interface for permissions with given
-// database connection.
-func NewPermsStore(db *gorm.DB) PermsStore {
-	return &permsStore{DB: db}
+func newPermissionsStore(db *gorm.DB) *PermissionsStore {
+	return &PermissionsStore{db: db}
 }
 
 type AccessModeOptions struct {
@@ -91,7 +75,8 @@ type AccessModeOptions struct {
 	Private bool  // Whether the repository is private.
 }
 
-func (s *permsStore) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
+// AccessMode returns the access mode of given user has to the repository.
+func (s *PermissionsStore) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
 	if repoID <= 0 {
 		return AccessModeNone
 	}
@@ -111,9 +96,9 @@ func (s *permsStore) AccessMode(ctx context.Context, userID, repoID int64, opts 
 	}
 
 	access := new(Access)
-	err := s.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
+	err := s.db.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
 	if err != nil {
-		if err != gorm.ErrRecordNotFound {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Error("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
 		}
 		return mode
@@ -121,11 +106,15 @@ func (s *permsStore) AccessMode(ctx context.Context, userID, repoID int64, opts 
 	return access.Mode
 }
 
-func (s *permsStore) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
+// Authorize returns true if the user has as good as desired access mode to the
+// repository.
+func (s *PermissionsStore) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
 	return desired <= s.AccessMode(ctx, userID, repoID, opts)
 }
 
-func (s *permsStore) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
+// SetRepoPerms does a full update to which users have which level of access to
+// given repository. Keys of the "accessMap" are user IDs.
+func (s *PermissionsStore) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
 	records := make([]*Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
 		records = append(records, &Access{
@@ -135,7 +124,7 @@ func (s *permsStore) SetRepoPerms(ctx context.Context, repoID int64, accessMap m
 		})
 	}
 
-	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Where("repo_id = ?", repoID).Delete(new(Access)).Error
 		if err != nil {
 			return err

@@ -57,7 +57,7 @@ func repoAssignment() macaron.Handler {
 		if c.IsTokenAuth && c.User.IsAdmin {
 			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = database.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

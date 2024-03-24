@@ -171,7 +171,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = database.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -182,7 +182,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If the authenticated user has no direct access, see if the repository is a fork
 		// and whether the user has access to the base repository.
 		if c.Repo.AccessMode == database.AccessModeNone && repo.BaseRepo != nil {
-			mode := database.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
+			mode := database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.BaseRepo.OwnerID,
 					Private: repo.BaseRepo.IsPrivate,

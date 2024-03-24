@@ -596,7 +596,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 		participants = make([]*database.User, 1, 10)
 	)
 
-	// Render comments and and fetch participants.
+	// Render comments and fetch participants.
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
 		if comment.Type == database.COMMENT_TYPE_COMMENT {
@@ -612,7 +612,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 			if repo.IsOwnedBy(comment.PosterID) ||
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
 				comment.ShowTag = database.COMMENT_TAG_OWNER
-			} else if database.Perms.Authorize(
+			} else if database.Handle.Permissions().Authorize(
 				c.Req.Context(),
 				comment.PosterID,
 				repo.ID,

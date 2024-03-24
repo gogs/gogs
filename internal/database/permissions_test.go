@@ -19,13 +19,13 @@ func TestPerms(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &permsStore{
-		DB: newTestDB(t, "permsStore"),
+	s := &PermissionsStore{
+		db: newTestDB(t, "PermissionsStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *permsStore)
+		test func(t *testing.T, ctx context.Context, s *PermissionsStore)
 	}{
 		{"AccessMode", permsAccessMode},
 		{"Authorize", permsAuthorize},
@@ -33,10 +33,10 @@ func TestPerms(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -44,16 +44,16 @@ func TestPerms(t *testing.T) {
 	}
 }
 
-func permsAccessMode(t *testing.T, ctx context.Context, db *permsStore) {
+func permsAccessMode(t *testing.T, ctx context.Context, s *PermissionsStore) {
 	// Set up permissions
-	err := db.SetRepoPerms(ctx, 1,
+	err := s.SetRepoPerms(ctx, 1,
 		map[int64]AccessMode{
 			2: AccessModeWrite,
 			3: AccessModeAdmin,
 		},
 	)
 	require.NoError(t, err)
-	err = db.SetRepoPerms(ctx, 2,
+	err = s.SetRepoPerms(ctx, 2,
 		map[int64]AccessMode{
 			1: AccessModeRead,
 		},
@@ -149,15 +149,15 @@ func permsAccessMode(t *testing.T, ctx context.Context, db *permsStore) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mode := db.AccessMode(ctx, test.userID, test.repoID, test.opts)
+			mode := s.AccessMode(ctx, test.userID, test.repoID, test.opts)
 			assert.Equal(t, test.wantAccessMode, mode)
 		})
 	}
 }
 
-func permsAuthorize(t *testing.T, ctx context.Context, db *permsStore) {
+func permsAuthorize(t *testing.T, ctx context.Context, s *PermissionsStore) {
 	// Set up permissions
-	err := db.SetRepoPerms(ctx, 1,
+	err := s.SetRepoPerms(ctx, 1,
 		map[int64]AccessMode{
 			1: AccessModeRead,
 			2: AccessModeWrite,
@@ -230,7 +230,7 @@ func permsAuthorize(t *testing.T, ctx context.Context, db *permsStore) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			authorized := db.Authorize(ctx, test.userID, repo.ID, test.desired,
+			authorized := s.Authorize(ctx, test.userID, repo.ID, test.desired,
 				AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -241,7 +241,7 @@ func permsAuthorize(t *testing.T, ctx context.Context, db *permsStore) {
 	}
 }
 
-func permsSetRepoPerms(t *testing.T, ctx context.Context, db *permsStore) {
+func permsSetRepoPerms(t *testing.T, ctx context.Context, s *PermissionsStore) {
 	for _, update := range []struct {
 		repoID    int64
 		accessMap map[int64]AccessMode
@@ -280,14 +280,14 @@ func permsSetRepoPerms(t *testing.T, ctx context.Context, db *permsStore) {
 			},
 		},
 	} {
-		err := db.SetRepoPerms(ctx, update.repoID, update.accessMap)
+		err := s.SetRepoPerms(ctx, update.repoID, update.accessMap)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	var accesses []*Access
-	err := db.Order("user_id, repo_id").Find(&accesses).Error
+	err := s.db.Order("user_id, repo_id").Find(&accesses).Error
 	require.NoError(t, err)
 
 	// Ignore ID fields

@@ -754,7 +754,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		if !Perms.Authorize(context.TODO(), doer.ID, repo.ID, AccessModeAdmin,
+		if !Handle.Permissions().Authorize(context.TODO(), doer.ID, repo.ID, AccessModeAdmin,
 			AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
