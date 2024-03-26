@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/gogs/go-libravatar"
+	"gopkg.in/ini.v1"
+	log "unknwon.dev/clog/v2"
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
@@ -428,6 +430,51 @@ func handleDeprecated() {
 	// 	App.BrandName = App.AppName
 	// 	App.AppName = ""
 	// }
+}
+
+// warnDeprecated warns about deprecated configuration sections and options.
+func warnDeprecated(cfg *ini.File) {
+	deprecatedSections := map[string]string{
+		"mailer":  "email",
+		"service": "auth",
+	}
+
+	type sectionOptionPair struct {
+		section string
+		option  string
+	}
+
+	deprecatedOptions := map[sectionOptionPair]sectionOptionPair{
+		{"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
+		{"auth", "ACTIVE_CODE_LIVE_MINUTES"}:              {"auth", "ACTIVATE_CODE_LIVES"},
+		{"auth", "RESET_PASSWD_CODE_LIVE_MINUTES"}:        {"auth", "RESET_PASSWORD_CODE_LIVES"},
+		{"auth", "ENABLE_CAPTCHA"}:                        {"auth", "ENABLE_REGISTRATION_CAPTCHA"},
+		{"auth", "ENABLE_NOTIFY_MAIL"}:                    {"user", "ENABLE_EMAIL_NOTIFICATION"},
+		{"auth", "REGISTER_EMAIL_CONFIRM"}:                {"auth", "REQUIRE_EMAIL_CONFIRMATION"},
+		{"session", "GC_INTERVAL_TIME"}:                   {"session", "GC_INTERVAL"},
+		{"session", "SESSION_LIFE_TIME"}:                  {"session", "MAX_LIFE_TIME"},
+		{"server", "ROOT_URL"}:                            {"server", "EXTERNAL_URL"},
+		{"server", "LANDING_PAGE"}:                        {"server", "LANDING_URL"},
+		{"database", "DB_TYPE"}:                           {"database", "TYPE"},
+		{"database", "PASSWD"}:                            {"database", "PASSWORD"},
+	}
+
+	for oldSection, newSection := range deprecatedSections {
+		if cfg.Section(oldSection).KeyStrings() != nil {
+			log.Warn("section %s is deprecated, use %s instead", oldSection, newSection)
+		}
+	}
+
+	for oldSectionOption, newSectionOption := range deprecatedOptions {
+		if cfg.Section(oldSectionOption.section).HasKey(oldSectionOption.option) {
+			log.Warn("option [%s] %s is deprecated, use [%s] %s instead",
+				oldSectionOption.section, oldSectionOption.option,
+				newSectionOption.section, newSectionOption.option)
+		}
+	}
+
+	// TODO: get list of available section-option pair, give warning if there are
+	// exisisting (unused) section-option pair
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.
