@@ -45,7 +45,7 @@ func repoAssignment() macaron.Handler {
 		}
 		c.Repo.Owner = owner
 
-		repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
+		repo, err := database.Handle.Repositories().GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			c.NotFoundOrError(err, "get repository by name")
 			return

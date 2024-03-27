@@ -85,13 +85,13 @@ func TestRepos(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &reposStore{
-		DB: newTestDB(t, "repos"),
+	s := &RepositoriesStore{
+		db: newTestDB(t, "repos"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *reposStore)
+		test func(t *testing.T, ctx context.Context, s *RepositoriesStore)
 	}{
 		{"Create", reposCreate},
 		{"GetByCollaboratorID", reposGetByCollaboratorID},
@@ -106,10 +106,10 @@ func TestRepos(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -117,9 +117,9 @@ func TestRepos(t *testing.T) {
 	}
 }
 
-func reposCreate(t *testing.T, ctx context.Context, db *reposStore) {
+func reposCreate(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.Create(ctx,
+		_, err := s.Create(ctx,
 			1,
 			CreateRepoOptions{
 				Name: "my.git",
@@ -130,14 +130,14 @@ func reposCreate(t *testing.T, ctx context.Context, db *reposStore) {
 	})
 
 	t.Run("already exists", func(t *testing.T) {
-		_, err := db.Create(ctx, 2,
+		_, err := s.Create(ctx, 2,
 			CreateRepoOptions{
 				Name: "repo1",
 			},
 		)
 		require.NoError(t, err)
 
-		_, err = db.Create(ctx, 2,
+		_, err = s.Create(ctx, 2,
 			CreateRepoOptions{
 				Name: "repo1",
 			},
@@ -146,54 +146,54 @@ func reposCreate(t *testing.T, ctx context.Context, db *reposStore) {
 		assert.Equal(t, wantErr, err)
 	})
 
-	repo, err := db.Create(ctx, 3,
+	repo, err := s.Create(ctx, 3,
 		CreateRepoOptions{
 			Name: "repo2",
 		},
 	)
 	require.NoError(t, err)
 
-	repo, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	repo, err = s.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
 	assert.Equal(t, 1, repo.NumWatches) // The owner is watching the repo by default.
 }
 
-func reposGetByCollaboratorID(t *testing.T, ctx context.Context, db *reposStore) {
-	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+func reposGetByCollaboratorID(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
-	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
+	repo2, err := s.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
-	permissionsStore := newPermissionsStore(db.DB)
+	permissionsStore := newPermissionsStore(s.db)
 	err = permissionsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
 	require.NoError(t, err)
 	err = permissionsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{4: AccessModeAdmin})
 	require.NoError(t, err)
 
 	t.Run("user 3 is a collaborator of repo1", func(t *testing.T) {
-		got, err := db.GetByCollaboratorID(ctx, 3, 10, "")
+		got, err := s.GetByCollaboratorID(ctx, 3, 10, "")
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		assert.Equal(t, repo1.ID, got[0].ID)
 	})
 
 	t.Run("do not return directly owned repository", func(t *testing.T) {
-		got, err := db.GetByCollaboratorID(ctx, 1, 10, "")
+		got, err := s.GetByCollaboratorID(ctx, 1, 10, "")
 		require.NoError(t, err)
 		require.Len(t, got, 0)
 	})
 }
 
-func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, db *reposStore) {
-	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
-	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
+	repo2, err := s.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
-	repo3, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo3"})
+	repo3, err := s.Create(ctx, 2, CreateRepoOptions{Name: "repo3"})
 	require.NoError(t, err)
 
-	permissionsStore := newPermissionsStore(db.DB)
+	permissionsStore := newPermissionsStore(s.db)
 	err = permissionsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
 	require.NoError(t, err)
 	err = permissionsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{3: AccessModeAdmin, 4: AccessModeWrite})
@@ -201,7 +201,7 @@ func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, d
 	err = permissionsStore.SetRepoPerms(ctx, repo3.ID, map[int64]AccessMode{4: AccessModeWrite})
 	require.NoError(t, err)
 
-	got, err := db.GetByCollaboratorIDWithAccessMode(ctx, 3)
+	got, err := s.GetByCollaboratorIDWithAccessMode(ctx, 3)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -213,46 +213,46 @@ func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, d
 	assert.Equal(t, AccessModeAdmin, accessModes[repo2.ID])
 }
 
-func reposGetByID(t *testing.T, ctx context.Context, db *reposStore) {
-	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+func reposGetByID(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
-	got, err := db.GetByID(ctx, repo1.ID)
+	got, err := s.GetByID(ctx, repo1.ID)
 	require.NoError(t, err)
 	assert.Equal(t, repo1.Name, got.Name)
 
-	_, err = db.GetByID(ctx, 404)
+	_, err = s.GetByID(ctx, 404)
 	wantErr := ErrRepoNotExist{args: errutil.Args{"repoID": int64(404)}}
 	assert.Equal(t, wantErr, err)
 }
 
-func reposGetByName(t *testing.T, ctx context.Context, db *reposStore) {
-	repo, err := db.Create(ctx, 1,
+func reposGetByName(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo, err := s.Create(ctx, 1,
 		CreateRepoOptions{
 			Name: "repo1",
 		},
 	)
 	require.NoError(t, err)
 
-	_, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	_, err = s.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 
-	_, err = db.GetByName(ctx, 1, "bad_name")
+	_, err = s.GetByName(ctx, 1, "bad_name")
 	wantErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
 	assert.Equal(t, wantErr, err)
 }
 
-func reposStar(t *testing.T, ctx context.Context, db *reposStore) {
-	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+func reposStar(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
-	usersStore := NewUsersStore(db.DB)
+	usersStore := NewUsersStore(s.db)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	err = db.Star(ctx, alice.ID, repo1.ID)
+	err = s.Star(ctx, alice.ID, repo1.ID)
 	require.NoError(t, err)
 
-	repo1, err = db.GetByID(ctx, repo1.ID)
+	repo1, err = s.GetByID(ctx, repo1.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, repo1.NumStars)
 
@@ -261,41 +261,41 @@ func reposStar(t *testing.T, ctx context.Context, db *reposStore) {
 	assert.Equal(t, 1, alice.NumStars)
 }
 
-func reposTouch(t *testing.T, ctx context.Context, db *reposStore) {
-	repo, err := db.Create(ctx, 1,
+func reposTouch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo, err := s.Create(ctx, 1,
 		CreateRepoOptions{
 			Name: "repo1",
 		},
 	)
 	require.NoError(t, err)
 
-	err = db.WithContext(ctx).Model(new(Repository)).Where("id = ?", repo.ID).Update("is_bare", true).Error
+	err = s.db.WithContext(ctx).Model(new(Repository)).Where("id = ?", repo.ID).Update("is_bare", true).Error
 	require.NoError(t, err)
 
 	// Make sure it is bare
-	got, err := db.GetByName(ctx, repo.OwnerID, repo.Name)
+	got, err := s.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.True(t, got.IsBare)
 
 	// Touch it
-	err = db.Touch(ctx, repo.ID)
+	err = s.Touch(ctx, repo.ID)
 	require.NoError(t, err)
 
 	// It should not be bare anymore
-	got, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	got, err = s.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.False(t, got.IsBare)
 }
 
-func reposListWatches(t *testing.T, ctx context.Context, db *reposStore) {
-	err := db.Watch(ctx, 1, 1)
+func reposListWatches(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	err := s.Watch(ctx, 1, 1)
 	require.NoError(t, err)
-	err = db.Watch(ctx, 2, 1)
+	err = s.Watch(ctx, 2, 1)
 	require.NoError(t, err)
-	err = db.Watch(ctx, 2, 2)
+	err = s.Watch(ctx, 2, 2)
 	require.NoError(t, err)
 
-	got, err := db.ListWatches(ctx, 1)
+	got, err := s.ListWatches(ctx, 1)
 	require.NoError(t, err)
 	for _, w := range got {
 		w.ID = 0
@@ -308,16 +308,16 @@ func reposListWatches(t *testing.T, ctx context.Context, db *reposStore) {
 	assert.Equal(t, want, got)
 }
 
-func reposWatch(t *testing.T, ctx context.Context, db *reposStore) {
-	reposStore := NewReposStore(db.DB)
+func reposWatch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	reposStore := newReposStore(s.db)
 	repo1, err := reposStore.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
-	err = db.Watch(ctx, 2, repo1.ID)
+	err = s.Watch(ctx, 2, repo1.ID)
 	require.NoError(t, err)
 
 	// It is OK to watch multiple times and just be noop.
-	err = db.Watch(ctx, 2, repo1.ID)
+	err = s.Watch(ctx, 2, repo1.ID)
 	require.NoError(t, err)
 
 	repo1, err = reposStore.GetByID(ctx, repo1.ID)
@@ -325,11 +325,11 @@ func reposWatch(t *testing.T, ctx context.Context, db *reposStore) {
 	assert.Equal(t, 2, repo1.NumWatches) // The owner is watching the repo by default.
 }
 
-func reposHasForkedBy(t *testing.T, ctx context.Context, db *reposStore) {
-	has := db.HasForkedBy(ctx, 1, 2)
+func reposHasForkedBy(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	has := s.HasForkedBy(ctx, 1, 2)
 	assert.False(t, has)
 
-	_, err := NewReposStore(db.DB).Create(
+	_, err := newReposStore(s.db).Create(
 		ctx,
 		2,
 		CreateRepoOptions{
@@ -339,6 +339,6 @@ func reposHasForkedBy(t *testing.T, ctx context.Context, db *reposStore) {
 	)
 	require.NoError(t, err)
 
-	has = db.HasForkedBy(ctx, 1, 2)
+	has = s.HasForkedBy(ctx, 1, 2)
 	assert.True(t, has)
 }

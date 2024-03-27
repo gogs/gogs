@@ -135,7 +135,7 @@ func TestActions(t *testing.T) {
 func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -438,7 +438,7 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -483,7 +483,7 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore)
 func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -524,7 +524,7 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore)
 func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -565,7 +565,7 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore)
 func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -630,7 +630,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -709,7 +709,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -801,7 +801,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	alice, err := NewUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",
@@ -840,7 +840,7 @@ func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	require.NoError(t, err)
 	bob, err := NewUsersStore(s.db).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := NewReposStore(s.db).Create(ctx,
+	repo, err := newReposStore(s.db).Create(ctx,
 		alice.ID,
 		CreateRepoOptions{
 			Name: "example",

@@ -116,7 +116,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
-	accessibleRepos, err := database.Repos.GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
+	accessibleRepos, err := database.Handle.Repositories().GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
 	if err != nil {
 		c.Error(err, "get repositories accesses by collaborator")
 		return

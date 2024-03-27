@@ -18,46 +18,6 @@ import (
 	"gogs.io/gogs/internal/repoutil"
 )
 
-// ReposStore is the persistent interface for repositories.
-type ReposStore interface {
-	// Create creates a new repository record in the database. It returns
-	// ErrNameNotAllowed when the repository name is not allowed, or
-	// ErrRepoAlreadyExist when a repository with same name already exists for the
-	// owner.
-	Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error)
-	// GetByCollaboratorID returns a list of repositories that the given
-	// collaborator has access to. Results are limited to the given limit and sorted
-	// by the given order (e.g. "updated_unix DESC"). Repositories that are owned
-	// directly by the given collaborator are not included.
-	GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error)
-	// GetByCollaboratorIDWithAccessMode returns a list of repositories and
-	// corresponding access mode that the given collaborator has access to.
-	// Repositories that are owned directly by the given collaborator are not
-	// included.
-	GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error)
-	// GetByID returns the repository with given ID. It returns ErrRepoNotExist when
-	// not found.
-	GetByID(ctx context.Context, id int64) (*Repository, error)
-	// GetByName returns the repository with given owner and name. It returns
-	// ErrRepoNotExist when not found.
-	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
-	// Star marks the user to star the repository.
-	Star(ctx context.Context, userID, repoID int64) error
-	// Touch updates the updated time to the current time and removes the bare state
-	// of the given repository.
-	Touch(ctx context.Context, id int64) error
-
-	// ListWatches returns all watches of the given repository.
-	ListWatches(ctx context.Context, repoID int64) ([]*Watch, error)
-	// Watch marks the user to watch the repository.
-	Watch(ctx context.Context, userID, repoID int64) error
-
-	// HasForkedBy returns true if the given repository has forked by the given user.
-	HasForkedBy(ctx context.Context, repoID, userID int64) bool
-}
-
-var Repos ReposStore
-
 // BeforeCreate implements the GORM create hook.
 func (r *Repository) BeforeCreate(tx *gorm.DB) error {
 	if r.CreatedUnix == 0 {
@@ -119,16 +79,13 @@ func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) 
 	}
 }
 
-var _ ReposStore = (*reposStore)(nil)
-
-type reposStore struct {
-	*gorm.DB
+// RepositoriesStore is the storage layer for repositories.
+type RepositoriesStore struct {
+	db *gorm.DB
 }
 
-// NewReposStore returns a persistent interface for repositories with given
-// database connection.
-func NewReposStore(db *gorm.DB) ReposStore {
-	return &reposStore{DB: db}
+func newReposStore(db *gorm.DB) *RepositoriesStore {
+	return &RepositoriesStore{db: db}
 }
 
 type ErrRepoAlreadyExist struct {
@@ -157,7 +114,11 @@ type CreateRepoOptions struct {
 	ForkID        int64
 }
 
-func (s *reposStore) Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error) {
+// Create creates a new repository record in the database. It returns
+// ErrNameNotAllowed when the repository name is not allowed, or
+// ErrRepoAlreadyExist when a repository with same name already exists for the
+// owner.
+func (s *RepositoriesStore) Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error) {
 	err := isRepoNameAllowed(opts.Name)
 	if err != nil {
 		return nil, err
@@ -189,13 +150,13 @@ func (s *reposStore) Create(ctx context.Context, ownerID int64, opts CreateRepoO
 		IsFork:        opts.Fork,
 		ForkID:        opts.ForkID,
 	}
-	return repo, s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return repo, s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err = tx.Create(repo).Error
 		if err != nil {
 			return errors.Wrap(err, "create")
 		}
 
-		err = NewReposStore(tx).Watch(ctx, ownerID, repo.ID)
+		err = newReposStore(tx).Watch(ctx, ownerID, repo.ID)
 		if err != nil {
 			return errors.Wrap(err, "watch")
 		}
@@ -203,7 +164,11 @@ func (s *reposStore) Create(ctx context.Context, ownerID int64, opts CreateRepoO
 	})
 }
 
-func (s *reposStore) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
+// GetByCollaboratorID returns a list of repositories that the given
+// collaborator has access to. Results are limited to the given limit and sorted
+// by the given order (e.g. "updated_unix DESC"). Repositories that are owned
+// directly by the given collaborator are not included.
+func (s *RepositoriesStore) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -214,7 +179,7 @@ func (s *reposStore) GetByCollaboratorID(ctx context.Context, collaboratorID int
 		LIMIT @limit
 	*/
 	var repos []*Repository
-	return repos, s.WithContext(ctx).
+	return repos, s.db.WithContext(ctx).
 		Joins("JOIN access ON access.repo_id = repository.id AND access.user_id = ?", collaboratorID).
 		Where("access.mode >= ?", AccessModeRead).
 		Order(orderBy).
@@ -223,7 +188,11 @@ func (s *reposStore) GetByCollaboratorID(ctx context.Context, collaboratorID int
 		Error
 }
 
-func (s *reposStore) GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error) {
+// GetByCollaboratorIDWithAccessMode returns a list of repositories and
+// corresponding access mode that the given collaborator has access to.
+// Repositories that are owned directly by the given collaborator are not
+// included.
+func (s *RepositoriesStore) GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -238,7 +207,7 @@ func (s *reposStore) GetByCollaboratorIDWithAccessMode(ctx context.Context, coll
 		*Repository
 		Mode AccessMode
 	}
-	err := s.WithContext(ctx).
+	err := s.db.WithContext(ctx).
 		Select("repository.*", "access.mode").
 		Table("repository").
 		Joins("JOIN access ON access.repo_id = repository.id AND access.user_id = ?", collaboratorID).
@@ -275,11 +244,13 @@ func (ErrRepoNotExist) NotFound() bool {
 	return true
 }
 
-func (s *reposStore) GetByID(ctx context.Context, id int64) (*Repository, error) {
+// GetByID returns the repository with given ID. It returns ErrRepoNotExist when
+// not found.
+func (s *RepositoriesStore) GetByID(ctx context.Context, id int64) (*Repository, error) {
 	repo := new(Repository)
-	err := s.WithContext(ctx).Where("id = ?", id).First(repo).Error
+	err := s.db.WithContext(ctx).Where("id = ?", id).First(repo).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrRepoNotExist{errutil.Args{"repoID": id}}
 		}
 		return nil, err
@@ -287,9 +258,11 @@ func (s *reposStore) GetByID(ctx context.Context, id int64) (*Repository, error)
 	return repo, nil
 }
 
-func (s *reposStore) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {
+// GetByName returns the repository with given owner and name. It returns
+// ErrRepoNotExist when not found.
+func (s *RepositoriesStore) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {
 	repo := new(Repository)
-	err := s.WithContext(ctx).
+	err := s.db.WithContext(ctx).
 		Where("owner_id = ? AND lower_name = ?", ownerID, strings.ToLower(name)).
 		First(repo).
 		Error
@@ -307,7 +280,7 @@ func (s *reposStore) GetByName(ctx context.Context, ownerID int64, name string) 
 	return repo, nil
 }
 
-func (s *reposStore) recountStars(tx *gorm.DB, userID, repoID int64) error {
+func (s *RepositoriesStore) recountStars(tx *gorm.DB, userID, repoID int64) error {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -350,8 +323,9 @@ func (s *reposStore) recountStars(tx *gorm.DB, userID, repoID int64) error {
 	return nil
 }
 
-func (s *reposStore) Star(ctx context.Context, userID, repoID int64) error {
-	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+// Star marks the user to star the repository.
+func (s *RepositoriesStore) Star(ctx context.Context, userID, repoID int64) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		star := &Star{
 			UserID: userID,
 			RepoID: repoID,
@@ -367,23 +341,26 @@ func (s *reposStore) Star(ctx context.Context, userID, repoID int64) error {
 	})
 }
 
-func (s *reposStore) Touch(ctx context.Context, id int64) error {
-	return s.WithContext(ctx).
+// Touch updates the updated time to the current time and removes the bare state
+// of the given repository.
+func (s *RepositoriesStore) Touch(ctx context.Context, id int64) error {
+	return s.db.WithContext(ctx).
 		Model(new(Repository)).
 		Where("id = ?", id).
 		Updates(map[string]any{
 			"is_bare":      false,
-			"updated_unix": s.NowFunc().Unix(),
+			"updated_unix": s.db.NowFunc().Unix(),
 		}).
 		Error
 }
 
-func (s *reposStore) ListWatches(ctx context.Context, repoID int64) ([]*Watch, error) {
+// ListWatches returns all watches of the given repository.
+func (s *RepositoriesStore) ListWatches(ctx context.Context, repoID int64) ([]*Watch, error) {
 	var watches []*Watch
-	return watches, s.WithContext(ctx).Where("repo_id = ?", repoID).Find(&watches).Error
+	return watches, s.db.WithContext(ctx).Where("repo_id = ?", repoID).Find(&watches).Error
 }
 
-func (s *reposStore) recountWatches(tx *gorm.DB, repoID int64) error {
+func (s *RepositoriesStore) recountWatches(tx *gorm.DB, repoID int64) error {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -402,8 +379,9 @@ func (s *reposStore) recountWatches(tx *gorm.DB, repoID int64) error {
 		Error
 }
 
-func (s *reposStore) Watch(ctx context.Context, userID, repoID int64) error {
-	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+// Watch marks the user to watch the repository.
+func (s *RepositoriesStore) Watch(ctx context.Context, userID, repoID int64) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		w := &Watch{
 			UserID: userID,
 			RepoID: repoID,
@@ -419,8 +397,9 @@ func (s *reposStore) Watch(ctx context.Context, userID, repoID int64) error {
 	})
 }
 
-func (s *reposStore) HasForkedBy(ctx context.Context, repoID, userID int64) bool {
+// HasForkedBy returns true if the given repository has forked by the given user.
+func (s *RepositoriesStore) HasForkedBy(ctx context.Context, repoID, userID int64) bool {
 	var count int64
-	s.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
+	s.db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
 	return count > 0
 }
