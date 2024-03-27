@@ -8,14 +8,6 @@ import (
 	"testing"
 )
 
-func SetMockReposStore(t *testing.T, mock ReposStore) {
-	before := Repos
-	Repos = mock
-	t.Cleanup(func() {
-		Repos = before
-	})
-}
-
 func SetMockTwoFactorsStore(t *testing.T, mock TwoFactorsStore) {
 	before := TwoFactors
 	TwoFactors = mock

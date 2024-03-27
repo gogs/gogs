@@ -77,7 +77,7 @@ func HTTPContexter(store Store) macaron.Handler {
 			return
 		}
 
-		repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
+		repo, err := store.GetRepositoryByName(c.Req.Context(), owner.ID, repoName)
 		if err != nil {
 			if database.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)

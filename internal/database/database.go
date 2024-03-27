@@ -123,7 +123,6 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	}
 
 	// Initialize stores, sorted in alphabetical order.
-	Repos = NewReposStore(db)
 	TwoFactors = &twoFactorsStore{DB: db}
 	Users = NewUsersStore(db)
 
@@ -182,4 +181,8 @@ func (db *DB) Permissions() *PermissionsStore {
 
 func (db *DB) PublicKey() *PublicKeysStore {
 	return newPublicKeysStore(db.db)
+}
+
+func (db *DB) Repositories() *RepositoriesStore {
+	return newReposStore(db.db)
 }

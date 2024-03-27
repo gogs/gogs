@@ -403,7 +403,7 @@ func RepoRef() macaron.Handler {
 		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
-		if c.Repo.IsWriter() || (c.IsLogged && database.Repos.HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
+		if c.Repo.IsWriter() || (c.IsLogged && database.Handle.Repositories().HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if c.Repo.Repository.BaseRepo != nil {

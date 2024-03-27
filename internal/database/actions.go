@@ -124,7 +124,7 @@ func (s *ActionsStore) ListByUser(ctx context.Context, userID, actorID, afterID 
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
 func (s *ActionsStore) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := NewReposStore(s.db).ListWatches(ctx, act.RepoID)
+	watches, err := newReposStore(s.db).ListWatches(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}
@@ -465,7 +465,7 @@ type CommitRepoOptions struct {
 // regular push also creates a new branch, then another action with type
 // ActionCreateBranch is created.
 func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
-	err := NewReposStore(s.db).Touch(ctx, opts.Repo.ID)
+	err := newReposStore(s.db).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
@@ -612,7 +612,7 @@ type PushTagOptions struct {
 // the type ActionDeleteTag is created if the push deletes a tag. Otherwise, an
 // action with the type ActionPushTag is created for a regular push.
 func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
-	err := NewReposStore(s.db).Touch(ctx, opts.Repo.ID)
+	err := newReposStore(s.db).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
