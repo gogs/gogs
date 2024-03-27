@@ -16,6 +16,10 @@ type Store interface {
 	// TouchAccessTokenByID updates the updated time of the given access token to
 	// the current time.
 	TouchAccessTokenByID(ctx context.Context, id int64) error
+
+	// GetRepositoryByName returns the repository with given owner and name. It
+	// returns database.ErrRepoNotExist when not found.
+	GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error)
 }
 
 type store struct{}
@@ -31,4 +35,8 @@ func (*store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.
 
 func (*store) TouchAccessTokenByID(ctx context.Context, id int64) error {
 	return database.Handle.AccessTokens().Touch(ctx, id)
+}
+
+func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
 }

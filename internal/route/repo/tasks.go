@@ -44,7 +44,7 @@ func TriggerTask(c *macaron.Context) {
 		return
 	}
 
-	repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
+	repo, err := database.Handle.Repositories().GetByName(c.Req.Context(), owner.ID, reponame)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			c.Error(http.StatusBadRequest, "Repository does not exist")
