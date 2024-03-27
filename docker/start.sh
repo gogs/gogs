@@ -74,7 +74,6 @@ createuser(){
     # Create user/group to run Gogs
     addgroup -S $USER
     adduser -G $USER -H -D -g 'Gogs Git User' $USER -h /data/$USER -s /bin/bash && usermod -p '*' $USER && passwd -u $USER
-    mkdir -p $USER_HOME
     # add gogs configuration in profile file
     echo "export GOGS_CUSTOM=$GOGS_CUSTOM" >> /etc/profile
     # add allowed user to ssh server configuration
