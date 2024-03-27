@@ -339,13 +339,13 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	if len(strings.TrimSpace(f.SMTPHost)) > 0 {
-		cfg.Section("mailer").Key("ENABLED").SetValue("true")
-		cfg.Section("mailer").Key("HOST").SetValue(f.SMTPHost)
-		cfg.Section("mailer").Key("FROM").SetValue(f.SMTPFrom)
-		cfg.Section("mailer").Key("USER").SetValue(f.SMTPUser)
-		cfg.Section("mailer").Key("PASSWD").SetValue(f.SMTPPasswd)
+		cfg.Section("email").Key("ENABLED").SetValue("true")
+		cfg.Section("email").Key("HOST").SetValue(f.SMTPHost)
+		cfg.Section("email").Key("FROM").SetValue(f.SMTPFrom)
+		cfg.Section("email").Key("USER").SetValue(f.SMTPUser)
+		cfg.Section("email").Key("PASSWD").SetValue(f.SMTPPasswd)
 	} else {
-		cfg.Section("mailer").Key("ENABLED").SetValue("false")
+		cfg.Section("email").Key("ENABLED").SetValue("false")
 	}
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(f.OfflineMode))
 	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(com.ToStr(f.RegisterConfirm))
