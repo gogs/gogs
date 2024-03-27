@@ -24,6 +24,6 @@ ln -sfn /data/gogs/log  ./log
 ln -sfn /data/gogs/data ./data
 
 # Backward Compatibility with Gogs Container v0.6.15
-ln -sfn /data/git /home/$USER
+ln -sfn /data/$USER /home/$USER
 
 chmod 0755 /data /data/gogs $USER_HOME/
