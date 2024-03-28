@@ -265,7 +265,7 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 		require.NoError(t, err)
 
 		// Create a user that uses this login source
-		_, err = NewUsersStore(s.db).Create(ctx, "alice", "",
+		_, err = newUsersStore(s.db).Create(ctx, "alice", "",
 			CreateUserOptions{
 				LoginSource: source.ID,
 			},

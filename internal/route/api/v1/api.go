@@ -37,7 +37,7 @@ func repoAssignment() macaron.Handler {
 		if c.IsLogged && c.User.LowerName == strings.ToLower(username) {
 			owner = c.User
 		} else {
-			owner, err = database.Users.GetByUsername(c.Req.Context(), username)
+			owner, err = database.Handle.Users().GetByUsername(c.Req.Context(), username)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return
@@ -91,7 +91,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 
 		var err error
 		if assignOrg {
-			c.Org.Organization, err = database.Users.GetByUsername(c.Req.Context(), c.Params(":orgname"))
+			c.Org.Organization, err = database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":orgname"))
 			if err != nil {
 				c.NotFoundOrError(err, "get organization by name")
 				return

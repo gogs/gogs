@@ -37,6 +37,32 @@ type Store interface {
 
 	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
 	IsTwoFactorEnabled(ctx context.Context, userID int64) bool
+
+	// GetUserByID returns the user with given ID. It returns
+	// database.ErrUserNotExist when not found.
+	GetUserByID(ctx context.Context, id int64) (*database.User, error)
+	// GetUserByUsername returns the user with given username. It returns
+	// database.ErrUserNotExist when not found.
+	GetUserByUsername(ctx context.Context, username string) (*database.User, error)
+	// CreateUser creates a new user and persists to database. It returns
+	// database.ErrNameNotAllowed if the given name or pattern of the name is not
+	// allowed as a username, or database.ErrUserAlreadyExist when a user with same
+	// name already exists, or database.ErrEmailAlreadyUsed if the email has been
+	// verified by another user.
+	CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
+	// AuthenticateUser validates username and password via given login source ID.
+	// It returns database.ErrUserNotExist when the user was not found.
+	//
+	// When the "loginSourceID" is negative, it aborts the process and returns
+	// database.ErrUserNotExist if the user was not found in the database.
+	//
+	// When the "loginSourceID" is non-negative, it returns
+	// database.ErrLoginSourceMismatch if the user has different login source ID
+	// than the "loginSourceID".
+	//
+	// When the "loginSourceID" is positive, it tries to authenticate via given
+	// login source and creates a new user when not yet exists in the database.
+	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
 type store struct{}
@@ -76,4 +102,20 @@ func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name strin
 
 func (*store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
 	return database.Handle.TwoFactors().IsEnabled(ctx, userID)
+}
+
+func (*store) GetUserByID(ctx context.Context, id int64) (*database.User, error) {
+	return database.Handle.Users().GetByID(ctx, id)
+}
+
+func (*store) GetUserByUsername(ctx context.Context, username string) (*database.User, error) {
+	return database.Handle.Users().GetByUsername(ctx, username)
+}
+
+func (*store) CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error) {
+	return database.Handle.Users().Create(ctx, username, email, opts)
+}
+
+func (*store) AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error) {
+	return database.Handle.Users().Authenticate(ctx, login, password, loginSourceID)
 }

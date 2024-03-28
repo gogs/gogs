@@ -73,7 +73,7 @@ func (org *User) GetMembers(limit int) error {
 
 	org.Members = make([]*User, len(ous))
 	for i, ou := range ous {
-		org.Members[i], err = Users.GetByID(context.TODO(), ou.Uid)
+		org.Members[i], err = Handle.Users().GetByID(context.TODO(), ou.Uid)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		return err
 	}
 
-	if Users.IsUsernameUsed(context.TODO(), org.Name, 0) {
+	if Handle.Users().IsUsernameUsed(context.TODO(), org.Name, 0) {
 		return ErrUserAlreadyExist{
 			args: errutil.Args{
 				"name": org.Name,
@@ -216,7 +216,7 @@ func deleteBeans(e Engine, beans ...any) (err error) {
 
 // DeleteOrganization completely and permanently deletes everything of organization.
 func DeleteOrganization(org *User) error {
-	err := Users.DeleteByID(context.TODO(), org.ID, false)
+	err := Handle.Users().DeleteByID(context.TODO(), org.ID, false)
 	if err != nil {
 		return err
 	}
@@ -373,11 +373,11 @@ func RemoveOrgUser(orgID, userID int64) error {
 		return nil
 	}
 
-	user, err := Users.GetByID(context.TODO(), userID)
+	user, err := Handle.Users().GetByID(context.TODO(), userID)
 	if err != nil {
 		return fmt.Errorf("GetUserByID [%d]: %v", userID, err)
 	}
-	org, err := Users.GetByID(context.TODO(), orgID)
+	org, err := Handle.Users().GetByID(context.TODO(), orgID)
 	if err != nil {
 		return fmt.Errorf("GetUserByID [%d]: %v", orgID, err)
 	}

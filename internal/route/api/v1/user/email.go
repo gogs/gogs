@@ -17,7 +17,7 @@ import (
 )
 
 func ListEmails(c *context.APIContext) {
-	emails, err := database.Users.ListEmails(c.Req.Context(), c.User.ID)
+	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "get email addresses")
 		return
@@ -37,7 +37,7 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 
 	apiEmails := make([]*api.Email, 0, len(form.Emails))
 	for _, email := range form.Emails {
-		err := database.Users.AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
+		err := database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
 		if err != nil {
 			if database.IsErrEmailAlreadyUsed(err) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Errorf("email address has been used: %s", err.(database.ErrEmailAlreadyUsed).Email()))
@@ -64,7 +64,7 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 			return
 		}
 
-		err := database.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
+		err := database.Handle.Users().DeleteEmail(c.Req.Context(), c.User.ID, email)
 		if err != nil {
 			c.Error(err, "delete email addresses")
 			return

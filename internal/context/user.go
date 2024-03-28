@@ -19,7 +19,7 @@ type ParamsUser struct {
 // and injects it as *ParamsUser.
 func InjectParamsUser() macaron.Handler {
 	return func(c *Context) {
-		user, err := database.Users.GetByUsername(c.Req.Context(), c.Params(":username"))
+		user, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return

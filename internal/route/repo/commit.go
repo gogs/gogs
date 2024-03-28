@@ -114,7 +114,7 @@ func FileHistory(c *context.Context) {
 // tryGetUserByEmail returns a non-nil value if the email is corresponding to an
 // existing user.
 func tryGetUserByEmail(ctx gocontext.Context, email string) *database.User {
-	user, _ := database.Users.GetByEmail(ctx, email)
+	user, _ := database.Handle.Users().GetByEmail(ctx, email)
 	return user
 }
 
@@ -197,10 +197,11 @@ type userCommit struct {
 func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit) []*userCommit {
 	emailToUsers := make(map[string]*database.User)
 	newCommits := make([]*userCommit, len(oldCommits))
+	usersStore := database.Handle.Users()
 	for i := range oldCommits {
 		var u *database.User
 		if v, ok := emailToUsers[oldCommits[i].Author.Email]; !ok {
-			u, _ = database.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
+			u, _ = usersStore.GetByEmail(ctx, oldCommits[i].Author.Email)
 			emailToUsers[oldCommits[i].Author.Email] = u
 		} else {
 			u = v

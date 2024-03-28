@@ -225,7 +225,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		newOwner := c.Query("new_owner_name")
-		if !database.Users.IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
+		if !database.Handle.Users().IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
 			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -380,7 +380,7 @@ func SettingsCollaborationPost(c *context.Context) {
 		return
 	}
 
-	u, err := database.Users.GetByUsername(c.Req.Context(), name)
+	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), name)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Flash.Error(c.Tr("form.user_not_exist"))

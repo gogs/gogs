@@ -52,7 +52,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-inactive-users",
 		Usage: "Delete all inactive accounts",
 		Action: adminDashboardOperation(
-			func() error { return database.Users.DeleteInactivated() },
+			func() error { return database.Handle.Users().DeleteInactivated() },
 			"All inactivated accounts have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -152,7 +152,7 @@ func runCreateUser(c *cli.Context) error {
 		return errors.Wrap(err, "set engine")
 	}
 
-	user, err := database.Users.Create(
+	user, err := database.Handle.Users().Create(
 		context.Background(),
 		c.String("name"),
 		c.String("email"),

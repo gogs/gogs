@@ -418,7 +418,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Get organization.
-	org, err := Users.GetByID(context.TODO(), t.OrgID)
+	org, err := Handle.Users().GetByID(context.TODO(), t.OrgID)
 	if err != nil {
 		return err
 	}

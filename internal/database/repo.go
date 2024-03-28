@@ -542,7 +542,7 @@ func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
 	) {
 		return nil, ErrUserNotExist{args: errutil.Args{"userID": userID}}
 	}
-	return Users.GetByID(ctx, userID)
+	return Handle.Users().GetByID(ctx, userID)
 }
 
 // GetWriters returns all users that have write access to the repository.
@@ -1255,7 +1255,7 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 	}
 
 	// Remember visibility preference
-	err = Users.Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
+	err = Handle.Users().Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
 	if err != nil {
 		return nil, errors.Wrap(err, "update user")
 	}
@@ -1352,7 +1352,7 @@ func RepoPath(userName, repoName string) string {
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
 func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error {
-	newOwner, err := Users.GetByUsername(context.TODO(), newOwnerName)
+	newOwner, err := Handle.Users().GetByUsername(context.TODO(), newOwnerName)
 	if err != nil {
 		return fmt.Errorf("get new owner '%s': %v", newOwnerName, err)
 	}
@@ -1643,7 +1643,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 	}
 
 	// In case is a organization.
-	org, err := Users.GetByID(context.TODO(), ownerID)
+	org, err := Handle.Users().GetByID(context.TODO(), ownerID)
 	if err != nil {
 		return err
 	}
@@ -1761,7 +1761,7 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 	}
 
 	userName, repoName := ref[:n], ref[n+1:]
-	user, err := Users.GetByUsername(context.TODO(), userName)
+	user, err := Handle.Users().GetByUsername(context.TODO(), userName)
 	if err != nil {
 		return nil, err
 	}
@@ -2577,7 +2577,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	// Remember visibility preference
-	err = Users.Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
+	err = Handle.Users().Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
 	if err != nil {
 		return nil, errors.Wrap(err, "update user")
 	}

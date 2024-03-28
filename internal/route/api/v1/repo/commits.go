@@ -120,7 +120,7 @@ func GetReferenceSHA(c *context.APIContext) {
 func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commit, error) {
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
-	author, err := database.Users.GetByEmail(c.Req.Context(), commit.Author.Email)
+	author, err := database.Handle.Users().GetByEmail(c.Req.Context(), commit.Author.Email)
 	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
 	} else if err == nil {
@@ -131,7 +131,7 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commi
 	if commit.Committer.Email == commit.Author.Email {
 		apiCommitter = apiAuthor
 	} else {
-		committer, err := database.Users.GetByEmail(c.Req.Context(), commit.Committer.Email)
+		committer, err := database.Handle.Users().GetByEmail(c.Req.Context(), commit.Committer.Email)
 		if err != nil && !database.IsErrUserNotExist(err) {
 			return nil, err
 		} else if err == nil {
