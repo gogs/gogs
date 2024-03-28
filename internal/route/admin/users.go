@@ -31,8 +31,8 @@ func Users(c *context.Context) {
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
 		Type:     database.UserTypeIndividual,
-		Counter:  database.Users.Count,
-		Ranger:   database.Users.List,
+		Counter:  database.Handle.Users().Count,
+		Ranger:   database.Handle.Users().List,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -88,7 +88,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		}
 	}
 
-	user, err := database.Users.Create(c.Req.Context(), f.UserName, f.Email, createUserOpts)
+	user, err := database.Handle.Users().Create(c.Req.Context(), f.UserName, f.Email, createUserOpts)
 	if err != nil {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
@@ -117,7 +117,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 }
 
 func prepareUserInfo(c *context.Context) *database.User {
-	u, err := database.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
+	u, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return nil
@@ -203,7 +203,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		opts.Email = &f.Email
 	}
 
-	err := database.Users.Update(c.Req.Context(), u.ID, opts)
+	err := database.Handle.Users().Update(c.Req.Context(), u.ID, opts)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
@@ -220,13 +220,13 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := database.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
+	u, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
 	}
 
-	if err = database.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
+	if err = database.Handle.Users().DeleteByID(c.Req.Context(), u.ID, false); err != nil {
 		switch {
 		case database.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))

@@ -245,7 +245,7 @@ func reposGetByName(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 func reposStar(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	repo1, err := s.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
-	usersStore := NewUsersStore(s.db)
+	usersStore := newUsersStore(s.db)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 

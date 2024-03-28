@@ -145,7 +145,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.LowerName == strings.ToLower(ownerName) {
 			owner = c.User
 		} else {
-			owner, err = database.Users.GetByUsername(c.Req.Context(), ownerName)
+			owner, err = database.Handle.Users().GetByUsername(c.Req.Context(), ownerName)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return

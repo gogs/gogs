@@ -162,7 +162,7 @@ func runServ(c *cli.Context) error {
 	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
 	repoName = strings.TrimSuffix(repoName, ".wiki")
 
-	owner, err := database.Users.GetByUsername(ctx, ownerName)
+	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
@@ -205,7 +205,7 @@ func runServ(c *cli.Context) error {
 			}
 			checkDeployKey(key, repo)
 		} else {
-			user, err = database.Users.GetByKeyID(ctx, key.ID)
+			user, err = database.Handle.Users().GetByKeyID(ctx, key.ID)
 			if err != nil {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}

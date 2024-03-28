@@ -34,9 +34,6 @@ mocks:
           - Provider
   - filename: internal/route/lfs/mocks_test.go
     sources:
-      - path: gogs.io/gogs/internal/database
-        interfaces:
-          - UsersStore
       - path: gogs.io/gogs/internal/route/lfs
         interfaces:
           - Store

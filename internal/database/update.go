@@ -73,7 +73,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return fmt.Errorf("open repository: %v", err)
 	}
 
-	owner, err := Users.GetByUsername(ctx, opts.RepoUserName)
+	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {
 		return fmt.Errorf("GetUserByName: %v", err)
 	}

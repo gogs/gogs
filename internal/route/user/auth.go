@@ -56,7 +56,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 		}
 	}()
 
-	u, err := database.Users.GetByUsername(c.Req.Context(), uname)
+	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), uname)
 	if err != nil {
 		if !database.IsErrUserNotExist(err) {
 			return false, fmt.Errorf("get user by name: %v", err)
@@ -165,7 +165,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := database.Users.Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
+	u, err := database.Handle.Users().Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
 	if err != nil {
 		switch {
 		case auth.IsErrBadCredentials(err):
@@ -231,7 +231,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	u, err := database.Users.GetByID(c.Req.Context(), userID)
+	u, err := database.Handle.Users().GetByID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
@@ -277,7 +277,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	u, err := database.Users.GetByID(c.Req.Context(), userID)
+	u, err := database.Handle.Users().GetByID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
@@ -335,7 +335,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	user, err := database.Users.Create(
+	user, err := database.Handle.Users().Create(
 		c.Req.Context(),
 		f.UserName,
 		f.Email,
@@ -366,9 +366,9 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	// should have a dedicate method to check whether the "user" table is empty.
 	//
 	// Auto-set admin for the only user.
-	if database.Users.Count(c.Req.Context()) == 1 {
+	if database.Handle.Users().Count(c.Req.Context()) == 1 {
 		v := true
-		err := database.Users.Update(
+		err := database.Handle.Users().Update(
 			c.Req.Context(),
 			user.ID,
 			database.UpdateUserOptions{
@@ -409,7 +409,7 @@ func parseUserFromCode(code string) (user *database.User) {
 	// Use tail hex username to query user
 	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
-		if user, err = database.Users.GetByUsername(gocontext.TODO(), string(b)); user != nil {
+		if user, err = database.Handle.Users().GetByUsername(gocontext.TODO(), string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
 			log.Error("Failed to get user by name %q: %v", string(b), err)
@@ -445,7 +445,7 @@ func verifyActiveEmailCode(code, email string) *database.EmailAddress {
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			emailAddress, err := database.Users.GetEmail(gocontext.TODO(), user.ID, email, false)
+			emailAddress, err := database.Handle.Users().GetEmail(gocontext.TODO(), user.ID, email, false)
 			if err == nil {
 				return emailAddress
 			}
@@ -484,7 +484,7 @@ func Activate(c *context.Context) {
 	// Verify code.
 	if user := verifyUserActiveCode(code); user != nil {
 		v := true
-		err := database.Users.Update(
+		err := database.Handle.Users().Update(
 			c.Req.Context(),
 			user.ID,
 			database.UpdateUserOptions{
@@ -515,7 +515,7 @@ func ActivateEmail(c *context.Context) {
 
 	// Verify code.
 	if email := verifyActiveEmailCode(code, emailAddr); email != nil {
-		err := database.Users.MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
+		err := database.Handle.Users().MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
 		if err != nil {
 			c.Error(err, "activate email")
 			return
@@ -553,7 +553,7 @@ func ForgotPasswdPost(c *context.Context) {
 	emailAddr := c.Query("email")
 	c.Data["Email"] = emailAddr
 
-	u, err := database.Users.GetByEmail(c.Req.Context(), emailAddr)
+	u, err := database.Handle.Users().GetByEmail(c.Req.Context(), emailAddr)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
@@ -621,7 +621,7 @@ func ResetPasswdPost(c *context.Context) {
 			return
 		}
 
-		err := database.Users.Update(c.Req.Context(), u.ID, database.UpdateUserOptions{Password: &password})
+		err := database.Handle.Users().Update(c.Req.Context(), u.ID, database.UpdateUserOptions{Password: &password})
 		if err != nil {
 			c.Error(err, "update user")
 			return

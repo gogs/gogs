@@ -92,7 +92,7 @@ func Followers(c *context.Context, puser *context.ParamsUser) {
 		c,
 		puser.NumFollowers,
 		func(page int) ([]*database.User, error) {
-			return database.Users.ListFollowers(c.Req.Context(), puser.ID, page, database.ItemsPerPage)
+			return database.Handle.Users().ListFollowers(c.Req.Context(), puser.ID, page, database.ItemsPerPage)
 		},
 		FOLLOWERS,
 	)
@@ -107,7 +107,7 @@ func Following(c *context.Context, puser *context.ParamsUser) {
 		c,
 		puser.NumFollowing,
 		func(page int) ([]*database.User, error) {
-			return database.Users.ListFollowings(c.Req.Context(), puser.ID, page, database.ItemsPerPage)
+			return database.Handle.Users().ListFollowings(c.Req.Context(), puser.ID, page, database.ItemsPerPage)
 		},
 		FOLLOWERS,
 	)
@@ -120,9 +120,9 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	var err error
 	switch c.Params(":action") {
 	case "follow":
-		err = database.Users.Follow(c.Req.Context(), c.UserID(), puser.ID)
+		err = database.Handle.Users().Follow(c.Req.Context(), c.UserID(), puser.ID)
 	case "unfollow":
-		err = database.Users.Unfollow(c.Req.Context(), c.UserID(), puser.ID)
+		err = database.Handle.Users().Unfollow(c.Req.Context(), c.UserID(), puser.ID)
 	}
 
 	if err != nil {

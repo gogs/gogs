@@ -84,7 +84,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	if c.User.IsLocal() {
 		// Check if the username (including cases) had been changed
 		if c.User.Name != f.Name {
-			err := database.Users.ChangeUsername(c.Req.Context(), c.User.ID, f.Name)
+			err := database.Handle.Users().ChangeUsername(c.Req.Context(), c.User.ID, f.Name)
 			if err != nil {
 				c.FormErr("Name")
 				var msg string
@@ -106,7 +106,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 		}
 	}
 
-	err := database.Users.Update(
+	err := database.Handle.Users().Update(
 		c.Req.Context(),
 		c.User.ID,
 		database.UpdateUserOptions{
@@ -128,7 +128,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.User) error {
 	if f.Source == form.AvatarLookup && f.Gravatar != "" {
 		avatar := cryptoutil.MD5(f.Gravatar)
-		err := database.Users.Update(
+		err := database.Handle.Users().Update(
 			c.Req.Context(),
 			ctxUser.ID,
 			database.UpdateUserOptions{
@@ -140,7 +140,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.Us
 			return errors.Wrap(err, "update user")
 		}
 
-		err = database.Users.DeleteCustomAvatar(c.Req.Context(), c.User.ID)
+		err = database.Handle.Users().DeleteCustomAvatar(c.Req.Context(), c.User.ID)
 		if err != nil {
 			return errors.Wrap(err, "delete custom avatar")
 		}
@@ -162,7 +162,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.Us
 			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 
-		err = database.Users.UseCustomAvatar(c.Req.Context(), ctxUser.ID, data)
+		err = database.Handle.Users().UseCustomAvatar(c.Req.Context(), ctxUser.ID, data)
 		if err != nil {
 			return errors.Wrap(err, "save avatar")
 		}
@@ -188,7 +188,7 @@ func SettingsAvatarPost(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	err := database.Users.DeleteCustomAvatar(c.Req.Context(), c.User.ID)
+	err := database.Handle.Users().DeleteCustomAvatar(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
 	}
@@ -216,7 +216,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))
 	} else {
-		err := database.Users.Update(
+		err := database.Handle.Users().Update(
 			c.Req.Context(),
 			c.User.ID,
 			database.UpdateUserOptions{
@@ -237,7 +237,7 @@ func SettingsEmails(c *context.Context) {
 	c.Title("settings.emails")
 	c.PageIs("SettingsEmails")
 
-	emails, err := database.Users.ListEmails(c.Req.Context(), c.User.ID)
+	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Errorf(err, "get email addresses")
 		return
@@ -252,7 +252,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	c.PageIs("SettingsEmails")
 
 	if c.Query("_method") == "PRIMARY" {
-		err := database.Users.MarkEmailPrimary(c.Req.Context(), c.User.ID, c.Query("email"))
+		err := database.Handle.Users().MarkEmailPrimary(c.Req.Context(), c.User.ID, c.Query("email"))
 		if err != nil {
 			c.Errorf(err, "make email primary")
 			return
@@ -263,7 +263,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	// Add Email address.
-	emails, err := database.Users.ListEmails(c.Req.Context(), c.User.ID)
+	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Errorf(err, "get email addresses")
 		return
@@ -275,7 +275,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 		return
 	}
 
-	err = database.Users.AddEmail(c.Req.Context(), c.User.ID, f.Email, !conf.Auth.RequireEmailConfirmation)
+	err = database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, f.Email, !conf.Auth.RequireEmailConfirmation)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
@@ -310,7 +310,7 @@ func DeleteEmail(c *context.Context) {
 		return
 	}
 
-	err := database.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
+	err := database.Handle.Users().DeleteEmail(c.Req.Context(), c.User.ID, email)
 	if err != nil {
 		c.Error(err, "delete email address")
 		return
@@ -663,7 +663,7 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := database.Users.Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
@@ -672,7 +672,7 @@ func SettingsDelete(c *context.Context) {
 			return
 		}
 
-		if err := database.Users.DeleteByID(c.Req.Context(), c.User.ID, false); err != nil {
+		if err := database.Handle.Users().DeleteByID(c.Req.Context(), c.User.ID, false); err != nil {
 			switch {
 			case database.IsErrUserOwnRepos(err):
 				c.Flash.Error(c.Tr("form.still_own_repo"))

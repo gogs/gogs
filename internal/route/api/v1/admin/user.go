@@ -39,7 +39,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		return
 	}
 
-	user, err := database.Users.Create(
+	user, err := database.Handle.Users().Create(
 		c.Req.Context(),
 		form.Username,
 		form.Email,
@@ -104,7 +104,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		opts.Email = &form.Email
 	}
 
-	err := database.Users.Update(c.Req.Context(), u.ID, opts)
+	err := database.Handle.Users().Update(c.Req.Context(), u.ID, opts)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -115,7 +115,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 	}
 	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
-	u, err = database.Users.GetByID(c.Req.Context(), u.ID)
+	u, err = database.Handle.Users().GetByID(c.Req.Context(), u.ID)
 	if err != nil {
 		c.Error(err, "get user")
 		return
@@ -129,7 +129,7 @@ func DeleteUser(c *context.APIContext) {
 		return
 	}
 
-	if err := database.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
+	if err := database.Handle.Users().DeleteByID(c.Req.Context(), u.ID, false); err != nil {
 		if database.IsErrUserOwnRepos(err) ||
 			database.IsErrUserHasOrgs(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)

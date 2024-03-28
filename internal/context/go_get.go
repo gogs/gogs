@@ -27,7 +27,7 @@ func ServeGoGet() macaron.Handler {
 		repoName := c.Params(":reponame")
 		branchName := "master"
 
-		owner, err := database.Users.GetByUsername(c.Req.Context(), ownerName)
+		owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), ownerName)
 		if err == nil {
 			repo, err := database.Handle.Repositories().GetByName(c.Req.Context(), owner.ID, repoName)
 			if err == nil && repo.DefaultBranch != "" {

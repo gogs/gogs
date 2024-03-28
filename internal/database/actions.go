@@ -221,7 +221,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 	}
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
-		NewUsersStore(s.db),
+		newUsersStore(s.db),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -470,7 +470,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		return errors.Wrap(err, "touch repository")
 	}
 
-	pusher, err := NewUsersStore(s.db).GetByUsername(ctx, opts.PusherName)
+	pusher, err := newUsersStore(s.db).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
@@ -566,7 +566,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	}
 
 	commits, err := opts.Commits.APIFormat(ctx,
-		NewUsersStore(s.db),
+		newUsersStore(s.db),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -617,7 +617,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 		return errors.Wrap(err, "touch repository")
 	}
 
-	pusher, err := NewUsersStore(s.db).GetByUsername(ctx, opts.PusherName)
+	pusher, err := newUsersStore(s.db).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
@@ -852,7 +852,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore UsersStore, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {
@@ -925,7 +925,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore UsersStore, re
 func (pcs *PushCommits) AvatarLink(email string) string {
 	_, ok := pcs.avatars[email]
 	if !ok {
-		u, err := Users.GetByEmail(context.Background(), email)
+		u, err := Handle.Users().GetByEmail(context.Background(), email)
 		if err != nil {
 			pcs.avatars[email] = tool.AvatarLink(email)
 			if !IsErrUserNotExist(err) {

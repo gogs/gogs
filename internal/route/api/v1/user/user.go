@@ -19,7 +19,7 @@ func Search(c *context.APIContext) {
 	if pageSize <= 0 {
 		pageSize = 10
 	}
-	users, _, err := database.Users.SearchByName(c.Req.Context(), c.Query("q"), 1, pageSize, "")
+	users, _, err := database.Handle.Users().SearchByName(c.Req.Context(), c.Query("q"), 1, pageSize, "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
@@ -48,7 +48,7 @@ func Search(c *context.APIContext) {
 }
 
 func GetInfo(c *context.APIContext) {
-	u, err := database.Users.GetByUsername(c.Req.Context(), c.Params(":username"))
+	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return

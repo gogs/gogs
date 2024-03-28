@@ -113,7 +113,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 		}
 		count = opts.Counter(c.Req.Context())
 	} else {
-		search := database.Users.SearchByName
+		search := database.Handle.Users().SearchByName
 		if opts.Type == database.UserTypeOrganization {
 			search = database.Handle.Organizations().SearchByName
 		}
@@ -138,8 +138,8 @@ func ExploreUsers(c *context.Context) {
 
 	RenderUserSearch(c, &UserSearchOptions{
 		Type:     database.UserTypeIndividual,
-		Counter:  database.Users.Count,
-		Ranger:   database.Users.List,
+		Counter:  database.Handle.Users().Count,
+		Ranger:   database.Handle.Users().List,
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,

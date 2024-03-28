@@ -391,7 +391,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Create admin account
 	if len(f.AdminName) > 0 {
-		user, err := database.Users.Create(
+		user, err := database.Handle.Users().Create(
 			c.Req.Context(),
 			f.AdminName,
 			f.AdminEmail,
@@ -410,7 +410,7 @@ func InstallPost(c *context.Context, f form.Install) {
 			}
 
 			log.Info("Admin account already exist")
-			user, err = database.Users.GetByUsername(c.Req.Context(), f.AdminName)
+			user, err = database.Handle.Users().GetByUsername(c.Req.Context(), f.AdminName)
 			if err != nil {
 				c.Error(err, "get user by name")
 				return
