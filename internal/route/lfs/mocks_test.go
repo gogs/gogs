@@ -14,407 +14,6 @@ import (
 	lfsutil "gogs.io/gogs/internal/lfsutil"
 )
 
-// MockTwoFactorsStore is a mock implementation of the TwoFactorsStore
-// interface (from the package gogs.io/gogs/internal/database) used for unit
-// testing.
-type MockTwoFactorsStore struct {
-	// CreateFunc is an instance of a mock function object controlling the
-	// behavior of the method Create.
-	CreateFunc *TwoFactorsStoreCreateFunc
-	// GetByUserIDFunc is an instance of a mock function object controlling
-	// the behavior of the method GetByUserID.
-	GetByUserIDFunc *TwoFactorsStoreGetByUserIDFunc
-	// IsEnabledFunc is an instance of a mock function object controlling
-	// the behavior of the method IsEnabled.
-	IsEnabledFunc *TwoFactorsStoreIsEnabledFunc
-}
-
-// NewMockTwoFactorsStore creates a new mock of the TwoFactorsStore
-// interface. All methods return zero values for all results, unless
-// overwritten.
-func NewMockTwoFactorsStore() *MockTwoFactorsStore {
-	return &MockTwoFactorsStore{
-		CreateFunc: &TwoFactorsStoreCreateFunc{
-			defaultHook: func(context.Context, int64, string, string) (r0 error) {
-				return
-			},
-		},
-		GetByUserIDFunc: &TwoFactorsStoreGetByUserIDFunc{
-			defaultHook: func(context.Context, int64) (r0 *database.TwoFactor, r1 error) {
-				return
-			},
-		},
-		IsEnabledFunc: &TwoFactorsStoreIsEnabledFunc{
-			defaultHook: func(context.Context, int64) (r0 bool) {
-				return
-			},
-		},
-	}
-}
-
-// NewStrictMockTwoFactorsStore creates a new mock of the TwoFactorsStore
-// interface. All methods panic on invocation, unless overwritten.
-func NewStrictMockTwoFactorsStore() *MockTwoFactorsStore {
-	return &MockTwoFactorsStore{
-		CreateFunc: &TwoFactorsStoreCreateFunc{
-			defaultHook: func(context.Context, int64, string, string) error {
-				panic("unexpected invocation of MockTwoFactorsStore.Create")
-			},
-		},
-		GetByUserIDFunc: &TwoFactorsStoreGetByUserIDFunc{
-			defaultHook: func(context.Context, int64) (*database.TwoFactor, error) {
-				panic("unexpected invocation of MockTwoFactorsStore.GetByUserID")
-			},
-		},
-		IsEnabledFunc: &TwoFactorsStoreIsEnabledFunc{
-			defaultHook: func(context.Context, int64) bool {
-				panic("unexpected invocation of MockTwoFactorsStore.IsEnabled")
-			},
-		},
-	}
-}
-
-// NewMockTwoFactorsStoreFrom creates a new mock of the MockTwoFactorsStore
-// interface. All methods delegate to the given implementation, unless
-// overwritten.
-func NewMockTwoFactorsStoreFrom(i database.TwoFactorsStore) *MockTwoFactorsStore {
-	return &MockTwoFactorsStore{
-		CreateFunc: &TwoFactorsStoreCreateFunc{
-			defaultHook: i.Create,
-		},
-		GetByUserIDFunc: &TwoFactorsStoreGetByUserIDFunc{
-			defaultHook: i.GetByUserID,
-		},
-		IsEnabledFunc: &TwoFactorsStoreIsEnabledFunc{
-			defaultHook: i.IsEnabled,
-		},
-	}
-}
-
-// TwoFactorsStoreCreateFunc describes the behavior when the Create method
-// of the parent MockTwoFactorsStore instance is invoked.
-type TwoFactorsStoreCreateFunc struct {
-	defaultHook func(context.Context, int64, string, string) error
-	hooks       []func(context.Context, int64, string, string) error
-	history     []TwoFactorsStoreCreateFuncCall
-	mutex       sync.Mutex
-}
-
-// Create delegates to the next hook function in the queue and stores the
-// parameter and result values of this invocation.
-func (m *MockTwoFactorsStore) Create(v0 context.Context, v1 int64, v2 string, v3 string) error {
-	r0 := m.CreateFunc.nextHook()(v0, v1, v2, v3)
-	m.CreateFunc.appendCall(TwoFactorsStoreCreateFuncCall{v0, v1, v2, v3, r0})
-	return r0
-}
-
-// SetDefaultHook sets function that is called when the Create method of the
-// parent MockTwoFactorsStore instance is invoked and the hook queue is
-// empty.
-func (f *TwoFactorsStoreCreateFunc) SetDefaultHook(hook func(context.Context, int64, string, string) error) {
-	f.defaultHook = hook
-}
-
-// PushHook adds a function to the end of hook queue. Each invocation of the
-// Create method of the parent MockTwoFactorsStore instance invokes the hook
-// at the front of the queue and discards it. After the queue is empty, the
-// default hook function is invoked for any future action.
-func (f *TwoFactorsStoreCreateFunc) PushHook(hook func(context.Context, int64, string, string) error) {
-	f.mutex.Lock()
-	f.hooks = append(f.hooks, hook)
-	f.mutex.Unlock()
-}
-
-// SetDefaultReturn calls SetDefaultHook with a function that returns the
-// given values.
-func (f *TwoFactorsStoreCreateFunc) SetDefaultReturn(r0 error) {
-	f.SetDefaultHook(func(context.Context, int64, string, string) error {
-		return r0
-	})
-}
-
-// PushReturn calls PushHook with a function that returns the given values.
-func (f *TwoFactorsStoreCreateFunc) PushReturn(r0 error) {
-	f.PushHook(func(context.Context, int64, string, string) error {
-		return r0
-	})
-}
-
-func (f *TwoFactorsStoreCreateFunc) nextHook() func(context.Context, int64, string, string) error {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-
-	if len(f.hooks) == 0 {
-		return f.defaultHook
-	}
-
-	hook := f.hooks[0]
-	f.hooks = f.hooks[1:]
-	return hook
-}
-
-func (f *TwoFactorsStoreCreateFunc) appendCall(r0 TwoFactorsStoreCreateFuncCall) {
-	f.mutex.Lock()
-	f.history = append(f.history, r0)
-	f.mutex.Unlock()
-}
-
-// History returns a sequence of TwoFactorsStoreCreateFuncCall objects
-// describing the invocations of this function.
-func (f *TwoFactorsStoreCreateFunc) History() []TwoFactorsStoreCreateFuncCall {
-	f.mutex.Lock()
-	history := make([]TwoFactorsStoreCreateFuncCall, len(f.history))
-	copy(history, f.history)
-	f.mutex.Unlock()
-
-	return history
-}
-
-// TwoFactorsStoreCreateFuncCall is an object that describes an invocation
-// of method Create on an instance of MockTwoFactorsStore.
-type TwoFactorsStoreCreateFuncCall struct {
-	// Arg0 is the value of the 1st argument passed to this method
-	// invocation.
-	Arg0 context.Context
-	// Arg1 is the value of the 2nd argument passed to this method
-	// invocation.
-	Arg1 int64
-	// Arg2 is the value of the 3rd argument passed to this method
-	// invocation.
-	Arg2 string
-	// Arg3 is the value of the 4th argument passed to this method
-	// invocation.
-	Arg3 string
-	// Result0 is the value of the 1st result returned from this method
-	// invocation.
-	Result0 error
-}
-
-// Args returns an interface slice containing the arguments of this
-// invocation.
-func (c TwoFactorsStoreCreateFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
-}
-
-// Results returns an interface slice containing the results of this
-// invocation.
-func (c TwoFactorsStoreCreateFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
-}
-
-// TwoFactorsStoreGetByUserIDFunc describes the behavior when the
-// GetByUserID method of the parent MockTwoFactorsStore instance is invoked.
-type TwoFactorsStoreGetByUserIDFunc struct {
-	defaultHook func(context.Context, int64) (*database.TwoFactor, error)
-	hooks       []func(context.Context, int64) (*database.TwoFactor, error)
-	history     []TwoFactorsStoreGetByUserIDFuncCall
-	mutex       sync.Mutex
-}
-
-// GetByUserID delegates to the next hook function in the queue and stores
-// the parameter and result values of this invocation.
-func (m *MockTwoFactorsStore) GetByUserID(v0 context.Context, v1 int64) (*database.TwoFactor, error) {
-	r0, r1 := m.GetByUserIDFunc.nextHook()(v0, v1)
-	m.GetByUserIDFunc.appendCall(TwoFactorsStoreGetByUserIDFuncCall{v0, v1, r0, r1})
-	return r0, r1
-}
-
-// SetDefaultHook sets function that is called when the GetByUserID method
-// of the parent MockTwoFactorsStore instance is invoked and the hook queue
-// is empty.
-func (f *TwoFactorsStoreGetByUserIDFunc) SetDefaultHook(hook func(context.Context, int64) (*database.TwoFactor, error)) {
-	f.defaultHook = hook
-}
-
-// PushHook adds a function to the end of hook queue. Each invocation of the
-// GetByUserID method of the parent MockTwoFactorsStore instance invokes the
-// hook at the front of the queue and discards it. After the queue is empty,
-// the default hook function is invoked for any future action.
-func (f *TwoFactorsStoreGetByUserIDFunc) PushHook(hook func(context.Context, int64) (*database.TwoFactor, error)) {
-	f.mutex.Lock()
-	f.hooks = append(f.hooks, hook)
-	f.mutex.Unlock()
-}
-
-// SetDefaultReturn calls SetDefaultHook with a function that returns the
-// given values.
-func (f *TwoFactorsStoreGetByUserIDFunc) SetDefaultReturn(r0 *database.TwoFactor, r1 error) {
-	f.SetDefaultHook(func(context.Context, int64) (*database.TwoFactor, error) {
-		return r0, r1
-	})
-}
-
-// PushReturn calls PushHook with a function that returns the given values.
-func (f *TwoFactorsStoreGetByUserIDFunc) PushReturn(r0 *database.TwoFactor, r1 error) {
-	f.PushHook(func(context.Context, int64) (*database.TwoFactor, error) {
-		return r0, r1
-	})
-}
-
-func (f *TwoFactorsStoreGetByUserIDFunc) nextHook() func(context.Context, int64) (*database.TwoFactor, error) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-
-	if len(f.hooks) == 0 {
-		return f.defaultHook
-	}
-
-	hook := f.hooks[0]
-	f.hooks = f.hooks[1:]
-	return hook
-}
-
-func (f *TwoFactorsStoreGetByUserIDFunc) appendCall(r0 TwoFactorsStoreGetByUserIDFuncCall) {
-	f.mutex.Lock()
-	f.history = append(f.history, r0)
-	f.mutex.Unlock()
-}
-
-// History returns a sequence of TwoFactorsStoreGetByUserIDFuncCall objects
-// describing the invocations of this function.
-func (f *TwoFactorsStoreGetByUserIDFunc) History() []TwoFactorsStoreGetByUserIDFuncCall {
-	f.mutex.Lock()
-	history := make([]TwoFactorsStoreGetByUserIDFuncCall, len(f.history))
-	copy(history, f.history)
-	f.mutex.Unlock()
-
-	return history
-}
-
-// TwoFactorsStoreGetByUserIDFuncCall is an object that describes an
-// invocation of method GetByUserID on an instance of MockTwoFactorsStore.
-type TwoFactorsStoreGetByUserIDFuncCall struct {
-	// Arg0 is the value of the 1st argument passed to this method
-	// invocation.
-	Arg0 context.Context
-	// Arg1 is the value of the 2nd argument passed to this method
-	// invocation.
-	Arg1 int64
-	// Result0 is the value of the 1st result returned from this method
-	// invocation.
-	Result0 *database.TwoFactor
-	// Result1 is the value of the 2nd result returned from this method
-	// invocation.
-	Result1 error
-}
-
-// Args returns an interface slice containing the arguments of this
-// invocation.
-func (c TwoFactorsStoreGetByUserIDFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
-}
-
-// Results returns an interface slice containing the results of this
-// invocation.
-func (c TwoFactorsStoreGetByUserIDFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0, c.Result1}
-}
-
-// TwoFactorsStoreIsEnabledFunc describes the behavior when the IsEnabled
-// method of the parent MockTwoFactorsStore instance is invoked.
-type TwoFactorsStoreIsEnabledFunc struct {
-	defaultHook func(context.Context, int64) bool
-	hooks       []func(context.Context, int64) bool
-	history     []TwoFactorsStoreIsEnabledFuncCall
-	mutex       sync.Mutex
-}
-
-// IsEnabled delegates to the next hook function in the queue and stores the
-// parameter and result values of this invocation.
-func (m *MockTwoFactorsStore) IsEnabled(v0 context.Context, v1 int64) bool {
-	r0 := m.IsEnabledFunc.nextHook()(v0, v1)
-	m.IsEnabledFunc.appendCall(TwoFactorsStoreIsEnabledFuncCall{v0, v1, r0})
-	return r0
-}
-
-// SetDefaultHook sets function that is called when the IsEnabled method of
-// the parent MockTwoFactorsStore instance is invoked and the hook queue is
-// empty.
-func (f *TwoFactorsStoreIsEnabledFunc) SetDefaultHook(hook func(context.Context, int64) bool) {
-	f.defaultHook = hook
-}
-
-// PushHook adds a function to the end of hook queue. Each invocation of the
-// IsEnabled method of the parent MockTwoFactorsStore instance invokes the
-// hook at the front of the queue and discards it. After the queue is empty,
-// the default hook function is invoked for any future action.
-func (f *TwoFactorsStoreIsEnabledFunc) PushHook(hook func(context.Context, int64) bool) {
-	f.mutex.Lock()
-	f.hooks = append(f.hooks, hook)
-	f.mutex.Unlock()
-}
-
-// SetDefaultReturn calls SetDefaultHook with a function that returns the
-// given values.
-func (f *TwoFactorsStoreIsEnabledFunc) SetDefaultReturn(r0 bool) {
-	f.SetDefaultHook(func(context.Context, int64) bool {
-		return r0
-	})
-}
-
-// PushReturn calls PushHook with a function that returns the given values.
-func (f *TwoFactorsStoreIsEnabledFunc) PushReturn(r0 bool) {
-	f.PushHook(func(context.Context, int64) bool {
-		return r0
-	})
-}
-
-func (f *TwoFactorsStoreIsEnabledFunc) nextHook() func(context.Context, int64) bool {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-
-	if len(f.hooks) == 0 {
-		return f.defaultHook
-	}
-
-	hook := f.hooks[0]
-	f.hooks = f.hooks[1:]
-	return hook
-}
-
-func (f *TwoFactorsStoreIsEnabledFunc) appendCall(r0 TwoFactorsStoreIsEnabledFuncCall) {
-	f.mutex.Lock()
-	f.history = append(f.history, r0)
-	f.mutex.Unlock()
-}
-
-// History returns a sequence of TwoFactorsStoreIsEnabledFuncCall objects
-// describing the invocations of this function.
-func (f *TwoFactorsStoreIsEnabledFunc) History() []TwoFactorsStoreIsEnabledFuncCall {
-	f.mutex.Lock()
-	history := make([]TwoFactorsStoreIsEnabledFuncCall, len(f.history))
-	copy(history, f.history)
-	f.mutex.Unlock()
-
-	return history
-}
-
-// TwoFactorsStoreIsEnabledFuncCall is an object that describes an
-// invocation of method IsEnabled on an instance of MockTwoFactorsStore.
-type TwoFactorsStoreIsEnabledFuncCall struct {
-	// Arg0 is the value of the 1st argument passed to this method
-	// invocation.
-	Arg0 context.Context
-	// Arg1 is the value of the 2nd argument passed to this method
-	// invocation.
-	Arg1 int64
-	// Result0 is the value of the 1st result returned from this method
-	// invocation.
-	Result0 bool
-}
-
-// Args returns an interface slice containing the arguments of this
-// invocation.
-func (c TwoFactorsStoreIsEnabledFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
-}
-
-// Results returns an interface slice containing the results of this
-// invocation.
-func (c TwoFactorsStoreIsEnabledFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
-}
-
 // MockUsersStore is a mock implementation of the UsersStore interface (from
 // the package gogs.io/gogs/internal/database) used for unit testing.
 type MockUsersStore struct {
@@ -3968,6 +3567,9 @@ type MockStore struct {
 	// GetRepositoryByNameFunc is an instance of a mock function object
 	// controlling the behavior of the method GetRepositoryByName.
 	GetRepositoryByNameFunc *StoreGetRepositoryByNameFunc
+	// IsTwoFactorEnabledFunc is an instance of a mock function object
+	// controlling the behavior of the method IsTwoFactorEnabled.
+	IsTwoFactorEnabledFunc *StoreIsTwoFactorEnabledFunc
 	// TouchAccessTokenByIDFunc is an instance of a mock function object
 	// controlling the behavior of the method TouchAccessTokenByID.
 	TouchAccessTokenByIDFunc *StoreTouchAccessTokenByIDFunc
@@ -4004,6 +3606,11 @@ func NewMockStore() *MockStore {
 		},
 		GetRepositoryByNameFunc: &StoreGetRepositoryByNameFunc{
 			defaultHook: func(context.Context, int64, string) (r0 *database.Repository, r1 error) {
+				return
+			},
+		},
+		IsTwoFactorEnabledFunc: &StoreIsTwoFactorEnabledFunc{
+			defaultHook: func(context.Context, int64) (r0 bool) {
 				return
 			},
 		},
@@ -4049,6 +3656,11 @@ func NewStrictMockStore() *MockStore {
 				panic("unexpected invocation of MockStore.GetRepositoryByName")
 			},
 		},
+		IsTwoFactorEnabledFunc: &StoreIsTwoFactorEnabledFunc{
+			defaultHook: func(context.Context, int64) bool {
+				panic("unexpected invocation of MockStore.IsTwoFactorEnabled")
+			},
+		},
 		TouchAccessTokenByIDFunc: &StoreTouchAccessTokenByIDFunc{
 			defaultHook: func(context.Context, int64) error {
 				panic("unexpected invocation of MockStore.TouchAccessTokenByID")
@@ -4078,6 +3690,9 @@ func NewMockStoreFrom(i Store) *MockStore {
 		},
 		GetRepositoryByNameFunc: &StoreGetRepositoryByNameFunc{
 			defaultHook: i.GetRepositoryByName,
+		},
+		IsTwoFactorEnabledFunc: &StoreIsTwoFactorEnabledFunc{
+			defaultHook: i.IsTwoFactorEnabled,
 		},
 		TouchAccessTokenByIDFunc: &StoreTouchAccessTokenByIDFunc{
 			defaultHook: i.TouchAccessTokenByID,
@@ -4761,6 +4376,111 @@ func (c StoreGetRepositoryByNameFuncCall) Args() []interface{} {
 // invocation.
 func (c StoreGetRepositoryByNameFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// StoreIsTwoFactorEnabledFunc describes the behavior when the
+// IsTwoFactorEnabled method of the parent MockStore instance is invoked.
+type StoreIsTwoFactorEnabledFunc struct {
+	defaultHook func(context.Context, int64) bool
+	hooks       []func(context.Context, int64) bool
+	history     []StoreIsTwoFactorEnabledFuncCall
+	mutex       sync.Mutex
+}
+
+// IsTwoFactorEnabled delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockStore) IsTwoFactorEnabled(v0 context.Context, v1 int64) bool {
+	r0 := m.IsTwoFactorEnabledFunc.nextHook()(v0, v1)
+	m.IsTwoFactorEnabledFunc.appendCall(StoreIsTwoFactorEnabledFuncCall{v0, v1, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the IsTwoFactorEnabled
+// method of the parent MockStore instance is invoked and the hook queue is
+// empty.
+func (f *StoreIsTwoFactorEnabledFunc) SetDefaultHook(hook func(context.Context, int64) bool) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// IsTwoFactorEnabled method of the parent MockStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *StoreIsTwoFactorEnabledFunc) PushHook(hook func(context.Context, int64) bool) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *StoreIsTwoFactorEnabledFunc) SetDefaultReturn(r0 bool) {
+	f.SetDefaultHook(func(context.Context, int64) bool {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *StoreIsTwoFactorEnabledFunc) PushReturn(r0 bool) {
+	f.PushHook(func(context.Context, int64) bool {
+		return r0
+	})
+}
+
+func (f *StoreIsTwoFactorEnabledFunc) nextHook() func(context.Context, int64) bool {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *StoreIsTwoFactorEnabledFunc) appendCall(r0 StoreIsTwoFactorEnabledFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of StoreIsTwoFactorEnabledFuncCall objects
+// describing the invocations of this function.
+func (f *StoreIsTwoFactorEnabledFunc) History() []StoreIsTwoFactorEnabledFuncCall {
+	f.mutex.Lock()
+	history := make([]StoreIsTwoFactorEnabledFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// StoreIsTwoFactorEnabledFuncCall is an object that describes an invocation
+// of method IsTwoFactorEnabled on an instance of MockStore.
+type StoreIsTwoFactorEnabledFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 bool
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c StoreIsTwoFactorEnabledFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c StoreIsTwoFactorEnabledFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // StoreTouchAccessTokenByIDFunc describes the behavior when the
