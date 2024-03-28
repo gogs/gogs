@@ -187,7 +187,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	if !database.TwoFactors.IsEnabled(c.Req.Context(), u.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), u.ID) {
 		afterLogin(c, u, f.Remember)
 		return
 	}
@@ -214,7 +214,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	t, err := database.TwoFactors.GetByUserID(c.Req.Context(), userID)
+	t, err := database.Handle.TwoFactors().GetByUserID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get two factor by user ID")
 		return

@@ -152,7 +152,7 @@ func HTTPContexter(store Store) macaron.Handler {
 					return
 				}
 			}
-		} else if database.TwoFactors.IsEnabled(c.Req.Context(), authUser.ID) {
+		} else if store.IsTwoFactorEnabled(c.Req.Context(), authUser.ID) {
 			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
 Please create and use personal access token on user settings page`)
 			return

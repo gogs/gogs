@@ -398,7 +398,7 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := database.TwoFactors.GetByUserID(c.Req.Context(), c.UserID())
+	t, err := database.Handle.TwoFactors().GetByUserID(c.Req.Context(), c.UserID())
 	if err != nil && !database.IsErrTwoFactorNotFound(err) {
 		c.Errorf(err, "get two factor by user ID")
 		return
@@ -409,7 +409,7 @@ func SettingsSecurity(c *context.Context) {
 }
 
 func SettingsTwoFactorEnable(c *context.Context) {
-	if database.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
+	if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -466,7 +466,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := database.TwoFactors.Create(c.Req.Context(), c.UserID(), conf.Security.SecretKey, secret); err != nil {
+	if err := database.Handle.TwoFactors().Create(c.Req.Context(), c.UserID(), conf.Security.SecretKey, secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.RedirectSubpath("/user/settings/security/two_factor_enable")
 		return
@@ -479,7 +479,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {
-	if !database.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -498,7 +498,7 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
-	if !database.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -513,7 +513,7 @@ func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
 }
 
 func SettingsTwoFactorDisable(c *context.Context) {
-	if !database.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}

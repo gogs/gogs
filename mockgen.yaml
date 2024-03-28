@@ -37,7 +37,6 @@ mocks:
       - path: gogs.io/gogs/internal/database
         interfaces:
           - UsersStore
-          - TwoFactorsStore
       - path: gogs.io/gogs/internal/route/lfs
         interfaces:
           - Store
