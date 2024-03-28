@@ -466,7 +466,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 		headBranch = headInfos[0]
 
 	} else if len(headInfos) == 2 {
-		headUser, err = database.Users.GetByUsername(c.Req.Context(), headInfos[0])
+		headUser, err = database.Handle.Users().GetByUsername(c.Req.Context(), headInfos[0])
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return nil, nil, nil, nil, "", ""

@@ -128,7 +128,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 			continue
 		}
 
-		to, err := Users.GetByID(ctx, watchers[i].UserID)
+		to, err := Handle.Users().GetByID(ctx, watchers[i].UserID)
 		if err != nil {
 			return fmt.Errorf("GetUserByID [%d]: %v", watchers[i].UserID, err)
 		}
@@ -168,7 +168,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		toUsernames = append(toUsernames, mentions[i])
 	}
 
-	tos, err = Users.GetMailableEmailsByUsernames(ctx, toUsernames)
+	tos, err = Handle.Users().GetMailableEmailsByUsernames(ctx, toUsernames)
 	if err != nil {
 		return errors.Wrap(err, "get mailable emails by usernames")
 	}

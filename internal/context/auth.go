@@ -113,6 +113,32 @@ type AuthStore interface {
 	// TouchAccessTokenByID updates the updated time of the given access token to
 	// the current time.
 	TouchAccessTokenByID(ctx context.Context, id int64) error
+
+	// GetUserByID returns the user with given ID. It returns
+	// database.ErrUserNotExist when not found.
+	GetUserByID(ctx context.Context, id int64) (*database.User, error)
+	// GetUserByUsername returns the user with given username. It returns
+	// database.ErrUserNotExist when not found.
+	GetUserByUsername(ctx context.Context, username string) (*database.User, error)
+	// CreateUser creates a new user and persists to database. It returns
+	// database.ErrNameNotAllowed if the given name or pattern of the name is not
+	// allowed as a username, or database.ErrUserAlreadyExist when a user with same
+	// name already exists, or database.ErrEmailAlreadyUsed if the email has been
+	// verified by another user.
+	CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
+	// AuthenticateUser validates username and password via given login source ID.
+	// It returns database.ErrUserNotExist when the user was not found.
+	//
+	// When the "loginSourceID" is negative, it aborts the process and returns
+	// database.ErrUserNotExist if the user was not found in the database.
+	//
+	// When the "loginSourceID" is non-negative, it returns
+	// database.ErrLoginSourceMismatch if the user has different login source ID
+	// than the "loginSourceID".
+	//
+	// When the "loginSourceID" is positive, it tries to authenticate via given
+	// login source and creates a new user when not yet exists in the database.
+	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
@@ -160,7 +186,7 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
-		_, err := database.Users.GetByID(c.Req.Context(), id)
+		_, err := store.GetUserByID(c.Req.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
 				log.Error("Failed to get user by ID: %v", err)
@@ -185,7 +211,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		if conf.Auth.EnableReverseProxyAuthentication {
 			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
-				user, err := database.Users.GetByUsername(ctx.Req.Context(), webAuthUser)
+				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
 				if err != nil {
 					if !database.IsErrUserNotExist(err) {
 						log.Error("Failed to get user by name: %v", err)
@@ -194,7 +220,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 
 					// Check if enabled auto-registration.
 					if conf.Auth.EnableReverseProxyAutoRegistration {
-						user, err = database.Users.Create(
+						user, err = store.CreateUser(
 							ctx.Req.Context(),
 							webAuthUser,
 							gouuid.NewV4().String()+"@localhost",
@@ -219,7 +245,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := database.Users.Authenticate(ctx.Req.Context(), uname, passwd, -1)
+				u, err := store.AuthenticateUser(ctx.Req.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
 						log.Error("Failed to authenticate user: %v", err)
@@ -233,7 +259,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		return nil, false, false
 	}
 
-	u, err := database.Users.GetByID(ctx.Req.Context(), uid)
+	u, err := store.GetUserByID(ctx.Req.Context(), uid)
 	if err != nil {
 		log.Error("GetUserByID: %v", err)
 		return nil, false, false
@@ -254,7 +280,7 @@ func AuthenticateByToken(store AuthStore, ctx context.Context, token string) (*d
 		log.Error("Failed to touch access token [id: %d]: %v", t.ID, err)
 	}
 
-	user, err := database.Users.GetByID(ctx, t.UserID)
+	user, err := store.GetUserByID(ctx, t.UserID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "get user by ID [user_id: %d]", t.UserID)
 	}

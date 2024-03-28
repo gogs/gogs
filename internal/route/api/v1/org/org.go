@@ -89,7 +89,7 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	err := database.Users.Update(
+	err := database.Handle.Users().Update(
 		c.Req.Context(),
 		c.Org.Organization.ID,
 		database.UpdateUserOptions{

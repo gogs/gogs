@@ -45,12 +45,12 @@ func ToTag(b *database.Tag, c *git.Commit) *Tag {
 
 func ToCommit(c *git.Commit) *api.PayloadCommit {
 	authorUsername := ""
-	author, err := database.Users.GetByEmail(context.TODO(), c.Author.Email)
+	author, err := database.Handle.Users().GetByEmail(context.TODO(), c.Author.Email)
 	if err == nil {
 		authorUsername = author.Name
 	}
 	committerUsername := ""
-	committer, err := database.Users.GetByEmail(context.TODO(), c.Committer.Email)
+	committer, err := database.Handle.Users().GetByEmail(context.TODO(), c.Committer.Email)
 	if err == nil {
 		committerUsername = committer.Name
 	}

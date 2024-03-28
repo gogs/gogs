@@ -39,7 +39,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 	// Check if the organization username (including cases) had been changed
 	if org.Name != f.Name {
-		err := database.Users.ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
+		err := database.Handle.Users().ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
 		if err != nil {
 			c.Data["OrgName"] = true
 			var msg string
@@ -71,7 +71,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	if c.User.IsAdmin {
 		opts.MaxRepoCreation = &f.MaxRepoCreation
 	}
-	err := database.Users.Update(c.Req.Context(), c.Org.Organization.ID, opts)
+	err := database.Handle.Users().Update(c.Req.Context(), c.Org.Organization.ID, opts)
 	if err != nil {
 		c.Error(err, "update organization")
 		return
@@ -93,7 +93,7 @@ func SettingsAvatar(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	if err := database.Users.DeleteCustomAvatar(c.Req.Context(), c.Org.Organization.ID); err != nil {
+	if err := database.Handle.Users().DeleteCustomAvatar(c.Req.Context(), c.Org.Organization.ID); err != nil {
 		c.Flash.Error(err.Error())
 	}
 
@@ -106,7 +106,7 @@ func SettingsDelete(c *context.Context) {
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := database.Users.Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {

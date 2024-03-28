@@ -373,7 +373,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		commits = append([]*git.Commit{mergeCommit}, commits...)
 	}
 
-	pcs, err := CommitsToPushCommits(commits).APIFormat(ctx, Users, pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
+	pcs, err := CommitsToPushCommits(commits).APIFormat(ctx, Handle.Users(), pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
 	if err != nil {
 		log.Error("Failed to convert to API payload commits: %v", err)
 		return nil

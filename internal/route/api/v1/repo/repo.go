@@ -32,7 +32,7 @@ func Search(c *context.APIContext) {
 		if c.User.ID == opts.OwnerID {
 			opts.Private = true
 		} else {
-			u, err := database.Users.GetByID(c.Req.Context(), opts.OwnerID)
+			u, err := database.Handle.Users().GetByID(c.Req.Context(), opts.OwnerID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, map[string]any{
 					"ok":    false,
@@ -77,7 +77,7 @@ func Search(c *context.APIContext) {
 }
 
 func listUserRepositories(c *context.APIContext, username string) {
-	user, err := database.Users.GetByUsername(c.Req.Context(), username)
+	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), username)
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return
@@ -209,7 +209,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
 	if f.Uid != ctxUser.ID {
-		org, err := database.Users.GetByID(c.Req.Context(), f.Uid)
+		org, err := database.Handle.Users().GetByID(c.Req.Context(), f.Uid)
 		if err != nil {
 			if database.IsErrUserNotExist(err) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -287,7 +287,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 
 // FIXME: inject in the handler chain
 func parseOwnerAndRepo(c *context.APIContext) (*database.User, *database.Repository) {
-	owner, err := database.Users.GetByUsername(c.Req.Context(), c.Params(":username"))
+	owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -453,7 +453,7 @@ func Releases(c *context.APIContext) {
 	}
 	apiReleases := make([]*api.Release, 0, len(releases))
 	for _, r := range releases {
-		publisher, err := database.Users.GetByID(c.Req.Context(), r.PublisherID)
+		publisher, err := database.Handle.Users().GetByID(c.Req.Context(), r.PublisherID)
 		if err != nil {
 			c.Error(err, "get release publisher")
 			return

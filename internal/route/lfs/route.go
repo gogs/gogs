@@ -62,7 +62,7 @@ func authenticate(store Store) macaron.Handler {
 			return
 		}
 
-		user, err := database.Users.Authenticate(c.Req.Context(), username, password, -1)
+		user, err := store.AuthenticateUser(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(c.Resp)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
@@ -109,7 +109,7 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
-		owner, err := database.Users.GetByUsername(c.Req.Context(), username)
+		owner, err := store.GetUserByUsername(c.Req.Context(), username)
 		if err != nil {
 			if database.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)

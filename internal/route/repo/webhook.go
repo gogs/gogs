@@ -493,7 +493,7 @@ func TestWebhook(c *context.Context) {
 		committer = c.Repo.Commit.Committer
 
 		// Try to match email with a real user.
-		author, err := database.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Author.Email)
+		author, err := database.Handle.Users().GetByEmail(c.Req.Context(), c.Repo.Commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
 		} else if !database.IsErrUserNotExist(err) {
@@ -501,7 +501,7 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		user, err := database.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Committer.Email)
+		user, err := database.Handle.Users().GetByEmail(c.Req.Context(), c.Repo.Commit.Committer.Email)
 		if err == nil {
 			committerUsername = user.Name
 		} else if !database.IsErrUserNotExist(err) {
