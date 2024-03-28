@@ -67,13 +67,13 @@ func TestTwoFactors(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	db := &twoFactorsStore{
-		DB: newTestDB(t, "twoFactorsStore"),
+	s := &TwoFactorsStore{
+		db: newTestDB(t, "TwoFactorsStore"),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *twoFactorsStore)
+		test func(t *testing.T, ctx context.Context, s *TwoFactorsStore)
 	}{
 		{"Create", twoFactorsCreate},
 		{"GetByUserID", twoFactorsGetByUserID},
@@ -81,10 +81,10 @@ func TestTwoFactors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB)
+				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			tc.test(t, ctx, db)
+			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
 			break
@@ -92,43 +92,43 @@ func TestTwoFactors(t *testing.T) {
 	}
 }
 
-func twoFactorsCreate(t *testing.T, ctx context.Context, db *twoFactorsStore) {
+func twoFactorsCreate(t *testing.T, ctx context.Context, s *TwoFactorsStore) {
 	// Create a 2FA token
-	err := db.Create(ctx, 1, "secure-key", "secure-secret")
+	err := s.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
 
 	// Get it back and check the Created field
-	tf, err := db.GetByUserID(ctx, 1)
+	tf, err := s.GetByUserID(ctx, 1)
 	require.NoError(t, err)
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), tf.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), tf.Created.UTC().Format(time.RFC3339))
 
 	// Verify there are 10 recover codes generated
 	var count int64
-	err = db.Model(new(TwoFactorRecoveryCode)).Count(&count).Error
+	err = s.db.Model(new(TwoFactorRecoveryCode)).Count(&count).Error
 	require.NoError(t, err)
 	assert.Equal(t, int64(10), count)
 }
 
-func twoFactorsGetByUserID(t *testing.T, ctx context.Context, db *twoFactorsStore) {
+func twoFactorsGetByUserID(t *testing.T, ctx context.Context, s *TwoFactorsStore) {
 	// Create a 2FA token for user 1
-	err := db.Create(ctx, 1, "secure-key", "secure-secret")
+	err := s.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
 
 	// We should be able to get it back
-	_, err = db.GetByUserID(ctx, 1)
+	_, err = s.GetByUserID(ctx, 1)
 	require.NoError(t, err)
 
 	// Try to get a non-existent 2FA token
-	_, err = db.GetByUserID(ctx, 2)
+	_, err = s.GetByUserID(ctx, 2)
 	wantErr := ErrTwoFactorNotFound{args: errutil.Args{"userID": int64(2)}}
 	assert.Equal(t, wantErr, err)
 }
 
-func twoFactorsIsEnabled(t *testing.T, ctx context.Context, db *twoFactorsStore) {
+func twoFactorsIsEnabled(t *testing.T, ctx context.Context, s *TwoFactorsStore) {
 	// Create a 2FA token for user 1
-	err := db.Create(ctx, 1, "secure-key", "secure-secret")
+	err := s.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
 
-	assert.True(t, db.IsEnabled(ctx, 1))
-	assert.False(t, db.IsEnabled(ctx, 2))
+	assert.True(t, s.IsEnabled(ctx, 1))
+	assert.False(t, s.IsEnabled(ctx, 2))
 }

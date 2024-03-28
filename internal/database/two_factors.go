@@ -20,22 +20,6 @@ import (
 	"gogs.io/gogs/internal/strutil"
 )
 
-// TwoFactorsStore is the persistent interface for 2FA.
-type TwoFactorsStore interface {
-	// Create creates a new 2FA token and recovery codes for given user. The "key"
-	// is used to encrypt and later decrypt given "secret", which should be
-	// configured in site-level and change of the "key" will break all existing 2FA
-	// tokens.
-	Create(ctx context.Context, userID int64, key, secret string) error
-	// GetByUserID returns the 2FA token of given user. It returns
-	// ErrTwoFactorNotFound when not found.
-	GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error)
-	// IsEnabled returns true if the user has enabled 2FA.
-	IsEnabled(ctx context.Context, userID int64) bool
-}
-
-var TwoFactors TwoFactorsStore
-
 // BeforeCreate implements the GORM create hook.
 func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
 	if t.CreatedUnix == 0 {
@@ -50,13 +34,20 @@ func (t *TwoFactor) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-var _ TwoFactorsStore = (*twoFactorsStore)(nil)
-
-type twoFactorsStore struct {
-	*gorm.DB
+// TwoFactorsStore is the storage layer for two-factor authentication settings.
+type TwoFactorsStore struct {
+	db *gorm.DB
 }
 
-func (s *twoFactorsStore) Create(ctx context.Context, userID int64, key, secret string) error {
+func newTwoFactorsStore(db *gorm.DB) *TwoFactorsStore {
+	return &TwoFactorsStore{db: db}
+}
+
+// Create creates a new 2FA token and recovery codes for given user. The "key"
+// is used to encrypt and later decrypt given "secret", which should be
+// configured in site-level and change of the "key" will break all existing 2FA
+// tokens.
+func (s *TwoFactorsStore) Create(ctx context.Context, userID int64, key, secret string) error {
 	encrypted, err := cryptoutil.AESGCMEncrypt(cryptoutil.MD5Bytes(key), []byte(secret))
 	if err != nil {
 		return errors.Wrap(err, "encrypt secret")
@@ -71,7 +62,7 @@ func (s *twoFactorsStore) Create(ctx context.Context, userID int64, key, secret 
 		return errors.Wrap(err, "generate recovery codes")
 	}
 
-	return s.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(tf).Error
 		if err != nil {
 			return err
@@ -88,8 +79,7 @@ type ErrTwoFactorNotFound struct {
 }
 
 func IsErrTwoFactorNotFound(err error) bool {
-	_, ok := err.(ErrTwoFactorNotFound)
-	return ok
+	return errors.As(err, &ErrTwoFactorNotFound{})
 }
 
 func (err ErrTwoFactorNotFound) Error() string {
@@ -100,11 +90,13 @@ func (ErrTwoFactorNotFound) NotFound() bool {
 	return true
 }
 
-func (s *twoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error) {
+// GetByUserID returns the 2FA token of given user. It returns
+// ErrTwoFactorNotFound when not found.
+func (s *TwoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error) {
 	tf := new(TwoFactor)
-	err := s.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
+	err := s.db.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
 		}
 		return nil, err
@@ -112,9 +104,10 @@ func (s *twoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFa
 	return tf, nil
 }
 
-func (s *twoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
+// IsEnabled returns true if the user has enabled 2FA.
+func (s *TwoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
 	var count int64
-	err := s.WithContext(ctx).Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
+	err := s.db.WithContext(ctx).Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
 	if err != nil {
 		log.Error("Failed to count two factors [user_id: %d]: %v", userID, err)
 	}

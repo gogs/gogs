@@ -22,14 +22,13 @@ import (
 
 func TestAuthenticate(t *testing.T) {
 	tests := []struct {
-		name                string
-		header              http.Header
-		mockUsersStore      func() database.UsersStore
-		mockTwoFactorsStore func() database.TwoFactorsStore
-		mockStore           func() *MockStore
-		expStatusCode       int
-		expHeader           http.Header
-		expBody             string
+		name           string
+		header         http.Header
+		mockUsersStore func() database.UsersStore
+		mockStore      func() *MockStore
+		expStatusCode  int
+		expHeader      http.Header
+		expBody        string
 	}{
 		{
 			name:          "no authorization",
@@ -50,10 +49,10 @@ func TestAuthenticate(t *testing.T) {
 				mock.AuthenticateFunc.SetDefaultReturn(&database.User{}, nil)
 				return mock
 			},
-			mockTwoFactorsStore: func() database.TwoFactorsStore {
-				mock := NewMockTwoFactorsStore()
-				mock.IsEnabledFunc.SetDefaultReturn(true)
-				return mock
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.IsTwoFactorEnabledFunc.SetDefaultReturn(true)
+				return mockStore
 			},
 			expStatusCode: http.StatusBadRequest,
 			expHeader:     http.Header{},
@@ -92,10 +91,10 @@ func TestAuthenticate(t *testing.T) {
 				mock.AuthenticateFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockTwoFactorsStore: func() database.TwoFactorsStore {
-				mock := NewMockTwoFactorsStore()
-				mock.IsEnabledFunc.SetDefaultReturn(false)
-				return mock
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.IsTwoFactorEnabledFunc.SetDefaultReturn(false)
+				return mockStore
 			},
 			expStatusCode: http.StatusOK,
 			expHeader:     http.Header{},
@@ -151,9 +150,6 @@ func TestAuthenticate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if test.mockUsersStore != nil {
 				database.SetMockUsersStore(t, test.mockUsersStore())
-			}
-			if test.mockTwoFactorsStore != nil {
-				database.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore())
 			}
 			if test.mockStore == nil {
 				test.mockStore = NewMockStore

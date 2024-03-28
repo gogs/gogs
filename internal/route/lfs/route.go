@@ -69,7 +69,7 @@ func authenticate(store Store) macaron.Handler {
 			return
 		}
 
-		if err == nil && database.TwoFactors.IsEnabled(c.Req.Context(), user.ID) {
+		if err == nil && store.IsTwoFactorEnabled(c.Req.Context(), user.ID) {
 			c.Error(http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
 			return
 		}

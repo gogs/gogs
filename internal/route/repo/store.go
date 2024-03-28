@@ -20,6 +20,9 @@ type Store interface {
 	// GetRepositoryByName returns the repository with given owner and name. It
 	// returns database.ErrRepoNotExist when not found.
 	GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error)
+
+	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
+	IsTwoFactorEnabled(ctx context.Context, userID int64) bool
 }
 
 type store struct{}
@@ -39,4 +42,8 @@ func (*store) TouchAccessTokenByID(ctx context.Context, id int64) error {
 
 func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
 	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
+}
+
+func (*store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
+	return database.Handle.TwoFactors().IsEnabled(ctx, userID)
 }
