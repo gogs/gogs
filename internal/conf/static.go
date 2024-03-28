@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -433,7 +434,8 @@ func handleDeprecated() {
 }
 
 // warnDeprecated warns about deprecated configuration sections and options.
-func warnDeprecated(cfg *ini.File) {
+func warnDeprecated(cfg *ini.File) []string {
+	// Deprecated sections and options
 	deprecatedSections := map[string]string{
 		"mailer":  "email",
 		"service": "auth",
@@ -459,22 +461,27 @@ func warnDeprecated(cfg *ini.File) {
 		{"database", "PASSWD"}:                            {"database", "PASSWORD"},
 	}
 
+	var warnings []string
+
 	for oldSection, newSection := range deprecatedSections {
 		if cfg.Section(oldSection).KeyStrings() != nil {
-			log.Warn("section %s is deprecated, use %s instead", oldSection, newSection)
+			warning := fmt.Sprintf("section %s is deprecated, use %s instead", oldSection, newSection)
+			log.Warn(warning)
+			warnings = append(warnings, warning)
 		}
 	}
 
 	for oldSectionOption, newSectionOption := range deprecatedOptions {
 		if cfg.Section(oldSectionOption.section).HasKey(oldSectionOption.option) {
-			log.Warn("option [%s] %s is deprecated, use [%s] %s instead",
+			warning := fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
 				oldSectionOption.section, oldSectionOption.option,
 				newSectionOption.section, newSectionOption.option)
+			log.Warn(warning)
+			warnings = append(warnings, warning)
 		}
 	}
 
-	// TODO: get list of available section-option pair, give warning if there are
-	// exisisting (unused) section-option pair
+	return warnings
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.
