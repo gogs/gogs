@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gogs/go-libravatar"
+	"gogs.io/gogs/conf"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 )
@@ -435,7 +436,7 @@ func handleDeprecated() {
 
 // warnDeprecated warns about deprecated configuration sections and options.
 // NOTE: Delete this function after 0.14.0 is released
-func warnDeprecated(cfg *ini.File) []string {
+func warnDeprecated(currentConfig *ini.File) []string {
 	// Deprecated sections and options
 	deprecatedSections := map[string]string{
 		"mailer":  "email",
@@ -465,7 +466,7 @@ func warnDeprecated(cfg *ini.File) []string {
 	var warnings []string
 
 	for oldSection, newSection := range deprecatedSections {
-		if cfg.Section(oldSection).KeyStrings() != nil {
+		if currentConfig.Section(oldSection).KeyStrings() != nil {
 			warning := fmt.Sprintf("section %s is deprecated, use %s instead", oldSection, newSection)
 			log.Warn(warning)
 			warnings = append(warnings, warning)
@@ -473,12 +474,39 @@ func warnDeprecated(cfg *ini.File) []string {
 	}
 
 	for oldSectionOption, newSectionOption := range deprecatedOptions {
-		if cfg.Section(oldSectionOption.section).HasKey(oldSectionOption.option) {
+		if currentConfig.Section(oldSectionOption.section).HasKey(oldSectionOption.option) {
 			warning := fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
 				oldSectionOption.section, oldSectionOption.option,
 				newSectionOption.section, newSectionOption.option)
 			log.Warn(warning)
 			warnings = append(warnings, warning)
+		}
+	}
+
+	// Compare available config with current config
+	availableConfigFS := conf.Files
+	availableConfigData, err := availableConfigFS.ReadFile("app.ini")
+	if err != nil {
+		log.Error("Failed to open available config: %v", err)
+		return warnings
+	}
+
+	availableConfig, err := ini.LoadSources(ini.LoadOptions{
+		IgnoreInlineComment: true,
+	}, availableConfigData)
+	if err != nil {
+		log.Error("Failed to parse available config: %v", err)
+		return warnings
+	}
+
+	for _, currentSection := range currentConfig.Sections() {
+		for _, currentOption := range currentSection.Keys() {
+			if !availableConfig.Section(currentSection.Name()).HasKey(currentOption.Name()) {
+				warning := fmt.Sprintf("option [%s] %s is not in the available config",
+					currentSection.Name(), currentOption.Name())
+				log.Warn(warning)
+				warnings = append(warnings, warning)
+			}
 		}
 	}
 
