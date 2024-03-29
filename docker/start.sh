@@ -48,8 +48,15 @@ create_volume_subfolder() {
 
 setids() {
     # export USER=$USER_GOGS
-    PUID=${PUID:-1000}
-    PGID=${PGID:-1000}
+    USER_ID=$(id -u $USER)
+    GROUP_ID=$(id -g $USER)
+
+    PUID=${PUID:-${USER_ID}}
+    PGID=${PGID:-${GROUP_ID}}
+
+    echo "setting groupID as $PGID"
+    echo "setting userID as $PUID"
+
     groupmod -o -g "$PGID" $USER
     usermod -o -u "$PUID" $USER
 }
