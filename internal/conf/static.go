@@ -434,6 +434,7 @@ func handleDeprecated() {
 }
 
 // warnDeprecated warns about deprecated configuration sections and options.
+// NOTE: Delete this function after 0.14.0 is released
 func warnDeprecated(cfg *ini.File) []string {
 	// Deprecated sections and options
 	deprecatedSections := map[string]string{
