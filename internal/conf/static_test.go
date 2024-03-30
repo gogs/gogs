@@ -32,6 +32,9 @@ func Test_i18n_DateLang(t *testing.T) {
 	}
 }
 
+// TestWarnDeprecated tests the warnDeprecated function.
+// It creates a new ini.File, adds some sections and keys,
+// and then checks if the expected warnings are returned by the function.
 func TestWarnDeprecated(t *testing.T) {
 	cfg := ini.Empty()
 	cfg.Section("mailer").NewKey("ENABLED", "true")
