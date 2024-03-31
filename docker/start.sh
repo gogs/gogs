@@ -73,7 +73,7 @@ manageusername() {
 
 createuser(){
     # check if user alread exists
-    exists=$(cat /etc/passwd | grep "$USER")
+    exists=$(grep "$USER" /etc/passwd )
     if test -n "$exists"; then
         # if exists return
         return
