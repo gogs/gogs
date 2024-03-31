@@ -48,27 +48,27 @@ create_volume_subfolder() {
 
 setids() {
     # export USER=$USER_GOGS
-    USER_ID=$(id -u $USER)
-    GROUP_ID=$(id -g $USER)
+    USER_ID="$(id -u "${USER}")"
+    GROUP_ID="$(id -g "${USER}")"
 
-    PUID=${PUID:-${USER_ID}}
-    PGID=${PGID:-${GROUP_ID}}
+    PUID="${PUID:-${USER_ID}}"
+    PGID="${PGID:-${GROUP_ID}}"
 
-    echo "setting groupID as $PGID"
-    echo "setting userID as $PUID"
+    echo "setting groupID as ${PGID}"
+    echo "setting userID as ${PUID}"
 
-    groupmod -o -g "$PGID" $USER
-    usermod -o -u "$PUID" $USER
+    groupmod -o -g "$PGID" "$USER"
+    usermod -o -u "$PUID" "$USER"
 }
 
 manageusername() {
     if test -n "$USER_GOGS"; then 
-        export USER=$USER_GOGS 
+        export USER="$USER_GOGS" 
     else
         export USER=git
     fi
 
-    export USER_HOME=$(eval echo ~$USER)
+    export USER_HOME=$"(eval echo ~$USER)"
 }
 
 createuser(){
@@ -79,8 +79,8 @@ createuser(){
         return
     fi
     # Create user/group to run Gogs
-    addgroup -S $USER
-    adduser -G $USER -H -D -g 'Gogs Git User' $USER -h /data/$USER -s /bin/bash && usermod -p '*' $USER && passwd -u $USER
+    addgroup -S "$USER"
+    adduser -G "$USER" -H -D -g 'Gogs Git User' "$USER" -h /data/"$USER" -s /bin/bash && usermod -p '*' "$USER" && passwd -u "$USER"
     # add gogs configuration in profile file
     echo "export GOGS_CUSTOM=$GOGS_CUSTOM" >> /etc/profile
     # add allowed user to ssh server configuration
