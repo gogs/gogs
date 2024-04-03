@@ -31,7 +31,12 @@ func ListIssueComments(c *context.APIContext) {
 		return
 	}
 
-	comments, err := database.GetCommentsByIssueIDSince(issue.ID, since.Unix())
+	var isAsc bool = true
+	if c.Query("is_asc") == "false" {
+		isAsc = false
+	}
+
+	comments, err := database.GetCommentsByIssueIDSince(issue.ID, since.Unix(), isAsc)
 	if err != nil {
 		c.Error(err, "get comments by issue ID")
 		return
@@ -55,7 +60,12 @@ func ListRepoIssueComments(c *context.APIContext) {
 		}
 	}
 
-	comments, err := database.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix())
+	var isAsc bool = true
+	if c.Query("is_asc") == "false" {
+		isAsc = false
+	}
+
+	comments, err := database.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix(), isAsc)
 	if err != nil {
 		c.Error(err, "get comments by repository ID")
 		return
