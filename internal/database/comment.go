@@ -473,17 +473,19 @@ func getCommentsByIssueID(e Engine, issueID int64, isAsc bool) ([]*Comment, erro
 	return getCommentsByIssueIDSince(e, issueID, -1, isAsc)
 }
 
-// GetCommentsByIssueID returns all comments of an issue.
+// GetCommentsByIssueID returns all comments of an issue, sorted by created time.
 func GetCommentsByIssueID(issueID int64, isAsc bool) ([]*Comment, error) {
 	return getCommentsByIssueID(x, issueID, isAsc)
 }
 
-// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
+// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point, sorted
+// by created time.
 func GetCommentsByIssueIDSince(issueID, since int64, isAsc bool) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(x, issueID, since, isAsc)
 }
 
-// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
+// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time
+// point, sorted by created time.
 func GetCommentsByRepoIDSince(repoID, since int64, isAsc bool) ([]*Comment, error) {
 	return getCommentsByRepoIDSince(x, repoID, since, isAsc)
 }
