@@ -1,0 +1,67 @@
+{{template "base/head" .}}
+<div class="repository insights contributors">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/insights/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{DateFmtShort .RangeStart}} - {{DateFmtShort .RangeEnd}}
+					<div class="ui" style="float: right;">
+						<div class="ui dropdown jump item">
+							<span class="text">{{.i18n.Tr "repo.insights.contributions"}}</span>
+							<i class="dropdown icon"></i>
+							<div class="menu">
+								<a class="item" href="{{.RepoLink}}/graphs/contributors?from={{.RangeStartStr}}&to={{.RangeEndStr}}&type=c">{{.i18n.Tr "repo.insights.contributions_commits"}}</a>
+								<a class="item" href="{{.RepoLink}}/graphs/contributors?from={{.RangeStartStr}}&to={{.RangeEndStr}}&type=a">{{.i18n.Tr "repo.insights.contributions_additions"}}</a>
+								<a class="item" href="{{.RepoLink}}/graphs/contributors?from={{.RangeStartStr}}&to={{.RangeEndStr}}&type=d">{{.i18n.Tr "repo.insights.contributions_deletions"}}</a>
+							</div>
+						</div>
+					</div>
+				</h4>
+
+				<div class="ui attached segment default-branch">
+					<p>{{.i18n.Tr "repo.insights.contributors_desc" .DefaultBranch}}</p>
+					<canvas id="contributors-chart"></canvas>
+					<script>
+						function initContibutorsMainChart() {
+							var ctx = document.getElementById('contributors-chart').getContext('2d');
+							var chart = new Chart(ctx, {
+								type: 'line',
+								data: {
+									labels: {{.ContributorsMainChartData.Labels}},
+									datasets: [
+										{
+											label: {{.ContributorsMainChartData.Dataset.Label}},
+											data: {{.ContributorsMainChartData.Dataset.Data}},
+											fill: true,
+											pointStyle: false,
+											backgroundColor: [
+												'rgba(255, 99, 132, 0.2)'
+											],
+											borderColor: [
+												'rgba(255, 99, 132, 1)'
+											],
+											borderWidth: 1
+										}
+									]
+								},
+								options: {
+									scales: {
+										y: {
+											beginAtZero: true
+										}
+									}
+								}
+							});
+						}
+						window.onload = initContibutorsMainChart;
+					</script>
+				</div>
+
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -66,6 +66,9 @@
 		});
 	</script>
 {{end}}
+{{if .RequireChartJS}}
+	<script src="{{AppSubURL}}/plugins/chart.js-4.4.2/package/dist/chart.umd.js"></script>
+{{end}}
 
 <script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
 <script src="{{AppSubURL}}/js/libs/clipboard-2.0.4.min.js"></script>
