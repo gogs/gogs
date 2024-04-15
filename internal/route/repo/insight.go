@@ -32,8 +32,8 @@ type ChartData struct {
 	} `json:"dataset"`
 }
 
-// ContributorsMainChartData represents the data structure for the contributors main data.
-type ContributorsMainChartData struct {
+// ContributorChartData represents the data structure for the contributors main data.
+type ContributorChartData struct {
 	Additions ChartData `json:"additions"`
 	Deletions ChartData `json:"deletions"`
 	Commits   ChartData `json:"commits"`
@@ -46,11 +46,23 @@ type commitData struct {
 	Deletions int
 }
 
+// authorData represents the data structure for the author.
+type authorData struct {
+	*userCommit
+	CommitsData    []*commitData
+	ChartData      ChartData
+	NumOfCommits   int
+	NumOfAdditions int
+	NumOfDeletions int
+}
+
 // contributionType represents the type of contribution.
+type contributionType string
+
 const (
-	contributionTypeCommit   string = "c"
-	contributionTypeAddition string = "a"
-	contributionTypeDeletion string = "d"
+	contributionTypeCommit   contributionType = "c"
+	contributionTypeAddition contributionType = "a"
+	contributionTypeDeletion contributionType = "d"
 )
 
 // InsightContributorsPage represents the GET method for the contributors insight page.
@@ -72,41 +84,49 @@ func InsightContributorsPage(c *context.Context) {
 		return
 	}
 
-	// Get first and latest commit time
-	firstCommitTime := commits[len(commits)-1].Commit.Author.When
-	latestCommitTime := commits[0].Commit.Author.When
-	if ctxQueryFrom != "" && ctxQueryTo != "" {
-		firstCommitTime, _ = time.Parse(time.DateOnly, ctxQueryFrom)
-		latestCommitTime, _ = time.Parse(time.DateOnly, ctxQueryTo)
-	}
-
 	// sort and filter commits
 	sort.Slice(commits, func(i, j int) bool {
 		return commits[i].Commit.Author.When.After(commits[j].Commit.Author.When)
 	})
 
+	// Get first and latest commit time
+	firstCommitTime := commits[len(commits)-1].Commit.Author.When.Add(-24 * time.Hour)
+	latestCommitTime := commits[0].Commit.Author.When.Add(24 * time.Hour)
+	if ctxQueryFrom != "" && ctxQueryTo != "" {
+		ctxQueryFromTime, _ := time.Parse(time.DateOnly, ctxQueryFrom)
+		if firstCommitTime.Before(ctxQueryFromTime) {
+			firstCommitTime = ctxQueryFromTime
+		}
+		ctxQueryToTime, _ := time.Parse(time.DateOnly, ctxQueryTo)
+		if latestCommitTime.After(ctxQueryToTime) {
+			latestCommitTime = ctxQueryToTime
+		}
+	}
+
 	filteredCommits := make([]*commitData, 0)
 	for _, commit := range commits {
-		if commit.Commit.Author.When.After(firstCommitTime) && commit.Commit.Author.When.Before(latestCommitTime) {
+		if !(commit.Commit.Author.When.Before(firstCommitTime) || commit.Commit.Author.When.After(latestCommitTime)) {
 			filteredCommits = append(filteredCommits, commit)
 		}
 	}
 
-	contributorsMainChartData := getContributorsMainChartData(commits)
+	contributorChartData := getContributorChartData(filteredCommits, nil, nil)
+	authorDataSlice := getContributorsAuthorData(c, filteredCommits, contributionType(ctxQueryType))
 
 	c.Data["RangeStart"] = firstCommitTime
 	c.Data["RangeEnd"] = latestCommitTime
 	c.Data["RangeStartStr"] = firstCommitTime.Format(time.DateOnly)
 	c.Data["RangeEndStr"] = latestCommitTime.Format(time.DateOnly)
 	c.Data["DefaultBranch"] = defaultBranch
-	switch ctxQueryType {
+	switch contributionType(ctxQueryType) {
 	case contributionTypeAddition:
-		c.Data["ContributorsMainChartData"] = contributorsMainChartData.Additions
+		c.Data["ContributorsMainChartData"] = contributorChartData.Additions
 	case contributionTypeDeletion:
-		c.Data["ContributorsMainChartData"] = contributorsMainChartData.Deletions
+		c.Data["ContributorsMainChartData"] = contributorChartData.Deletions
 	default:
-		c.Data["ContributorsMainChartData"] = contributorsMainChartData.Commits
+		c.Data["ContributorsMainChartData"] = contributorChartData.Commits
 	}
+	c.Data["Authors"] = authorDataSlice
 	c.Data["RequireChartJS"] = true
 
 	c.RequireAutosize()
@@ -134,15 +154,15 @@ func InsightsGroup(c *context.Context) {
 	c.PageIs("Insights")
 }
 
-// getContributorsMainChartData returns the ContributorsMainChartData struct that
+// getContributorChartData returns the ContributorChartData struct that
 // will be used in page's template. It takes a slice of *commitData and returns a
-// ContributorsMainChartData struct. The ContributorsMainChartData struct contains
+// ContributorChartData struct. The ContributorChartData struct contains
 // three ChartData structs: Additions, Deletions, and Commits. Each ChartData struct
 // represents a dataset for the chart, with labels and data.
 //
 // NOTE: The input commits slice is expected to be already sorted by commit time.
-func getContributorsMainChartData(commits []*commitData) ContributorsMainChartData {
-	commitsByDay := groupCommitsByDay(commits)
+func getContributorChartData(commits []*commitData, rangeFrom, rangeTo *time.Time) ContributorChartData {
+	commitsByDay := groupCommitsByDay(commits, rangeFrom, rangeTo)
 	commitChartData := ChartData{}
 	additionChartData := ChartData{}
 	deletionChartData := ChartData{}
@@ -167,11 +187,73 @@ func getContributorsMainChartData(commits []*commitData) ContributorsMainChartDa
 	additionChartData.Dataset.Label = "Additions"
 	deletionChartData.Dataset.Label = "Deletions"
 
-	return ContributorsMainChartData{
+	return ContributorChartData{
 		Additions: additionChartData,
 		Deletions: deletionChartData,
 		Commits:   commitChartData,
 	}
+}
+
+// getContributorsAuthorData returns a slice of authorData structs. Each authorData
+// struct contains the author's name, email, and the number of commits, additions,
+// and deletions made by the author.
+//
+// NOTE: The input commits slice is expected to be already sorted by commit time.
+func getContributorsAuthorData(ctx *context.Context, commitsData []*commitData, _contributiontype contributionType) []authorData {
+	authorDataMap := make(map[string]authorData)
+
+	firstCommitTime := commitsData[len(commitsData)-1].Commit.Author.When.Truncate(24 * time.Hour)
+	latestCommitTime := commitsData[0].Commit.Author.When.Truncate(24 * time.Hour)
+
+	commits := make([]*git.Commit, 0)
+	for _, commitData := range commitsData {
+		commits = append(commits, commitData.Commit)
+	}
+	userCommits := matchUsersWithCommitEmails(ctx.Req.Context(), commits)
+
+	for i, userCommit := range userCommits {
+		authorEmail := userCommit.Commit.Author.Email
+		_authorData, ok := authorDataMap[authorEmail]
+		if !ok {
+			_authorData = authorData{}
+			_authorData.userCommit = userCommit
+			_authorData.CommitsData = make([]*commitData, 0)
+		}
+		_authorData.NumOfCommits++
+		_authorData.NumOfAdditions += commitsData[i].Additions
+		_authorData.NumOfDeletions += commitsData[i].Deletions
+		_authorData.CommitsData = append(_authorData.CommitsData, commitsData[i])
+		authorDataMap[authorEmail] = _authorData
+	}
+
+	authorDataSlice := make([]authorData, 0, len(authorDataMap))
+	for _, authorData := range authorDataMap {
+		authorDataSlice = append(authorDataSlice, authorData)
+	}
+
+	sort.Slice(authorDataSlice, func(i, j int) bool {
+		switch _contributiontype {
+		case contributionTypeAddition:
+			return authorDataSlice[i].NumOfCommits > authorDataSlice[j].NumOfCommits
+		case contributionTypeDeletion:
+			return authorDataSlice[i].NumOfDeletions > authorDataSlice[j].NumOfDeletions
+		default:
+			return authorDataSlice[i].NumOfCommits > authorDataSlice[j].NumOfCommits
+		}
+	})
+
+	for i, _authorData := range authorDataSlice {
+		switch _contributiontype {
+		case contributionTypeAddition:
+			authorDataSlice[i].ChartData = getContributorChartData(_authorData.CommitsData, &firstCommitTime, &latestCommitTime).Additions
+		case contributionTypeDeletion:
+			authorDataSlice[i].ChartData = getContributorChartData(_authorData.CommitsData, &firstCommitTime, &latestCommitTime).Deletions
+		default:
+			authorDataSlice[i].ChartData = getContributorChartData(_authorData.CommitsData, &firstCommitTime, &latestCommitTime).Commits
+		}
+	}
+
+	return authorDataSlice
 }
 
 // getCommitData returns a slice of commitData structs. Each commitData struct
@@ -225,11 +307,21 @@ func getCommitData(c *context.Context, branch string) ([]*commitData, error) {
 //	   []*commitData{}, []*commitData{commitD_day04}}
 //
 // NOTE: The input commits slice is expected to be already sorted by commit time.
-func groupCommitsByDay(commits []*commitData) [][]*commitData {
+func groupCommitsByDay(commits []*commitData, rangeFrom, rangeTo *time.Time) [][]*commitData {
 	res := make([][]*commitData, 0)
 
 	firstCommitTime := commits[len(commits)-1].Commit.Author.When.Truncate(24 * time.Hour)
 	latestCommitTime := commits[0].Commit.Author.When.Truncate(24 * time.Hour)
+	if rangeFrom != nil {
+		if firstCommitTime.After(*rangeFrom) {
+			firstCommitTime = rangeFrom.Truncate(24 * time.Hour)
+		}
+	}
+	if rangeTo != nil {
+		if latestCommitTime.Before(*rangeTo) {
+			latestCommitTime = rangeTo.Truncate(24 * time.Hour)
+		}
+	}
 	numOfDays := int(latestCommitTime.Sub(firstCommitTime)/(24*time.Hour)) + 1
 
 	commitBucketMap := make(map[string][]*commitData)
