@@ -624,8 +624,8 @@ func runWeb(c *cli.Context) error {
 			// below are the group for repo insights path
 			m.Group("/graphs", func() {
 				m.Get("/contributors", repo.MustBeNotBare, repo.InsightContributorsPage)
-				// m.Get("/commits", repo.MustBeNotBare, repo.InsightCommitsPage)
-				// m.Get("/code_frequency", repo.MustBeNotBare, repo.InsightCodeFrequencyPage)
+				m.Get("/commits", repo.MustBeNotBare, repo.InsightCommitsPage)
+				m.Get("/code_frequency", repo.MustBeNotBare, repo.InsightCodeFrequencyPage)
 			}, repo.InsightsGroup)
 		}, ignSignIn, context.RepoAssignment())
 

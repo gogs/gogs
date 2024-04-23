@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -56,6 +57,12 @@ type authorData struct {
 	NumOfDeletions int
 }
 
+// CommitsChartData represents the data structure for the commits chart.
+type CommitsChartData struct {
+	CommitsByWeek  ChartData `json:"commits_by_week"`
+	CommitsInAWeek ChartData `json:"commits_in_a_week"`
+}
+
 // contributionType represents the type of contribution.
 type contributionType string
 
@@ -78,7 +85,7 @@ func InsightContributorsPage(c *context.Context) {
 	defaultBranch := c.Repo.Repository.DefaultBranch
 
 	// Get commit data for the default branch
-	commits, err := getCommitData(c, defaultBranch)
+	commits, err := getCommitData(c, defaultBranch, true)
 	if err != nil {
 		c.Error(err, "get commits")
 		return
@@ -133,21 +140,46 @@ func InsightContributorsPage(c *context.Context) {
 	c.Success(INSIGHT_CONTRIBUTORS)
 }
 
-// // InsightCommitsPage represents the GET method for the commits insight page.
-// func InsightCommitsPage(c *context.Context) {
-// 	c.Title("repo.insights.commits")
-// 	c.PageIs("InsightsCommits")
-// 	c.RequireAutosize()
-// 	c.Success(INSIGHT_COMMITS)
-// }
+// InsightCommitsPage represents the GET method for the commits insight page.
+func InsightCommitsPage(c *context.Context) {
+	c.Title("repo.insights.commits")
+	c.PageIs("InsightsCommits")
 
-// // InsightCodeFrequencyPage represents the GET method for the code frequency insight page.
-// func InsightCodeFrequencyPage(c *context.Context) {
-// 	c.Title("repo.insights.code_frequency")
-// 	c.PageIs("InsightsCodeFrequency")
-// 	c.RequireAutosize()
-// 	c.Success(INSIGHT_CODE_FREQUENCY)
-// }
+	// Get context query
+	ctxQueryWeekID := c.Query("week_id") // e.g. 2019-52
+	var yearID, weekID int
+	fmt.Sscanf(ctxQueryWeekID, "%d-%d", &yearID, &weekID)
+
+	// Get commit data for the default branch
+	commits, err := getCommitData(c, c.Repo.Repository.DefaultBranch, false)
+	if err != nil {
+		c.Error(err, "get commits")
+		return
+	}
+
+	// sort commits
+	sort.Slice(commits, func(i, j int) bool {
+		return commits[i].Commit.Author.When.Before(commits[j].Commit.Author.When)
+	})
+
+	commitChartData := getCommitChartData(commits, yearID, weekID)
+	c.Data["CommitsByWeekChartData"] = commitChartData.CommitsByWeek
+	c.Data["CommitsInAWeekChartData"] = commitChartData.CommitsInAWeek
+
+	c.Data["RequireChartJS"] = true
+	c.RequireAutosize()
+	c.Success(INSIGHT_COMMITS)
+}
+
+// InsightCodeFrequencyPage represents the GET method for the code frequency insight page.
+func InsightCodeFrequencyPage(c *context.Context) {
+	c.Title("repo.insights.code_frequency")
+	c.PageIs("InsightsCodeFrequency")
+
+	c.Data["RequireChartJS"] = true
+	c.RequireAutosize()
+	c.Success(INSIGHT_CODE_FREQUENCY)
+}
 
 // InsightsGroup represents the handler for the insights group.
 func InsightsGroup(c *context.Context) {
@@ -256,10 +288,52 @@ func getContributorsAuthorData(ctx *context.Context, commitsData []*commitData, 
 	return authorDataSlice
 }
 
-// getCommitData returns a slice of commitData structs. Each commitData struct
-// contains a *git.Commit and the number of additions and deletions made in that
-// commit.
-func getCommitData(c *context.Context, branch string) ([]*commitData, error) {
+// getCommitChartData returns the CommitsChartData struct that
+// will be used in page's template. It takes a slice of *commitData and returns a
+// CommitsChartData struct. The CommitsChartData struct contains
+// two ChartData structs: CommitsByWeek and CommitsInAWeek. Each ChartData struct
+// represents a dataset for the chart, with labels and data.
+//
+// NOTE: The input commits slice is expected to be already sorted by commit time.
+func getCommitChartData(commits []*commitData, year, week int) CommitsChartData {
+	commitsByWeek := groupCommitsByWeek(commits)
+	commitsByWeekChartData := ChartData{Labels: []string{}}
+	commitsInAWeekChartData := ChartData{Labels: []string{}}
+
+	if len(commits) == 0 {
+		return CommitsChartData{}
+	}
+
+	curWeekTime := commits[0].Commit.Author.When
+
+	for _, _ = range commitsByWeek {
+		curYear, curWeek := curWeekTime.ISOWeek()
+		commitsByWeekChartData.Labels = append(commitsByWeekChartData.Labels, fmt.Sprintf("%04d-%02d", curYear, curWeek))
+		curWeekTime = curWeekTime.Add(7 * 24 * time.Hour)
+	}
+	commitInAWeekData := make([]int, 7)
+	for _, commit := range commits {
+		curYear, curWeek := commit.Commit.Author.When.ISOWeek()
+		if curYear == year && curWeek == week {
+			commitInAWeekData[commit.Commit.Author.When.Weekday()]++
+		}
+	}
+	commitsByWeekChartData.Dataset.Label = "Commits by week"
+	commitsByWeekChartData.Dataset.Data = commitsByWeek
+	commitsInAWeekChartData.Labels = []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	commitsInAWeekChartData.Dataset.Label = "Commits in a week"
+	commitsInAWeekChartData.Dataset.Data = commitInAWeekData
+
+	return CommitsChartData{
+		CommitsByWeek:  commitsByWeekChartData,
+		CommitsInAWeek: commitsInAWeekChartData,
+	}
+}
+
+// getCommitData returns a slice of commitData structs. If isFetchAdditionDeletion
+// is enabled, each commitData struct contains a *git.Commit and the number of
+// additions and deletions made in that commit.
+func getCommitData(c *context.Context, branch string, isFetchAdditionDeletion bool) ([]*commitData, error) {
 	res := make([]*commitData, 0)
 
 	commits, err := c.Repo.GitRepo.Log(branch)
@@ -280,10 +354,13 @@ func getCommitData(c *context.Context, branch string) ([]*commitData, error) {
 		}
 		endCommitID := commit.ID.String()
 
-		diff, _ := gitutil.RepoDiff(c.Repo.GitRepo,
-			endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-			git.DiffOptions{Base: startCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
-		)
+		diff := &gitutil.Diff{Diff: &git.Diff{}}
+		if isFetchAdditionDeletion {
+			diff, _ = gitutil.RepoDiff(c.Repo.GitRepo,
+				endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+				git.DiffOptions{Base: startCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+			)
+		}
 		res = append(res, &commitData{
 			Commit:    commit,
 			Additions: diff.TotalAdditions(),
@@ -339,5 +416,53 @@ func groupCommitsByDay(commits []*commitData, rangeFrom, rangeTo *time.Time) [][
 		}
 	}
 
+	return res
+}
+
+// groupCommitsByWeek groups commits by the week they were made. It takes a slice of
+// *commitData and returns a slice of integers representing the number of commits
+// made in each week.
+//
+// Example:
+// Input: []*commitData{commitA_week01, commitB_week01, commitC_week02, commitD_week04}
+//
+//	Output: []int{2, 1, 0, 1}
+//
+// NOTE: The input commits slice is expected to be already sorted by commit time.
+func groupCommitsByWeek(commits []*commitData) []int {
+	res := make([]int, 0)
+
+	if len(commits) == 0 {
+		return nil
+	}
+
+	nCommit := 0
+	curTime := commits[0].Commit.Author.When
+	for _, commit := range commits {
+		y, w := commit.Commit.Author.When.ISOWeek()
+		curYear, curWeek := curTime.ISOWeek()
+		if w != curWeek || y != curYear {
+			res = append(res, nCommit)
+
+			// add missing week
+			nMissingWeek := 0
+			if y == curYear && w-curWeek > 1 {
+				nMissingWeek += (w - curWeek - 1)
+			}
+			if y > curYear {
+				curLastWeekOfTheYear, _ := time.Date(curYear, time.December, 31, 0, 0, 0, 0, curTime.Location()).ISOWeek()
+				firstWeekOfTheYear, _ := time.Date(y, time.January, 1, 0, 0, 0, 0, curTime.Location()).ISOWeek()
+				nMissingWeek += (curLastWeekOfTheYear - curWeek) + (y - curYear - 1) + (w - firstWeekOfTheYear)
+			}
+			for i := 0; i < nMissingWeek; i++ {
+				res = append(res, 0)
+			}
+
+			curTime = commit.Commit.Author.When
+			nCommit = 0
+		}
+		nCommit++
+	}
+	res = append(res, nCommit)
 	return res
 }
