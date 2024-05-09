@@ -176,6 +176,27 @@ func InsightCodeFrequencyPage(c *context.Context) {
 	c.Title("repo.insights.code_frequency")
 	c.PageIs("InsightsCodeFrequency")
 
+	// Get commit data for the default branch
+	commits, err := getCommitData(c, c.Repo.Repository.DefaultBranch, true)
+	if err != nil {
+		c.Error(err, "get commits")
+		return
+	}
+
+	// sort commits
+	sort.Slice(commits, func(i, j int) bool {
+		return commits[i].Commit.Author.When.After(commits[j].Commit.Author.When)
+	})
+
+	// get adition and deletion data
+	contributorChartData := getContributorChartData(commits, nil, nil)
+	c.Data["AdditionsChartData"] = contributorChartData.Additions
+	for i := range contributorChartData.Deletions.Dataset.Data {
+		contributorChartData.Deletions.Dataset.Data[i] = -contributorChartData.Deletions.Dataset.Data[i]
+	}
+	c.Data["DeletionsChartData"] = contributorChartData.Deletions
+
+	c.Data["RepositoryName"] = fmt.Sprintf("%s/%s", c.Repo.Owner.Name, c.Repo.Repository.Name)
 	c.Data["RequireChartJS"] = true
 	c.RequireAutosize()
 	c.Success(INSIGHT_CODE_FREQUENCY)
