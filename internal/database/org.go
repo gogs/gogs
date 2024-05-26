@@ -412,7 +412,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	}
 
 	// Delete all repository accesses and unwatch them.
-	repoIDs := make([]int64, len(repos))
+	repoIDs := make([]int64, 0, len(repos))
 	for i := range repos {
 		repoIDs = append(repoIDs, repos[i].ID)
 		if err = watchRepo(sess, user.ID, repos[i].ID, false); err != nil {
