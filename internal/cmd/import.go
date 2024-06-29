@@ -83,9 +83,7 @@ func runImportLocale(c *cli.Context) error {
 
 		tw, err := os.Create(target)
 		if err != nil {
-			if err != nil {
-				return fmt.Errorf("Open: %v", err)
-			}
+			return fmt.Errorf("Create: %v", err)
 		}
 
 		scanner := bufio.NewScanner(sr)
