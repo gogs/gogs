@@ -47,6 +47,10 @@
 						<a class="item logo" href="{{$.Link}}/dingtalk/new">
 							<img class="img-12" src="{{AppSubURL}}/img/dingtalk.png">Dingtalk
 						</a>
+					{{else if eq . "wechat"}}
+						<a class="item logo" href="{{$.Link}}/wechat/new">
+							<img class="img-12" src="{{AppSubURL}}/img/wechat.png">WeChat
+						</a>
 					{{end}}
 				{{end}}
 			</div>

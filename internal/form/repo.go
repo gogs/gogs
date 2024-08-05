@@ -217,6 +217,15 @@ func (f *NewDingtalkHook) Validate(ctx *macaron.Context, errs binding.Errors) bi
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type NewWeChatHook struct {
+	PayloadURL string `binding:"Required;Url"`
+	Webhook
+}
+
+func (f *NewWeChatHook) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // .___
 // |   | ______ ________ __   ____
 // |   |/  ___//  ___/  |  \_/ __ \

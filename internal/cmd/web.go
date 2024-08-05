@@ -347,11 +347,13 @@ func runWeb(c *cli.Context) error {
 				m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackNewPost)
 				m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordNewPost)
 				m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkNewPost)
+				m.Post("/wechat/new", bindIgnErr(form.NewWeChatHook{}), repo.WebhooksWeChatNewPost)
 				m.Get("/:id", repo.WebhooksEdit)
 				m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebhooksEditPost)
 				m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackEditPost)
 				m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordEditPost)
 				m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkEditPost)
+				m.Post("/wechat/:id", bindIgnErr(form.NewWeChatHook{}), repo.WebhooksWeChatEditPost)
 			}, repo.InjectOrgRepoContext())
 		}
 

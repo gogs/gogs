@@ -285,6 +285,24 @@ func WebhooksDingtalkNewPost(c *context.Context, orCtx *orgRepoContext, f form.N
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
+func WebhooksWeChatNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewWeChatHook) {
+	c.Title("repo.settings.add_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksNew")
+	c.Data["HookType"] = "wechat"
+
+	w := &db.Webhook{
+		RepoID:       orCtx.RepoID,
+		URL:          f.PayloadURL,
+		ContentType:  db.JSON,
+		HookEvent:    toHookEvent(f.Webhook),
+		IsActive:     f.Active,
+		HookTaskType: db.WECHAT,
+		OrgID:        orCtx.OrgID,
+	}
+	validateAndCreateWebhook(c, orCtx, w)
+}
+
 func loadWebhook(c *context.Context, orCtx *orgRepoContext) *db.Webhook {
 	c.RequireHighlightJS()
 
@@ -443,6 +461,22 @@ func WebhooksDiscordEditPost(c *context.Context, orCtx *orgRepoContext, f form.N
 }
 
 func WebhooksDingtalkEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewDingtalkHook) {
+	c.Title("repo.settings.update_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksEdit")
+
+	w := loadWebhook(c, orCtx)
+	if c.Written() {
+		return
+	}
+
+	w.URL = f.PayloadURL
+	w.HookEvent = toHookEvent(f.Webhook)
+	w.IsActive = f.Active
+	validateAndUpdateWebhook(c, orCtx, w)
+}
+
+func WebhooksWeChatEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewWeChatHook) {
 	c.Title("repo.settings.update_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")

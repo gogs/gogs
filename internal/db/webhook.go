@@ -371,6 +371,7 @@ const (
 	SLACK
 	DISCORD
 	DINGTALK
+	WECHAT
 )
 
 var hookTaskTypes = map[string]HookTaskType{
@@ -378,6 +379,7 @@ var hookTaskTypes = map[string]HookTaskType{
 	"slack":    SLACK,
 	"discord":  DISCORD,
 	"dingtalk": DINGTALK,
+	"wechat":   WECHAT,
 }
 
 // ToHookTaskType returns HookTaskType by given name.
@@ -395,6 +397,8 @@ func (t HookTaskType) Name() string {
 		return "discord"
 	case DINGTALK:
 		return "dingtalk"
+	case WECHAT:
+		return "wechat"
 	}
 	return ""
 }
@@ -619,6 +623,11 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			payloader, err = GetDingtalkPayload(p, event)
 			if err != nil {
 				return fmt.Errorf("GetDingtalkPayload: %v", err)
+			}
+		case WECHAT:
+			payloader, err = GetWeChatPayload(p, event)
+			if err != nil {
+				return fmt.Errorf("GetWechatPayload: %v", err)
 			}
 		default:
 			payloader = p
