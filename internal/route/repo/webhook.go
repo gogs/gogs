@@ -328,6 +328,8 @@ func loadWebhook(c *context.Context, orCtx *orgRepoContext) *db.Webhook {
 		c.Data["HookType"] = "discord"
 	case db.DINGTALK:
 		c.Data["HookType"] = "dingtalk"
+	case db.WECHAT:
+		c.Data["HookType"] = "wechat"
 	default:
 		c.Data["HookType"] = "gogs"
 	}

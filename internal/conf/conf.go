@@ -397,7 +397,7 @@ func Init(customConf string) error {
 	} else if err = File.Section("other").MapTo(&Other); err != nil {
 		return errors.Wrap(err, "mapping [other] section")
 	}
-
+	fmt.Println(Webhook.Types)
 	HasRobotsTxt = osutil.IsFile(filepath.Join(CustomDir(), "robots.txt"))
 	return nil
 }
