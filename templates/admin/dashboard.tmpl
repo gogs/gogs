@@ -17,7 +17,13 @@
 						<dt>{{.i18n.Tr "admin.dashboard.go_version"}}</dt>
 						<dd>{{.GoVersion}}</dd>
 						<dt>{{.i18n.Tr "admin.dashboard.build_time"}}</dt>
-						<dd>{{.BuildTime}}</dd>
+						<dd>
+							{{if .BuildTime}}
+								{{.BuildTime}}
+							{{else}}
+								N/A
+							{{end}}
+						</dd>
 						<dt>{{.i18n.Tr "admin.dashboard.build_commit"}}</dt>
 						<dd>
 							{{if .BuildCommit}}
