@@ -343,7 +343,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		cfg.Section("email").Key("HOST").SetValue(f.SMTPHost)
 		cfg.Section("email").Key("FROM").SetValue(f.SMTPFrom)
 		cfg.Section("email").Key("USER").SetValue(f.SMTPUser)
-		cfg.Section("email").Key("PASSWD").SetValue(f.SMTPPasswd)
+		cfg.Section("email").Key("PASSWORD").SetValue(f.SMTPPasswd)
 	} else {
 		cfg.Section("email").Key("ENABLED").SetValue("false")
 	}
