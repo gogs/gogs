@@ -70,6 +70,25 @@
 						});
 					});
 				</script>
+			{{else if .IsSwaggerJson}}
+			  <link rel="stylesheet" href="{{AppSubURL}}/plugins/swagger-ui-5.17.14/swagger-ui.css" />
+        <script src="{{AppSubURL}}/plugins/swagger-ui-5.17.14/swagger-ui-bundle.js" crossorigin></script>
+        <script src="{{AppSubURL}}/plugins/swagger-ui-5.17.14/swagger-ui-standalone-preset.js" crossorigin></script>
+
+				<div id="swagger-ui"></div>
+				<script>
+					window.onload = () => {
+						window.ui = SwaggerUIBundle({
+							url: '{{.RawFileLink}}',
+							dom_id: '#swagger-ui',
+							presets: [
+								SwaggerUIBundle.presets.apis,
+								SwaggerUIStandalonePreset
+							],
+							layout: "StandaloneLayout",
+						});
+					};
+				</script>
 			{{else if .ReadmeInList}}
 				{{if .FileContent}}{{.FileContent | Str2HTML}}{{end}}
 			{{else if not .IsTextFile}}

@@ -28,6 +28,11 @@ func IsIPythonNotebook(name string) bool {
 	return strings.HasSuffix(name, ".ipynb")
 }
 
+// IsJsonFile reports whether name looks like a JSON file based on its extension.
+func IsJsonFile(name string) bool {
+	return strings.HasSuffix(name, ".json")
+}
+
 const (
 	IssueNameStyleNumeric      = "numeric"
 	IssueNameStyleAlphanumeric = "alphanumeric"
@@ -318,6 +323,7 @@ const (
 	TypeMarkdown        Type = "markdown"
 	TypeOrgMode         Type = "orgmode"
 	TypeIPythonNotebook Type = "ipynb"
+	TypeJson            Type = "json"
 )
 
 // Detect returns best guess of a markup type based on file name.
@@ -329,6 +335,8 @@ func Detect(filename string) Type {
 		return TypeOrgMode
 	case IsIPythonNotebook(filename):
 		return TypeIPythonNotebook
+	case IsJsonFile(filename):
+		return TypeJson
 	default:
 		return TypeUnrecognized
 	}
