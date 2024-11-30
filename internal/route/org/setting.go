@@ -1,6 +1,7 @@
 package org
 
 import (
+	"net/http"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -27,7 +28,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	c.Data["PageIsSettingsOptions"] = true
 
 	if c.HasError() {
-		c.Success(tmplOrgSettingsOptions)
+		c.HTML(http.StatusBadRequest, tmplOrgSettingsOptions)
 		return
 	}
 
@@ -38,18 +39,14 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 		err := database.Handle.Users().ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
 		if err != nil {
 			c.Data["OrgName"] = true
-			var msg string
 			switch {
 			case database.IsErrUserAlreadyExist(err):
-				msg = c.Tr("form.username_been_taken")
+				c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, SETTINGS_OPTIONS, &f)
 			case database.IsErrNameNotAllowed(err):
-				msg = c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+				c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, SETTINGS_OPTIONS, &f)
 			default:
 				c.Error(err, "change organization name")
-				return
 			}
-
-			c.RenderWithErr(msg, tmplOrgSettingsOptions, &f)
 			return
 		}
 
@@ -104,7 +101,7 @@ func SettingsDelete(c *context.Context) {
 	if c.Req.Method == "POST" {
 		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), tmplOrgSettingsDelete, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), http.StatusUnauthorized, tmplOrgSettingsDelete, nil)
 			} else {
 				c.Error(err, "authenticate user")
 			}
