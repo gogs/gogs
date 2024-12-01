@@ -1,9 +1,9 @@
 module gogs.io/gogs
 
-go 1.20
+go 1.21
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/derision-test/go-mockgen v1.3.7
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.2
 	github.com/go-ldap/ldap/v3 v3.4.8
