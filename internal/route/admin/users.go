@@ -5,6 +5,7 @@
 package admin
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -72,7 +73,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["CanSendEmail"] = conf.Email.Enabled
 
 	if c.HasError() {
-		c.Success(USER_NEW)
+		c.HTML(http.StatusBadRequest, USER_NEW)
 		return
 	}
 
@@ -93,13 +94,13 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, USER_NEW, &f)
 		case database.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), http.StatusUnprocessableEntity, USER_NEW, &f)
 		case database.IsErrNameNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, USER_NEW, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -170,7 +171,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	}
 
 	if c.HasError() {
-		c.Success(USER_EDIT)
+		c.HTML(http.StatusBadRequest, USER_EDIT)
 		return
 	}
 
@@ -207,7 +208,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), http.StatusUnprocessableEntity, USER_EDIT, &f)
 		} else {
 			c.Error(err, "update user")
 		}
