@@ -9,6 +9,10 @@ import (
 	"math"
 	"net/http"
 	"strings"
+
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/validate"
 )
 
 // IsTextFile returns true if file content format is plain text or empty.
@@ -25,6 +29,21 @@ func IsImageFile(data []byte) bool {
 
 func IsPDFFile(data []byte) bool {
 	return strings.Contains(http.DetectContentType(data), "application/pdf")
+}
+
+// IsSwaggerJsonFile Whether it is a Swagger JSON file.
+// Validates spec with default Swagger 2.0 format definitions
+func IsSwaggerJsonFile(data []byte) bool {
+	doc, err := loads.Analyzed(data, "2.0")
+	if err != nil {
+		return false
+	}
+
+	if errs := validate.Spec(doc, strfmt.Default); errs != nil {
+		return false
+	}
+
+	return true
 }
 
 func IsVideoFile(data []byte) bool {

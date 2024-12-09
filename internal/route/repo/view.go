@@ -161,6 +161,8 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			c.Data["FileContent"] = string(markup.OrgMode(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
 		case markup.TypeIPythonNotebook:
 			c.Data["IsIPythonNotebook"] = true
+		case markup.TypeJson:
+			c.Data["IsSwaggerJson"] = tool.IsSwaggerJsonFile(p)
 		default:
 			// Building code view blocks with line number on server side.
 			var fileContent string
