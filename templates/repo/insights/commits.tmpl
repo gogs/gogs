@@ -1,0 +1,109 @@
+{{template "base/head" .}}
+{{$root := .}}
+<div class="repository insights commits">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/insights/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "repo.insights.commits_by_week"}}
+				</h4>
+
+				<div class="ui attached segment">
+					<canvas id="commits-by-week"></canvas>
+					<script>
+						var functionsToRunOnLoad = [];
+						function runFunctionsToRunOnLoad() {
+							for (var i = 0; i < functionsToRunOnLoad.length; i++) {
+								functionsToRunOnLoad[i]();
+							}
+						}
+						window.onload = runFunctionsToRunOnLoad;
+
+						functionsToRunOnLoad.push(function() {
+							var ctx = document.getElementById('commits-by-week').getContext('2d');
+							var chart = new Chart(ctx, {
+								type: 'bar',
+								data: {
+									labels: {{.CommitsByWeekChartData.Labels}},
+									datasets: [
+										{
+											label: {{.i18n.Tr "repo.insights.commits"}},
+											data: {{.CommitsByWeekChartData.Dataset.Data}},
+											fill: true,
+											backgroundColor: [
+												'rgba(255, 153, 0, 0.2)'
+											],
+											borderColor: [
+												'rgba(255, 153, 0, 1)'
+											],
+											borderWidth: 1
+										}
+									]
+								},
+								options: {
+									scales: {
+										y: {
+											beginAtZero: true
+										}
+									},
+									onClick: function(event, elements) {
+										if (elements.length > 0) {
+											window.location.href = "{{.RepoLink}}/graphs/commits?week_id=" + chart.data.labels[elements[0].index];
+										}
+									}
+								}
+							});
+						});
+					</script>
+				</div>
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "repo.insights.commits_in_a_week"}}
+				</h4>
+
+				<div class="ui attached segment">
+					<canvas id="commits-in-a-week"></canvas>
+					<script>
+						functionsToRunOnLoad.push(function() {
+							var ctx = document.getElementById('commits-in-a-week').getContext('2d');
+							var chart = new Chart(ctx, {
+								type: 'line',
+								data: {
+									labels: {{.CommitsInAWeekChartData.Labels}},
+									datasets: [
+										{
+											label: {{.i18n.Tr "repo.insights.commits"}},
+											data: {{.CommitsInAWeekChartData.Dataset.Data}},
+											fill: false,
+											pointRadius: 5,
+											pointHoverRadius: 10,
+											showLine: true,
+											backgroundColor: [
+												'rgba(99, 255, 132, 0.2)'
+											],
+											borderColor: [
+												'rgba(99, 255, 132, 1)'
+											],
+											borderWidth: 1
+										}
+									]
+								},
+								options: {
+									scales: {
+										y: {
+											beginAtZero: true
+										}
+									}
+								}
+							});
+						});
+					</script>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
