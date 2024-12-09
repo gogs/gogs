@@ -192,6 +192,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 				return
 			}
 		} else {
+			// 🚨 SECURITY: Do not allow editing if the target file is a symlink.
 			if entry.IsSymlink() {
 				c.FormErr("TreePath")
 				c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", part), tmplEditorEdit, &f)
@@ -205,7 +206,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	if !isNewFile {
-		_, err := c.Repo.Commit.TreeEntry(oldTreePath)
+		entry, err := c.Repo.Commit.TreeEntry(oldTreePath)
 		if err != nil {
 			if gitutil.IsErrRevisionNotExist(err) {
 				c.FormErr("TreePath")
@@ -215,6 +216,14 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 			}
 			return
 		}
+
+		// 🚨 SECURITY: Do not allow editing if the old file is a symlink.
+		if entry.IsSymlink() {
+			c.FormErr("TreePath")
+			c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", oldTreePath), tmplEditorEdit, &f)
+			return
+		}
+
 		if lastCommit != c.Repo.CommitID {
 			files, err := c.Repo.Commit.FilesChangedAfter(lastCommit)
 			if err != nil {
