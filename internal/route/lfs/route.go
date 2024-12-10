@@ -48,17 +48,13 @@ func RegisterRoutes(r *macaron.Router) {
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
 func authenticate(store Store) macaron.Handler {
-	askCredentials := func(w http.ResponseWriter) {
-		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
-		responseJSON(w, http.StatusUnauthorized, responseError{
-			Message: "Credentials needed",
-		})
-	}
-
 	return func(c *macaron.Context) {
+		// dummy user to allow for unauthenticated read requests to public repositories
+		anonUser := database.User{ID: 0, Name: "Anonymous"}
+
 		username, password := authutil.DecodeBasic(c.Req.Header)
 		if username == "" {
-			askCredentials(c.Resp)
+			c.Map(&anonUser)
 			return
 		}
 
@@ -87,7 +83,7 @@ func authenticate(store Store) macaron.Handler {
 				user, err = context.AuthenticateByToken(store, c.Req.Context(), password)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
-						askCredentials(c.Resp)
+						c.Map(&anonUser)
 					} else {
 						c.Status(http.StatusInternalServerError)
 						log.Error("Failed to authenticate by access token via password: %v", err)
@@ -137,6 +133,14 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 				Private: repo.IsPrivate,
 			},
 		) {
+			if actor.ID == 0 {
+				c.Resp.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
+				responseJSON(c.Resp, http.StatusUnauthorized, responseError{
+					Message: "Credentials needed",
+				})
+				return
+			}
+
 			c.Status(http.StatusNotFound)
 			return
 		}
