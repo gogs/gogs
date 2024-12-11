@@ -7,6 +7,7 @@ package repo
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -53,7 +54,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	switch c.Query("action") {
 	case "update":
 		if c.HasError() {
-			c.Success(SETTINGS_OPTIONS)
+			c.HTML(http.StatusBadRequest, SETTINGS_OPTIONS)
 			return
 		}
 
@@ -67,9 +68,9 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				c.FormErr("RepoName")
 				switch {
 				case database.IsErrRepoAlreadyExist(err):
-					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), http.StatusUnprocessableEntity, SETTINGS_OPTIONS, &f)
 				case database.IsErrNameNotAllowed(err):
-					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, SETTINGS_OPTIONS, &f)
 				default:
 					c.Error(err, "change repository name")
 				}
@@ -179,7 +180,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, SETTINGS_OPTIONS, nil)
 			return
 		}
 
@@ -213,7 +214,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, SETTINGS_OPTIONS, nil)
 			return
 		}
 
@@ -226,13 +227,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		newOwner := c.Query("new_owner_name")
 		if !database.Handle.Users().IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), http.StatusBadRequest, SETTINGS_OPTIONS, nil)
 			return
 		}
 
 		if err := database.TransferOwnership(c.User, newOwner, repo); err != nil {
 			if database.IsErrRepoAlreadyExist(err) {
-				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
+				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), http.StatusUnprocessableEntity, SETTINGS_OPTIONS, nil)
 			} else {
 				c.Error(err, "transfer ownership")
 			}
@@ -248,7 +249,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, SETTINGS_OPTIONS, nil)
 			return
 		}
 
@@ -274,7 +275,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, SETTINGS_OPTIONS, nil)
 			return
 		}
 
@@ -440,7 +441,7 @@ func SettingsBranches(c *context.Context) {
 
 	if c.Repo.Repository.IsBare {
 		c.Flash.Info(c.Tr("repo.settings.branches_bare"), true)
-		c.Success(SETTINGS_BRANCHES)
+		c.HTML(http.StatusUnprocessableEntity, SETTINGS_BRANCHES)
 		return
 	}
 
@@ -637,7 +638,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Data["Deploykeys"] = keys
 
 	if c.HasError() {
-		c.Success(SETTINGS_DEPLOY_KEYS)
+		c.HTML(http.StatusBadRequest, SETTINGS_DEPLOY_KEYS)
 		return
 	}
 
@@ -660,10 +661,10 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
 			c.Data["Err_Content"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), http.StatusUnprocessableEntity, SETTINGS_DEPLOY_KEYS, &f)
 		case database.IsErrKeyNameAlreadyUsed(err):
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), http.StatusUnprocessableEntity, SETTINGS_DEPLOY_KEYS, &f)
 		default:
 			c.Error(err, "add deploy key")
 		}
