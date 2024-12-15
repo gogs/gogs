@@ -541,6 +541,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 			continue
 		}
 
+		// 🚨 SECURITY: Prevent path traversal.
 		upload.Name = pathutil.Clean(upload.Name)
 
 		// 🚨 SECURITY: Prevent uploading files into the ".git" directory
