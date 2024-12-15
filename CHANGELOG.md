@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.14.0+dev (`main`)
 
+### Added
+
+- Support using TLS for Redis session provider using `[session] PROVIDER_CONFIG = ...,tls=true`. [#7860](https://github.com/gogs/gogs/pull/7860)
+
 ### Changed
 
 - The required Go version to compile source code changed to 1.21.
