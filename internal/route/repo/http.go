@@ -411,6 +411,7 @@ func HTTP(c *HTTPContext) {
 			return
 		}
 
+		// 🚨 SECURITY: Prevent path traversal.
 		cleaned := pathutil.Clean(m[1])
 		if m[1] != "/"+cleaned {
 			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
