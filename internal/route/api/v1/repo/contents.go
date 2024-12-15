@@ -16,6 +16,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/repoutil"
 )
 
@@ -120,7 +121,8 @@ func GetContents(c *context.APIContext) {
 		return
 	}
 
-	treePath := c.Params("*")
+	// 🚨 SECURITY: Prevent path traversal.
+	treePath := pathutil.Clean(c.Params("*"))
 	entry, err := commit.TreeEntry(treePath)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
@@ -188,7 +190,10 @@ func PutContents(c *context.APIContext, r PutContentsRequest) {
 	if r.Branch == "" {
 		r.Branch = c.Repo.Repository.DefaultBranch
 	}
-	treePath := c.Params("*")
+
+	// 🚨 SECURITY: Prevent path traversal.
+	treePath := pathutil.Clean(c.Params("*"))
+
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
 		database.UpdateRepoFileOptions{
