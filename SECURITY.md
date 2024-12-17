@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only lastest two minor version releases are supported (>= 0.12) for accepting vulnerability reports and patching fixes.
+Only the latest minor version releases are supported (>= 0.13) for accepting vulnerability reports and patching fixes.
 
 Existing vulnerability reports are being tracked in [GitHub Security Advisories](https://github.com/gogs/gogs/security/advisories).
 
