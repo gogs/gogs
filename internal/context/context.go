@@ -160,13 +160,13 @@ func (c *Context) RedirectSubpath(location string, status ...int) {
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (c *Context) RenderWithErr(msg, tpl string, f any) {
+func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 	if f != nil {
 		form.Assign(f, c.Data)
 	}
 	c.Flash.ErrorMsg = msg
 	c.Data["Flash"] = c.Flash
-	c.HTML(http.StatusOK, tpl)
+	c.HTML(status, tpl)
 }
 
 // NotFound renders the 404 page.
