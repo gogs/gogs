@@ -63,6 +63,12 @@ jobs:
           tags: |
             gogs/gogs:latest
             ghcr.io/gogs/gogs:latest
+            registry.digitalocean.com/gogs/gogs:latest
+      - name: Scan for container vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: gogs/gogs:latest
+          exit-code: '1'
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         if: ${{ failure() }}
@@ -103,7 +109,8 @@ jobs:
           echo "Flags:     ${{ steps.buildx.outputs.flags }}"
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
       - name: Compute short commit SHA
-        uses: benjlevesque/short-sha@v1.2
+        id: short-sha
+        uses: benjlevesque/short-sha@v2.1
       - name: Build and push images
         uses: docker/build-push-action@v2
         with:
@@ -111,7 +118,12 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ttl.sh/gogs/gogs-${{ env.SHA }}:1d
+            ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
+      - name: Scan for container vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
+          exit-code: '1'
 
   # Updates to the following section needs to be synced to all release branches within their lifecycles.
   buildx-release:
