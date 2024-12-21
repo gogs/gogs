@@ -1,0 +1,4 @@
+scan:
+  skip-files:
+    # CVE patching of the following things is far behind and out of our control.
+    - "usr/sbin/gosu"
