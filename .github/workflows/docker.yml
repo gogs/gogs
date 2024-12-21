@@ -70,11 +70,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: gogs/gogs:latest
-          format: 'table'
           exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         if: ${{ failure() }}
@@ -129,11 +125,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
-          format: 'table'
           exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
 
   # Updates to the following section needs to be synced to all release branches within their lifecycles.
   buildx-release:
