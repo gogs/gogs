@@ -120,32 +120,32 @@ func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.Success(orCtx.TmplNew)
 }
 
-func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, ok bool) {
+func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, status int) {
 	// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 	// see https://github.com/gogs/gogs/issues/5366 for details.
 	payloadURL, err := url.Parse(w.URL)
 	if err != nil {
-		return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), false
+		return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), http.StatusBadRequest
 	}
 
 	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
-		return "PayloadURL", l.Tr("repo.settings.webhook.url_resolved_to_blocked_local_address"), false
+		return "PayloadURL", l.Tr("repo.settings.webhook.url_resolved_to_blocked_local_address"), http.StatusForbidden
 	}
-	return "", "", true
+	return "", "", http.StatusOK
 }
 
 func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *database.Webhook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.TmplNew)
+		c.HTML(http.StatusBadRequest, orCtx.TmplNew)
 		return
 	}
 
-	field, msg, ok := validateWebhook(c.Locale, w)
-	if !ok {
+	field, msg, status := validateWebhook(c.Locale, w)
+	if status != http.StatusOK {
 		c.FormErr(field)
-		c.RenderWithErr(msg, orCtx.TmplNew, nil)
+		c.RenderWithErr(msg, status, orCtx.TmplNew, nil)
 		return
 	}
 
@@ -342,14 +342,14 @@ func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *data
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.TmplNew)
+		c.HTML(http.StatusBadRequest, orCtx.TmplNew)
 		return
 	}
 
-	field, msg, ok := validateWebhook(c.Locale, w)
-	if !ok {
+	field, msg, status := validateWebhook(c.Locale, w)
+	if status != http.StatusOK {
 		c.FormErr(field)
-		c.RenderWithErr(msg, orCtx.TmplNew, nil)
+		c.RenderWithErr(msg, status, orCtx.TmplNew, nil)
 		return
 	}
 
