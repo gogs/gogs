@@ -10,7 +10,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
-- The required Go version to compile source code changed to 1.21.
+- The required Go version to compile source code changed to 1.23.4.
 
 ### Fixed
 
