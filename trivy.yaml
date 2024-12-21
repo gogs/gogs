@@ -1,0 +1,16 @@
+scan:
+  skip-files:
+    # CVE patching of the following things is far behind and out of our control.
+    - "usr/sbin/gosu"
+
+severity:
+  - CRITICAL
+  - HIGH
+
+vulnerability:
+  ignore-unfixed: true
+  type:
+    - os
+    - library
+
+format: "table"

@@ -66,6 +66,11 @@ jobs:
             gogs/gogs:latest
             ghcr.io/gogs/gogs:latest
             registry.digitalocean.com/gogs/gogs:latest
+      - name: Scan for container vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: gogs/gogs:latest
+          exit-code: '1'
       - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         if: ${{ failure() }}
@@ -116,6 +121,11 @@ jobs:
           push: true
           tags: |
             ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
+      - name: Scan for container vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
+          exit-code: '1'
 
   # Updates to the following section needs to be synced to all release branches within their lifecycles.
   buildx-release:
