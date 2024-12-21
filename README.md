@@ -31,7 +31,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Jupyter Notebook and PDF rendering.
 - Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
 - Customize HTML templates, static files and many others.
-- Rich database backend, including PostgreSQL, MySQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb).
+- Rich database backend support, including PostgreSQL, MySQL, SQLite3 or any database backend that speaks one of those protocols.
 - Have localization over [31 languages](https://crowdin.com/project/gogs).
 
 ## 💾 Hardware requirements
@@ -60,11 +60,7 @@ There are 6 ways to install Gogs:
 ### Deploy to cloud
 
 - [Cloudron](https://www.cloudron.io/store/io.gogs.cloudronapp.html)
-- [Sandstorm](https://github.com/cem/gogs-sandstorm)
-- [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
-- [DPlatform](https://github.com/DFabric/DPlatform-Shell)
-- [LunaNode](https://github.com/LunaNode/launchgogs)
 - [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
 
 ### Tutorials
@@ -81,7 +77,6 @@ There are 6 ways to install Gogs:
 
 ## 📦 Software, service and product support
 
-- [Fabric8](http://fabric8.io/) (DevOps)
 - [Jenkins](https://plugins.jenkins.io/gogs-webhook/) (CI)
 - [Puppet](https://forge.puppet.com/modules/Siteminds/gogs) (IT)
 - [Synology](https://www.synology.com) (Docker)
@@ -89,7 +84,7 @@ There are 6 ways to install Gogs:
 
 ## 🙇‍♂️ Acknowledgments
 
-<p>This project is proundly supported by:</p>
+<p>This project is proudly supported by:</p>
 <p>
   <a href="https://www.digitalocean.com/">
     <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px">
