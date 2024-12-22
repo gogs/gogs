@@ -243,7 +243,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 		return nil, fmt.Errorf("write file: %v", err)
 	}
 
-	// 🚨 SECURITY: Prevent including unintended options in the path to the git command.
+	// 🚨 SECURITY: Prevent including unintended options in the path to the Git command.
 	cmd := exec.Command("git", "diff", "--end-of-options", treePath)
 	cmd.Dir = localPath
 	cmd.Stderr = os.Stderr
