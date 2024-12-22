@@ -220,6 +220,11 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
 func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *gitutil.Diff, err error) {
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	if isRepositoryGitPath(treePath) {
+		return nil, errors.Errorf("bad tree path %q", treePath)
+	}
+
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -283,6 +288,11 @@ type DeleteRepoFileOptions struct {
 }
 
 func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	if isRepositoryGitPath(opts.TreePath) {
+		return errors.Errorf("bad tree path %q", opts.TreePath)
+	}
+
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
