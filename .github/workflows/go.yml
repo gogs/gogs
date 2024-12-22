@@ -30,14 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
         with:
-          version: latest
-          args: --timeout=30m
+          go-version: 1.23.x
       - name: Install Task
-        uses: arduino/setup-task@v1
+        uses: arduino/setup-task@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check Go module tidiness and generated files
@@ -52,6 +51,11 @@ jobs:
             echo "Run 'go mod tidy' or 'task generate' commit them"
             exit 1
           fi
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=30m
 
   test:
     name: Test

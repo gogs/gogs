@@ -361,7 +361,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
 			log.Error("LoadIssue: %v", err)
-			return
+			return err
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
 			Action:      api.HOOK_ISSUE_LABEL_CLEARED,

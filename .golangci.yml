@@ -6,6 +6,11 @@ linters-settings:
     ]
   nakedret:
     max-func-lines: 0 # Disallow any unnamed return statement
+  govet:
+    disable:
+      # printf: non-constant format string in call to fmt.Errorf (govet)
+      # showing up since golangci-lint version 1.60.1
+      - printf
 
 linters:
   enable:
