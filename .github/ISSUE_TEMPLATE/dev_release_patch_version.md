@@ -13,6 +13,7 @@ On the release branch:
 
 - [ ] Make sure all commits are cherry-picked from the `main` branch by checking the patch milestone.
 	- Run `task build` for every cherry-picked commit to make sure there is no compilation error.
+	- After pushing the commits, make sure the CI is green.
 - [ ] [Update CHANGELOG on the `main` branch](https://github.com/gogs/gogs/commit/e6c5633f580399c8f4dfc07166a63a01c6c70346) to include entries for the current patch release.
 
 ## During release
