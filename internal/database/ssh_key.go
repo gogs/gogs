@@ -447,8 +447,9 @@ func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
 	return key, nil
 }
 
-// SearchPublicKeyByContent searches content as prefix (leak e-mail part)
-// and returns public key found.
+// SearchPublicKeyByContent searches a public key using the content as prefix
+// (i.e. ignore the email part). It returns ErrKeyNotExist if no such key
+// exists.
 func SearchPublicKeyByContent(content string) (*PublicKey, error) {
 	key := new(PublicKey)
 	has, err := x.Where("content like ?", content+"%").Get(key)
