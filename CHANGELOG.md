@@ -17,6 +17,20 @@ All notable changes to Gogs are documented in this file.
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
 
+## 0.13.1
+
+### Fixed
+
+- _Security:_ Path Traversal in file editing UI. [GHSA-r7j8-5h9c-f6fx](https://github.com/gogs/gogs/security/advisories/GHSA-r7j8-5h9c-f6fx)
+- _Security:_ Path Traversal in file update API. [GHSA-qf5v-rp47-55gg](https://github.com/gogs/gogs/security/advisories/GHSA-qf5v-rp47-55gg)
+- _Security:_ Argument Injection in the built-in SSH server. [GHSA-vm62-9jw3-c8w3](https://github.com/gogs/gogs/security/advisories/GHSA-vm62-9jw3-c8w3)
+- _Security:_ Deletion of internal files. [GHSA-ccqv-43vm-4f3w](https://github.com/gogs/gogs/security/advisories/GHSA-ccqv-43vm-4f3w)
+- _Security:_ Argument Injection during changes preview. [GHSA-9pp6-wq8c-3w2c](https://github.com/gogs/gogs/security/advisories/GHSA-9pp6-wq8c-3w2c)
+- _Security:_ Argument Injection when tagging new releases. [GHSA-m27m-h5gj-wwmg](https://github.com/gogs/gogs/security/advisories/GHSA-m27m-h5gj-wwmg)
+- Use the non-deprecated section name `[email]` during installation for email settings. [#7704](https://github.com/gogs/gogs/pull/7704)
+- Use the non-deprecated section name `[email] PASSWORD` during installation for email password. [#7807](https://github.com/gogs/gogs/pull/7807)
+- Make purple template label color to actually use the hexcode of purple. [#7722](https://github.com/gogs/gogs/pull/7722)
+
 ## 0.13.0
 
 ### Added
