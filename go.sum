@@ -129,8 +129,8 @@ github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561 h1:aBzukfDxQlCTVS0NBU
 github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561/go.mod h1:Pcatq5tYkCW2Q6yrR2VRHlbHpZ/R4/7qyL1TCF7vl14=
 github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14 h1:yXtpJr/LV6PFu4nTLgfjQdcMdzjbqqXMEnHfq0Or6p8=
 github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14/go.mod h1:jPoNZLWDAqA5N3G5amEoiNbhVrmM+ZQEcnQvNQ2KaZk=
-github.com/gogs/git-module v1.8.3 h1:4N9HOLzkmSfb5y4Go4f/gdt1/Z60/aQaAKr8lbsfFps=
-github.com/gogs/git-module v1.8.3/go.mod h1:yAn6ZMwh8x0u3fMotXqMP7Ct1XNNOZWNdBSBx6IFGCY=
+github.com/gogs/git-module v1.8.4 h1:oSt8sOL4NWOGrSo/CwbS+C4YXtk76QvxyPofem/ViTU=
+github.com/gogs/git-module v1.8.4/go.mod h1:bQY0aoMK5Q5+NKgy4jXe3K1GFW+GnsSk0SJK0jh6yD0=
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4 h1:C7NryI/RQhsIWwC2bHN601P1wJKeuQ6U/UCOYTn3Cic=
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4/go.mod h1:fR6z1Ie6rtF7kl/vBYMfgD5/G5B1blui7z426/sj2DU=
 github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0 h1:K02vod+sn3M1OOkdqi2tPxN2+xESK4qyITVQ3JkGEv4=
@@ -419,8 +419,9 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/unknwon/cae v1.0.2 h1:3L8/RCN1ARvD5quyNjU30EdvYkFbxBfnRcIBXugpHlg=
 github.com/unknwon/cae v1.0.2/go.mod h1:HqpmD2fVq9G1oGEXrXzbgIp51uJ29Hshv41n9ljm+AA=
@@ -511,7 +512,7 @@ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
-golang.org/x/sync v0.3.0/go.mod h1:FU7BRWz2tNW+3quACPkgCx/L+uEAv1htQ0V83Z9Rj+Y=
+golang.org/x/sync v0.9.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 golang.org/x/sync v0.10.0 h1:3NQrjDixjgGwUOCaF8w2+VYHv0Ve/vGYSbdkTa98gmQ=
 golang.org/x/sync v0.10.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
