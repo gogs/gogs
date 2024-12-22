@@ -119,7 +119,7 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.NewTreeName) {
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
 	}
@@ -220,7 +220,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
 func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *gitutil.Diff, err error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
@@ -243,7 +243,8 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 		return nil, fmt.Errorf("write file: %v", err)
 	}
 
-	cmd := exec.Command("git", "diff", treePath)
+	// 🚨 SECURITY: Prevent including unintended options in the path to the git command.
+	cmd := exec.Command("git", "diff", "--end-of-options", treePath)
 	cmd.Dir = localPath
 	cmd.Stderr = os.Stderr
 
@@ -288,7 +289,7 @@ type DeleteRepoFileOptions struct {
 }
 
 func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
@@ -513,7 +514,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		return nil
 	}
 
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
@@ -554,7 +555,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		// 🚨 SECURITY: Prevent path traversal.
 		upload.Name = pathutil.Clean(upload.Name)
 
-		// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+		// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 		if isRepositoryGitPath(upload.Name) {
 			continue
 		}
