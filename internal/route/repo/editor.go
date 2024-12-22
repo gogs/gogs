@@ -302,7 +302,8 @@ func NewFilePost(c *context.Context, f form.EditRepoFile) {
 }
 
 func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
-	treePath := c.Repo.TreePath
+	// 🚨 SECURITY: Prevent path traversal.
+	treePath := pathutil.Clean(c.Repo.TreePath)
 
 	entry, err := c.Repo.Commit.TreeEntry(treePath)
 	if err != nil {
