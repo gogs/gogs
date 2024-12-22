@@ -706,6 +706,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 	// NOTE: We set a noop mock here to avoid data race with other tests that writes
 	// to the mock server because this function holds a lock.
 	conf.SetMockServer(t, conf.ServerOpts{})
+	conf.SetMockSSH(t, conf.SSHOpts{})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
