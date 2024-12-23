@@ -1,6 +1,5 @@
 [Unit]
 Description=Gogs
-After=syslog.target
 After=network.target
 After=mariadb.service mysql.service mysqld.service postgresql.service memcached.service redis.service
 
