@@ -49,7 +49,7 @@ All commands are starting at the repository root.
 - Linux:
 	```sh
 	# Produce the ZIP archive
-	$ TAGS="cert pam" task release
+	$ TAGS="cert" task release
 
 	# Produce the Tarball
 	$ export VERSION=0.12.4
@@ -58,7 +58,7 @@ All commands are starting at the repository root.
 - ARMv8:
 	```sh
 	# Produce the ZIP archive
-	$ TAGS="cert pam" task release
+	$ TAGS="cert" task release
 
 	# Produce the Tarball
 	$ export VERSION=0.12.4
