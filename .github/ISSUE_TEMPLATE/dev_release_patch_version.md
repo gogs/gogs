@@ -35,7 +35,7 @@ On the release branch:
 - [ ] [Update Docker image tag](https://github.com/gogs/gogs/blob/main/docs/dev/release/release_new_version.md#update-docker-image-tag) for the minor release `<MAJOR>.<MINOR>` on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 - [ ] [Compile and pack binaries](https://github.com/gogs/gogs/blob/main/docs/dev/release/release_new_version.md#compile-and-pack-binaries) (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
 	- [ ] macOS: `darwin_arm64.zip`
-	- [ ] Linux: `linux_386.tar.gz`, `linux_386.zip`, `linux_amd64.tar.gz`, `linux_amd64.zip`
+	- [ ] Linux: `linux_amd64.tar.gz`, `linux_amd64.zip`
 	- [ ] ARM: `linux_armv7.tar.gz`, `linux_armv7.zip`, `linux_armv8.tar.gz`, `linux_armv8.zip`
 	- [ ] Windows: `windows_amd64.zip`, `windows_amd64_mws.zip`
 - [ ] [Generate SHA256 checksum](https://github.com/gogs/gogs/blob/main/docs/dev/release/sha256.sh) for all binaries to the file `checksum_sha256.txt`.
