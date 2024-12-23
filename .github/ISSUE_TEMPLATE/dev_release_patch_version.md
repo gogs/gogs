@@ -34,7 +34,7 @@ On the release branch:
 	- Pull down the Docker image and [run through application setup](https://github.com/gogs/gogs/blob/main/docker/README.md) to make sure nothing blows up.
 - [ ] [Update Docker image tag](https://github.com/gogs/gogs/blob/main/docs/dev/release/release_new_version.md#update-docker-image-tag) for the minor release `<MAJOR>.<MINOR>` on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 - [ ] [Compile and pack binaries](https://github.com/gogs/gogs/blob/main/docs/dev/release/release_new_version.md#compile-and-pack-binaries) (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
-	- [ ] macOS: `darwin_arm64.zip`
+	- [ ] macOS: `darwin_arm64.zip`, `darwin_amd64.zip`
 	- [ ] Linux: `linux_amd64.tar.gz`, `linux_amd64.zip`
 	- [ ] ARM: `linux_armv8.tar.gz`, `linux_armv8.zip`
 	- [ ] Windows: `windows_amd64.zip`, `windows_amd64_mws.zip`
