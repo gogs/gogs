@@ -82,6 +82,11 @@
 					<i class="octicon octicon-book"></i> {{.i18n.Tr "repo.wiki"}}
 				</a>
 			{{end}}
+			{{if not $.IsGuest}}
+				<a class="{{if .PageIsInsights}}active{{end}} item" href="{{.RepoLink}}/graphs/contributors">
+					<i class="octicon octicon-graph"></i> {{.i18n.Tr "repo.insights"}}
+				</a>
+			{{end}}
 			{{if .IsRepositoryAdmin}}
 				<div class="right menu">
 					<a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
