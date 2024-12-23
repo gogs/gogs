@@ -49,25 +49,16 @@ All commands are starting at the repository root.
 - Linux:
 	```sh
 	# Produce the ZIP archive
-	$ TAGS="cert pam" task release
+	$ TAGS="cert" task release
 
 	# Produce the Tarball
 	$ export VERSION=0.12.4
 	$ cd release && tar czf gogs_${VERSION}_linux_$(go env GOARCH).tar.gz gogs
 	```
-- ARMv7:
-	```sh
-	# Produce the ZIP archive
-	$ TAGS="cert pam" task release
-
-	# Produce the Tarball
-	$ export VERSION=0.12.4
-	$ cd release && tar czf gogs_${VERSION}_linux_armv7.tar.gz gogs
-	```
 - ARMv8:
 	```sh
 	# Produce the ZIP archive
-	$ TAGS="cert pam" task release
+	$ TAGS="cert" task release
 
 	# Produce the Tarball
 	$ export VERSION=0.12.4
