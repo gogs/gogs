@@ -147,10 +147,20 @@ func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
 					continue
 				}
 
+				tags := make([]string, 0)
+				for tag := range field.TagSettings {
+					if tag == "UNIQUE" {
+						tags = append(tags, tag)
+					}
+				}
+				typeSuffix := ""
+				if len(tags) > 0 {
+					typeSuffix = " " + strings.Join(tags, " ")
+				}
 				fields = append(fields, &tableField{
 					Name:   field.Name,
 					Column: field.DBName,
-					Type:   m.FullDataTypeOf(field).SQL,
+					Type:   m.FullDataTypeOf(field).SQL + typeSuffix,
 				})
 			}
 
