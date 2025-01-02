@@ -1474,6 +1474,7 @@ $(document).ready(function() {
       headers: { "X-CSRF-Token": csrf },
       maxFiles: $dropzone.data("max-file"),
       maxFilesize: $dropzone.data("max-size"),
+      timeout: 0,
       acceptedFiles:
         $dropzone.data("accepts") === "*/*" ? null : $dropzone.data("accepts"),
       addRemoveLinks: true,
