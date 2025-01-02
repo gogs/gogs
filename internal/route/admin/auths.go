@@ -155,7 +155,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = hasTLS
 
 	if c.HasError() {
-		c.Success(AUTH_NEW)
+		c.HTML(http.StatusBadRequest, AUTH_NEW)
 		return
 	}
 
@@ -171,7 +171,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	if err != nil {
 		if database.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), AUTH_NEW, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), http.StatusUnprocessableEntity, AUTH_NEW, f)
 		} else {
 			c.Error(err, "create login source")
 		}
@@ -227,7 +227,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
-		c.Success(AUTH_EDIT)
+		c.HTML(http.StatusBadRequest, AUTH_EDIT)
 		return
 	}
 
