@@ -112,14 +112,15 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
+	customDir := filepath.Join(conf.CustomDir(), "templates")
 	renderOpt := macaron.RenderOptions{
 		Directory:         filepath.Join(conf.WorkDir(), "templates"),
-		AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates")},
+		AppendDirectories: []string{customDir},
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
 	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
+		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
 	}
 	m.Use(macaron.Renderer(renderOpt))
 
