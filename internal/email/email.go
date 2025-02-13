@@ -40,9 +40,10 @@ var (
 // render renders a mail template with given data.
 func render(tpl string, data map[string]any) (string, error) {
 	tplRenderOnce.Do(func() {
+		customDir := filepath.Join(conf.CustomDir(), "templates")
 		opt := &macaron.RenderOptions{
 			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
-			AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates", "mail")},
+			AppendDirectories: []string{filepath.Join(customDir, "mail")},
 			Extensions:        []string{".tmpl", ".html"},
 			Funcs: []template.FuncMap{map[string]any{
 				"AppName": func() string {
@@ -60,7 +61,7 @@ func render(tpl string, data map[string]any) (string, error) {
 			}},
 		}
 		if !conf.Server.LoadAssetsFromDisk {
-			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
+			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", customDir)
 		}
 
 		ts := macaron.NewTemplateSet()
