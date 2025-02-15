@@ -415,7 +415,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	if c.HasError() {
-		c.Success(ISSUE_NEW)
+		c.HTML(http.StatusBadRequest, ISSUE_NEW)
 		return
 	}
 
@@ -1132,7 +1132,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	if c.HasError() {
-		c.Success(MILESTONE_NEW)
+		c.HTML(http.StatusBadRequest, MILESTONE_NEW)
 		return
 	}
 
@@ -1142,7 +1142,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), http.StatusBadRequest, MILESTONE_NEW, &f)
 		return
 	}
 
@@ -1188,7 +1188,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	if c.HasError() {
-		c.Success(MILESTONE_NEW)
+		c.HTML(http.StatusBadRequest, MILESTONE_NEW)
 		return
 	}
 
@@ -1198,7 +1198,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), http.StatusBadRequest, MILESTONE_NEW, &f)
 		return
 	}
 
