@@ -120,6 +120,14 @@ type RepoSetting struct {
 	PullsMergeType        string
 }
 
+func (f *RepoSetting) PullsPreferRebase() bool {
+	return strings.HasPrefix(f.PullsMergeType, "rebase_")
+}
+
+func (f *RepoSetting) PullsAllowAlt() bool {
+	return strings.HasSuffix(f.PullsMergeType, "_default")
+}
+
 func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
