@@ -289,6 +289,14 @@ func (repo *Repository) MustOwner() *User {
 	return repo.mustOwner(x)
 }
 
+func (repo *Repository) PullsAllowMerge() bool {
+	return !repo.PullsPreferRebase || repo.PullsAllowAlt
+}
+
+func (repo *Repository) PullsAllowRebase() bool {
+	return repo.PullsPreferRebase || repo.PullsAllowAlt
+}
+
 func (repo *Repository) FullName() string {
 	return repo.MustOwner().Name + "/" + repo.Name
 }
