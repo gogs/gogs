@@ -117,7 +117,7 @@ type RepoSetting struct {
 	TrackerIssueStyle     string
 	EnablePulls           bool
 	PullsIgnoreWhitespace bool
-	PullsAllowRebase      bool
+	PullsMergeType        string
 }
 
 func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
