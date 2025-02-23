@@ -254,8 +254,12 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	remoteHeadBranch := "head_repo/" + pr.HeadBranch
 
 	// Check if merge style is allowed, reset to default style if not
-	if mergeStyle == MERGE_STYLE_REBASE && !pr.BaseRepo.PullsAllowRebase {
-		mergeStyle = MERGE_STYLE_REGULAR
+	if !pr.BaseRepo.PullsAllowAlt {
+		if pr.BaseRepo.PullsPreferRebase {
+			mergeStyle = MERGE_STYLE_REBASE
+		} else {
+			mergeStyle = MERGE_STYLE_REGULAR
+		}
 	}
 
 	switch mergeStyle {
