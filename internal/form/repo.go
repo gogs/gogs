@@ -7,6 +7,7 @@ package form
 import (
 	"net/url"
 	"strings"
+	"slices"
 
 	"github.com/go-macaron/binding"
 	"github.com/unknwon/com"
@@ -128,7 +129,25 @@ func (f *RepoSetting) PullsAllowAlt() bool {
 	return strings.HasSuffix(f.PullsMergeType, "_default")
 }
 
+const (
+	MERGE_STYLE_SETTING_MERGE_ONLY = "merge_only"
+	MERGE_STYLE_SETTING_MERGE_DEFAULT = "merge_default"
+	MERGE_STYLE_SETTING_REBASE_DEFAULT = "rebase_default"
+	MERGE_STYLE_SETTING_REBASE_ONLY = "rebase_only"
+)
+
+const ERR_INVALID_MERGE_TYPE = "InvalidMergeTypeError"
+
 func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	valid := []string{
+		MERGE_STYLE_SETTING_MERGE_ONLY,
+		MERGE_STYLE_SETTING_MERGE_DEFAULT,
+		MERGE_STYLE_SETTING_REBASE_DEFAULT,
+		MERGE_STYLE_SETTING_REBASE_ONLY,
+	}
+	if mt := f.PullsMergeType; !slices.Contains(valid, mt) {
+		errs.Add([]string{mt}, ERR_INVALID_MERGE_TYPE, "InvalidMergeType")
+	}
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
