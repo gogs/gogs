@@ -63,6 +63,10 @@ var migrations = []Migration{
 	// on v22. Let's make a noop v22 to make sure every instance will not miss a
 	// real future migration.
 	NewMigration("noop", func(*gorm.DB) error { return nil }),
+	NewMigration(
+		"rename repository.pulls_allow_rebase -> repository.pulls_allow_alt",
+		renameRepoPullsAllowRebaseToPullsAllowAlt,
+	),
 }
 
 var errMigrationSkipped = errors.New("the migration has been skipped")

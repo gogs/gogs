@@ -201,7 +201,8 @@ type Repository struct {
 	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
 	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
-	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsPreferRebase     bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsAllowAlt         bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	ForkID   int64
@@ -286,6 +287,14 @@ func (repo *Repository) CanGuestViewIssues() bool {
 // It creates a fake object that contains error details when error occurs.
 func (repo *Repository) MustOwner() *User {
 	return repo.mustOwner(x)
+}
+
+func (repo *Repository) PullsAllowMerge() bool {
+	return !repo.PullsPreferRebase || repo.PullsAllowAlt
+}
+
+func (repo *Repository) PullsAllowRebase() bool {
+	return repo.PullsPreferRebase || repo.PullsAllowAlt
 }
 
 func (repo *Repository) FullName() string {

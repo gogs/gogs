@@ -195,16 +195,18 @@
 									<div class="ui divider"></div>
 									<form class="ui form" action="{{.Link}}/merge" method="post">
 										{{.CSRFTokenHTML}}
-										<div class="field">
-											<div class="ui radio checkbox">
-											  <input type="radio" name="merge_style" value="create_merge_commit" checked="checked">
-											  <label>{{$.i18n.Tr "repo.pulls.create_merge_commit"}}</label>
+										{{if .Issue.Repo.PullsAllowMerge}}
+											<div class="field">
+												<div class="ui radio checkbox">
+													<input type="radio" name="merge_style" value="create_merge_commit" {{if not .Issue.Repo.PullsPreferRebase}}checked="checked"{{end}}>
+													<label>{{$.i18n.Tr "repo.pulls.create_merge_commit"}}</label>
+												</div>
 											</div>
-										</div>
+										{{end}}
 										{{if .Issue.Repo.PullsAllowRebase}}
 											<div class="field">
 												<div class="ui radio checkbox">
-												  <input type="radio" name="merge_style" value="rebase_before_merging">
+												  <input type="radio" name="merge_style" value="rebase_before_merging" {{if .Issue.Repo.PullsPreferRebase}}checked="checked"{{end}}>
 												  <label>{{$.i18n.Tr "repo.pulls.rebase_before_merging"}}</label>
 												</div>
 											</div>
