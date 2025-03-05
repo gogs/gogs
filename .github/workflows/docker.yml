@@ -5,6 +5,7 @@ on:
       - main
   pull_request:
     paths:
+      - '.trivy.yaml'
       - 'Dockerfile'
       - 'docker/**'
       - '.github/workflows/docker.yml'
