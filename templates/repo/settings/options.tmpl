@@ -231,9 +231,27 @@
 									</div>
 								</div>
 								<div class="field">
-									<div class="ui checkbox">
-										<input name="pulls_allow_rebase" type="checkbox" {{if .Repository.PullsAllowRebase}}checked{{end}}>
-										<label>{{.i18n.Tr "repo.settings.pulls.allow_rebase_merge"}}</label>
+									<div class="ui radio checkbox">
+										<input name="pulls_merge_type" type="radio" value="merge_only" {{if and (not .Repository.PullsPreferRebase) (not .Repository.PullsAllowAlt)}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.merge_only"}}</label>
+									</div>
+								</div>
+								<div class="field">
+									<div class="ui radio checkbox">
+										<input name="pulls_merge_type" type="radio" value="merge_default" {{if and (not .Repository.PullsPreferRebase) .Repository.PullsAllowAlt}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.merge_default"}}</label>
+									</div>
+								</div>
+								<div class="field">
+									<div class="ui radio checkbox">
+										<input name="pulls_merge_type" type="radio" value="rebase_default" {{if and .Repository.PullsPreferRebase .Repository.PullsAllowAlt}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.rebase_default"}}</label>
+									</div>
+								</div>
+								<div class="field">
+									<div class="ui radio checkbox">
+										<input name="pulls_merge_type" type="radio" value="rebase_only" {{if and .Repository.PullsPreferRebase (not .Repository.PullsAllowAlt)}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.rebase_only"}}</label>
 									</div>
 								</div>
 							</div>

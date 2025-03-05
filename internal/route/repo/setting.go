@@ -155,7 +155,8 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repo.ExternalTrackerStyle = f.TrackerIssueStyle
 		repo.EnablePulls = f.EnablePulls
 		repo.PullsIgnoreWhitespace = f.PullsIgnoreWhitespace
-		repo.PullsAllowRebase = f.PullsAllowRebase
+		repo.PullsPreferRebase = f.PullsPreferRebase()
+		repo.PullsAllowAlt = f.PullsAllowAlt()
 
 		if !repo.EnableWiki || repo.EnableExternalWiki {
 			repo.AllowPublicWiki = false
