@@ -112,7 +112,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.Success(FORK)
+		c.HTML(http.StatusBadRequest, FORK)
 		return
 	}
 
@@ -133,7 +133,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 
 	// Cannot fork to same owner
 	if ctxUser.ID == baseRepo.OwnerID {
-		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f)
+		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), http.StatusUnprocessableEntity, FORK, &f)
 		return
 	}
 
@@ -142,11 +142,11 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case database.IsErrReachLimitOfRepo(err):
-			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), http.StatusForbidden, FORK, &f)
 		case database.IsErrRepoAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), http.StatusUnprocessableEntity, FORK, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, FORK, &f)
 		default:
 			c.Error(err, "fork repository")
 		}
@@ -713,7 +713,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 			return
 		}
 
-		c.Success(COMPARE_PULL)
+		c.HTML(http.StatusBadRequest, COMPARE_PULL)
 		return
 	}
 

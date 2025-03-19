@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/gogs/git-module"
@@ -173,12 +174,12 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	if c.HasError() {
-		c.Success(RELEASE_NEW)
+		c.HTML(http.StatusBadRequest, RELEASE_NEW)
 		return
 	}
 
 	if !c.Repo.GitRepo.HasBranch(f.Target) {
-		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f)
+		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), http.StatusUnprocessableEntity, RELEASE_NEW, &f)
 		return
 	}
 
@@ -226,9 +227,9 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		c.Data["Err_TagName"] = true
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), http.StatusUnprocessableEntity, RELEASE_NEW, &f)
 		case database.IsErrInvalidTagName(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), http.StatusBadRequest, RELEASE_NEW, &f)
 		default:
 			c.Error(err, "new release")
 		}
@@ -284,7 +285,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["IsDraft"] = rel.IsDraft
 
 	if c.HasError() {
-		c.Success(RELEASE_NEW)
+		c.HTML(http.StatusBadRequest, RELEASE_NEW)
 		return
 	}
 

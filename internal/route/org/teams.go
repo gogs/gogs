@@ -163,7 +163,7 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.Success(TEAM_NEW)
+		c.HTML(http.StatusBadRequest, TEAM_NEW)
 		return
 	}
 
@@ -171,9 +171,9 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case database.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), http.StatusUnprocessableEntity, TEAM_NEW, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, TEAM_NEW, &f)
 		default:
 			c.Error(err, "new team")
 		}
@@ -218,7 +218,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.Success(TEAM_NEW)
+		c.HTML(http.StatusBadRequest, TEAM_NEW)
 		return
 	}
 
@@ -249,7 +249,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case database.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), http.StatusUnprocessableEntity, TEAM_NEW, &f)
 		default:
 			c.Error(err, "update team")
 		}
