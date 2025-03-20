@@ -1,6 +1,6 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package admin
 
@@ -39,18 +39,13 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		return
 	}
 
-	user, err := database.Handle.Users().Create(
-		c.Req.Context(),
-		form.Username,
-		form.Email,
-		database.CreateUserOptions{
-			FullName:    form.FullName,
-			Password:    form.Password,
-			LoginSource: form.SourceID,
-			LoginName:   form.LoginName,
-			Activated:   true,
-		},
-	)
+	user, err := database.Handle.Users().Create(c.Req.Context(), form.Username, form.Email, database.CreateUserOptions{
+		FullName:    form.FullName,
+		Password:    form.Password,
+		LoginSource: form.SourceID,
+		LoginName:   form.LoginName,
+		Activated:   true,
+	})
 	if err != nil {
 		if database.IsErrUserAlreadyExist(err) ||
 			database.IsErrEmailAlreadyUsed(err) ||
@@ -71,7 +66,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	c.JSON(http.StatusCreated, user.APIFormat())
 }
 
-func EditUser(c *context.APIContext, form api.EditUserOption) {
+func EditUser(c *context.APIContext, form api.EditUserOption) { // TODO 代检查
 	u := user.GetUserByParams(c)
 	if c.Written() {
 		return

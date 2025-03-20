@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package context
 
@@ -229,7 +229,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if repo.IsMirror {
 			c.Repo.Mirror, err = database.GetMirrorByRepoID(repo.ID)
 			if err != nil {
-				c.Error(err, "get mirror by repository ID")
+				c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 				return
 			}
 			c.Data["MirrorEnablePrune"] = c.Repo.Mirror.EnablePrune
@@ -239,14 +239,14 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		gitRepo, err := git.Open(database.RepoPath(ownerName, repoName))
 		if err != nil {
-			c.Error(err, "open repository")
+			c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 			return
 		}
 		c.Repo.GitRepo = gitRepo
 
 		tags, err := c.Repo.GitRepo.Tags()
 		if err != nil {
-			c.Error(err, "get tags")
+			c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 			return
 		}
 		c.Data["Tags"] = tags
@@ -277,7 +277,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["TagName"] = c.Repo.TagName
 		branches, err := c.Repo.GitRepo.Branches()
 		if err != nil {
-			c.Error(err, "get branches")
+			c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 			return
 		}
 		c.Data["Branches"] = branches
@@ -317,7 +317,7 @@ func RepoRef() macaron.Handler {
 			repoPath := database.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
 			c.Repo.GitRepo, err = git.Open(repoPath)
 			if err != nil {
-				c.Error(err, "open repository")
+				c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 				return
 			}
 		}
@@ -328,14 +328,14 @@ func RepoRef() macaron.Handler {
 			if !c.Repo.GitRepo.HasBranch(refName) {
 				branches, err := c.Repo.GitRepo.Branches()
 				if err != nil {
-					c.Error(err, "get branches")
+					c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 					return
 				}
 				refName = branches[0]
 			}
 			c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
 			if err != nil {
-				c.Error(err, "get branch commit")
+				c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 				return
 			}
 			c.Repo.CommitID = c.Repo.Commit.ID.String()
@@ -366,7 +366,7 @@ func RepoRef() macaron.Handler {
 
 				c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
 				if err != nil {
-					c.Error(err, "get branch commit")
+					c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID.String()
@@ -375,7 +375,7 @@ func RepoRef() macaron.Handler {
 				c.Repo.IsViewTag = true
 				c.Repo.Commit, err = c.Repo.GitRepo.TagCommit(refName)
 				if err != nil {
-					c.Error(err, "get tag commit")
+					c.Wait(err, "The Git repository has not been loaded yet, please refresh and try again later!", true)
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID.String()

@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package form
 
@@ -10,12 +10,13 @@ import (
 )
 
 type AdminCrateUser struct {
-	LoginType  string `binding:"Required"`
-	LoginName  string
-	UserName   string `binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email      string `binding:"Required;Email;MaxSize(254)"`
-	Password   string `binding:"MaxSize(255)"`
-	SendNotify bool
+	LoginType   string `binding:"Required"`
+	LoginName   string
+	UserName    string `binding:"Required;AlphaDashDot;MaxSize(35)"`
+	Email       string `binding:"Required;Email;MaxSize(254)"`
+	PublicEmail string `binding:"Email;MaxSize(254)"`
+	Password    string `binding:"MaxSize(255)"`
+	SendNotify  bool
 }
 
 func (f *AdminCrateUser) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -27,6 +28,7 @@ type AdminEditUser struct {
 	LoginName        string
 	FullName         string `binding:"MaxSize(100)"`
 	Email            string `binding:"Required;Email;MaxSize(254)"`
+	PublicEmail      string `binding:"Required;Email;MaxSize(254)"`
 	Password         string `binding:"MaxSize(255)"`
 	Website          string `binding:"MaxSize(50)"`
 	Location         string `binding:"MaxSize(50)"`

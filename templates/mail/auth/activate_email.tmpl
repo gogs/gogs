@@ -7,9 +7,9 @@
 
 <body>
 	<p>Hi <b>{{.Username}}</b>,</p>
-	<p>Please click the following link to verify your email address within <b>{{.ActiveCodeLives}} hours</b>:</p>
+	<p>请点击以下链接验证您的电子邮件地址，有效期 <b>{{.ActiveCodeLives}} 小时</b>：</p>
 	<p><a href="{{AppURL}}user/activate_email?code={{.Code}}&email={{.Email}}">{{AppURL}}user/activate_email?code={{.Code}}&email={{.Email}}</a></p>
-	<p>Not working? Try copying and pasting it to your browser.</p>
-	<p>© {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}</a></p>
+	<p>不起作用？请尝试将其复制并粘贴到您的浏览器中。</p>
+	<p>&copy; {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}. All rights reserved.</a></p>
 </body>
 </html>

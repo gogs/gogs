@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package conf
 
@@ -213,7 +213,7 @@ func Init(customConf string) error {
 		if err != nil {
 			return errors.Wrapf(err, "parse mail address %q", Email.From)
 		}
-		Email.FromEmail = parsed.Address
+		Email.FromEmail = parsed
 	}
 
 	// ***********************************
@@ -375,8 +375,6 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [ui] section")
 	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
 		return errors.Wrap(err, "mapping [prometheus] section")
-	} else if err = File.Section("other").MapTo(&Other); err != nil {
-		return errors.Wrap(err, "mapping [other] section")
 	}
 
 	HasRobotsTxt = osutil.IsFile(filepath.Join(CustomDir(), "robots.txt"))

@@ -1,5 +1,21 @@
 {{template "base/head" .}}
 <div class="explore repositories">
+	{{ if not .IsLogged }}
+		<div class="explore-home">
+			<div class="ui middle very relaxed page grid">
+				<div class="sixteen wide center aligned centered column">
+					<div class="explore-logo">
+						<img alt="logo" src="{{AppSubURL}}/img/logo-text.png" />
+					</div>
+					<div class="export-hero">
+						<h1>
+							欢迎访问 开源项目 仓库！
+						</h1>
+					</div>
+				</div>
+			</div>
+		</div>
+	{{ end }}
 	<div class="ui container">
 		<div class="ui grid">
 			{{template "explore/navbar" .}}

@@ -42,6 +42,10 @@
 							<label for="email">{{.i18n.Tr "email"}}</label>
 							<input id="email" name="email" type="email" value="{{.User.Email}}" autofocus required>
 						</div>
+						<div class="required field {{if .Err_Email}}error{{end}}">
+							<label for="public_email">{{.i18n.Tr "pubemail"}}</label>
+							<input id="public_email" name="public_email" type="email" value="{{.User.PublicEmail}}" autofocus required>
+						</div>
 						<input class="fake" type="password">
 						<div class="local field {{if .Err_Password}}error{{end}} {{if not (eq .User.LoginSource 0)}}hide{{end}}">
 							<label for="password">{{.i18n.Tr "password"}}</label>
@@ -58,12 +62,6 @@
 						</div>
 
 						<div class="ui divider"></div>
-
-						<div class="inline field {{if .Err_MaxRepoCreation}}error{{end}}">
-							<label for="max_repo_creation">{{.i18n.Tr "admin.users.max_repo_creation"}}</label>
-							<input id="max_repo_creation" name="max_repo_creation" type="number" value="{{.User.MaxRepoCreation}}">
-							<p class="help">{{.i18n.Tr "admin.users.max_repo_creation_desc"}}</p>
-						</div>
 
 						<div class="ui divider"></div>
 

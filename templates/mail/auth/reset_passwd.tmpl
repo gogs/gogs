@@ -2,14 +2,14 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>{{.Username}}, you have requested to reset your password</title>
+	<title>{{.Username}}, 您正在请求重置密码</title>
 </head>
 
 <body>
 	<p>Hi <b>{{.Username}}</b>,</p>
-	<p>Please click the following link to reset your password within <b>{{.ResetPwdCodeLives}} hours</b>:</p>
+	<p>请点击以下链接重置您的密码，有效期 <b>{{.ResetPwdCodeLives}} 小时</b>：</p>
 	<p><a href="{{AppURL}}user/reset_password?code={{.Code}}">{{AppURL}}user/reset_password?code={{.Code}}</a></p>
-	<p>Not working? Try copying and pasting it to your browser.</p>
-	<p>© {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}</a></p>
+	<p>不起作用？请尝试将其复制并粘贴到您的浏览器中。</p>
+	<p>&copy; {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}. All rights reserved.</a></p>
 </body>
 </html>

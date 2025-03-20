@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package database
 
@@ -766,13 +766,13 @@ type MigrateRepoOptions struct {
 - GitHub, GitLab, Gogs: *.wiki.git
 - BitBucket: *.git/wiki
 */
-var commonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
+var CommonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
 
 // wikiRemoteURL returns accessible repository URL for wiki if exists.
 // Otherwise, it returns an empty string.
 func wikiRemoteURL(remote string) string {
 	remote = strings.TrimSuffix(remote, ".git")
-	for _, suffix := range commonWikiURLSuffixes {
+	for _, suffix := range CommonWikiURLSuffixes {
 		wikiURL := remote + suffix
 		if git.IsURLAccessible(time.Minute, wikiURL) {
 			return wikiURL
@@ -782,8 +782,8 @@ func wikiRemoteURL(remote string) string {
 }
 
 // MigrateRepository migrates a existing repository from other project hosting.
-func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
-	repo, err := CreateRepository(doer, owner, CreateRepoOptionsLegacy{
+func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (repo *Repository, err error) {
+	repo, err = CreateRepository(doer, owner, CreateRepoOptionsLegacy{
 		Name:        opts.Name,
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
@@ -792,10 +792,9 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	})
 	if err != nil {
 		return nil, err
+	} else if repo == nil {
+		return nil, fmt.Errorf("create repository error: repo is nil")
 	}
-
-	repoPath := RepoPath(owner.Name, opts.Name)
-	wikiPath := WikiPath(owner.Name, opts.Name)
 
 	if owner.IsOrganization() {
 		t, err := owner.GetOwnerTeam()
@@ -808,6 +807,8 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
+	repoPath := repo.RepoPath()
+	wikiPath := repo.WikiPath()
 
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
 	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneOptions{
@@ -815,13 +816,12 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		Quiet:   true,
 		Timeout: migrateTimeout,
 	}); err != nil {
-		return repo, fmt.Errorf("clone: %v", err)
+		return nil, fmt.Errorf("clone: %v", err)
 	}
 
-	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
-	if len(wikiRemotePath) > 0 {
+	if len(wikiPath) > 0 {
 		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
-		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneOptions{
+		if err = git.Clone(wikiPath, wikiPath, git.CloneOptions{
 			Mirror:  true,
 			Quiet:   true,
 			Timeout: migrateTimeout,
@@ -1024,15 +1024,15 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		}
 	}
 
-	// LICENSE
+	// LICENSE.gogs
 	if len(opts.License) > 0 {
 		data, err = getRepoInitFile("license", opts.License)
 		if err != nil {
 			return fmt.Errorf("getRepoInitFile[%s]: %v", opts.License, err)
 		}
 
-		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0644); err != nil {
-			return fmt.Errorf("write LICENSE: %v", err)
+		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE.gogs"), data, 0644); err != nil {
+			return fmt.Errorf("write LICENSE.gogs: %v", err)
 		}
 	}
 
@@ -1083,7 +1083,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 			tmpDir,
 			&git.Signature{
 				Name:  doer.DisplayName(),
-				Email: doer.Email,
+				Email: doer.PublicEmail,
 				When:  time.Now(),
 			},
 		)
@@ -1208,7 +1208,7 @@ func (err ErrReachLimitOfRepo) Error() string {
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
-	if !owner.canCreateRepo() {
+	if !owner.CanCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
 
@@ -2522,7 +2522,7 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 
 // ForkRepository creates a fork of target repository under another user domain.
 func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
-	if !owner.canCreateRepo() {
+	if !owner.CanCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
 
@@ -2551,7 +2551,8 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		return nil, err
 	}
 
-	repoPath := repo.repoPath(sess)
+	repoPath := repo.RepoPath()
+
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
 
 	_, stderr, err := process.ExecTimeout(10*time.Minute,

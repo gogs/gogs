@@ -2,13 +2,13 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>{{.Username}}, welcome to {{AppName}}</title>
+	<title>{{.Username}}, 欢迎来到 {{AppName}}</title>
 </head>
 
 <body>
-	<p>Hi <b>{{.Username}}</b>, this is your registration confirmation email for {{AppName}}!</p>
-	<p>You can now login via username: {{.Username}}.</p>
+	<p>Hi <b>{{.Username}}</b>, 这是您在 {{AppName}} 的注册确认电子邮件!</p>
+	<p>您现在可以通过用户名登录： {{.Username}}.</p>
 	<p><a href="{{AppURL}}user/login">{{AppURL}}user/login</a></p>
-	<p>© {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}</a></p>
+	<p>&copy; {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}. All rights reserved.</a></p>
 </body>
 </html>

@@ -1,6 +1,20 @@
 {{template "base/head" .}}
 <div class="dashboard feeds">
-	{{template "user/dashboard/navbar" .}}
+	<div class="dashboard-home">
+		<div class="ui stackable middle very relaxed page grid">
+			<div class="sixteen wide center aligned centered column">
+				<div class="dashboard-logo">
+					<img alt="logo" src="{{AppSubURL}}/img/logo-text.png" />
+				</div>
+				<div class="dashboard-hero">
+					<h1>
+						欢迎访问 开源代码 仓库！
+					</h1>
+				</div>
+			</div>
+		</div>
+	</div>
+  {{template "user/dashboard/navbar" .}}
 	<div class="ui container">
 		<div class="ui grid">
 			<div class="ten wide column">

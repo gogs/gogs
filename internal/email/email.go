@@ -87,6 +87,7 @@ type User interface {
 	ID() int64
 	DisplayName() string
 	Email() string
+	PublicEmail() string
 	GenerateEmailActivateCode(string) string
 }
 
@@ -204,7 +205,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := gomail.NewMessage().FormatAddress(conf.Email.FromEmail, doer.DisplayName())
+	from := gomail.NewMessage().FormatAddress(conf.Email.FromEmail.Address, doer.DisplayName())
 	msg := NewMessageFrom(tos, from, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg

@@ -1,6 +1,6 @@
 // Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package smtp
 
@@ -82,9 +82,10 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}
 
 	return &auth.ExternalAccount{
-		Login: login,
-		Name:  username,
-		Email: login,
+		Login:       login,
+		Name:        username,
+		Email:       login,
+		PublicEmail: "",
 	}, nil
 }
 

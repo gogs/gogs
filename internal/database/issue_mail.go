@@ -1,6 +1,6 @@
 // Copyright 2016 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package database
 
@@ -37,6 +37,10 @@ func (this mailerUser) DisplayName() string {
 
 func (this mailerUser) Email() string {
 	return this.user.Email
+}
+
+func (this mailerUser) PublicEmail() string {
+	return this.user.PublicEmail
 }
 
 func (this mailerUser) GenerateEmailActivateCode(email string) string {

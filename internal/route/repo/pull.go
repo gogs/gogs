@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package repo
 
@@ -137,8 +137,24 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err = database.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
-	if err != nil {
+	var errChannel = make(chan error, 1)
+	var repoChannel = make(chan *database.Repository, 1)
+
+	go func() {
+		repo, err = database.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
+		if err != nil {
+			errChannel <- err
+			close(repoChannel)
+			close(errChannel)
+		} else {
+			repoChannel <- repo
+			close(repoChannel)
+			close(errChannel)
+		}
+	}()
+
+	select {
+	case err := <-errChannel:
 		c.Data["Err_RepoName"] = true
 		switch {
 		case database.IsErrReachLimitOfRepo(err):
@@ -150,11 +166,12 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		default:
 			c.Error(err, "fork repository")
 		}
-		return
+	case repo := <-repoChannel:
+		log.Trace("Repository forked from '%s' -> '%s'", baseRepo.FullName(), repo.FullName())
+		c.Redirect(repo.Link())
+	case <-time.After(5 * time.Second):
+		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 	}
-
-	log.Trace("Repository forked from '%s' -> '%s'", baseRepo.FullName(), repo.FullName())
-	c.Redirect(repo.Link())
 }
 
 func checkPullInfo(c *context.Context) *database.Issue {

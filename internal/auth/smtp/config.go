@@ -1,15 +1,15 @@
 // Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package smtp
 
 import (
 	"crypto/tls"
 	"fmt"
-	"net/smtp"
-
 	"github.com/pkg/errors"
+	"net"
+	"net/smtp"
 )
 
 // Config contains configuration for SMTP authentication.
@@ -25,17 +25,34 @@ type Config struct {
 }
 
 func (c *Config) doAuth(auth smtp.Auth) error {
-	client, err := smtp.Dial(fmt.Sprintf("%s:%d", c.Host, c.Port))
+	addr := fmt.Sprintf("%s:%d", c.Host, c.Port)
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	isSecureConn := false
+	if c.Port == 465 {
+		isSecureConn = true
+		conn = tls.Client(conn, &tls.Config{
+			InsecureSkipVerify: c.SkipVerify,
+			ServerName:         c.Host,
+		})
+	}
+
+	client, err := smtp.NewClient(conn, c.Host)
+	if err != nil {
+		return err
+	}
 
 	if err = client.Hello("gogs"); err != nil {
 		return err
 	}
 
-	if c.TLS {
+	if c.TLS && !isSecureConn {
 		if ok, _ := client.Extension("STARTTLS"); ok {
 			if err = client.StartTLS(&tls.Config{
 				InsecureSkipVerify: c.SkipVerify,

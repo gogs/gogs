@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package context
 
@@ -125,7 +125,7 @@ type AuthStore interface {
 	// allowed as a username, or database.ErrUserAlreadyExist when a user with same
 	// name already exists, or database.ErrEmailAlreadyUsed if the email has been
 	// verified by another user.
-	CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
+	CreateUser(ctx context.Context, username, email, publicEmail string, opts database.CreateUserOptions) (*database.User, error)
 	// AuthenticateUser validates username and password via given login source ID.
 	// It returns database.ErrUserNotExist when the user was not found.
 	//
@@ -220,10 +220,12 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 
 					// Check if enabled auto-registration.
 					if conf.Auth.EnableReverseProxyAutoRegistration {
+						email := gouuid.NewV4().String() + "@fake.localhost"
 						user, err = store.CreateUser(
 							ctx.Req.Context(),
 							webAuthUser,
-							gouuid.NewV4().String()+"@localhost",
+							email,
+							"",
 							database.CreateUserOptions{
 								Activated: true,
 							},

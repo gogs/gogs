@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package template
 
@@ -66,9 +66,6 @@ func FuncMap() []template.FuncMap {
 			},
 			"DisableGravatar": func() bool {
 				return conf.Picture.DisableGravatar
-			},
-			"ShowFooterTemplateLoadTime": func() bool {
-				return conf.Other.ShowFooterTemplateLoadTime
 			},
 			"LoadTimes": func(startTime time.Time) string {
 				return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"

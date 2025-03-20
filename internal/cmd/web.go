@@ -7,6 +7,7 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/pires/go-proxyproto"
 	"io"
 	"net"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
@@ -181,6 +183,7 @@ func runWeb(c *cli.Context) error {
 
 	m.Group("", func() {
 		m.Get("/", ignSignIn, route.Home)
+		m.Get("/home", ignSignIn, route.Home)
 		m.Group("/explore", func() {
 			m.Get("", func(c *context.Context) {
 				c.Redirect(conf.Server.Subpath + "/explore/repos")
@@ -715,7 +718,32 @@ func runWeb(c *cli.Context) error {
 
 	switch conf.Server.Protocol {
 	case "http":
-		err = http.ListenAndServe(listenAddr, m)
+		server := http.Server{
+			Addr:    listenAddr,
+			Handler: m,
+		}
+
+		var ln net.Listener
+		ln, err = net.Listen("tcp", server.Addr)
+		if err != nil {
+			log.Fatal("Failed to start server: %v", err)
+			return nil
+		}
+
+		var proxyListener net.Listener
+		if conf.Server.ProxyProto {
+			proxyListener = &proxyproto.Listener{
+				Listener:          ln,
+				ReadHeaderTimeout: 10 * time.Second,
+			}
+		} else {
+			proxyListener = ln
+		}
+		defer func() {
+			_ = proxyListener.Close()
+		}()
+
+		err = server.Serve(proxyListener)
 
 	case "https":
 		tlsMinVersion := tls.VersionTLS12
@@ -729,23 +757,55 @@ func runWeb(c *cli.Context) error {
 		case "TLS10":
 			tlsMinVersion = tls.VersionTLS10
 		}
-		server := &http.Server{
-			Addr: listenAddr,
-			TLSConfig: &tls.Config{
-				MinVersion:               uint16(tlsMinVersion),
-				CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
-				PreferServerCipherSuites: true,
-				CipherSuites: []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				},
-			}, Handler: m,
+
+		var cert tls.Certificate
+		cert, err = tls.LoadX509KeyPair(conf.Server.CertFile, conf.Server.KeyFile)
+		if err != nil {
+			log.Fatal("Failed to start server: %v", err)
+			return nil
 		}
-		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+
+		tlsConfig := &tls.Config{
+			MinVersion:       uint16(tlsMinVersion),
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
+			Certificates:     []tls.Certificate{cert},
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			},
+		}
+
+		server := http.Server{
+			Addr:    listenAddr,
+			Handler: m,
+		}
+
+		var ln net.Listener
+		ln, err = net.Listen("tcp", server.Addr)
+		if err != nil {
+			panic(err)
+		}
+
+		var proxyListener net.Listener
+		if conf.Server.ProxyProto {
+			proxyListener = &proxyproto.Listener{
+				Listener:          ln,
+				ReadHeaderTimeout: 10 * time.Second,
+			}
+		} else {
+			proxyListener = ln
+		}
+
+		tlsListener := tls.NewListener(proxyListener, tlsConfig)
+		defer func() {
+			_ = tlsListener.Close()
+		}()
+
+		err = server.Serve(tlsListener)
 
 	case "fcgi":
 		err = fcgi.Serve(nil, m)

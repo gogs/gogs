@@ -23,6 +23,8 @@
 
 						<dt>{{.i18n.Tr "admin.config.server.external_url"}}</dt>
 						<dd>{{.Server.ExternalURL}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.proxy_proto"}}</dt>
+						<dd><i class="fa fa{{if .Server.ProxyProto}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.server.domain"}}</dt>
 						<dd>{{.Server.Domain}}</dd>
 						<dt>{{.i18n.Tr "admin.config.server.protocol"}}</dt>
@@ -109,6 +111,19 @@
 					</dl>
 				</div>
 
+				{{/* Database settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.admin_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.admin.disable_regular_org_creation"}}</dt>
+						<dd><i class="fa fa{{if .Admin.DisableRegularOrgCreation}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.admin.disable_regularExploreUser"}}</dt>
+						<dd><i class="fa fa{{if .Admin.DisableRegularExploreUser}}-check{{end}}-square-o"></i></dd>
+					</dl>
+				</div>
+
 				{{/* Repository settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.repo_config"}}
@@ -129,6 +144,10 @@
 						</dd>
 						<dt>{{.i18n.Tr "admin.config.repo.force_private"}}</dt>
 						<dd><i class="fa fa{{if .Repository.ForcePrivate}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.admin_not_creation_limit"}}</dt>
+						<dd><i class="fa fa{{if .Repository.AdminNotCreationLimit}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.organization_not_creation_limit"}}</dt>
+						<dd><i class="fa fa{{if .Repository.OrganizationNotCreationLimit}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.repo.max_creation_limit"}}</dt>
 						<dd>{{.Repository.MaxCreationLimit}}</dd>
 						<dt>{{.i18n.Tr "admin.config.repo.preferred_licenses"}}</dt>

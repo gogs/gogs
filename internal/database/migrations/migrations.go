@@ -1,6 +1,6 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package migrations
 
@@ -63,6 +63,12 @@ var migrations = []Migration{
 	// on v22. Let's make a noop v22 to make sure every instance will not miss a
 	// real future migration.
 	NewMigration("noop", func(*gorm.DB) error { return nil }),
+	// v22 -> v23:v0.14.0
+	NewMigration("add user.public_email column", addUserPublicEmail),
+	// v23 -> v24:v0.14.0
+	NewMigration("add user.local_email column", addUserLocalEmail),
+	// v24 -> v25:v0.14.0
+	NewMigration("insert user primary to database", insertUserPrimaryEmail),
 }
 
 var errMigrationSkipped = errors.New("the migration has been skipped")

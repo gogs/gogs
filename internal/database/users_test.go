@@ -1,6 +1,6 @@
 // Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package database
 
@@ -136,11 +136,9 @@ func TestUsers(t *testing.T) {
 
 func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 	password := "pa$$word"
-	alice, err := s.Create(ctx, "alice", "alice@example.com",
-		CreateUserOptions{
-			Password: password,
-		},
-	)
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{
+		Password: password,
+	})
 	require.NoError(t, err)
 
 	t.Run("user not found", func(t *testing.T) {
@@ -189,12 +187,10 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		)
 		require.NoError(t, err)
 
-		bob, err := s.Create(ctx, "bob", "bob@example.com",
-			CreateUserOptions{
-				Password:    password,
-				LoginSource: 1,
-			},
-		)
+		bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{
+			Password:    password,
+			LoginSource: 1,
+		})
 		require.NoError(t, err)
 
 		user, err := s.Authenticate(ctx, bob.Email, password, loginSource.ID)
@@ -231,14 +227,9 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(
-		ctx,
-		"alice",
-		"alice@example.com",
-		CreateUserOptions{
-			Activated: true,
-		},
-	)
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{
+		Activated: true,
+	})
 	require.NoError(t, err)
 
 	t.Run("name not allowed", func(t *testing.T) {
@@ -253,14 +244,9 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
-		bob, err := s.Create(
-			ctx,
-			"bob",
-			"bob@example.com",
-			CreateUserOptions{
-				Activated: true,
-			},
-		)
+		bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{
+			Activated: true,
+		})
 		require.NoError(t, err)
 
 		err = s.ChangeUsername(ctx, alice.ID, bob.Name)
@@ -384,14 +370,9 @@ func usersCount(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersCreate(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(
-		ctx,
-		"alice",
-		"alice@example.com",
-		CreateUserOptions{
-			Activated: true,
-		},
-	)
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{
+		Activated: true,
+	})
 	require.NoError(t, err)
 
 	t.Run("name not allowed", func(t *testing.T) {
@@ -1032,21 +1013,16 @@ func usersSearchByName(t *testing.T, ctx context.Context, s *UsersStore) {
 
 func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 	const oldPassword = "Password"
-	alice, err := s.Create(
-		ctx,
-		"alice",
-		"alice@example.com",
-		CreateUserOptions{
-			FullName:    "FullName",
-			Password:    oldPassword,
-			LoginSource: 9,
-			LoginName:   "LoginName",
-			Location:    "Location",
-			Website:     "Website",
-			Activated:   false,
-			Admin:       false,
-		},
-	)
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{
+		FullName:    "FullName",
+		Password:    oldPassword,
+		LoginSource: 9,
+		LoginName:   "LoginName",
+		Location:    "Location",
+		Website:     "Website",
+		Activated:   false,
+		Admin:       false,
+	})
 	require.NoError(t, err)
 
 	t.Run("update password", func(t *testing.T) {
@@ -1067,14 +1043,9 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 	})
 
 	t.Run("update email but already used", func(t *testing.T) {
-		bob, err := s.Create(
-			ctx,
-			"bob",
-			"bob@example.com",
-			CreateUserOptions{
-				Activated: true,
-			},
-		)
+		bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{
+			Activated: true,
+		})
 		require.NoError(t, err)
 
 		got := s.Update(ctx, alice.ID, UpdateUserOptions{Email: &bob.Email})

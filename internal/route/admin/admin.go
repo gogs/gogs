@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package admin
 
@@ -195,6 +195,7 @@ func Config(c *context.Context) {
 	c.Data["Server"] = conf.Server
 	c.Data["SSH"] = conf.SSH
 	c.Data["Repository"] = conf.Repository
+	c.Data["Admin"] = conf.Admin
 	c.Data["Database"] = conf.Database
 	c.Data["Security"] = conf.Security
 	c.Data["Email"] = conf.Email
