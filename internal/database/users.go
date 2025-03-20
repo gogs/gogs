@@ -1149,6 +1149,7 @@ func (s *UsersStore) Active(ctx context.Context, userID int64) error {
 
 		user.UpdatedUnix = s.db.NowFunc().Unix()
 		user.Rands = rands
+		user.IsActive = true
 
 		err = tx.Save(user).Error
 		if err != nil {

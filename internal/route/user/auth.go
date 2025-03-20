@@ -6,13 +6,10 @@ package user
 
 import (
 	gocontext "context"
-	"encoding/hex"
 	"fmt"
+	"github.com/go-macaron/captcha"
 	"net/http"
 	"net/url"
-	"strings"
-
-	"github.com/go-macaron/captcha"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -395,66 +392,51 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	c.RedirectSubpath("/user/login")
 }
 
-// parseUserFromCode returns user by username encoded in code.
-// It returns nil if code or username is invalid.
-func parseUserFromCode(code string) (user *database.User) {
-	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
+// verify active code when active account
+func verifyUserActiveCode(code string) (user *database.User) {
+	data, err := tool.ParseToken(code)
+	if err != nil || data.Valid() != nil {
 		return nil
 	}
 
-	// Use tail hex username to query user
-	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
-	if b, err := hex.DecodeString(hexStr); err == nil {
-		if user, err = database.Handle.Users().GetByUsername(gocontext.TODO(), string(b)); user != nil {
-			return user
-		} else if !database.IsErrUserNotExist(err) {
-			log.Error("Failed to get user by name %q: %v", string(b), err)
+	if user, err = database.Handle.Users().GetByID(gocontext.TODO(), data.Id); err != nil {
+		if !database.IsErrUserNotExist(err) {
+			log.Error("Failed to get user by id %d: %v", data.Id, err)
 		}
+		return nil
 	}
 
-	return nil
-}
-
-// verify active code when active account
-func verifyUserActiveCode(code string) (user *database.User) {
-	minutes := conf.Auth.ActivateCodeLives
-
-	if user = parseUserFromCode(code); user != nil {
-		// time limit code
-		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
-		data := fmt.Sprintf("%d%s%s%s%s", user.ID, user.Email, strings.ToLower(user.Name), user.Password, user.Rands)
-
-		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			return user
-		}
-	}
-	return nil
+	return user
 }
 
 // verify active code when active account
 func verifyActiveEmailCode(code, email string) *database.EmailAddress {
-	minutes := conf.Auth.ActivateCodeLives
-
-	if user := parseUserFromCode(code); user != nil {
-		// time limit code
-		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
-		data := fmt.Sprintf("%d%s%s%s%s", user.ID, email, strings.ToLower(user.Name), user.Password, user.Rands)
-
-		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			emailAddress, err := database.Handle.Users().GetEmail(gocontext.TODO(), user.ID, email, false)
-			if err == nil {
-				return emailAddress
-			}
-		}
+	data, err := tool.ParseToken(code)
+	if err != nil {
+		return nil
+	} else if data.Valid() != nil {
+		return nil
 	}
-	return nil
+
+	user, err := database.Handle.Users().GetByID(gocontext.TODO(), data.Id)
+	if err != nil || user == nil {
+		log.Error("Failed to get user by id %d: %v", data.Id, err)
+		return nil
+	}
+
+	emailAddress, err := database.Handle.Users().GetEmail(gocontext.TODO(), user.ID, email, false)
+	if err != nil {
+		return nil
+	}
+
+	return emailAddress
 }
 
 func Activate(c *context.Context) {
 	code := c.Query("code")
 	if code == "" {
 		c.Data["IsActivatePage"] = true
-		if c.User.IsActive {
+		if c.User == nil || c.User.IsActive {
 			c.NotFound()
 			return
 		}
@@ -602,25 +584,31 @@ func ResetPasswdPost(c *context.Context) {
 	}
 	c.Data["Code"] = code
 
-	if u := verifyUserActiveCode(code); u != nil {
-		// Validate password length.
-		password := c.Query("password")
-		if len(password) < 6 {
-			c.Data["IsResetForm"] = true
-			c.Data["Err_Password"] = true
-			c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
-			return
-		}
+	data, err := tool.ParseToken(code)
+	if err == nil && data.Valid() == nil {
+		user, err := database.Handle.Users().GetByID(gocontext.TODO(), data.Id)
+		if err == nil && user != nil {
+			// Validate password length.
+			password := c.Query("password")
+			if len(password) < 6 {
+				c.Data["IsResetForm"] = true
+				c.Data["Err_Password"] = true
+				c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
+				return
+			}
 
-		err := database.Handle.Users().Update(c.Req.Context(), u.ID, database.UpdateUserOptions{Password: &password})
-		if err != nil {
-			c.Error(err, "update user")
-			return
-		}
+			err := database.Handle.Users().Update(c.Req.Context(), user.ID, database.UpdateUserOptions{Password: &password})
+			if err != nil {
+				c.Error(err, "update user")
+				return
+			}
 
-		log.Trace("User password reset: %s", u.Name)
-		c.RedirectSubpath("/user/login")
-		return
+			log.Trace("User password reset: %s", user.Name)
+			c.RedirectSubpath("/user/login")
+			return
+		} else if user == nil {
+			log.Error("Failed to get user by id %d: %v", data.Id, err)
+		}
 	}
 
 	c.Data["IsResetFailed"] = true

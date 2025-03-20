@@ -8,23 +8,19 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
 	"fmt"
+	"github.com/nfnt/resize"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/pbkdf2"
 	"image"
 	"image/png"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
-
-	"github.com/nfnt/resize"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/pbkdf2"
 
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/strutil"
-	"gogs.io/gogs/internal/tool"
 )
 
 // DashboardURLPath returns the URL path to the user or organization dashboard.
@@ -33,20 +29,6 @@ func DashboardURLPath(name string, isOrganization bool) string {
 		return conf.Server.Subpath + "/org/" + name + "/dashboard/"
 	}
 	return conf.Server.Subpath + "/"
-}
-
-// GenerateActivateCode generates an activate code based on user information and
-// the given email.
-func GenerateActivateCode(userID int64, email, name, password, rands string) string {
-	code := tool.CreateTimeLimitCode(
-		fmt.Sprintf("%d%s%s%s%s", userID, email, strings.ToLower(name), password, rands),
-		conf.Auth.ActivateCodeLives,
-		nil,
-	)
-
-	// Add tailing hex username
-	code += hex.EncodeToString([]byte(strings.ToLower(name)))
-	return code
 }
 
 // CustomAvatarPath returns the absolute path of the user custom avatar file.

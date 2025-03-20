@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +26,7 @@ func insertUserPrimaryEmail(db *gorm.DB) error {
 			var res []User
 			err := tx.Table("user").Where("type = ?", 0).Offset(offset).Limit(limit).Find(&res).Error
 			if err != nil {
-				return errors.Wrap(err, "query user")
+				return fmt.Errorf("query user error: %s", err.Error())
 			}
 
 			for _, r := range res {
@@ -37,7 +37,7 @@ func insertUserPrimaryEmail(db *gorm.DB) error {
 				}
 				err := tx.Table("email_address").Where("uid = ? AND email = ?", record.UserID, record.Email).FirstOrCreate(record).Error
 				if err != nil {
-					return errors.Wrap(err, "insert email")
+					return fmt.Errorf("insert email error: %s", err.Error())
 				}
 			}
 

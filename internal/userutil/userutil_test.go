@@ -14,7 +14,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/public"
 )
 
@@ -30,18 +29,6 @@ func TestDashboardURLPath(t *testing.T) {
 		want := "/org/acme/dashboard/"
 		assert.Equal(t, want, got)
 	})
-}
-
-func TestGenerateActivateCode(t *testing.T) {
-	conf.SetMockAuth(t,
-		conf.AuthOpts{
-			ActivateCodeLives: 10,
-		},
-	)
-
-	code := GenerateActivateCode(1, "alice@example.com", "Alice", "123456", "rands")
-	got := tool.VerifyTimeLimitCode("1alice@example.comalice123456rands", conf.Auth.ActivateCodeLives, code[:tool.TIME_LIMIT_CODE_LENGTH])
-	assert.True(t, got)
 }
 
 func TestCustomAvatarPath(t *testing.T) {

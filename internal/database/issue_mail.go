@@ -15,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/userutil"
 )
 
 func (issue *Issue) MailSubject() string {
@@ -41,16 +40,6 @@ func (this mailerUser) Email() string {
 
 func (this mailerUser) PublicEmail() string {
 	return this.user.PublicEmail
-}
-
-func (this mailerUser) GenerateEmailActivateCode(email string) string {
-	return userutil.GenerateActivateCode(
-		this.user.ID,
-		email,
-		this.user.Name,
-		this.user.Password,
-		this.user.Rands,
-	)
 }
 
 func NewMailerUser(u *User) email.User {
