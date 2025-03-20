@@ -4,9 +4,9 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	{{if not .PageIsAdmin}}
-		<meta name="author" content="{{if .Repository}}{{.Owner.Name}}{{else}}Huan-Gogs{{end}}" />
-		<meta name="description" content="Huan-Gogs 开源 Gi t仓库，基于Gogs。" />
-		<meta name="keywords" content="Open Source, Git, Go, Gogs, Huan, Huan-Gogs">
+		<meta name="author" content="{{if .Repository}}{{.Owner.Name}}{{else}}Gogs{{end}}" />
+		<meta name="description" content="{{if .Repository}}{{.Repository.Name}}{{if .Repository.Description}} - {{.Repository.Description}}{{end}}{{else}}Gogs is a painless self-hosted Git service{{end}}" />
+		<meta name="keywords" content="go, git, self-hosted, gogs">
 	{{end}}
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CSRFToken}}" />
@@ -30,7 +30,7 @@
 		<meta property="og:url" content="{{AppURL}}" />
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content="{{AppName}}">
-		<meta property="og:description" content="Huan-Gogs 开源 Gi t仓库，基于Gogs。">
+		<meta property="og:description" content="Gogs is a painless self-hosted Git service.">
 		<meta property="og:image" content="{{AppURL}}img/favicon.png" />
 		<meta property="og:site_name" content="Gogs">
 	{{end}}
@@ -150,6 +150,9 @@
 												</a>
 												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubURL}}/user/settings">
 													<i class="octicon octicon-settings"></i> {{.i18n.Tr "your_settings"}}
+												</a>
+												<a class="item" target="_blank" rel="noopener noreferrer" href="https://gogs.io/docs" rel="noreferrer">
+													<i class="octicon octicon-question"></i> {{.i18n.Tr "help"}}
 												</a>
 												{{if .IsAdmin}}
 													<div class="divider"></div>
