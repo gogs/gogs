@@ -66,8 +66,9 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 
 		// Check standard error format first, then fallback to the worse case.
 		tperr, ok := err.(*textproto.Error)
-		if (ok && tperr.Code == 535) ||
-			strings.Contains(err.Error(), "Username and Password not accepted") {
+		if (ok && (tperr.Code == 526 || tperr.Code == 530 || tperr.Code == 534 || tperr.Code == 535 || tperr.Code == 536)) ||
+			strings.Contains(err.Error(), "Username and Password not accepted") ||
+			strings.Contains(err.Error(), "Authentication failure") {
 			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 		return nil, err

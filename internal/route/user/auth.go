@@ -171,9 +171,9 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		case database.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
-
 		default:
-			c.Error(err, "authenticate user")
+			c.FormErr("UserName", "Password", "LoginSource")
+			c.RenderWithErr(err.Error(), LOGIN, &f)
 		}
 		for i := range loginSources {
 			if loginSources[i].IsDefault {
