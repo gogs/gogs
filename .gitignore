@@ -16,3 +16,6 @@ output*
 /release
 .task
 .envrc
+go-remote.sh
+testhome
+*.patch

@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package repo
 
@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -196,38 +197,55 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.User, ctxUser, database.MigrateRepoOptions{
-		Name:        f.RepoName,
-		Description: f.Description,
-		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
-		IsUnlisted:  f.Unlisted,
-		IsMirror:    f.Mirror,
-		RemoteAddr:  remoteAddr,
-	})
-	if err == nil {
-		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
-		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
-		return
-	}
+	var errChannel = make(chan error, 1)
+	var repoChannel = make(chan *database.Repository, 1)
 
-	if repo != nil {
-		if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-			log.Error("DeleteRepository: %v", errDelete)
+	go func() {
+		repo, err := database.MigrateRepository(c.User, ctxUser, database.MigrateRepoOptions{
+			Name:        f.RepoName,
+			Description: f.Description,
+			IsPrivate:   f.Private || conf.Repository.ForcePrivate,
+			IsUnlisted:  f.Unlisted,
+			IsMirror:    f.Mirror,
+			RemoteAddr:  remoteAddr,
+		})
+		if err != nil {
+			if repo != nil {
+				if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+					log.Error("DeleteRepository: %v", errDelete)
+				}
+			}
+
+			log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
+
+			errChannel <- err
+			close(repoChannel)
+			close(errChannel)
+		} else {
+			repoChannel <- repo
+			close(repoChannel)
+			close(errChannel)
 		}
-	}
+	}()
 
-	if strings.Contains(err.Error(), "Authentication failed") ||
-		strings.Contains(err.Error(), "could not read Username") {
-		c.Data["Err_Auth"] = true
-		c.RenderWithErr(c.Tr("form.auth_failed", database.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
-		return
-	} else if strings.Contains(err.Error(), "fatal:") {
-		c.Data["Err_CloneAddr"] = true
-		c.RenderWithErr(c.Tr("repo.migrate.failed", database.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
-		return
-	}
+	select {
+	case err := <-errChannel:
+		if strings.Contains(err.Error(), "Authentication failed") ||
+			strings.Contains(err.Error(), "could not read Username") {
+			c.Data["Err_Auth"] = true
+			c.RenderWithErr(c.Tr("form.auth_failed", database.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		} else if strings.Contains(err.Error(), "fatal:") {
+			c.Data["Err_CloneAddr"] = true
+			c.RenderWithErr(c.Tr("repo.migrate.failed", database.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		} else {
+			handleCreateError(c, err, "MigratePost", MIGRATE, &f)
+		}
+	case repo := <-repoChannel:
+		c.Redirect(conf.Server.Subpath + "/" + repo.Owner.Name + "/" + repo.Name)
+	case <-time.After(5 * time.Second):
+		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 
-	handleCreateError(c, err, "MigratePost", MIGRATE, &f)
+	}
 }
 
 func Action(c *context.Context) {

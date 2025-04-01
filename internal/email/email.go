@@ -6,6 +6,7 @@ package email
 
 import (
 	"fmt"
+	"gogs.io/gogs/internal/tool"
 	"html/template"
 	"path/filepath"
 	"sync"
@@ -87,7 +88,7 @@ type User interface {
 	ID() int64
 	DisplayName() string
 	Email() string
-	GenerateEmailActivateCode(string) string
+	PublicEmail() string
 }
 
 type Repository interface {
@@ -122,19 +123,37 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 }
 
 func SendActivateAccountMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
+	token, err := tool.NewClaims(u.ID(), u.Email(), tool.SubjectActiveAccount).ToToken()
+	if err != nil {
+		log.Error("Create token error: %s", err.Error())
+		return
+	}
+
+	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, token, c.Tr("mail.activate_account"), "activate account")
 }
 
 func SendResetPasswordMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
+	token, err := tool.NewClaims(u.ID(), u.Email(), tool.SubjectForgetPasswd).ToToken()
+	if err != nil {
+		log.Error("Create token error: %s", err.Error())
+		return
+	}
+
+	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, token, c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
 func SendActivateEmailMail(c *macaron.Context, u User, email string) {
+	token, err := tool.NewClaims(u.ID(), email, tool.SubjectActiveEmail).ToToken()
+	if err != nil {
+		log.Error("Create token error: %s", err.Error())
+		return
+	}
+
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
-		"Code":            u.GenerateEmailActivateCode(email),
+		"Code":            token,
 		"Email":           email,
 	}
 	body, err := render(MAIL_AUTH_ACTIVATE_EMAIL, data)
@@ -204,7 +223,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := gomail.NewMessage().FormatAddress(conf.Email.FromEmail, doer.DisplayName())
+	from := gomail.NewMessage().FormatAddress(conf.Email.FromEmail.Address, doer.DisplayName())
 	msg := NewMessageFrom(tos, from, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg

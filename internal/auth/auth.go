@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package auth
 
@@ -69,6 +69,8 @@ type ExternalAccount struct {
 	FullName string
 	// The email address of the account.
 	Email string
+	// The public email address of the account.
+	PublicEmail string
 	// The location of the account.
 	Location string
 	// The website of the account.

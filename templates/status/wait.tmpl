@@ -1,0 +1,17 @@
+{{template "base/head" .}}
+<div class="ui container center" style="padding-top: 30px">
+	<h1 style="font-size: 7em; margin-bottom: 0.5em; color: #cc0000;">Wait a moment!</h1>
+	<h2 style="font-size: 2em; color: #666">{{if .Flash}}{{.Flash}}{{end}}</h2>
+
+	<div class="ui divider"></div>
+	<br>
+
+	{{if .IsAdmin}}<p>Application Version: {{AppVer}}</p>{{end}}
+	<p>If you think this is an error, please <a href="https://github.com/SongZihuan/huan-gogs/issues">  contact with me </a>.</p>
+</div>
+{{if .Refresh}}
+<script type="module">
+	setInterval(() => location.reload(), 5000); // 5秒 = 300000毫秒
+</script>
+{{end}}
+{{template "base/footer" .}}

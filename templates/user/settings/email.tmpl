@@ -18,21 +18,47 @@
 								<div class="column">
 									<strong>{{.Email}}</strong>
 									{{if .IsPrimary}}<span class="ui green tiny primary label">{{$.i18n.Tr "settings.primary"}}</span>{{end}}
+									{{if .IsPublic}}<span class="ui green tiny primary label">{{$.i18n.Tr "settings.public"}}</span>{{end}}
+									{{if .IsLocal}}<span class="ui green tiny primary label">{{$.i18n.Tr "settings.anonymous"}}</span>{{end}}
 									{{if not .IsPrimary}}
-										<div class="ui right">
-											<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Email}}">
-												{{$.i18n.Tr "settings.delete_email"}}
-											</button>
-										</div>
+										{{if not .IsPublic}}
+											{{if not .IsLocal}}
+												<div class="ui right floated">
+													<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Email}}">
+														{{$.i18n.Tr "settings.delete_email"}}
+													</button>
+												</div>
+											{{end}}
+										{{end}}
+									{{end}}
+									{{if not .NotExists}}
 										{{if .IsActivated}}
-											<div class="right floated">
-												<form action="{{$.Link}}" method="post">
-													{{$.CSRFTokenHTML}}
-													<input name="_method" type="hidden" value="PRIMARY">
-													<input name="email" type="hidden" value="{{.Email}}">
-													<button class="ui green tiny basic button">{{$.i18n.Tr "settings.primary_email"}}</button>
-												</form>
-											</div>
+											{{if not .IsPrimary}}
+												{{if not .IsLocal}}
+													<div class="right floated">
+														<form action="{{$.Link}}" method="post">
+															{{$.CSRFTokenHTML}}
+															<input name="_method" type="hidden" value="PRIMARY">
+															<input name="email" type="hidden" value="{{.Email}}">
+															<button class="ui green tiny basic button">{{$.i18n.Tr "settings.primary_email"}}</button>
+														</form>
+													</div>
+												{{end}}
+											{{end}}
+											{{if not .IsPublic}}
+												<div class="right floated">
+													<form action="{{$.Link}}" method="post">
+														{{$.CSRFTokenHTML}}
+														<input name="_method" type="hidden" value="PUBLIC">
+														<input name="email" type="hidden" value="{{.Email}}">
+														{{if .IsLocal}}
+															<button class="ui green tiny basic button">{{$.i18n.Tr "settings.anonymous_email"}}</button>
+														{{else}}
+															<button class="ui green tiny basic button">{{$.i18n.Tr "settings.public_email"}}</button>
+														{{end}}
+													</form>
+												</div>
+											{{end}}
 										{{end}}
 									{{end}}
 								</div>

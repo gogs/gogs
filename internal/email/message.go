@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package email
 
@@ -65,7 +65,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 
 // NewMessage creates new mail message object with default From header.
 func NewMessage(to []string, subject, body string) *Message {
-	return NewMessageFrom(to, conf.Email.From, subject, body)
+	return NewMessageFrom(to, conf.Email.FromEmail.String(), subject, body)
 }
 
 type loginAuth struct {
@@ -122,12 +122,15 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	isSecureConn := false
-	// Start TLS directly if the port ends with 465 (SMTPS protocol)
-	if strings.HasSuffix(port, "465") {
-		conn = tls.Client(conn, tlsconfig)
+	_conn := tls.Client(conn, tlsconfig)
+	err = _conn.Handshake()
+	if err == nil {
+		conn = _conn
 		isSecureConn = true
 	}
 

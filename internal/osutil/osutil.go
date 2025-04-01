@@ -1,6 +1,6 @@
 // Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package osutil
 
@@ -36,6 +36,13 @@ func IsExist(path string) bool {
 
 // CurrentUsername returns the username of the current user.
 func CurrentUsername() string {
+	// To get the real user of the current process, you should use user.Current(),
+	// and USER may not be the real user of the process (for example, executing it
+	// through sudo will display the original user)
+	if currentUser, err := user.Current(); err == nil && currentUser != nil && len(currentUser.Username) > 0 {
+		return currentUser.Username
+	}
+
 	username := os.Getenv("USER")
 	if len(username) > 0 {
 		return username
@@ -44,10 +51,6 @@ func CurrentUsername() string {
 	username = os.Getenv("USERNAME")
 	if len(username) > 0 {
 		return username
-	}
-
-	if user, err := user.Current(); err == nil {
-		username = user.Username
 	}
 	return username
 }

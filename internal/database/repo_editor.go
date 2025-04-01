@@ -1,6 +1,6 @@
 // Copyright 2016 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package database
 
@@ -56,7 +56,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 		"SSH_ORIGINAL_COMMAND=1",
 		ENV_AUTH_USER_ID + "=" + com.ToStr(opts.AuthUser.ID),
 		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
-		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
+		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.PublicEmail,
 		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
 		ENV_REPO_OWNER_SALT_MD5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
 		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
@@ -189,7 +189,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
-			Email: doer.Email,
+			Email: doer.PublicEmail,
 			When:  time.Now(),
 		},
 		opts.Message,
@@ -322,7 +322,7 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
-			Email: doer.Email,
+			Email: doer.PublicEmail,
 			When:  time.Now(),
 		},
 		opts.Message,
@@ -574,7 +574,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
-			Email: doer.Email,
+			Email: doer.PublicEmail,
 			When:  time.Now(),
 		},
 		opts.Message,

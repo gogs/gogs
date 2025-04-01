@@ -1,6 +1,6 @@
 // Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package database
 
@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	gouuid "github.com/satori/go.uuid"
 	"os"
 	"strings"
 	"time"
@@ -69,12 +70,7 @@ func (err ErrLoginSourceMismatch) Error() string {
 func (s *UsersStore) Authenticate(ctx context.Context, login, password string, loginSourceID int64) (*User, error) {
 	login = strings.ToLower(login)
 
-	query := s.db.WithContext(ctx)
-	if strings.Contains(login, "@") {
-		query = query.Where("email = ?", login)
-	} else {
-		query = query.Where("lower_name = ?", login)
-	}
+	query := s.db.WithContext(ctx).Where("email = ? OR lower_name = ? OR login_name = ?", login, login, login)
 
 	user := new(User)
 	err := query.First(user).Error
@@ -137,17 +133,53 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 		return nil, fmt.Errorf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
-	return s.Create(ctx, extAccount.Name, extAccount.Email,
-		CreateUserOptions{
-			FullName:    extAccount.FullName,
-			LoginSource: authSourceID,
-			LoginName:   extAccount.Login,
-			Location:    extAccount.Location,
-			Website:     extAccount.Website,
-			Activated:   true,
-			Admin:       extAccount.Admin,
-		},
-	)
+	return s.Create(ctx, extAccount.Name, extAccount.Email, CreateUserOptions{
+		FullName:    extAccount.FullName,
+		LoginSource: authSourceID,
+		LoginName:   extAccount.Login,
+		Location:    extAccount.Location,
+		Website:     extAccount.Website,
+		Activated:   true,
+		Admin:       extAccount.Admin,
+	})
+}
+
+func (s *UsersStore) AuthenticateByUser(ctx context.Context, user *User, password string, loginSourceID int64) error {
+	var authSourceID int64 // The login source ID will be used to authenticate the user
+
+	if loginSourceID >= 0 && user.LoginSource != loginSourceID {
+		return ErrLoginSourceMismatch{args: errutil.Args{"expect": loginSourceID, "actual": user.LoginSource}}
+	}
+
+	// Validate password hash fetched from database for local accounts.
+	if user.IsLocal() {
+		if userutil.ValidatePassword(user.Password, user.Salt, password) {
+			return nil
+		}
+
+		return auth.ErrBadCredentials{Args: map[string]any{"login": user.Name, "userID": user.ID}}
+	}
+
+	authSourceID = user.LoginSource
+
+	source, err := newLoginSourcesStore(s.db, loadedLoginSourceFilesStore).GetByID(ctx, authSourceID)
+	if err != nil {
+		return errors.Wrap(err, "get login source")
+	}
+
+	if !source.IsActived {
+		return errors.Errorf("login source %d is not activated", source.ID)
+	}
+
+	_, err = source.Provider.Authenticate(user.LoginName, password)
+	if err != nil {
+		_, err = source.Provider.Authenticate(user.Name, password)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ChangeUsername changes the username of the given user and updates all
@@ -307,6 +339,8 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 		}
 	}
 
+	localEmail := gouuid.NewV4().String() + "@fake.localhost"
+
 	email = strings.ToLower(strings.TrimSpace(email))
 	_, err = s.GetByEmail(ctx, email)
 	if err == nil {
@@ -319,11 +353,17 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 		return nil, err
 	}
 
+	if opts.LoginName == "" {
+		opts.LoginName = username
+	}
+
 	user := &User{
 		LowerName:       strings.ToLower(username),
 		Name:            username,
 		FullName:        opts.FullName,
 		Email:           email,
+		PublicEmail:     localEmail,
+		LocalEmail:      localEmail,
 		Password:        opts.Password,
 		LoginSource:     opts.LoginSource,
 		LoginName:       opts.LoginName,
@@ -346,7 +386,21 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 	}
 	user.Password = userutil.EncodePassword(user.Password, user.Salt)
 
-	return user, s.db.WithContext(ctx).Create(user).Error
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(user).Error
+		if err == nil {
+			return err
+		}
+
+		err = s.addEmail(tx, user.ID, user.Email, !conf.Auth.RequireEmailConfirmation)
+		if err == nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return user, err
 }
 
 // DeleteCustomAvatar deletes the current user custom avatar and falls back to
@@ -694,6 +748,45 @@ func (ErrUserNotExist) NotFound() bool {
 
 // GetByEmail returns the user (not organization) with given email. It ignores
 // records with unverified emails and returns ErrUserNotExist when not found.
+func (s *UsersStore) getByEmail(tx *gorm.DB, email string) (*User, error) {
+	if email == "" {
+		return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
+	}
+	email = strings.ToLower(email)
+
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN email_address ON email_address.uid = "user".id
+		WHERE
+			"user".type = @userType
+		AND (
+				"user".email = @email AND "user".is_active = TRUE
+			OR  email_address.email = @email AND email_address.is_activated = TRUE
+		)
+	*/
+	user := new(User)
+	err := tx.
+		Joins(dbutil.Quote("LEFT JOIN email_address ON email_address.uid = %s.id", "user"), true).
+		Where(dbutil.Quote("%s.type = ?", "user"), UserTypeIndividual).
+		Where(tx.
+			Where(dbutil.Quote("%[1]s.email = ? AND %[1]s.is_active = ?", "user"), email, true).
+			Or("email_address.email = ? AND email_address.is_activated = ?", email, true),
+		).
+		First(&user).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetByEmail returns the user (not organization) with given email. It ignores
+// records with unverified emails and returns ErrUserNotExist when not found.
 func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error) {
 	if email == "" {
 		return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
@@ -725,6 +818,20 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetByID returns the user with given ID. It returns ErrUserNotExist when not
+// found.
+func (s *UsersStore) getByID(tx *gorm.DB, id int64) (*User, error) {
+	user := new(User)
+	err := tx.Where("id = ?", id).First(user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 		}
 		return nil, err
 	}
@@ -899,6 +1006,7 @@ type UpdateUserOptions struct {
 
 	FullName    *string
 	Email       *string
+	PublicEmail *string
 	Website     *string
 	Location    *string
 	Description *string
@@ -938,6 +1046,7 @@ func (s *UsersStore) Update(ctx context.Context, userID int64, opts UpdateUserOp
 		updates["passwd"] = userutil.EncodePassword(*opts.Password, salt)
 		opts.GenerateNewRands = true
 	}
+
 	if opts.GenerateNewRands {
 		rands, err := userutil.RandomSalt()
 		if err != nil {
@@ -957,6 +1066,16 @@ func (s *UsersStore) Update(ctx context.Context, userID int64, opts UpdateUserOp
 			return errors.Wrap(err, "check email")
 		}
 		updates["email"] = *opts.Email
+	}
+	if opts.PublicEmail != nil {
+		// 不检查用户之间的 Public Email 重复
+		//_, err := s.GetByPublicEmail(ctx, *opts.Email)
+		//if err == nil {
+		//	return ErrEmailAlreadyUsed{args: errutil.Args{"email": *opts.Email}}
+		//} else if !IsErrUserNotExist(err) {
+		//	return errors.Wrap(err, "check email")
+		//}
+		updates["public_email"] = *opts.PublicEmail
 	}
 	if opts.Website != nil {
 		updates["website"] = strutil.Truncate(*opts.Website, 255)
@@ -1004,6 +1123,43 @@ func (s *UsersStore) Update(ctx context.Context, userID int64, opts UpdateUserOp
 	return s.db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
 }
 
+func (s *UsersStore) Active(ctx context.Context, userID int64) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		user, err := s.getByID(tx, userID)
+		if err != nil {
+			return err
+		}
+
+		emailUser, err := s.getByEmail(tx, user.Email)
+		if err == nil && emailUser.ID != user.ID {
+			return ErrEmailAlreadyUsed{args: errutil.Args{"email": user.Email}}
+		} else if !IsErrUserNotExist(err) {
+			return errors.Wrap(err, "check email")
+		}
+
+		err = s.markEmailActivated(tx, user.ID, user.Email)
+		if err != nil {
+			return err
+		}
+
+		rands, err := userutil.RandomSalt()
+		if err != nil {
+			return errors.Wrap(err, "generate rands")
+		}
+
+		user.UpdatedUnix = s.db.NowFunc().Unix()
+		user.Rands = rands
+		user.IsActive = true
+
+		err = tx.Save(user).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 // UseCustomAvatar uses the given avatar as the user custom avatar.
 func (s *UsersStore) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
 	err := userutil.SaveAvatar(userID, avatar)
@@ -1019,6 +1175,30 @@ func (s *UsersStore) UseCustomAvatar(ctx context.Context, userID int64, avatar [
 			"updated_unix":      s.db.NowFunc().Unix(),
 		}).
 		Error
+}
+
+// AddEmail adds a new email address to given user. It returns
+// ErrEmailAlreadyUsed if the email has been verified by another user.
+func (s *UsersStore) addEmail(tx *gorm.DB, userID int64, email string, isActivated bool) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	_, err := s.getByEmail(tx, email)
+	if err == nil {
+		return ErrEmailAlreadyUsed{
+			args: errutil.Args{
+				"email": email,
+			},
+		}
+	} else if !IsErrUserNotExist(err) {
+		return errors.Wrap(err, "check user by email")
+	}
+
+	return tx.Create(
+		&EmailAddress{
+			UserID:      userID,
+			Email:       email,
+			IsActivated: isActivated,
+		},
+	).Error
 }
 
 // AddEmail adds a new email address to given user. It returns
@@ -1105,25 +1285,90 @@ func (s *UsersStore) ListEmails(ctx context.Context, userID int64) ([]*EmailAddr
 		return nil, errors.Wrap(err, "list emails")
 	}
 
-	isPrimaryFound := false
+	var emailMap = make(map[string]*EmailAddress, 10)
+
 	for _, email := range emails {
+		if e, ok := emailMap[email.Email]; ok && e != nil {
+			continue
+		}
+
+		email.NotExists = false
+		emailMap[email.Email] = email
+
 		if email.Email == user.Email {
-			isPrimaryFound = true
 			email.IsPrimary = true
-			break
+		}
+
+		if email.Email == user.PublicEmail {
+			email.IsPublic = true
+		}
+
+		if email.Email == user.LocalEmail {
+			email.IsActivated = true
+			email.IsLocal = true
 		}
 	}
 
 	// We always want the primary email address displayed, even if it's not in the
 	// email_address table yet.
-	if !isPrimaryFound {
-		emails = append(emails, &EmailAddress{
+	if email, ok := emailMap[user.Email]; !ok || email == nil {
+		email = &EmailAddress{
 			Email:       user.Email,
 			IsActivated: user.IsActive,
 			IsPrimary:   true,
-		})
+			NotExists:   true,
+		}
+		emailMap[email.Email] = email
+		emails = append(emails, email)
+	} else {
+		email.IsPrimary = true
 	}
+
+	if email, ok := emailMap[user.PublicEmail]; !ok || email == nil {
+		email = &EmailAddress{
+			Email:       user.PublicEmail,
+			IsActivated: false,
+			IsPublic:    true,
+			NotExists:   true,
+		}
+		emailMap[email.Email] = email
+		emails = append(emails, email)
+	} else {
+		email.IsPublic = true
+	}
+
+	if email, ok := emailMap[user.LocalEmail]; !ok || email == nil {
+		email = &EmailAddress{
+			Email:       user.LocalEmail,
+			IsActivated: true,
+			IsLocal:     true,
+			NotExists:   false,
+		}
+
+		emailMap[user.LocalEmail] = email
+		emails = append(emails, email)
+	} else {
+		email.IsActivated = true
+		email.IsLocal = true
+		email.NotExists = false
+	}
+
 	return emails, nil
+}
+
+// MarkEmailActivated marks the email address of the given user as activated,
+// and new rands are generated for the user.
+func (s *UsersStore) markEmailActivated(tx *gorm.DB, userID int64, email string) error {
+	err := tx.
+		Model(&EmailAddress{}).
+		Where("uid = ? AND email = ?", userID, email).
+		Update("is_activated", true).
+		Error
+	if err != nil {
+		return errors.Wrap(err, "mark email activated")
+	}
+
+	return nil
 }
 
 // MarkEmailActivated marks the email address of the given user as activated,
@@ -1180,22 +1425,19 @@ func (s *UsersStore) MarkEmailPrimary(ctx context.Context, userID int64, email s
 		return errors.Wrap(err, "get user")
 	}
 
+	if email == user.LocalEmail {
+		return ErrEmailNotExist{args: errutil.Args{"email": email}}
+	}
+
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Make sure the former primary email doesn't disappear.
-		err = tx.FirstOrCreate(
-			&EmailAddress{
-				UserID:      user.ID,
-				Email:       user.Email,
-				IsActivated: user.IsActive,
-			},
-			&EmailAddress{
-				UserID: user.ID,
-				Email:  user.Email,
-			},
-		).Error
-		if err != nil {
-			return errors.Wrap(err, "upsert former primary email address")
-		}
+		err = tx.FirstOrCreate(&EmailAddress{
+			UserID:      user.ID,
+			Email:       user.Email,
+			IsActivated: false,
+		}, &EmailAddress{
+			UserID: user.ID,
+			Email:  user.Email,
+		}).Error
 
 		return tx.Model(&User{}).
 			Where("id = ?", user.ID).
@@ -1207,9 +1449,78 @@ func (s *UsersStore) MarkEmailPrimary(ctx context.Context, userID int64, email s
 	})
 }
 
+func (s *UsersStore) MarkEmailPublic(ctx context.Context, userID int64, email string) error {
+	user, err := s.GetByID(ctx, userID)
+	if err != nil {
+		return errors.Wrap(err, "get user")
+	}
+
+	if email != user.LocalEmail {
+		var emailAddress EmailAddress
+		err := s.db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrEmailNotExist{args: errutil.Args{"email": email}}
+			}
+			return errors.Wrap(err, "get email address")
+		}
+
+		if !emailAddress.IsActivated {
+			return ErrEmailNotVerified{args: errutil.Args{"email": email}}
+		}
+	}
+
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err = tx.FirstOrCreate(&EmailAddress{
+			UserID:      user.ID,
+			Email:       user.PublicEmail,
+			IsActivated: false,
+		}, &EmailAddress{
+			UserID: user.ID,
+			Email:  user.PublicEmail,
+		}).Error
+		if err != nil {
+			return err
+		}
+
+		return tx.Model(&User{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]any{
+				"public_email": email,
+				"updated_unix": tx.NowFunc().Unix(),
+			},
+			).Error
+	})
+}
+
 // DeleteEmail deletes the email address of the given user.
 func (s *UsersStore) DeleteEmail(ctx context.Context, userID int64, email string) error {
 	return s.db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).Delete(&EmailAddress{}).Error
+}
+
+// DeletePublicEmail deletes the email address of the given user.
+func (s *UsersStore) DeletePublicEmail(ctx context.Context, user *User) error {
+	if user.PublicEmail == "" {
+		return nil
+	}
+
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if user.Email != user.LocalEmail {
+			err := s.db.WithContext(ctx).Where("uid = ? AND email = ?", user.ID, user.PublicEmail).Delete(&EmailAddress{}).Error
+			if err != nil {
+				return nil
+			}
+		}
+
+		user.PublicEmail = user.LocalEmail
+
+		updates := map[string]any{
+			"updated_unix": s.db.NowFunc().Unix(),
+			"public_email": user.PublicEmail,
+		}
+
+		return tx.Model(&User{}).Where("id = ?", user.ID).Updates(updates).Error
+	})
 }
 
 // UserType indicates the type of the user account.
@@ -1227,7 +1538,11 @@ type User struct {
 	Name      string `xorm:"UNIQUE NOT NULL" gorm:"not null"`
 	FullName  string
 	// Email is the primary email address (to be used for communication)
-	Email       string `xorm:"NOT NULL" gorm:"not null"`
+	Email string `xorm:"NOT NULL" gorm:"not null"`
+	// PublicEmail is the public email address
+	PublicEmail string `xorm:"NOT NULL" gorm:"not null"`
+	// LocalEmail is the fake email
+	LocalEmail  string `xorm:"NOT NULL" gorm:"not null"`
 	Password    string `xorm:"passwd NOT NULL" gorm:"column:passwd;not null"`
 	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	LoginName   string
@@ -1301,7 +1616,7 @@ func (u *User) IsOrganization() bool {
 }
 
 // APIFormat returns the API format of a user.
-func (u *User) APIFormat() *api.User {
+func (u *User) APIFormat() *api.User { // TODO 待检查
 	return &api.User{
 		ID:        u.ID,
 		UserName:  u.Name,
@@ -1315,20 +1630,42 @@ func (u *User) APIFormat() *api.User {
 // maxNumRepos returns the maximum number of repositories that the user can have
 // direct ownership.
 func (u *User) maxNumRepos() int {
-	if u.MaxRepoCreation <= -1 {
+	if !u.IsActive {
+		return 0
+	} else if u.MaxRepoCreation <= -1 {
 		return conf.Repository.MaxCreationLimit
 	}
 	return u.MaxRepoCreation
 }
 
-// canCreateRepo returns true if the user can create a repository.
-func (u *User) canCreateRepo() bool {
+// CanCreateRepo returns true if the user can create a repository.
+func (u *User) CanCreateRepo() bool {
+	if !u.IsActive {
+		return false
+	}
+
+	if conf.Repository.AdminNotCreationLimit && u.IsAdmin {
+		return true
+	}
+
+	if conf.Admin.DisableRegularOrgCreation && conf.Repository.OrganizationNotCreationLimit && u.IsOrganization() {
+		return true
+	}
+
 	return u.maxNumRepos() <= -1 || u.NumRepos < u.maxNumRepos()
 }
 
 // CanCreateOrganization returns true if user can create organizations.
 func (u *User) CanCreateOrganization() bool {
-	return !conf.Admin.DisableRegularOrgCreation || u.IsAdmin
+	if !u.IsActive {
+		return false
+	}
+
+	if conf.Admin.DisableRegularOrgCreation {
+		return u.IsAdmin
+	}
+
+	return true
 }
 
 // CanEditGitHook returns true if user can edit Git hooks.
@@ -1389,7 +1726,7 @@ func (u *User) AvatarURLPath() string {
 		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
 	case conf.Picture.DisableGravatar:
 		if !hasCustomAvatar {
-			if err := userutil.GenerateRandomAvatar(u.ID, u.Name, u.Email); err != nil {
+			if err := userutil.GenerateRandomAvatar(u.ID, u.Name, u.PublicEmail); err != nil {
 				log.Error("Failed to generate random avatar [user_id: %d]: %v", u.ID, err)
 			}
 		}
@@ -1580,6 +1917,9 @@ type EmailAddress struct {
 	Email       string `xorm:"UNIQUE NOT NULL" gorm:"uniqueIndex:email_address_user_email_unique;not null;size:254"`
 	IsActivated bool   `gorm:"not null;default:FALSE"`
 	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
+	IsPublic    bool   `xorm:"-" gorm:"-" json:"-"`
+	IsLocal     bool   `xorm:"-" gorm:"-" json:"-"`
+	NotExists   bool   `xorm:"-" gorm:"-" json:"-"`
 }
 
 // Follow represents relations of users and their followers.

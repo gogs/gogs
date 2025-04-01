@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package route
 
@@ -52,6 +52,7 @@ func ExploreRepos(c *context.Context) {
 	c.Data["Title"] = c.Tr("explore")
 	c.Data["PageIsExplore"] = true
 	c.Data["PageIsExploreRepositories"] = true
+	c.Data["ExploreUser"] = !conf.Admin.DisableRegularExploreUser || (c.User != nil && c.User.IsActive && c.User.IsAdmin)
 
 	page := c.QueryInt("page")
 	if page <= 0 {
@@ -132,9 +133,15 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 }
 
 func ExploreUsers(c *context.Context) {
+	if conf.Admin.DisableRegularExploreUser && (!c.IsLogged || c.User == nil || !c.User.IsActive || !c.User.IsAdmin) {
+		c.NotFound()
+		return
+	}
+
 	c.Data["Title"] = c.Tr("explore")
 	c.Data["PageIsExplore"] = true
 	c.Data["PageIsExploreUsers"] = true
+	c.Data["ExploreUser"] = !conf.Admin.DisableRegularExploreUser || (c.User != nil && c.User.IsActive && c.User.IsAdmin)
 
 	RenderUserSearch(c, &UserSearchOptions{
 		Type:     database.UserTypeIndividual,
@@ -150,6 +157,7 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["Title"] = c.Tr("explore")
 	c.Data["PageIsExplore"] = true
 	c.Data["PageIsExploreOrganizations"] = true
+	c.Data["ExploreUser"] = !conf.Admin.DisableRegularExploreUser || (c.User != nil && c.User.IsActive && c.User.IsAdmin)
 
 	RenderUserSearch(c, &UserSearchOptions{
 		Type: database.UserTypeOrganization,

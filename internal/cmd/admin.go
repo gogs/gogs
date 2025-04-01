@@ -1,6 +1,6 @@
 // Copyright 2016 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package cmd
 
@@ -152,16 +152,11 @@ func runCreateUser(c *cli.Context) error {
 		return errors.Wrap(err, "set engine")
 	}
 
-	user, err := database.Handle.Users().Create(
-		context.Background(),
-		c.String("name"),
-		c.String("email"),
-		database.CreateUserOptions{
-			Password:  c.String("password"),
-			Activated: true,
-			Admin:     c.Bool("admin"),
-		},
-	)
+	user, err := database.Handle.Users().Create(context.Background(), c.String("name"), c.String("email"), database.CreateUserOptions{
+		Password:  c.String("password"),
+		Activated: true,
+		Admin:     c.Bool("admin"),
+	})
 	if err != nil {
 		return errors.Wrap(err, "create user")
 	}

@@ -1,6 +1,6 @@
 // Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package ldap
 
@@ -53,11 +53,12 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}
 
 	return &auth.ExternalAccount{
-		Login:    login,
-		Name:     username,
-		FullName: composeFullName(fn, sn, username),
-		Email:    email,
-		Admin:    isAdmin,
+		Login:       login,
+		Name:        username,
+		FullName:    composeFullName(fn, sn, username),
+		Email:       email,
+		PublicEmail: "",
+		Admin:       isAdmin,
 	}, nil
 }
 

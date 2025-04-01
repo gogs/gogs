@@ -28,7 +28,7 @@ type Store interface {
 	// allowed as a username, or database.ErrUserAlreadyExist when a user with same
 	// name already exists, or database.ErrEmailAlreadyUsed if the email has been
 	// verified by another user.
-	CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
+	CreateUser(ctx context.Context, username, email, publicEmail string, opts database.CreateUserOptions) (*database.User, error)
 	// AuthenticateUser validates username and password via given login source ID.
 	// It returns database.ErrUserNotExist when the user was not found.
 	//
@@ -67,7 +67,7 @@ func (*store) GetUserByUsername(ctx context.Context, username string) (*database
 	return database.Handle.Users().GetByUsername(ctx, username)
 }
 
-func (*store) CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error) {
+func (*store) CreateUser(ctx context.Context, username, email, publicEmail string, opts database.CreateUserOptions) (*database.User, error) {
 	return database.Handle.Users().Create(ctx, username, email, opts)
 }
 

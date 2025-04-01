@@ -2,6 +2,46 @@
 	padding-top: 15px;
 	padding-bottom: @footer-margin * 2;
 
+  .dashboard-home {
+    padding-bottom: @footer-margin;
+
+    .dashboard-logo {
+      img {
+        max-width: 20vw;
+        max-height: 20vh;
+      }
+    }
+    .dashboard-hero {
+      h1 {
+        font-size: 1.8rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      .octicon {
+        color: #d9453d;
+        font-size: 40px;
+        width: 50px;
+      }
+      &.header {
+        font-size: 20px;
+      }
+    }
+    p.large {
+      font-size: 16px
+    }
+    p.ssh-secret {
+      font-size: 1.2rem;
+      line-height: 1.8rem;
+    }
+    .stackable {
+      padding-top: 30px;
+    }
+    a {
+      color: #3216d1;
+    }
+  }
+
 	&.feeds,
 	&.issues {
 		.context.user.menu {
@@ -48,6 +88,30 @@
 			}
 		}
 	}
+  .hero {
+    h1 {
+      font-size: 4em;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.8em;
+    }
+    .octicon {
+      color: #d9453d;
+      font-size: 40px;
+      width: 50px;
+    }
+    &.header {
+      font-size: 20px;
+    }
+  }
+  .logo {
+		margin-bottom: 20px;
+	}
+  p.ssh-secret {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
 }
 
 &.feeds {

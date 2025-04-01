@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 // Package ldap provide functions & structure to query a LDAP ldap directory.
 // For now, it's mainly tested again an MS Active Directory service, see README.md for more information.

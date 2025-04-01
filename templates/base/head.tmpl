@@ -88,16 +88,16 @@
 					<div class="ui grid">
 						<div class="column">
 							<div class="ui top secondary menu">
-								<a class="item brand" href="{{AppSubURL}}/">
+								<a class="item brand" href="{{AppSubURL}}/home">
 									<img class="ui mini image" src="{{AppSubURL}}/img/favicon.png">
 								</a>
 
 								{{if .IsLogged}}
-									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "dashboard"}}</a>
+									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubURL}}/home">{{.i18n.Tr "dashboard"}}</a>
 									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubURL}}/issues">{{.i18n.Tr "issues"}}</a>
 									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubURL}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
 								{{else}}
-									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "home"}}</a>
+									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubURL}}/home">{{.i18n.Tr "home"}}</a>
 								{{end}}
 
 								<a class="item{{if .PageIsExplore}} active{{end}}" href="{{AppSubURL}}/explore/repos">{{.i18n.Tr "explore"}}</a>
@@ -110,26 +110,29 @@
 
 								{{if .IsLogged}}
 									<div class="right menu">
-										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
-											<span class="text">
-												<i class="octicon octicon-plus"><span class="sr-only">{{.i18n.Tr "create_new"}}</span></i>
-												<i class="octicon octicon-triangle-down"></i>
-											</span>
-											<div class="menu">
-												<a class="item" href="{{AppSubURL}}/repo/create">
-													<i class="octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
-												</a>
-												<a class="item" href="{{AppSubURL}}/repo/migrate">
-													<i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
-												</a>
-												{{if .LoggedUser.CanCreateOrganization}}
-												<a class="item" href="{{AppSubURL}}/org/create">
-													<i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
-												</a>
-												{{end}}
-											</div><!-- end content create new menu -->
-										</div><!-- end dropdown menu create new -->
-
+										{{if .IsCanCreate}}
+											<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
+												<span class="text">
+													<i class="octicon octicon-plus"><span class="sr-only">{{.i18n.Tr "create_new"}}</span></i>
+													<i class="octicon octicon-triangle-down"></i>
+												</span>
+												<div class="menu">
+													{{if .IsCanCreateRepo}}
+													<a class="item" href="{{AppSubURL}}/repo/create">
+														<i class="octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
+													</a>
+													<a class="item" href="{{AppSubURL}}/repo/migrate">
+														<i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
+													</a>
+													{{end}}
+													{{if .IsCanCreateOrg}}
+														<a class="item" href="{{AppSubURL}}/org/create">
+															<i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
+														</a>
+													{{end}}
+												</div><!-- end content create new menu -->
+											</div><!-- end dropdown menu create new -->
+										{{end}}
 										<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
 											<span class="text avatar">
 												<img class="ui small rounded image" src="{{.LoggedUser.AvatarURLPath}}">
@@ -173,7 +176,6 @@
 
 								{{else}}
 
-									<a class="item" target="_blank" rel="noopener noreferrer" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}</a>
 									<div class="right menu">
 										{{if .ShowRegistrationButton}}
 											<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubURL}}/user/sign_up">

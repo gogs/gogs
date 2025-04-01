@@ -1,6 +1,6 @@
 // Copyright 2015 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package database
 
@@ -136,7 +136,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
-			Email: doer.Email,
+			Email: doer.PublicEmail,
 			When:  time.Now(),
 		},
 		message,
@@ -183,7 +183,7 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
-			Email: doer.Email,
+			Email: doer.PublicEmail,
 			When:  time.Now(),
 		},
 		message,

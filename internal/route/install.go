@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package route
 
@@ -391,16 +391,11 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Create admin account
 	if len(f.AdminName) > 0 {
-		user, err := database.Handle.Users().Create(
-			c.Req.Context(),
-			f.AdminName,
-			f.AdminEmail,
-			database.CreateUserOptions{
-				Password:  f.AdminPasswd,
-				Activated: true,
-				Admin:     true,
-			},
-		)
+		user, err := database.Handle.Users().Create(c.Req.Context(), f.AdminName, f.AdminEmail, database.CreateUserOptions{
+			Password:  f.AdminPasswd,
+			Activated: true,
+			Admin:     true,
+		})
 		if err != nil {
 			if !database.IsErrUserAlreadyExist(err) {
 				conf.Security.InstallLock = false

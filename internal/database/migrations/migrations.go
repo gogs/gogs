@@ -52,17 +52,23 @@ var migrations = []Migration{
 	// v18 -> v19:v0.11.55
 	// NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
 
-	// v19 -> v20:v0.13.0
+	// v19 -> v20:v0.13.0（Gogs）
 	NewMigration("migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
-	// v20 -> v21:v0.13.0
+	// v20 -> v21:v0.13.0（Gogs）
 	NewMigration("add index to action.user_id", addIndexToActionUserID),
-	// v21 -> v22:v0.13.0
+	// v21 -> v22:v0.13.0（Gogs）
 	//
 	// NOTE: There was a bug in calculating the value of the `version.version`
 	// column after a migration is done, thus some instances are on v21 but some are
 	// on v22. Let's make a noop v22 to make sure every instance will not miss a
 	// real future migration.
 	NewMigration("noop", func(*gorm.DB) error { return nil }),
+	// v22 -> v23:v0.14.0（Gogs）
+	NewMigration("add user.public_email column", addUserPublicEmail),
+	// v23 -> v24:v0.14.0（Gogs）
+	NewMigration("add user.local_email column", addUserLocalEmail),
+	// v24 -> v25:v0.14.0（Gogs） v24:v1.0.0（Gogs）
+	NewMigration("insert user primary to database", insertUserPrimaryEmail),
 }
 
 var errMigrationSkipped = errors.New("the migration has been skipped")

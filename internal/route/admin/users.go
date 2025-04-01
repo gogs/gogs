@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE.gogs file.
 
 package admin
 
@@ -201,6 +201,10 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 
 	if u.Email != f.Email {
 		opts.Email = &f.Email
+	}
+
+	if u.PublicEmail != f.PublicEmail {
+		opts.PublicEmail = &f.PublicEmail
 	}
 
 	err := database.Handle.Users().Update(c.Req.Context(), u.ID, opts)
