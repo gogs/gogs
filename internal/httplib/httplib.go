@@ -95,13 +95,13 @@ type Settings struct {
 	UserAgent        string
 	ConnectTimeout   time.Duration
 	ReadWriteTimeout time.Duration
-	TlsClientConfig  *tls.Config
+	TLSClientConfig  *tls.Config
 	Proxy            func(*http.Request) (*url.URL, error)
 	Transport        http.RoundTripper
 	EnableCookie     bool
 }
 
-// HttpRequest provides more useful methods for requesting one url than http.Request.
+// Request provides more useful methods for requesting a URL than http.Request.
 type Request struct {
 	url     string
 	req     *http.Request
@@ -112,7 +112,7 @@ type Request struct {
 	body    []byte
 }
 
-// Change request settings
+// Setting changes the request settings
 func (r *Request) Setting(setting Settings) *Request {
 	r.setting = setting
 	return r
@@ -151,7 +151,7 @@ func (r *Request) SetTimeout(connectTimeout, readWriteTimeout time.Duration) *Re
 
 // SetTLSClientConfig sets tls connection configurations if visiting https url.
 func (r *Request) SetTLSClientConfig(config *tls.Config) *Request {
-	r.setting.TlsClientConfig = config
+	r.setting.TLSClientConfig = config
 	return r
 }
 
@@ -304,7 +304,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 	if trans == nil {
 		// create default transport
 		trans = &http.Transport{
-			TLSClientConfig: r.setting.TlsClientConfig,
+			TLSClientConfig: r.setting.TLSClientConfig,
 			Proxy:           r.setting.Proxy,
 			DialContext:     TimeoutDialer(r.setting.ConnectTimeout, r.setting.ReadWriteTimeout),
 		}
@@ -312,7 +312,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 		// if r.transport is *http.Transport then set the settings.
 		if t, ok := trans.(*http.Transport); ok {
 			if t.TLSClientConfig == nil {
-				t.TLSClientConfig = r.setting.TlsClientConfig
+				t.TLSClientConfig = r.setting.TLSClientConfig
 			}
 			if t.Proxy == nil {
 				t.Proxy = r.setting.Proxy

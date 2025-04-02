@@ -792,13 +792,13 @@ func (s *UsersStore) GetMailableEmailsByUsernames(ctx context.Context, usernames
 // IsUsernameUsed returns true if the given username has been used other than
 // the excluded user (a non-positive ID effectively meaning check against all
 // users).
-func (s *UsersStore) IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool {
+func (s *UsersStore) IsUsernameUsed(ctx context.Context, username string, excludeUserID int64) bool {
 	if username == "" {
 		return false
 	}
 	return s.db.WithContext(ctx).
 		Select("id").
-		Where("lower_name = ? AND id != ?", strings.ToLower(username), excludeUserId).
+		Where("lower_name = ? AND id != ?", strings.ToLower(username), excludeUserID).
 		First(&User{}).
 		Error != gorm.ErrRecordNotFound
 }
@@ -1425,8 +1425,8 @@ func (u *User) IsFollowing(followID int64) bool {
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
-func (u *User) IsUserOrgOwner(orgId int64) bool {
-	return IsOrganizationOwner(orgId, u.ID)
+func (u *User) IsUserOrgOwner(orgID int64) bool {
+	return IsOrganizationOwner(orgID, u.ID)
 }
 
 // IsPublicMember returns true if the user has public membership of the given
@@ -1434,8 +1434,8 @@ func (u *User) IsUserOrgOwner(orgId int64) bool {
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
-func (u *User) IsPublicMember(orgId int64) bool {
-	return IsPublicMembership(orgId, u.ID)
+func (u *User) IsPublicMember(orgID int64) bool {
+	return IsPublicMembership(orgID, u.ID)
 }
 
 // GetOrganizationCount returns the count of organization membership that the

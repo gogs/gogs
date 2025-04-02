@@ -146,7 +146,7 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 		}
 
 		if err = client.Hello(hostname); err != nil {
-			return fmt.Errorf("Hello: %v", err)
+			return fmt.Errorf("hello: %v", err)
 		}
 	}
 
@@ -173,28 +173,28 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 		if auth != nil {
 			if err = client.Auth(auth); err != nil {
-				return fmt.Errorf("Auth: %v", err)
+				return fmt.Errorf("auth: %v", err)
 			}
 		}
 	}
 
 	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("Mail: %v", err)
+		return fmt.Errorf("mail: %v", err)
 	}
 
 	for _, rec := range to {
 		if err = client.Rcpt(rec); err != nil {
-			return fmt.Errorf("Rcpt: %v", err)
+			return fmt.Errorf("rcpt: %v", err)
 		}
 	}
 
 	w, err := client.Data()
 	if err != nil {
-		return fmt.Errorf("Data: %v", err)
+		return fmt.Errorf("data: %v", err)
 	} else if _, err = msg.WriteTo(w); err != nil {
-		return fmt.Errorf("WriteTo: %v", err)
+		return fmt.Errorf("write to: %v", err)
 	} else if err = w.Close(); err != nil {
-		return fmt.Errorf("Close: %v", err)
+		return fmt.Errorf("close: %v", err)
 	}
 
 	return client.Quit()
