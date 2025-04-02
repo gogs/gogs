@@ -30,7 +30,7 @@ func Home(c *context.Context) {
 	if c.IsLogged {
 		if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
-			c.Success(user.ACTIVATE)
+			c.Success(user.TmplUserAuthActivate)
 		} else {
 			user.Dashboard(c)
 		}

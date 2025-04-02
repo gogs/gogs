@@ -22,13 +22,8 @@ const (
 )
 
 func Profile(c *context.Context, puser *context.ParamsUser) {
-	isShowKeys := false
-	if strings.HasSuffix(c.Params(":username"), ".keys") {
-		isShowKeys = true
-	}
-
 	// Show SSH keys.
-	if isShowKeys {
+	if strings.HasSuffix(c.Params(":username"), ".keys") {
 		ShowSSHKeys(c, puser.ID)
 		return
 	}

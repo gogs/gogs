@@ -235,11 +235,7 @@ func TimeSincePro(then time.Time) string {
 	}
 
 	var timeStr, diffStr string
-	for {
-		if diff == 0 {
-			break
-		}
-
+	for diff != 0 {
 		diff, diffStr = computeTimeDiff(diff)
 		timeStr += ", " + diffStr
 	}
