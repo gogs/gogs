@@ -1108,9 +1108,9 @@ func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 }
 
 // PairsContains returns true when pairs list contains given issue.
-func PairsContains(ius []*IssueUser, issueId, uid int64) int {
+func PairsContains(ius []*IssueUser, issueID, uid int64) int {
 	for i := range ius {
-		if ius[i].IssueID == issueId &&
+		if ius[i].IssueID == issueID &&
 			ius[i].UserID == uid {
 			return i
 		}

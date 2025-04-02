@@ -13,8 +13,9 @@ linters:
         - printf
     staticcheck:
       checks:
-        - -SA1019 # There are valid use cases of strings.Title
         - all
+        - "-SA1019" # This project is under active refactoring and not all code is up to date.
+        - "-QF1001" # I'm a math noob
     nakedret:
       max-func-lines: 0 # Disallow any unnamed return statement
   exclusions:

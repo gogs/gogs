@@ -166,21 +166,21 @@ func (c *Comment) EventTag() string {
 
 // mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
-	mentions := markup.FindAllMentions(cmt.Content)
-	if err = updateIssueMentions(e, cmt.IssueID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
+func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
+	mentions := markup.FindAllMentions(c.Content)
+	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
+		return fmt.Errorf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
 	switch opType {
 	case ActionCommentIssue:
-		issue.Content = cmt.Content
+		issue.Content = c.Content
 	case ActionCloseIssue:
 		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(issue, c.Poster, mentions); err != nil {
 		log.Error("mailIssueCommentToParticipants: %v", err)
 	}
 

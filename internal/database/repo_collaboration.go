@@ -47,14 +47,14 @@ func IsCollaborator(repoID, userID int64) bool {
 	return has
 }
 
-func (repo *Repository) IsCollaborator(userID int64) bool {
-	return IsCollaborator(repo.ID, userID)
+func (r *Repository) IsCollaborator(userID int64) bool {
+	return IsCollaborator(r.ID, userID)
 }
 
 // AddCollaborator adds new collaboration to a repository with default access mode.
-func (repo *Repository) AddCollaborator(u *User) error {
+func (r *Repository) AddCollaborator(u *User) error {
 	collaboration := &Collaboration{
-		RepoID: repo.ID,
+		RepoID: r.ID,
 		UserID: u.ID,
 	}
 
@@ -74,16 +74,16 @@ func (repo *Repository) AddCollaborator(u *User) error {
 
 	if _, err = sess.Insert(collaboration); err != nil {
 		return err
-	} else if err = repo.recalculateAccesses(sess); err != nil {
-		return fmt.Errorf("recalculateAccesses [repo_id: %v]: %v", repo.ID, err)
+	} else if err = r.recalculateAccesses(sess); err != nil {
+		return fmt.Errorf("recalculateAccesses [repo_id: %v]: %v", r.ID, err)
 	}
 
 	return sess.Commit()
 }
 
-func (repo *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
+func (r *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
 	collaborations := make([]*Collaboration, 0)
-	return collaborations, e.Find(&collaborations, &Collaboration{RepoID: repo.ID})
+	return collaborations, e.Find(&collaborations, &Collaboration{RepoID: r.ID})
 }
 
 // Collaborator represents a user with collaboration details.
@@ -103,8 +103,8 @@ func (c *Collaborator) APIFormat() *api.Collaborator {
 	}
 }
 
-func (repo *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
-	collaborations, err := repo.getCollaborations(e)
+func (r *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
+	collaborations, err := r.getCollaborations(e)
 	if err != nil {
 		return nil, fmt.Errorf("getCollaborations: %v", err)
 	}
@@ -124,19 +124,19 @@ func (repo *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
 }
 
 // GetCollaborators returns the collaborators for a repository
-func (repo *Repository) GetCollaborators() ([]*Collaborator, error) {
-	return repo.getCollaborators(x)
+func (r *Repository) GetCollaborators() ([]*Collaborator, error) {
+	return r.getCollaborators(x)
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
-func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
+func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
 	// Discard invalid input
 	if mode <= AccessModeNone || mode > AccessModeOwner {
 		return nil
 	}
 
 	collaboration := &Collaboration{
-		RepoID: repo.ID,
+		RepoID: r.ID,
 		UserID: userID,
 	}
 	has, err := x.Get(collaboration)
@@ -152,10 +152,10 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 	collaboration.Mode = mode
 
 	// If it's an organizational repository, merge with team access level for highest permission
-	if repo.Owner.IsOrganization() {
-		teams, err := GetUserTeams(repo.OwnerID, userID)
+	if r.Owner.IsOrganization() {
+		teams, err := GetUserTeams(r.OwnerID, userID)
 		if err != nil {
-			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", repo.OwnerID, userID, err)
+			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", r.OwnerID, userID, err)
 		}
 		for i := range teams {
 			if mode < teams[i].Authorize {
@@ -176,14 +176,14 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 
 	access := &Access{
 		UserID: userID,
-		RepoID: repo.ID,
+		RepoID: r.ID,
 	}
 	has, err = sess.Get(access)
 	if err != nil {
 		return fmt.Errorf("get access record: %v", err)
 	}
 	if has {
-		_, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, repo.ID)
+		_, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, r.ID)
 	} else {
 		access.Mode = mode
 		_, err = sess.Insert(access)
@@ -221,6 +221,6 @@ func DeleteCollaboration(repo *Repository, userID int64) (err error) {
 	return sess.Commit()
 }
 
-func (repo *Repository) DeleteCollaboration(userID int64) error {
-	return DeleteCollaboration(repo, userID)
+func (r *Repository) DeleteCollaboration(userID int64) error {
+	return DeleteCollaboration(r, userID)
 }

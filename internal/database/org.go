@@ -261,14 +261,14 @@ func IsOrganizationOwner(orgID, userID int64) bool {
 }
 
 // IsOrganizationMember returns true if given user is member of organization.
-func IsOrganizationMember(orgId, uid int64) bool {
-	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).Get(new(OrgUser))
+func IsOrganizationMember(orgID, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgID).Get(new(OrgUser))
 	return has
 }
 
 // IsPublicMembership returns true if given user public his/her membership.
-func IsPublicMembership(orgId, uid int64) bool {
-	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
+func IsPublicMembership(orgID, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgID).And("is_public=?", true).Get(new(OrgUser))
 	return has
 }
 
