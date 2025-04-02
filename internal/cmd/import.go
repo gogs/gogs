@@ -78,12 +78,12 @@ func runImportLocale(c *cli.Context) error {
 		// this breaks INI parser, we need to fix that.
 		sr, err := os.Open(source)
 		if err != nil {
-			return fmt.Errorf("Open: %v", err)
+			return fmt.Errorf("open: %v", err)
 		}
 
 		tw, err := os.Create(target)
 		if err != nil {
-			return fmt.Errorf("Create: %v", err)
+			return fmt.Errorf("create: %v", err)
 		}
 
 		scanner := bufio.NewScanner(sr)

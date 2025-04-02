@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/xml"
 	"io"
 	"log"
 	"mime/multipart"
@@ -22,8 +21,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 var (
@@ -410,26 +407,6 @@ func (r *Request) ToFile(filename string) error {
 	defer resp.Body.Close()
 	_, err = io.Copy(f, resp.Body)
 	return err
-}
-
-// ToJson returns the map that marshals from the body bytes as json in response .
-// it calls Response inner.
-func (r *Request) ToJson(v any) error {
-	data, err := r.Bytes()
-	if err != nil {
-		return err
-	}
-	return jsoniter.Unmarshal(data, v)
-}
-
-// ToXml returns the map that marshals from the body bytes as xml in response .
-// it calls Response inner.
-func (r *Request) ToXml(v any) error {
-	data, err := r.Bytes()
-	if err != nil {
-		return err
-	}
-	return xml.Unmarshal(data, v)
 }
 
 // Response executes request client gets response manually.

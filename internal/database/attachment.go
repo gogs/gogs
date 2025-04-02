@@ -72,9 +72,9 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 	defer fw.Close()
 
 	if _, err = fw.Write(buf); err != nil {
-		return nil, fmt.Errorf("Write: %v", err)
+		return nil, fmt.Errorf("write: %v", err)
 	} else if _, err = io.Copy(fw, file); err != nil {
-		return nil, fmt.Errorf("Copy: %v", err)
+		return nil, fmt.Errorf("copy: %v", err)
 	}
 
 	if _, err := x.Insert(attach); err != nil {

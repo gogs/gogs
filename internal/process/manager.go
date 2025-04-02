@@ -17,7 +17,7 @@ import (
 
 var ErrExecTimeout = errors.New("process execution timeout")
 
-const DEFAULT_TIMEOUT = 60 * time.Second
+const defaultTimeout = 60 * time.Second
 
 // Process represents a running process calls shell command.
 type Process struct {
@@ -77,7 +77,7 @@ func Remove(pid int64) bool {
 // Exec starts executing a shell command in given path, it tracks corresponding process and timeout.
 func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
-		timeout = DEFAULT_TIMEOUT
+		timeout = defaultTimeout
 	}
 
 	bufOut := new(bytes.Buffer)

@@ -354,7 +354,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	if issue.IsPull {
@@ -485,7 +485,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	if issue.IsPull {
@@ -770,11 +770,11 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		LableIDs:    labelIDs,
 		Attachments: uuids,
 	}); err != nil {
-		return fmt.Errorf("newIssue: %v", err)
+		return fmt.Errorf("new issue: %v", err)
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	if err = NotifyWatchers(&Action{

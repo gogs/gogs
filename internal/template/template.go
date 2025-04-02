@@ -164,11 +164,11 @@ func ToUTF8WithErr(content []byte) (error, string) {
 
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
-		return fmt.Errorf("Unknown encoding: %s", charsetLabel), string(content)
+		return fmt.Errorf("unknown encoding: %s", charsetLabel), string(content)
 	}
 
 	// If there is an error, we concatenate the nicely decoded part and the
-	// original left over. This way we won't loose data.
+	// original left over. This way we won't lose data.
 	result, n, err := transform.String(encoding.NewDecoder(), string(content))
 	if err != nil {
 		result = result + string(content[n:])

@@ -402,12 +402,12 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 // parseUserFromCode returns user by username encoded in code.
 // It returns nil if code or username is invalid.
 func parseUserFromCode(code string) (user *database.User) {
-	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
+	if len(code) <= tool.TimeLimitCodeLength {
 		return nil
 	}
 
 	// Use tail hex username to query user
-	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
+	hexStr := code[tool.TimeLimitCodeLength:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = database.Handle.Users().GetByUsername(gocontext.TODO(), string(b)); user != nil {
 			return user
@@ -425,7 +425,7 @@ func verifyUserActiveCode(code string) (user *database.User) {
 
 	if user = parseUserFromCode(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
+		prefix := code[:tool.TimeLimitCodeLength]
 		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
@@ -441,7 +441,7 @@ func verifyActiveEmailCode(code, email string) *database.EmailAddress {
 
 	if user := parseUserFromCode(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
+		prefix := code[:tool.TimeLimitCodeLength]
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
