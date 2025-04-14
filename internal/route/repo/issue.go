@@ -121,16 +121,16 @@ func issues(c *context.Context, isPullList bool) {
 		assigneeID = c.QueryInt64("assignee")
 		posterID   int64
 	)
-	filterMode := database.FILTER_MODE_YOUR_REPOS
+	filterMode := database.FilterModeYourRepos
 	switch viewType {
 	case "assigned":
-		filterMode = database.FILTER_MODE_ASSIGN
+		filterMode = database.FilterModeAssign
 		assigneeID = c.User.ID
 	case "created_by":
-		filterMode = database.FILTER_MODE_CREATE
+		filterMode = database.FilterModeCreate
 		posterID = c.User.ID
 	case "mentioned":
-		filterMode = database.FILTER_MODE_MENTION
+		filterMode = database.FilterModeMention
 	}
 
 	var uid int64 = -1
@@ -174,7 +174,7 @@ func issues(c *context.Context, isPullList bool) {
 		MilestoneID: milestoneID,
 		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
-		IsMention:   filterMode == database.FILTER_MODE_MENTION,
+		IsMention:   filterMode == database.FilterModeMention,
 		IsPull:      isPullList,
 		Labels:      selectLabels,
 		SortType:    sortType,
@@ -597,7 +597,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	// Render comments and fetch participants.
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
-		if comment.Type == database.COMMENT_TYPE_COMMENT {
+		if comment.Type == database.CommentTypeComment {
 			comment.RenderedContent = string(markup.Markdown(comment.Content, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
@@ -609,7 +609,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 			if repo.IsOwnedBy(comment.PosterID) ||
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
-				comment.ShowTag = database.COMMENT_TAG_OWNER
+				comment.ShowTag = database.CommentTagOwner
 			} else if database.Handle.Permissions().Authorize(
 				c.Req.Context(),
 				comment.PosterID,
@@ -620,9 +620,9 @@ func viewIssue(c *context.Context, isPullList bool) {
 					Private: repo.IsPrivate,
 				},
 			) {
-				comment.ShowTag = database.COMMENT_TAG_WRITER
+				comment.ShowTag = database.CommentTagWriter
 			} else if comment.PosterID == issue.PosterID {
-				comment.ShowTag = database.COMMENT_TAG_POSTER
+				comment.ShowTag = database.CommentTagPoster
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
@@ -933,7 +933,7 @@ func UpdateCommentContent(c *context.Context) {
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
-	} else if comment.Type != database.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != database.CommentTypeComment {
 		c.Status(http.StatusNoContent)
 		return
 	}
@@ -966,7 +966,7 @@ func DeleteComment(c *context.Context) {
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
-	} else if comment.Type != database.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != database.CommentTypeComment {
 		c.Status(http.StatusNoContent)
 		return
 	}

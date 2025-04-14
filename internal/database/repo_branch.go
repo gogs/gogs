@@ -147,12 +147,12 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 
 	if protectBranch.ID == 0 {
 		if _, err = sess.Insert(protectBranch); err != nil {
-			return fmt.Errorf("Insert: %v", err)
+			return fmt.Errorf("insert: %v", err)
 		}
 	}
 
 	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
-		return fmt.Errorf("Update: %v", err)
+		return fmt.Errorf("update: %v", err)
 	}
 
 	return sess.Commit()
@@ -213,7 +213,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	// Make sure protectBranch.ID is not 0 for whitelists
 	if protectBranch.ID == 0 {
 		if _, err = x.Insert(protectBranch); err != nil {
-			return fmt.Errorf("Insert: %v", err)
+			return fmt.Errorf("insert: %v", err)
 		}
 	}
 

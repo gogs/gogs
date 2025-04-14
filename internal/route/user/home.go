@@ -203,19 +203,19 @@ func Issues(c *context.Context) {
 
 	var (
 		sortType   = c.Query("sort")
-		filterMode = database.FILTER_MODE_YOUR_REPOS
+		filterMode = database.FilterModeYourRepos
 	)
 
 	// Note: Organization does not have view type and filter mode.
 	if !ctxUser.IsOrganization() {
 		viewType := c.Query("type")
 		types := []string{
-			string(database.FILTER_MODE_YOUR_REPOS),
-			string(database.FILTER_MODE_ASSIGN),
-			string(database.FILTER_MODE_CREATE),
+			string(database.FilterModeYourRepos),
+			string(database.FilterModeAssign),
+			string(database.FilterModeCreate),
 		}
 		if !com.IsSliceContainsStr(types, viewType) {
-			viewType = string(database.FILTER_MODE_YOUR_REPOS)
+			viewType = string(database.FilterModeYourRepos)
 		}
 		filterMode = database.FilterMode(viewType)
 	}
@@ -260,7 +260,7 @@ func Issues(c *context.Context) {
 	for _, repo := range repos {
 		userRepoIDs = append(userRepoIDs, repo.ID)
 
-		if filterMode != database.FILTER_MODE_YOUR_REPOS {
+		if filterMode != database.FilterModeYourRepos {
 			continue
 		}
 
@@ -297,7 +297,7 @@ func Issues(c *context.Context) {
 		SortType: sortType,
 	}
 	switch filterMode {
-	case database.FILTER_MODE_YOUR_REPOS:
+	case database.FilterModeYourRepos:
 		// Get all issues from repositories from this user.
 		if userRepoIDs == nil {
 			issueOptions.RepoIDs = []int64{-1}
@@ -305,11 +305,11 @@ func Issues(c *context.Context) {
 			issueOptions.RepoIDs = userRepoIDs
 		}
 
-	case database.FILTER_MODE_ASSIGN:
+	case database.FilterModeAssign:
 		// Get all issues assigned to this user.
 		issueOptions.AssigneeID = ctxUser.ID
 
-	case database.FILTER_MODE_CREATE:
+	case database.FilterModeCreate:
 		// Get all issues created by this user.
 		issueOptions.PosterID = ctxUser.ID
 	}

@@ -1146,9 +1146,9 @@ func GetIssueUserPairsByMode(userID, repoID int64, filterMode FilterMode, isClos
 	}
 
 	switch filterMode {
-	case FILTER_MODE_ASSIGN:
+	case FilterModeAssign:
 		sess.And("is_assigned=?", true)
-	case FILTER_MODE_CREATE:
+	case FilterModeCreate:
 		sess.And("is_poster=?", true)
 	default:
 		return ius, nil
@@ -1212,10 +1212,10 @@ type IssueStats struct {
 type FilterMode string
 
 const (
-	FILTER_MODE_YOUR_REPOS FilterMode = "your_repositories"
-	FILTER_MODE_ASSIGN     FilterMode = "assigned"
-	FILTER_MODE_CREATE     FilterMode = "created_by"
-	FILTER_MODE_MENTION    FilterMode = "mentioned"
+	FilterModeYourRepos FilterMode = "your_repositories"
+	FilterModeAssign    FilterMode = "assigned"
+	FilterModeCreate    FilterMode = "created_by"
+	FilterModeMention   FilterMode = "mentioned"
 )
 
 func parseCountResult(results []map[string][]byte) int64 {
@@ -1264,7 +1264,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	}
 
 	switch opts.FilterMode {
-	case FILTER_MODE_YOUR_REPOS, FILTER_MODE_ASSIGN:
+	case FilterModeYourRepos, FilterModeAssign:
 		stats.OpenCount, _ = countSession(opts).
 			And("is_closed = ?", false).
 			Count(new(Issue))
@@ -1272,7 +1272,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 		stats.ClosedCount, _ = countSession(opts).
 			And("is_closed = ?", true).
 			Count(new(Issue))
-	case FILTER_MODE_CREATE:
+	case FilterModeCreate:
 		stats.OpenCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", false).
@@ -1282,7 +1282,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", true).
 			Count(new(Issue))
-	case FILTER_MODE_MENTION:
+	case FilterModeMention:
 		stats.OpenCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
 			And("issue_user.uid = ?", opts.UserID).
@@ -1330,7 +1330,7 @@ func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterM
 	}
 
 	switch filterMode {
-	case FILTER_MODE_YOUR_REPOS:
+	case FilterModeYourRepos:
 		if !hasAnyRepo {
 			break
 		}
@@ -1339,14 +1339,14 @@ func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterM
 			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, repoIDs).
 			Count(new(Issue))
-	case FILTER_MODE_ASSIGN:
+	case FilterModeAssign:
 		stats.OpenCount, _ = countSession(false, isPull, repoID, nil).
 			And("assignee_id = ?", userID).
 			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, nil).
 			And("assignee_id = ?", userID).
 			Count(new(Issue))
-	case FILTER_MODE_CREATE:
+	case FilterModeCreate:
 		stats.OpenCount, _ = countSession(false, isPull, repoID, nil).
 			And("poster_id = ?", userID).
 			Count(new(Issue))
@@ -1372,10 +1372,10 @@ func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool)
 	closedCountSession := countSession(true, isPull, repoID)
 
 	switch filterMode {
-	case FILTER_MODE_ASSIGN:
+	case FilterModeAssign:
 		openCountSession.And("assignee_id = ?", userID)
 		closedCountSession.And("assignee_id = ?", userID)
-	case FILTER_MODE_CREATE:
+	case FilterModeCreate:
 		openCountSession.And("poster_id = ?", userID)
 		closedCountSession.And("poster_id = ?", userID)
 	}

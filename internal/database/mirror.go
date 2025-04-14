@@ -290,11 +290,11 @@ func DeleteMirrorByRepoID(repoID int64) error {
 
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate() {
-	if taskStatusTable.IsRunning(_MIRROR_UPDATE) {
+	if taskStatusTable.IsRunning(taskNameMirrorUpdate) {
 		return
 	}
-	taskStatusTable.Start(_MIRROR_UPDATE)
-	defer taskStatusTable.Stop(_MIRROR_UPDATE)
+	taskStatusTable.Start(taskNameMirrorUpdate)
+	defer taskStatusTable.Stop(taskNameMirrorUpdate)
 
 	log.Trace("Doing: MirrorUpdate")
 

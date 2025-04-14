@@ -32,14 +32,14 @@ import (
 )
 
 const (
-	ENV_AUTH_USER_ID           = "GOGS_AUTH_USER_ID"
-	ENV_AUTH_USER_NAME         = "GOGS_AUTH_USER_NAME"
-	ENV_AUTH_USER_EMAIL        = "GOGS_AUTH_USER_EMAIL"
-	ENV_REPO_OWNER_NAME        = "GOGS_REPO_OWNER_NAME"
-	ENV_REPO_OWNER_SALT_MD5    = "GOGS_REPO_OWNER_SALT_MD5"
-	ENV_REPO_ID                = "GOGS_REPO_ID"
-	ENV_REPO_NAME              = "GOGS_REPO_NAME"
-	ENV_REPO_CUSTOM_HOOKS_PATH = "GOGS_REPO_CUSTOM_HOOKS_PATH"
+	EnvAuthUserID          = "GOGS_AUTH_USER_ID"
+	EnvAuthUserName        = "GOGS_AUTH_USER_NAME"
+	EnvAuthUserEmail       = "GOGS_AUTH_USER_EMAIL"
+	EnvRepoOwnerName       = "GOGS_REPO_OWNER_NAME"
+	EnvRepoOwnerSaltMd5    = "GOGS_REPO_OWNER_SALT_MD5"
+	EnvRepoID              = "GOGS_REPO_ID"
+	EnvRepoName            = "GOGS_REPO_NAME"
+	EnvRepoCustomHooksPath = "GOGS_REPO_CUSTOM_HOOKS_PATH"
 )
 
 type ComposeHookEnvsOptions struct {
@@ -54,14 +54,14 @@ type ComposeHookEnvsOptions struct {
 func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 	envs := []string{
 		"SSH_ORIGINAL_COMMAND=1",
-		ENV_AUTH_USER_ID + "=" + com.ToStr(opts.AuthUser.ID),
-		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
-		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
-		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
-		ENV_REPO_OWNER_SALT_MD5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
-		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
-		ENV_REPO_NAME + "=" + opts.RepoName,
-		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
+		EnvAuthUserID + "=" + com.ToStr(opts.AuthUser.ID),
+		EnvAuthUserName + "=" + opts.AuthUser.Name,
+		EnvAuthUserEmail + "=" + opts.AuthUser.Email,
+		EnvRepoOwnerName + "=" + opts.OwnerName,
+		EnvRepoOwnerSaltMd5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
+		EnvRepoID + "=" + com.ToStr(opts.RepoID),
+		EnvRepoName + "=" + opts.RepoName,
+		EnvRepoCustomHooksPath + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
 	}
 	return envs
 }

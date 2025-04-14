@@ -41,7 +41,7 @@ func (org *User) GetTeam(name string) (*Team, error) {
 }
 
 func (org *User) getOwnerTeam(e Engine) (*Team, error) {
-	return org.getTeam(e, OWNER_TEAM)
+	return org.getTeam(e, ownerTeamName)
 }
 
 // GetOwnerTeam returns owner team of organization.
@@ -150,8 +150,8 @@ func CreateOrganization(org, owner *User) (err error) {
 	// Create default owner team.
 	t := &Team{
 		OrgID:      org.ID,
-		LowerName:  strings.ToLower(OWNER_TEAM),
-		Name:       OWNER_TEAM,
+		LowerName:  strings.ToLower(ownerTeamName),
+		Name:       ownerTeamName,
 		Authorize:  AccessModeOwner,
 		NumMembers: 1,
 	}

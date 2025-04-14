@@ -291,7 +291,7 @@ func getSlackReleasePayload(p *api.ReleasePayload) *SlackPayload {
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("Unmarshal: %v", err)
+		return nil, fmt.Errorf("unmarshal: %v", err)
 	}
 
 	switch event {

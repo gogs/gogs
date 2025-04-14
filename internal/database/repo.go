@@ -44,8 +44,8 @@ import (
 	"gogs.io/gogs/internal/sync"
 )
 
-// REPO_AVATAR_URL_PREFIX is used to identify a URL is to access repository avatar.
-const REPO_AVATAR_URL_PREFIX = "repo-avatars"
+// RepoAvatarURLPrefix is used to identify a URL is to access repository avatar.
+const RepoAvatarURLPrefix = "repo-avatars"
 
 var repoWorkingPool = sync.NewExclusivePool()
 
@@ -310,7 +310,7 @@ func (r *Repository) RelAvatarLink() string {
 	if !com.IsExist(r.CustomAvatarPath()) {
 		return defaultImgURL
 	}
-	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, REPO_AVATAR_URL_PREFIX, r.ID)
+	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, RepoAvatarURLPrefix, r.ID)
 }
 
 // AvatarLink returns repository avatar absolute link.
@@ -1729,7 +1729,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	// Remove repository files.
@@ -1905,11 +1905,11 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 }
 
 func DeleteOldRepositoryArchives() {
-	if taskStatusTable.IsRunning(_CLEAN_OLD_ARCHIVES) {
+	if taskStatusTable.IsRunning(taskNameCleanOldArchives) {
 		return
 	}
-	taskStatusTable.Start(_CLEAN_OLD_ARCHIVES)
-	defer taskStatusTable.Stop(_CLEAN_OLD_ARCHIVES)
+	taskStatusTable.Start(taskNameCleanOldArchives)
+	defer taskStatusTable.Stop(taskNameCleanOldArchives)
 
 	log.Trace("Doing: DeleteOldRepositoryArchives")
 
@@ -1962,11 +1962,11 @@ func DeleteOldRepositoryArchives() {
 
 // DeleteRepositoryArchives deletes all repositories' archives.
 func DeleteRepositoryArchives() error {
-	if taskStatusTable.IsRunning(_CLEAN_OLD_ARCHIVES) {
+	if taskStatusTable.IsRunning(taskNameCleanOldArchives) {
 		return nil
 	}
-	taskStatusTable.Start(_CLEAN_OLD_ARCHIVES)
-	defer taskStatusTable.Stop(_CLEAN_OLD_ARCHIVES)
+	taskStatusTable.Start(taskNameCleanOldArchives)
+	defer taskStatusTable.Stop(taskNameCleanOldArchives)
 
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean any) error {
@@ -2057,19 +2057,19 @@ func SyncRepositoryHooks() error {
 var taskStatusTable = sync.NewStatusTable()
 
 const (
-	_MIRROR_UPDATE      = "mirror_update"
-	_GIT_FSCK           = "git_fsck"
-	_CHECK_REPO_STATS   = "check_repos_stats"
-	_CLEAN_OLD_ARCHIVES = "clean_old_archives"
+	taskNameMirrorUpdate     = "mirror_update"
+	taskNameGitFSCK          = "git_fsck"
+	taskNameCheckRepoStats   = "check_repos_stats"
+	taskNameCleanOldArchives = "clean_old_archives"
 )
 
 // GitFsck calls 'git fsck' to check repository health.
 func GitFsck() {
-	if taskStatusTable.IsRunning(_GIT_FSCK) {
+	if taskStatusTable.IsRunning(taskNameGitFSCK) {
 		return
 	}
-	taskStatusTable.Start(_GIT_FSCK)
-	defer taskStatusTable.Stop(_GIT_FSCK)
+	taskStatusTable.Start(taskNameGitFSCK)
+	defer taskStatusTable.Stop(taskNameGitFSCK)
 
 	log.Trace("Doing: GitFsck")
 
@@ -2137,11 +2137,11 @@ func repoStatsCheck(checker *repoChecker) {
 }
 
 func CheckRepoStats() {
-	if taskStatusTable.IsRunning(_CHECK_REPO_STATS) {
+	if taskStatusTable.IsRunning(taskNameCheckRepoStats) {
 		return
 	}
-	taskStatusTable.Start(_CHECK_REPO_STATS)
-	defer taskStatusTable.Stop(_CHECK_REPO_STATS)
+	taskStatusTable.Start(taskNameCheckRepoStats)
+	defer taskStatusTable.Stop(taskNameCheckRepoStats)
 
 	log.Trace("Doing: CheckRepoStats")
 
@@ -2573,7 +2573,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	if err = sess.Commit(); err != nil {
-		return nil, fmt.Errorf("Commit: %v", err)
+		return nil, fmt.Errorf("commit: %v", err)
 	}
 
 	// Remember visibility preference
