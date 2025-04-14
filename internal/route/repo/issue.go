@@ -1120,7 +1120,7 @@ func NewMilestone(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 	c.Success(MILESTONE_NEW)
 }
 
@@ -1129,7 +1129,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
 		c.Success(MILESTONE_NEW)
@@ -1165,7 +1165,7 @@ func EditMilestone(c *context.Context) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	m, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
@@ -1185,7 +1185,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
 		c.Success(MILESTONE_NEW)

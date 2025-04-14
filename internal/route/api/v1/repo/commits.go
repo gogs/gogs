@@ -104,9 +104,10 @@ func GetReferenceSHA(c *context.APIContext) {
 	}
 
 	var sha string
-	if refType == 1 {
+	switch refType {
+	case 1:
 		sha, err = gitRepo.BranchCommitID(ref)
-	} else if refType == 2 {
+	case 2:
 		sha, err = gitRepo.TagCommitID(ref)
 	}
 	if err != nil {

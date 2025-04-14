@@ -162,11 +162,12 @@ func getDingtalkIssuesPayload(p *api.IssuesPayload) *DingtalkPayload {
 	actionCard.Text += "# Issue Event " + strings.Title(string(p.Action))
 	actionCard.Text += "\n- Issue: **" + MarkdownLinkFormatter(issueURL, issueName) + "**"
 
-	if p.Action == api.HOOK_ISSUE_ASSIGNED {
+	switch p.Action {
+	case api.HOOK_ISSUE_ASSIGNED:
 		actionCard.Text += "\n- New Assignee: **" + p.Issue.Assignee.UserName + "**"
-	} else if p.Action == api.HOOK_ISSUE_MILESTONED {
+	case api.HOOK_ISSUE_MILESTONED:
 		actionCard.Text += "\n- New Milestone: **" + p.Issue.Milestone.Title + "**"
-	} else if p.Action == api.HOOK_ISSUE_LABEL_UPDATED {
+	case api.HOOK_ISSUE_LABEL_UPDATED:
 		if len(p.Issue.Labels) > 0 {
 			labels := make([]string, len(p.Issue.Labels))
 			for i, label := range p.Issue.Labels {
@@ -218,11 +219,12 @@ func getDingtalkPullRequestPayload(p *api.PullRequestPayload) *DingtalkPayload {
 	pullRequestURL := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
 
 	content := "- PR: " + MarkdownLinkFormatter(pullRequestURL, fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
-	if p.Action == api.HOOK_ISSUE_ASSIGNED {
+	switch p.Action {
+	case api.HOOK_ISSUE_ASSIGNED:
 		content += "\n- New Assignee: **" + p.PullRequest.Assignee.UserName + "**"
-	} else if p.Action == api.HOOK_ISSUE_MILESTONED {
+	case api.HOOK_ISSUE_MILESTONED:
 		content += "\n- New Milestone: *" + p.PullRequest.Milestone.Title + "*"
-	} else if p.Action == api.HOOK_ISSUE_LABEL_UPDATED {
+	case api.HOOK_ISSUE_LABEL_UPDATED:
 		labels := make([]string, len(p.PullRequest.Labels))
 		for i, label := range p.PullRequest.Labels {
 			labels[i] = "**" + label.Name + "**"

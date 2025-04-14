@@ -11,6 +11,7 @@ import (
 	"gopkg.in/macaron.v1"
 )
 
+//nolint:staticcheck // Reason: needed for legacy code
 type Install struct {
 	DbType   string `binding:"Required"`
 	DbHost   string

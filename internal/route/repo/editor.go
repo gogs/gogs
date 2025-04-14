@@ -82,7 +82,7 @@ func editFile(c *context.Context, isNewFile bool) {
 			return
 		}
 
-		if err, content := template.ToUTF8WithErr(p); err != nil {
+		if content, err := template.ToUTF8WithErr(p); err != nil {
 			if err != nil {
 				log.Error("Failed to convert encoding to UTF-8: %v", err)
 			}

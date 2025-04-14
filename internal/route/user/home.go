@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	DASHBOARD = "user/dashboard/dashboard"
-	NEWS_FEED = "user/dashboard/feeds"
-	ISSUES    = "user/dashboard/issues"
-	PROFILE   = "user/profile"
-	ORG_HOME  = "org/home"
+	tmplUserDashboard       = "user/dashboard/dashboard"
+	tmplUserDashboardFeeds  = "user/dashboard/feeds"
+	tmplUserDashboardIssues = "user/dashboard/issues"
+	tmplUserProfile         = "user/profile"
+	tmplOrgHome             = "org/home"
 )
 
 // getDashboardContextUser finds out dashboard is viewing as which context user.
@@ -115,7 +115,7 @@ func Dashboard(c *context.Context) {
 	}
 
 	if c.Req.Header.Get("X-AJAX") == "true" {
-		c.Success(NEWS_FEED)
+		c.Success(tmplUserDashboardFeeds)
 		return
 	}
 
@@ -183,7 +183,7 @@ func Dashboard(c *context.Context) {
 	c.Data["MirrorCount"] = len(mirrors)
 	c.Data["Mirrors"] = mirrors
 
-	c.Success(DASHBOARD)
+	c.Success(tmplUserDashboard)
 }
 
 func Issues(c *context.Context) {
@@ -370,7 +370,7 @@ func Issues(c *context.Context) {
 		c.Data["State"] = "open"
 	}
 
-	c.Success(ISSUES)
+	c.Success(tmplUserDashboardIssues)
 }
 
 func ShowSSHKeys(c *context.Context, uid int64) {
@@ -440,7 +440,7 @@ func showOrgProfile(c *context.Context) {
 
 	c.Data["Teams"] = org.Teams
 
-	c.Success(ORG_HOME)
+	c.Success(tmplOrgHome)
 }
 
 func Email2User(c *context.Context) {

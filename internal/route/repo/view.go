@@ -164,10 +164,8 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 		default:
 			// Building code view blocks with line number on server side.
 			var fileContent string
-			if err, content := template.ToUTF8WithErr(p); err != nil {
-				if err != nil {
-					log.Error("ToUTF8WithErr: %s", err)
-				}
+			if content, err := template.ToUTF8WithErr(p); err != nil {
+				log.Error("ToUTF8WithErr: %s", err)
 				fileContent = string(p)
 			} else {
 				fileContent = content

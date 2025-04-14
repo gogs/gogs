@@ -154,17 +154,17 @@ func Sha1(str string) string {
 	return cryptoutil.SHA1(str)
 }
 
-func ToUTF8WithErr(content []byte) (error, string) {
+func ToUTF8WithErr(content []byte) (string, error) {
 	charsetLabel, err := tool.DetectEncoding(content)
 	if err != nil {
-		return err, ""
+		return "", err
 	} else if charsetLabel == "UTF-8" {
-		return nil, string(content)
+		return string(content), nil
 	}
 
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
-		return fmt.Errorf("unknown encoding: %s", charsetLabel), string(content)
+		return string(content), fmt.Errorf("unknown encoding: %s", charsetLabel)
 	}
 
 	// If there is an error, we concatenate the nicely decoded part and the
@@ -174,7 +174,7 @@ func ToUTF8WithErr(content []byte) (error, string) {
 		result = result + string(content[n:])
 	}
 
-	return err, result
+	return result, err
 }
 
 // RenderCommitMessage renders commit message with special links.
