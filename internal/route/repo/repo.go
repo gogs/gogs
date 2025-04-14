@@ -162,7 +162,7 @@ func Migrate(c *context.Context) {
 func MigratePost(c *context.Context, f form.MigrateRepo) {
 	c.Data["Title"] = c.Tr("new_migrate")
 
-	ctxUser := checkContextUser(c, f.Uid)
+	ctxUser := checkContextUser(c, f.UID)
 	if c.Written() {
 		return
 	}

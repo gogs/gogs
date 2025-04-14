@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	TEAMS             = "org/team/teams"
-	TEAM_NEW          = "org/team/new"
-	TEAM_MEMBERS      = "org/team/members"
-	TEAM_REPOSITORIES = "org/team/repositories"
+	tmplOrgTeams            = "org/team/teams"
+	tmplOrgTeamNew          = "org/team/new"
+	tmplOrgTeamMembers      = "org/team/members"
+	tmplOrgTeamRepositories = "org/team/repositories"
 )
 
 func Teams(c *context.Context) {
@@ -36,7 +36,7 @@ func Teams(c *context.Context) {
 	}
 	c.Data["Teams"] = org.Teams
 
-	c.Success(TEAMS)
+	c.Success(tmplOrgTeams)
 }
 
 func TeamsAction(c *context.Context) {
@@ -146,7 +146,7 @@ func NewTeam(c *context.Context) {
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["PageIsOrgTeamsNew"] = true
 	c.Data["Team"] = &database.Team{}
-	c.Success(TEAM_NEW)
+	c.Success(tmplOrgTeamNew)
 }
 
 func NewTeamPost(c *context.Context, f form.CreateTeam) {
@@ -163,7 +163,7 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.Success(TEAM_NEW)
+		c.Success(tmplOrgTeamNew)
 		return
 	}
 
@@ -171,9 +171,9 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case database.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), tmplOrgTeamNew, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplOrgTeamNew, &f)
 		default:
 			c.Error(err, "new team")
 		}
@@ -190,7 +190,7 @@ func TeamMembers(c *context.Context) {
 		c.Error(err, "get members")
 		return
 	}
-	c.Success(TEAM_MEMBERS)
+	c.Success(tmplOrgTeamMembers)
 }
 
 func TeamRepositories(c *context.Context) {
@@ -200,7 +200,7 @@ func TeamRepositories(c *context.Context) {
 		c.Error(err, "get repositories")
 		return
 	}
-	c.Success(TEAM_REPOSITORIES)
+	c.Success(tmplOrgTeamRepositories)
 }
 
 func EditTeam(c *context.Context) {
@@ -208,7 +208,7 @@ func EditTeam(c *context.Context) {
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["team_name"] = c.Org.Team.Name
 	c.Data["desc"] = c.Org.Team.Description
-	c.Success(TEAM_NEW)
+	c.Success(tmplOrgTeamNew)
 }
 
 func EditTeamPost(c *context.Context, f form.CreateTeam) {
@@ -218,7 +218,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.Success(TEAM_NEW)
+		c.Success(tmplOrgTeamNew)
 		return
 	}
 
@@ -249,7 +249,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case database.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), tmplOrgTeamNew, &f)
 		default:
 			c.Error(err, "update team")
 		}

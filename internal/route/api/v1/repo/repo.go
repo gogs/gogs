@@ -208,8 +208,8 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	ctxUser := c.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
-	if f.Uid != ctxUser.ID {
-		org, err := database.Handle.Users().GetByID(c.Req.Context(), f.Uid)
+	if f.UID != ctxUser.ID {
+		org, err := database.Handle.Users().GetByID(c.Req.Context(), f.UID)
 		if err != nil {
 			if database.IsErrUserNotExist(err) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, err)

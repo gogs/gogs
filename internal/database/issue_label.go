@@ -65,17 +65,17 @@ type Label struct {
 	IsChecked       bool `xorm:"-" json:"-" gorm:"-"`
 }
 
-func (label *Label) APIFormat() *api.Label {
+func (l *Label) APIFormat() *api.Label {
 	return &api.Label{
-		ID:    label.ID,
-		Name:  label.Name,
-		Color: strings.TrimLeft(label.Color, "#"),
+		ID:    l.ID,
+		Name:  l.Name,
+		Color: strings.TrimLeft(l.Color, "#"),
 	}
 }
 
 // CalOpenIssues calculates the open issues of label.
-func (label *Label) CalOpenIssues() {
-	label.NumOpenIssues = label.NumIssues - label.NumClosedIssues
+func (l *Label) CalOpenIssues() {
+	l.NumOpenIssues = l.NumIssues - l.NumClosedIssues
 }
 
 // ForegroundColor calculates the text color for labels based

@@ -49,8 +49,8 @@ func AttachmentLocalPath(uuid string) string {
 }
 
 // LocalPath returns where attachment is stored in local file system.
-func (attach *Attachment) LocalPath() string {
-	return AttachmentLocalPath(attach.UUID)
+func (a *Attachment) LocalPath() string {
+	return AttachmentLocalPath(a.UUID)
 }
 
 // NewAttachment creates a new attachment object.
@@ -72,9 +72,9 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 	defer fw.Close()
 
 	if _, err = fw.Write(buf); err != nil {
-		return nil, fmt.Errorf("Write: %v", err)
+		return nil, fmt.Errorf("write: %v", err)
 	} else if _, err = io.Copy(fw, file); err != nil {
-		return nil, fmt.Errorf("Copy: %v", err)
+		return nil, fmt.Errorf("copy: %v", err)
 	}
 
 	if _, err := x.Insert(attach); err != nil {
@@ -183,8 +183,8 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 }
 
 // DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
-func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByIssueID(issueId)
+func DeleteAttachmentsByIssue(issueID int64, remove bool) (int, error) {
+	attachments, err := GetAttachmentsByIssueID(issueID)
 	if err != nil {
 		return 0, err
 	}
@@ -193,8 +193,8 @@ func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
 }
 
 // DeleteAttachmentsByComment deletes all attachments associated with the given comment.
-func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByCommentID(commentId)
+func DeleteAttachmentsByComment(commentID int64, remove bool) (int, error) {
+	attachments, err := GetAttachmentsByCommentID(commentID)
 	if err != nil {
 		return 0, err
 	}

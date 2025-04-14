@@ -89,7 +89,7 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	return false
 }
 
-const TIME_LIMIT_CODE_LENGTH = 12 + 6 + 40
+const TimeLimitCodeLength = 12 + 6 + 40
 
 // CreateTimeLimitCode generates a time limit code based on given input data.
 // Format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
@@ -235,11 +235,7 @@ func TimeSincePro(then time.Time) string {
 	}
 
 	var timeStr, diffStr string
-	for {
-		if diff == 0 {
-			break
-		}
-
+	for diff != 0 {
 		diff, diffStr = computeTimeDiff(diff)
 		timeStr += ", " + diffStr
 	}

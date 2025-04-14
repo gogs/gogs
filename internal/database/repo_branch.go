@@ -64,18 +64,18 @@ func (ErrBranchNotExist) NotFound() bool {
 	return true
 }
 
-func (repo *Repository) GetBranch(name string) (*Branch, error) {
-	if !git.RepoHasBranch(repo.RepoPath(), name) {
+func (r *Repository) GetBranch(name string) (*Branch, error) {
+	if !git.RepoHasBranch(r.RepoPath(), name) {
 		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return &Branch{
-		RepoPath: repo.RepoPath(),
+		RepoPath: r.RepoPath(),
 		Name:     name,
 	}, nil
 }
 
-func (repo *Repository) GetBranches() ([]*Branch, error) {
-	return GetBranchesByPath(repo.RepoPath())
+func (r *Repository) GetBranches() ([]*Branch, error) {
+	return GetBranchesByPath(r.RepoPath())
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {
@@ -147,12 +147,12 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 
 	if protectBranch.ID == 0 {
 		if _, err = sess.Insert(protectBranch); err != nil {
-			return fmt.Errorf("Insert: %v", err)
+			return fmt.Errorf("insert: %v", err)
 		}
 	}
 
 	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
-		return fmt.Errorf("Update: %v", err)
+		return fmt.Errorf("update: %v", err)
 	}
 
 	return sess.Commit()
@@ -213,7 +213,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	// Make sure protectBranch.ID is not 0 for whitelists
 	if protectBranch.ID == 0 {
 		if _, err = x.Insert(protectBranch); err != nil {
-			return fmt.Errorf("Insert: %v", err)
+			return fmt.Errorf("insert: %v", err)
 		}
 	}
 

@@ -150,7 +150,7 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 }
 
 func (r *Release) preparePublishWebhooks() {
-	if err := PrepareWebhooks(r.Repo, HOOK_EVENT_RELEASE, &api.ReleasePayload{
+	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &api.ReleasePayload{
 		Action:     api.HOOK_RELEASE_PUBLISHED,
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormatLegacy(nil),
@@ -181,7 +181,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	}
 
 	if _, err = sess.Insert(r); err != nil {
-		return fmt.Errorf("Insert: %v", err)
+		return fmt.Errorf("insert: %v", err)
 	}
 
 	if len(uuids) > 0 {
@@ -191,7 +191,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	// Only send webhook when actually published, skip drafts
@@ -236,7 +236,7 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 
 	r := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
 	if _, err = x.Get(r); err != nil {
-		return nil, fmt.Errorf("Get: %v", err)
+		return nil, fmt.Errorf("get: %v", err)
 	}
 
 	return r, r.LoadAttributes()
@@ -334,7 +334,7 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	if !isPublish {
@@ -370,7 +370,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 	}
 
 	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
-		return fmt.Errorf("Delete: %v", err)
+		return fmt.Errorf("delete: %v", err)
 	}
 
 	return nil

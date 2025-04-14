@@ -20,17 +20,17 @@ import (
 )
 
 const (
-	HOME                  = "home"
-	EXPLORE_REPOS         = "explore/repos"
-	EXPLORE_USERS         = "explore/users"
-	EXPLORE_ORGANIZATIONS = "explore/organizations"
+	tmplHome                 = "home"
+	tmplExploreRepos         = "explore/repos"
+	tmplExploreUsers         = "explore/users"
+	tmplExploreOrganizations = "explore/organizations"
 )
 
 func Home(c *context.Context) {
 	if c.IsLogged {
 		if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
-			c.Success(user.ACTIVATE)
+			c.Success(user.TmplUserAuthActivate)
 		} else {
 			user.Dashboard(c)
 		}
@@ -45,7 +45,7 @@ func Home(c *context.Context) {
 	}
 
 	c.Data["PageIsHome"] = true
-	c.Success(HOME)
+	c.Success(tmplHome)
 }
 
 func ExploreRepos(c *context.Context) {
@@ -80,7 +80,7 @@ func ExploreRepos(c *context.Context) {
 	}
 	c.Data["Repos"] = repos
 
-	c.Success(EXPLORE_REPOS)
+	c.Success(tmplExploreRepos)
 }
 
 type UserSearchOptions struct {
@@ -142,7 +142,7 @@ func ExploreUsers(c *context.Context) {
 		Ranger:   database.Handle.Users().List,
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
-		TplName:  EXPLORE_USERS,
+		TplName:  tmplExploreUsers,
 	})
 }
 
@@ -161,7 +161,7 @@ func ExploreOrganizations(c *context.Context) {
 		},
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
-		TplName:  EXPLORE_ORGANIZATIONS,
+		TplName:  tmplExploreOrganizations,
 	})
 }
 

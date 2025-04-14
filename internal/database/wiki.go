@@ -40,8 +40,8 @@ func ToWikiPageName(urlString string) string {
 // WikiCloneLink returns clone URLs of repository wiki.
 //
 // Deprecated: Use repoutil.NewCloneLink instead.
-func (repo *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
-	return repo.cloneLink(true)
+func (r *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
+	return r.cloneLink(true)
 }
 
 // WikiPath returns wiki data path by given user and repository name.
@@ -49,37 +49,37 @@ func WikiPath(userName, repoName string) string {
 	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
 }
 
-func (repo *Repository) WikiPath() string {
-	return WikiPath(repo.MustOwner().Name, repo.Name)
+func (r *Repository) WikiPath() string {
+	return WikiPath(r.MustOwner().Name, r.Name)
 }
 
 // HasWiki returns true if repository has wiki.
-func (repo *Repository) HasWiki() bool {
-	return com.IsDir(repo.WikiPath())
+func (r *Repository) HasWiki() bool {
+	return com.IsDir(r.WikiPath())
 }
 
 // InitWiki initializes a wiki for repository,
 // it does nothing when repository already has wiki.
-func (repo *Repository) InitWiki() error {
-	if repo.HasWiki() {
+func (r *Repository) InitWiki() error {
+	if r.HasWiki() {
 		return nil
 	}
 
-	if err := git.Init(repo.WikiPath(), git.InitOptions{Bare: true}); err != nil {
+	if err := git.Init(r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
 		return fmt.Errorf("init repository: %v", err)
-	} else if err = createDelegateHooks(repo.WikiPath()); err != nil {
+	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
 		return fmt.Errorf("createDelegateHooks: %v", err)
 	}
 	return nil
 }
 
-func (repo *Repository) LocalWikiPath() string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", com.ToStr(repo.ID))
+func (r *Repository) LocalWikiPath() string {
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", com.ToStr(r.ID))
 }
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
-func (repo *Repository) UpdateLocalWiki() error {
-	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), "master", true)
+func (r *Repository) UpdateLocalWiki() error {
+	return UpdateLocalCopyBranch(r.WikiPath(), r.LocalWikiPath(), "master", true)
 }
 
 func discardLocalWikiChanges(localPath string) error {
@@ -87,18 +87,18 @@ func discardLocalWikiChanges(localPath string) error {
 }
 
 // updateWikiPage adds new page to repository wiki.
-func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) (err error) {
-	wikiWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer wikiWorkingPool.CheckOut(com.ToStr(repo.ID))
+func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) (err error) {
+	wikiWorkingPool.CheckIn(com.ToStr(r.ID))
+	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	if err = repo.InitWiki(); err != nil {
+	if err = r.InitWiki(); err != nil {
 		return fmt.Errorf("InitWiki: %v", err)
 	}
 
-	localPath := repo.LocalWikiPath()
+	localPath := r.LocalWikiPath()
 	if err = discardLocalWikiChanges(localPath); err != nil {
 		return fmt.Errorf("discardLocalWikiChanges: %v", err)
-	} else if err = repo.UpdateLocalWiki(); err != nil {
+	} else if err = r.UpdateLocalWiki(); err != nil {
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 
@@ -150,22 +150,22 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	return nil
 }
 
-func (repo *Repository) AddWikiPage(doer *User, title, content, message string) error {
-	return repo.updateWikiPage(doer, "", title, content, message, true)
+func (r *Repository) AddWikiPage(doer *User, title, content, message string) error {
+	return r.updateWikiPage(doer, "", title, content, message, true)
 }
 
-func (repo *Repository) EditWikiPage(doer *User, oldTitle, title, content, message string) error {
-	return repo.updateWikiPage(doer, oldTitle, title, content, message, false)
+func (r *Repository) EditWikiPage(doer *User, oldTitle, title, content, message string) error {
+	return r.updateWikiPage(doer, oldTitle, title, content, message, false)
 }
 
-func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
-	wikiWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer wikiWorkingPool.CheckOut(com.ToStr(repo.ID))
+func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
+	wikiWorkingPool.CheckIn(com.ToStr(r.ID))
+	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	localPath := repo.LocalWikiPath()
+	localPath := r.LocalWikiPath()
 	if err = discardLocalWikiChanges(localPath); err != nil {
 		return fmt.Errorf("discardLocalWikiChanges: %v", err)
-	} else if err = repo.UpdateLocalWiki(); err != nil {
+	} else if err = r.UpdateLocalWiki(); err != nil {
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 

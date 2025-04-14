@@ -23,7 +23,7 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		metas := repo.ComposeMetas()
 		assert.Equal(t, metas["repoLink"], repo.Link())
 
-		// Should no format and style if no external tracker is configured
+		// Should not have format and style if no external tracker is configured
 		_, ok := metas["format"]
 		assert.False(t, ok)
 		_, ok = metas["style"]

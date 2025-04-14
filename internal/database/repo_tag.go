@@ -47,6 +47,6 @@ func GetTagsByPath(path string) ([]*Tag, error) {
 	return tags, nil
 }
 
-func (repo *Repository) GetTags() ([]*Tag, error) {
-	return GetTagsByPath(repo.RepoPath())
+func (r *Repository) GetTags() ([]*Tag, error) {
+	return GetTagsByPath(r.RepoPath())
 }

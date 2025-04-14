@@ -1,29 +1,42 @@
-linters-settings:
-  staticcheck:
-    checks: [
-      "all",
-      "-SA1019" # There are valid use cases of strings.Title
-    ]
-  nakedret:
-    max-func-lines: 0 # Disallow any unnamed return statement
-  govet:
-    disable:
-      # printf: non-constant format string in call to fmt.Errorf (govet)
-      # showing up since golangci-lint version 1.60.1
-      - printf
-
+version: "2"
 linters:
   enable:
-    - unused
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
     - nakedret
-    - gofmt
     - rowserrcheck
     - unconvert
-    - goimports
     - unparam
+  settings:
+    govet:
+      disable:
+        # printf: non-constant format string in call to fmt.Errorf (govet)
+        # showing up since golangci-lint version 1.60.1
+        - printf
+    staticcheck:
+      checks:
+        - all
+        - "-SA1019" # This project is under active refactoring and not all code is up to date.
+        - "-QF1001" # I'm a math noob
+        - "-ST1016" # Some legit code uses this pattern
+    nakedret:
+      max-func-lines: 0 # Disallow any unnamed return statement
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

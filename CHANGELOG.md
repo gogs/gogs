@@ -10,7 +10,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
-- The required Go version to compile source code changed to 1.23.4.
+- The required Go version to compile source code changed to 1.24.
 - The build tag `cert` has been removed, and the `gogs cert` subcommand is now always available. [#7883](https://github.com/gogs/gogs/pull/7883)
 
 ### Fixed

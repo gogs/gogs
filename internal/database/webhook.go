@@ -88,9 +88,9 @@ type HookEvent struct {
 type HookStatus int
 
 const (
-	HOOK_STATUS_NONE = iota
-	HOOK_STATUS_SUCCEED
-	HOOK_STATUS_FAILED
+	HookStatusNone = iota
+	HookStatusSucceed
+	HookStatusFailed
 )
 
 // Webhook represents a web hook object.
@@ -162,49 +162,49 @@ func (w *Webhook) UpdateEvent() error {
 // HasCreateEvent returns true if hook enabled create event.
 func (w *Webhook) HasCreateEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Create)
+		(w.ChooseEvents && w.Create)
 }
 
 // HasDeleteEvent returns true if hook enabled delete event.
 func (w *Webhook) HasDeleteEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Delete)
+		(w.ChooseEvents && w.Delete)
 }
 
 // HasForkEvent returns true if hook enabled fork event.
 func (w *Webhook) HasForkEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Fork)
+		(w.ChooseEvents && w.Fork)
 }
 
 // HasPushEvent returns true if hook enabled push event.
 func (w *Webhook) HasPushEvent() bool {
 	return w.PushOnly || w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Push)
+		(w.ChooseEvents && w.Push)
 }
 
 // HasIssuesEvent returns true if hook enabled issues event.
 func (w *Webhook) HasIssuesEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Issues)
+		(w.ChooseEvents && w.Issues)
 }
 
 // HasPullRequestEvent returns true if hook enabled pull request event.
 func (w *Webhook) HasPullRequestEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.PullRequest)
+		(w.ChooseEvents && w.PullRequest)
 }
 
 // HasIssueCommentEvent returns true if hook enabled issue comment event.
 func (w *Webhook) HasIssueCommentEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.IssueComment)
+		(w.ChooseEvents && w.IssueComment)
 }
 
 // HasReleaseEvent returns true if hook enabled release event.
 func (w *Webhook) HasReleaseEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Release)
+		(w.ChooseEvents && w.Release)
 }
 
 type eventChecker struct {
@@ -215,14 +215,14 @@ type eventChecker struct {
 func (w *Webhook) EventsArray() []string {
 	events := make([]string, 0, 8)
 	eventCheckers := []eventChecker{
-		{w.HasCreateEvent, HOOK_EVENT_CREATE},
-		{w.HasDeleteEvent, HOOK_EVENT_DELETE},
-		{w.HasForkEvent, HOOK_EVENT_FORK},
-		{w.HasPushEvent, HOOK_EVENT_PUSH},
-		{w.HasIssuesEvent, HOOK_EVENT_ISSUES},
-		{w.HasPullRequestEvent, HOOK_EVENT_PULL_REQUEST},
-		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
-		{w.HasReleaseEvent, HOOK_EVENT_RELEASE},
+		{w.HasCreateEvent, HookEventTypeCreate},
+		{w.HasDeleteEvent, HookEventTypeDelete},
+		{w.HasForkEvent, HookEventTypeFork},
+		{w.HasPushEvent, HookEventTypePush},
+		{w.HasIssuesEvent, HookEventTypeIssues},
+		{w.HasPullRequestEvent, HookEventTypePullRequest},
+		{w.HasIssueCommentEvent, HookEventTypeIssueComment},
+		{w.HasReleaseEvent, HookEventTypeRelease},
 	}
 	for _, c := range eventCheckers {
 		if c.checker() {
@@ -409,14 +409,14 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	HOOK_EVENT_CREATE        HookEventType = "create"
-	HOOK_EVENT_DELETE        HookEventType = "delete"
-	HOOK_EVENT_FORK          HookEventType = "fork"
-	HOOK_EVENT_PUSH          HookEventType = "push"
-	HOOK_EVENT_ISSUES        HookEventType = "issues"
-	HOOK_EVENT_PULL_REQUEST  HookEventType = "pull_request"
-	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
-	HOOK_EVENT_RELEASE       HookEventType = "release"
+	HookEventTypeCreate       HookEventType = "create"
+	HookEventTypeDelete       HookEventType = "delete"
+	HookEventTypeFork         HookEventType = "fork"
+	HookEventTypePush         HookEventType = "push"
+	HookEventTypeIssues       HookEventType = "issues"
+	HookEventTypePullRequest  HookEventType = "pull_request"
+	HookEventTypeIssueComment HookEventType = "issue_comment"
+	HookEventTypeRelease      HookEventType = "release"
 )
 
 // HookRequest represents hook task request information.
@@ -511,7 +511,7 @@ func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 // createHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
 func createHookTask(e Engine, t *HookTask) error {
-	data, err := t.Payloader.JSONPayload()
+	data, err := t.JSONPayload()
 	if err != nil {
 		return err
 	}
@@ -570,35 +570,35 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 	var payloader api.Payloader
 	for _, w := range webhooks {
 		switch event {
-		case HOOK_EVENT_CREATE:
+		case HookEventTypeCreate:
 			if !w.HasCreateEvent() {
 				continue
 			}
-		case HOOK_EVENT_DELETE:
+		case HookEventTypeDelete:
 			if !w.HasDeleteEvent() {
 				continue
 			}
-		case HOOK_EVENT_FORK:
+		case HookEventTypeFork:
 			if !w.HasForkEvent() {
 				continue
 			}
-		case HOOK_EVENT_PUSH:
+		case HookEventTypePush:
 			if !w.HasPushEvent() {
 				continue
 			}
-		case HOOK_EVENT_ISSUES:
+		case HookEventTypeIssues:
 			if !w.HasIssuesEvent() {
 				continue
 			}
-		case HOOK_EVENT_PULL_REQUEST:
+		case HookEventTypePullRequest:
 			if !w.HasPullRequestEvent() {
 				continue
 			}
-		case HOOK_EVENT_ISSUE_COMMENT:
+		case HookEventTypeIssueComment:
 			if !w.HasIssueCommentEvent() {
 				continue
 			}
-		case HOOK_EVENT_RELEASE:
+		case HookEventTypeRelease:
 			if !w.HasReleaseEvent() {
 				continue
 			}
@@ -751,9 +751,9 @@ func (t *HookTask) deliver() {
 			return
 		}
 		if t.IsSucceed {
-			w.LastStatus = HOOK_STATUS_SUCCEED
+			w.LastStatus = HookStatusSucceed
 		} else {
-			w.LastStatus = HOOK_STATUS_FAILED
+			w.LastStatus = HookStatusFailed
 		}
 		if err = UpdateWebhook(w); err != nil {
 			log.Error("UpdateWebhook: %v", err)

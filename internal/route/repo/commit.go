@@ -25,10 +25,10 @@ const (
 
 func RefCommits(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
-	switch {
-	case c.Repo.TreePath == "":
+	switch c.Repo.TreePath {
+	case "":
 		Commits(c)
-	case c.Repo.TreePath == "search":
+	case "search":
 		SearchCommits(c)
 	default:
 		FileHistory(c)

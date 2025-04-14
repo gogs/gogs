@@ -23,13 +23,13 @@ import (
 )
 
 const (
-	FORK         = "repo/pulls/fork"
-	COMPARE_PULL = "repo/pulls/compare"
-	PULL_COMMITS = "repo/pulls/commits"
-	PULL_FILES   = "repo/pulls/files"
+	tmplRepoPullsFork    = "repo/pulls/fork"
+	tmplRepoPullsCompare = "repo/pulls/compare"
+	tmplRepoPullsCommits = "repo/pulls/commits"
+	tmplRepoPullsFiles   = "repo/pulls/files"
 
-	PULL_REQUEST_TEMPLATE_KEY       = "PullRequestTemplate"
-	PULL_REQUEST_TITLE_TEMPLATE_KEY = "PullRequestTitleTemplate"
+	PullRequestTemplateKey      = "PullRequestTemplate"
+	PullRequestTitleTemplateKey = "PullRequestTitleTemplate"
 )
 
 var (
@@ -94,7 +94,7 @@ func Fork(c *context.Context) {
 	}
 
 	c.Data["ContextUser"] = c.User
-	c.Success(FORK)
+	c.Success(tmplRepoPullsFork)
 }
 
 func ForkPost(c *context.Context, f form.CreateRepo) {
@@ -112,7 +112,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.Success(FORK)
+		c.Success(tmplRepoPullsFork)
 		return
 	}
 
@@ -133,7 +133,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 
 	// Cannot fork to same owner
 	if ctxUser.ID == baseRepo.OwnerID {
-		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f)
+		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), tmplRepoPullsFork, &f)
 		return
 	}
 
@@ -142,11 +142,11 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case database.IsErrReachLimitOfRepo(err):
-			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), tmplRepoPullsFork, &f)
 		case database.IsErrRepoAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), tmplRepoPullsFork, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplRepoPullsFork, &f)
 		default:
 			c.Error(err, "fork repository")
 		}
@@ -301,7 +301,7 @@ func ViewPullCommits(c *context.Context) {
 	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 
-	c.Success(PULL_COMMITS)
+	c.Success(tmplRepoPullsCommits)
 }
 
 func ViewPullFiles(c *context.Context) {
@@ -399,7 +399,7 @@ func ViewPullFiles(c *context.Context) {
 	}
 
 	c.Data["RequireHighlightJS"] = true
-	c.Success(PULL_FILES)
+	c.Success(tmplRepoPullsFiles)
 }
 
 func MergePullRequest(c *context.Context) {
@@ -550,7 +550,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	if err != nil {
 		if gitutil.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
-			c.Success(COMPARE_PULL)
+			c.Success(tmplRepoPullsCompare)
 		} else {
 			c.Error(err, "get pull request meta")
 		}
@@ -626,7 +626,7 @@ func CompareAndPullRequest(c *context.Context) {
 	c.Data["PageIsComparePull"] = true
 	c.Data["IsDiffCompare"] = true
 	c.Data["RequireHighlightJS"] = true
-	setTemplateIfExists(c, PULL_REQUEST_TEMPLATE_KEY, PullRequestTemplateCandidates)
+	setTemplateIfExists(c, PullRequestTemplateKey, PullRequestTemplateCandidates)
 	renderAttachmentSettings(c)
 
 	headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(c)
@@ -643,7 +643,7 @@ func CompareAndPullRequest(c *context.Context) {
 	} else {
 		c.Data["HasPullRequest"] = true
 		c.Data["PullRequest"] = pr
-		c.Success(COMPARE_PULL)
+		c.Success(tmplRepoPullsCompare)
 		return
 	}
 
@@ -666,15 +666,15 @@ func CompareAndPullRequest(c *context.Context) {
 	}
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
-	setTemplateIfExists(c, PULL_REQUEST_TITLE_TEMPLATE_KEY, PullRequestTitleTemplateCandidates)
+	setTemplateIfExists(c, PullRequestTitleTemplateKey, PullRequestTitleTemplateCandidates)
 
-	if c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY] != nil {
-		customTitle := c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY].(string)
+	if c.Data[PullRequestTitleTemplateKey] != nil {
+		customTitle := c.Data[PullRequestTitleTemplateKey].(string)
 		r := strings.NewReplacer("{{headBranch}}", headBranch, "{{baseBranch}}", baseBranch)
 		c.Data["title"] = r.Replace(customTitle)
 	}
 
-	c.Success(COMPARE_PULL)
+	c.Success(tmplRepoPullsCompare)
 }
 
 func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
@@ -713,7 +713,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 			return
 		}
 
-		c.Success(COMPARE_PULL)
+		c.Success(tmplRepoPullsCompare)
 		return
 	}
 
@@ -743,7 +743,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		HeadRepo:     headRepo,
 		BaseRepo:     repo,
 		MergeBase:    meta.MergeBase,
-		Type:         database.PULL_REQUEST_GOGS,
+		Type:         database.PullRequestTypeGogs,
 	}
 	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
 	// instead of 500.

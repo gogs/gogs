@@ -96,15 +96,6 @@ func (c *Context) UserID() int64 {
 	return c.User.ID
 }
 
-// HasError returns true if error occurs in form validation.
-func (c *Context) HasApiError() bool {
-	hasErr, ok := c.Data["HasError"]
-	if !ok {
-		return false
-	}
-	return hasErr.(bool)
-}
-
 func (c *Context) GetErrMsg() string {
 	return c.Data["ErrorMsg"].(string)
 }

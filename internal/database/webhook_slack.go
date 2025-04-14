@@ -291,25 +291,25 @@ func getSlackReleasePayload(p *api.ReleasePayload) *SlackPayload {
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("Unmarshal: %v", err)
+		return nil, fmt.Errorf("unmarshal: %v", err)
 	}
 
 	switch event {
-	case HOOK_EVENT_CREATE:
+	case HookEventTypeCreate:
 		payload = getSlackCreatePayload(p.(*api.CreatePayload))
-	case HOOK_EVENT_DELETE:
+	case HookEventTypeDelete:
 		payload = getSlackDeletePayload(p.(*api.DeletePayload))
-	case HOOK_EVENT_FORK:
+	case HookEventTypeFork:
 		payload = getSlackForkPayload(p.(*api.ForkPayload))
-	case HOOK_EVENT_PUSH:
+	case HookEventTypePush:
 		payload = getSlackPushPayload(p.(*api.PushPayload), slack)
-	case HOOK_EVENT_ISSUES:
+	case HookEventTypeIssues:
 		payload = getSlackIssuesPayload(p.(*api.IssuesPayload), slack)
-	case HOOK_EVENT_ISSUE_COMMENT:
+	case HookEventTypeIssueComment:
 		payload = getSlackIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
-	case HOOK_EVENT_PULL_REQUEST:
+	case HookEventTypePullRequest:
 		payload = getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
-	case HOOK_EVENT_RELEASE:
+	case HookEventTypeRelease:
 		payload = getSlackReleasePayload(p.(*api.ReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)

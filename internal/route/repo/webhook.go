@@ -545,7 +545,7 @@ func TestWebhook(c *context.Context) {
 		Pusher: apiUser,
 		Sender: apiUser,
 	}
-	if err := database.TestWebhook(c.Repo.Repository, database.HOOK_EVENT_PUSH, p, c.ParamsInt64("id")); err != nil {
+	if err := database.TestWebhook(c.Repo.Repository, database.HookEventTypePush, p, c.ParamsInt64("id")); err != nil {
 		c.Error(err, "test webhook")
 		return
 	}
