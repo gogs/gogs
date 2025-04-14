@@ -458,7 +458,7 @@ func (r *Repository) ComposeMetas() map[string]string {
 
 	if r.EnableExternalTracker {
 		r.ExternalMetas["user"] = r.MustOwner().Name
-		r.ExternalMetas["r"] = r.Name
+		r.ExternalMetas["repo"] = r.Name
 		r.ExternalMetas["format"] = r.ExternalTrackerFormat
 
 		switch r.ExternalTrackerStyle {
