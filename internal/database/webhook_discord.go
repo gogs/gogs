@@ -378,21 +378,21 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 	}
 
 	switch event {
-	case HOOK_EVENT_CREATE:
+	case HookEventTypeCreate:
 		payload = getDiscordCreatePayload(p.(*api.CreatePayload))
-	case HOOK_EVENT_DELETE:
+	case HookEventTypeDelete:
 		payload = getDiscordDeletePayload(p.(*api.DeletePayload))
-	case HOOK_EVENT_FORK:
+	case HookEventTypeFork:
 		payload = getDiscordForkPayload(p.(*api.ForkPayload))
-	case HOOK_EVENT_PUSH:
+	case HookEventTypePush:
 		payload = getDiscordPushPayload(p.(*api.PushPayload), slack)
-	case HOOK_EVENT_ISSUES:
+	case HookEventTypeIssues:
 		payload = getDiscordIssuesPayload(p.(*api.IssuesPayload), slack)
-	case HOOK_EVENT_ISSUE_COMMENT:
+	case HookEventTypeIssueComment:
 		payload = getDiscordIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
-	case HOOK_EVENT_PULL_REQUEST:
+	case HookEventTypePullRequest:
 		payload = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
-	case HOOK_EVENT_RELEASE:
+	case HookEventTypeRelease:
 		payload = getDiscordReleasePayload(p.(*api.ReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)

@@ -41,7 +41,7 @@ func (org *User) GetTeam(name string) (*Team, error) {
 }
 
 func (org *User) getOwnerTeam(e Engine) (*Team, error) {
-	return org.getTeam(e, OWNER_TEAM)
+	return org.getTeam(e, ownerTeamName)
 }
 
 // GetOwnerTeam returns owner team of organization.
@@ -73,7 +73,7 @@ func (org *User) GetMembers(limit int) error {
 
 	org.Members = make([]*User, len(ous))
 	for i, ou := range ous {
-		org.Members[i], err = Handle.Users().GetByID(context.TODO(), ou.Uid)
+		org.Members[i], err = Handle.Users().GetByID(context.TODO(), ou.UID)
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	// Add initial creator to organization and owner team.
 	if _, err = sess.Insert(&OrgUser{
-		Uid:      owner.ID,
+		UID:      owner.ID,
 		OrgID:    org.ID,
 		IsOwner:  true,
 		NumTeams: 1,
@@ -150,8 +150,8 @@ func CreateOrganization(org, owner *User) (err error) {
 	// Create default owner team.
 	t := &Team{
 		OrgID:      org.ID,
-		LowerName:  strings.ToLower(OWNER_TEAM),
-		Name:       OWNER_TEAM,
+		LowerName:  strings.ToLower(ownerTeamName),
+		Name:       ownerTeamName,
 		Authorize:  AccessModeOwner,
 		NumMembers: 1,
 	}
@@ -247,7 +247,7 @@ func DeleteOrganization(org *User) error {
 // OrgUser represents relations of organizations and their members.
 type OrgUser struct {
 	ID       int64 `gorm:"primaryKey"`
-	Uid      int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
+	UID      int64 `xorm:"uid INDEX UNIQUE(s)" gorm:"column:uid;uniqueIndex:org_user_user_org_unique;index;not null"`
 	OrgID    int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
 	IsPublic bool  `gorm:"not null;default:FALSE"`
 	IsOwner  bool  `gorm:"not null;default:FALSE"`
@@ -261,14 +261,14 @@ func IsOrganizationOwner(orgID, userID int64) bool {
 }
 
 // IsOrganizationMember returns true if given user is member of organization.
-func IsOrganizationMember(orgId, uid int64) bool {
-	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).Get(new(OrgUser))
+func IsOrganizationMember(orgID, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgID).Get(new(OrgUser))
 	return has
 }
 
 // IsPublicMembership returns true if given user public his/her membership.
-func IsPublicMembership(orgId, uid int64) bool {
-	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
+func IsPublicMembership(orgID, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgID).And("is_public=?", true).Get(new(OrgUser))
 	return has
 }
 
@@ -349,7 +349,7 @@ func AddOrgUser(orgID, uid int64) error {
 	}
 
 	ou := &OrgUser{
-		Uid:   uid,
+		UID:   uid,
 		OrgID: orgID,
 	}
 

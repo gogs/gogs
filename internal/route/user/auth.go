@@ -26,13 +26,13 @@ import (
 )
 
 const (
-	LOGIN                    = "user/auth/login"
-	TWO_FACTOR               = "user/auth/two_factor"
-	TWO_FACTOR_RECOVERY_CODE = "user/auth/two_factor_recovery_code"
-	SIGNUP                   = "user/auth/signup"
-	ACTIVATE                 = "user/auth/activate"
-	FORGOT_PASSWORD          = "user/auth/forgot_passwd"
-	RESET_PASSWORD           = "user/auth/reset_passwd"
+	tmplUserAuthLogin                 = "user/auth/login"
+	tmplUserAuthTwoFactor             = "user/auth/two_factor"
+	tmplUserAuthTwoFactorRecoveryCode = "user/auth/two_factor_recovery_code"
+	tmplUserAuthSignup                = "user/auth/signup"
+	TmplUserAuthActivate              = "user/auth/activate"
+	tmplUserAuthForgotPassword        = "user/auth/forgot_passwd"
+	tmplUserAuthResetPassword         = "user/auth/reset_passwd"
 )
 
 // AutoLogin reads cookie and try to auto-login.
@@ -119,7 +119,7 @@ func Login(c *context.Context) {
 			break
 		}
 	}
-	c.Success(LOGIN)
+	c.Success(tmplUserAuthLogin)
 }
 
 func afterLogin(c *context.Context, u *database.User, remember bool) {
@@ -161,7 +161,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	c.Data["LoginSources"] = loginSources
 
 	if c.HasError() {
-		c.Success(LOGIN)
+		c.Success(tmplUserAuthLogin)
 		return
 	}
 
@@ -170,10 +170,10 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		switch {
 		case auth.IsErrBadCredentials(err):
 			c.FormErr("UserName", "Password")
-			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
+			c.RenderWithErr(c.Tr("form.username_password_incorrect"), tmplUserAuthLogin, &f)
 		case database.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
-			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
+			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), tmplUserAuthLogin, &f)
 
 		default:
 			c.Error(err, "authenticate user")
@@ -204,7 +204,7 @@ func LoginTwoFactor(c *context.Context) {
 		return
 	}
 
-	c.Success(TWO_FACTOR)
+	c.Success(tmplUserAuthTwoFactor)
 }
 
 func LoginTwoFactorPost(c *context.Context) {
@@ -257,7 +257,7 @@ func LoginTwoFactorRecoveryCode(c *context.Context) {
 		return
 	}
 
-	c.Success(TWO_FACTOR_RECOVERY_CODE)
+	c.Success(tmplUserAuthTwoFactorRecoveryCode)
 }
 
 func LoginTwoFactorRecoveryCodePost(c *context.Context) {
@@ -301,11 +301,11 @@ func SignUp(c *context.Context) {
 
 	if conf.Auth.DisableRegistration {
 		c.Data["DisableRegistration"] = true
-		c.Success(SIGNUP)
+		c.Success(tmplUserAuthSignup)
 		return
 	}
 
-	c.Success(SIGNUP)
+	c.Success(tmplUserAuthSignup)
 }
 
 func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
@@ -319,19 +319,19 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	}
 
 	if c.HasError() {
-		c.Success(SIGNUP)
+		c.Success(tmplUserAuthSignup)
 		return
 	}
 
 	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
 		c.FormErr("Captcha")
-		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f)
+		c.RenderWithErr(c.Tr("form.captcha_incorrect"), tmplUserAuthSignup, &f)
 		return
 	}
 
 	if f.Password != f.Retype {
 		c.FormErr("Password")
-		c.RenderWithErr(c.Tr("form.password_not_match"), SIGNUP, &f)
+		c.RenderWithErr(c.Tr("form.password_not_match"), tmplUserAuthSignup, &f)
 		return
 	}
 
@@ -348,13 +348,13 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), tmplUserAuthSignup, &f)
 		case database.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
-			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), tmplUserAuthSignup, &f)
 		case database.IsErrNameNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplUserAuthSignup, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -388,7 +388,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = user.Email
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-		c.Success(ACTIVATE)
+		c.Success(TmplUserAuthActivate)
 
 		if err := c.Cache.Put(userutil.MailResendCacheKey(user.ID), 1, 180); err != nil {
 			log.Error("Failed to put cache key 'mail resend': %v", err)
@@ -402,12 +402,12 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 // parseUserFromCode returns user by username encoded in code.
 // It returns nil if code or username is invalid.
 func parseUserFromCode(code string) (user *database.User) {
-	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
+	if len(code) <= tool.TimeLimitCodeLength {
 		return nil
 	}
 
 	// Use tail hex username to query user
-	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
+	hexStr := code[tool.TimeLimitCodeLength:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = database.Handle.Users().GetByUsername(gocontext.TODO(), string(b)); user != nil {
 			return user
@@ -425,7 +425,7 @@ func verifyUserActiveCode(code string) (user *database.User) {
 
 	if user = parseUserFromCode(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
+		prefix := code[:tool.TimeLimitCodeLength]
 		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
@@ -441,7 +441,7 @@ func verifyActiveEmailCode(code, email string) *database.EmailAddress {
 
 	if user := parseUserFromCode(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
+		prefix := code[:tool.TimeLimitCodeLength]
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
@@ -477,7 +477,7 @@ func Activate(c *context.Context) {
 		} else {
 			c.Data["ServiceNotEnabled"] = true
 		}
-		c.Success(ACTIVATE)
+		c.Success(TmplUserAuthActivate)
 		return
 	}
 
@@ -506,7 +506,7 @@ func Activate(c *context.Context) {
 	}
 
 	c.Data["IsActivateFailed"] = true
-	c.Success(ACTIVATE)
+	c.Success(TmplUserAuthActivate)
 }
 
 func ActivateEmail(c *context.Context) {
@@ -533,12 +533,12 @@ func ForgotPasswd(c *context.Context) {
 
 	if !conf.Email.Enabled {
 		c.Data["IsResetDisable"] = true
-		c.Success(FORGOT_PASSWORD)
+		c.Success(tmplUserAuthForgotPassword)
 		return
 	}
 
 	c.Data["IsResetRequest"] = true
-	c.Success(FORGOT_PASSWORD)
+	c.Success(tmplUserAuthForgotPassword)
 }
 
 func ForgotPasswdPost(c *context.Context) {
@@ -558,7 +558,7 @@ func ForgotPasswdPost(c *context.Context) {
 		if database.IsErrUserNotExist(err) {
 			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 			c.Data["IsResetSent"] = true
-			c.Success(FORGOT_PASSWORD)
+			c.Success(tmplUserAuthForgotPassword)
 			return
 		}
 
@@ -568,13 +568,13 @@ func ForgotPasswdPost(c *context.Context) {
 
 	if !u.IsLocal() {
 		c.FormErr("Email")
-		c.RenderWithErr(c.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil)
+		c.RenderWithErr(c.Tr("auth.non_local_account"), tmplUserAuthForgotPassword, nil)
 		return
 	}
 
 	if c.Cache.IsExist(userutil.MailResendCacheKey(u.ID)) {
 		c.Data["ResendLimited"] = true
-		c.Success(FORGOT_PASSWORD)
+		c.Success(tmplUserAuthForgotPassword)
 		return
 	}
 
@@ -585,7 +585,7 @@ func ForgotPasswdPost(c *context.Context) {
 
 	c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 	c.Data["IsResetSent"] = true
-	c.Success(FORGOT_PASSWORD)
+	c.Success(tmplUserAuthForgotPassword)
 }
 
 func ResetPasswd(c *context.Context) {
@@ -598,7 +598,7 @@ func ResetPasswd(c *context.Context) {
 	}
 	c.Data["Code"] = code
 	c.Data["IsResetForm"] = true
-	c.Success(RESET_PASSWORD)
+	c.Success(tmplUserAuthResetPassword)
 }
 
 func ResetPasswdPost(c *context.Context) {
@@ -617,7 +617,7 @@ func ResetPasswdPost(c *context.Context) {
 		if len(password) < 6 {
 			c.Data["IsResetForm"] = true
 			c.Data["Err_Password"] = true
-			c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
+			c.RenderWithErr(c.Tr("auth.password_too_short"), tmplUserAuthResetPassword, nil)
 			return
 		}
 
@@ -633,5 +633,5 @@ func ResetPasswdPost(c *context.Context) {
 	}
 
 	c.Data["IsResetFailed"] = true
-	c.Success(RESET_PASSWORD)
+	c.Success(tmplUserAuthResetPassword)
 }

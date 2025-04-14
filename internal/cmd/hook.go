@@ -68,7 +68,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 	setup(c, "pre-receive.log", true)
 
-	isWiki := strings.Contains(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -89,7 +89,7 @@ func runHookPreReceive(c *cli.Context) error {
 		branchName := git.RefShortName(string(fields[2]))
 
 		// Branch protection
-		repoID := com.StrTo(os.Getenv(database.ENV_REPO_ID)).MustInt64()
+		repoID := com.StrTo(os.Getenv(database.EnvRepoID)).MustInt64()
 		protectBranch, err := database.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
 			if database.IsErrBranchNotExist(err) {
@@ -105,7 +105,7 @@ func runHookPreReceive(c *cli.Context) error {
 		bypassRequirePullRequest := false
 
 		// Check if user is in whitelist when enabled
-		userID := com.StrTo(os.Getenv(database.ENV_AUTH_USER_ID)).MustInt64()
+		userID := com.StrTo(os.Getenv(database.EnvAuthUserID)).MustInt64()
 		if protectBranch.EnableWhitelist {
 			if !database.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
 				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
@@ -126,7 +126,7 @@ func runHookPreReceive(c *cli.Context) error {
 
 		// Check force push
 		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
-			RunInDir(database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME)))
+			RunInDir(database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName)))
 		if err != nil {
 			fail("Internal error", "Failed to detect force push: %v", err)
 		} else if len(output) > 0 {
@@ -134,7 +134,7 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")
+	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "pre-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
@@ -145,7 +145,7 @@ func runHookPreReceive(c *cli.Context) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath)
 	}
-	hookCmd.Dir = database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME))
+	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
@@ -168,7 +168,7 @@ func runHookUpdate(c *cli.Context) error {
 		fail("First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), "update")
+	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "update")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
@@ -179,7 +179,7 @@ func runHookUpdate(c *cli.Context) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath, args...)
 	}
-	hookCmd.Dir = database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME))
+	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
@@ -199,7 +199,7 @@ func runHookPostReceive(c *cli.Context) error {
 	// so we need to setup additional services for email notifications.
 	email.NewContext()
 
-	isWiki := strings.Contains(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -221,10 +221,10 @@ func runHookPostReceive(c *cli.Context) error {
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
 			FullRefspec:  string(fields[2]),
-			PusherID:     com.StrTo(os.Getenv(database.ENV_AUTH_USER_ID)).MustInt64(),
-			PusherName:   os.Getenv(database.ENV_AUTH_USER_NAME),
-			RepoUserName: os.Getenv(database.ENV_REPO_OWNER_NAME),
-			RepoName:     os.Getenv(database.ENV_REPO_NAME),
+			PusherID:     com.StrTo(os.Getenv(database.EnvAuthUserID)).MustInt64(),
+			PusherName:   os.Getenv(database.EnvAuthUserName),
+			RepoUserName: os.Getenv(database.EnvRepoOwnerName),
+			RepoName:     os.Getenv(database.EnvRepoName),
 		}
 		if err := database.PushUpdate(options); err != nil {
 			log.Error("PushUpdate: %v", err)
@@ -233,8 +233,8 @@ func runHookPostReceive(c *cli.Context) error {
 		// Ask for running deliver hook and test pull request tasks
 		q := make(url.Values)
 		q.Add("branch", git.RefShortName(options.FullRefspec))
-		q.Add("secret", os.Getenv(database.ENV_REPO_OWNER_SALT_MD5))
-		q.Add("pusher", os.Getenv(database.ENV_AUTH_USER_ID))
+		q.Add("secret", os.Getenv(database.EnvRepoOwnerSaltMd5))
+		q.Add("pusher", os.Getenv(database.EnvAuthUserID))
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
@@ -252,7 +252,7 @@ func runHookPostReceive(c *cli.Context) error {
 		}
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(database.ENV_REPO_CUSTOM_HOOKS_PATH), "post-receive")
+	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "post-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
@@ -263,7 +263,7 @@ func runHookPostReceive(c *cli.Context) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath)
 	}
-	hookCmd.Dir = database.RepoPath(os.Getenv(database.ENV_REPO_OWNER_NAME), os.Getenv(database.ENV_REPO_NAME))
+	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr

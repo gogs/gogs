@@ -94,7 +94,7 @@ func EditIssueComment(c *context.APIContext, form api.EditIssueCommentOption) {
 	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
 		c.Status(http.StatusForbidden)
 		return
-	} else if comment.Type != database.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != database.CommentTypeComment {
 		c.NoContent()
 		return
 	}
@@ -118,7 +118,7 @@ func DeleteIssueComment(c *context.APIContext) {
 	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
 		c.Status(http.StatusForbidden)
 		return
-	} else if comment.Type != database.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != database.CommentTypeComment {
 		c.NoContent()
 		return
 	}

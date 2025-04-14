@@ -22,13 +22,8 @@ const (
 )
 
 func Profile(c *context.Context, puser *context.ParamsUser) {
-	isShowKeys := false
-	if strings.HasSuffix(c.Params(":username"), ".keys") {
-		isShowKeys = true
-	}
-
 	// Show SSH keys.
-	if isShowKeys {
+	if strings.HasSuffix(c.Params(":username"), ".keys") {
 		ShowSSHKeys(c, puser.ID)
 		return
 	}
@@ -80,7 +75,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 		c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 	}
 
-	c.Success(PROFILE)
+	c.Success(tmplUserProfile)
 }
 
 func Followers(c *context.Context, puser *context.ParamsUser) {

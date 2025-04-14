@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-const OWNER_TEAM = "Owners"
+const ownerTeamName = "Owners"
 
 // Team represents a organization team.
 type Team struct {
@@ -43,7 +43,7 @@ func (t *Team) AfterSet(colName string, _ xorm.Cell) {
 
 // IsOwnerTeam returns true if team is owner team.
 func (t *Team) IsOwnerTeam() bool {
-	return t.Name == OWNER_TEAM
+	return t.Name == ownerTeamName
 }
 
 // HasWriteAccess returns true if team has at least write level access mode.

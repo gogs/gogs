@@ -233,7 +233,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 	apiPusher := opts.Owner.APIFormat()
 	err = PrepareWebhooks(
 		opts.Repo,
-		HOOK_EVENT_PUSH,
+		HookEventTypePush,
 		&api.PushPayload{
 			Ref:        opts.RefName,
 			Before:     opts.OldCommitID,
@@ -499,7 +499,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	if isDelRef {
 		err = PrepareWebhooks(
 			opts.Repo,
-			HOOK_EVENT_DELETE,
+			HookEventTypeDelete,
 			&api.DeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
@@ -543,7 +543,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	if isNewRef {
 		err = PrepareWebhooks(
 			opts.Repo,
-			HOOK_EVENT_CREATE,
+			HookEventTypeCreate,
 			&api.CreatePayload{
 				Ref:           refName,
 				RefType:       "branch",
@@ -576,7 +576,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	err = PrepareWebhooks(
 		opts.Repo,
-		HOOK_EVENT_PUSH,
+		HookEventTypePush,
 		&api.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
@@ -638,7 +638,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 	if opts.NewCommitID == git.EmptyID {
 		err = PrepareWebhooks(
 			opts.Repo,
-			HOOK_EVENT_DELETE,
+			HookEventTypeDelete,
 			&api.DeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
@@ -661,7 +661,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 
 	err = PrepareWebhooks(
 		opts.Repo,
-		HOOK_EVENT_CREATE,
+		HookEventTypeCreate,
 		&api.CreatePayload{
 			Ref:           refName,
 			RefType:       "tag",

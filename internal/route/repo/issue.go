@@ -25,17 +25,15 @@ import (
 )
 
 const (
-	ISSUES     = "repo/issue/list"
-	ISSUE_NEW  = "repo/issue/new"
-	ISSUE_VIEW = "repo/issue/view"
+	tmplRepoIssueList          = "repo/issue/list"
+	tmplRepoIssueNew           = "repo/issue/new"
+	tmplRepoIssueView          = "repo/issue/view"
+	tmplRepoIssueLabels        = "repo/issue/labels"
+	tmplRepoIssueMilestones    = "repo/issue/milestones"
+	tmplRepoIssueMilestoneNew  = "repo/issue/milestone_new"
+	tmplRepoIssueMilestoneEdit = "repo/issue/milestone_edit"
 
-	LABELS = "repo/issue/labels"
-
-	MILESTONE      = "repo/issue/milestones"
-	MILESTONE_NEW  = "repo/issue/milestone_new"
-	MILESTONE_EDIT = "repo/issue/milestone_edit"
-
-	ISSUE_TEMPLATE_KEY = "IssueTemplate"
+	IssueTemplateKey = "IssueTemplate"
 )
 
 var (
@@ -123,16 +121,16 @@ func issues(c *context.Context, isPullList bool) {
 		assigneeID = c.QueryInt64("assignee")
 		posterID   int64
 	)
-	filterMode := database.FILTER_MODE_YOUR_REPOS
+	filterMode := database.FilterModeYourRepos
 	switch viewType {
 	case "assigned":
-		filterMode = database.FILTER_MODE_ASSIGN
+		filterMode = database.FilterModeAssign
 		assigneeID = c.User.ID
 	case "created_by":
-		filterMode = database.FILTER_MODE_CREATE
+		filterMode = database.FilterModeCreate
 		posterID = c.User.ID
 	case "mentioned":
-		filterMode = database.FILTER_MODE_MENTION
+		filterMode = database.FilterModeMention
 	}
 
 	var uid int64 = -1
@@ -176,7 +174,7 @@ func issues(c *context.Context, isPullList bool) {
 		MilestoneID: milestoneID,
 		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
-		IsMention:   filterMode == database.FILTER_MODE_MENTION,
+		IsMention:   filterMode == database.FilterModeMention,
 		IsPull:      isPullList,
 		Labels:      selectLabels,
 		SortType:    sortType,
@@ -241,7 +239,7 @@ func issues(c *context.Context, isPullList bool) {
 		c.Data["State"] = "open"
 	}
 
-	c.Success(ISSUES)
+	c.Success(tmplRepoIssueList)
 }
 
 func Issues(c *context.Context) {
@@ -337,7 +335,7 @@ func NewIssue(c *context.Context) {
 	c.Data["RequireSimpleMDE"] = true
 	c.Data["title"] = c.Query("title")
 	c.Data["content"] = c.Query("content")
-	setTemplateIfExists(c, ISSUE_TEMPLATE_KEY, IssueTemplateCandidates)
+	setTemplateIfExists(c, IssueTemplateKey, IssueTemplateCandidates)
 	renderAttachmentSettings(c)
 
 	RetrieveRepoMetas(c, c.Repo.Repository)
@@ -345,7 +343,7 @@ func NewIssue(c *context.Context) {
 		return
 	}
 
-	c.Success(ISSUE_NEW)
+	c.Success(tmplRepoIssueNew)
 }
 
 func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int64) {
@@ -415,7 +413,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	if c.HasError() {
-		c.Success(ISSUE_NEW)
+		c.Success(tmplRepoIssueNew)
 		return
 	}
 
@@ -599,7 +597,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	// Render comments and fetch participants.
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
-		if comment.Type == database.COMMENT_TYPE_COMMENT {
+		if comment.Type == database.CommentTypeComment {
 			comment.RenderedContent = string(markup.Markdown(comment.Content, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
@@ -611,7 +609,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 			if repo.IsOwnedBy(comment.PosterID) ||
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
-				comment.ShowTag = database.COMMENT_TAG_OWNER
+				comment.ShowTag = database.CommentTagOwner
 			} else if database.Handle.Permissions().Authorize(
 				c.Req.Context(),
 				comment.PosterID,
@@ -622,9 +620,9 @@ func viewIssue(c *context.Context, isPullList bool) {
 					Private: repo.IsPrivate,
 				},
 			) {
-				comment.ShowTag = database.COMMENT_TAG_WRITER
+				comment.ShowTag = database.CommentTagWriter
 			} else if comment.PosterID == issue.PosterID {
-				comment.ShowTag = database.COMMENT_TAG_POSTER
+				comment.ShowTag = database.CommentTagPoster
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
@@ -670,7 +668,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	c.Data["Issue"] = issue
 	c.Data["IsIssueOwner"] = c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))
 	c.Data["SignInLink"] = conf.Server.Subpath + "/user/login?redirect_to=" + c.Data["Link"].(string)
-	c.Success(ISSUE_VIEW)
+	c.Success(tmplRepoIssueView)
 }
 
 func ViewIssue(c *context.Context) {
@@ -935,7 +933,7 @@ func UpdateCommentContent(c *context.Context) {
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
-	} else if comment.Type != database.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != database.CommentTypeComment {
 		c.Status(http.StatusNoContent)
 		return
 	}
@@ -968,7 +966,7 @@ func DeleteComment(c *context.Context) {
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
-	} else if comment.Type != database.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != database.CommentTypeComment {
 		c.Status(http.StatusNoContent)
 		return
 	}
@@ -987,7 +985,7 @@ func Labels(c *context.Context) {
 	c.Data["PageIsLabels"] = true
 	c.Data["RequireMinicolors"] = true
 	c.Data["LabelTemplates"] = database.LabelTemplates
-	c.Success(LABELS)
+	c.Success(tmplRepoIssueLabels)
 }
 
 func InitializeLabels(c *context.Context, f form.InitializeLabels) {
@@ -1112,7 +1110,7 @@ func Milestones(c *context.Context) {
 	}
 
 	c.Data["IsShowClosed"] = isShowClosed
-	c.Success(MILESTONE)
+	c.Success(tmplRepoIssueMilestones)
 }
 
 func NewMilestone(c *context.Context) {
@@ -1120,8 +1118,8 @@ func NewMilestone(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
-	c.Success(MILESTONE_NEW)
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
+	c.Success(tmplRepoIssueMilestoneNew)
 }
 
 func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
@@ -1129,10 +1127,10 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
-		c.Success(MILESTONE_NEW)
+		c.Success(tmplRepoIssueMilestoneNew)
 		return
 	}
 
@@ -1142,7 +1140,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), tmplRepoIssueMilestoneNew, &f)
 		return
 	}
 
@@ -1165,7 +1163,7 @@ func EditMilestone(c *context.Context) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	m, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
@@ -1177,7 +1175,7 @@ func EditMilestone(c *context.Context) {
 	if len(m.DeadlineString) > 0 {
 		c.Data["deadline"] = m.DeadlineString
 	}
-	c.Success(MILESTONE_NEW)
+	c.Success(tmplRepoIssueMilestoneNew)
 }
 
 func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
@@ -1185,10 +1183,10 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
-		c.Success(MILESTONE_NEW)
+		c.Success(tmplRepoIssueMilestoneNew)
 		return
 	}
 
@@ -1198,7 +1196,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), tmplRepoIssueMilestoneNew, &f)
 		return
 	}
 

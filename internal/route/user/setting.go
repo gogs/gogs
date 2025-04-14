@@ -43,19 +43,19 @@ func NewSettingsHandler(s SettingsStore) *SettingsHandler {
 }
 
 const (
-	SETTINGS_PROFILE                   = "user/settings/profile"
-	SETTINGS_AVATAR                    = "user/settings/avatar"
-	SETTINGS_PASSWORD                  = "user/settings/password"
-	SETTINGS_EMAILS                    = "user/settings/email"
-	SETTINGS_SSH_KEYS                  = "user/settings/sshkeys"
-	SETTINGS_SECURITY                  = "user/settings/security"
-	SETTINGS_TWO_FACTOR_ENABLE         = "user/settings/two_factor_enable"
-	SETTINGS_TWO_FACTOR_RECOVERY_CODES = "user/settings/two_factor_recovery_codes"
-	SETTINGS_REPOSITORIES              = "user/settings/repositories"
-	SETTINGS_ORGANIZATIONS             = "user/settings/organizations"
-	SETTINGS_APPLICATIONS              = "user/settings/applications"
-	SETTINGS_DELETE                    = "user/settings/delete"
-	NOTIFICATION                       = "user/notification"
+	tmplUserSettingsProfile                = "user/settings/profile"
+	tmplUserSettingsAvatar                 = "user/settings/avatar"
+	tmplUserSettingsPassword               = "user/settings/password"
+	tmplUserSettingsEmail                  = "user/settings/email"
+	tmplUserSettingsSSHKeys                = "user/settings/sshkeys"
+	tmplUserSettingsSecurity               = "user/settings/security"
+	tmplUserSettingsTwoFactorEnable        = "user/settings/two_factor_enable"
+	tmplUserSettingsTwoFactorRecoveryCodes = "user/settings/two_factor_recovery_codes"
+	tmplUserSettingsRepositories           = "user/settings/repositories"
+	tmplUserSettingsOrganizations          = "user/settings/organizations"
+	tmplUserSettingsApplications           = "user/settings/applications"
+	tmplUserSettingsDelete                 = "user/settings/delete"
+	tmplUserNotification                   = "user/notification"
 )
 
 func Settings(c *context.Context) {
@@ -67,7 +67,7 @@ func Settings(c *context.Context) {
 	c.Data["email"] = c.User.Email
 	c.Data["website"] = c.User.Website
 	c.Data["location"] = c.User.Location
-	c.Success(SETTINGS_PROFILE)
+	c.Success(tmplUserSettingsProfile)
 }
 
 func SettingsPost(c *context.Context, f form.UpdateProfile) {
@@ -76,7 +76,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	c.Data["origin_name"] = c.User.Name
 
 	if c.HasError() {
-		c.Success(SETTINGS_PROFILE)
+		c.Success(tmplUserSettingsProfile)
 		return
 	}
 
@@ -98,7 +98,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 					return
 				}
 
-				c.RenderWithErr(msg, SETTINGS_PROFILE, &f)
+				c.RenderWithErr(msg, tmplUserSettingsProfile, &f)
 				return
 			}
 
@@ -174,7 +174,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.Us
 func SettingsAvatar(c *context.Context) {
 	c.Title("settings.avatar")
 	c.PageIs("SettingsAvatar")
-	c.Success(SETTINGS_AVATAR)
+	c.Success(tmplUserSettingsAvatar)
 }
 
 func SettingsAvatarPost(c *context.Context, f form.Avatar) {
@@ -199,7 +199,7 @@ func SettingsDeleteAvatar(c *context.Context) {
 func SettingsPassword(c *context.Context) {
 	c.Title("settings.password")
 	c.PageIs("SettingsPassword")
-	c.Success(SETTINGS_PASSWORD)
+	c.Success(tmplUserSettingsPassword)
 }
 
 func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
@@ -207,7 +207,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	c.PageIs("SettingsPassword")
 
 	if c.HasError() {
-		c.Success(SETTINGS_PASSWORD)
+		c.Success(tmplUserSettingsPassword)
 		return
 	}
 
@@ -244,7 +244,7 @@ func SettingsEmails(c *context.Context) {
 	}
 	c.Data["Emails"] = emails
 
-	c.Success(SETTINGS_EMAILS)
+	c.Success(tmplUserSettingsEmail)
 }
 
 func SettingsEmailPost(c *context.Context, f form.AddEmail) {
@@ -271,14 +271,14 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	c.Data["Emails"] = emails
 
 	if c.HasError() {
-		c.Success(SETTINGS_EMAILS)
+		c.Success(tmplUserSettingsEmail)
 		return
 	}
 
 	err = database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, f.Email, !conf.Auth.RequireEmailConfirmation)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
-			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), tmplUserSettingsEmail, &f)
 		} else {
 			c.Errorf(err, "add email address")
 		}
@@ -333,7 +333,7 @@ func SettingsSSHKeys(c *context.Context) {
 	}
 	c.Data["Keys"] = keys
 
-	c.Success(SETTINGS_SSH_KEYS)
+	c.Success(tmplUserSettingsSSHKeys)
 }
 
 func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
@@ -348,7 +348,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Data["Keys"] = keys
 
 	if c.HasError() {
-		c.Success(SETTINGS_SSH_KEYS)
+		c.Success(tmplUserSettingsSSHKeys)
 		return
 	}
 
@@ -368,10 +368,10 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
 			c.FormErr("Content")
-			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &f)
+			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), tmplUserSettingsSSHKeys, &f)
 		case database.IsErrKeyNameAlreadyUsed(err):
 			c.FormErr("Title")
-			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &f)
+			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), tmplUserSettingsSSHKeys, &f)
 		default:
 			c.Errorf(err, "add public key")
 		}
@@ -405,7 +405,7 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
-	c.Success(SETTINGS_SECURITY)
+	c.Success(tmplUserSettingsSecurity)
 }
 
 func SettingsTwoFactorEnable(c *context.Context) {
@@ -450,7 +450,7 @@ func SettingsTwoFactorEnable(c *context.Context) {
 
 	_ = c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
 	_ = c.Session.Set("twoFactorURL", key.String())
-	c.Success(SETTINGS_TWO_FACTOR_ENABLE)
+	c.Success(tmplUserSettingsTwoFactorEnable)
 }
 
 func SettingsTwoFactorEnablePost(c *context.Context) {
@@ -494,7 +494,7 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 	}
 	c.Data["RecoveryCodes"] = recoveryCodes
 
-	c.Success(SETTINGS_TWO_FACTOR_RECOVERY_CODES)
+	c.Success(tmplUserSettingsTwoFactorRecoveryCodes)
 }
 
 func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
@@ -544,7 +544,7 @@ func SettingsRepos(c *context.Context) {
 	}
 	c.Data["Repos"] = repos
 
-	c.Success(SETTINGS_REPOSITORIES)
+	c.Success(tmplUserSettingsRepositories)
 }
 
 func SettingsLeaveRepo(c *context.Context) {
@@ -576,7 +576,7 @@ func SettingsOrganizations(c *context.Context) {
 	}
 	c.Data["Orgs"] = orgs
 
-	c.Success(SETTINGS_ORGANIZATIONS)
+	c.Success(tmplUserSettingsOrganizations)
 }
 
 func SettingsLeaveOrganization(c *context.Context) {
@@ -606,7 +606,7 @@ func (h *SettingsHandler) Applications() macaron.Handler {
 		}
 		c.Data["Tokens"] = tokens
 
-		c.Success(SETTINGS_APPLICATIONS)
+		c.Success(tmplUserSettingsApplications)
 	}
 }
 
@@ -623,7 +623,7 @@ func (h *SettingsHandler) ApplicationsPost() macaron.Handler {
 			}
 
 			c.Data["Tokens"] = tokens
-			c.Success(SETTINGS_APPLICATIONS)
+			c.Success(tmplUserSettingsApplications)
 			return
 		}
 
@@ -665,7 +665,7 @@ func SettingsDelete(c *context.Context) {
 	if c.Req.Method == "POST" {
 		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), tmplUserSettingsDelete, nil)
 			} else {
 				c.Errorf(err, "authenticate user")
 			}
@@ -690,7 +690,7 @@ func SettingsDelete(c *context.Context) {
 		return
 	}
 
-	c.Success(SETTINGS_DELETE)
+	c.Success(tmplUserSettingsDelete)
 }
 
 // SettingsStore is the data layer carrier for user settings endpoints. This

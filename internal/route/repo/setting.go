@@ -26,21 +26,21 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS          = "repo/settings/options"
-	SETTINGS_REPO_AVATAR      = "repo/settings/avatar"
-	SETTINGS_COLLABORATION    = "repo/settings/collaboration"
-	SETTINGS_BRANCHES         = "repo/settings/branches"
-	SETTINGS_PROTECTED_BRANCH = "repo/settings/protected_branch"
-	SETTINGS_GITHOOKS         = "repo/settings/githooks"
-	SETTINGS_GITHOOK_EDIT     = "repo/settings/githook_edit"
-	SETTINGS_DEPLOY_KEYS      = "repo/settings/deploy_keys"
+	tmplRepoSettingsOptions         = "repo/settings/options"
+	tmplRepoSettingsAvatar          = "repo/settings/avatar"
+	tmplRepoSettingsCollaboration   = "repo/settings/collaboration"
+	tmplRepoSettingsBranches        = "repo/settings/branches"
+	tmplRepoSettingsProtectedBranch = "repo/settings/protected_branch"
+	tmplRepoSettingsGithooks        = "repo/settings/githooks"
+	tmplRepoSettingsGithookEdit     = "repo/settings/githook_edit"
+	tmplRepoSettingsDeployKeys      = "repo/settings/deploy_keys"
 )
 
 func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
 	c.RequireAutosize()
-	c.Success(SETTINGS_OPTIONS)
+	c.Success(tmplRepoSettingsOptions)
 }
 
 func SettingsPost(c *context.Context, f form.RepoSetting) {
@@ -53,7 +53,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	switch c.Query("action") {
 	case "update":
 		if c.HasError() {
-			c.Success(SETTINGS_OPTIONS)
+			c.Success(tmplRepoSettingsOptions)
 			return
 		}
 
@@ -67,9 +67,9 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				c.FormErr("RepoName")
 				switch {
 				case database.IsErrRepoAlreadyExist(err):
-					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tmplRepoSettingsOptions, &f)
 				case database.IsErrNameNotAllowed(err):
-					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplRepoSettingsOptions, &f)
 				default:
 					c.Error(err, "change repository name")
 				}
@@ -179,7 +179,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -213,7 +213,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -226,13 +226,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		newOwner := c.Query("new_owner_name")
 		if !database.Handle.Users().IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), tmplRepoSettingsOptions, nil)
 			return
 		}
 
 		if err := database.TransferOwnership(c.User, newOwner, repo); err != nil {
 			if database.IsErrRepoAlreadyExist(err) {
-				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
+				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), tmplRepoSettingsOptions, nil)
 			} else {
 				c.Error(err, "transfer ownership")
 			}
@@ -248,7 +248,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -274,7 +274,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -305,7 +305,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 func SettingsAvatar(c *context.Context) {
 	c.Title("settings.avatar")
 	c.PageIs("SettingsAvatar")
-	c.Success(SETTINGS_REPO_AVATAR)
+	c.Success(tmplRepoSettingsAvatar)
 }
 
 func SettingsAvatarPost(c *context.Context, f form.Avatar) {
@@ -370,7 +370,7 @@ func SettingsCollaboration(c *context.Context) {
 	}
 	c.Data["Collaborators"] = users
 
-	c.Success(SETTINGS_COLLABORATION)
+	c.Success(tmplRepoSettingsCollaboration)
 }
 
 func SettingsCollaborationPost(c *context.Context) {
@@ -440,7 +440,7 @@ func SettingsBranches(c *context.Context) {
 
 	if c.Repo.Repository.IsBare {
 		c.Flash.Info(c.Tr("repo.settings.branches_bare"), true)
-		c.Success(SETTINGS_BRANCHES)
+		c.Success(tmplRepoSettingsBranches)
 		return
 	}
 
@@ -459,7 +459,7 @@ func SettingsBranches(c *context.Context) {
 	}
 	c.Data["ProtectBranches"] = branches
 
-	c.Success(SETTINGS_BRANCHES)
+	c.Success(tmplRepoSettingsBranches)
 }
 
 func UpdateDefaultBranch(c *context.Context) {
@@ -527,7 +527,7 @@ func SettingsProtectedBranch(c *context.Context) {
 	}
 
 	c.Data["Branch"] = protectBranch
-	c.Success(SETTINGS_PROTECTED_BRANCH)
+	c.Success(tmplRepoSettingsProtectedBranch)
 }
 
 func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
@@ -579,7 +579,7 @@ func SettingsGitHooks(c *context.Context) {
 	}
 	c.Data["Hooks"] = hooks
 
-	c.Success(SETTINGS_GITHOOKS)
+	c.Success(tmplRepoSettingsGithooks)
 }
 
 func SettingsGitHooksEdit(c *context.Context) {
@@ -594,7 +594,7 @@ func SettingsGitHooksEdit(c *context.Context) {
 		return
 	}
 	c.Data["Hook"] = hook
-	c.Success(SETTINGS_GITHOOK_EDIT)
+	c.Success(tmplRepoSettingsGithookEdit)
 }
 
 func SettingsGitHooksEditPost(c *context.Context) {
@@ -622,7 +622,7 @@ func SettingsDeployKeys(c *context.Context) {
 	}
 	c.Data["Deploykeys"] = keys
 
-	c.Success(SETTINGS_DEPLOY_KEYS)
+	c.Success(tmplRepoSettingsDeployKeys)
 }
 
 func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
@@ -637,7 +637,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Data["Deploykeys"] = keys
 
 	if c.HasError() {
-		c.Success(SETTINGS_DEPLOY_KEYS)
+		c.Success(tmplRepoSettingsDeployKeys)
 		return
 	}
 
@@ -660,10 +660,10 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
 			c.Data["Err_Content"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), tmplRepoSettingsDeployKeys, &f)
 		case database.IsErrKeyNameAlreadyUsed(err):
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), tmplRepoSettingsDeployKeys, &f)
 		default:
 			c.Error(err, "add deploy key")
 		}

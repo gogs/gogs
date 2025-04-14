@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	BRANCHES_OVERVIEW = "repo/branches/overview"
-	BRANCHES_ALL      = "repo/branches/all"
+	tmplRepoBranchesOverview = "repo/branches/overview"
+	tmplRepoBranchesAll      = "repo/branches/all"
 )
 
 type Branch struct {
@@ -91,7 +91,7 @@ func Branches(c *context.Context) {
 
 	c.Data["ActiveBranches"] = activeBranches
 	c.Data["StaleBranches"] = staleBranches
-	c.Success(BRANCHES_OVERVIEW)
+	c.Success(tmplRepoBranchesOverview)
 }
 
 func AllBranches(c *context.Context) {
@@ -104,7 +104,7 @@ func AllBranches(c *context.Context) {
 	}
 	c.Data["Branches"] = branches
 
-	c.Success(BRANCHES_ALL)
+	c.Success(tmplRepoBranchesAll)
 }
 
 func DeleteBranchPost(c *context.Context) {
@@ -142,14 +142,14 @@ func DeleteBranchPost(c *context.Context) {
 		return
 	}
 
-	if err := database.PrepareWebhooks(c.Repo.Repository, database.HOOK_EVENT_DELETE, &api.DeletePayload{
+	if err := database.PrepareWebhooks(c.Repo.Repository, database.HookEventTypeDelete, &api.DeletePayload{
 		Ref:        branchName,
 		RefType:    "branch",
 		PusherType: api.PUSHER_TYPE_USER,
 		Repo:       c.Repo.Repository.APIFormatLegacy(nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {
-		log.Error("Failed to prepare webhooks for %q: %v", database.HOOK_EVENT_DELETE, err)
+		log.Error("Failed to prepare webhooks for %q: %v", database.HookEventTypeDelete, err)
 		return
 	}
 }

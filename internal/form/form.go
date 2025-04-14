@@ -16,7 +16,7 @@ import (
 	"gogs.io/gogs/internal/lazyregexp"
 )
 
-const ERR_ALPHA_DASH_DOT_SLASH = "AlphaDashDotSlashError"
+const ErrAlphaDashDotSlash = "AlphaDashDotSlashError"
 
 var AlphaDashDotSlashPattern = lazyregexp.New("[^\\d\\w-_\\./]")
 
@@ -28,7 +28,7 @@ func init() {
 		},
 		IsValid: func(errs binding.Errors, name string, v any) (bool, binding.Errors) {
 			if AlphaDashDotSlashPattern.MatchString(fmt.Sprintf("%v", v)) {
-				errs.Add([]string{name}, ERR_ALPHA_DASH_DOT_SLASH, "AlphaDashDotSlash")
+				errs.Add([]string{name}, ErrAlphaDashDotSlash, "AlphaDashDotSlash")
 				return false, errs
 			}
 			return true, errs
@@ -129,7 +129,7 @@ func validate(errs binding.Errors, data map[string]any, f Form, l macaron.Locale
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_error")
 			case binding.ERR_ALPHA_DASH_DOT:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
-			case ERR_ALPHA_DASH_DOT_SLASH:
+			case ErrAlphaDashDotSlash:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_slash_error")
 			case binding.ERR_SIZE:
 				data["ErrorMsg"] = trName + l.Tr("form.size_error", getSize(field))

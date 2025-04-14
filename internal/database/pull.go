@@ -30,16 +30,16 @@ var PullRequestQueue = sync.NewUniqueQueue(1000)
 type PullRequestType int
 
 const (
-	PULL_REQUEST_GOGS PullRequestType = iota
-	PLLL_ERQUEST_GIT
+	PullRequestTypeGogs PullRequestType = iota
+	PullRequestTypeGit
 )
 
 type PullRequestStatus int
 
 const (
-	PULL_REQUEST_STATUS_CONFLICT PullRequestStatus = iota
-	PULL_REQUEST_STATUS_CHECKING
-	PULL_REQUEST_STATUS_MERGEABLE
+	PullRequestStatusConflict PullRequestStatus = iota
+	PullRequestStatusChecking
+	PullRequestStatusMergeable
 )
 
 // PullRequest represents relation between pull request and repositories.
@@ -161,8 +161,8 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 		HasMerged:  pr.HasMerged,
 	}
 
-	if pr.Status != PULL_REQUEST_STATUS_CHECKING {
-		mergeable := pr.Status != PULL_REQUEST_STATUS_CONFLICT
+	if pr.Status != PullRequestStatusChecking {
+		mergeable := pr.Status != PullRequestStatusConflict
 		apiPullRequest.Mergeable = &mergeable
 	}
 	if pr.HasMerged {
@@ -176,20 +176,20 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 
 // IsChecking returns true if this pull request is still checking conflict.
 func (pr *PullRequest) IsChecking() bool {
-	return pr.Status == PULL_REQUEST_STATUS_CHECKING
+	return pr.Status == PullRequestStatusChecking
 }
 
 // CanAutoMerge returns true if this pull request can be merged automatically.
 func (pr *PullRequest) CanAutoMerge() bool {
-	return pr.Status == PULL_REQUEST_STATUS_MERGEABLE
+	return pr.Status == PullRequestStatusMergeable
 }
 
 // MergeStyle represents the approach to merge commits into base branch.
 type MergeStyle string
 
 const (
-	MERGE_STYLE_REGULAR MergeStyle = "create_merge_commit"
-	MERGE_STYLE_REBASE  MergeStyle = "rebase_before_merging"
+	MergeStyleRegular MergeStyle = "create_merge_commit"
+	MergeStyleRebase  MergeStyle = "rebase_before_merging"
 )
 
 // Merge merges pull request to base repository.
@@ -254,12 +254,12 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	remoteHeadBranch := "head_repo/" + pr.HeadBranch
 
 	// Check if merge style is allowed, reset to default style if not
-	if mergeStyle == MERGE_STYLE_REBASE && !pr.BaseRepo.PullsAllowRebase {
-		mergeStyle = MERGE_STYLE_REGULAR
+	if mergeStyle == MergeStyleRebase && !pr.BaseRepo.PullsAllowRebase {
+		mergeStyle = MergeStyleRegular
 	}
 
 	switch mergeStyle {
-	case MERGE_STYLE_REGULAR: // Create merge commit
+	case MergeStyleRegular: // Create merge commit
 
 		// Merge changes from head branch.
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
@@ -277,7 +277,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 			return fmt.Errorf("git commit [%s]: %v - %s", tmpBasePath, err, stderr)
 		}
 
-	case MERGE_STYLE_REBASE: // Rebase before merging
+	case MergeStyleRebase: // Rebase before merging
 
 		// Rebase head branch based on base branch, this creates a non-branch commit state.
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
@@ -332,7 +332,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	if err = Handle.Actions().MergePullRequest(ctx, doer, pr.Issue.Repo.Owner, pr.Issue.Repo, pr.Issue); err != nil {
@@ -344,7 +344,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		log.Error("LoadAttributes: %v", err)
 		return nil
 	}
-	if err = PrepareWebhooks(pr.Issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+	if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
 		Action:      api.HOOK_ISSUE_CLOSED,
 		Index:       pr.Index,
 		PullRequest: pr.APIFormat(),
@@ -369,7 +369,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		log.Error("Failed to get base branch %q commit: %v", pr.BaseBranch, err)
 		return nil
 	}
-	if mergeStyle == MERGE_STYLE_REGULAR {
+	if mergeStyle == MergeStyleRegular {
 		commits = append([]*git.Commit{mergeCommit}, commits...)
 	}
 
@@ -389,7 +389,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),
 	}
-	if err = PrepareWebhooks(pr.BaseRepo, HOOK_EVENT_PUSH, p); err != nil {
+	if err = PrepareWebhooks(pr.BaseRepo, HookEventTypePush, p); err != nil {
 		log.Error("Failed to prepare webhooks: %v", err)
 		return nil
 	}
@@ -432,13 +432,13 @@ func (pr *PullRequest) testPatch() (err error) {
 	}
 	args = append(args, patchPath)
 
-	pr.Status = PULL_REQUEST_STATUS_CHECKING
+	pr.Status = PullRequestStatusChecking
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
 		fmt.Sprintf("testPatch (git apply --check): %d", pr.BaseRepo.ID),
 		"git", args...)
 	if err != nil {
 		log.Trace("PullRequest[%d].testPatch (apply): has conflict\n%s", pr.ID, stderr)
-		pr.Status = PULL_REQUEST_STATUS_CONFLICT
+		pr.Status = PullRequestStatusConflict
 		return nil
 	}
 	return nil
@@ -472,8 +472,8 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return fmt.Errorf("testPatch: %v", err)
 	}
 	// No conflict appears after test means mergeable.
-	if pr.Status == PULL_REQUEST_STATUS_CHECKING {
-		pr.Status = PULL_REQUEST_STATUS_MERGEABLE
+	if pr.Status == PullRequestStatusChecking {
+		pr.Status = PullRequestStatusMergeable
 	}
 
 	pr.IssueID = pull.ID
@@ -482,7 +482,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
 	}
 
 	if err = NotifyWatchers(&Action{
@@ -503,7 +503,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 	pr.Issue = pull
 	pull.PullRequest = pr
-	if err = PrepareWebhooks(repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+	if err = PrepareWebhooks(repo, HookEventTypePullRequest, &api.PullRequestPayload{
 		Action:      api.HOOK_ISSUE_OPENED,
 		Index:       pull.Index,
 		PullRequest: pr.APIFormat(),
@@ -705,7 +705,7 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 // AddToTaskQueue adds itself to pull request test task queue.
 func (pr *PullRequest) AddToTaskQueue() {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
-		pr.Status = PULL_REQUEST_STATUS_CHECKING
+		pr.Status = PullRequestStatusChecking
 		if err := pr.UpdateCols("status"); err != nil {
 			log.Error("AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
 		}
@@ -795,7 +795,7 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 					log.Error("LoadAttributes: %v", err)
 					continue
 				}
-				if err = PrepareWebhooks(pr.Issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+				if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
 					Action:      api.HOOK_ISSUE_SYNCHRONIZED,
 					Index:       pr.Issue.Index,
 					PullRequest: pr.Issue.PullRequest.APIFormat(),
@@ -826,8 +826,8 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 // and set to be either conflict or mergeable.
 func (pr *PullRequest) checkAndUpdateStatus() {
 	// Status is not changed to conflict means mergeable.
-	if pr.Status == PULL_REQUEST_STATUS_CHECKING {
-		pr.Status = PULL_REQUEST_STATUS_MERGEABLE
+	if pr.Status == PullRequestStatusChecking {
+		pr.Status = PullRequestStatusMergeable
 	}
 
 	// Make sure there is no waiting test to process before leaving the checking status.
@@ -843,7 +843,7 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 func TestPullRequests() {
 	prs := make([]*PullRequest, 0, 10)
 	_ = x.Iterate(PullRequest{
-		Status: PULL_REQUEST_STATUS_CHECKING,
+		Status: PullRequestStatusChecking,
 	},
 		func(idx int, bean any) error {
 			pr := bean.(*PullRequest)

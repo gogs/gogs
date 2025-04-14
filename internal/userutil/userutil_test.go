@@ -40,7 +40,7 @@ func TestGenerateActivateCode(t *testing.T) {
 	)
 
 	code := GenerateActivateCode(1, "alice@example.com", "Alice", "123456", "rands")
-	got := tool.VerifyTimeLimitCode("1alice@example.comalice123456rands", conf.Auth.ActivateCodeLives, code[:tool.TIME_LIMIT_CODE_LENGTH])
+	got := tool.VerifyTimeLimitCode("1alice@example.comalice123456rands", conf.Auth.ActivateCodeLives, code[:tool.TimeLimitCodeLength])
 	assert.True(t, got)
 }
 

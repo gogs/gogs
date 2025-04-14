@@ -32,14 +32,14 @@ import (
 )
 
 const (
-	ENV_AUTH_USER_ID           = "GOGS_AUTH_USER_ID"
-	ENV_AUTH_USER_NAME         = "GOGS_AUTH_USER_NAME"
-	ENV_AUTH_USER_EMAIL        = "GOGS_AUTH_USER_EMAIL"
-	ENV_REPO_OWNER_NAME        = "GOGS_REPO_OWNER_NAME"
-	ENV_REPO_OWNER_SALT_MD5    = "GOGS_REPO_OWNER_SALT_MD5"
-	ENV_REPO_ID                = "GOGS_REPO_ID"
-	ENV_REPO_NAME              = "GOGS_REPO_NAME"
-	ENV_REPO_CUSTOM_HOOKS_PATH = "GOGS_REPO_CUSTOM_HOOKS_PATH"
+	EnvAuthUserID          = "GOGS_AUTH_USER_ID"
+	EnvAuthUserName        = "GOGS_AUTH_USER_NAME"
+	EnvAuthUserEmail       = "GOGS_AUTH_USER_EMAIL"
+	EnvRepoOwnerName       = "GOGS_REPO_OWNER_NAME"
+	EnvRepoOwnerSaltMd5    = "GOGS_REPO_OWNER_SALT_MD5"
+	EnvRepoID              = "GOGS_REPO_ID"
+	EnvRepoName            = "GOGS_REPO_NAME"
+	EnvRepoCustomHooksPath = "GOGS_REPO_CUSTOM_HOOKS_PATH"
 )
 
 type ComposeHookEnvsOptions struct {
@@ -54,14 +54,14 @@ type ComposeHookEnvsOptions struct {
 func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 	envs := []string{
 		"SSH_ORIGINAL_COMMAND=1",
-		ENV_AUTH_USER_ID + "=" + com.ToStr(opts.AuthUser.ID),
-		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
-		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
-		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
-		ENV_REPO_OWNER_SALT_MD5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
-		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
-		ENV_REPO_NAME + "=" + opts.RepoName,
-		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
+		EnvAuthUserID + "=" + com.ToStr(opts.AuthUser.ID),
+		EnvAuthUserName + "=" + opts.AuthUser.Name,
+		EnvAuthUserEmail + "=" + opts.AuthUser.Email,
+		EnvRepoOwnerName + "=" + opts.OwnerName,
+		EnvRepoOwnerSaltMd5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
+		EnvRepoID + "=" + com.ToStr(opts.RepoID),
+		EnvRepoName + "=" + opts.RepoName,
+		EnvRepoCustomHooksPath + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
 	}
 	return envs
 }
@@ -92,13 +92,13 @@ func discardLocalRepoBranchChanges(localPath, branch string) error {
 	return nil
 }
 
-func (repo *Repository) DiscardLocalRepoBranchChanges(branch string) error {
-	return discardLocalRepoBranchChanges(repo.LocalCopyPath(), branch)
+func (r *Repository) DiscardLocalRepoBranchChanges(branch string) error {
+	return discardLocalRepoBranchChanges(r.LocalCopyPath(), branch)
 }
 
 // CheckoutNewBranch checks out to a new branch from the a branch name.
-func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	if err := git.Checkout(repo.LocalCopyPath(), newBranch, git.CheckoutOptions{
+func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
+	if err := git.Checkout(r.LocalCopyPath(), newBranch, git.CheckoutOptions{
 		BaseBranch: oldBranch,
 		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
@@ -118,23 +118,23 @@ type UpdateRepoFileOptions struct {
 }
 
 // UpdateRepoFile adds or updates a file in repository.
-func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
+func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.NewTreeName) {
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+	repoWorkingPool.CheckIn(com.ToStr(r.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	if err = repo.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = repo.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
+	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
+		return fmt.Errorf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
+	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
 		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
-	repoPath := repo.RepoPath()
-	localPath := repo.LocalCopyPath()
+	repoPath := r.RepoPath()
+	localPath := r.LocalCopyPath()
 
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
@@ -151,7 +151,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 			}
 		}
 
-		if err := repo.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
+		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
 			return fmt.Errorf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
@@ -203,11 +203,11 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 			CommandOptions: git.CommandOptions{
 				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
 					AuthUser:  doer,
-					OwnerName: repo.MustOwner().Name,
-					OwnerSalt: repo.MustOwner().Salt,
-					RepoID:    repo.ID,
-					RepoName:  repo.Name,
-					RepoPath:  repo.RepoPath(),
+					OwnerName: r.MustOwner().Name,
+					OwnerSalt: r.MustOwner().Salt,
+					RepoID:    r.ID,
+					RepoName:  r.Name,
+					RepoPath:  r.RepoPath(),
 				}),
 			},
 		},
@@ -219,22 +219,22 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *gitutil.Diff, err error) {
+func (r *Repository) GetDiffPreview(branch, treePath, content string) (diff *gitutil.Diff, err error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+	repoWorkingPool.CheckIn(com.ToStr(r.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	if err = repo.DiscardLocalRepoBranchChanges(branch); err != nil {
-		return nil, fmt.Errorf("discard local repo branch[%s] changes: %v", branch, err)
-	} else if err = repo.UpdateLocalCopyBranch(branch); err != nil {
+	if err = r.DiscardLocalRepoBranchChanges(branch); err != nil {
+		return nil, fmt.Errorf("discard local r branch[%s] changes: %v", branch, err)
+	} else if err = r.UpdateLocalCopyBranch(branch); err != nil {
 		return nil, fmt.Errorf("update local copy branch[%s]: %v", branch, err)
 	}
 
-	localPath := repo.LocalCopyPath()
+	localPath := r.LocalCopyPath()
 	filePath := path.Join(localPath, treePath)
 	if err = os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 		return nil, fmt.Errorf("start: %v", err)
 	}
 
-	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", repo.RepoPath()), cmd)
+	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", r.RepoPath()), cmd)
 	defer process.Remove(pid)
 
 	diff, err = gitutil.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
@@ -288,28 +288,28 @@ type DeleteRepoFileOptions struct {
 	Message      string
 }
 
-func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
+func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+	repoWorkingPool.CheckIn(com.ToStr(r.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	if err = repo.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = repo.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
+	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
+		return fmt.Errorf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
+	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
 		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
 	if opts.OldBranch != opts.NewBranch {
-		if err := repo.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
+		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
 			return fmt.Errorf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
 
-	localPath := repo.LocalCopyPath()
+	localPath := r.LocalCopyPath()
 	if err = os.Remove(path.Join(localPath, opts.TreePath)); err != nil {
 		return fmt.Errorf("remove file %q: %v", opts.TreePath, err)
 	}
@@ -336,11 +336,11 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 			CommandOptions: git.CommandOptions{
 				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
 					AuthUser:  doer,
-					OwnerName: repo.MustOwner().Name,
-					OwnerSalt: repo.MustOwner().Salt,
-					RepoID:    repo.ID,
-					RepoName:  repo.Name,
-					RepoPath:  repo.RepoPath(),
+					OwnerName: r.MustOwner().Name,
+					OwnerSalt: r.MustOwner().Salt,
+					RepoID:    r.ID,
+					RepoName:  r.Name,
+					RepoPath:  r.RepoPath(),
 				}),
 			},
 		},
@@ -509,7 +509,7 @@ func isRepositoryGitPath(path string) bool {
 		strings.Contains(path, `.git.\`)
 }
 
-func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
+func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
 	if len(opts.Files) == 0 {
 		return nil
 	}
@@ -524,22 +524,22 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		return fmt.Errorf("get uploads by UUIDs[%v]: %v", opts.Files, err)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+	repoWorkingPool.CheckIn(com.ToStr(r.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	if err = repo.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = repo.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
+	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
+		return fmt.Errorf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
+	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
 		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
 	if opts.OldBranch != opts.NewBranch {
-		if err = repo.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
+		if err = r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
 			return fmt.Errorf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
 
-	localPath := repo.LocalCopyPath()
+	localPath := r.LocalCopyPath()
 	dirPath := path.Join(localPath, opts.TreePath)
 	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
 		return err
@@ -588,11 +588,11 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 			CommandOptions: git.CommandOptions{
 				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
 					AuthUser:  doer,
-					OwnerName: repo.MustOwner().Name,
-					OwnerSalt: repo.MustOwner().Salt,
-					RepoID:    repo.ID,
-					RepoName:  repo.Name,
-					RepoPath:  repo.RepoPath(),
+					OwnerName: r.MustOwner().Name,
+					OwnerSalt: r.MustOwner().Salt,
+					RepoID:    r.ID,
+					RepoName:  r.Name,
+					RepoPath:  r.RepoPath(),
 				}),
 			},
 		},

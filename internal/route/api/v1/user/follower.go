@@ -11,7 +11,7 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func responseApiUsers(c *context.APIContext, users []*database.User) {
+func responseAPIUsers(c *context.APIContext, users []*database.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
 		apiUsers[i] = users[i].APIFormat()
@@ -25,7 +25,7 @@ func listUserFollowers(c *context.APIContext, u *database.User) {
 		c.Error(err, "list followers")
 		return
 	}
-	responseApiUsers(c, users)
+	responseAPIUsers(c, users)
 }
 
 func ListMyFollowers(c *context.APIContext) {
@@ -46,7 +46,7 @@ func listUserFollowing(c *context.APIContext, u *database.User) {
 		c.Error(err, "list followings")
 		return
 	}
-	responseApiUsers(c, users)
+	responseAPIUsers(c, users)
 }
 
 func ListMyFollowing(c *context.APIContext) {

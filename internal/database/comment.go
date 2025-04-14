@@ -25,27 +25,27 @@ type CommentType int
 
 const (
 	// Plain comment, can be associated with a commit (CommitID > 0) and a line (LineNum > 0)
-	COMMENT_TYPE_COMMENT CommentType = iota
-	COMMENT_TYPE_REOPEN
-	COMMENT_TYPE_CLOSE
+	CommentTypeComment CommentType = iota
+	CommentTypeReopen
+	CommentTypeClose
 
 	// References.
-	COMMENT_TYPE_ISSUE_REF
+	CommentTypeIssueRef
 	// Reference from a commit (not part of a pull request)
-	COMMENT_TYPE_COMMIT_REF
+	CommentTypeCommitRef
 	// Reference from a comment
-	COMMENT_TYPE_COMMENT_REF
+	CommentTypeCommentRef
 	// Reference from a pull request
-	COMMENT_TYPE_PULL_REF
+	CommentTypePullRef
 )
 
 type CommentTag int
 
 const (
-	COMMENT_TAG_NONE CommentTag = iota
-	COMMENT_TAG_POSTER
-	COMMENT_TAG_WRITER
-	COMMENT_TAG_OWNER
+	CommentTagNone CommentTag = iota
+	CommentTagPoster
+	CommentTagWriter
+	CommentTagOwner
 )
 
 // Comment represents a comment in commit and issue page.
@@ -166,21 +166,21 @@ func (c *Comment) EventTag() string {
 
 // mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
-	mentions := markup.FindAllMentions(cmt.Content)
-	if err = updateIssueMentions(e, cmt.IssueID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
+func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
+	mentions := markup.FindAllMentions(c.Content)
+	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
+		return fmt.Errorf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
 	switch opType {
 	case ActionCommentIssue:
-		issue.Content = cmt.Content
+		issue.Content = c.Content
 	case ActionCloseIssue:
 		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(issue, c.Poster, mentions); err != nil {
 		log.Error("mailIssueCommentToParticipants: %v", err)
 	}
 
@@ -216,7 +216,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 
 	// Check comment type.
 	switch opts.Type {
-	case COMMENT_TYPE_COMMENT:
+	case CommentTypeComment:
 		act.OpType = ActionCommentIssue
 
 		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
@@ -245,7 +245,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			}
 		}
 
-	case COMMENT_TYPE_REOPEN:
+	case CommentTypeReopen:
 		act.OpType = ActionReopenIssue
 		if opts.Issue.IsPull {
 			act.OpType = ActionReopenPullRequest
@@ -260,7 +260,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			return nil, err
 		}
 
-	case COMMENT_TYPE_CLOSE:
+	case CommentTypeClose:
 		act.OpType = ActionCloseIssue
 		if opts.Issue.IsPull {
 			act.OpType = ActionClosePullRequest
@@ -294,9 +294,9 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 }
 
 func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
-	cmtType := COMMENT_TYPE_CLOSE
+	cmtType := CommentTypeClose
 	if !issue.IsClosed {
-		cmtType = COMMENT_TYPE_REOPEN
+		cmtType = CommentTypeReopen
 	}
 	return createComment(e, &CreateCommentOptions{
 		Type:  cmtType,
@@ -338,7 +338,7 @@ func CreateComment(opts *CreateCommentOptions) (comment *Comment, err error) {
 // CreateIssueComment creates a plain issue comment.
 func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
 	comment, err := CreateComment(&CreateCommentOptions{
-		Type:        COMMENT_TYPE_COMMENT,
+		Type:        CommentTypeComment,
 		Doer:        doer,
 		Repo:        repo,
 		Issue:       issue,
@@ -350,7 +350,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 	}
 
 	comment.Issue = issue
-	if err = PrepareWebhooks(repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
+	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
 		Action:     api.HOOK_ISSUE_COMMENT_CREATED,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
@@ -371,7 +371,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 
 	// Check if same reference from same commit has already existed.
 	has, err := x.Get(&Comment{
-		Type:      COMMENT_TYPE_COMMIT_REF,
+		Type:      CommentTypeCommitRef,
 		IssueID:   issue.ID,
 		CommitSHA: commitSHA,
 	})
@@ -382,7 +382,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 	}
 
 	_, err = CreateComment(&CreateCommentOptions{
-		Type:      COMMENT_TYPE_COMMIT_REF,
+		Type:      CommentTypeCommitRef,
 		Doer:      doer,
 		Repo:      repo,
 		Issue:     issue,
@@ -486,7 +486,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 
 	if err = c.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
-	} else if err = PrepareWebhooks(c.Issue.Repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
+	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
 		Action:  api.HOOK_ISSUE_COMMENT_EDITED,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
@@ -524,7 +524,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		return err
 	}
 
-	if comment.Type == COMMENT_TYPE_COMMENT {
+	if comment.Type == CommentTypeComment {
 		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
 			return err
 		}
@@ -541,7 +541,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
-	} else if err = PrepareWebhooks(comment.Issue.Repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
+	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
 		Action:     api.HOOK_ISSUE_COMMENT_DELETED,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),

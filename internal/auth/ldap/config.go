@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/go-ldap/ldap/v3"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -166,7 +166,7 @@ func dial(ls *Config) (*ldap.Conn, error) {
 
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
 	if err != nil {
-		return nil, fmt.Errorf("Dial: %v", err)
+		return nil, fmt.Errorf("dial: %v", err)
 	}
 
 	if ls.SecurityProtocol == SecurityProtocolStartTLS {
