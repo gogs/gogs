@@ -300,7 +300,7 @@ func gitCommand(dir string, args ...string) []byte {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		log.Error(fmt.Sprintf("Git: %v - %s", err, out))
+		log.Error("Git: %v - %s", err, out)
 	}
 	return out
 }
