@@ -1945,9 +1945,13 @@ func DeleteOldRepositoryArchives() {
 
 					archivePath := filepath.Join(dirPath, fi.Name())
 					if err = os.Remove(archivePath); err != nil {
-						desc := fmt.Sprintf("Failed to health delete archive '%s': %v", archivePath, err)
-						log.Warn(desc)
-						if err = Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+						const fmtStr = "Failed to health delete archive %q: %v"
+						log.Warn(fmtStr, archivePath, err)
+						if err = Handle.Notices().Create(
+							context.TODO(),
+							NoticeTypeRepository,
+							fmt.Sprintf(fmtStr, archivePath, err),
+						); err != nil {
 							log.Error("CreateRepositoryNotice: %v", err)
 						}
 					}
@@ -2084,9 +2088,13 @@ func GitFsck() {
 				Timeout: conf.Cron.RepoHealthCheck.Timeout,
 			})
 			if err != nil {
-				desc := fmt.Sprintf("Failed to perform health check on repository '%s': %v", repoPath, err)
-				log.Warn(desc)
-				if err = Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+				const fmtStr = "Failed to perform health check on repository %q: %v"
+				log.Warn(fmtStr, repoPath, err)
+				if err = Handle.Notices().Create(
+					context.TODO(),
+					NoticeTypeRepository,
+					fmt.Sprintf(fmtStr, repoPath, err),
+				); err != nil {
 					log.Error("CreateRepositoryNotice: %v", err)
 				}
 			}
@@ -2585,7 +2593,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	if err = repo.UpdateSize(); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 	}
-	if err = PrepareWebhooks(baseRepo, HOOK_EVENT_FORK, &api.ForkPayload{
+	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &api.ForkPayload{
 		Forkee: repo.APIFormatLegacy(nil),
 		Repo:   baseRepo.APIFormatLegacy(nil),
 		Sender: doer.APIFormat(),

@@ -229,9 +229,13 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		timeout, repoPath, fmt.Sprintf("Mirror.runSync: %s", repoPath),
 		"git", gitArgs...)
 	if err != nil {
-		desc := fmt.Sprintf("Failed to update mirror repository '%s': %s", repoPath, stderr)
-		log.Error(desc)
-		if err = Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+		const fmtStr = "Failed to update mirror repository %q: %s"
+		log.Error(fmtStr, repoPath, stderr)
+		if err = Handle.Notices().Create(
+			context.TODO(),
+			NoticeTypeRepository,
+			fmt.Sprintf(fmtStr, repoPath, stderr),
+		); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
 		}
 		return nil, false
@@ -247,9 +251,13 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		if _, stderr, err := process.ExecDir(
 			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
 			"git", "remote", "update", "--prune"); err != nil {
-			desc := fmt.Sprintf("Failed to update mirror wiki repository '%s': %s", wikiPath, stderr)
-			log.Error(desc)
-			if err = Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+			const fmtStr = "Failed to update mirror wiki repository %q: %s"
+			log.Error(fmtStr, wikiPath, stderr)
+			if err = Handle.Notices().Create(
+				context.TODO(),
+				NoticeTypeRepository,
+				fmt.Sprintf(fmtStr, wikiPath, stderr),
+			); err != nil {
 				log.Error("CreateRepositoryNotice: %v", err)
 			}
 		}

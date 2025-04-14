@@ -350,7 +350,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 	}
 
 	comment.Issue = issue
-	if err = PrepareWebhooks(repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
+	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
 		Action:     api.HOOK_ISSUE_COMMENT_CREATED,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
@@ -486,7 +486,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 
 	if err = c.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
-	} else if err = PrepareWebhooks(c.Issue.Repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
+	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
 		Action:  api.HOOK_ISSUE_COMMENT_EDITED,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
@@ -541,7 +541,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
-	} else if err = PrepareWebhooks(comment.Issue.Repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
+	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
 		Action:     api.HOOK_ISSUE_COMMENT_DELETED,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),

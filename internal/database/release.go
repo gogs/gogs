@@ -150,7 +150,7 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 }
 
 func (r *Release) preparePublishWebhooks() {
-	if err := PrepareWebhooks(r.Repo, HOOK_EVENT_RELEASE, &api.ReleasePayload{
+	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &api.ReleasePayload{
 		Action:     api.HOOK_RELEASE_PUBLISHED,
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormatLegacy(nil),

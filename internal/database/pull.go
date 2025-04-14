@@ -344,7 +344,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		log.Error("LoadAttributes: %v", err)
 		return nil
 	}
-	if err = PrepareWebhooks(pr.Issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+	if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
 		Action:      api.HOOK_ISSUE_CLOSED,
 		Index:       pr.Index,
 		PullRequest: pr.APIFormat(),
@@ -389,7 +389,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),
 	}
-	if err = PrepareWebhooks(pr.BaseRepo, HOOK_EVENT_PUSH, p); err != nil {
+	if err = PrepareWebhooks(pr.BaseRepo, HookEventTypePush, p); err != nil {
 		log.Error("Failed to prepare webhooks: %v", err)
 		return nil
 	}
@@ -503,7 +503,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 	pr.Issue = pull
 	pull.PullRequest = pr
-	if err = PrepareWebhooks(repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+	if err = PrepareWebhooks(repo, HookEventTypePullRequest, &api.PullRequestPayload{
 		Action:      api.HOOK_ISSUE_OPENED,
 		Index:       pull.Index,
 		PullRequest: pr.APIFormat(),
@@ -795,7 +795,7 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 					log.Error("LoadAttributes: %v", err)
 					continue
 				}
-				if err = PrepareWebhooks(pr.Issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+				if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
 					Action:      api.HOOK_ISSUE_SYNCHRONIZED,
 					Index:       pr.Issue.Index,
 					PullRequest: pr.Issue.PullRequest.APIFormat(),

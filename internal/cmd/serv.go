@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	_ACCESS_DENIED_MESSAGE = "Repository does not exist or you do not have access"
+	accessDeniedMessage = "Repository does not exist or you do not have access"
 )
 
 var Serv = cli.Command{
@@ -173,7 +173,7 @@ func runServ(c *cli.Context) error {
 	repo, err := database.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
-			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
+			fail(accessDeniedMessage, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		fail("Internal error", "Failed to get repository: %v", err)
 	}
@@ -217,7 +217,7 @@ func runServ(c *cli.Context) error {
 				},
 			)
 			if mode < requestMode {
-				clientMessage := _ACCESS_DENIED_MESSAGE
+				clientMessage := accessDeniedMessage
 				if mode >= database.AccessModeRead {
 					clientMessage = "You do not have sufficient authorization for this action"
 				}

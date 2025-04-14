@@ -359,7 +359,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 			log.Error("LoadIssue: %v", err)
 			return err
 		}
-		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
@@ -367,7 +367,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &api.IssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),

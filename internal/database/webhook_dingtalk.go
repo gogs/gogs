@@ -61,21 +61,21 @@ func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
 // TODO: add content
 func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
 	switch event {
-	case HOOK_EVENT_CREATE:
+	case HookEventTypeCreate:
 		payload = getDingtalkCreatePayload(p.(*api.CreatePayload))
-	case HOOK_EVENT_DELETE:
+	case HookEventTypeDelete:
 		payload = getDingtalkDeletePayload(p.(*api.DeletePayload))
-	case HOOK_EVENT_FORK:
+	case HookEventTypeFork:
 		payload = getDingtalkForkPayload(p.(*api.ForkPayload))
-	case HOOK_EVENT_PUSH:
+	case HookEventTypePush:
 		payload = getDingtalkPushPayload(p.(*api.PushPayload))
-	case HOOK_EVENT_ISSUES:
+	case HookEventTypeIssues:
 		payload = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
-	case HOOK_EVENT_ISSUE_COMMENT:
+	case HookEventTypeIssueComment:
 		payload = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
-	case HOOK_EVENT_PULL_REQUEST:
+	case HookEventTypePullRequest:
 		payload = getDingtalkPullRequestPayload(p.(*api.PullRequestPayload))
-	case HOOK_EVENT_RELEASE:
+	case HookEventTypeRelease:
 		payload = getDingtalkReleasePayload(p.(*api.ReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)

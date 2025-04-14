@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	RELEASES    = "repo/release/list"
-	RELEASE_NEW = "repo/release/new"
+	tmplRepoReleaseList = "repo/release/list"
+	tmplRepoReleaseNew  = "repo/release/new"
 )
 
 // calReleaseNumCommitsBehind calculates given release has how many commits behind release target.
@@ -148,7 +148,7 @@ func Releases(c *context.Context) {
 	if len(results) > 0 {
 		c.Data["NextAfter"] = results[len(results)-1].TagName
 	}
-	c.Success(RELEASES)
+	c.Success(tmplRepoReleaseList)
 }
 
 func renderReleaseAttachmentSettings(c *context.Context) {
@@ -164,7 +164,7 @@ func NewRelease(c *context.Context) {
 	c.Data["PageIsReleaseList"] = true
 	c.Data["tag_target"] = c.Repo.Repository.DefaultBranch
 	renderReleaseAttachmentSettings(c)
-	c.Success(RELEASE_NEW)
+	c.Success(tmplRepoReleaseNew)
 }
 
 func NewReleasePost(c *context.Context, f form.NewRelease) {
@@ -173,12 +173,12 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	if c.HasError() {
-		c.Success(RELEASE_NEW)
+		c.Success(tmplRepoReleaseNew)
 		return
 	}
 
 	if !c.Repo.GitRepo.HasBranch(f.Target) {
-		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f)
+		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), tmplRepoReleaseNew, &f)
 		return
 	}
 
@@ -226,9 +226,9 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		c.Data["Err_TagName"] = true
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), tmplRepoReleaseNew, &f)
 		case database.IsErrInvalidTagName(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), tmplRepoReleaseNew, &f)
 		default:
 			c.Error(err, "new release")
 		}
@@ -260,7 +260,7 @@ func EditRelease(c *context.Context) {
 	c.Data["prerelease"] = rel.IsPrerelease
 	c.Data["IsDraft"] = rel.IsDraft
 
-	c.Success(RELEASE_NEW)
+	c.Success(tmplRepoReleaseNew)
 }
 
 func EditReleasePost(c *context.Context, f form.EditRelease) {
@@ -284,7 +284,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["IsDraft"] = rel.IsDraft
 
 	if c.HasError() {
-		c.Success(RELEASE_NEW)
+		c.Success(tmplRepoReleaseNew)
 		return
 	}
 

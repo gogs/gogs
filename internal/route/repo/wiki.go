@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	WIKI_START = "repo/wiki/start"
-	WIKI_VIEW  = "repo/wiki/view"
-	WIKI_NEW   = "repo/wiki/new"
-	WIKI_PAGES = "repo/wiki/pages"
+	tmplRepoWikiStart = "repo/wiki/start"
+	tmplRepoWikiView  = "repo/wiki/view"
+	tmplRepoWikiNew   = "repo/wiki/new"
+	tmplRepoWikiPages = "repo/wiki/pages"
 )
 
 func MustEnableWiki(c *context.Context) {
@@ -114,7 +114,7 @@ func Wiki(c *context.Context) {
 
 	if !c.Repo.Repository.HasWiki() {
 		c.Data["Title"] = c.Tr("repo.wiki")
-		c.Success(WIKI_START)
+		c.Success(tmplRepoWikiStart)
 		return
 	}
 
@@ -131,7 +131,7 @@ func Wiki(c *context.Context) {
 	}
 	c.Data["Author"] = commits[0].Author
 
-	c.Success(WIKI_VIEW)
+	c.Success(tmplRepoWikiView)
 }
 
 func WikiPages(c *context.Context) {
@@ -177,7 +177,7 @@ func WikiPages(c *context.Context) {
 	}
 	c.Data["Pages"] = pages
 
-	c.Success(WIKI_PAGES)
+	c.Success(tmplRepoWikiPages)
 }
 
 func NewWiki(c *context.Context) {
@@ -189,7 +189,7 @@ func NewWiki(c *context.Context) {
 		c.Data["title"] = "Home"
 	}
 
-	c.Success(WIKI_NEW)
+	c.Success(tmplRepoWikiNew)
 }
 
 func NewWikiPost(c *context.Context, f form.NewWiki) {
@@ -198,14 +198,14 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(WIKI_NEW)
+		c.Success(tmplRepoWikiNew)
 		return
 	}
 
 	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), tmplRepoWikiNew, &f)
 		} else {
 			c.Error(err, "add wiki page")
 		}
@@ -230,7 +230,7 @@ func EditWiki(c *context.Context) {
 		return
 	}
 
-	c.Success(WIKI_NEW)
+	c.Success(tmplRepoWikiNew)
 }
 
 func EditWikiPost(c *context.Context, f form.NewWiki) {
@@ -239,7 +239,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(WIKI_NEW)
+		c.Success(tmplRepoWikiNew)
 		return
 	}
 

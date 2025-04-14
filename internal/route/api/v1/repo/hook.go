@@ -61,14 +61,14 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 		HookEvent: &database.HookEvent{
 			ChooseEvents: true,
 			HookEvents: database.HookEvents{
-				Create:       com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_CREATE)),
-				Delete:       com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_DELETE)),
-				Fork:         com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_FORK)),
-				Push:         com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_PUSH)),
-				Issues:       com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_ISSUES)),
-				IssueComment: com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_ISSUE_COMMENT)),
-				PullRequest:  com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_PULL_REQUEST)),
-				Release:      com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_RELEASE)),
+				Create:       com.IsSliceContainsStr(form.Events, string(database.HookEventTypeCreate)),
+				Delete:       com.IsSliceContainsStr(form.Events, string(database.HookEventTypeDelete)),
+				Fork:         com.IsSliceContainsStr(form.Events, string(database.HookEventTypeFork)),
+				Push:         com.IsSliceContainsStr(form.Events, string(database.HookEventTypePush)),
+				Issues:       com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssues)),
+				IssueComment: com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssueComment)),
+				PullRequest:  com.IsSliceContainsStr(form.Events, string(database.HookEventTypePullRequest)),
+				Release:      com.IsSliceContainsStr(form.Events, string(database.HookEventTypeRelease)),
 			},
 		},
 		IsActive:     form.Active,
@@ -148,14 +148,14 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 	w.PushOnly = false
 	w.SendEverything = false
 	w.ChooseEvents = true
-	w.Create = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_CREATE))
-	w.Delete = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_DELETE))
-	w.Fork = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_FORK))
-	w.Push = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_PUSH))
-	w.Issues = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_ISSUES))
-	w.IssueComment = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_ISSUE_COMMENT))
-	w.PullRequest = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_PULL_REQUEST))
-	w.Release = com.IsSliceContainsStr(form.Events, string(database.HOOK_EVENT_RELEASE))
+	w.Create = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeCreate))
+	w.Delete = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeDelete))
+	w.Fork = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeFork))
+	w.Push = com.IsSliceContainsStr(form.Events, string(database.HookEventTypePush))
+	w.Issues = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssues))
+	w.IssueComment = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssueComment))
+	w.PullRequest = com.IsSliceContainsStr(form.Events, string(database.HookEventTypePullRequest))
+	w.Release = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeRelease))
 	if err = w.UpdateEvent(); err != nil {
 		c.Errorf(err, "update event")
 		return

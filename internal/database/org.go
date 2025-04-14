@@ -73,7 +73,7 @@ func (org *User) GetMembers(limit int) error {
 
 	org.Members = make([]*User, len(ous))
 	for i, ou := range ous {
-		org.Members[i], err = Handle.Users().GetByID(context.TODO(), ou.Uid)
+		org.Members[i], err = Handle.Users().GetByID(context.TODO(), ou.UID)
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	// Add initial creator to organization and owner team.
 	if _, err = sess.Insert(&OrgUser{
-		Uid:      owner.ID,
+		UID:      owner.ID,
 		OrgID:    org.ID,
 		IsOwner:  true,
 		NumTeams: 1,
@@ -247,7 +247,7 @@ func DeleteOrganization(org *User) error {
 // OrgUser represents relations of organizations and their members.
 type OrgUser struct {
 	ID       int64 `gorm:"primaryKey"`
-	Uid      int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
+	UID      int64 `xorm:"uid INDEX UNIQUE(s)" gorm:"column:uid;uniqueIndex:org_user_user_org_unique;index;not null"`
 	OrgID    int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
 	IsPublic bool  `gorm:"not null;default:FALSE"`
 	IsOwner  bool  `gorm:"not null;default:FALSE"`
@@ -349,7 +349,7 @@ func AddOrgUser(orgID, uid int64) error {
 	}
 
 	ou := &OrgUser{
-		Uid:   uid,
+		UID:   uid,
 		OrgID: orgID,
 	}
 
