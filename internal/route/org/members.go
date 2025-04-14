@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	MEMBERS       = "org/member/members"
-	MEMBER_INVITE = "org/member/invite"
+	tmplOrgMembers       = "org/member/members"
+	templOrgMemberInvite = "org/member/invite"
 )
 
 func Members(c *context.Context) {
@@ -29,7 +29,7 @@ func Members(c *context.Context) {
 	}
 	c.Data["Members"] = org.Members
 
-	c.Success(MEMBERS)
+	c.Success(tmplOrgMembers)
 }
 
 func MembersAction(c *context.Context) {
@@ -118,5 +118,5 @@ func Invitation(c *context.Context) {
 		return
 	}
 
-	c.Success(MEMBER_INVITE)
+	c.Success(templOrgMemberInvite)
 }

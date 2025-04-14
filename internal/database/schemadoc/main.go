@@ -82,12 +82,12 @@ func main() {
 		if len(ti.Indexes) > 0 {
 			_, _ = w.WriteString("Indexes: \n")
 			for _, index := range ti.Indexes {
-				_, _ = w.WriteString(fmt.Sprintf("\t%q", index.Name))
+				_, _ = fmt.Fprintf(w, "\t%q", index.Name)
 				if index.Class != "" {
-					_, _ = w.WriteString(fmt.Sprintf(" %s", index.Class))
+					_, _ = fmt.Fprintf(w, " %s", index.Class)
 				}
 				if index.Type != "" {
-					_, _ = w.WriteString(fmt.Sprintf(", %s", index.Type))
+					_, _ = fmt.Fprintf(w, ", %s", index.Type)
 				}
 
 				if len(index.Fields) > 0 {
@@ -95,7 +95,7 @@ func main() {
 					for i := range index.Fields {
 						fields[i] = index.Fields[i].DBName
 					}
-					_, _ = w.WriteString(fmt.Sprintf(" (%s)", strings.Join(fields, ", ")))
+					_, _ = fmt.Fprintf(w, " (%s)", strings.Join(fields, ", "))
 				}
 				_, _ = w.WriteString("\n")
 			}

@@ -162,49 +162,49 @@ func (w *Webhook) UpdateEvent() error {
 // HasCreateEvent returns true if hook enabled create event.
 func (w *Webhook) HasCreateEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Create)
+		(w.ChooseEvents && w.Create)
 }
 
 // HasDeleteEvent returns true if hook enabled delete event.
 func (w *Webhook) HasDeleteEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Delete)
+		(w.ChooseEvents && w.Delete)
 }
 
 // HasForkEvent returns true if hook enabled fork event.
 func (w *Webhook) HasForkEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Fork)
+		(w.ChooseEvents && w.Fork)
 }
 
 // HasPushEvent returns true if hook enabled push event.
 func (w *Webhook) HasPushEvent() bool {
 	return w.PushOnly || w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Push)
+		(w.ChooseEvents && w.Push)
 }
 
 // HasIssuesEvent returns true if hook enabled issues event.
 func (w *Webhook) HasIssuesEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Issues)
+		(w.ChooseEvents && w.Issues)
 }
 
 // HasPullRequestEvent returns true if hook enabled pull request event.
 func (w *Webhook) HasPullRequestEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.PullRequest)
+		(w.ChooseEvents && w.PullRequest)
 }
 
 // HasIssueCommentEvent returns true if hook enabled issue comment event.
 func (w *Webhook) HasIssueCommentEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.IssueComment)
+		(w.ChooseEvents && w.IssueComment)
 }
 
 // HasReleaseEvent returns true if hook enabled release event.
 func (w *Webhook) HasReleaseEvent() bool {
 	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.Release)
+		(w.ChooseEvents && w.Release)
 }
 
 type eventChecker struct {
@@ -511,7 +511,7 @@ func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 // createHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
 func createHookTask(e Engine, t *HookTask) error {
-	data, err := t.Payloader.JSONPayload()
+	data, err := t.JSONPayload()
 	if err != nil {
 		return err
 	}

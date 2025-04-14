@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	USERS     = "admin/user/list"
-	USER_NEW  = "admin/user/new"
-	USER_EDIT = "admin/user/edit"
+	tmplAdminUserList = "admin/user/list"
+	tmplAdminUserNew  = "admin/user/new"
+	tmplAdminUserEdit = "admin/user/edit"
 )
 
 func Users(c *context.Context) {
@@ -35,7 +35,7 @@ func Users(c *context.Context) {
 		Ranger:   database.Handle.Users().List,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
-		TplName:  USERS,
+		TplName:  tmplAdminUserList,
 	})
 }
 
@@ -54,7 +54,7 @@ func NewUser(c *context.Context) {
 	c.Data["Sources"] = sources
 
 	c.Data["CanSendEmail"] = conf.Email.Enabled
-	c.Success(USER_NEW)
+	c.Success(tmplAdminUserNew)
 }
 
 func NewUserPost(c *context.Context, f form.AdminCrateUser) {
@@ -72,7 +72,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["CanSendEmail"] = conf.Email.Enabled
 
 	if c.HasError() {
-		c.Success(USER_NEW)
+		c.Success(tmplAdminUserNew)
 		return
 	}
 
@@ -93,13 +93,13 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), tmplAdminUserNew, &f)
 		case database.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), tmplAdminUserNew, &f)
 		case database.IsErrNameNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplAdminUserNew, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -155,7 +155,7 @@ func EditUser(c *context.Context) {
 		return
 	}
 
-	c.Success(USER_EDIT)
+	c.Success(tmplAdminUserEdit)
 }
 
 func EditUserPost(c *context.Context, f form.AdminEditUser) {
@@ -170,7 +170,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	}
 
 	if c.HasError() {
-		c.Success(USER_EDIT)
+		c.Success(tmplAdminUserEdit)
 		return
 	}
 
@@ -207,7 +207,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), tmplAdminUserEdit, &f)
 		} else {
 			c.Error(err, "update user")
 		}

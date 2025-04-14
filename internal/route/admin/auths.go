@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	AUTHS     = "admin/auth/list"
-	AUTH_NEW  = "admin/auth/new"
-	AUTH_EDIT = "admin/auth/edit"
+	tmplAdminAuthList = "admin/auth/list"
+	tmplAdminAuthNew  = "admin/auth/new"
+	tmplAdminAuthEdit = "admin/auth/edit"
 )
 
 func Authentications(c *context.Context) {
@@ -42,7 +42,7 @@ func Authentications(c *context.Context) {
 	}
 
 	c.Data["Total"] = database.Handle.LoginSources().Count(c.Req.Context())
-	c.Success(AUTHS)
+	c.Success(tmplAdminAuthList)
 }
 
 type dropdownItem struct {
@@ -79,7 +79,7 @@ func NewAuthSource(c *context.Context) {
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
-	c.Success(AUTH_NEW)
+	c.Success(tmplAdminAuthNew)
 }
 
 func parseLDAPConfig(f form.Authentication) *ldap.Config {
@@ -155,7 +155,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = hasTLS
 
 	if c.HasError() {
-		c.Success(AUTH_NEW)
+		c.Success(tmplAdminAuthNew)
 		return
 	}
 
@@ -171,7 +171,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	if err != nil {
 		if database.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), AUTH_NEW, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), tmplAdminAuthNew, f)
 		} else {
 			c.Error(err, "create login source")
 		}
@@ -208,7 +208,7 @@ func EditAuthSource(c *context.Context) {
 	c.Data["Source"] = source
 	c.Data["HasTLS"] = source.Provider.HasTLS()
 
-	c.Success(AUTH_EDIT)
+	c.Success(tmplAdminAuthEdit)
 }
 
 func EditAuthSourcePost(c *context.Context, f form.Authentication) {
@@ -227,7 +227,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
-		c.Success(AUTH_EDIT)
+		c.Success(tmplAdminAuthEdit)
 		return
 	}
 

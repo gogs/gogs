@@ -1001,7 +1001,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 
 	issues := make([]*Issue, 0, conf.UI.IssuePagingNum)
 	if err := sess.Find(&issues); err != nil {
-		return nil, fmt.Errorf("Find: %v", err)
+		return nil, fmt.Errorf("find: %v", err)
 	}
 
 	// FIXME: use IssueList to improve performance.

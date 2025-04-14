@@ -16,14 +16,14 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS = "org/settings/options"
-	SETTINGS_DELETE  = "org/settings/delete"
+	tmplOrgSettingsOptions = "org/settings/options"
+	tmplOrgSettingsDelete  = "org/settings/delete"
 )
 
 func Settings(c *context.Context) {
 	c.Title("org.settings")
 	c.Data["PageIsSettingsOptions"] = true
-	c.Success(SETTINGS_OPTIONS)
+	c.Success(tmplOrgSettingsOptions)
 }
 
 func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
@@ -31,7 +31,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	c.Data["PageIsSettingsOptions"] = true
 
 	if c.HasError() {
-		c.Success(SETTINGS_OPTIONS)
+		c.Success(tmplOrgSettingsOptions)
 		return
 	}
 
@@ -53,7 +53,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 				return
 			}
 
-			c.RenderWithErr(msg, SETTINGS_OPTIONS, &f)
+			c.RenderWithErr(msg, tmplOrgSettingsOptions, &f)
 			return
 		}
 
@@ -108,7 +108,7 @@ func SettingsDelete(c *context.Context) {
 	if c.Req.Method == "POST" {
 		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), tmplOrgSettingsDelete, nil)
 			} else {
 				c.Error(err, "authenticate user")
 			}
@@ -129,5 +129,5 @@ func SettingsDelete(c *context.Context) {
 		return
 	}
 
-	c.Success(SETTINGS_DELETE)
+	c.Success(tmplOrgSettingsDelete)
 }
