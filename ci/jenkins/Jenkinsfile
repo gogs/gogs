@@ -1,0 +1,126 @@
+pipeline {
+    agent any
+
+    environment {
+        GO_VERSION = '1.24.0'
+    }
+    
+    tools {
+        go "${GO_VERSION}" 
+    }
+
+    triggers {
+
+    }
+    
+    options {
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '7', daysToKeepStr: '', numToKeepStr: '7')
+    }
+
+    stages {
+        
+        stage('Validate & Generate Code') {
+            steps {
+                sh'go version'
+                sh"go mod tidy"
+                sh"sudo apt-get update && sudo apt-get install -y build-essential"
+                sh"go install golang.org/x/tools/cmd/goimports@latest"
+                sh"""
+                   export PATH=$PATH:\$(go env GOPATH)/bin
+                   CGO_ENABLED=1 go generate ./... """
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                script {
+                    sh """
+                        echo "Installing golangci-lint..."
+                        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b \$(go env GOPATH)/bin v2.1.6
+                        export PATH=$PATH:\$(go env GOPATH)/bin
+                        golangci-lint run --timeout=30m
+                    """
+                }
+            }
+        }
+        
+        stage('Run Test') {
+            parallel {
+                stage('Test') {
+                    steps {
+                        script {
+                            try {
+                                sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
+                            } catch (err) {
+                                echo "Tests failed: ${err}"
+                                currentBuild.result = 'FAILURE'
+                            } finally {
+                                if (fileExists('report.xml')) {
+                                    junit 'report.xml'
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Test Postgres Database') {
+                    environment {
+                        PGHOST = 'localhost'
+                        PGPORT = '5432'
+                        PGUSER = 'postgres'
+                        PGPASSWORD = 'postgres'
+                        PGSSLMODE = 'disable'
+                    }
+                    steps {
+                        sh '''
+                            sudo apt-get update
+                            sudo apt-get install -y postgresql
+                            sudo systemctl start postgresql
+                            sudo systemctl enable postgresql
+                        '''
+                        sh'go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...' 
+                    }
+                }
+            }
+        }
+
+
+        
+        stage('Build') {
+            steps {
+                sh 'go build -v .'
+            }
+        }
+        
+        stage('Archive Build') {
+            steps {
+                script {
+                    def buildArtifactsDir = "artifacts/build_${BUILD_NUMBER}"
+                    sh """
+                    mkdir -p artifacts
+                    mkdir -p ${buildArtifactsDir}/log
+                    mkdir -p ${buildArtifactsDir}/coverages
+                    
+                    cp ./gogs ${buildArtifactsDir}/
+                    cp -r ./scripts ${buildArtifactsDir}/scripts
+                    go tool cover -html=coverage.out -o coverage.html
+                    cp ./coverage*.out ${buildArtifactsDir}/coverages/
+                    """
+                    //publishHTML([reportDir: '.', reportFiles: 'coverage.html', reportName: 'Go Coverage'])
+                    archiveArtifacts artifacts: "${buildArtifactsDir}/**", fingerprint: true
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo("All tests passed.");
+        }
+        failure {
+            echo("Tests failed.");
+        }
+    }
+}
