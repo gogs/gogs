@@ -34,6 +34,20 @@ func IsExist(path string) bool {
 	return err == nil || os.IsExist(err)
 }
 
+// IsSymlink returns true if given path is a symbolic link.
+func IsSymlink(path string) bool {
+	if !IsExist(path) {
+		return false
+	}
+
+	fileInfo, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+
+	return fileInfo.Mode()&os.ModeSymlink != 0
+}
+
 // CurrentUsername returns the username of the current user.
 func CurrentUsername() string {
 	username := os.Getenv("USER")
