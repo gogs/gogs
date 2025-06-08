@@ -247,17 +247,15 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (diff *git
 
 	localPath := r.LocalCopyPath()
 	filePath := path.Join(localPath, treePath)
-	if err = os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-		return nil, err
-	}
 
 	// 🚨 SECURITY: Prevent updating files in surprising place, check if the target is
 	// a symlink.
 	if osutil.IsSymlink(filePath) {
 		return nil, fmt.Errorf("cannot get diff preview for symbolic link: %s", treePath)
 	}
-
-	if err = os.WriteFile(filePath, []byte(content), 0600); err != nil {
+	if err = os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+		return nil, err
+	} else if err = os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		return nil, fmt.Errorf("write file: %v", err)
 	}
 
