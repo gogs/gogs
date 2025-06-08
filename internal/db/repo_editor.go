@@ -164,7 +164,12 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 	// If it's meant to be a new file, make sure it doesn't exist.
 	if opts.IsNewFile {
-		if com.IsExist(filePath) {
+		// 🚨 SECURITY: Prevent updating files in surprising place, check if the file is
+		// a symlink.
+		if osutil.IsSymlink(filePath) {
+			return fmt.Errorf("cannot update symbolic link: %s", opts.NewTreeName)
+		}
+		if osutil.IsExist(filePath) {
 			return ErrRepoFileAlreadyExist{filePath}
 		}
 	}
@@ -172,6 +177,12 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	// Ignore move step if it's a new file under a directory.
 	// Otherwise, move the file when name changed.
 	if osutil.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
+		// 🚨 SECURITY: Prevent updating files in surprising place, check if the file is
+		// a symlink.
+		if osutil.IsSymlink(oldFilePath) {
+			return fmt.Errorf("cannot move symbolic link: %s", opts.OldTreeName)
+		}
+
 		if err = git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return fmt.Errorf("git mv %q %q: %v", opts.OldTreeName, opts.NewTreeName, err)
 		}
@@ -236,10 +247,15 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 
 	localPath := repo.LocalCopyPath()
 	filePath := path.Join(localPath, treePath)
+
+	// 🚨 SECURITY: Prevent updating files in surprising place, check if the target is
+	// a symlink.
+	if osutil.IsSymlink(filePath) {
+		return nil, fmt.Errorf("cannot get diff preview for symbolic link: %s", treePath)
+	}
 	if err = os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 		return nil, err
-	}
-	if err = os.WriteFile(filePath, []byte(content), 0600); err != nil {
+	} else if err = os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		return nil, fmt.Errorf("write file: %v", err)
 	}
 
@@ -310,7 +326,15 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 	}
 
 	localPath := repo.LocalCopyPath()
-	if err = os.Remove(path.Join(localPath, opts.TreePath)); err != nil {
+	filePath := path.Join(localPath, opts.TreePath)
+
+	// 🚨 SECURITY: Prevent updating files in surprising place, check if the file is
+	// a symlink.
+	if osutil.IsSymlink(filePath) {
+		return fmt.Errorf("cannot delete symbolic link: %s", opts.TreePath)
+	}
+
+	if err = os.Remove(filePath); err != nil {
 		return fmt.Errorf("remove file %q: %v", opts.TreePath, err)
 	}
 
@@ -561,6 +585,13 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		}
 
 		targetPath := path.Join(dirPath, upload.Name)
+
+		// 🚨 SECURITY: Prevent updating files in surprising place, check if the target
+		// is a symlink.
+		if osutil.IsSymlink(targetPath) {
+			return fmt.Errorf("cannot overwrite symbolic link: %s", upload.Name)
+		}
+
 		if err = com.Copy(tmpPath, targetPath); err != nil {
 			return fmt.Errorf("copy: %v", err)
 		}
