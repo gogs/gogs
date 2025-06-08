@@ -17,6 +17,14 @@ All notable changes to Gogs are documented in this file.
 
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
+
+## 0.13.3
+
+### Fixed
+
+- _Security:_ Stored XSS in PDF renderer. [GHSA-xh32-cx6c-cp4v](https://github.com/gogs/gogs/security/advisories/GHSA-xh32-cx6c-cp4v)
+- _Security:_ Path Traversal in file editing UI. [GHSA-wj44-9vcg-wjq7](https://github.com/gogs/gogs/security/advisories/GHSA-wj44-9vcg-wjq7)
+- Randomly timeout on repository file uploads. [#7890](https://github.com/gogs/gogs/pull/7890)
 - Unable to override email templates in custom directory. [#7905](https://github.com/gogs/gogs/pull/7905)
 
 ## 0.13.2
