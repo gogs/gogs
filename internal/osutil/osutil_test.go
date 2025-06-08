@@ -83,14 +83,12 @@ func TestIsExist(t *testing.T) {
 
 func TestCurrentUsername(t *testing.T) {
 	if oldUser, ok := os.LookupEnv("USER"); ok {
-		defer func() { _ = os.Setenv("USER", oldUser) }()
+		defer func() { t.Setenv("USER", oldUser) }()
 	} else {
 		defer func() { _ = os.Unsetenv("USER") }()
 	}
 
-	if err := os.Setenv("USER", "__TESTING::USERNAME"); err != nil {
-		t.Skip("Could not set the USER environment variable:", err)
-	}
+	t.Setenv("USER", "__TESTING::USERNAME")
 	assert.Equal(t, "__TESTING::USERNAME", CurrentUsername())
 }
 
