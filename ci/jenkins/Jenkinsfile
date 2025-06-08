@@ -69,15 +69,25 @@ pipeline {
                         PGUSER = 'postgres'
                         PGPASSWORD = 'postgres'
                         PGSSLMODE = 'disable'
+                        GOGS_DATABASE_TYPE = 'postgres'
                     }
                     steps {
                         sh '''
                             sudo apt-get update
-                            sudo apt-get install -y postgresql
-                            sudo systemctl start postgresql
-                            sudo systemctl enable postgresql
+                            sudo apt-get install -y postgresql postgresql-contrib
+                
+                            # Конфігурація пароля для postgres
+                            sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+                
+                            # Створення бази якщо потрібно
+                            sudo -u postgres createdb gogs
+                
+                            # Очікування readiness
+                            until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+                
+                            # Запуск тестів
+                            go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...
                         '''
-                        sh'go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...' 
                     }
                 }
             }
