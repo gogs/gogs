@@ -45,18 +45,16 @@ pipeline {
         }
         
         stage('Run Test') {
-            stage('Test') {
-                steps {
-                    script {
-                        try {
-                            sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
-                        } catch (err) {
-                            echo "Tests failed: ${err}"
-                            currentBuild.result = 'FAILURE'
-                        } finally {
-                            if (fileExists('report.xml')) {
-                                junit 'report.xml'
-                            }
+            steps {
+                script {
+                    try {
+                         sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
+                    } catch (err) {
+                        echo "Tests failed: ${err}"
+                        currentBuild.result = 'FAILURE'
+                    } finally {
+                        if (fileExists('report.xml')) {
+                            junit 'report.xml'
                         }
                     }
                 }
