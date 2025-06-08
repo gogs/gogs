@@ -164,14 +164,13 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 
 	// If it's meant to be a new file, make sure it doesn't exist.
 	if opts.IsNewFile {
-		if com.IsExist(filePath) {
-			return ErrRepoFileAlreadyExist{filePath}
-		}
-	} else {
 		// 🚨 SECURITY: Prevent updating files in surprising place, check if the file is
 		// a symlink.
 		if osutil.IsSymlink(filePath) {
 			return fmt.Errorf("cannot update symbolic link: %s", opts.NewTreeName)
+		}
+		if osutil.IsExist(filePath) {
+			return ErrRepoFileAlreadyExist{filePath}
 		}
 	}
 
