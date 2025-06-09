@@ -52,7 +52,6 @@ On the `main` branch:
     ```
     The <MAJOR>.<MINOR>.<PATCH> has been released that includes the patch of the reported issue.
     ```
-- [ ] Update the repository mirror on [Gitee](https://gitee.com/unknwon/gogs).
 - [ ] Create a new release announcement in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
 - [ ] Send a tweet on the [official Twitter account](https://twitter.com/GogsHQ) for the patch release.
 - [ ] Close the patch milestone.
