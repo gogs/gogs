@@ -54,9 +54,30 @@ setids() {
     usermod -o -u "$PUID" $USER
 }
 
+envsubst_vars() {
+    GOGS_DB_TYPE=${GOGS_DB_TYPE:-"sqlite3"} \
+    GOGS_DB_HOST=${GOGS_DB_HOST:-"127.0.0.1"} \
+    GOGS_DB_PORT=${GOGS_DB_PORT:-"5432"} \
+    GOGS_DB_NAME=${GOGS_DB_NAME:-"gogs"} \
+    GOGS_SCHEMA=${GOGS_SCHEMA:-"public"} \
+    GOGS_DB_USER=${GOGS_DB_USER:-"gogs"} \
+    GOGS_DB_PASSWORD=${GOGS_DB_PASSWORD:-"gogs"} \
+    GOGS_DB_SSL_MODE=${GOGS_DB_SSL_MODE:-"disable"} \
+    GOGS_DEFAULT_BRANCH=${GOGS_DEFAULT_BRANCH:-"main"} \
+    GOGS_DOMAIN=${GOGS_DOMAIN:-"localhost"} \
+    GOGS_HTTP_PORT=${GOGS_HTTP_PORT:-"3000"} \
+    GOGS_EXTERNAL_URL=${GOGS_EXTERNAL_URL:-"http://localhost:3000/"} \
+    GOGS_DISABLE_SSH=${GOGS_DISABLE_SSH:-"false"} \
+    GOGS_SSH_PORT=${GOGS_SSH_PORT:-"22"} \
+    GOGS_START_SSH_SERVER=${GOGS_START_SSH_SERVER:-"false"} \
+    GOGS_OFFLINE_MODE=${GOGS_OFFLINE_MODE:-"false"} \
+    envsubst < /app/gogs/docker/templates/app.ini > /data/gogs/conf/app.ini
+}
+
 setids
 cleanup
 create_volume_subfolder
+envsubst_vars
 
 LINK=$(echo "$SOCAT_LINK" | tr '[:upper:]' '[:lower:]')
 if [ "$LINK" = "false" ] || [ "$LINK" = "0" ]; then

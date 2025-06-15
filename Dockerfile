@@ -23,9 +23,10 @@ RUN apk --no-cache --no-progress add \
   shadow \
   socat \
   tzdata \
-  rsync
+  rsync \
+  gettext
 
-ENV GOGS_CUSTOM /data/gogs
+ENV GOGS_CUSTOM=/data/gogs
 
 # Configure LibC Name Service
 COPY docker/nsswitch.conf /etc/nsswitch.conf
