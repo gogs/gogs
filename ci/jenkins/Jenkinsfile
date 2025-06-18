@@ -3,31 +3,49 @@ pipeline {
 
     environment {
         GO_VERSION = '1.24.0'
+
+        IMAGE_NAME = 'gogs'
+        // REGISTRY   = 'registry.example.com'
     }
     
     tools {
         go "${GO_VERSION}" 
     }
-
-    triggers {
-        githubPush()
-    }
     
     options {
-        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '7', daysToKeepStr: '', numToKeepStr: '7')
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '10')
     }
 
     stages {
-        
-        stage('Validate & Generate Code') {
+
+        stage('Notify') {
+            steps {
+                discordSend(
+                    webhookURL: env.DISCORD_WEBHOOK,
+                    title: env.JOB_NAME,
+                    link: env.BUILD_URL,
+                    description: "Pipeline Started: build ${env.BUILD_NUMBER}",
+                    result: 'ABORTED',
+                )
+            }
+        }
+
+        stage('Git Clone') {
             steps {
                 sh'go version'
+                git branch: 'main', credentialsId: 'gogs_jenkins_github_app', url: 'https://github.com/finkord/gogs'
+            }
+        }
+
+        stage('Validate and Generate Code') {
+            steps {
                 sh"go mod tidy"
-                sh"sudo apt-get update && sudo apt-get install -y build-essential"
+                // sh"sudo apt-get update && sudo apt-get install -y build-essential"
                 sh"go install golang.org/x/tools/cmd/goimports@latest"
                 sh"""
                    export PATH=$PATH:\$(go env GOPATH)/bin
-                   CGO_ENABLED=1 go generate ./... """
+                   CGO_ENABLED=1 go generate ./... 
+                """
             }
         }
 
@@ -35,7 +53,6 @@ pipeline {
             steps {
                 script {
                     sh """
-                        echo "Installing golangci-lint..."
                         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b \$(go env GOPATH)/bin v2.1.6
                         export PATH=$PATH:\$(go env GOPATH)/bin
                         golangci-lint run --timeout=30m
@@ -44,48 +61,59 @@ pipeline {
             }
         }
         
-        stage('Run Test') {
+        stage('Test') {
+            steps {
+                sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
+            }
+        }
+
+        stage('Prepare Variables') {
             steps {
                 script {
-                    try {
-                         sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
-                    } catch (err) {
-                        echo "Tests failed: ${err}"
-                        currentBuild.result = 'FAILURE'
-                    } finally {
-                        if (fileExists('report.xml')) {
-                            junit 'report.xml'
-                        }
-                    }
+                    def branch    = env.GIT_BRANCH?.replaceAll(/^origin\//, '')?.replaceAll('/', '-') ?: 'unknown'
+                    def commit    = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                    def timestamp = sh(returnStdout: true, script: "date +%Y%m%d%H%M%S").trim()
+                    def tag       = "${branch}-${commit}-${timestamp}"
+                    env.IMAGE_TAG = tag
+                    echo "Image tag: ${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // docker.build("${REGISTRY}/${IMAGE_NAME}:${TAG}")
+                    docker.build("${IMAGE_NAME}:${env.IMAGE_TAG}")
                 }
             }
         }
         
-        stage('Build') {
-            steps {
-                sh 'go build -v .'
-            }
-        }
+        // stage('Build') {
+        //     steps {
+        //         sh 'go build -v .'
+        //     }
+        // }
         
-        stage('Archive Build') {
-            steps {
-                script {
-                    def buildArtifactsDir = "artifacts/build_${BUILD_NUMBER}"
-                    sh """
-                    mkdir -p artifacts
-                    mkdir -p ${buildArtifactsDir}/log
-                    mkdir -p ${buildArtifactsDir}/coverages
+        // stage('Artifact Build') {
+        //     steps {
+        //         script {
+        //             def buildArtifactsDir = "artifacts/build_${BUILD_NUMBER}"
+        //             sh """
+        //             mkdir -p artifacts
+        //             mkdir -p ${buildArtifactsDir}/log
+        //             mkdir -p ${buildArtifactsDir}/coverages
                     
-                    cp ./gogs ${buildArtifactsDir}/
-                    cp -r ./scripts ${buildArtifactsDir}/scripts
-                    go tool cover -html=coverage.out -o coverage.html
-                    cp ./coverage*.out ${buildArtifactsDir}/coverages/
-                    """
-                    //publishHTML([reportDir: '.', reportFiles: 'coverage.html', reportName: 'Go Coverage'])
-                    archiveArtifacts artifacts: "${buildArtifactsDir}/**", fingerprint: true
-                }
-            }
-        }
+        //             cp ./gogs ${buildArtifactsDir}/
+        //             cp -r ./scripts ${buildArtifactsDir}/scripts
+        //             go tool cover -html=coverage.out -o coverage.html
+        //             cp ./coverage*.out ${buildArtifactsDir}/coverages/
+        //             """
+        //             //publishHTML([reportDir: '.', reportFiles: 'coverage.html', reportName: 'Go Coverage'])
+        //             archiveArtifacts artifacts: "${buildArtifactsDir}/**", fingerprint: true
+        //         }
+        //     }
+        // }
     }
 
     post {
@@ -93,10 +121,33 @@ pipeline {
             cleanWs()
         }
         success {
-            echo("All tests passed.");
+            discordSend(
+                webhookURL: env.DISCORD_WEBHOOK,
+                title: env.JOB_NAME,
+                link: env.BUILD_URL,
+                description: "Pipeline Success: build ${env.BUILD_NUMBER}",
+                result: 'SUCCESS',
+                showChangeset: true,
+            )
         }
         failure {
-            echo("Tests failed.");
+            discordSend(
+                webhookURL: env.DISCORD_WEBHOOK,
+                title: env.JOB_NAME,
+                link: env.BUILD_URL,
+                description: "Pipeline Failed: build ${env.BUILD_NUMBER}",
+                result: 'FAILURE',
+                showChangeset: true,
+            )
+        }
+        aborted {
+            discordSend(
+                webhookURL: env.DISCORD_WEBHOOK,
+                title: env.JOB_NAME,
+                link: env.BUILD_URL,
+                description: "Pipeline Aborted: build ${env.BUILD_NUMBER}",
+                result: 'ABORTED',
+            )
         }
     }
 }
