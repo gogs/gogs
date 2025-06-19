@@ -43,35 +43,34 @@ pipeline {
         //     }
         // }
 
-        // stage('Validate and Generate Code') {
-        //     steps {
-        //         sh"go mod tidy"
-        //         // sh"sudo apt-get update && sudo apt-get install -y build-essential"
-        //         sh"go install golang.org/x/tools/cmd/goimports@latest"
-        //         sh"""
-        //            export PATH=$PATH:\$(go env GOPATH)/bin
-        //            CGO_ENABLED=1 go generate ./... 
-        //         """
-        //     }
-        // }
+        stage('Validate and Generate Code') {
+            steps {
+                sh"go mod tidy"
+                sh"go install golang.org/x/tools/cmd/goimports@latest"
+                sh"""
+                   export PATH=$PATH:\$(go env GOPATH)/bin
+                   CGO_ENABLED=1 go generate ./... 
+                """
+            }
+        }
 
-        // stage('Lint') {
-        //     steps {
-        //         script {
-        //             sh """
-        //                 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b \$(go env GOPATH)/bin v2.1.6
-        //                 export PATH=$PATH:\$(go env GOPATH)/bin
-        //                 golangci-lint run --timeout=30m
-        //             """
-        //         }
-        //     }
-        // }
+        stage('Lint') {
+            steps {
+                script {
+                    sh """
+                        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b \$(go env GOPATH)/bin v2.1.6
+                        export PATH=$PATH:\$(go env GOPATH)/bin
+                        golangci-lint run --timeout=30m
+                    """
+                }
+            }
+        }
         
-        // stage('Test') {
-        //     steps {
-        //         sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
-        //     }
-        // }
+        stage('Test') {
+            steps {
+                sh 'go test -cover -race -coverprofile=coverage.out -covermode=atomic ./...'
+            }
+        }
 
         stage('Prepare Variables') {
             steps {
@@ -81,33 +80,9 @@ pipeline {
                     def timestamp = sh(returnStdout: true, script: "date +%Y%m%d%H%M%S").trim()
                     env.IMAGE_TAG = "${branch}-${commit}-${timestamp}"
                     echo "Assigned IMAGE_TAG = ${env.IMAGE_TAG}"
-
-                    // def branch    = scm.branches[0].name.replaceFirst(/^origin\//, '').replaceAll('/', '-')
-                    // def commit    = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
-                    // def timestamp = sh(returnStdout: true, script: 'date +%Y%m%d%H%M%S').trim()
-                    // env.IMAGE_TAG = "${branch}-${commit}-${timestamp}"
-                    // echo "Assigned IMAGE_TAG = ${env.IMAGE_TAG}"
                 }
             }
         }
-
-        // stage('Build Docker Image') {
-        //     steps {
-        //         script {
-        //             gogs = docker.build("${IMAGE_NAME}:${env.IMAGE_TAG}")
-        //         }
-        //     }
-        // }
-
-        // stage('Push Image to AWS ECR') {
-        //     steps {
-        //         script {
-        //             docker.withRegistry("https://${ECR_REPO}", "ecr:${AWS_REGION}:Jenkins_ECR"){
-        //                 gogs.push()
-        //             }
-        //         }
-        //     }
-        // }
 
         stage('Build Docker Image') {
             steps {
