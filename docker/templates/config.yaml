@@ -1,0 +1,66 @@
+
+receivers:
+#======================================
+# GOGS TRACES 
+#======================================
+  otlp/traces:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+#======================================
+# GOGS LOGS 
+#======================================
+  filelog:
+    include: [ /app/gogs/log/*.log ]
+    operators:
+      - type: regex_parser
+        regex: '^(?P<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) (?P<sev>[A-Z]*) (?P<msg>.*)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%d %H:%M:%S'
+        severity:
+          parse_from: attributes.sev
+
+processors:
+  batch:
+  resourcedetection/docker:
+    detectors: [env, docker]
+    timeout: 2s
+    override: false
+  resourcedetection/system:
+    detectors: ["system"]
+    system:
+      hostname_sources: ["dns", "os"] 
+
+exporters:
+  splunk_hec/traces:
+    token: "${SPLUNK_HEC_TRACES_TOKEN}"
+    endpoint: "${SPLUNK_HEC_URL}"
+    source: "otel_traces"
+    index: "traces"
+    tls:
+      insecure_skip_verify: true
+
+  splunk_hec/logs:
+    token: "${SPLUNK_HEC_LOGS_TOKEN}"
+    endpoint: "${SPLUNK_HEC_URL}"
+    source: "otel_logs"
+    index: "logs"
+    tls:
+      insecure_skip_verify: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp/traces]
+      processors: [batch, resourcedetection/docker]
+      exporters: [splunk_hec/traces]
+
+    logs:
+      receivers: [filelog]
+      processors: [batch, resourcedetection/docker]
+      exporters: [splunk_hec/logs]
+

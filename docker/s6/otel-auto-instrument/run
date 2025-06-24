@@ -1,0 +1,7 @@
+#!/bin/sh
+
+exec env \
+  OTEL_GO_AUTO_TARGET_EXE=/app/gogs/gogs \
+  OTEL_SERVICE_NAME=gogs \
+  OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-localhost:4318} \
+  /app/otel-go-instrumentation
