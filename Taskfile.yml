@@ -17,6 +17,7 @@ tasks:
     desc: Build the binary
     cmds:
       - go build -v
+        -buildmode=pie
         -ldflags '
           -X "{{.PKG_PATH}}.BuildTime={{.BUILD_TIME}}"
           -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"

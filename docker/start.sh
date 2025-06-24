@@ -79,6 +79,9 @@ cleanup
 create_volume_subfolder
 envsubst_vars
 
+chmod +x /app/otelcol/run
+chmod +x /app/otel-auto-instrument/run
+
 LINK=$(echo "$SOCAT_LINK" | tr '[:upper:]' '[:lower:]')
 if [ "$LINK" = "false" ] || [ "$LINK" = "0" ]; then
     echo "init:socat  | Will not try to create socat links as requested" 1>&2
