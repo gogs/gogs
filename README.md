@@ -62,6 +62,7 @@ There are 6 ways to install Gogs:
 - [Cloudron](https://www.cloudron.io/store/io.gogs.cloudronapp.html)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
+- [Elestio](https://elest.io/open-source/gogs)
 
 ### Tutorials
 
