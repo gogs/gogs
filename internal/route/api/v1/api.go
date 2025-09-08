@@ -189,7 +189,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 					accessTokensHandler := user.NewAccessTokensHandler(user.NewAccessTokensStore())
 					m.Combo("").
 						Get(accessTokensHandler.List()).
-						Post(bind(api.CreateAccessTokenOption{}), accessTokensHandler.Create())
+						Post(bind(api.CreateAccessTokenOption{}), accessTokensHandler.Create()).
+						Delete(bind(api.DeleteAccessTokenOption{}), accessTokensHandler.Delete())
 				}, reqBasicAuth())
 			})
 		})
