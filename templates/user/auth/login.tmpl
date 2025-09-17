@@ -66,7 +66,7 @@
 					{{range .OIDCLoginSources}}
 						<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" class="ui basic button">
 							<i class="sign in icon"></i>
-							{{.i18n.Tr "auth.oidc_signin_via"}} {{.Name}}
+							{{.i18n.Tr "oidc_signin_via"}} {{.Name}}
 						</a>
 					{{end}}
 				</div>
