@@ -112,25 +112,38 @@ func Login(c *context.Context) {
 		return
 	}
 	
-	// Separate OIDC sources from regular sources
+	// Separate OIDC sources from regular sources and check for default
 	var regularLoginSources []*database.LoginSource
 	var oidcLoginSources []*database.LoginSource
+	var defaultOIDCSource *database.LoginSource
+	
 	for _, source := range loginSources {
 		if source.Type == auth.OIDC {
 			oidcLoginSources = append(oidcLoginSources, source)
+			if source.IsDefault {
+				defaultOIDCSource = source
+			}
 		} else {
 			regularLoginSources = append(regularLoginSources, source)
 		}
 	}
 	
-	c.Data["LoginSources"] = regularLoginSources
-	c.Data["OIDCLoginSources"] = oidcLoginSources
-	
-	for i := range regularLoginSources {
-		if regularLoginSources[i].IsDefault {
-			c.Data["DefaultLoginSource"] = regularLoginSources[i]
-			c.Data["login_source"] = regularLoginSources[i].ID
-			break
+	// If there's a default OIDC source, hide the username/password form
+	if defaultOIDCSource != nil {
+		c.Data["LoginSources"] = []*database.LoginSource{} // Empty regular sources
+		c.Data["OIDCLoginSources"] = oidcLoginSources
+		c.Data["DefaultOIDCSource"] = defaultOIDCSource
+		c.Data["HideUsernamePasswordForm"] = true
+	} else {
+		c.Data["LoginSources"] = regularLoginSources
+		c.Data["OIDCLoginSources"] = oidcLoginSources
+		
+		for i := range regularLoginSources {
+			if regularLoginSources[i].IsDefault {
+				c.Data["DefaultLoginSource"] = regularLoginSources[i]
+				c.Data["login_source"] = regularLoginSources[i].ID
+				break
+			}
 		}
 	}
 	c.Success(tmplUserAuthLogin)
