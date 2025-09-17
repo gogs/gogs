@@ -44,8 +44,12 @@ func OIDCLogin(c *context.Context) {
 		return
 	}
 
-	// Build redirect URL
-	callbackURL := fmt.Sprintf("%s/user/oauth2/%d/callback", conf.Server.ExternalURL, loginSourceID)
+	// Build redirect URL - use configured URL if available, otherwise build it
+	oidcConfig := loginSource.OIDC()
+	callbackURL := oidcConfig.RedirectURL
+	if callbackURL == "" {
+		callbackURL = fmt.Sprintf("%s/user/oauth2/%d/callback", conf.Server.ExternalURL, loginSourceID)
+	}
 	oauth2Config.RedirectURL = callbackURL
 
 	// Store state for security
