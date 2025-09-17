@@ -7,6 +7,7 @@ package user
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -48,7 +49,12 @@ func OIDCLogin(c *context.Context) {
 	oidcConfig := loginSource.OIDC()
 	callbackURL := oidcConfig.RedirectURL
 	if callbackURL == "" {
-		callbackURL = fmt.Sprintf("%suser/oauth2/%d/callback", conf.Server.ExternalURL, loginSourceID)
+		// Ensure proper URL joining by checking for trailing slash
+		baseURL := conf.Server.ExternalURL
+		if !strings.HasSuffix(baseURL, "/") {
+			baseURL += "/"
+		}
+		callbackURL = fmt.Sprintf("%suser/oauth2/%d/callback", baseURL, loginSourceID)
 	}
 	oauth2Config.RedirectURL = callbackURL
 
