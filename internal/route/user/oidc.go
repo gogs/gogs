@@ -48,7 +48,7 @@ func OIDCLogin(c *context.Context) {
 	oidcConfig := loginSource.OIDC()
 	callbackURL := oidcConfig.RedirectURL
 	if callbackURL == "" {
-		callbackURL = fmt.Sprintf("%s/user/oauth2/%d/callback", conf.Server.ExternalURL, loginSourceID)
+		callbackURL = fmt.Sprintf("%suser/oauth2/%d/callback", conf.Server.ExternalURL, loginSourceID)
 	}
 	oauth2Config.RedirectURL = callbackURL
 
@@ -58,7 +58,8 @@ func OIDCLogin(c *context.Context) {
 	_ = c.Session.Set("oidc_login_source_id", loginSourceID)
 
 	authURL := oauth2Config.AuthCodeURL(state)
-	c.Redirect(authURL)
+	c.Resp.Header().Set("Location", authURL)
+	c.Resp.WriteHeader(302)
 }
 
 // OIDCCallback handles the OIDC callback
