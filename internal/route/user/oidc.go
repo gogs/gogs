@@ -135,6 +135,26 @@ func OIDCCallback(c *context.Context) {
 			c.Error(err, "create user from OIDC")
 			return
 		}
+	} else {
+		// User exists - update admin status based on current group membership
+		oidcConfig := loginSource.OIDC()
+		if oidcConfig.AdminGroup != "" && user.IsAdmin != extAccount.Admin {
+			// Admin status has changed, update the user
+			err = database.Handle.Users().Update(
+				c.Req.Context(),
+				user.ID,
+				database.UpdateUserOptions{
+					IsAdmin: &extAccount.Admin,
+				},
+			)
+			if err != nil {
+				log.Error("Failed to update user admin status: %v", err)
+				// Don't fail the login, just log the error
+			} else {
+				// Update the local user object to reflect the change
+				user.IsAdmin = extAccount.Admin
+			}
+		}
 	}
 
 	// Log in the user
