@@ -15,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/oidc"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/conf"
@@ -57,6 +58,7 @@ var (
 		{auth.Name(auth.SMTP), auth.SMTP},
 		{auth.Name(auth.PAM), auth.PAM},
 		{auth.Name(auth.GitHub), auth.GitHub},
+		{auth.Name(auth.OIDC), auth.OIDC},
 	}
 	securityProtocols = []dropdownItem{
 		{ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted), ldap.SecurityProtocolUnencrypted},
@@ -118,6 +120,20 @@ func parseSMTPConfig(f form.Authentication) *smtp.Config {
 	}
 }
 
+func parseOIDCConfig(f form.Authentication) *oidc.Config {
+	return &oidc.Config{
+		IssuerURL:       f.OIDCIssuerURL,
+		ClientID:        f.OIDCClientID,
+		ClientSecret:    f.OIDCClientSecret,
+		Scopes:          f.OIDCScopes,
+		AutoRegister:    f.OIDCAutoRegister,
+		SkipVerify:      f.SkipVerify,
+		AdminGroup:      f.OIDCAdminGroup,
+		ButtonLogoURL:   f.OIDCButtonLogoURL,
+		ButtonBgColor:   f.OIDCButtonBgColor,
+	}
+}
+
 func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Title("admin.auths.new")
 	c.PageIs("Admin")
@@ -147,6 +163,9 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 			SkipVerify:  f.SkipVerify,
 		}
+		hasTLS = true
+	case auth.OIDC:
+		config = parseOIDCConfig(f)
 		hasTLS = true
 	default:
 		c.Status(http.StatusBadRequest)
@@ -248,6 +267,8 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 			SkipVerify:  f.SkipVerify,
 		})
+	case auth.OIDC:
+		provider = oidc.NewProvider(parseOIDCConfig(f))
 	default:
 		c.Status(http.StatusBadRequest)
 		return
