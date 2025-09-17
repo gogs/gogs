@@ -111,11 +111,25 @@ func Login(c *context.Context) {
 		c.Error(err, "list activated login sources")
 		return
 	}
-	c.Data["LoginSources"] = loginSources
-	for i := range loginSources {
-		if loginSources[i].IsDefault {
-			c.Data["DefaultLoginSource"] = loginSources[i]
-			c.Data["login_source"] = loginSources[i].ID
+	
+	// Separate OIDC sources from regular sources
+	var regularLoginSources []*database.LoginSource
+	var oidcLoginSources []*database.LoginSource
+	for _, source := range loginSources {
+		if source.Type == auth.OIDC {
+			oidcLoginSources = append(oidcLoginSources, source)
+		} else {
+			regularLoginSources = append(regularLoginSources, source)
+		}
+	}
+	
+	c.Data["LoginSources"] = regularLoginSources
+	c.Data["OIDCLoginSources"] = oidcLoginSources
+	
+	for i := range regularLoginSources {
+		if regularLoginSources[i].IsDefault {
+			c.Data["DefaultLoginSource"] = regularLoginSources[i]
+			c.Data["login_source"] = regularLoginSources[i].ID
 			break
 		}
 	}

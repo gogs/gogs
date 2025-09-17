@@ -206,6 +206,10 @@ func runWeb(c *cli.Context) error {
 			m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
 			m.Get("/reset_password", user.ResetPasswd)
 			m.Post("/reset_password", user.ResetPasswdPost)
+			
+			// OIDC routes
+			m.Get("/oauth2/:id/login", user.OIDCLogin)
+			m.Get("/oauth2/:id/callback", user.OIDCCallback)
 		}, reqSignOut)
 
 		m.Group("/user/settings", func() {

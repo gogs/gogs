@@ -60,6 +60,17 @@
 					{{end}}
 				</div>
 			</form>
+			{{if .OIDCLoginSources}}
+				<div class="ui secondary segment">
+					<h4 class="ui header">{{.i18n.Tr "auth.oidc_signin"}}</h4>
+					{{range .OIDCLoginSources}}
+						<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" class="ui basic button">
+							<i class="sign in icon"></i>
+							{{.i18n.Tr "auth.oidc_signin_via"}} {{.Name}}
+						</a>
+					{{end}}
+				</div>
+			{{end}}
 		</div>
 	</div>
 </div>

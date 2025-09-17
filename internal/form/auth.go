@@ -42,6 +42,12 @@ type Authentication struct {
 	SkipVerify        bool
 	PAMServiceName    string
 	GitHubAPIEndpoint string `form:"github_api_endpoint" binding:"Url"`
+	// OIDC fields
+	OIDCIssuerURL     string `form:"oidc_issuer_url" binding:"Url"`
+	OIDCClientID      string `form:"oidc_client_id"`
+	OIDCClientSecret  string `form:"oidc_client_secret"`
+	OIDCScopes        string `form:"oidc_scopes"`
+	OIDCAutoRegister  bool   `form:"oidc_auto_register"`
 }
 
 func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
