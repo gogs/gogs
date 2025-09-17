@@ -14,14 +14,16 @@ import (
 
 // Config contains configuration of an OIDC authentication provider.
 type Config struct {
-	IssuerURL    string `json:"issuer_url"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	RedirectURL  string `json:"redirect_url"`
-	Scopes       string `json:"scopes"`
-	AutoRegister bool   `json:"auto_register"`
-	SkipVerify   bool   `json:"skip_verify"`
-	AdminGroup   string `json:"admin_group"`
+	IssuerURL       string `json:"issuer_url"`
+	ClientID        string `json:"client_id"`
+	ClientSecret    string `json:"client_secret"`
+	RedirectURL     string `json:"redirect_url"`
+	Scopes          string `json:"scopes"`
+	AutoRegister    bool   `json:"auto_register"`
+	SkipVerify      bool   `json:"skip_verify"`
+	AdminGroup      string `json:"admin_group"`
+	ButtonLogoURL   string `json:"button_logo_url"`
+	ButtonBgColor   string `json:"button_bg_color"`
 }
 
 // newProvider creates the OIDC provider and OAuth2 config

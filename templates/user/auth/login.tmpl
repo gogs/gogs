@@ -72,8 +72,15 @@
 							{{template "base/alert" .}}
 							<h4 class="ui header">{{.i18n.Tr "auth.oidc_signin"}}</h4>
 							{{range .OIDCLoginSources}}
-								<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" class="ui basic button">
-									<i class="sign in icon"></i>
+								{{$cfg := .OIDC}}
+								<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" 
+								   class="ui button oidc-login-btn" 
+								   style="background-color: {{if $cfg.ButtonBgColor}}{{$cfg.ButtonBgColor}}{{else}}#4183c4{{end}}; color: white; border: none; margin-bottom: 8px; display: inline-flex; align-items: center; padding: 10px 16px;">
+									{{if $cfg.ButtonLogoURL}}
+										<img src="{{$cfg.ButtonLogoURL}}" style="width: 18px; height: 18px; margin-right: 8px;" alt="{{.Name}} logo" />
+									{{else}}
+										<i class="sign in icon" style="margin-right: 8px;"></i>
+									{{end}}
 									{{$.i18n.Tr "auth.oidc_signin_via"}} {{.Name}}
 								</a>
 							{{end}}
@@ -81,8 +88,15 @@
 					{{else}}
 						<h4 class="ui header">{{.i18n.Tr "auth.oidc_signin"}}</h4>
 						{{range .OIDCLoginSources}}
-							<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" class="ui basic button">
-								<i class="sign in icon"></i>
+							{{$cfg := .OIDC}}
+							<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" 
+							   class="ui button oidc-login-btn" 
+							   style="background-color: {{if $cfg.ButtonBgColor}}{{$cfg.ButtonBgColor}}{{else}}#4183c4{{end}}; color: white; border: none; margin-bottom: 8px; display: inline-flex; align-items: center; padding: 10px 16px;">
+								{{if $cfg.ButtonLogoURL}}
+									<img src="{{$cfg.ButtonLogoURL}}" style="width: 18px; height: 18px; margin-right: 8px;" alt="{{.Name}} logo" />
+								{{else}}
+									<i class="sign in icon" style="margin-right: 8px;"></i>
+								{{end}}
 								{{$.i18n.Tr "auth.oidc_signin_via"}} {{.Name}}
 							</a>
 						{{end}}

@@ -49,6 +49,8 @@ type Authentication struct {
 	OIDCScopes        string `form:"oidc_scopes"`
 	OIDCAutoRegister  bool   `form:"oidc_auto_register"`
 	OIDCAdminGroup    string `form:"oidc_admin_group"`
+	OIDCButtonLogoURL string `form:"oidc_button_logo_url"`
+	OIDCButtonBgColor string `form:"oidc_button_bg_color"`
 }
 
 func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

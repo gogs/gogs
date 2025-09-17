@@ -122,13 +122,15 @@ func parseSMTPConfig(f form.Authentication) *smtp.Config {
 
 func parseOIDCConfig(f form.Authentication) *oidc.Config {
 	return &oidc.Config{
-		IssuerURL:    f.OIDCIssuerURL,
-		ClientID:     f.OIDCClientID,
-		ClientSecret: f.OIDCClientSecret,
-		Scopes:       f.OIDCScopes,
-		AutoRegister: f.OIDCAutoRegister,
-		SkipVerify:   f.SkipVerify,
-		AdminGroup:   f.OIDCAdminGroup,
+		IssuerURL:       f.OIDCIssuerURL,
+		ClientID:        f.OIDCClientID,
+		ClientSecret:    f.OIDCClientSecret,
+		Scopes:          f.OIDCScopes,
+		AutoRegister:    f.OIDCAutoRegister,
+		SkipVerify:      f.SkipVerify,
+		AdminGroup:      f.OIDCAdminGroup,
+		ButtonLogoURL:   f.OIDCButtonLogoURL,
+		ButtonBgColor:   f.OIDCButtonBgColor,
 	}
 }
 
