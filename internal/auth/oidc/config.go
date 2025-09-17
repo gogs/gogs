@@ -21,6 +21,7 @@ type Config struct {
 	Scopes       string `json:"scopes"`
 	AutoRegister bool   `json:"auto_register"`
 	SkipVerify   bool   `json:"skip_verify"`
+	AdminGroup   string `json:"admin_group"`
 }
 
 // newProvider creates the OIDC provider and OAuth2 config
@@ -31,6 +32,12 @@ func (cfg *Config) newProvider(ctx context.Context) (*oidc.Provider, *oauth2.Con
 	}
 
 	scopes := []string{oidc.ScopeOpenID, "profile", "email"}
+	
+	// Add groups scope if admin group is configured
+	if cfg.AdminGroup != "" {
+		scopes = append(scopes, "groups")
+	}
+	
 	if cfg.Scopes != "" {
 		// TODO: Parse additional scopes from config
 	}

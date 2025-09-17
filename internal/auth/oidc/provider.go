@@ -60,13 +60,14 @@ func (p *Provider) AuthenticateUser(ctx context.Context, code string) (*auth.Ext
 
 	// Extract claims
 	var claims struct {
-		Email         string `json:"email"`
-		EmailVerified bool   `json:"email_verified"`
-		Name          string `json:"name"`
-		GivenName     string `json:"given_name"`
-		FamilyName    string `json:"family_name"`
+		Email         string   `json:"email"`
+		EmailVerified bool     `json:"email_verified"`
+		Name          string   `json:"name"`
+		GivenName     string   `json:"given_name"`
+		FamilyName    string   `json:"family_name"`
 		PreferredUsername string `json:"preferred_username"`
-		Subject       string `json:"sub"`
+		Subject       string   `json:"sub"`
+		Groups        []string `json:"groups"`
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
@@ -87,11 +88,23 @@ func (p *Provider) AuthenticateUser(ctx context.Context, code string) (*auth.Ext
 		fullName = claims.GivenName + " " + claims.FamilyName
 	}
 
+	// Check if user is admin based on group membership
+	isAdmin := false
+	if p.config.AdminGroup != "" {
+		for _, group := range claims.Groups {
+			if group == p.config.AdminGroup {
+				isAdmin = true
+				break
+			}
+		}
+	}
+
 	return &auth.ExternalAccount{
 		Login:    login,
 		Name:     login,
 		FullName: fullName,
 		Email:    claims.Email,
+		Admin:    isAdmin,
 	}, nil
 }
 

@@ -128,6 +128,7 @@ func OIDCCallback(c *context.Context) {
 			database.CreateUserOptions{
 				FullName:  extAccount.FullName,
 				Activated: true, // OIDC users are pre-verified
+				Admin:     extAccount.Admin,
 			},
 		)
 		if err != nil {

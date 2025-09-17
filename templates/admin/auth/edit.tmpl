@@ -196,6 +196,11 @@
 								<label for="oidc_scopes">{{.i18n.Tr "admin.auths.oidc_scopes"}}</label>
 								<input id="oidc_scopes" name="oidc_scopes" value="{{$cfg.Scopes}}" placeholder="openid profile email">
 							</div>
+							<div class="field">
+								<label for="oidc_admin_group">{{.i18n.Tr "admin.auths.oidc_admin_group"}}</label>
+								<input id="oidc_admin_group" name="oidc_admin_group" value="{{$cfg.AdminGroup}}" placeholder="e.g. administrators">
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_admin_group_helper"}}</p>
+							</div>
 							<div class="inline field">
 								<div class="ui checkbox">
 									<label><strong>{{.i18n.Tr "admin.auths.oidc_auto_register"}}</strong></label>

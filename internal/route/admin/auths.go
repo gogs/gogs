@@ -128,6 +128,7 @@ func parseOIDCConfig(f form.Authentication) *oidc.Config {
 		Scopes:       f.OIDCScopes,
 		AutoRegister: f.OIDCAutoRegister,
 		SkipVerify:   f.SkipVerify,
+		AdminGroup:   f.OIDCAdminGroup,
 	}
 }
 
