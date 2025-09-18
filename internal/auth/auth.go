@@ -23,6 +23,7 @@ const (
 	PAM         // 4
 	DLDAP       // 5
 	GitHub      // 6
+	OIDC        // 7
 
 	Mock Type = 999
 )
@@ -35,6 +36,7 @@ func Name(typ Type) string {
 		SMTP:   "SMTP",
 		PAM:    "PAM",
 		GitHub: "GitHub",
+		OIDC:   "OIDC",
 	}[typ]
 }
 

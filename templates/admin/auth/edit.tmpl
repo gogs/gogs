@@ -177,6 +177,53 @@
 							</div>
 						{{end}}
 
+						<!-- OIDC -->
+						{{if .Source.IsOIDC}}
+							{{ $cfg:=.Source.OIDC }}
+							<div class="required field">
+								<label for="oidc_issuer_url">{{.i18n.Tr "admin.auths.oidc_issuer_url"}}</label>
+								<input id="oidc_issuer_url" name="oidc_issuer_url" value="{{$cfg.IssuerURL}}" placeholder="e.g. https://accounts.google.com" required>
+							</div>
+							<div class="required field">
+								<label for="oidc_client_id">{{.i18n.Tr "admin.auths.oidc_client_id"}}</label>
+								<input id="oidc_client_id" name="oidc_client_id" value="{{$cfg.ClientID}}" required>
+							</div>
+							<div class="required field">
+								<label for="oidc_client_secret">{{.i18n.Tr "admin.auths.oidc_client_secret"}}</label>
+								<input id="oidc_client_secret" name="oidc_client_secret" type="password" value="{{$cfg.ClientSecret}}" required>
+							</div>
+							<div class="field">
+								<label for="oidc_scopes">{{.i18n.Tr "admin.auths.oidc_scopes"}}</label>
+								<input id="oidc_scopes" name="oidc_scopes" value="{{$cfg.Scopes}}" placeholder="openid profile email">
+							</div>
+							<div class="field">
+								<label for="oidc_admin_group">{{.i18n.Tr "admin.auths.oidc_admin_group"}}</label>
+								<input id="oidc_admin_group" name="oidc_admin_group" value="{{$cfg.AdminGroup}}" placeholder="e.g. administrators">
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_admin_group_helper"}}</p>
+							</div>
+							<div class="field">
+								<label for="oidc_button_logo_url">{{.i18n.Tr "admin.auths.oidc_button_logo_url"}}</label>
+								<input id="oidc_button_logo_url" name="oidc_button_logo_url" value="{{$cfg.ButtonLogoURL}}" placeholder="e.g. https://example.com/logo.png">
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_button_logo_url_helper"}}</p>
+							</div>
+							<div class="field">
+								<label for="oidc_button_bg_color">{{.i18n.Tr "admin.auths.oidc_button_bg_color"}}</label>
+								<input id="oidc_button_bg_color" name="oidc_button_bg_color" type="color" value="{{if $cfg.ButtonBgColor}}{{$cfg.ButtonBgColor}}{{else}}#4183c4{{end}}">
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_button_bg_color_helper"}}</p>
+							</div>
+							<div class="field">
+								<label for="oidc_button_text_color">{{.i18n.Tr "admin.auths.oidc_button_text_color"}}</label>
+								<input id="oidc_button_text_color" name="oidc_button_text_color" type="color" value="{{if $cfg.ButtonTextColor}}{{$cfg.ButtonTextColor}}{{else}}#ffffff{{end}}">
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_button_text_color_helper"}}</p>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "admin.auths.oidc_auto_register"}}</strong></label>
+									<input name="oidc_auto_register" type="checkbox" {{if $cfg.AutoRegister}}checked{{end}}>
+								</div>
+							</div>
+						{{end}}
+
 						<div class="inline field {{if not .Source.IsSMTP}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>

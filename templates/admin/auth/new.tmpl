@@ -164,6 +164,52 @@
 							<input id="github_api_endpoint" name="github_api_endpoint" value="{{.github_api_endpoint}}" placeholder="e.g. https://api.github.com/" />
 						</div>
 
+						<!-- OIDC -->
+						<div class="oidc field {{if not (eq .type 7)}}hide{{end}}">
+							<div class="required field">
+								<label for="oidc_issuer_url">{{.i18n.Tr "admin.auths.oidc_issuer_url"}}</label>
+								<input id="oidc_issuer_url" name="oidc_issuer_url" value="{{.oidc_issuer_url}}" placeholder="e.g. https://accounts.google.com" />
+							</div>
+							<div class="required field">
+								<label for="oidc_client_id">{{.i18n.Tr "admin.auths.oidc_client_id"}}</label>
+								<input id="oidc_client_id" name="oidc_client_id" value="{{.oidc_client_id}}" />
+							</div>
+							<div class="required field">
+								<label for="oidc_client_secret">{{.i18n.Tr "admin.auths.oidc_client_secret"}}</label>
+								<input id="oidc_client_secret" name="oidc_client_secret" type="password" value="{{.oidc_client_secret}}" />
+							</div>
+							<div class="field">
+								<label for="oidc_scopes">{{.i18n.Tr "admin.auths.oidc_scopes"}}</label>
+								<input id="oidc_scopes" name="oidc_scopes" value="{{.oidc_scopes}}" placeholder="openid profile email" />
+							</div>
+							<div class="field">
+								<label for="oidc_admin_group">{{.i18n.Tr "admin.auths.oidc_admin_group"}}</label>
+								<input id="oidc_admin_group" name="oidc_admin_group" value="{{.oidc_admin_group}}" placeholder="e.g. administrators" />
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_admin_group_helper"}}</p>
+							</div>
+							<div class="field">
+								<label for="oidc_button_logo_url">{{.i18n.Tr "admin.auths.oidc_button_logo_url"}}</label>
+								<input id="oidc_button_logo_url" name="oidc_button_logo_url" value="{{.oidc_button_logo_url}}" placeholder="e.g. https://example.com/logo.png" />
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_button_logo_url_helper"}}</p>
+							</div>
+							<div class="field">
+								<label for="oidc_button_bg_color">{{.i18n.Tr "admin.auths.oidc_button_bg_color"}}</label>
+								<input id="oidc_button_bg_color" name="oidc_button_bg_color" type="color" value="{{if .oidc_button_bg_color}}{{.oidc_button_bg_color}}{{else}}#4183c4{{end}}" />
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_button_bg_color_helper"}}</p>
+							</div>
+							<div class="field">
+								<label for="oidc_button_text_color">{{.i18n.Tr "admin.auths.oidc_button_text_color"}}</label>
+								<input id="oidc_button_text_color" name="oidc_button_text_color" type="color" value="{{if .ButtonTextColor}}{{.ButtonTextColor}}{{else}}#ffffff{{end}}">
+								<p class="help">{{.i18n.Tr "admin.auths.oidc_button_text_color_helper"}}</p>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "admin.auths.oidc_auto_register"}}</strong></label>
+									<input name="oidc_auto_register" type="checkbox" {{if .oidc_auto_register}}checked{{end}}>
+								</div>
+							</div>
+						</div>
+
 						<div class="ldap field">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.attributes_in_bind"}}</strong></label>
