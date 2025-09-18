@@ -131,6 +131,7 @@ func parseOIDCConfig(f form.Authentication) *oidc.Config {
 		AdminGroup:      f.OIDCAdminGroup,
 		ButtonLogoURL:   f.OIDCButtonLogoURL,
 		ButtonBgColor:   f.OIDCButtonBgColor,
+		ButtonTextColor: f.OIDCButtonTextColor,
 	}
 }
 
