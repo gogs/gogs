@@ -1,0 +1,74 @@
+{{template "base/head" .}}
+{{$root := .}}
+<div class="repository insights code_frequency">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/insights/navbar" .}}
+			<div class="twelve wide column content">
+                <div class="ui top attached header">
+                    {{.i18n.Tr "repo.insights.code_frequency_header" .RepositoryName}}
+                </div>
+
+                <div class="ui attached segment">
+                    <canvas id="code-frequency"></canvas>
+                    <script>
+                        var functionsToRunOnLoad = [];
+                        function runFunctionsToRunOnLoad() {
+                            for (var i = 0; i < functionsToRunOnLoad.length; i++) {
+                                functionsToRunOnLoad[i]();
+                            }
+                        }
+                        window.onload = runFunctionsToRunOnLoad;
+
+                        functionsToRunOnLoad.push(function() {
+                            var ctx = document.getElementById('code-frequency').getContext('2d');
+                            var chart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: {{.AdditionsChartData.Labels}},
+                                    datasets: [
+                                        {
+                                            label: {{.i18n.Tr "repo.insights.additions"}},
+                                            data: {{.AdditionsChartData.Dataset.Data}},
+                                            fill: true,
+                                            pointStyle: false,
+                                            backgroundColor: [
+                                                'rgba(0, 255, 0, 0.2)'
+                                            ],
+                                            borderColor: [
+                                                'rgba(0, 255, 0, 0)'
+                                            ],
+                                            borderWidth: 0
+                                        },
+                                        {
+                                            label: {{.i18n.Tr "repo.insights.deletions"}},
+                                            data: {{.DeletionsChartData.Dataset.Data}},
+                                            fill: true,
+                                            pointStyle: false,
+                                            backgroundColor: [
+                                                'rgba(255, 0, 0, 0.2)'
+                                            ],
+                                            borderColor: [
+                                                'rgba(255, 0, 0, 0)'
+                                            ],
+                                            borderWidth: 0
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                    </script>
+                </div>
+            </div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
