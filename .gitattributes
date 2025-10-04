@@ -6,3 +6,4 @@ public/css/themes/** linguist-vendored
 public/css/semantic-* linguist-vendored
 public/js/libs/** linguist-vendored
 public/js/semantic-* linguist-vendored
+*.zip filter=lfs diff=lfs merge=lfs -text
