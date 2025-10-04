@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gogs.fullname" . }}
+  labels:
+    app: {{ include "gogs.name" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "gogs.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "gogs.name" . }}
+    spec:
+      containers:
+        - name: gogs
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DB_TYPE
+              value: "postgres"
+            - name: DB_HOST
+              value: "{{ include "gogs.fullname" . }}-postgres.gogs.svc.cluster.local:5432"
+            - name: DB_USER
+              value: "{{ .Values.postgres.user }}"
+            - name: DB_PASSWD
+              value: "{{ .Values.postgres.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.postgres.database }}"
+            - name: RUN_CROND
+              value: "true"
+            - name: APP_NAME
+              value: "Gogs"
+            - name: DOMAIN
+              value: "{{ .Values.ingress.hostname }}"
+            - name: SSH_PORT
+              value: "{{ .Values.service.sshPort }}"
+            - name: HTTP_PORT
+              value: "{{ .Values.service.webPort }}"
+            - name: APP_URL
+              value: "http://{{ .Values.ingress.hostname }}"
+            - name: LOG_ROOT_PATH
+              value: "/data/gogs/log"
+          ports:
+            - name: web
+              containerPort: {{ .Values.service.webPort }}
+            - name: ssh
+              containerPort: {{ .Values.service.sshPort }}
+          volumeMounts:
+            - name: gogs-data
+              mountPath: /data
+      volumes:
+        - name: gogs-data
+          persistentVolumeClaim:
+            claimName: {{ include "gogs.fullname" . }}-pvc
+

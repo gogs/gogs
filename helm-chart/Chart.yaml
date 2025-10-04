@@ -1,0 +1,7 @@
+apiVersion: v2
+name: gogs
+description: A simple self-hosted Git service (Gogs)
+type: application
+version: 0.1.0
+appVersion: "latest"
+

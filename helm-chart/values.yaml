@@ -1,0 +1,33 @@
+image:
+  repository: gogs/gogs
+  tag: latest
+  pullPolicy: IfNotPresent
+
+postgres:
+  enabled: true
+  image: postgres:15
+  user: gogs
+  password: gogs_pass
+  database: gogs
+  storage: 5Gi
+
+service:
+  type: ClusterIP
+  webPort: 3000
+  sshPort: 22
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClassName: gp2
+
+ingress:
+  enabled: true
+  className: nginx
+  hostname: gogs.example.com
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  tls:
+    enabled: false
+    secretName: gogs-tls
+

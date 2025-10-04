@@ -1,0 +1,62 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gogs.fullname" . }}-postgres
+  labels:
+    app: {{ include "gogs.name" . }}-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "gogs.name" . }}-postgres
+  template:
+    metadata:
+      labels:
+        app: {{ include "gogs.name" . }}-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: {{ .Values.postgres.image }}
+        env:
+        - name: POSTGRES_USER
+          value: {{ .Values.postgres.user | quote }}
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.postgres.password | quote }}
+        - name: POSTGRES_DB
+          value: {{ .Values.postgres.database | quote }}
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: pgdata
+          mountPath: /var/lib/postgresql
+      volumes:
+      - name: pgdata
+        persistentVolumeClaim:
+          claimName: {{ include "gogs.fullname" . }}-postgres-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "gogs.fullname" . }}-postgres-pvc
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storage }}
+  storageClassName: {{ .Values.persistence.storageClassName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gogs.fullname" . }}-postgres
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: {{ include "gogs.name" . }}-postgres
+{{- end }}
+

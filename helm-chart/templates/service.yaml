@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gogs.fullname" . }}
+  labels:
+    app: {{ include "gogs.name" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: web
+      port: 80
+      targetPort: {{ .Values.service.webPort }}
+    - name: ssh
+      port: 22
+      targetPort: {{ .Values.service.sshPort }}
+  selector:
+    app: {{ include "gogs.name" . }}
+
