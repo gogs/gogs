@@ -16,3 +16,5 @@ output*
 /release
 .task
 .envrc
+.terraform/
+.terraform.lock.hcl
