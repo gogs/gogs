@@ -2,6 +2,7 @@
 <div class="user signin">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
+			{{if not .HideUsernamePasswordForm}}
 			<form class="ui form" action="{{.Link}}" method="post">
 				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached header">
@@ -60,6 +61,48 @@
 					{{end}}
 				</div>
 			</form>
+			{{end}}
+			{{if .OIDCLoginSources}}
+				<div class="ui secondary segment">
+					{{if .HideUsernamePasswordForm}}
+						<h3 class="ui top attached header">
+							{{.i18n.Tr "sign_in"}}
+						</h3>
+						<div class="ui attached segment">
+							{{template "base/alert" .}}
+							<h4 class="ui header">{{.i18n.Tr "auth.oidc_signin"}}</h4>
+							{{range .OIDCLoginSources}}
+								{{$cfg := .OIDC}}
+								<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" 
+								   class="ui button oidc-login-btn" 
+								   style="background-color: {{if $cfg.ButtonBgColor}}{{$cfg.ButtonBgColor}}{{else}}#4183c4{{end}}; color: {{if $cfg.ButtonTextColor}}{{$cfg.ButtonTextColor}}{{else}}white{{end}}; border: none; margin-bottom: 8px; display: inline-flex; align-items: center; padding: 10px 16px;">
+									{{if $cfg.ButtonLogoURL}}
+										<img src="{{$cfg.ButtonLogoURL}}" style="width: 18px; height: 18px; margin-right: 8px;" alt="{{.Name}} logo" />
+									{{else}}
+										<i class="sign in icon" style="margin-right: 8px;"></i>
+									{{end}}
+									{{$.i18n.Tr "auth.oidc_signin_via"}} {{.Name}}
+								</a>
+							{{end}}
+						</div>
+					{{else}}
+						<h4 class="ui header">{{.i18n.Tr "auth.oidc_signin"}}</h4>
+						{{range .OIDCLoginSources}}
+							{{$cfg := .OIDC}}
+							<a href="{{AppSubURL}}/user/oauth2/{{.ID}}/login" 
+							   class="ui button oidc-login-btn" 
+							   style="background-color: {{if $cfg.ButtonBgColor}}{{$cfg.ButtonBgColor}}{{else}}#4183c4{{end}}; color: {{if $cfg.ButtonTextColor}}{{$cfg.ButtonTextColor}}{{else}}white{{end}}; border: none; margin-bottom: 8px; display: inline-flex; align-items: center; padding: 10px 16px;">
+								{{if $cfg.ButtonLogoURL}}
+									<img src="{{$cfg.ButtonLogoURL}}" style="width: 18px; height: 18px; margin-right: 8px;" alt="{{.Name}} logo" />
+								{{else}}
+									<i class="sign in icon" style="margin-right: 8px;"></i>
+								{{end}}
+								{{$.i18n.Tr "auth.oidc_signin_via"}} {{.Name}}
+							</a>
+						{{end}}
+					{{end}}
+				</div>
+			{{end}}
 		</div>
 	</div>
 </div>

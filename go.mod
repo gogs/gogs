@@ -1,9 +1,12 @@
 module gogs.io/gogs
 
-go 1.24
+go 1.24.0
+
+toolchain go1.24.7
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/coreos/go-oidc/v3 v3.15.0
 	github.com/derision-test/go-mockgen v1.3.7
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.3
 	github.com/go-ldap/ldap/v3 v3.4.11
@@ -45,6 +48,7 @@ require (
 	github.com/urfave/cli v1.22.17
 	golang.org/x/crypto v0.41.0
 	golang.org/x/net v0.43.0
+	golang.org/x/oauth2 v0.31.0
 	golang.org/x/text v0.28.0
 	gopkg.in/DATA-DOG/go-sqlmock.v2 v2.0.0-20180914054222-c19298f520d0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -79,6 +83,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b // indirect

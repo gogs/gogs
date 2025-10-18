@@ -1070,6 +1070,7 @@ function initAdmin() {
       $(".smtp").hide();
       $(".pam").hide();
       $(".github").hide();
+      $(".oidc").hide();
       $(".has-tls").hide();
 
       var authType = $(this).val();
@@ -1089,6 +1090,10 @@ function initAdmin() {
           break;
         case "6": //GITHUB
           $(".github").show();
+          $(".has-tls").show();
+          break;
+        case "7": //OIDC
+          $(".oidc").show();
           $(".has-tls").show();
           break;
       }

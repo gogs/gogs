@@ -11,7 +11,7 @@ import (
 
 type Authentication struct {
 	ID                int64
-	Type              int    `binding:"Range(2,6)"`
+	Type              int    `binding:"Range(2,7)"`
 	Name              string `binding:"Required;MaxSize(30)"`
 	Host              string
 	Port              int
@@ -42,6 +42,16 @@ type Authentication struct {
 	SkipVerify        bool
 	PAMServiceName    string
 	GitHubAPIEndpoint string `form:"github_api_endpoint" binding:"Url"`
+	// OIDC fields
+	OIDCIssuerURL       string `form:"oidc_issuer_url" binding:"Required;Url"`
+	OIDCClientID        string `form:"oidc_client_id" binding:"Required"`
+	OIDCClientSecret    string `form:"oidc_client_secret" binding:"Required"`
+	OIDCScopes          string `form:"oidc_scopes"`
+	OIDCAutoRegister    bool   `form:"oidc_auto_register"`
+	OIDCAdminGroup      string `form:"oidc_admin_group"`
+	OIDCButtonLogoURL   string `form:"oidc_button_logo_url"`
+	OIDCButtonBgColor   string `form:"oidc_button_bg_color"`
+	OIDCButtonTextColor string `form:"oidc_button_text_color"`
 }
 
 func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
