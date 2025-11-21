@@ -323,6 +323,8 @@ type RepositoryOpts struct {
 	EnableRawFileRenderMode  bool
 	CommitsFetchConcurrency  int
 	DefaultBranch            string
+	DisableWiki              bool `ini:"DISABLE_WIKI"`
+	DisableIssues            bool `ini:"DISABLE_ISSUES"`
 
 	// Repository editor settings
 	Editor struct {

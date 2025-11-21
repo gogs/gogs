@@ -1220,8 +1220,8 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 		Description:  opts.Description,
 		IsPrivate:    opts.IsPrivate,
 		IsUnlisted:   opts.IsUnlisted,
-		EnableWiki:   true,
-		EnableIssues: true,
+		EnableWiki:   !conf.Repository.DisableWiki,
+		EnableIssues: !conf.Repository.DisableIssues,
 		EnablePulls:  true,
 	}
 
@@ -2545,6 +2545,9 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		IsUnlisted:    baseRepo.IsUnlisted,
 		IsFork:        true,
 		ForkID:        baseRepo.ID,
+		EnableWiki:    !conf.Repository.DisableWiki,
+		EnableIssues:  !conf.Repository.DisableIssues,
+		EnablePulls:   true,
 	}
 
 	sess := x.NewSession()

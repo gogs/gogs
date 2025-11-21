@@ -141,6 +141,10 @@
 						<dd><i class="fa fa{{if .Repository.EnableRawFileRenderMode}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.repo.commits_fetch_concurrency"}}</dt>
 						<dd>{{.Repository.CommitsFetchConcurrency}}</dd>
+						<dt>{{.i18n.Tr "admin.config.repo.disable_wiki"}}</dt>
+						<dd><i class="fa fa{{if .Repository.DisableWiki}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.disable_issues"}}</dt>
+						<dd><i class="fa fa{{if .Repository.DisableIssues}}-check{{end}}-square-o"></i></dd>
 
 						<div class="ui divider"></div>
 
