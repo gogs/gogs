@@ -67,7 +67,7 @@
 					<i class="octicon octicon-file-text"></i> {{.i18n.Tr "repo.files"}}
 				</a>
 			{{end}}
-			{{if .Repository.EnableIssues}}
+			{{if and .Repository.EnableIssues (not .DisableIssuesGlobally)}}
 				<a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
 					<i class="octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} {{if not .Repository.EnableExternalTracker}}<span class="ui {{if not .Repository.NumOpenIssues}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenIssues}}{{end}}</span>
 				</a>

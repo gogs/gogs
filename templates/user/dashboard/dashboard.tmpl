@@ -20,12 +20,14 @@
 				<div class="ui tab active list" data-tab="repos">
 					<div class="ui top attached header">
 						{{.i18n.Tr "home.my_repos"}} <span class="ui grey label">{{.RepoCount}}</span>
+						{{if not .DisableRepoCreation}}
 						<div class="ui right">
 							<a class="poping up" href="{{AppSubURL}}/repo/create{{if .ContextUser.IsOrganization}}?org={{.ContextUser.ID}}{{end}}" data-content="{{.i18n.Tr "new_repo"}}" data-variation="tiny inverted" data-position="left center">
 								<i class="plus icon"></i>
 								<span class="sr-only">{{.i18n.Tr "new_repo"}}</span>
 							</a>
 						</div>
+						{{end}}
 					</div>
 					<div class="ui attached table segment">
 						<ul class="repo-owner-name-list">
