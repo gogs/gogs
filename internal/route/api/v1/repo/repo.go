@@ -182,6 +182,12 @@ func CreateUserRepo(c *context.APIContext, owner *database.User, opt api.CreateR
 }
 
 func Create(c *context.APIContext, opt api.CreateRepoOption) {
+	// Check if repository creation is disabled
+	if conf.Repository.DisableRepoCreation {
+		c.ErrorStatus(http.StatusForbidden, errors.New("Repository creation is disabled"))
+		return
+	}
+
 	// Shouldn't reach this condition, but just in case.
 	if c.User.IsOrganization() {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Not allowed to create repository for organization."))
@@ -191,6 +197,12 @@ func Create(c *context.APIContext, opt api.CreateRepoOption) {
 }
 
 func CreateOrgRepo(c *context.APIContext, opt api.CreateRepoOption) {
+	// Check if repository creation is disabled
+	if conf.Repository.DisableRepoCreation {
+		c.ErrorStatus(http.StatusForbidden, errors.New("Repository creation is disabled"))
+		return
+	}
+
 	org, err := database.GetOrgByName(c.Params(":org"))
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
@@ -205,6 +217,12 @@ func CreateOrgRepo(c *context.APIContext, opt api.CreateRepoOption) {
 }
 
 func Migrate(c *context.APIContext, f form.MigrateRepo) {
+	// Check if migration is disabled
+	if conf.Repository.DisableMigration {
+		c.ErrorStatus(http.StatusForbidden, errors.New("Repository migration is disabled"))
+		return
+	}
+
 	ctxUser := c.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
