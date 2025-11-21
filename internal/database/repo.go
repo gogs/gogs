@@ -2545,8 +2545,8 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		IsUnlisted:    baseRepo.IsUnlisted,
 		IsFork:        true,
 		ForkID:        baseRepo.ID,
-		EnableWiki:    !conf.Repository.DisableWiki,
-		EnableIssues:  !conf.Repository.DisableIssues,
+		EnableWiki:    baseRepo.EnableWiki && !conf.Repository.DisableWiki,
+		EnableIssues:  baseRepo.EnableIssues && !conf.Repository.DisableIssues,
 		EnablePulls:   true,
 	}
 
