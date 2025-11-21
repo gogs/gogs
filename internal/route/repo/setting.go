@@ -40,6 +40,8 @@ func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
 	c.RequireAutosize()
+	c.Data["DisableWikiGlobally"] = conf.Repository.DisableWiki
+	c.Data["DisableIssuesGlobally"] = conf.Repository.DisableIssues
 	c.Success(tmplRepoSettingsOptions)
 }
 
@@ -143,11 +145,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		c.Redirect(repo.Link() + "/settings")
 
 	case "advanced":
-		repo.EnableWiki = f.EnableWiki
+		repo.EnableWiki = f.EnableWiki && !conf.Repository.DisableWiki
 		repo.AllowPublicWiki = f.AllowPublicWiki
 		repo.EnableExternalWiki = f.EnableExternalWiki
 		repo.ExternalWikiURL = f.ExternalWikiURL
-		repo.EnableIssues = f.EnableIssues
+		repo.EnableIssues = f.EnableIssues && !conf.Repository.DisableIssues
 		repo.AllowPublicIssues = f.AllowPublicIssues
 		repo.EnableExternalTracker = f.EnableExternalTracker
 		repo.ExternalTrackerURL = f.ExternalTrackerURL

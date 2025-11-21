@@ -126,8 +126,8 @@
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.wiki"}}</label>
 							<div class="ui checkbox">
-								<input class="enable-system" type="checkbox" name="enable_wiki" data-target="#wiki_box" data-uncheck="input[name='allow_public_wiki']" {{if .Repository.EnableWiki}}checked{{end}}>
-								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}</label>
+								<input class="enable-system" type="checkbox" name="enable_wiki" data-target="#wiki_box" data-uncheck="input[name='allow_public_wiki']" {{if .Repository.EnableWiki}}checked{{end}} {{if .DisableWikiGlobally}}disabled{{end}}>
+								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}{{if .DisableWikiGlobally}} ({{.i18n.Tr "repo.settings.disabled_globally"}}){{end}}</label>
 							</div>
 						</div>
 						<div class="ui segment field {{if not .Repository.EnableWiki}}disabled{{end}}" id="wiki_box">
@@ -161,8 +161,8 @@
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.issues"}}</label>
 							<div class="ui checkbox">
-								<input class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" data-uncheck="input[name='allow_public_issues']" {{if .Repository.EnableIssues}}checked{{end}}>
-								<label>{{.i18n.Tr "repo.settings.issues_desc"}}</label>
+								<input class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" data-uncheck="input[name='allow_public_issues']" {{if .Repository.EnableIssues}}checked{{end}} {{if .DisableIssuesGlobally}}disabled{{end}}>
+								<label>{{.i18n.Tr "repo.settings.issues_desc"}}{{if .DisableIssuesGlobally}} ({{.i18n.Tr "repo.settings.disabled_globally"}}){{end}}</label>
 							</div>
 						</div>
 						<div class="ui segment field {{if not .Repository.EnableIssues}}disabled{{end}}" id="issue_box">
