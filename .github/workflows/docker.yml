@@ -89,6 +89,40 @@ jobs:
 
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+  deploy-demo:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
+    needs: buildx
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Configure kubectl
+        run: doctl kubernetes cluster kubeconfig save ${{ secrets.DIGITALOCEAN_K8S_CLUSTER_ID }}
+      - name: Restart gogs-demo deployment
+        run: |
+          kubectl rollout restart deployment gogs-demo -n gogs
+          kubectl rollout status deployment gogs-demo -n gogs
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@v3
+        if: ${{ failure() }}
+        with:
+          server_address: smtp.mailgun.org
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: GitHub Actions (${{ github.repository }}) job result
+          to: github-actions-8ce6454@unknwon.io
+          from: GitHub Actions (${{ github.repository }})
+          reply_to: noreply@unknwon.io
+          body: |
+            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
+
+            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
   buildx-pull-request:
     if: ${{ github.event_name == 'pull_request'}}
     runs-on: ubuntu-latest
