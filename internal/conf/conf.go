@@ -59,6 +59,7 @@ func Init(customConf string) error {
 		return errors.Wrap(err, `parse "app.ini"`)
 	}
 	File.NameMapper = ini.SnackCase
+	File.ValueMapper = os.ExpandEnv
 
 	if customConf == "" {
 		customConf = filepath.Join(CustomDir(), "conf", "app.ini")
