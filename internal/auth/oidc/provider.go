@@ -60,14 +60,15 @@ func (p *Provider) AuthenticateUser(ctx context.Context, code string) (*auth.Ext
 
 	// Extract claims
 	var claims struct {
-		Email         string   `json:"email"`
-		EmailVerified bool     `json:"email_verified"`
-		Name          string   `json:"name"`
-		GivenName     string   `json:"given_name"`
-		FamilyName    string   `json:"family_name"`
-		PreferredUsername string `json:"preferred_username"`
-		Subject       string   `json:"sub"`
-		Groups        []string `json:"groups"`
+		Email             string   `json:"email"`
+		EmailVerified     bool     `json:"email_verified"`
+		Name              string   `json:"name"`
+		GivenName         string   `json:"given_name"`
+		FamilyName        string   `json:"family_name"`
+		PreferredUsername string   `json:"preferred_username"`
+		Subject           string   `json:"sub"`
+		Groups            []string `json:"groups"`
+		Picture           string   `json:"picture"`
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
@@ -100,11 +101,12 @@ func (p *Provider) AuthenticateUser(ctx context.Context, code string) (*auth.Ext
 	}
 
 	return &auth.ExternalAccount{
-		Login:    login,
-		Name:     login,
-		FullName: fullName,
-		Email:    claims.Email,
-		Admin:    isAdmin,
+		Login:     login,
+		Name:      login,
+		FullName:  fullName,
+		Email:     claims.Email,
+		Admin:     isAdmin,
+		AvatarURL: claims.Picture,
 	}, nil
 }
 

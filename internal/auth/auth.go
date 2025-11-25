@@ -77,6 +77,8 @@ type ExternalAccount struct {
 	Website string
 	// Whether the user should be prompted as a site admin.
 	Admin bool
+	// The URL of the account avatar/profile picture.
+	AvatarURL string
 }
 
 // Provider defines an authenticate provider which provides ability to authentication against

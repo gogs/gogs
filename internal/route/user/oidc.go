@@ -6,6 +6,8 @@ package user
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -166,6 +168,14 @@ func OIDCCallback(c *context.Context) {
 	// Log in the user
 	afterLogin(c, user, false)
 
+	// Import profile picture as custom avatar if available
+	if extAccount.AvatarURL != "" {
+		if err := importOIDCAvatar(c, user.ID, extAccount.AvatarURL); err != nil {
+			log.Error("Failed to import OIDC avatar for user %d: %v", user.ID, err)
+			// Don't fail the login, just log the error
+		}
+	}
+
 	// Handle redirect
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	if tool.IsSameSiteURLPath(redirectTo) {
@@ -174,4 +184,44 @@ func OIDCCallback(c *context.Context) {
 		c.RedirectSubpath("/")
 	}
 	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
+}
+
+// importOIDCAvatar downloads the avatar from the given URL and saves it as the user's custom avatar.
+func importOIDCAvatar(c *context.Context, userID int64, avatarURL string) error {
+	// Validate the URL
+	parsedURL, err := url.Parse(avatarURL)
+	if err != nil {
+		return fmt.Errorf("invalid avatar URL: %v", err)
+	}
+
+	// Only allow HTTP and HTTPS schemes
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("unsupported URL scheme: %s", parsedURL.Scheme)
+	}
+
+	// Download the avatar image
+	resp, err := http.Get(avatarURL)
+	if err != nil {
+		return fmt.Errorf("failed to download avatar: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download avatar: HTTP %d", resp.StatusCode)
+	}
+
+	// Limit the size of the avatar to prevent memory issues (max 5MB)
+	const maxAvatarSize = 5 * 1024 * 1024
+	limitedReader := io.LimitReader(resp.Body, maxAvatarSize)
+	avatarData, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return fmt.Errorf("failed to read avatar data: %v", err)
+	}
+
+	// Save the avatar as custom avatar
+	if err := database.Handle.Users().UseCustomAvatar(c.Req.Context(), userID, avatarData); err != nil {
+		return fmt.Errorf("failed to save avatar: %v", err)
+	}
+
+	return nil
 }
