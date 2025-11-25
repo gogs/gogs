@@ -96,14 +96,15 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Configure kubectl
-        run: doctl kubernetes cluster kubeconfig save ${{ secrets.DIGITALOCEAN_K8S_CLUSTER_ID }}
+        run: |
+          mkdir -p ~/.kube
+          echo "${KUBECONFIG}" | base64 -d > ~/.kube/config
+        env:
+          KUBECONFIG: ${{ secrets.DIGITALOCEAN_K8S_CLUSTER_KUBECONFIG }}
       - name: Restart gogs-demo deployment
         run: |
+          set -e
           kubectl rollout restart deployment gogs-demo -n gogs
           kubectl rollout status deployment gogs-demo -n gogs
       - name: Send email on failure
