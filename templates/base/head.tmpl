@@ -94,7 +94,9 @@
 
 								{{if .IsLogged}}
 									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "dashboard"}}</a>
+									{{ if not .DisableIssuesGlobally }}
 									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubURL}}/issues">{{.i18n.Tr "issues"}}</a>
+									{{ end }}
 									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubURL}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
 								{{else}}
 									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "home"}}</a>
@@ -116,12 +118,16 @@
 												<i class="octicon octicon-triangle-down"></i>
 											</span>
 											<div class="menu">
+												{{if not .DisableRepoCreation}}
 												<a class="item" href="{{AppSubURL}}/repo/create">
 													<i class="octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
 												</a>
+												{{end}}
+												{{if not .DisableMigration}}
 												<a class="item" href="{{AppSubURL}}/repo/migrate">
 													<i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
 												</a>
+												{{end}}
 												{{if .LoggedUser.CanCreateOrganization}}
 												<a class="item" href="{{AppSubURL}}/org/create">
 													<i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}

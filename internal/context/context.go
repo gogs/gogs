@@ -284,6 +284,9 @@ func Contexter(store Store) macaron.Handler {
 
 		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
 		c.Data["ShowFooterBranding"] = conf.Other.ShowFooterBranding
+		c.Data["DisableRepoCreation"] = conf.Repository.DisableRepoCreation
+		c.Data["DisableMigration"] = conf.Repository.DisableMigration
+		c.Data["DisableIssuesGlobally"] = conf.Repository.DisableIssues
 
 		c.renderNoticeBanner()
 

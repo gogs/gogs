@@ -69,6 +69,12 @@ func Create(c *context.Context) {
 	c.Title("new_repo")
 	c.RequireAutosize()
 
+	// Check if repository creation is disabled
+	if conf.Repository.DisableRepoCreation {
+		c.NotFound()
+		return
+	}
+
 	// Give default value for template to render.
 	c.Data["Gitignores"] = database.Gitignores
 	c.Data["Licenses"] = database.Licenses
@@ -103,6 +109,12 @@ func handleCreateError(c *context.Context, err error, name, tpl string, form any
 
 func CreatePost(c *context.Context, f form.CreateRepo) {
 	c.Data["Title"] = c.Tr("new_repo")
+
+	// Check if repository creation is disabled
+	if conf.Repository.DisableRepoCreation {
+		c.NotFound()
+		return
+	}
 
 	c.Data["Gitignores"] = database.Gitignores
 	c.Data["Licenses"] = database.Licenses
@@ -146,9 +158,17 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 
 func Migrate(c *context.Context) {
 	c.Data["Title"] = c.Tr("new_migrate")
+
+	// Check if migration is disabled
+	if conf.Repository.DisableMigration {
+		c.NotFound()
+		return
+	}
+
 	c.Data["private"] = c.User.LastRepoVisibility
 	c.Data["IsForcedPrivate"] = conf.Repository.ForcePrivate
-	c.Data["mirror"] = c.Query("mirror") == "1"
+	// Default mirror to true
+	c.Data["mirror"] = c.Query("mirror") != "0"
 
 	ctxUser := checkContextUser(c, c.QueryInt64("org"))
 	if c.Written() {
@@ -161,6 +181,12 @@ func Migrate(c *context.Context) {
 
 func MigratePost(c *context.Context, f form.MigrateRepo) {
 	c.Data["Title"] = c.Tr("new_migrate")
+
+	// Check if migration is disabled
+	if conf.Repository.DisableMigration {
+		c.NotFound()
+		return
+	}
 
 	ctxUser := checkContextUser(c, f.UID)
 	if c.Written() {
