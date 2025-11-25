@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -199,8 +200,20 @@ func importOIDCAvatar(c *context.Context, userID int64, avatarURL string) error 
 		return fmt.Errorf("unsupported URL scheme: %s", parsedURL.Scheme)
 	}
 
+	// Create HTTP client with timeout to prevent indefinite blocking
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Create request with proper headers
+	req, err := http.NewRequest("GET", avatarURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("User-Agent", "Gogs")
+
 	// Download the avatar image
-	resp, err := http.Get(avatarURL)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to download avatar: %v", err)
 	}
@@ -210,12 +223,23 @@ func importOIDCAvatar(c *context.Context, userID int64, avatarURL string) error 
 		return fmt.Errorf("failed to download avatar: HTTP %d", resp.StatusCode)
 	}
 
+	// Validate Content-Type is an image
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		return fmt.Errorf("invalid content type: %s", contentType)
+	}
+
 	// Limit the size of the avatar to prevent memory issues (max 5MB)
 	const maxAvatarSize = 5 * 1024 * 1024
-	limitedReader := io.LimitReader(resp.Body, maxAvatarSize)
+	limitedReader := io.LimitReader(resp.Body, maxAvatarSize+1) // Read one extra byte to detect truncation
 	avatarData, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return fmt.Errorf("failed to read avatar data: %v", err)
+	}
+
+	// Check if the image was truncated
+	if len(avatarData) > maxAvatarSize {
+		return fmt.Errorf("avatar image too large (max %d bytes)", maxAvatarSize)
 	}
 
 	// Save the avatar as custom avatar
