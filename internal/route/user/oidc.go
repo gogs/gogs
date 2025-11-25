@@ -223,12 +223,6 @@ func importOIDCAvatar(c *context.Context, userID int64, avatarURL string) error 
 		return fmt.Errorf("failed to download avatar: HTTP %d", resp.StatusCode)
 	}
 
-	// Validate Content-Type is an image
-	contentType := resp.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "image/") {
-		return fmt.Errorf("invalid content type: %s", contentType)
-	}
-
 	// Limit the size of the avatar to prevent memory issues (max 5MB)
 	const maxAvatarSize = 5 * 1024 * 1024
 	limitedReader := io.LimitReader(resp.Body, maxAvatarSize+1) // Read one extra byte to detect truncation
@@ -240,6 +234,11 @@ func importOIDCAvatar(c *context.Context, userID int64, avatarURL string) error 
 	// Check if the image was truncated
 	if len(avatarData) > maxAvatarSize {
 		return fmt.Errorf("avatar image too large (max %d bytes)", maxAvatarSize)
+	}
+
+	// Validate the downloaded data is actually an image
+	if !tool.IsImageFile(avatarData) {
+		return fmt.Errorf("downloaded file is not a valid image")
 	}
 
 	// Save the avatar as custom avatar
