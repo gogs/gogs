@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Modern, rootless startup script for Gogs
+# Supports Kubernetes security contexts: runAsNonRoot, readOnlyRootFilesystem, allowPrivilegeEscalation=false
+
 create_socat_links() {
     # Bind linked docker container to localhost socket using socat
     USED_PORT="3000:22"
@@ -31,30 +34,16 @@ cleanup() {
 }
 
 create_volume_subfolder() {
-    # only change ownership if needed, if using an nfs mount this could be expensive
-    if [ "$USER:$USER" != "$(stat /data -c '%U:%G')" ]
-    then
-        # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
-        chown -R "$USER:$USER" /data
-    fi
-
-    # Create VOLUME subfolder
+    # Create VOLUME subfolders if they don't exist
+    # Note: The container now runs as the git user (UID 1000 by default).
+    # Ensure volume permissions match the container user.
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
         if ! test -d $f; then
-            gosu "$USER" mkdir -p $f
+            mkdir -p $f 2>/dev/null || echo "Warning: Could not create $f - ensure volume has correct permissions" 1>&2
         fi
     done
 }
 
-setids() {
-    export USER=git
-    PUID=${PUID:-1000}
-    PGID=${PGID:-1000}
-    groupmod -o -g "$PGID" $USER
-    usermod -o -u "$PUID" $USER
-}
-
-setids
 cleanup
 create_volume_subfolder
 
@@ -69,10 +58,10 @@ CROND=$(echo "$RUN_CROND" | tr '[:upper:]' '[:lower:]')
 if [ "$CROND" = "true" ] || [ "$CROND" = "1" ]; then
     echo "init:crond  | Cron Daemon (crond) will be run as requested by s6" 1>&2
     rm -f /app/gogs/docker/s6/crond/down
-    /bin/sh /app/gogs/docker/runtime/backup-init.sh "${PUID}"
+    /bin/sh /app/gogs/docker/runtime/backup-init.sh
 else
     # Tell s6 not to run the crond service
-    touch /app/gogs/docker/s6/crond/down
+    touch /app/gogs/docker/s6/crond/down 2>/dev/null || true
 fi
 
 # Exec CMD or S6 by default if nothing present

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Skip SSH setup if not running as root (SSH disabled in rootless mode)
+if [ "$(id -u)" != "0" ]; then
+    exit 0
+fi
+
 # Check if host keys are present, else create them
 if ! test -f /data/ssh/ssh_host_rsa_key; then
     ssh-keygen -q -f /data/ssh/ssh_host_rsa_key -N '' -t rsa

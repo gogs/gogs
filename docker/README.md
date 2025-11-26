@@ -4,6 +4,41 @@
 
 Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs) to see all available images and tags.
 
+## Security-first Design
+
+This Docker image is designed with Kubernetes security best practices in mind:
+
+- **Runs as non-root by default** (UID 1000, GID 1000)
+- **Supports restrictive security contexts**:
+  - `runAsNonRoot: true`
+  - `allowPrivilegeEscalation: false`
+  - `readOnlyRootFilesystem: true` (with appropriate volume mounts)
+- **No privilege escalation tools** (gosu removed)
+- **Fixed UID/GID** at build time for predictable permissions
+
+### Kubernetes Security Context Example
+
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  capabilities:
+    drop:
+      - ALL
+```
+
+### Custom UID/GID at Build Time
+
+If you need a different UID/GID, build the image with custom arguments:
+
+```sh
+docker build --build-arg GOGS_UID=1001 --build-arg GOGS_GID=1001 -t my-gogs .
+```
+
 ## Usage
 
 To keep your data out of Docker container, we do a volume (`/var/gogs` -> `/data`) here, and you can change it based on your situation.
@@ -129,6 +164,30 @@ This container has some options available via environment variables, these optio
       Used by backup system. If defined, append content to arguments to `gogs backup`.\
       See: [Backup System](#backup-system)
 
+## SSH Access
+
+### Built-in SSH Server (Recommended for Kubernetes)
+
+The recommended approach for SSH access in containerized environments is to use Gogs' built-in SSH server. Enable it in your `app.ini`:
+
+```ini
+[server]
+START_SSH_SERVER = true
+SSH_PORT = 2222
+```
+
+Then expose port 2222 from your container.
+
+### OpenSSH Server (Requires Root)
+
+The OpenSSH server in the container is disabled by default when running as non-root. If you need OpenSSH functionality (for example, for SSH passthrough), you must run the container as root:
+
+```sh
+docker run --user root --name=gogs -p 10022:22 -p 10880:3000 -v /var/gogs:/data gogs/gogs
+```
+
+**Note:** Running as root is not recommended for Kubernetes deployments. Use the built-in SSH server instead.
+
 ## Backup system
 
 Automated backups with retention policy:
@@ -146,6 +205,17 @@ Steps to upgrade Gogs with Docker:
 - `docker stop gogs`
 - `docker rm gogs`
 - Finally, create a container for the first time and don't forget to do the same for the volume and port mapping.
+
+## Migration from Previous Versions
+
+If you're upgrading from an older version that used PUID/PGID environment variables:
+
+1. **PUID/PGID are no longer supported**: The container now uses a fixed UID/GID (1000:1000 by default)
+2. **Update volume permissions**: Ensure your data volumes are owned by UID 1000:GID 1000
+   ```sh
+   chown -R 1000:1000 /var/gogs
+   ```
+3. **Custom UID/GID**: If you need a different UID/GID, rebuild the image with custom build arguments
 
 ## Known issues
 

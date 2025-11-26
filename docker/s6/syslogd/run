@@ -5,4 +5,10 @@ if test -f ./setup; then
     source ./setup
 fi
 
-exec gosu root /sbin/syslogd -nS -O-
+# Syslogd typically requires root. If not running as root, skip or use alternative logging.
+if [ "$(id -u)" != "0" ]; then
+    echo "syslogd:disabled | Running as non-root user, syslogd disabled." 1>&2
+    exec sleep infinity
+fi
+
+exec /sbin/syslogd -nS -O-
