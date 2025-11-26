@@ -7,5 +7,5 @@ if test -f ./setup; then
     source ./setup
 fi
 
-# Crond can run as non-root user with user-level crontabs
+# Crontabs directory is already created by finalize.sh with proper permissions
 exec /usr/sbin/crond -fS -c /var/spool/cron/crontabs

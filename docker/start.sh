@@ -39,7 +39,9 @@ create_volume_subfolder() {
     # Ensure volume permissions match the container user.
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
         if ! test -d $f; then
-            mkdir -p $f 2>/dev/null || echo "Warning: Could not create $f - ensure volume has correct permissions" 1>&2
+            if ! mkdir -p $f 2>/dev/null; then
+                echo "Warning: Could not create $f - ensure volume has correct permissions" 1>&2
+            fi
         fi
     done
 }

@@ -4,8 +4,12 @@ set -e
 BACKUP_PATH="/backup"
 
 # Make sure that required directories exist
-mkdir -p "${BACKUP_PATH}" 2>/dev/null || echo "Warning: Could not create backup directory" 1>&2
-mkdir -p "/var/spool/cron/crontabs" 2>/dev/null || true
+if ! mkdir -p "${BACKUP_PATH}" 2>/dev/null; then
+    echo "Warning: Could not create backup directory ${BACKUP_PATH}" 1>&2
+fi
+if ! mkdir -p "/var/spool/cron/crontabs" 2>/dev/null; then
+    echo "Warning: Could not create crontabs directory" 1>&2
+fi
 
 # [string] BACKUP_INTERVAL   Period expression
 # [string] BACKUP_RETENTION  Period expression
