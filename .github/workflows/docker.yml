@@ -103,8 +103,9 @@ jobs:
         env:
           KUBECONFIG: ${{ secrets.DIGITALOCEAN_K8S_CLUSTER_KUBECONFIG }}
       - name: Restart gogs-demo deployment
+        timeout-minutes: 5
         run: |
-          set -e
+          set -ex
           kubectl rollout restart deployment gogs-demo -n gogs
           kubectl rollout status deployment gogs-demo -n gogs
       - name: Send email on failure
