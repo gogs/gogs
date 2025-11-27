@@ -7,9 +7,9 @@ on:
     paths:
       - '.trivy.yaml'
       - 'Dockerfile'
-      - 'Dockerfile.legacy'
+      - 'Dockerfile.next'
       - 'docker/**'
-      - 'docker-legacy/**'
+      - 'docker-next/**'
       - '.github/workflows/docker.yml'
   release:
     types: [ published ]

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Crontabs are located in /var/spool/cron/crontabs/
+# Note: Running as non-root, only user-level cron jobs are supported
+
+if test -f ./setup; then
+    # shellcheck disable=SC2039,SC1091,SC3046
+    source ./setup
+fi
+
+# Crond runs as current user with user-level crontabs
+exec /usr/sbin/crond -fS -c /var/spool/cron/crontabs
