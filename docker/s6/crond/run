@@ -1,6 +1,6 @@
 #!/bin/sh
-# Crontabs are located by default in /var/spool/cron/crontabs/
-# The default configuration is also calling all the scripts in /etc/periodic/${period}
+# Crontabs are located in /var/spool/cron/crontabs/
+# Note: Running as non-root, only user-level cron jobs are supported
 
 if test -f ./setup; then
     # shellcheck disable=SC2039,SC1091,SC3046

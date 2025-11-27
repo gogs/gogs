@@ -129,7 +129,7 @@ add_backup_cronjob() {
 	echo "${CRONJOB_TASK}" >>"${CRONTAB_FILE}"
 }
 
-# Use current user for crontab
+# Use current user for crontab (git user in rootless mode)
 CRONTAB_USER=$(whoami)
 
 # Up to this point, it was desirable that interpreter handles the command errors and halts execution upon any error.

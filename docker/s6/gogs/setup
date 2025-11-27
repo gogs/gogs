@@ -19,4 +19,6 @@ ln -sfn /data/gogs/data ./data
 # Backward Compatibility with Gogs Container v0.6.15
 ln -sfn /data/git /home/git
 
-chmod 0755 /data /data/gogs ~git/ 2>/dev/null || true
+if ! chmod 0755 /data /data/gogs ~git/ 2>/dev/null; then
+    echo "Warning: Could not set permissions on data directories - ensure volume has correct permissions" 1>&2
+fi
