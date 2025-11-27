@@ -1,4 +1,0 @@
-#!/bin/sh
-
-# Cleanup s6 event folder
-rm -rf "$(find /app/gogs/docker/s6/ -name 'event')" 2>/dev/null || true
