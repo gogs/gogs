@@ -4,12 +4,10 @@ set -e
 BACKUP_PATH="/backup"
 
 # Make sure that required directories exist
-if ! mkdir -p "${BACKUP_PATH}" 2>/dev/null; then
-    echo "Warning: Could not create backup directory ${BACKUP_PATH}" 1>&2
-fi
-if ! mkdir -p "/var/spool/cron/crontabs" 2>/dev/null; then
-    echo "Warning: Could not create crontabs directory" 1>&2
-fi
+mkdir -p "${BACKUP_PATH}"
+mkdir -p "/etc/crontabs"
+chown git:git /backup
+chmod 2770 /backup
 
 # [string] BACKUP_INTERVAL   Period expression
 # [string] BACKUP_RETENTION  Period expression
@@ -108,7 +106,7 @@ parse_generate_retention_expression() {
 
 add_backup_cronjob() {
 	CRONTAB_USER="${1:-git}"
-	CRONTAB_FILE="/var/spool/cron/crontabs/${CRONTAB_USER}"
+	CRONTAB_FILE="/etc/crontabs/${CRONTAB_USER}"
 	CRONJOB_EXPRESSION="${2:-}"
 	CRONJOB_EXECUTOR="${3:-}"
 	CRONJOB_EXECUTOR_ARGUMENTS="${4:-}"
@@ -129,8 +127,7 @@ add_backup_cronjob() {
 	echo "${CRONJOB_TASK}" >>"${CRONTAB_FILE}"
 }
 
-# Use current user for crontab
-CRONTAB_USER=$(whoami)
+CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 
 # Up to this point, it was desirable that interpreter handles the command errors and halts execution upon any error.
 # From now, we handle the errors our self.

@@ -7,5 +7,4 @@ if test -f ./setup; then
     source ./setup
 fi
 
-# Crond runs as current user with user-level crontabs
-exec /usr/sbin/crond -fS -c /var/spool/cron/crontabs
+exec gosu root /usr/sbin/crond -fS
