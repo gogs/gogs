@@ -24,7 +24,8 @@ RUN apk --no-cache --no-progress add \
   bash \
   ca-certificates \
   git \
-  linux-pam
+  linux-pam \
+  openssh-keygen
 
 ENV GOGS_CUSTOM=/data/gogs
 
