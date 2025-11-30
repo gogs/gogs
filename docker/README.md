@@ -1,5 +1,10 @@
 # Docker for Gogs
 
+> [!WARNING]
+> This is now the legacy Docker image that lacks modern security best practices. It will be published as `gogs/gogs:legacy-latest` starting 0.15.0, and be completely removed starting 0.16.0.
+>
+> To use the next-generation, security-focused Docker image, see [docker-next/README.md](../docker-next/README.md).
+
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge)
 
 Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs) to see all available images and tags.
@@ -9,7 +14,6 @@ Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry]
 To keep your data out of Docker container, we do a volume (`/var/gogs` -> `/data`) here, and you can change it based on your situation.
 
 ```sh
-# Pull image from Docker Hub.
 $ docker pull gogs/gogs
 
 # Create local directory for volume.
@@ -22,7 +26,7 @@ $ docker run --name=gogs -p 10022:22 -p 10880:3000 -v /var/gogs:/data gogs/gogs
 $ docker start gogs
 ```
 
-Note: It is important to map the SSH service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
+> [!NOTE] It is important to map the SSH service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
 
 Files will be store in local path `/var/gogs` in my case.
 
@@ -138,14 +142,15 @@ Automated backups with retention policy:
 
 ## Upgrade
 
-:exclamation::exclamation::exclamation:<span style="color: red">**Make sure you have volumed data to somewhere outside Docker container**</span>:exclamation::exclamation::exclamation:
+> [!CAUTION]
+> Make sure you have volumed data to somewhere outside Docker container!
 
 Steps to upgrade Gogs with Docker:
 
 - `docker pull gogs/gogs`
 - `docker stop gogs`
 - `docker rm gogs`
-- Finally, create a container for the first time and don't forget to do the same for the volume and port mapping.
+- Create a container for the first time and don't forget to do the same for the volume and port mapping.
 
 ## Known issues
 
