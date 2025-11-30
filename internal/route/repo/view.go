@@ -10,7 +10,7 @@ import (
 	gotemplate "html/template"
 	"path"
 	"strings"
-	"time"
+	//"time"
 
 	"github.com/gogs/git-module"
 	"github.com/unknwon/paginater"
@@ -47,15 +47,26 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 	entries.Sort()
 
-	c.Data["Files"], err = entries.CommitsInfo(c.Repo.Commit, git.CommitsInfoOptions{
-		Path:           c.Repo.TreePath,
-		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
-		Timeout:        5 * time.Minute,
-	})
-	if err != nil {
-		c.Error(err, "get commits info")
-		return
+	var safeFiles []any
+
+	for _, entry := range entries {
+		var lastCommit *git.Commit
+		lastCommit, err := c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{
+			Path: path.Join(c.Repo.TreePath, entry.Name()),
+		})
+		if err != nil {
+			// Skip problematic file to avoid failure
+			continue
+		}
+
+		// Prepare minimal info for template rendering
+		safeFiles = append(safeFiles, map[string]any{
+			"Entry":  entry,
+			"Commit": lastCommit,
+		})
 	}
+
+	c.Data["Files"] = safeFiles
 
 	var readmeFile *git.Blob
 	for _, entry := range entries {
