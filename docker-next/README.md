@@ -49,7 +49,7 @@ $ mkdir -p /var/gogs
 $ chown 1000:1000 /var/gogs
 
 # Use `docker run` for the first time.
-$ docker run --name=gogs -p 10022:22 -p 10880:3000 -v /var/gogs:/data gogs/gogs:next-latest
+$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v /var/gogs:/data gogs/gogs:next-latest
 
 # Use `docker start` if you have stopped it.
 $ docker start gogs
@@ -74,7 +74,7 @@ Directory `/var/gogs` keeps Git repositories and Gogs data:
 
 ```zsh
 $ docker volume create --name gogs-data
-$ docker run --name=gogs -p 10022:22 -p 10880:3000 -v gogs-data:/data gogs/gogs:next-latest
+$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v gogs-data:/data gogs/gogs:next-latest
 ```
 
 ## Settings
@@ -86,7 +86,7 @@ Most of the settings are obvious and easy to understand, but there are some sett
 - **Repository Root Path**: keep it as default value `/home/git/gogs-repositories`
 - **Run User**: default `git` (UID 1000)
 - **Domain**: fill in with Docker container IP (e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
-- **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `22` inside Docker, **but** you expose it by `10022:22`, then use `10022` for this value.
+- **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `2222` inside Docker, **but** you expose it by `10022:2222`, then use `10022` for this value.
 - **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, **and** you expose it by `10880:3000`, but you still use `3000` for this value.
 - **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values (e.g. `http://192.168.99.100:10880/`).
 
@@ -103,7 +103,7 @@ To enable Git over SSH access, the use of builtin SSH server is required as foll
 [server]
 START_SSH_SERVER = true
 SSH_PORT         = 10022 # The port shown in the clone URL
-SSH_LISTEN_PORT  = 22    # The port that builtin server listens on
+SSH_LISTEN_PORT  = 2222  # The port that builtin server listens on
 ```
 
 ## Upgrade
