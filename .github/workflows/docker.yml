@@ -229,11 +229,11 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
+            ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:7d
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
         with:
-          image-ref: ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:1d
+          image-ref: ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:7d
           exit-code: '1'
 
   buildx-next-pull-request:
@@ -269,11 +269,11 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:1d
+            ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:7d
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
         with:
-          image-ref: ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:1d
+          image-ref: ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:7d
           exit-code: '1'
 
   # Updates to the following section needs to be synced to all release branches within their lifecycles.
