@@ -12,7 +12,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
-- The required Go version to compile source code changed to 1.24.
+- The required Go version to compile source code changed to 1.25.
 - The build tag `cert` has been removed, and the `gogs cert` subcommand is now always available. [#7883](https://github.com/gogs/gogs/pull/7883)
 - Updated Mermaid JS to 11.9.0. [#8009](https://github.com/gogs/gogs/pull/8009)
 

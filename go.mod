@@ -1,6 +1,6 @@
 module gogs.io/gogs
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -135,5 +135,5 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-// +heroku goVersion go1.24
+// +heroku goVersion go1.25
 // +heroku install ./
