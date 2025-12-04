@@ -2,26 +2,78 @@
 
 All notable changes to Gogs are documented in this file.
 
-## 0.13.0+dev (`main`)
+## 0.14.0+dev (`main`)
 
 ### Added
 
+- Support using TLS for Redis session provider using `[session] PROVIDER_CONFIG = ...,tls=true`. [#7860](https://github.com/gogs/gogs/pull/7860)
+- Support expanading values in `app.ini` from environment variables, e.g. `[database] PASSWORD = ${DATABASE_PASSWORD}`. [#8057](https://github.com/gogs/gogs/pull/8057)
+- Start publishing next-generation, security-focused Docker image via `gogs/gogs:next-latest`, which will become the default image distribution (`gogs/gogs:latest`) starting 0.15.0. While not all container options support have been added in the next-generation image, the use of current legacy Docker image is deprecated, it will be published as `gogs/gogs:legacy-latest` starting 0.15.0, and be completely removed starting 0.16.0. [#8061](https://github.com/gogs/gogs/pull/8061)
+
+### Changed
+
+- The required Go version to compile source code changed to 1.25.
+- The build tag `cert` has been removed, and the `gogs cert` subcommand is now always available. [#7883](https://github.com/gogs/gogs/pull/7883)
+- Updated Mermaid JS to 11.9.0. [#8009](https://github.com/gogs/gogs/pull/8009)
+
+### Fixed
+
+- Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
+- Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
+
+## 0.13.3
+
+### Fixed
+
+- _Security:_ Stored XSS in PDF renderer. [GHSA-xh32-cx6c-cp4v](https://github.com/gogs/gogs/security/advisories/GHSA-xh32-cx6c-cp4v)
+- _Security:_ Path Traversal in file editing UI. [GHSA-wj44-9vcg-wjq7](https://github.com/gogs/gogs/security/advisories/GHSA-wj44-9vcg-wjq7)
+- Randomly timeout on repository file uploads. [#7890](https://github.com/gogs/gogs/pull/7890)
+- Unable to override email templates in custom directory. [#7905](https://github.com/gogs/gogs/pull/7905)
+
+## 0.13.2
+
+### Fixed
+
+- _Security:_ Path Traversal in file editing UI. [GHSA-r7j8-5h9c-f6fx](https://github.com/gogs/gogs/security/advisories/GHSA-r7j8-5h9c-f6fx)
+- _Security:_ Path Traversal in file update API. [GHSA-qf5v-rp47-55gg](https://github.com/gogs/gogs/security/advisories/GHSA-qf5v-rp47-55gg)
+- _Security:_ Argument Injection in the built-in SSH server. [GHSA-vm62-9jw3-c8w3](https://github.com/gogs/gogs/security/advisories/GHSA-vm62-9jw3-c8w3)
+- _Security:_ Deletion of internal files. [GHSA-ccqv-43vm-4f3w](https://github.com/gogs/gogs/security/advisories/GHSA-ccqv-43vm-4f3w)
+- _Security:_ Argument Injection during changes preview. [GHSA-9pp6-wq8c-3w2c](https://github.com/gogs/gogs/security/advisories/GHSA-9pp6-wq8c-3w2c)
+- _Security:_ Argument Injection when tagging new releases. [GHSA-m27m-h5gj-wwmg](https://github.com/gogs/gogs/security/advisories/GHSA-m27m-h5gj-wwmg)
+- Use the non-deprecated section name `[email]` during installation for email settings. [#7704](https://github.com/gogs/gogs/pull/7704)
+- Use the non-deprecated section name `[email] PASSWORD` during installation for email password. [#7807](https://github.com/gogs/gogs/pull/7807)
+- Make purple template label color to actually use the hexcode of purple. [#7722](https://github.com/gogs/gogs/pull/7722)
+
+## 0.13.0
+
+### Added
+
+- Support using personal access token in the password field. [#3866](https://github.com/gogs/gogs/issues/3866)
 - An unlisted option is added when create or migrate a repository. Unlisted repositories are public but not being listed for users without direct access in the UI. [#5733](https://github.com/gogs/gogs/issues/5733)
+- New API endpoint `PUT /repos/:owner/:repo/contents/:path` for creating and update repository contents. [#5967](https://github.com/gogs/gogs/issues/5967)
 - New configuration option `[git.timeout] DIFF` for customizing operation timeout of `git diff`. [#6315](https://github.com/gogs/gogs/issues/6315)
 - New configuration option `[server] SSH_SERVER_MACS` for setting list of accepted MACs for connections to builtin SSH server. [#6434](https://github.com/gogs/gogs/issues/6434)
-- New languages support: Mongolian. [#6510](https://github.com/gogs/gogs/pull/6510)
+- New configuration option `[repository] DEFAULT_BRANCH` for setting default branch name for new repositories. [#7291](https://github.com/gogs/gogs/issues/7291)
+- New configuration option `[server] SSH_SERVER_ALGORITHMS` for specifying the list of accepted key exchange algorithms for connections to builtin SSH server. [#7345](https://github.com/gogs/gogs/pull/7345)
+- Support specifying custom schema for PostgreSQL. [#6695](https://github.com/gogs/gogs/pull/6695)
+- Support rendering Mermaid diagrams in Markdown. [#6776](https://github.com/gogs/gogs/pull/6776)
+- Docker: Allow passing extra arguments to the `backup` command. [#7060](https://github.com/gogs/gogs/pull/7060)
+- New languages support: Mongolian, Romanian. [#6510](https://github.com/gogs/gogs/pull/6510) [#7082](https://github.com/gogs/gogs/pull/7082)
 
 ### Changed
 
 - The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
 - MSSQL as database backend is deprecated, installation page no longer shows it as an option. Existing installations and manually craft configuration file continue to work. [#6295](https://github.com/gogs/gogs/pull/6295)
-- Use [Task](https://github.com/go-task/task) as the default build tool for development. [#6297](https://github.com/gogs/gogs/pull/6297)
+- Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
+- The required Go version to compile source code changed to 1.18.
+- Access tokens are now stored using their SHA256 hashes instead of raw values. [#7008](https://github.com/gogs/gogs/pull/7008)
 
 ### Fixed
 
-- Add `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409)
-- [Security] Potential SSRF attack by CRLF injection via repository migration. [#6413](https://github.com/gogs/gogs/issues/6413)
-
+- Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
+- Unable to choose "Lookup Avatar by mail" in user settings without deleting custom avatar. [#7267](https://github.com/gogs/gogs/pull/7267)
+- Mistakenly include the "data" directory under the custom directory in the Docker setup. [#7343](https://github.com/gogs/gogs/pull/7343)
+- Unable to start after data recovery with an outdated migration version. [#7125](https://github.com/gogs/gogs/issues/7125)
 
 ### Removed
 
@@ -41,6 +93,80 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+- Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
+
+## 0.12.11
+
+### Fixed
+
+- _Security:_ Stored XSS for issue assignees. [#7145](https://github.com/gogs/gogs/issues/7145)
+- _Security:_ OS Command Injection in repo editor on case-insensitive file systems. [#7030](https://github.com/gogs/gogs/issues/7030)
+- Unable to render repository pages with implicit submodules (e.g. `get submodule "REDACTED": revision does not exist`). [#6436](https://github.com/gogs/gogs/issues/6436)
+
+## 0.12.10
+
+### Changed
+
+- Support using `[security] LOCAL_NETWORK_ALLOWLIST = *` to allow all hostnames. [#7111](https://github.com/gogs/gogs/pull/7111)
+
+### Fixed
+
+- Unable to send webhooks to local network addresses after configured `[security] LOCAL_NETWORK_ALLOWLIST`. [#7074](https://github.com/gogs/gogs/issues/7074)
+
+## 0.12.9
+
+### Fixed
+
+- _Security:_ OS Command Injection in file editor. [#7000](https://github.com/gogs/gogs/issues/7000)
+- _Security:_ Sanitize `DisplayName` in repository issue list. [#7009](https://github.com/gogs/gogs/pull/7009)
+- _Security:_ Path Traversal in file editor on Windows. [#7001](https://github.com/gogs/gogs/issues/7001)
+- _Security:_ Path Traversal in Git HTTP endpoints. [#7002](https://github.com/gogs/gogs/issues/7002)
+- Unable to init repository during creation on Windows. [#6967](https://github.com/gogs/gogs/issues/6967)
+- Mysterious panic on `Value not found for type *repo.HTTPContext`. [#6963](https://github.com/gogs/gogs/issues/6963)
+
+## 0.12.8
+
+### Changed
+
+- All users (including admins) need to use the configuration option `[security] LOCAL_NETWORK_ALLOWLIST` to allow repository migration and webhooks to be able to access local network addresses, which is a comma separated list of hostnames. [#6988](https://github.com/gogs/gogs/pull/6988)
+
+### Fixed
+
+- _Security:_ SSRF in webhook. [#6901](https://github.com/gogs/gogs/issues/6901)
+- _Security:_ XSS in cookies. [#6953](https://github.com/gogs/gogs/issues/6953)
+- _Security:_ OS Command Injection in file uploading. [#6968](https://github.com/gogs/gogs/issues/6968)
+- _Security:_ Remote Command Execution in file editing. [#6555](https://github.com/gogs/gogs/issues/6555)
+
+## 0.12.7
+
+### Fixed
+
+- _Security:_ Stored XSS in issues. [#6919](https://github.com/gogs/gogs/issues/6919)
+- Invalid character in `Access-Control-Allow-Credentials` response header. [#4983](https://github.com/gogs/gogs/issues/4983)
+- Mysterious `ssh: overflow reading version string` errors from builtin SSH server. [#6882](https://github.com/gogs/gogs/issues/6882)
+
+## 0.12.6
+
+### Fixed
+
+- _Security:_ Remote command execution in file uploading. [#6833](https://github.com/gogs/gogs/issues/6833)
+- _Regression:_ Unable to migrate repository from other local Git hosting. Added a new configuration option `[security] LOCAL_NETWORK_ALLOWLIST`, which is a comma separated list of hostnames that are explicitly allowed to be accessed within the local network. [#6841](https://github.com/gogs/gogs/issues/6841)
+- Slow start of Docker containers using NAS devices. [#6554](https://github.com/gogs/gogs/issues/6554)
+
+## 0.12.5
+
+### Fixed
+
+- _Security:_ Potential SSRF in repository migration. [#6754](https://github.com/gogs/gogs/issues/6754)
+- _Security:_ Improper PAM authorization handling. [#6810](https://github.com/gogs/gogs/issues/6810)
+
+## 0.12.4
+
+### Fixed
+
+- _Security:_ Potential SSRF attack by CRLF injection via repository migration. [#6413](https://github.com/gogs/gogs/issues/6413)
+- _Regression:_ Fixed smart links for issues stops rendering. [#6506](https://github.com/gogs/gogs/issues/6506)
+- Added `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409)
 
 ## 0.12.3
 

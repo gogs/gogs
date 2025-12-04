@@ -13,13 +13,12 @@ import (
 	"time"
 
 	"github.com/gogs/git-module"
-	"github.com/pkg/errors"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
@@ -85,17 +84,17 @@ func renderDirectory(c *context.Context, treeLink string) {
 		c.Data["FileName"] = readmeFile.Name()
 		if isTextFile {
 			switch markup.Detect(readmeFile.Name()) {
-			case markup.MARKDOWN:
+			case markup.TypeMarkdown:
 				c.Data["IsMarkdown"] = true
 				p = markup.Markdown(p, treeLink, c.Repo.Repository.ComposeMetas())
-			case markup.ORG_MODE:
+			case markup.TypeOrgMode:
 				c.Data["IsMarkdown"] = true
 				p = markup.OrgMode(p, treeLink, c.Repo.Repository.ComposeMetas())
-			case markup.IPYTHON_NOTEBOOK:
+			case markup.TypeIPythonNotebook:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
-				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
+				p = bytes.ReplaceAll(p, []byte("\n"), []byte(`<br>`))
 			}
 			c.Data["FileContent"] = string(p)
 		}
@@ -112,7 +111,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		}
 	}
 	c.Data["LatestCommit"] = latestCommit
-	c.Data["LatestCommitUser"] = db.ValidateCommitWithEmail(latestCommit)
+	c.Data["LatestCommitUser"] = tryGetUserByEmail(c.Req.Context(), latestCommit.Author.Email)
 
 	if c.Repo.CanEnableEditor() {
 		c.Data["CanAddFile"] = true
@@ -154,21 +153,19 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 		c.Data["ReadmeExist"] = markup.IsReadmeFile(blob.Name())
 
 		switch markup.Detect(blob.Name()) {
-		case markup.MARKDOWN:
+		case markup.TypeMarkdown:
 			c.Data["IsMarkdown"] = true
 			c.Data["FileContent"] = string(markup.Markdown(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
-		case markup.ORG_MODE:
+		case markup.TypeOrgMode:
 			c.Data["IsMarkdown"] = true
 			c.Data["FileContent"] = string(markup.OrgMode(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
-		case markup.IPYTHON_NOTEBOOK:
+		case markup.TypeIPythonNotebook:
 			c.Data["IsIPythonNotebook"] = true
 		default:
 			// Building code view blocks with line number on server side.
 			var fileContent string
-			if err, content := template.ToUTF8WithErr(p); err != nil {
-				if err != nil {
-					log.Error("ToUTF8WithErr: %s", err)
-				}
+			if content, err := template.ToUTF8WithErr(p); err != nil {
+				log.Error("ToUTF8WithErr: %s", err)
 				fileContent = string(p)
 			} else {
 				fileContent = content
@@ -177,7 +174,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			var output bytes.Buffer
 			lines := strings.Split(fileContent, "\n")
 			// Remove blank line at the end of file
-			if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
+			if len(lines) > 0 && lines[len(lines)-1] == "" {
 				lines = lines[:len(lines)-1]
 			}
 			for index, line := range lines {
@@ -221,7 +218,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig()
-	if err != nil && !gitutil.IsErrRevisionNotExist(errors.Cause(err)) {
+	if err != nil && !gitutil.IsErrRevisionNotExist(err) {
 		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
@@ -309,12 +306,12 @@ func Home(c *context.Context) {
 	c.Success(HOME)
 }
 
-func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*db.User, error), tpl string) {
+func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*database.User, error), tpl string) {
 	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
-	pager := paginater.New(total, db.ItemsPerPage, page, 5)
+	pager := paginater.New(total, database.ItemsPerPage, page, 5)
 	c.Data["Page"] = pager
 
 	items, err := getter(pager.Current())

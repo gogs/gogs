@@ -4,7 +4,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 
 ## 项目愿景
 
-Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、稳定和可扩展的自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、macOS、Windows 以及 ARM 平台。
+Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、稳定和可扩展的自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、macOS、Windows 和基于 ARM 的操作系统。
 
 ## 概览
 
@@ -31,7 +31,7 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 - 开启两步验证（2FA）登录
 - 自定义 HTML 模板、静态文件和许多其它组件
 - 多样的数据库后端，包括 PostgreSQL、MySQL、SQLite3 和 [TiDB](https://github.com/pingcap/tidb)
-- 超过[30 种语言](https://crowdin.com/project/gogs)的本地化
+- 超过 [31 种语言](https://crowdin.com/project/gogs)的本地化
 
 ## 硬件要求
 
@@ -88,9 +88,8 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 ## 特别鸣谢
 
 - 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
+- 感谢 [DigitalOcean](https://www.digitalocean.com) 和 [MonoVM](https://monovm.com) 提供服务器赞助。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
-- 感谢 [DigitalOcean](https://www.digitalocean.com)、[VPSServer](https://www.vpsserver.com/)、[Hosted.nl](https://www.hosted.nl/)、[MonoVM](https://monovm.com) 和 [BitLaunch](https://bitlaunch.io) 提供服务器赞助。
-- 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
 - 感谢 [Buildkite](https://buildkite.com) 提供免费的开源项目 CI/CD 支持。
 
 ## 贡献成员

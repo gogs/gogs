@@ -5,22 +5,23 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/osutil"
 )
 
 var Backup = cli.Command{
@@ -42,8 +43,10 @@ portable among all supported database engines.`,
 	},
 }
 
-const currentBackupFormatVersion = 1
-const archiveRootDir = "gogs-backup"
+const (
+	currentBackupFormatVersion = 1
+	archiveRootDir             = "gogs-backup"
+)
 
 func runBackup(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
@@ -54,16 +57,16 @@ func runBackup(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	conn, err := db.SetEngine()
+	conn, err := database.SetEngine()
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
 	tmpDir := c.String("tempdir")
-	if !com.IsExist(tmpDir) {
+	if !osutil.IsExist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
-	rootDir, err := ioutil.TempDir(tmpDir, "gogs-backup-")
+	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
 	if err != nil {
 		log.Fatal("Failed to create backup root directory '%s': %v", rootDir, err)
 	}
@@ -72,7 +75,7 @@ func runBackup(c *cli.Context) error {
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
 	metadata := ini.Empty()
-	metadata.Section("").Key("VERSION").SetValue(com.ToStr(currentBackupFormatVersion))
+	metadata.Section("").Key("VERSION").SetValue(strconv.Itoa(currentBackupFormatVersion))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
 	if err = metadata.SaveTo(metaFile); err != nil {
@@ -92,25 +95,24 @@ func runBackup(c *cli.Context) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = db.DumpDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = database.DumpDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
 		log.Fatal("Failed to include 'db': %v", err)
 	}
 
-	// Custom files
 	if !c.Bool("database-only") {
-		if err = z.AddDir(archiveRootDir+"/custom", conf.CustomDir()); err != nil {
-			log.Fatal("Failed to include 'custom': %v", err)
+		// Custom files
+		err = addCustomDirToBackup(z)
+		if err != nil {
+			log.Fatal("Failed to add custom directory to backup: %v", err)
 		}
-	}
 
-	// Data files
-	if !c.Bool("database-only") {
-		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
+		// Data files
+		for _, dir := range []string{"ssh", "attachments", "avatars", "repo-avatars"} {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if !com.IsDir(dirPath) {
+			if !osutil.IsDir(dirPath) {
 				continue
 			}
 
@@ -125,7 +127,7 @@ func runBackup(c *cli.Context) error {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
 		log.Info("Dumping repositories in %q", conf.Repository.Root)
 		if c.Bool("exclude-mirror-repos") {
-			repos, err := db.GetNonMirrorRepositories()
+			repos, err := database.GetNonMirrorRepositories()
 			if err != nil {
 				log.Fatal("Failed to get non-mirror repositories: %v", err)
 			}
@@ -162,5 +164,35 @@ func runBackup(c *cli.Context) error {
 	_ = os.RemoveAll(rootDir)
 	log.Info("Backup succeed! Archive is located at: %s", archiveName)
 	log.Stop()
+	return nil
+}
+
+func addCustomDirToBackup(z *zip.ZipArchive) error {
+	customDir := conf.CustomDir()
+	entries, err := os.ReadDir(customDir)
+	if err != nil {
+		return errors.Wrap(err, "list custom directory entries")
+	}
+
+	for _, e := range entries {
+		if e.Name() == "data" {
+			// Skip the "data" directory because it lives under the "custom" directory in
+			// the Docker setup and will be backed up separately.
+			log.Trace(`Skipping "data" directory in custom directory`)
+			continue
+		}
+
+		add := z.AddFile
+		if e.IsDir() {
+			add = z.AddDir
+		}
+		err = add(
+			fmt.Sprintf("%s/custom/%s", archiveRootDir, e.Name()),
+			filepath.Join(customDir, e.Name()),
+		)
+		if err != nil {
+			return errors.Wrapf(err, "add %q", e.Name())
+		}
+	}
 	return nil
 }

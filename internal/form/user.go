@@ -11,12 +11,14 @@ import (
 	"gopkg.in/macaron.v1"
 )
 
+//nolint:staticcheck // Reason: needed for legacy code
 type Install struct {
 	DbType   string `binding:"Required"`
 	DbHost   string
 	DbUser   string
 	DbPasswd string
 	DbName   string
+	DbSchema string
 	SSLMode  string
 	DbPath   string
 
@@ -30,6 +32,7 @@ type Install struct {
 	AppUrl              string `binding:"Required"`
 	LogRootPath         string `binding:"Required"`
 	EnableConsoleMode   bool
+	DefaultBranch       string
 
 	SMTPHost        string
 	SMTPFrom        string
@@ -94,7 +97,6 @@ func (f *SignIn) Validate(ctx *macaron.Context, errs binding.Errors) binding.Err
 type UpdateProfile struct {
 	Name     string `binding:"Required;AlphaDashDot;MaxSize(35)"`
 	FullName string `binding:"MaxSize(100)"`
-	Email    string `binding:"Required;Email;MaxSize(254)"`
 	Website  string `binding:"Url;MaxSize(100)"`
 	Location string `binding:"MaxSize(50)"`
 }
@@ -104,8 +106,8 @@ func (f *UpdateProfile) Validate(ctx *macaron.Context, errs binding.Errors) bind
 }
 
 const (
-	AVATAR_LOCAL  string = "local"
-	AVATAR_BYMAIL string = "bymail"
+	AvatarLocal  string = "local"
+	AvatarLookup string = "lookup"
 )
 
 type Avatar struct {

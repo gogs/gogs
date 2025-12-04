@@ -10,28 +10,28 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
-func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *db.User) {
+func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *database.User) {
 	if c.Written() {
 		return
 	}
 
-	org := &db.User{
+	org := &database.User{
 		Name:        apiForm.UserName,
 		FullName:    apiForm.FullName,
 		Description: apiForm.Description,
 		Website:     apiForm.Website,
 		Location:    apiForm.Location,
 		IsActive:    true,
-		Type:        db.UserOrganization,
+		Type:        database.UserTypeOrganization,
 	}
-	if err := db.CreateOrganization(org, user); err != nil {
-		if db.IsErrUserAlreadyExist(err) ||
-			db.IsErrNameNotAllowed(err) {
+	if err := database.CreateOrganization(org, user); err != nil {
+		if database.IsErrUserAlreadyExist(err) ||
+			database.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create organization")
@@ -42,15 +42,22 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 	c.JSON(201, convert.ToOrganization(org))
 }
 
-func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
-	if err := u.GetOrganizations(all); err != nil {
-		c.Error(err, "get organization")
+func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
+	orgs, err := database.Handle.Organizations().List(
+		c.Req.Context(),
+		database.ListOrgsOptions{
+			MemberID:              u.ID,
+			IncludePrivateMembers: all,
+		},
+	)
+	if err != nil {
+		c.Error(err, "list organizations")
 		return
 	}
 
-	apiOrgs := make([]*api.Organization, len(u.Orgs))
-	for i := range u.Orgs {
-		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
+	apiOrgs := make([]*api.Organization, len(orgs))
+	for i := range orgs {
+		apiOrgs[i] = convert.ToOrganization(orgs[i])
 	}
 	c.JSONSuccess(&apiOrgs)
 }
@@ -82,14 +89,25 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	org.FullName = form.FullName
-	org.Description = form.Description
-	org.Website = form.Website
-	org.Location = form.Location
-	if err := db.UpdateUser(org); err != nil {
-		c.Error(err, "update user")
+	err := database.Handle.Users().Update(
+		c.Req.Context(),
+		c.Org.Organization.ID,
+		database.UpdateUserOptions{
+			FullName:    &form.FullName,
+			Website:     &form.Website,
+			Location:    &form.Location,
+			Description: &form.Description,
+		},
+	)
+	if err != nil {
+		c.Error(err, "update organization")
 		return
 	}
 
+	org, err = database.GetOrgByName(org.Name)
+	if err != nil {
+		c.Error(err, "get organization")
+		return
+	}
 	c.JSONSuccess(convert.ToOrganization(org))
 }

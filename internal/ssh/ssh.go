@@ -5,21 +5,24 @@
 package ssh
 
 import (
-	"fmt"
+	"context"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
+	"github.com/pkg/errors"
+	"github.com/sourcegraph/run"
 	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/osutil"
 )
 
 func cleanCommand(cmd string) string {
@@ -51,26 +54,8 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				payload := cleanCommand(string(req.Payload))
 				switch req.Type {
 				case "env":
-					var env struct {
-						Name  string
-						Value string
-					}
-					if err := ssh.Unmarshal(req.Payload, &env); err != nil {
-						log.Warn("SSH: Invalid env payload %q: %v", req.Payload, err)
-						continue
-					}
-					// Sometimes the client could send malformed command (i.e. missing "="),
-					// see https://discuss.gogs.io/t/ssh/3106.
-					if env.Name == "" || env.Value == "" {
-						log.Warn("SSH: Invalid env arguments: %+v", env)
-						continue
-					}
-
-					_, stderr, err := com.ExecCmd("env", fmt.Sprintf("%s=%s", env.Name, env.Value))
-					if err != nil {
-						log.Error("env: %v - %s", err, stderr)
-						return
-					}
+					// We only need to accept the request and do nothing since whatever environment
+					// variables being set here won't be used in subsequent commands anyway.
 
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
@@ -145,8 +130,8 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 			log.Trace("SSH: Handshaking for %s", conn.RemoteAddr())
 			sConn, chans, reqs, err := ssh.NewServerConn(conn, config)
 			if err != nil {
-				if err == io.EOF {
-					log.Warn("SSH: Handshaking was terminated: %v", err)
+				if err == io.EOF || errors.Is(err, syscall.ECONNRESET) {
+					log.Trace("SSH: Handshaking was terminated: %v", err)
 				} else {
 					log.Error("SSH: Error on handshaking: %v", err)
 				}
@@ -162,43 +147,70 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 }
 
 // Listen starts a SSH server listens on given port.
-func Listen(host string, port int, ciphers, macs []string) {
+func Listen(opts conf.SSHOpts, appDataPath string) {
 	config := &ssh.ServerConfig{
 		Config: ssh.Config{
-			Ciphers: ciphers,
-			MACs:    macs,
+			Ciphers: opts.ServerCiphers,
+			MACs:    opts.ServerMACs,
 		},
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			pkey, err := db.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
+			pkey, err := database.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {
-				log.Error("SearchPublicKeyByContent: %v", err)
+				if !database.IsErrKeyNotExist(err) {
+					log.Error("SearchPublicKeyByContent: %v", err)
+				}
 				return nil, err
 			}
 			return &ssh.Permissions{Extensions: map[string]string{"key-id": com.ToStr(pkey.ID)}}, nil
 		},
 	}
 
-	keyPath := filepath.Join(conf.Server.AppDataPath, "ssh", "gogs.rsa")
-	if !com.IsExist(keyPath) {
-		if err := os.MkdirAll(filepath.Dir(keyPath), os.ModePerm); err != nil {
-			panic(err)
+	keys, err := setupHostKeys(appDataPath, opts.ServerAlgorithms)
+	if err != nil {
+		log.Fatal("SSH: Failed to setup host keys: %v", err)
+	}
+	for _, key := range keys {
+		config.AddHostKey(key)
+	}
+
+	go listen(config, opts.ListenHost, opts.ListenPort)
+}
+
+func setupHostKeys(appDataPath string, algorithms []string) ([]ssh.Signer, error) {
+	dir := filepath.Join(appDataPath, "ssh")
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return nil, errors.Wrapf(err, "create host key directory")
+	}
+
+	var hostKeys []ssh.Signer
+	for _, algo := range algorithms {
+		keyPath := filepath.Join(dir, "gogs."+algo)
+		if !osutil.IsExist(keyPath) {
+			args := []string{
+				conf.SSH.KeygenPath,
+				"-t", algo,
+				"-f", keyPath,
+				"-m", "PEM",
+				"-N", run.Arg(""),
+			}
+			err = run.Cmd(context.Background(), args...).Run().Wait()
+			if err != nil {
+				return nil, errors.Wrapf(err, "generate host key with args %v", args)
+			}
+			log.Trace("SSH: New private key is generated: %s", keyPath)
 		}
-		_, stderr, err := com.ExecCmd(conf.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")
+
+		keyData, err := os.ReadFile(keyPath)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to generate private key: %v - %s", err, stderr))
+			return nil, errors.Wrapf(err, "read host key %q", keyPath)
 		}
-		log.Trace("SSH: New private key is generateed: %s", keyPath)
-	}
+		signer, err := ssh.ParsePrivateKey(keyData)
+		if err != nil {
+			return nil, errors.Wrapf(err, "parse host key %q", keyPath)
+		}
 
-	privateBytes, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		panic("SSH: Failed to load private key: " + err.Error())
+		hostKeys = append(hostKeys, signer)
 	}
-	private, err := ssh.ParsePrivateKey(privateBytes)
-	if err != nil {
-		panic("SSH: Failed to parse private key: " + err.Error())
-	}
-	config.AddHostKey(private)
-
-	go listen(config, host, port)
+	return hostKeys, nil
 }

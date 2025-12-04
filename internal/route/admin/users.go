@@ -5,23 +5,23 @@
 package admin
 
 import (
+	"strconv"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route"
 )
 
 const (
-	USERS     = "admin/user/list"
-	USER_NEW  = "admin/user/new"
-	USER_EDIT = "admin/user/edit"
+	tmplAdminUserList = "admin/user/list"
+	tmplAdminUserNew  = "admin/user/new"
+	tmplAdminUserEdit = "admin/user/edit"
 )
 
 func Users(c *context.Context) {
@@ -30,12 +30,12 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.UserIndividual,
-		Counter:  db.CountUsers,
-		Ranger:   db.ListUsers,
+		Type:     database.UserTypeIndividual,
+		Counter:  database.Handle.Users().Count,
+		Ranger:   database.Handle.Users().List,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
-		TplName:  USERS,
+		TplName:  tmplAdminUserList,
 	})
 }
 
@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := db.LoginSources.List(db.ListLoginSourceOpts{})
+	sources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -54,7 +54,7 @@ func NewUser(c *context.Context) {
 	c.Data["Sources"] = sources
 
 	c.Data["CanSendEmail"] = conf.Email.Enabled
-	c.Success(USER_NEW)
+	c.Success(tmplAdminUserNew)
 }
 
 func NewUserPost(c *context.Context, f form.AdminCrateUser) {
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := db.LoginSources.List(db.ListLoginSourceOpts{})
+	sources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -72,54 +72,52 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["CanSendEmail"] = conf.Email.Enabled
 
 	if c.HasError() {
-		c.Success(USER_NEW)
+		c.Success(tmplAdminUserNew)
 		return
 	}
 
-	u := &db.User{
-		Name:     f.UserName,
-		Email:    f.Email,
-		Passwd:   f.Password,
-		IsActive: true,
+	createUserOpts := database.CreateUserOptions{
+		Password:  f.Password,
+		Activated: true,
 	}
-
 	if len(f.LoginType) > 0 {
 		fields := strings.Split(f.LoginType, "-")
 		if len(fields) == 2 {
-			u.LoginSource = com.StrTo(fields[1]).MustInt64()
-			u.LoginName = f.LoginName
+			createUserOpts.LoginSource, _ = strconv.ParseInt(fields[1], 10, 64)
+			createUserOpts.LoginName = f.LoginName
 		}
 	}
 
-	if err := db.CreateUser(u); err != nil {
+	user, err := database.Handle.Users().Create(c.Req.Context(), f.UserName, f.Email, createUserOpts)
+	if err != nil {
 		switch {
-		case db.IsErrUserAlreadyExist(err):
+		case database.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f)
-		case db.IsErrEmailAlreadyUsed(err):
+			c.RenderWithErr(c.Tr("form.username_been_taken"), tmplAdminUserNew, &f)
+		case database.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
-		case db.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("form.email_been_used"), tmplAdminUserNew, &f)
+		case database.IsErrNameNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplAdminUserNew, &f)
 		default:
 			c.Error(err, "create user")
 		}
 		return
 	}
-	log.Trace("Account created by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account %q created by admin %q", user.Name, c.User.Name)
 
 	// Send email notification.
 	if f.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context, db.NewMailerUser(u))
+		email.SendRegisterNotifyMail(c.Context, database.NewMailerUser(user))
 	}
 
-	c.Flash.Success(c.Tr("admin.users.new_success", u.Name))
-	c.Redirect(conf.Server.Subpath + "/admin/users/" + com.ToStr(u.ID))
+	c.Flash.Success(c.Tr("admin.users.new_success", user.Name))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + strconv.FormatInt(user.ID, 10))
 }
 
-func prepareUserInfo(c *context.Context) *db.User {
-	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
+func prepareUserInfo(c *context.Context) *database.User {
+	u, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return nil
@@ -127,16 +125,16 @@ func prepareUserInfo(c *context.Context) *db.User {
 	c.Data["User"] = u
 
 	if u.LoginSource > 0 {
-		c.Data["LoginSource"], err = db.LoginSources.GetByID(u.LoginSource)
+		c.Data["LoginSource"], err = database.Handle.LoginSources().GetByID(c.Req.Context(), u.LoginSource)
 		if err != nil {
 			c.Error(err, "get login source by ID")
 			return nil
 		}
 	} else {
-		c.Data["LoginSource"] = &db.LoginSource{}
+		c.Data["LoginSource"] = &database.LoginSource{}
 	}
 
-	sources, err := db.LoginSources.List(db.ListLoginSourceOpts{})
+	sources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return nil
@@ -157,7 +155,7 @@ func EditUser(c *context.Context) {
 		return
 	}
 
-	c.Success(USER_EDIT)
+	c.Success(tmplAdminUserEdit)
 }
 
 func EditUserPost(c *context.Context, f form.AdminEditUser) {
@@ -172,73 +170,72 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	}
 
 	if c.HasError() {
-		c.Success(USER_EDIT)
+		c.Success(tmplAdminUserEdit)
 		return
+	}
+
+	opts := database.UpdateUserOptions{
+		LoginName:        &f.LoginName,
+		FullName:         &f.FullName,
+		Website:          &f.Website,
+		Location:         &f.Location,
+		MaxRepoCreation:  &f.MaxRepoCreation,
+		IsActivated:      &f.Active,
+		IsAdmin:          &f.Admin,
+		AllowGitHook:     &f.AllowGitHook,
+		AllowImportLocal: &f.AllowImportLocal,
+		ProhibitLogin:    &f.ProhibitLogin,
 	}
 
 	fields := strings.Split(f.LoginType, "-")
 	if len(fields) == 2 {
-		loginSource := com.StrTo(fields[1]).MustInt64()
-
+		loginSource, _ := strconv.ParseInt(fields[1], 10, 64)
 		if u.LoginSource != loginSource {
-			u.LoginSource = loginSource
+			opts.LoginSource = &loginSource
 		}
 	}
 
-	if len(f.Password) > 0 {
-		u.Passwd = f.Password
-		var err error
-		if u.Salt, err = db.GetUserSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		u.EncodePassword()
+	if f.Password != "" {
+		opts.Password = &f.Password
 	}
 
-	u.LoginName = f.LoginName
-	u.FullName = f.FullName
-	u.Email = f.Email
-	u.Website = f.Website
-	u.Location = f.Location
-	u.MaxRepoCreation = f.MaxRepoCreation
-	u.IsActive = f.Active
-	u.IsAdmin = f.Admin
-	u.AllowGitHook = f.AllowGitHook
-	u.AllowImportLocal = f.AllowImportLocal
-	u.ProhibitLogin = f.ProhibitLogin
+	if u.Email != f.Email {
+		opts.Email = &f.Email
+	}
 
-	if err := db.UpdateUser(u); err != nil {
-		if db.IsErrEmailAlreadyUsed(err) {
+	err := database.Handle.Users().Update(c.Req.Context(), u.ID, opts)
+	if err != nil {
+		if database.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), tmplAdminUserEdit, &f)
 		} else {
 			c.Error(err, "update user")
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return
 	}
 
-	if err = db.DeleteUser(u); err != nil {
+	if err = database.Handle.Users().DeleteByID(c.Req.Context(), u.ID, false); err != nil {
 		switch {
-		case db.IsErrUserOwnRepos(err):
+		case database.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
-			c.JSONSuccess(map[string]interface{}{
+			c.JSONSuccess(map[string]any{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
-		case db.IsErrUserHasOrgs(err):
+		case database.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
-			c.JSONSuccess(map[string]interface{}{
+			c.JSONSuccess(map[string]any{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		default:
@@ -249,7 +246,7 @@ func DeleteUser(c *context.Context) {
 	log.Trace("Account deleted by admin (%s): %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/admin/users",
 	})
 }

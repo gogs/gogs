@@ -19,14 +19,14 @@ import (
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 )
 
 const (
-	AUTHS     = "admin/auth/list"
-	AUTH_NEW  = "admin/auth/new"
-	AUTH_EDIT = "admin/auth/edit"
+	tmplAdminAuthList = "admin/auth/list"
+	tmplAdminAuthNew  = "admin/auth/new"
+	tmplAdminAuthEdit = "admin/auth/edit"
 )
 
 func Authentications(c *context.Context) {
@@ -35,19 +35,19 @@ func Authentications(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	var err error
-	c.Data["Sources"], err = db.LoginSources.List(db.ListLoginSourceOpts{})
+	c.Data["Sources"], err = database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
 	}
 
-	c.Data["Total"] = db.LoginSources.Count()
-	c.Success(AUTHS)
+	c.Data["Total"] = database.Handle.LoginSources().Count(c.Req.Context())
+	c.Success(tmplAdminAuthList)
 }
 
 type dropdownItem struct {
 	Name string
-	Type interface{}
+	Type any
 }
 
 var (
@@ -79,7 +79,7 @@ func NewAuthSource(c *context.Context) {
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
-	c.Success(AUTH_NEW)
+	c.Success(tmplAdminAuthNew)
 }
 
 func parseLDAPConfig(f form.Authentication) *ldap.Config {
@@ -130,7 +130,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	hasTLS := false
-	var config interface{}
+	var config any
 	switch auth.Type(f.Type) {
 	case auth.LDAP, auth.DLDAP:
 		config = parseLDAPConfig(f)
@@ -155,21 +155,23 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = hasTLS
 
 	if c.HasError() {
-		c.Success(AUTH_NEW)
+		c.Success(tmplAdminAuthNew)
 		return
 	}
 
-	source, err := db.LoginSources.Create(db.CreateLoginSourceOpts{
-		Type:      auth.Type(f.Type),
-		Name:      f.Name,
-		Activated: f.IsActive,
-		Default:   f.IsDefault,
-		Config:    config,
-	})
+	source, err := database.Handle.LoginSources().Create(c.Req.Context(),
+		database.CreateLoginSourceOptions{
+			Type:      auth.Type(f.Type),
+			Name:      f.Name,
+			Activated: f.IsActive,
+			Default:   f.IsDefault,
+			Config:    config,
+		},
+	)
 	if err != nil {
-		if db.IsErrLoginSourceAlreadyExist(err) {
+		if database.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), AUTH_NEW, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), tmplAdminAuthNew, f)
 		} else {
 			c.Error(err, "create login source")
 		}
@@ -177,7 +179,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	if source.IsDefault {
-		err = db.LoginSources.ResetNonDefault(source)
+		err = database.Handle.LoginSources().ResetNonDefault(c.Req.Context(), source)
 		if err != nil {
 			c.Error(err, "reset non-default login sources")
 			return
@@ -198,7 +200,7 @@ func EditAuthSource(c *context.Context) {
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
 
-	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
+	source, err := database.Handle.LoginSources().GetByID(c.Req.Context(), c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return
@@ -206,7 +208,7 @@ func EditAuthSource(c *context.Context) {
 	c.Data["Source"] = source
 	c.Data["HasTLS"] = source.Provider.HasTLS()
 
-	c.Success(AUTH_EDIT)
+	c.Success(tmplAdminAuthEdit)
 }
 
 func EditAuthSourcePost(c *context.Context, f form.Authentication) {
@@ -216,7 +218,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 	c.Data["SMTPAuths"] = smtp.AuthTypes
 
-	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
+	source, err := database.Handle.LoginSources().GetByID(c.Req.Context(), c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return
@@ -225,7 +227,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
-		c.Success(AUTH_EDIT)
+		c.Success(tmplAdminAuthEdit)
 		return
 	}
 
@@ -255,13 +257,13 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	source.IsActived = f.IsActive
 	source.IsDefault = f.IsDefault
 	source.Provider = provider
-	if err := db.LoginSources.Save(source); err != nil {
+	if err := database.Handle.LoginSources().Save(c.Req.Context(), source); err != nil {
 		c.Error(err, "update login source")
 		return
 	}
 
 	if source.IsDefault {
-		err = db.LoginSources.ResetNonDefault(source)
+		err = database.Handle.LoginSources().ResetNonDefault(c.Req.Context(), source)
 		if err != nil {
 			c.Error(err, "reset non-default login sources")
 			return
@@ -276,13 +278,13 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 func DeleteAuthSource(c *context.Context) {
 	id := c.ParamsInt64(":authid")
-	if err := db.LoginSources.DeleteByID(id); err != nil {
-		if db.IsErrLoginSourceInUse(err) {
+	if err := database.Handle.LoginSources().DeleteByID(c.Req.Context(), id); err != nil {
+		if database.IsErrLoginSourceInUse(err) {
 			c.Flash.Error(c.Tr("admin.auths.still_in_used"))
 		} else {
 			c.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"redirect": conf.Server.Subpath + "/admin/auths/" + c.Params(":authid"),
 		})
 		return
@@ -290,7 +292,7 @@ func DeleteAuthSource(c *context.Context) {
 	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, id)
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/admin/auths",
 	})
 }

@@ -5,19 +5,20 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/semverutil"
 )
 
@@ -49,20 +50,27 @@ func runRestore(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
 
 	tmpDir := c.String("tempdir")
-	if !com.IsExist(tmpDir) {
+	if !osutil.IsDir(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
+	archivePath := path.Join(tmpDir, archiveRootDir)
 
-	log.Info("Restore backup from: %s", c.String("from"))
-	if err := zip.ExtractTo(c.String("from"), tmpDir); err != nil {
+	// Make sure there was no leftover and also clean up afterwards
+	err := os.RemoveAll(archivePath)
+	if err != nil {
+		log.Fatal("Failed to clean up previous leftover in %q: %v", archivePath, err)
+	}
+	defer func() { _ = os.RemoveAll(archivePath) }()
+
+	log.Info("Restoring backup from: %s", c.String("from"))
+	err = zip.ExtractTo(c.String("from"), tmpDir)
+	if err != nil {
 		log.Fatal("Failed to extract backup archive: %v", err)
 	}
-	archivePath := path.Join(tmpDir, archiveRootDir)
-	defer func() { _ = os.RemoveAll(archivePath) }()
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
-	if !com.IsExist(metaFile) {
+	if !osutil.IsFile(metaFile) {
 		log.Fatal("File 'metadata.ini' is missing")
 	}
 	metadata, err := ini.Load(metaFile)
@@ -88,7 +96,7 @@ func runRestore(c *cli.Context) error {
 	var customConf string
 	if c.IsSet("config") {
 		customConf = c.String("config")
-	} else if !com.IsExist(configFile) {
+	} else if !osutil.IsFile(configFile) {
 		log.Fatal("'--config' is not specified and custom config file is not found in backup")
 	} else {
 		customConf = configFile
@@ -100,20 +108,20 @@ func runRestore(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	conn, err := db.SetEngine()
+	conn, err := database.SetEngine()
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = db.ImportDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = database.ImportDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 
-	// Custom files
 	if !c.Bool("database-only") {
-		if com.IsExist(conf.CustomDir()) {
+		// Custom files
+		if osutil.IsDir(conf.CustomDir()) {
 			if err = os.Rename(conf.CustomDir(), conf.CustomDir()+".bak"); err != nil {
 				log.Fatal("Failed to backup current 'custom': %v", err)
 			}
@@ -121,20 +129,18 @@ func runRestore(c *cli.Context) error {
 		if err = os.Rename(filepath.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
 			log.Fatal("Failed to import 'custom': %v", err)
 		}
-	}
 
-	// Data files
-	if !c.Bool("database-only") {
+		// Data files
 		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			// Skip if backup archive does not have corresponding data
 			srcPath := filepath.Join(archivePath, "data", dir)
-			if !com.IsDir(srcPath) {
+			if !osutil.IsDir(srcPath) {
 				continue
 			}
 
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if com.IsExist(dirPath) {
+			if osutil.IsDir(dirPath) {
 				if err = os.Rename(dirPath, dirPath+".bak"); err != nil {
 					log.Fatal("Failed to backup current 'data': %v", err)
 				}
@@ -147,7 +153,7 @@ func runRestore(c *cli.Context) error {
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
-	if !c.Bool("exclude-repos") && !c.Bool("database-only") && com.IsExist(reposPath) {
+	if !c.Bool("exclude-repos") && !c.Bool("database-only") && osutil.IsFile(reposPath) {
 		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
 			log.Fatal("Failed to extract 'repositories.zip': %v", err)
 		}

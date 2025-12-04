@@ -3,7 +3,7 @@
 		<tr>
 			<th class="four wide">
 				{{if .LatestCommitUser}}
-					<img class="ui avatar image img-12" src="{{.LatestCommitUser.RelAvatarLink}}" />
+					<img class="ui avatar image img-12" src="{{.LatestCommitUser.AvatarURLPath}}" />
 					<a href="{{AppSubURL}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
 				{{else}}
 					<img class="ui avatar image img-12" src="{{AvatarLink .LatestCommit.Author.Email}}" />
@@ -28,7 +28,7 @@
 				{{if .Submodule}}
 					<td>
 						<span class="octicon octicon-file-submodule"></span>
-						<a href="{{InferSubmoduleURL $.RepoLink .Submodule}}">{{.Entry.Name}} @ {{ShortSHA1 .Submodule.Commit}}</a>
+						<a href="{{InferSubmoduleURL $.RepoLink .Submodule}}">{{.Entry.Name}} {{if .Submodule.Commit}}@ {{ShortSHA1 .Submodule.Commit}}{{end}}</a>
 					</td>
 				{{else}}
 					<td class="name">

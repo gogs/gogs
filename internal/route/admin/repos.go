@@ -10,7 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 const (
@@ -28,21 +28,21 @@ func Repos(c *context.Context) {
 	}
 
 	var (
-		repos []*db.Repository
+		repos []*database.Repository
 		count int64
 		err   error
 	)
 
 	keyword := c.Query("q")
-	if len(keyword) == 0 {
-		repos, err = db.Repositories(page, conf.UI.Admin.RepoPagingNum)
+	if keyword == "" {
+		repos, err = database.Repositories(page, conf.UI.Admin.RepoPagingNum)
 		if err != nil {
 			c.Error(err, "list repositories")
 			return
 		}
-		count = db.CountRepositories(true)
+		count = database.CountRepositories(true)
 	} else {
-		repos, count, err = db.SearchRepositoryByName(&db.SearchRepoOptions{
+		repos, count, err = database.SearchRepositoryByName(&database.SearchRepoOptions{
 			Keyword:  keyword,
 			OrderBy:  "id ASC",
 			Private:  true,
@@ -58,7 +58,7 @@ func Repos(c *context.Context) {
 	c.Data["Total"] = count
 	c.Data["Page"] = paginater.New(int(count), conf.UI.Admin.RepoPagingNum, page, 5)
 
-	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.Error(err, "load attributes")
 		return
 	}
@@ -68,20 +68,20 @@ func Repos(c *context.Context) {
 }
 
 func DeleteRepo(c *context.Context) {
-	repo, err := db.GetRepositoryByID(c.QueryInt64("id"))
+	repo, err := database.GetRepositoryByID(c.QueryInt64("id"))
 	if err != nil {
 		c.Error(err, "get repository by ID")
 		return
 	}
 
-	if err := db.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
+	if err := database.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
 		c.Error(err, "delete repository")
 		return
 	}
 	log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/admin/repos?page=" + c.Query("page"),
 	})
 }

@@ -1,26 +1,25 @@
 targets:
-  debian-8: &debian
+  debian-11: &debian
     build_dependencies:
       - libpam0g-dev
     dependencies:
       - libpam0g
       - git
-  debian-9:
+  debian-12:
     <<: *debian
-  debian-10:
+  debian-13:
     <<: *debian
-  debian-11:
+  debian-14:
     <<: *debian
-  ubuntu-14.04:
-    <<: *debian
-  ubuntu-16.04:
-    <<: *debian
-    build_dependencies:
-      - bzr
-      - mercurial
   ubuntu-18.04:
     <<: *debian
-  centos-7:
+  ubuntu-20.04:
+    <<: *debian
+  ubuntu-22.04:
+    <<: *debian
+  ubuntu-24.04:
+    <<: *debian
+  centos-9:
     build_dependencies:
       - pam-devel
       # required for Go buildpack

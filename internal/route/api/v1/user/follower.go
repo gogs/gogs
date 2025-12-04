@@ -8,10 +8,10 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
-func responseApiUsers(c *context.APIContext, users []*db.User) {
+func responseAPIUsers(c *context.APIContext, users []*database.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
 		apiUsers[i] = users[i].APIFormat()
@@ -19,13 +19,13 @@ func responseApiUsers(c *context.APIContext, users []*db.User) {
 	c.JSONSuccess(&apiUsers)
 }
 
-func listUserFollowers(c *context.APIContext, u *db.User) {
-	users, err := u.GetFollowers(c.QueryInt("page"))
+func listUserFollowers(c *context.APIContext, u *database.User) {
+	users, err := database.Handle.Users().ListFollowers(c.Req.Context(), u.ID, c.QueryInt("page"), database.ItemsPerPage)
 	if err != nil {
-		c.Error(err, "get followers")
+		c.Error(err, "list followers")
 		return
 	}
-	responseApiUsers(c, users)
+	responseAPIUsers(c, users)
 }
 
 func ListMyFollowers(c *context.APIContext) {
@@ -40,13 +40,13 @@ func ListFollowers(c *context.APIContext) {
 	listUserFollowers(c, u)
 }
 
-func listUserFollowing(c *context.APIContext, u *db.User) {
-	users, err := u.GetFollowing(c.QueryInt("page"))
+func listUserFollowing(c *context.APIContext, u *database.User) {
+	users, err := database.Handle.Users().ListFollowings(c.Req.Context(), u.ID, c.QueryInt("page"), database.ItemsPerPage)
 	if err != nil {
-		c.Error(err, "get following")
+		c.Error(err, "list followings")
 		return
 	}
-	responseApiUsers(c, users)
+	responseAPIUsers(c, users)
 }
 
 func ListMyFollowing(c *context.APIContext) {
@@ -61,8 +61,8 @@ func ListFollowing(c *context.APIContext) {
 	listUserFollowing(c, u)
 }
 
-func checkUserFollowing(c *context.APIContext, u *db.User, followID int64) {
-	if u.IsFollowing(followID) {
+func checkUserFollowing(c *context.APIContext, u *database.User, followID int64) {
+	if database.Handle.Users().IsFollowing(c.Req.Context(), u.ID, followID) {
 		c.NoContent()
 	} else {
 		c.NotFound()
@@ -94,7 +94,7 @@ func Follow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := db.FollowUser(c.User.ID, target.ID); err != nil {
+	if err := database.Handle.Users().Follow(c.Req.Context(), c.User.ID, target.ID); err != nil {
 		c.Error(err, "follow user")
 		return
 	}
@@ -106,7 +106,7 @@ func Unfollow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := db.UnfollowUser(c.User.ID, target.ID); err != nil {
+	if err := database.Handle.Users().Unfollow(c.Req.Context(), c.User.ID, target.ID); err != nil {
 		c.Error(err, "unfollow user")
 		return
 	}

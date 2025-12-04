@@ -9,9 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/xml"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net"
@@ -23,13 +21,13 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
-var defaultSetting = Settings{false, "GogsServer", 60 * time.Second, 60 * time.Second, nil, nil, nil, false}
-var defaultCookieJar http.CookieJar
-var settingMutex sync.Mutex
+var (
+	defaultSetting   = Settings{false, "GogsServer", 60 * time.Second, 60 * time.Second, nil, nil, nil, false}
+	defaultCookieJar http.CookieJar
+	settingMutex     sync.Mutex
+)
 
 // createDefaultCookie creates a global cookiejar to store cookies.
 func createDefaultCookie() {
@@ -94,13 +92,13 @@ type Settings struct {
 	UserAgent        string
 	ConnectTimeout   time.Duration
 	ReadWriteTimeout time.Duration
-	TlsClientConfig  *tls.Config
+	TLSClientConfig  *tls.Config
 	Proxy            func(*http.Request) (*url.URL, error)
 	Transport        http.RoundTripper
 	EnableCookie     bool
 }
 
-// HttpRequest provides more useful methods for requesting one url than http.Request.
+// Request provides more useful methods for requesting a URL than http.Request.
 type Request struct {
 	url     string
 	req     *http.Request
@@ -111,7 +109,7 @@ type Request struct {
 	body    []byte
 }
 
-// Change request settings
+// Setting changes the request settings
 func (r *Request) Setting(setting Settings) *Request {
 	r.setting = setting
 	return r
@@ -150,7 +148,7 @@ func (r *Request) SetTimeout(connectTimeout, readWriteTimeout time.Duration) *Re
 
 // SetTLSClientConfig sets tls connection configurations if visiting https url.
 func (r *Request) SetTLSClientConfig(config *tls.Config) *Request {
-	r.setting.TlsClientConfig = config
+	r.setting.TLSClientConfig = config
 	return r
 }
 
@@ -167,7 +165,7 @@ func (r *Request) Headers() http.Header {
 // Set the protocol version for incoming requests.
 // Client requests always use HTTP/1.1.
 func (r *Request) SetProtocolVersion(vers string) *Request {
-	if len(vers) == 0 {
+	if vers == "" {
 		vers = "HTTP/1.1"
 	}
 
@@ -197,9 +195,9 @@ func (r *Request) SetTransport(transport http.RoundTripper) *Request {
 // example:
 //
 //	func(req *http.Request) (*url.URL, error) {
-// 		u, _ := url.ParseRequestURI("http://127.0.0.1:8118")
-// 		return u, nil
-// 	}
+//		u, _ := url.ParseRequestURI("http://127.0.0.1:8118")
+//		return u, nil
+//	}
 func (r *Request) SetProxy(proxy func(*http.Request) (*url.URL, error)) *Request {
 	r.setting.Proxy = proxy
 	return r
@@ -219,15 +217,15 @@ func (r *Request) PostFile(formname, filename string) *Request {
 
 // Body adds request raw body.
 // it supports string and []byte.
-func (r *Request) Body(data interface{}) *Request {
+func (r *Request) Body(data any) *Request {
 	switch t := data.(type) {
 	case string:
 		bf := bytes.NewBufferString(t)
-		r.req.Body = ioutil.NopCloser(bf)
+		r.req.Body = io.NopCloser(bf)
 		r.req.ContentLength = int64(len(t))
 	case []byte:
 		bf := bytes.NewBuffer(t)
-		r.req.Body = ioutil.NopCloser(bf)
+		r.req.Body = io.NopCloser(bf)
 		r.req.ContentLength = int64(len(t))
 	}
 	return r
@@ -270,7 +268,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 					if err != nil {
 						log.Fatal(err)
 					}
-					//iocopy
+					// iocopy
 					_, err = io.Copy(fileWriter, fh)
 					_ = fh.Close()
 					if err != nil {
@@ -284,7 +282,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 				_ = pw.Close()
 			}()
 			r.Header("Content-Type", bodyWriter.FormDataContentType())
-			r.req.Body = ioutil.NopCloser(pr)
+			r.req.Body = io.NopCloser(pr)
 		} else if len(paramBody) > 0 {
 			r.Header("Content-Type", "application/x-www-form-urlencoded")
 			r.Body(paramBody)
@@ -303,7 +301,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 	if trans == nil {
 		// create default transport
 		trans = &http.Transport{
-			TLSClientConfig: r.setting.TlsClientConfig,
+			TLSClientConfig: r.setting.TLSClientConfig,
 			Proxy:           r.setting.Proxy,
 			DialContext:     TimeoutDialer(r.setting.ConnectTimeout, r.setting.ReadWriteTimeout),
 		}
@@ -311,7 +309,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 		// if r.transport is *http.Transport then set the settings.
 		if t, ok := trans.(*http.Transport); ok {
 			if t.TLSClientConfig == nil {
-				t.TLSClientConfig = r.setting.TlsClientConfig
+				t.TLSClientConfig = r.setting.TLSClientConfig
 			}
 			if t.Proxy == nil {
 				t.Proxy = r.setting.Proxy
@@ -337,7 +335,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 		Jar:       jar,
 	}
 
-	if len(r.setting.UserAgent) > 0 && len(r.req.Header.Get("User-Agent")) == 0 {
+	if len(r.setting.UserAgent) > 0 && r.req.Header.Get("User-Agent") == "" {
 		r.req.Header.Set("User-Agent", r.setting.UserAgent)
 	}
 
@@ -382,7 +380,7 @@ func (r *Request) Bytes() ([]byte, error) {
 		return nil, nil
 	}
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -411,33 +409,13 @@ func (r *Request) ToFile(filename string) error {
 	return err
 }
 
-// ToJson returns the map that marshals from the body bytes as json in response .
-// it calls Response inner.
-func (r *Request) ToJson(v interface{}) error {
-	data, err := r.Bytes()
-	if err != nil {
-		return err
-	}
-	return jsoniter.Unmarshal(data, v)
-}
-
-// ToXml returns the map that marshals from the body bytes as xml in response .
-// it calls Response inner.
-func (r *Request) ToXml(v interface{}) error {
-	data, err := r.Bytes()
-	if err != nil {
-		return err
-	}
-	return xml.Unmarshal(data, v)
-}
-
 // Response executes request client gets response manually.
 func (r *Request) Response() (*http.Response, error) {
 	return r.getResponse()
 }
 
 // TimeoutDialer returns functions of connection dialer with timeout settings for http.Transport Dial field.
-func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(ctx context.Context, net, addr string) (c net.Conn, err error) {
+func TimeoutDialer(cTimeout, rwTimeout time.Duration) func(ctx context.Context, net, addr string) (c net.Conn, err error) {
 	return func(ctx context.Context, netw, addr string) (net.Conn, error) {
 		conn, err := net.DialTimeout(netw, addr, cTimeout)
 		if err != nil {

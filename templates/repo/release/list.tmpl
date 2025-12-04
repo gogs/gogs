@@ -39,11 +39,11 @@
 							</h3>
 							<p class="text grey">
 								<span class="author">
-									<img class="img-10" src="{{.Publisher.RelAvatarLink}}">
+									<img class="img-10" src="{{.Publisher.AvatarURLPath}}">
 									<a href="{{AppSubURL}}/{{.Publisher.Name}}">{{.Publisher.DisplayName}}</a>
 								</span>
 								{{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
-								<span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2HTML}}</span>
+								<span class="ahead">| {{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2HTML}}</span>
 							</p>
 							<div class="markdown desc">
 								{{Str2HTML .Note}}

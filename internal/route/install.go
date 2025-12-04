@@ -21,7 +21,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
@@ -71,19 +71,20 @@ func GlobalInit(customConf string) error {
 	if conf.Security.InstallLock {
 		highlight.NewContext()
 		markup.NewSanitizer()
-		if err := db.NewEngine(); err != nil {
+		err := database.NewEngine()
+		if err != nil {
 			log.Fatal("Failed to initialize ORM engine: %v", err)
 		}
-		db.HasEngine = true
+		database.HasEngine = true
 
-		db.LoadRepoConfig()
-		db.NewRepoContext()
+		database.LoadRepoConfig()
+		database.NewRepoContext()
 
 		// Booting long running goroutines.
 		cron.NewContext()
-		db.InitSyncMirrors()
-		db.InitDeliverHooks()
-		db.InitTestPullRequests()
+		database.InitSyncMirrors()
+		database.InitDeliverHooks()
+		database.InitTestPullRequests()
 	}
 	if conf.HasMinWinSvc {
 		log.Info("Builtin Windows Service is supported")
@@ -98,14 +99,15 @@ func GlobalInit(customConf string) error {
 	}
 
 	if conf.SSH.StartBuiltinServer {
-		ssh.Listen(conf.SSH.ListenHost, conf.SSH.ListenPort, conf.SSH.ServerCiphers, conf.SSH.ServerMACs)
+		ssh.Listen(conf.SSH, conf.Server.AppDataPath)
 		log.Info("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
 		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
 		log.Trace("SSH server MAC list: %v", conf.SSH.ServerMACs)
+		log.Trace("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
-		if err := db.RewriteAuthorizedKeys(); err != nil {
+		if err := database.RewriteAuthorizedKeys(); err != nil {
 			log.Warn("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
@@ -132,6 +134,7 @@ func Install(c *context.Context) {
 	f.DbHost = conf.Database.Host
 	f.DbUser = conf.Database.User
 	f.DbName = conf.Database.Name
+	f.DbSchema = conf.Database.Schema
 	f.DbPath = conf.Database.Path
 
 	c.Data["CurDbOption"] = "PostgreSQL"
@@ -160,6 +163,7 @@ func Install(c *context.Context) {
 	f.HTTPPort = conf.Server.HTTPPort
 	f.AppUrl = conf.Server.ExternalURL
 	f.LogRootPath = conf.Log.RootPath
+	f.DefaultBranch = conf.Repository.DefaultBranch
 
 	// E-mail service settings
 	if conf.Email.Enabled {
@@ -216,17 +220,18 @@ func InstallPost(c *context.Context, f form.Install) {
 	conf.Database.User = f.DbUser
 	conf.Database.Password = f.DbPasswd
 	conf.Database.Name = f.DbName
+	conf.Database.Schema = f.DbSchema
 	conf.Database.SSLMode = f.SSLMode
 	conf.Database.Path = f.DbPath
 
-	if conf.Database.Type == "sqlite3" && len(conf.Database.Path) == 0 {
+	if conf.Database.Type == "sqlite3" && conf.Database.Path == "" {
 		c.FormErr("DbPath")
 		c.RenderWithErr(c.Tr("install.err_empty_db_path"), INSTALL, &f)
 		return
 	}
 
 	// Set test engine.
-	if err := db.NewTestEngine(); err != nil {
+	if err := database.NewTestEngine(); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			c.FormErr("DbType")
 			c.RenderWithErr(c.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &f)
@@ -238,7 +243,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test repository root path.
-	f.RepoRootPath = strings.Replace(f.RepoRootPath, "\\", "/", -1)
+	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), INSTALL, &f)
@@ -246,7 +251,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test log root path.
-	f.LogRootPath = strings.Replace(f.LogRootPath, "\\", "/", -1)
+	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), INSTALL, &f)
@@ -278,14 +283,14 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Check logic loophole between disable self-registration and no admin account.
-	if f.DisableRegistration && len(f.AdminName) == 0 {
+	if f.DisableRegistration && f.AdminName == "" {
 		c.FormErr("Services", "Admin")
 		c.RenderWithErr(c.Tr("install.no_admin_and_disable_registration"), INSTALL, f)
 		return
 	}
 
 	// Check admin password.
-	if len(f.AdminName) > 0 && len(f.AdminPasswd) == 0 {
+	if len(f.AdminName) > 0 && f.AdminPasswd == "" {
 		c.FormErr("Admin", "AdminPasswd")
 		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), INSTALL, f)
 		return
@@ -311,6 +316,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("database").Key("TYPE").SetValue(conf.Database.Type)
 	cfg.Section("database").Key("HOST").SetValue(conf.Database.Host)
 	cfg.Section("database").Key("NAME").SetValue(conf.Database.Name)
+	cfg.Section("database").Key("SCHEMA").SetValue(conf.Database.Schema)
 	cfg.Section("database").Key("USER").SetValue(conf.Database.User)
 	cfg.Section("database").Key("PASSWORD").SetValue(conf.Database.Password)
 	cfg.Section("database").Key("SSL_MODE").SetValue(conf.Database.SSLMode)
@@ -318,6 +324,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	cfg.Section("").Key("BRAND_NAME").SetValue(f.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(f.RepoRootPath)
+	cfg.Section("repository").Key("DEFAULT_BRANCH").SetValue(f.DefaultBranch)
 	cfg.Section("").Key("RUN_USER").SetValue(f.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(f.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(f.HTTPPort)
@@ -332,13 +339,13 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	if len(strings.TrimSpace(f.SMTPHost)) > 0 {
-		cfg.Section("mailer").Key("ENABLED").SetValue("true")
-		cfg.Section("mailer").Key("HOST").SetValue(f.SMTPHost)
-		cfg.Section("mailer").Key("FROM").SetValue(f.SMTPFrom)
-		cfg.Section("mailer").Key("USER").SetValue(f.SMTPUser)
-		cfg.Section("mailer").Key("PASSWD").SetValue(f.SMTPPasswd)
+		cfg.Section("email").Key("ENABLED").SetValue("true")
+		cfg.Section("email").Key("HOST").SetValue(f.SMTPHost)
+		cfg.Section("email").Key("FROM").SetValue(f.SMTPFrom)
+		cfg.Section("email").Key("USER").SetValue(f.SMTPUser)
+		cfg.Section("email").Key("PASSWORD").SetValue(f.SMTPPasswd)
 	} else {
-		cfg.Section("mailer").Key("ENABLED").SetValue("false")
+		cfg.Section("email").Key("ENABLED").SetValue("false")
 	}
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(f.OfflineMode))
 	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(com.ToStr(f.RegisterConfirm))
@@ -384,27 +391,35 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Create admin account
 	if len(f.AdminName) > 0 {
-		u := &db.User{
-			Name:     f.AdminName,
-			Email:    f.AdminEmail,
-			Passwd:   f.AdminPasswd,
-			IsAdmin:  true,
-			IsActive: true,
-		}
-		if err := db.CreateUser(u); err != nil {
-			if !db.IsErrUserAlreadyExist(err) {
+		user, err := database.Handle.Users().Create(
+			c.Req.Context(),
+			f.AdminName,
+			f.AdminEmail,
+			database.CreateUserOptions{
+				Password:  f.AdminPasswd,
+				Activated: true,
+				Admin:     true,
+			},
+		)
+		if err != nil {
+			if !database.IsErrUserAlreadyExist(err) {
 				conf.Security.InstallLock = false
 				c.FormErr("AdminName", "AdminEmail")
 				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
 				return
 			}
+
 			log.Info("Admin account already exist")
-			u, _ = db.GetUserByName(u.Name)
+			user, err = database.Handle.Users().GetByUsername(c.Req.Context(), f.AdminName)
+			if err != nil {
+				c.Error(err, "get user by name")
+				return
+			}
 		}
 
 		// Auto-login for admin
-		_ = c.Session.Set("uid", u.ID)
-		_ = c.Session.Set("uname", u.Name)
+		_ = c.Session.Set("uid", user.ID)
+		_ = c.Session.Set("uname", user.Name)
 	}
 
 	log.Info("First-time run install finished!")

@@ -12,10 +12,7 @@ import (
 
 func Test_RandomImage(t *testing.T) {
 	_, err := RandomImage([]byte("gogs@local"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = RandomImageSize(0, []byte("gogs@local"))
+	assert.NoError(t, err)
+	_, err = RandomImageWithSize(0, []byte("gogs@local"))
 	assert.Error(t, err)
 }

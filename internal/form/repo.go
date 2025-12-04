@@ -12,7 +12,9 @@ import (
 	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/netutil"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -42,7 +44,7 @@ type MigrateRepo struct {
 	CloneAddr    string `json:"clone_addr" binding:"Required"`
 	AuthUsername string `json:"auth_username"`
 	AuthPassword string `json:"auth_password"`
-	Uid          int64  `json:"uid" binding:"Required"`
+	UID          int64  `json:"uid" binding:"Required"`
 	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `json:"mirror"`
 	Private      bool   `json:"private"`
@@ -58,7 +60,7 @@ func (f *MigrateRepo) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 // and returns composed URL with needed username and password.
 // It also checks if given user has permission when remote address
 // is actually a local path.
-func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
+func (f MigrateRepo) ParseRemoteAddr(user *database.User) (string, error) {
 	remoteAddr := strings.TrimSpace(f.CloneAddr)
 
 	// Remote address can be HTTP/HTTPS/Git URL or local path.
@@ -67,20 +69,25 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		strings.HasPrefix(remoteAddr, "git://") {
 		u, err := url.Parse(remoteAddr)
 		if err != nil {
-			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
+
+		if netutil.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+			return "", database.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
+		}
+
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
 		}
 		// To prevent CRLF injection in git protocol, see https://github.com/gogs/gogs/issues/6413
 		if u.Scheme == "git" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
-			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
-		return "", db.ErrInvalidCloneAddr{IsPermissionDenied: true}
+		return "", database.ErrInvalidCloneAddr{IsPermissionDenied: true}
 	} else if !com.IsDir(remoteAddr) {
-		return "", db.ErrInvalidCloneAddr{IsInvalidPath: true}
+		return "", database.ErrInvalidCloneAddr{IsInvalidPath: true}
 	}
 
 	return remoteAddr, nil

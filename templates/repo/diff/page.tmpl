@@ -15,8 +15,8 @@
 			</div>
 			<div class="ui attached info segment">
 				{{if .Author}}
-					<img class="ui avatar image" src="{{.Author.RelAvatarLink}}" />
-					<a href="{{.Author.HomeLink}}"><strong>{{.Commit.Author.Name}}</strong></a> {{if .IsLogged}}<{{.Commit.Author.Email}}>{{end}}
+					<img class="ui avatar image" src="{{.Author.AvatarURLPath}}" />
+					<a href="{{.Author.HomeURLPath}}"><strong>{{.Commit.Author.Name}}</strong></a> {{if .IsLogged}}<{{.Commit.Author.Email}}>{{end}}
 				{{else}}
 					<img class="ui avatar image" src="{{AvatarLink .Commit.Author.Email}}" />
 					<strong>{{.Commit.Author.Name}}</strong>

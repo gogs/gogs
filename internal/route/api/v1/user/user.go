@@ -7,28 +7,21 @@ package user
 import (
 	"net/http"
 
-	"github.com/unknwon/com"
-
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/markup"
 )
 
 func Search(c *context.APIContext) {
-	opts := &db.SearchUserOptions{
-		Keyword:  c.Query("q"),
-		Type:     db.UserIndividual,
-		PageSize: com.StrTo(c.Query("limit")).MustInt(),
+	pageSize := c.QueryInt("limit")
+	if pageSize <= 0 {
+		pageSize = 10
 	}
-	if opts.PageSize == 0 {
-		opts.PageSize = 10
-	}
-
-	users, _, err := db.SearchUserByName(opts)
+	users, _, err := database.Handle.Users().SearchByName(c.Req.Context(), c.Query("q"), 1, pageSize, "")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
 			"error": err.Error(),
 		})
@@ -40,7 +33,7 @@ func Search(c *context.APIContext) {
 		results[i] = &api.User{
 			ID:        users[i].ID,
 			UserName:  users[i].Name,
-			AvatarUrl: users[i].AvatarLink(),
+			AvatarUrl: users[i].AvatarURL(),
 			FullName:  markup.Sanitize(users[i].FullName),
 		}
 		if c.IsLogged {
@@ -48,14 +41,14 @@ func Search(c *context.APIContext) {
 		}
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"ok":   true,
 		"data": results,
 	})
 }
 
 func GetInfo(c *context.APIContext) {
-	u, err := db.GetUserByName(c.Params(":username"))
+	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return

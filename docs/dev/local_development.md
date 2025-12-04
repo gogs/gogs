@@ -1,6 +1,4 @@
-# Getting started with developing Gogs
-
-> This document is driven from https://docs.sourcegraph.com/dev/local_development.
+# Set up your development environment
 
 Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https://tour.golang.org/) if you haven't done so!
 
@@ -23,9 +21,11 @@ Gogs is built and runs as a single binary and meant to be cross platform. Theref
 Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
-- [Go](https://golang.org/doc/install) (v1.14 or higher)
+- [Go](https://golang.org/doc/install) (v1.20 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
-- [Task](https://github.com/go-task/task)
+- [Task](https://github.com/go-task/task) (v3)
+- [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
+- [go-mockgen](https://github.com/derision-test/go-mockgen)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
@@ -38,9 +38,11 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git go-bindata npm go-task/tap/go-task
+    brew install go postgresql git npm go-task/tap/go-task
     npm install -g less
     npm install -g less-plugin-clean-css
+    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
+    go install golang.org/x/tools/cmd/goimports@latest
     ```
 
 1. Configure PostgreSQL to start automatically:
@@ -76,9 +78,9 @@ Gogs has the following dependencies:
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
-    # Watch out, it is NOT github.com/go-bindata/go-bindata!
-    go get -u github.com/kevinburke/go-bindata/...
-    go get go-task/task/cmd/task
+    go install github.com/go-task/task/v3/cmd/task@latest
+    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
+    go install golang.org/x/tools/cmd/goimports@latest
     ```
 
 1. Configure startup services:
@@ -123,7 +125,7 @@ Generally, you don't need a full clone, so set `--depth` to `10`:
 git clone --depth 10 https://github.com/gogs/gogs.git
 ```
 
-**NOTE** The repository has Go Modules enabled, please clone to somewhere outside of your `$GOPATH`.
+**NOTE** The repository has Go modules enabled, please clone to somewhere outside of your `$GOPATH`.
 
 ## Step 4: Configure database settings
 
@@ -156,13 +158,15 @@ task web --watch
 When you are actively working on HTML templates and static files during development, you may want to enable the following configuration to avoid recompiling and restarting Gogs every time you make a change to files under `template/` and `public/` directories:
 
 ```ini
+RUN_MODE = dev
+
 [server]
 LOAD_ASSETS_FROM_DISK = true
 ```
 
 ### Offline development
 
-Sometimes you will want to develop Gogs but it just so happens you will be on a plane or a train or perhaps a beach, and you will have no WiFi. And you may raise your fist toward heaven and say something like, "Why, we can put a man on the moon, so why can't we develop high-quality Git hosting without an Internet connection?" But lower your hand back to your keyboard and fret no further, for the year is 2020, and you *can* develop Gogs with no connectivity by setting the following configuration in your `custom/conf/app.ini`:
+Sometimes you will want to develop Gogs but it just so happens you will be on a plane or a train or perhaps a beach, and you will have no WiFi. And you may raise your fist toward heaven and say something like, "Why, we can put a man on the moon, so why can't we develop high-quality Git hosting without an Internet connection?" But lower your hand back to your keyboard and fret no further, you *can* develop Gogs with no connectivity by setting the following configuration in your `custom/conf/app.ini`:
 
 ```ini
 [server]

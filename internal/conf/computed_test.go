@@ -39,7 +39,7 @@ func TestIsProdMode(t *testing.T) {
 	}
 }
 
-func TestWorkDirHelper(t *testing.T) {
+func TestWorkDirHelper(_ *testing.T) {
 	if !testutil.WantHelperProcess() {
 		return
 	}
@@ -67,7 +67,7 @@ func TestWorkDir(t *testing.T) {
 	}
 }
 
-func TestCustomDirHelper(t *testing.T) {
+func TestCustomDirHelper(_ *testing.T) {
 	if !testutil.WantHelperProcess() {
 		return
 	}
@@ -95,7 +95,7 @@ func TestCustomDir(t *testing.T) {
 	}
 }
 
-func TestHomeDirHelper(t *testing.T) {
+func TestHomeDirHelper(_ *testing.T) {
 	if !testutil.WantHelperProcess() {
 		return
 	}

@@ -7,6 +7,8 @@ package auth
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -21,6 +23,8 @@ const (
 	PAM         // 4
 	DLDAP       // 5
 	GitHub      // 6
+
+	Mock Type = 999
 )
 
 // Name returns the human-readable name for given authentication type.
@@ -40,9 +44,10 @@ type ErrBadCredentials struct {
 	Args errutil.Args
 }
 
+// IsErrBadCredentials returns true if the underlying error has the type
+// ErrBadCredentials.
 func IsErrBadCredentials(err error) bool {
-	_, ok := err.(ErrBadCredentials)
-	return ok
+	return errors.As(err, &ErrBadCredentials{})
 }
 
 func (err ErrBadCredentials) Error() string {
@@ -80,7 +85,7 @@ type Provider interface {
 	Authenticate(login, password string) (*ExternalAccount, error)
 
 	// Config returns the underlying configuration of the authenticate provider.
-	Config() interface{}
+	Config() any
 	// HasTLS returns true if the authenticate provider supports TLS.
 	HasTLS() bool
 	// UseTLS returns true if the authenticate provider is configured to use TLS.

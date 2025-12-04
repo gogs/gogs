@@ -43,7 +43,7 @@ func isLink(link []byte) bool {
 }
 
 // Link defines how formal links should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
+func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] != '#' {
 			link = []byte(path.Join(r.urlPrefix, string(link)))
@@ -67,20 +67,20 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 		m := CommitPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "commit/")
-			j := strings.Index(string(m), "#")
+			i := bytes.Index(m, []byte("commit/"))
+			j := bytes.Index(m, []byte("#"))
 			if j == -1 {
 				j = len(m)
 			}
-			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, tool.ShortSHA1(string(m[i+7:j]))))
+			_, _ = fmt.Fprintf(out, ` <code><a href="%s">%s</a></code>`, m, tool.ShortSHA1(string(m[i+7:j])))
 			return
 		}
 
 		m = IssueFullPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "issues/")
-			j := strings.Index(string(m), "#")
+			i := bytes.Index(m, []byte("issues/"))
+			j := bytes.Index(m, []byte("#"))
 			if j == -1 {
 				j = len(m)
 			}
@@ -105,7 +105,7 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 }
 
 // ListItem defines how list items should be processed to produce corresponding HTML elements.
-func (options *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
+func (r *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	// Detect procedures to draw checkboxes.
 	switch {
 	case bytes.HasPrefix(text, []byte("[ ] ")):
@@ -113,7 +113,7 @@ func (options *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags 
 	case bytes.HasPrefix(text, []byte("[x] ")):
 		text = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
 	}
-	options.Renderer.ListItem(out, text, flags)
+	r.Renderer.ListItem(out, text, flags)
 }
 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
@@ -161,6 +161,6 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
-func Markdown(input interface{}, urlPrefix string, metas map[string]string) []byte {
-	return Render(MARKDOWN, input, urlPrefix, metas)
+func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
+	return Render(TypeMarkdown, input, urlPrefix, metas)
 }

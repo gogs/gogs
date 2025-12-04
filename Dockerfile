@@ -1,4 +1,4 @@
-FROM golang:alpine3.11 AS binarybuilder
+FROM golang:alpine3.21 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -7,13 +7,12 @@ RUN apk --no-cache --no-progress add --virtual \
 
 WORKDIR /gogs.io/gogs
 COPY . .
-RUN make build TAGS="cert pam"
 
-FROM alpine:3.11
-RUN wget https://github.com/tianon/gosu/releases/download/1.11/gosu-amd64 -O /usr/sbin/gosu \
-  && chmod +x /usr/sbin/gosu \
-  && echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
-  && apk --no-cache --no-progress add \
+RUN ./docker/build/install-task.sh
+RUN TAGS="cert pam" task build
+
+FROM alpine:3.21
+RUN apk --no-cache --no-progress add \
   bash \
   ca-certificates \
   curl \
@@ -35,11 +34,11 @@ WORKDIR /app/gogs
 COPY docker ./docker
 COPY --from=binarybuilder /gogs.io/gogs/gogs .
 
-RUN ./docker/finalize.sh
+RUN ./docker/build/finalize.sh
 
 # Configure Docker Container
 VOLUME ["/data", "/backup"]
 EXPOSE 22 3000
-HEALTHCHECK CMD (nc -z -w 3 localhost:22 && curl -o /dev/null -sS http://localhost:3000/healthcheck) || exit 1
+HEALTHCHECK CMD (curl -o /dev/null -sS http://localhost:3000/healthcheck) || exit 1
 ENTRYPOINT ["/app/gogs/docker/start.sh"]
-CMD ["/bin/s6-svscan", "/app/gogs/docker/s6/"]
+CMD ["/usr/bin/s6-svscan", "/app/gogs/docker/s6/"]

@@ -19,9 +19,10 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -34,7 +35,7 @@ type Context struct {
 	Session session.Store
 
 	Link        string // Current request URL
-	User        *db.User
+	User        *database.User
 	IsLogged    bool
 	IsBasicAuth bool
 	IsTokenAuth bool
@@ -95,15 +96,6 @@ func (c *Context) UserID() int64 {
 	return c.User.ID
 }
 
-// HasError returns true if error occurs in form validation.
-func (c *Context) HasApiError() bool {
-	hasErr, ok := c.Data["HasError"]
-	if !ok {
-		return false
-	}
-	return hasErr.(bool)
-}
-
 func (c *Context) GetErrMsg() string {
 	return c.Data["ErrorMsg"].(string)
 }
@@ -137,7 +129,7 @@ func (c *Context) Success(name string) {
 }
 
 // JSONSuccess responses JSON with status http.StatusOK.
-func (c *Context) JSONSuccess(data interface{}) {
+func (c *Context) JSONSuccess(data any) {
 	c.JSON(http.StatusOK, data)
 }
 
@@ -159,7 +151,7 @@ func (c *Context) RedirectSubpath(location string, status ...int) {
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (c *Context) RenderWithErr(msg, tpl string, f interface{}) {
+func (c *Context) RenderWithErr(msg, tpl string, f any) {
 	if f != nil {
 		form.Assign(f, c.Data)
 	}
@@ -188,7 +180,7 @@ func (c *Context) Error(err error, msg string) {
 }
 
 // Errorf renders the 500 response with formatted message.
-func (c *Context) Errorf(err error, format string, args ...interface{}) {
+func (c *Context) Errorf(err error, format string, args ...any) {
 	c.Error(err, fmt.Sprintf(format, args...))
 }
 
@@ -202,7 +194,7 @@ func (c *Context) NotFoundOrError(err error, msg string) {
 }
 
 // NotFoundOrErrorf is same as NotFoundOrError but with formatted message.
-func (c *Context) NotFoundOrErrorf(err error, format string, args ...interface{}) {
+func (c *Context) NotFoundOrErrorf(err error, format string, args ...any) {
 	c.NotFoundOrError(err, fmt.Sprintf(format, args...))
 }
 
@@ -210,7 +202,7 @@ func (c *Context) PlainText(status int, msg string) {
 	c.Render.PlainText(status, []byte(msg))
 }
 
-func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
+func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 	modtime := time.Now()
 	for _, p := range params {
 		switch v := p.(type) {
@@ -228,8 +220,13 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface
 	http.ServeContent(c.Resp, c.Req.Request, name, modtime, r)
 }
 
+// csrfTokenExcludePattern matches characters that are not used for generating
+// CSRF tokens, see all possible characters at
+// https://github.com/go-macaron/csrf/blob/5d38f39de352972063d1ef026fc477283841bb9b/csrf.go#L148.
+var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
+
 // Contexter initializes a classic context for a request.
-func Contexter() macaron.Handler {
+func Contexter(store Store) macaron.Handler {
 	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
 		c := &Context{
 			Context: ctx,
@@ -254,7 +251,7 @@ func Contexter() macaron.Handler {
 		}
 
 		// Get user from session or header when possible
-		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(c.Context, c.Session)
+		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(store, c.Context, c.Session)
 
 		if c.User != nil {
 			c.IsLogged = true
@@ -276,8 +273,12 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		c.Data["CSRFToken"] = x.GetToken()
-		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		// 🚨 SECURITY: Prevent XSS from injected CSRF cookie by stripping all
+		// characters that are not used for generating CSRF tokens, see
+		// https://github.com/gogs/gogs/issues/6953 for details.
+		csrfToken := csrfTokenExcludePattern.ReplaceAllString(x.GetToken(), "")
+		c.Data["CSRFToken"] = csrfToken
+		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + csrfToken + `">`)
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
@@ -289,7 +290,7 @@ func Contexter() macaron.Handler {
 		// 🚨 SECURITY: Prevent MIME type sniffing in some browsers,
 		// see https://github.com/gogs/gogs/issues/5397 for details.
 		c.Header().Set("X-Content-Type-Options", "nosniff")
-		c.Header().Set("X-Frame-Options", "DENY")
+		c.Header().Set("X-Frame-Options", "deny")
 
 		ctx.Map(c)
 	}

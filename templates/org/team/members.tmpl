@@ -15,8 +15,8 @@
 							{{if $.IsOrganizationOwner}}
 								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.ID}}">{{$.i18n.Tr "org.members.remove"}}</a>
 							{{end}}
-							<a href="{{.HomeLink}}">
-								<img class="ui avatar image" src="{{.RelAvatarLink}}">
+							<a href="{{.HomeURLPath}}">
+								<img class="ui avatar image" src="{{.AvatarURLPath}}">
 								{{.DisplayName}}
 							</a>
 						</div>

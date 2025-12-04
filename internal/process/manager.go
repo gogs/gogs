@@ -15,11 +15,9 @@ import (
 	log "unknwon.dev/clog/v2"
 )
 
-var (
-	ErrExecTimeout = errors.New("process execution timeout")
-)
+var ErrExecTimeout = errors.New("process execution timeout")
 
-const DEFAULT_TIMEOUT = 60 * time.Second
+const defaultTimeout = 60 * time.Second
 
 // Process represents a running process calls shell command.
 type Process struct {
@@ -41,8 +39,10 @@ func (c *pidCounter) PID() int64 {
 	return c.pid
 }
 
-var counter = new(pidCounter)
-var Processes []*Process
+var (
+	counter   = new(pidCounter)
+	Processes []*Process
+)
 
 // Add adds a process to global list and returns its PID.
 func Add(desc string, cmd *exec.Cmd) int64 {
@@ -77,7 +77,7 @@ func Remove(pid int64) bool {
 // Exec starts executing a shell command in given path, it tracks corresponding process and timeout.
 func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
-		timeout = DEFAULT_TIMEOUT
+		timeout = defaultTimeout
 	}
 
 	bufOut := new(bytes.Buffer)

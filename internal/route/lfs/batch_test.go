@@ -7,35 +7,28 @@ package lfs
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/lfsutil"
+	"gogs.io/gogs/internal/database"
 )
 
-func Test_serveBatch(t *testing.T) {
+func TestServeBatch(t *testing.T) {
 	conf.SetMockServer(t, conf.ServerOpts{
 		ExternalURL: "https://gogs.example.com/",
 	})
 
-	m := macaron.New()
-	m.Use(func(c *macaron.Context) {
-		c.Map(&db.User{Name: "owner"})
-		c.Map(&db.Repository{Name: "repo"})
-	})
-	m.Post("/", serveBatch)
-
 	tests := []struct {
 		name          string
 		body          string
-		mockLFSStore  *db.MockLFSStore
+		mockStore     func() *MockStore
 		expStatusCode int
 		expBody       string
 	}{
@@ -83,9 +76,10 @@ func Test_serveBatch(t *testing.T) {
 	{"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size": 123},
 	{"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57", "size": 456}
 ]}`,
-			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectsByOIDs: func(repoID int64, oids ...lfsutil.OID) ([]*db.LFSObject, error) {
-					return []*db.LFSObject{
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetLFSObjectsByOIDsFunc.SetDefaultReturn(
+					[]*database.LFSObject{
 						{
 							OID:  "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
 							Size: 1234,
@@ -93,8 +87,10 @@ func Test_serveBatch(t *testing.T) {
 							OID:  "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57",
 							Size: 456,
 						},
-					}, nil
-				},
+					},
+					nil,
+				)
+				return mockStore
 			},
 			expStatusCode: http.StatusOK,
 			expBody: `{
@@ -121,12 +117,20 @@ func Test_serveBatch(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			db.SetMockLFSStore(t, test.mockLFSStore)
-
-			r, err := http.NewRequest("POST", "/", bytes.NewBufferString(test.body))
-			if err != nil {
-				t.Fatal(err)
+			mockStore := NewMockStore()
+			if test.mockStore != nil {
+				mockStore = test.mockStore()
 			}
+
+			m := macaron.New()
+			m.Use(func(c *macaron.Context) {
+				c.Map(&database.User{Name: "owner"})
+				c.Map(&database.Repository{Name: "repo"})
+			})
+			m.Post("/", serveBatch(mockStore))
+
+			r, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(test.body))
+			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
 			m.ServeHTTP(rr, r)
@@ -134,22 +138,16 @@ func Test_serveBatch(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
 
 			var expBody bytes.Buffer
 			err = json.Indent(&expBody, []byte(test.expBody), "", "  ")
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			var gotBody bytes.Buffer
 			err = json.Indent(&gotBody, body, "", "  ")
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			assert.Equal(t, expBody.String(), gotBody.String())
 		})

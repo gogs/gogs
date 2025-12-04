@@ -11,17 +11,17 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 )
 
 const (
-	WIKI_START = "repo/wiki/start"
-	WIKI_VIEW  = "repo/wiki/view"
-	WIKI_NEW   = "repo/wiki/new"
-	WIKI_PAGES = "repo/wiki/pages"
+	tmplRepoWikiStart = "repo/wiki/start"
+	tmplRepoWikiView  = "repo/wiki/view"
+	tmplRepoWikiNew   = "repo/wiki/new"
+	tmplRepoWikiPages = "repo/wiki/pages"
 )
 
 func MustEnableWiki(c *context.Context) {
@@ -67,7 +67,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
 				pages = append(pages, PageMeta{
 					Name: name,
-					URL:  db.ToWikiPageURL(name),
+					URL:  database.ToWikiPageURL(name),
 				})
 			}
 		}
@@ -75,12 +75,12 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 	}
 
 	pageURL := c.Params(":page")
-	if len(pageURL) == 0 {
+	if pageURL == "" {
 		pageURL = "Home"
 	}
 	c.Data["PageURL"] = pageURL
 
-	pageName := db.ToWikiPageName(pageURL)
+	pageName := database.ToWikiPageName(pageURL)
 	c.Data["old_title"] = pageName
 	c.Data["Title"] = pageName
 	c.Data["title"] = pageName
@@ -114,7 +114,7 @@ func Wiki(c *context.Context) {
 
 	if !c.Repo.Repository.HasWiki() {
 		c.Data["Title"] = c.Tr("repo.wiki")
-		c.Success(WIKI_START)
+		c.Success(tmplRepoWikiStart)
 		return
 	}
 
@@ -131,7 +131,7 @@ func Wiki(c *context.Context) {
 	}
 	c.Data["Author"] = commits[0].Author
 
-	c.Success(WIKI_VIEW)
+	c.Success(tmplRepoWikiView)
 }
 
 func WikiPages(c *context.Context) {
@@ -170,14 +170,14 @@ func WikiPages(c *context.Context) {
 			name := strings.TrimSuffix(entries[i].Name(), ".md")
 			pages = append(pages, PageMeta{
 				Name:    name,
-				URL:     db.ToWikiPageURL(name),
+				URL:     database.ToWikiPageURL(name),
 				Updated: commits[0].Author.When,
 			})
 		}
 	}
 	c.Data["Pages"] = pages
 
-	c.Success(WIKI_PAGES)
+	c.Success(tmplRepoWikiPages)
 }
 
 func NewWiki(c *context.Context) {
@@ -189,7 +189,7 @@ func NewWiki(c *context.Context) {
 		c.Data["title"] = "Home"
 	}
 
-	c.Success(WIKI_NEW)
+	c.Success(tmplRepoWikiNew)
 }
 
 func NewWikiPost(c *context.Context, f form.NewWiki) {
@@ -198,21 +198,21 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(WIKI_NEW)
+		c.Success(tmplRepoWikiNew)
 		return
 	}
 
 	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
-		if db.IsErrWikiAlreadyExist(err) {
+		if database.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), tmplRepoWikiNew, &f)
 		} else {
 			c.Error(err, "add wiki page")
 		}
 		return
 	}
 
-	c.Redirect(c.Repo.RepoLink + "/wiki/" + db.ToWikiPageURL(db.ToWikiPageName(f.Title)))
+	c.Redirect(c.Repo.RepoLink + "/wiki/" + database.ToWikiPageURL(database.ToWikiPageName(f.Title)))
 }
 
 func EditWiki(c *context.Context) {
@@ -230,7 +230,7 @@ func EditWiki(c *context.Context) {
 		return
 	}
 
-	c.Success(WIKI_NEW)
+	c.Success(tmplRepoWikiNew)
 }
 
 func EditWikiPost(c *context.Context, f form.NewWiki) {
@@ -239,7 +239,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(WIKI_NEW)
+		c.Success(tmplRepoWikiNew)
 		return
 	}
 
@@ -248,22 +248,22 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 		return
 	}
 
-	c.Redirect(c.Repo.RepoLink + "/wiki/" + db.ToWikiPageURL(db.ToWikiPageName(f.Title)))
+	c.Redirect(c.Repo.RepoLink + "/wiki/" + database.ToWikiPageURL(database.ToWikiPageName(f.Title)))
 }
 
 func DeleteWikiPagePost(c *context.Context) {
 	pageURL := c.Params(":page")
-	if len(pageURL) == 0 {
+	if pageURL == "" {
 		pageURL = "Home"
 	}
 
-	pageName := db.ToWikiPageName(pageURL)
+	pageName := database.ToWikiPageName(pageURL)
 	if err := c.Repo.Repository.DeleteWikiPage(c.User, pageName); err != nil {
 		c.Error(err, "delete wiki page")
 		return
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.RepoLink + "/wiki/",
 	})
 }

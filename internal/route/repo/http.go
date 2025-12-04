@@ -22,8 +22,10 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -33,7 +35,7 @@ type HTTPContext struct {
 	OwnerSalt string
 	RepoID    int64
 	RepoName  string
-	AuthUser  *db.User
+	AuthUser  *database.User
 }
 
 // askCredentials responses HTTP header and status which informs client to provide credentials.
@@ -42,7 +44,7 @@ func askCredentials(c *macaron.Context, status int, text string) {
 	c.Error(status, text)
 }
 
-func HTTPContexter() macaron.Handler {
+func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
@@ -64,9 +66,9 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := db.Users.GetByUsername(ownerName)
+		owner, err := store.GetUserByUsername(c.Req.Context(), ownerName)
 		if err != nil {
-			if db.IsErrUserNotExist(err) {
+			if database.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
@@ -75,9 +77,9 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(owner.ID, repoName)
+		repo, err := store.GetRepositoryByName(c.Req.Context(), owner.ID, repoName)
 		if err != nil {
-			if db.IsErrRepoNotExist(err) {
+			if database.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
@@ -100,13 +102,13 @@ func HTTPContexter() macaron.Handler {
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
 			!strings.Contains(action, "objects/") {
-			c.NotFound()
+			c.Error(http.StatusBadRequest, fmt.Sprintf("Unrecognized action %q", action))
 			return
 		}
 
 		// Handle HTTP Basic Authentication
 		authHead := c.Req.Header.Get("Authorization")
-		if len(authHead) == 0 {
+		if authHead == "" {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
@@ -122,38 +124,35 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
+		authUser, err := store.AuthenticateUser(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
 			return
 		}
 
-		// If username and password combination failed, try again using username as a token.
+		// If username and password combination failed, try again using either username
+		// or password as the token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA(authUsername)
-			if err != nil {
-				if db.IsErrAccessTokenNotExist(err) {
-					askCredentials(c, http.StatusUnauthorized, "")
-				} else {
-					c.Status(http.StatusInternalServerError)
-					log.Error("Failed to get access token [sha: %s]: %v", authUsername, err)
-				}
-				return
-			}
-			if err = db.AccessTokens.Save(token); err != nil {
-				log.Error("Failed to update access token: %v", err)
-			}
-
-			authUser, err = db.Users.GetByID(token.UserID)
-			if err != nil {
-				// Once we found token, we're supposed to find its related user,
-				// thus any error is unexpected.
+			authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authUsername)
+			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
+			} else if database.IsErrAccessTokenNotExist(err) {
+				// Try again using the password field as the token.
+				authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authPassword)
+				if err != nil {
+					if database.IsErrAccessTokenNotExist(err) {
+						askCredentials(c, http.StatusUnauthorized, "")
+					} else {
+						c.Status(http.StatusInternalServerError)
+						log.Error("Failed to authenticate by access token via password: %v", err)
+					}
+					return
+				}
 			}
-		} else if authUser.IsEnabledTwoFactor() {
+		} else if store.IsTwoFactorEnabled(c.Req.Context(), authUser.ID) {
 			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
 Please create and use personal access token on user settings page`)
 			return
@@ -161,12 +160,12 @@ Please create and use personal access token on user settings page`)
 
 		log.Trace("[Git] Authenticated user: %s", authUser.Name)
 
-		mode := db.AccessModeWrite
+		mode := database.AccessModeWrite
 		if isPull {
-			mode = db.AccessModeRead
+			mode = database.AccessModeRead
 		}
-		if !db.Perms.Authorize(authUser.ID, repo.ID, mode,
-			db.AccessModeOptions{
+		if !database.Handle.Permissions().Authorize(c.Req.Context(), authUser.ID, repo.ID, mode,
+			database.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
 			},
@@ -197,7 +196,7 @@ type serviceHandler struct {
 	dir  string
 	file string
 
-	authUser  *db.User
+	authUser  *database.User
 	ownerName string
 	ownerSalt string
 	repoID    int64
@@ -259,7 +258,7 @@ func serviceRPC(h serviceHandler, service string) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	if service == "receive-pack" {
-		cmd.Env = append(os.Environ(), db.ComposeHookEnvs(db.ComposeHookEnvsOptions{
+		cmd.Env = append(os.Environ(), database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
 			AuthUser:  h.authUser,
 			OwnerName: h.ownerName,
 			OwnerSalt: h.ownerSalt,
@@ -301,7 +300,7 @@ func gitCommand(dir string, args ...string) []byte {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		log.Error(fmt.Sprintf("Git: %v - %s", err, out))
+		log.Error("Git: %v - %s", err, out)
 	}
 	return out
 }
@@ -408,15 +407,22 @@ func HTTP(c *HTTPContext) {
 		}
 
 		if route.method != c.Req.Method {
-			c.NotFound()
+			c.Error(http.StatusNotFound)
 			return
 		}
 
-		file := strings.TrimPrefix(reqPath, m[1]+"/")
-		dir, err := getGitRepoPath(m[1])
+		// 🚨 SECURITY: Prevent path traversal.
+		cleaned := pathutil.Clean(m[1])
+		if m[1] != "/"+cleaned {
+			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
+			return
+		}
+
+		file := strings.TrimPrefix(reqPath, cleaned)
+		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
-			c.NotFound()
+			c.Error(http.StatusNotFound)
 			return
 		}
 
@@ -435,5 +441,5 @@ func HTTP(c *HTTPContext) {
 		return
 	}
 
-	c.NotFound()
+	c.Error(http.StatusNotFound)
 }

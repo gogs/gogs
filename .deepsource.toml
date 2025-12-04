@@ -1,0 +1,26 @@
+version = 1
+
+exclude_patterns = ["**/mocks_test.go"]
+
+[[analyzers]]
+name = "docker"
+enabled = true
+
+[[analyzers]]
+name = "shell"
+enabled = true
+
+[[analyzers]]
+name = "go"
+enabled = true
+
+  [analyzers.meta]
+  import_root = "github.com/gogs/gogs"
+
+[[transformers]]
+name = "gofumpt"
+enabled = true
+
+[[transformers]]
+name = "gofmt"
+enabled = true

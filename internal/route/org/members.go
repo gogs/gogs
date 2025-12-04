@@ -10,12 +10,12 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 const (
-	MEMBERS       = "org/member/members"
-	MEMBER_INVITE = "org/member/invite"
+	tmplOrgMembers       = "org/member/members"
+	templOrgMemberInvite = "org/member/invite"
 )
 
 func Members(c *context.Context) {
@@ -29,7 +29,7 @@ func Members(c *context.Context) {
 	}
 	c.Data["Members"] = org.Members
 
-	c.Success(MEMBERS)
+	c.Success(tmplOrgMembers)
 }
 
 func MembersAction(c *context.Context) {
@@ -47,27 +47,27 @@ func MembersAction(c *context.Context) {
 			c.NotFound()
 			return
 		}
-		err = db.ChangeOrgUserStatus(org.ID, uid, false)
+		err = database.ChangeOrgUserStatus(org.ID, uid, false)
 	case "public":
 		if c.User.ID != uid && !c.Org.IsOwner {
 			c.NotFound()
 			return
 		}
-		err = db.ChangeOrgUserStatus(org.ID, uid, true)
+		err = database.ChangeOrgUserStatus(org.ID, uid, true)
 	case "remove":
 		if !c.Org.IsOwner {
 			c.NotFound()
 			return
 		}
 		err = org.RemoveMember(uid)
-		if db.IsErrLastOrgOwner(err) {
+		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
 		}
 	case "leave":
 		err = org.RemoveMember(c.User.ID)
-		if db.IsErrLastOrgOwner(err) {
+		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
@@ -76,7 +76,7 @@ func MembersAction(c *context.Context) {
 
 	if err != nil {
 		log.Error("Action(%s): %v", c.Params(":action"), err)
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"ok":  false,
 			"err": err.Error(),
 		})
@@ -97,9 +97,9 @@ func Invitation(c *context.Context) {
 
 	if c.Req.Method == "POST" {
 		uname := c.Query("uname")
-		u, err := db.GetUserByName(uname)
+		u, err := database.Handle.Users().GetByUsername(c.Req.Context(), uname)
 		if err != nil {
-			if db.IsErrUserNotExist(err) {
+			if database.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))
 				c.Redirect(c.Org.OrgLink + "/invitations/new")
 			} else {
@@ -118,5 +118,5 @@ func Invitation(c *context.Context) {
 		return
 	}
 
-	c.Success(MEMBER_INVITE)
+	c.Success(templOrgMemberInvite)
 }

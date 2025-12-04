@@ -5,6 +5,7 @@
 package repo
 
 import (
+	gocontext "context"
 	"path"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/tool"
 )
@@ -24,10 +25,10 @@ const (
 
 func RefCommits(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
-	switch {
-	case len(c.Repo.TreePath) == 0:
+	switch c.Repo.TreePath {
+	case "":
 		Commits(c)
-	case c.Repo.TreePath == "search":
+	case "search":
 		SearchCommits(c)
 	default:
 		FileHistory(c)
@@ -35,7 +36,7 @@ func RefCommits(c *context.Context) {
 }
 
 // TODO(unknwon)
-func RenderIssueLinks(oldCommits []*git.Commit, repoLink string) []*git.Commit {
+func RenderIssueLinks(oldCommits []*git.Commit, _ string) []*git.Commit {
 	return oldCommits
 }
 
@@ -60,7 +61,7 @@ func renderCommits(c *context.Context, filename string) {
 	}
 
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 
 	if page > 1 {
 		c.Data["HasPrevious"] = true
@@ -85,7 +86,7 @@ func SearchCommits(c *context.Context) {
 	c.Data["PageIsCommits"] = true
 
 	keyword := c.Query("q")
-	if len(keyword) == 0 {
+	if keyword == "" {
 		c.Redirect(c.Repo.RepoLink + "/commits/" + c.Repo.BranchName)
 		return
 	}
@@ -97,7 +98,7 @@ func SearchCommits(c *context.Context) {
 	}
 
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 
 	c.Data["Keyword"] = keyword
 	c.Data["Username"] = c.Repo.Owner.Name
@@ -108,6 +109,13 @@ func SearchCommits(c *context.Context) {
 
 func FileHistory(c *context.Context) {
 	renderCommits(c, c.Repo.TreePath)
+}
+
+// tryGetUserByEmail returns a non-nil value if the email is corresponding to an
+// existing user.
+func tryGetUserByEmail(ctx gocontext.Context, email string) *database.User {
+	user, _ := database.Handle.Users().GetByEmail(ctx, email)
+	return user
 }
 
 func Diff(c *context.Context) {
@@ -156,7 +164,7 @@ func Diff(c *context.Context) {
 	c.Data["IsImageFile"] = commit.IsImageFile
 	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 	c.Data["Commit"] = commit
-	c.Data["Author"] = db.ValidateCommitWithEmail(commit)
+	c.Data["Author"] = tryGetUserByEmail(c.Req.Context(), commit.Author.Email)
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
@@ -178,6 +186,33 @@ func RawDiff(c *context.Context) {
 		c.NotFoundOrError(gitutil.NewError(err), "get raw diff")
 		return
 	}
+}
+
+type userCommit struct {
+	User *database.User
+	*git.Commit
+}
+
+// matchUsersWithCommitEmails matches existing users using commit author emails.
+func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit) []*userCommit {
+	emailToUsers := make(map[string]*database.User)
+	newCommits := make([]*userCommit, len(oldCommits))
+	usersStore := database.Handle.Users()
+	for i := range oldCommits {
+		var u *database.User
+		if v, ok := emailToUsers[oldCommits[i].Author.Email]; !ok {
+			u, _ = usersStore.GetByEmail(ctx, oldCommits[i].Author.Email)
+			emailToUsers[oldCommits[i].Author.Email] = u
+		} else {
+			u = v
+		}
+
+		newCommits[i] = &userCommit{
+			User:   u,
+			Commit: oldCommits[i],
+		}
+	}
+	return newCommits
 }
 
 func CompareDiff(c *context.Context) {
@@ -210,7 +245,7 @@ func CompareDiff(c *context.Context) {
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["CommitRepoLink"] = c.Repo.RepoLink
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 	c.Data["BeforeCommitID"] = beforeCommitID
 	c.Data["AfterCommitID"] = afterCommitID

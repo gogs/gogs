@@ -77,7 +77,7 @@ func LoginAuth(username, password string) smtp.Auth {
 	return &loginAuth{username, password}
 }
 
-func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+func (*loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
 	return "LOGIN", []byte{}, nil
 }
 
@@ -95,10 +95,9 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
-type Sender struct {
-}
+type Sender struct{}
 
-func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
+func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 	opts := conf.Email
 
 	host, port, err := net.SplitHostPort(opts.Host)
@@ -139,7 +138,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 	if !opts.DisableHELO {
 		hostname := opts.HELOHostname
-		if len(hostname) == 0 {
+		if hostname == "" {
 			hostname, err = os.Hostname()
 			if err != nil {
 				return err
@@ -147,11 +146,11 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		}
 
 		if err = client.Hello(hostname); err != nil {
-			return fmt.Errorf("Hello: %v", err)
+			return fmt.Errorf("hello: %v", err)
 		}
 	}
 
-	// If not using SMTPS, alway use STARTTLS if available
+	// If not using SMTPS, always use STARTTLS if available
 	hasStartTLS, _ := client.Extension("STARTTLS")
 	if !isSecureConn && hasStartTLS {
 		if err = client.StartTLS(tlsconfig); err != nil {
@@ -174,28 +173,28 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 		if auth != nil {
 			if err = client.Auth(auth); err != nil {
-				return fmt.Errorf("Auth: %v", err)
+				return fmt.Errorf("auth: %v", err)
 			}
 		}
 	}
 
 	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("Mail: %v", err)
+		return fmt.Errorf("mail: %v", err)
 	}
 
 	for _, rec := range to {
 		if err = client.Rcpt(rec); err != nil {
-			return fmt.Errorf("Rcpt: %v", err)
+			return fmt.Errorf("rcpt: %v", err)
 		}
 	}
 
 	w, err := client.Data()
 	if err != nil {
-		return fmt.Errorf("Data: %v", err)
+		return fmt.Errorf("data: %v", err)
 	} else if _, err = msg.WriteTo(w); err != nil {
-		return fmt.Errorf("WriteTo: %v", err)
+		return fmt.Errorf("write to: %v", err)
 	} else if err = w.Close(); err != nil {
-		return fmt.Errorf("Close: %v", err)
+		return fmt.Errorf("close: %v", err)
 	}
 
 	return client.Quit()
@@ -233,6 +232,10 @@ func NewContext() {
 // It returns without confirmation (mail processed asynchronously) in normal cases,
 // but waits/blocks under hook mode to make sure mail has been sent.
 func Send(msg *Message) {
+	if !conf.Email.Enabled {
+		return
+	}
+
 	mailQueue <- msg
 
 	if conf.HookMode {

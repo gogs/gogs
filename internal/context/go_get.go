@@ -9,7 +9,8 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 // ServeGoGet does quick responses for appropriate go-get meta with status OK
@@ -26,9 +27,9 @@ func ServeGoGet() macaron.Handler {
 		repoName := c.Params(":reponame")
 		branchName := "master"
 
-		owner, err := db.Users.GetByUsername(ownerName)
+		owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), ownerName)
 		if err == nil {
-			repo, err := db.Repos.GetByName(owner.ID, repoName)
+			repo, err := database.Handle.Repositories().GetByName(c.Req.Context(), owner.ID, repoName)
 			if err == nil && repo.DefaultBranch != "" {
 				branchName = repo.DefaultBranch
 			}
@@ -52,7 +53,7 @@ func ServeGoGet() macaron.Handler {
 `,
 			map[string]string{
 				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, ownerName, repoName),
-				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
+				"CloneLink":      repoutil.HTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
 				"InsecureFlag":   insecureFlag,

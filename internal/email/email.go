@@ -15,21 +15,21 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/templates"
 )
 
 const (
-	MAIL_AUTH_ACTIVATE        = "auth/activate"
-	MAIL_AUTH_ACTIVATE_EMAIL  = "auth/activate_email"
-	MAIL_AUTH_RESET_PASSWORD  = "auth/reset_passwd"
-	MAIL_AUTH_REGISTER_NOTIFY = "auth/register_notify"
+	tmplAuthActivate       = "auth/activate"
+	tmplAuthActivateEmail  = "auth/activate_email"
+	tmplAuthResetPassword  = "auth/reset_passwd"
+	tmplAuthRegisterNotify = "auth/register_notify"
 
-	MAIL_ISSUE_COMMENT = "issue/comment"
-	MAIL_ISSUE_MENTION = "issue/mention"
+	tmplIssueComment = "issue/comment"
+	tmplIssueMention = "issue/mention"
 
-	MAIL_NOTIFY_COLLABORATOR = "notify/collaborator"
+	tmplNotifyCollaborator = "notify/collaborator"
 )
 
 var (
@@ -38,13 +38,14 @@ var (
 )
 
 // render renders a mail template with given data.
-func render(tpl string, data map[string]interface{}) (string, error) {
+func render(tpl string, data map[string]any) (string, error) {
 	tplRenderOnce.Do(func() {
+		customDir := filepath.Join(conf.CustomDir(), "templates")
 		opt := &macaron.RenderOptions{
 			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
-			AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates", "mail")},
+			AppendDirectories: []string{filepath.Join(customDir, "mail")},
 			Extensions:        []string{".tmpl", ".html"},
-			Funcs: []template.FuncMap{map[string]interface{}{
+			Funcs: []template.FuncMap{map[string]any{
 				"AppName": func() string {
 					return conf.App.BrandName
 				},
@@ -60,7 +61,7 @@ func render(tpl string, data map[string]interface{}) (string, error) {
 			}},
 		}
 		if !conf.Server.LoadAssetsFromDisk {
-			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
+			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", customDir)
 		}
 
 		ts := macaron.NewTemplateSet()
@@ -86,7 +87,6 @@ type User interface {
 	ID() int64
 	DisplayName() string
 	Email() string
-	GenerateActivateCode() string
 	GenerateEmailActivateCode(string) string
 }
 
@@ -102,8 +102,8 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
-	data := map[string]interface{}{
+func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
+	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
 		"ResetPwdCodeLives": conf.Auth.ResetPasswordCodeLives / 60,
@@ -122,22 +122,22 @@ func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 }
 
 func SendActivateAccountMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, u.GenerateActivateCode(), c.Tr("mail.activate_account"), "activate account")
+	SendUserMail(c, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
 }
 
 func SendResetPasswordMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, u.GenerateActivateCode(), c.Tr("mail.reset_password"), "reset password")
+	SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
 func SendActivateEmailMail(c *macaron.Context, u User, email string) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
 		"Code":            u.GenerateEmailActivateCode(email),
 		"Email":           email,
 	}
-	body, err := render(MAIL_AUTH_ACTIVATE_EMAIL, data)
+	body, err := render(tmplAuthActivateEmail, data)
 	if err != nil {
 		log.Error("HTMLString: %v", err)
 		return
@@ -151,10 +151,10 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 
 // SendRegisterNotifyMail triggers a notify e-mail by admin created a account.
 func SendRegisterNotifyMail(c *macaron.Context, u User) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
-	body, err := render(MAIL_AUTH_REGISTER_NOTIFY, data)
+	body, err := render(tmplAuthRegisterNotify, data)
 	if err != nil {
 		log.Error("HTMLString: %v", err)
 		return
@@ -170,12 +170,12 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) {
 func SendCollaboratorMail(u, doer User, repo Repository) {
 	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Subject":  subject,
 		"RepoName": repo.FullName(),
 		"Link":     repo.HTMLURL(),
 	}
-	body, err := render(MAIL_NOTIFY_COLLABORATOR, data)
+	body, err := render(tmplNotifyCollaborator, data)
 	if err != nil {
 		log.Error("HTMLString: %v", err)
 		return
@@ -187,8 +187,8 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 	Send(msg)
 }
 
-func composeTplData(subject, body, link string) map[string]interface{} {
-	data := make(map[string]interface{}, 10)
+func composeTplData(subject, body, link string) map[string]any {
+	data := make(map[string]any, 10)
 	data["Subject"] = subject
 	data["Body"] = body
 	data["Link"] = link
@@ -216,7 +216,7 @@ func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string)
 		return
 	}
 
-	Send(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_COMMENT, tos, "issue comment"))
+	Send(composeIssueMessage(issue, repo, doer, tmplIssueComment, tos, "issue comment"))
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
@@ -224,5 +224,5 @@ func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string)
 	if len(tos) == 0 {
 		return
 	}
-	Send(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_MENTION, tos, "issue mention"))
+	Send(composeIssueMessage(issue, repo, doer, tmplIssueMention, tos, "issue mention"))
 }

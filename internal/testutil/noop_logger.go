@@ -13,19 +13,19 @@ var _ log.Logger = (*noopLogger)(nil)
 // noopLogger is a placeholder logger that logs nothing.
 type noopLogger struct{}
 
-func (l *noopLogger) Name() string {
+func (*noopLogger) Name() string {
 	return "noop"
 }
 
-func (l *noopLogger) Level() log.Level {
+func (*noopLogger) Level() log.Level {
 	return log.LevelTrace
 }
 
-func (l *noopLogger) Write(log.Messager) error {
+func (*noopLogger) Write(log.Messager) error {
 	return nil
 }
 
 // InitNoopLogger is a init function to initialize a noop logger.
-var InitNoopLogger = func(name string, vs ...interface{}) (log.Logger, error) {
+var InitNoopLogger = func(name string, vs ...any) (log.Logger, error) {
 	return &noopLogger{}, nil
 }

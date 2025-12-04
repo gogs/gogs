@@ -58,6 +58,54 @@
 {{if .RequireAutosize}}
 	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
 {{end}}
+{{if .IsMarkdown}}
+	<script src="{{AppSubURL}}/plugins/mermaid-11.12.1/mermaid.min.js"></script>
+	<script>
+		$(document).ready(function () {
+			const deepMerge = function(target, source) {
+				// Create a deep copy of the target to avoid modifying the original
+				const output = { ...target };
+
+				if (target && typeof target === 'object' && source && typeof source === 'object') {
+					for (const key in source) {
+						if (source.hasOwnProperty(key)) {
+							if (source[key] instanceof Object && target[key] instanceof Object) {
+								// If both are objects, recursively merge
+								output[key] = deepMerge(target[key], source[key]);
+							} else if (Array.isArray(source[key]) && Array.isArray(target[key])) {
+								// If both are arrays, concatenate them
+								output[key] = [...target[key], ...source[key]];
+							} else {
+								// Otherwise, overwrite with the source value
+								output[key] = source[key];
+							}
+						}
+					}
+				}
+
+				return output;
+			};
+
+			let initializeOpts = { startOnLoad: false, sequence: {noteMargin: 10}, journey: {noteMargin: 10}, timeline: {noteMargin: 10}, state: {noteMargin: 10} };
+
+			if (window.MERMAID_INITIALIZE_OPTIONS) {
+				// allow customization in inject/head.tmpl
+				initializeOpts = deepMerge(initializeOpts, window.MERMAID_INITIALIZE_OPTIONS);
+			}
+
+			mermaid.initialize(initializeOpts);
+
+			let runOpts = { querySelector: '.language-mermaid' };
+			if (window.MERMAID_RUN_OPTIONS) {
+				// allow customization in inject/head.tmpl
+				runOpts = deepMerge(runOpts, window.MERMAID_RUN_OPTIONS);
+			}
+
+			mermaid.run(runOpts);
+		});
+	</script>
+{{end}}
+
 <script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
 <script src="{{AppSubURL}}/js/libs/clipboard-2.0.4.min.js"></script>
 

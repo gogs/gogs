@@ -29,12 +29,11 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
-	"gogs.io/gogs/internal/assets/public"
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/route"
@@ -46,6 +45,8 @@ import (
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/public"
+	"gogs.io/gogs/templates"
 )
 
 var Web = cli.Command{
@@ -83,11 +84,12 @@ func newMacaron() *macaron.Macaron {
 	))
 	var publicFs http.FileSystem
 	if !conf.Server.LoadAssetsFromDisk {
-		publicFs = public.NewFileSystem()
+		publicFs = http.FS(public.Files)
 	}
 	m.Use(macaron.Static(
 		filepath.Join(conf.WorkDir(), "public"),
 		macaron.StaticOptions{
+			ETag:        true,
 			SkipLogging: conf.Server.DisableRouterLog,
 			FileSystem:  publicFs,
 		},
@@ -96,36 +98,42 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		conf.Picture.AvatarUploadPath,
 		macaron.StaticOptions{
-			Prefix:      db.USER_AVATAR_URL_PREFIX,
+			ETag:        true,
+			Prefix:      conf.UsersAvatarPathPrefix,
 			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Static(
 		conf.Picture.RepositoryAvatarUploadPath,
 		macaron.StaticOptions{
-			Prefix:      db.REPO_AVATAR_URL_PREFIX,
+			ETag:        true,
+			Prefix:      database.RepoAvatarURLPrefix,
 			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 
+	customDir := filepath.Join(conf.CustomDir(), "templates")
 	renderOpt := macaron.RenderOptions{
 		Directory:         filepath.Join(conf.WorkDir(), "templates"),
-		AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates")},
+		AppendDirectories: []string{customDir},
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
 	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
+		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
 	}
 	m.Use(macaron.Renderer(renderOpt))
 
-	localeNames, err := conf.AssetDir("conf/locale")
+	localeNames, err := embedConf.FileNames("locale")
 	if err != nil {
 		log.Fatal("Failed to list locale files: %v", err)
 	}
 	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localeFiles[name] = conf.MustAsset("conf/locale/" + name)
+		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
+		if err != nil {
+			log.Fatal("Failed to read locale file %q: %v", name, err)
+		}
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.Server.Subpath,
@@ -148,7 +156,7 @@ func newMacaron() *macaron.Macaron {
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
 			{
 				Desc: "Database connection",
-				Func: db.Ping,
+				Func: database.Ping,
 			},
 		},
 	}))
@@ -230,9 +238,11 @@ func runWeb(c *cli.Context) error {
 				m.Get("", user.SettingsOrganizations)
 				m.Post("/leave", user.SettingsLeaveOrganization)
 			})
-			m.Combo("/applications").Get(user.SettingsApplications).
-				Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
-			m.Post("/applications/delete", user.SettingsDeleteApplication)
+
+			settingsHandler := user.NewSettingsHandler(user.NewSettingsStore())
+			m.Combo("/applications").Get(settingsHandler.Applications()).
+				Post(bindIgnErr(form.NewAccessToken{}), settingsHandler.ApplicationsPost())
+			m.Post("/applications/delete", settingsHandler.DeleteApplication())
 			m.Route("/delete", "GET,POST", user.SettingsDelete)
 		}, reqSignIn, func(c *context.Context) {
 			c.Data["PageIsUserSettings"] = true
@@ -298,7 +308,7 @@ func runWeb(c *cli.Context) error {
 			}, context.InjectParamsUser())
 
 			m.Get("/attachments/:uuid", func(c *context.Context) {
-				attach, err := db.GetAttachmentByUUID(c.Params(":uuid"))
+				attach, err := database.GetAttachmentByUUID(c.Params(":uuid"))
 				if err != nil {
 					c.NotFoundOrError(err, "get attachment by UUID")
 					return
@@ -314,6 +324,7 @@ func runWeb(c *cli.Context) error {
 				}
 				defer fr.Close()
 
+				c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 				c.Header().Set("Cache-Control", "public,max-age=86400")
 				c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
 
@@ -456,7 +467,6 @@ func runWeb(c *cli.Context) error {
 						Post(bindIgnErr(form.AddSSHKey{}), repo.SettingsDeployKeysPost)
 					m.Post("/delete", repo.DeleteDeployKey)
 				})
-
 			}, func(c *context.Context) {
 				c.Data["PageIsSettings"] = true
 			})
@@ -645,7 +655,7 @@ func runWeb(c *cli.Context) error {
 			SetCookie:      true,
 			Secure:         conf.Server.URL.Scheme == "https",
 		}),
-		context.Contexter(),
+		context.Contexter(context.NewStore()),
 	)
 
 	// ***************************
@@ -659,7 +669,7 @@ func runWeb(c *cli.Context) error {
 			lfs.RegisterRoutes(m.Router)
 		})
 
-		m.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(), repo.HTTP)
+		m.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
 	})
 
 	// ***************************
@@ -698,11 +708,10 @@ func runWeb(c *cli.Context) error {
 	var listenAddr string
 	if conf.Server.Protocol == "unix" {
 		listenAddr = conf.Server.HTTPAddr
-		log.Info("Listen on %v://%s", conf.Server.Protocol, listenAddr)
 	} else {
 		listenAddr = fmt.Sprintf("%s:%s", conf.Server.HTTPAddr, conf.Server.HTTPPort)
-		log.Info("Listen on %v://%s%s", conf.Server.Protocol, listenAddr, conf.Server.Subpath)
 	}
+	log.Info("Available on %s", conf.Server.ExternalURL)
 
 	switch conf.Server.Protocol {
 	case "http":
@@ -734,7 +743,8 @@ func runWeb(c *cli.Context) error {
 					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 				},
-			}, Handler: m}
+			}, Handler: m,
+		}
 		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
 
 	case "fcgi":

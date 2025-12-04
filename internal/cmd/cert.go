@@ -1,5 +1,3 @@
-// +build cert
-
 // Copyright 2009 The Go Authors. All rights reserved.
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
@@ -41,7 +39,7 @@ Outputs to 'cert.pem' and 'key.pem' and will overwrite existing files.`,
 	},
 }
 
-func publicKey(priv interface{}) interface{} {
+func publicKey(priv any) any {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &k.PublicKey
@@ -52,7 +50,7 @@ func publicKey(priv interface{}) interface{} {
 	}
 }
 
-func pemBlockForKey(priv interface{}) *pem.Block {
+func pemBlockForKey(priv any) *pem.Block {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
@@ -72,7 +70,7 @@ func runCert(ctx *cli.Context) error {
 		log.Fatal("Missing required --host parameter")
 	}
 
-	var priv interface{}
+	var priv any
 	var err error
 	switch ctx.String("ecdsa-curve") {
 	case "":
@@ -147,17 +145,28 @@ func runCert(ctx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Failed to open cert.pem for writing: %s", err)
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	certOut.Close()
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		log.Fatalf("Failed to encode data to cert.pem: %s", err)
+	}
+	err = certOut.Close()
+	if err != nil {
+		log.Fatalf("Failed to close writing to cert.pem: %s", err)
+	}
 	log.Println("Written cert.pem")
 
 	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Fatalf("Failed to open key.pem for writing: %v\n", err)
 	}
-	pem.Encode(keyOut, pemBlockForKey(priv))
-	keyOut.Close()
+	err = pem.Encode(keyOut, pemBlockForKey(priv))
+	if err != nil {
+		log.Fatalf("Failed to encode data to key.pem: %s", err)
+	}
+	err = keyOut.Close()
+	if err != nil {
+		log.Fatalf("Failed to close writing to key.pem: %s", err)
+	}
 	log.Println("Written key.pem")
-
 	return nil
 }

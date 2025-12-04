@@ -13,19 +13,19 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 )
 
 const (
-	RELEASES    = "repo/release/list"
-	RELEASE_NEW = "repo/release/new"
+	tmplRepoReleaseList = "repo/release/list"
+	tmplRepoReleaseNew  = "repo/release/new"
 )
 
 // calReleaseNumCommitsBehind calculates given release has how many commits behind release target.
-func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *db.Release, countCache map[string]int64) error {
+func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *database.Release, countCache map[string]int64) error {
 	// Get count if not exists
 	if _, ok := countCache[release.Target]; !ok {
 		if repoCtx.GitRepo.HasBranch(release.Target) {
@@ -57,7 +57,7 @@ func Releases(c *context.Context) {
 		return
 	}
 
-	releases, err := db.GetPublishedReleasesByRepoID(c.Repo.Repository.ID, tagsPage.Tags...)
+	releases, err := database.GetPublishedReleasesByRepoID(c.Repo.Repository.ID, tagsPage.Tags...)
 	if err != nil {
 		c.Error(err, "get published releases by repository ID")
 		return
@@ -66,7 +66,7 @@ func Releases(c *context.Context) {
 	// Temporary cache commits count of used branches to speed up.
 	countCache := make(map[string]int64)
 
-	results := make([]*db.Release, len(tagsPage.Tags))
+	results := make([]*database.Release, len(tagsPage.Tags))
 	for i, rawTag := range tagsPage.Tags {
 		for j, r := range releases {
 			if r == nil || r.TagName != rawTag {
@@ -97,7 +97,7 @@ func Releases(c *context.Context) {
 				return
 			}
 
-			results[i] = &db.Release{
+			results[i] = &database.Release{
 				Title:   rawTag,
 				TagName: rawTag,
 				Sha1:    commit.ID.String(),
@@ -111,12 +111,12 @@ func Releases(c *context.Context) {
 			results[i].NumCommitsBehind = c.Repo.CommitsCount - results[i].NumCommits
 		}
 	}
-	db.SortReleases(results)
+	database.SortReleases(results)
 
 	// Only show drafts if user is viewing the latest page
-	var drafts []*db.Release
+	var drafts []*database.Release
 	if tagsPage.HasLatest {
-		drafts, err = db.GetDraftReleasesByRepoID(c.Repo.Repository.ID)
+		drafts, err = database.GetDraftReleasesByRepoID(c.Repo.Repository.ID)
 		if err != nil {
 			c.Error(err, "get draft releases by repository ID")
 			return
@@ -148,7 +148,7 @@ func Releases(c *context.Context) {
 	if len(results) > 0 {
 		c.Data["NextAfter"] = results[len(results)-1].TagName
 	}
-	c.Success(RELEASES)
+	c.Success(tmplRepoReleaseList)
 }
 
 func renderReleaseAttachmentSettings(c *context.Context) {
@@ -164,7 +164,7 @@ func NewRelease(c *context.Context) {
 	c.Data["PageIsReleaseList"] = true
 	c.Data["tag_target"] = c.Repo.Repository.DefaultBranch
 	renderReleaseAttachmentSettings(c)
-	c.Success(RELEASE_NEW)
+	c.Success(tmplRepoReleaseNew)
 }
 
 func NewReleasePost(c *context.Context, f form.NewRelease) {
@@ -173,12 +173,12 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	if c.HasError() {
-		c.Success(RELEASE_NEW)
+		c.Success(tmplRepoReleaseNew)
 		return
 	}
 
 	if !c.Repo.GitRepo.HasBranch(f.Target) {
-		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f)
+		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), tmplRepoReleaseNew, &f)
 		return
 	}
 
@@ -209,7 +209,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		attachments = f.Files
 	}
 
-	rel := &db.Release{
+	rel := &database.Release{
 		RepoID:       c.Repo.Repository.ID,
 		PublisherID:  c.User.ID,
 		Title:        f.Title,
@@ -222,13 +222,13 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		IsPrerelease: f.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = db.NewRelease(c.Repo.GitRepo, rel, attachments); err != nil {
+	if err = database.NewRelease(c.Repo.GitRepo, rel, attachments); err != nil {
 		c.Data["Err_TagName"] = true
 		switch {
-		case db.IsErrReleaseAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &f)
-		case db.IsErrInvalidTagName(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
+		case database.IsErrReleaseAlreadyExist(err):
+			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), tmplRepoReleaseNew, &f)
+		case database.IsErrInvalidTagName(err):
+			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), tmplRepoReleaseNew, &f)
 		default:
 			c.Error(err, "new release")
 		}
@@ -246,7 +246,7 @@ func EditRelease(c *context.Context) {
 	renderReleaseAttachmentSettings(c)
 
 	tagName := c.Params("*")
-	rel, err := db.GetRelease(c.Repo.Repository.ID, tagName)
+	rel, err := database.GetRelease(c.Repo.Repository.ID, tagName)
 	if err != nil {
 		c.NotFoundOrError(err, "get release")
 		return
@@ -260,7 +260,7 @@ func EditRelease(c *context.Context) {
 	c.Data["prerelease"] = rel.IsPrerelease
 	c.Data["IsDraft"] = rel.IsDraft
 
-	c.Success(RELEASE_NEW)
+	c.Success(tmplRepoReleaseNew)
 }
 
 func EditReleasePost(c *context.Context, f form.EditRelease) {
@@ -270,7 +270,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	tagName := c.Params("*")
-	rel, err := db.GetRelease(c.Repo.Repository.ID, tagName)
+	rel, err := database.GetRelease(c.Repo.Repository.ID, tagName)
 	if err != nil {
 		c.NotFoundOrError(err, "get release")
 		return
@@ -284,7 +284,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["IsDraft"] = rel.IsDraft
 
 	if c.HasError() {
-		c.Success(RELEASE_NEW)
+		c.Success(tmplRepoReleaseNew)
 		return
 	}
 
@@ -293,12 +293,12 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 		attachments = f.Files
 	}
 
-	isPublish := rel.IsDraft && len(f.Draft) == 0
+	isPublish := rel.IsDraft && f.Draft == ""
 	rel.Title = f.Title
 	rel.Note = f.Content
 	rel.IsDraft = len(f.Draft) > 0
 	rel.IsPrerelease = f.Prerelease
-	if err = db.UpdateRelease(c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
+	if err = database.UpdateRelease(c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
 		c.Error(err, "update release")
 		return
 	}
@@ -314,13 +314,13 @@ func UploadReleaseAttachment(c *context.Context) {
 }
 
 func DeleteRelease(c *context.Context) {
-	if err := db.DeleteReleaseOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
+	if err := database.DeleteReleaseOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteReleaseByID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.release.deletion_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.RepoLink + "/releases",
 	})
 }

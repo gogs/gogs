@@ -6,7 +6,7 @@ create_socat_links() {
     while read -r NAME ADDR PORT; do
         if test -z "$NAME$ADDR$PORT"; then
             continue
-        elif echo $USED_PORT | grep -E "(^|:)$PORT($|:)" > /dev/null; then
+        elif echo "$USED_PORT" | grep -E "(^|:)$PORT($|:)" > /dev/null; then
             echo "init:socat  | Can't bind linked container ${NAME} to localhost, port ${PORT} already in use" 1>&2
         else
             SERV_FOLDER=/app/gogs/docker/s6/SOCAT_${NAME}_${PORT}
@@ -31,8 +31,12 @@ cleanup() {
 }
 
 create_volume_subfolder() {
-    # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
-    chown -R "$USER:$USER" /data
+    # only change ownership if needed, if using an nfs mount this could be expensive
+    if [ "$USER:$USER" != "$(stat /data -c '%U:%G')" ]
+    then
+        # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
+        chown -R "$USER:$USER" /data
+    fi
 
     # Create VOLUME subfolder
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
@@ -75,5 +79,5 @@ fi
 if [ $# -gt 0 ];then
     exec "$@"
 else
-    exec /bin/s6-svscan /app/gogs/docker/s6/
+    exec /usr/bin/s6-svscan /app/gogs/docker/s6/
 fi

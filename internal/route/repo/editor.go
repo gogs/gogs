@@ -14,8 +14,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/pathutil"
@@ -32,8 +32,8 @@ const (
 
 // getParentTreeFields returns list of parent tree names and corresponding tree paths
 // based on given tree path.
-func getParentTreeFields(treePath string) (treeNames []string, treePaths []string) {
-	if len(treePath) == 0 {
+func getParentTreeFields(treePath string) (treeNames, treePaths []string) {
+	if treePath == "" {
 		return treeNames, treePaths
 	}
 
@@ -82,7 +82,7 @@ func editFile(c *context.Context, isNewFile bool) {
 			return
 		}
 
-		if err, content := template.ToUTF8WithErr(p); err != nil {
+		if content, err := template.ToUTF8WithErr(p); err != nil {
 			if err != nil {
 				log.Error("Failed to convert encoding to UTF-8: %v", err)
 			}
@@ -135,6 +135,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		branchName = f.NewBranchName
 	}
 
+	// 🚨 SECURITY: Prevent path traversal.
 	f.TreePath = pathutil.Clean(f.TreePath)
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 
@@ -158,7 +159,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		return
 	}
 
-	if len(f.TreePath) == 0 {
+	if f.TreePath == "" {
 		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.filename_cannot_be_empty"), tmplEditorEdit, &f)
 		return
@@ -192,6 +193,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 				return
 			}
 		} else {
+			// 🚨 SECURITY: Do not allow editing if the target file is a symlink.
 			if entry.IsSymlink() {
 				c.FormErr("TreePath")
 				c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", part), tmplEditorEdit, &f)
@@ -205,7 +207,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	if !isNewFile {
-		_, err := c.Repo.Commit.TreeEntry(oldTreePath)
+		entry, err := c.Repo.Commit.TreeEntry(oldTreePath)
 		if err != nil {
 			if gitutil.IsErrRevisionNotExist(err) {
 				c.FormErr("TreePath")
@@ -215,6 +217,14 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 			}
 			return
 		}
+
+		// 🚨 SECURITY: Do not allow editing if the old file is a symlink.
+		if entry.IsSymlink() {
+			c.FormErr("TreePath")
+			c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", oldTreePath), tmplEditorEdit, &f)
+			return
+		}
+
 		if lastCommit != c.Repo.CommitID {
 			files, err := c.Repo.Commit.FilesChangedAfter(lastCommit)
 			if err != nil {
@@ -248,7 +258,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
-	if len(message) == 0 {
+	if message == "" {
 		if isNewFile {
 			message = c.Tr("repo.editor.add", f.TreePath)
 		} else {
@@ -261,19 +271,18 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UpdateRepoFile(c.User, db.UpdateRepoFileOptions{
-		LastCommitID: lastCommit,
-		OldBranch:    oldBranchName,
-		NewBranch:    branchName,
-		OldTreeName:  oldTreePath,
-		NewTreeName:  f.TreePath,
-		Message:      message,
-		Content:      strings.Replace(f.Content, "\r", "", -1),
-		IsNewFile:    isNewFile,
+	if err := c.Repo.Repository.UpdateRepoFile(c.User, database.UpdateRepoFileOptions{
+		OldBranch:   oldBranchName,
+		NewBranch:   branchName,
+		OldTreeName: oldTreePath,
+		NewTreeName: f.TreePath,
+		Message:     message,
+		Content:     strings.ReplaceAll(f.Content, "\r", ""),
+		IsNewFile:   isNewFile,
 	}); err != nil {
 		log.Error("Failed to update repo file: %v", err)
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errors.InternalServerError), tmplEditorEdit, &f)
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errors.ErrInternalServerError), tmplEditorEdit, &f)
 		return
 	}
 
@@ -293,7 +302,8 @@ func NewFilePost(c *context.Context, f form.EditRepoFile) {
 }
 
 func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
-	treePath := c.Repo.TreePath
+	// 🚨 SECURITY: Prevent path traversal.
+	treePath := pathutil.Clean(c.Repo.TreePath)
 
 	entry, err := c.Repo.Commit.TreeEntry(treePath)
 	if err != nil {
@@ -334,6 +344,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.PageIs("Delete")
 	c.Data["BranchLink"] = c.Repo.RepoLink + "/src/" + c.Repo.BranchName
 
+	// 🚨 SECURITY: Prevent path traversal.
 	c.Repo.TreePath = pathutil.Clean(c.Repo.TreePath)
 	c.Data["TreePath"] = c.Repo.TreePath
 
@@ -362,7 +373,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
-	if len(message) == 0 {
+	if message == "" {
 		message = c.Tr("repo.editor.delete", c.Repo.TreePath)
 	}
 
@@ -371,7 +382,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.DeleteRepoFile(c.User, db.DeleteRepoFileOptions{
+	if err := c.Repo.Repository.DeleteRepoFile(c.User, database.DeleteRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -379,7 +390,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		Message:      message,
 	}); err != nil {
 		log.Error("Failed to delete repo file: %v", err)
-		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errors.InternalServerError), tmplEditorDelete, &f)
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errors.ErrInternalServerError), tmplEditorDelete, &f)
 		return
 	}
 
@@ -429,6 +440,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		branchName = f.NewBranchName
 	}
 
+	// 🚨 SECURITY: Prevent path traversal.
 	f.TreePath = pathutil.Clean(f.TreePath)
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 	if len(treeNames) == 0 {
@@ -481,7 +493,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
-	if len(message) == 0 {
+	if message == "" {
 		message = c.Tr("repo.editor.upload_files_to_dir", f.TreePath)
 	}
 
@@ -490,7 +502,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UploadRepoFiles(c.User, db.UploadRepoFileOptions{
+	if err := c.Repo.Repository.UploadRepoFiles(c.User, database.UploadRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -500,7 +512,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}); err != nil {
 		log.Error("Failed to upload files: %v", err)
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errors.InternalServerError), tmplEditorUpload, &f)
+		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errors.ErrInternalServerError), tmplEditorUpload, &f)
 		return
 	}
 
@@ -542,7 +554,7 @@ func UploadFileToServer(c *context.Context) {
 		}
 	}
 
-	upload, err := db.NewUpload(header.Filename, buf, file)
+	upload, err := database.NewUpload(header.Filename, buf, file)
 	if err != nil {
 		c.Error(err, "new upload")
 		return
@@ -555,12 +567,12 @@ func UploadFileToServer(c *context.Context) {
 }
 
 func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
-	if len(f.File) == 0 {
+	if f.File == "" {
 		c.Status(http.StatusNoContent)
 		return
 	}
 
-	if err := db.DeleteUploadByUUID(f.File); err != nil {
+	if err := database.DeleteUploadByUUID(f.File); err != nil {
 		c.Error(err, "delete upload by UUID")
 		return
 	}

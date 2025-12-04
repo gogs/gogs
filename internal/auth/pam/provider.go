@@ -26,7 +26,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	err := p.config.doAuth(login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 		return nil, err
 	}
@@ -37,18 +37,18 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}, nil
 }
 
-func (p *Provider) Config() interface{} {
+func (p *Provider) Config() any {
 	return p.config
 }
 
-func (p *Provider) HasTLS() bool {
+func (*Provider) HasTLS() bool {
 	return false
 }
 
-func (p *Provider) UseTLS() bool {
+func (*Provider) UseTLS() bool {
 	return false
 }
 
-func (p *Provider) SkipTLSVerify() bool {
+func (*Provider) SkipTLSVerify() bool {
 	return false
 }

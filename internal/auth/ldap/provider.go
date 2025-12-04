@@ -29,13 +29,13 @@ func NewProvider(directBind bool, cfg *Config) auth.Provider {
 func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
 	username, fn, sn, email, isAdmin, succeed := p.config.searchEntry(login, password, p.directBind)
 	if !succeed {
-		return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+		return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 	}
 
-	if len(username) == 0 {
+	if username == "" {
 		username = login
 	}
-	if len(email) == 0 {
+	if email == "" {
 		email = fmt.Sprintf("%s@localhost", username)
 	}
 
@@ -61,7 +61,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}, nil
 }
 
-func (p *Provider) Config() interface{} {
+func (p *Provider) Config() any {
 	return p.config
 }
 

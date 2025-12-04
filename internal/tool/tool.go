@@ -5,7 +5,6 @@
 package tool
 
 import (
-	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
@@ -23,6 +22,7 @@ import (
 	"github.com/gogs/chardet"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptoutil"
 )
 
 // ShortSHA1 truncates SHA1 string length to at most 10.
@@ -89,11 +89,11 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	return false
 }
 
-const TIME_LIMIT_CODE_LENGTH = 12 + 6 + 40
+const TimeLimitCodeLength = 12 + 6 + 40
 
 // CreateTimeLimitCode generates a time limit code based on given input data.
 // Format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
-func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
+func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 	format := "200601021504"
 
 	var start, end time.Time
@@ -125,10 +125,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 // HashEmail hashes email address to MD5 string.
 // https://en.gravatar.com/site/implement/hash/
 func HashEmail(email string) string {
-	email = strings.ToLower(strings.TrimSpace(email))
-	h := md5.New()
-	_, _ = h.Write([]byte(email))
-	return hex.EncodeToString(h.Sum(nil))
+	return cryptoutil.MD5(strings.ToLower(strings.TrimSpace(email)))
 }
 
 // AvatarLink returns relative avatar link to the site domain by given email,
@@ -143,10 +140,10 @@ func AvatarLink(email string) (url string) {
 			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
-	if len(url) == 0 && !conf.Picture.DisableGravatar {
+	if url == "" && !conf.Picture.DisableGravatar {
 		url = conf.Picture.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
-	if len(url) == 0 {
+	if url == "" {
 		url = conf.Server.Subpath + "/img/avatar_default.png"
 	}
 	return url
@@ -238,11 +235,7 @@ func TimeSincePro(then time.Time) string {
 	}
 
 	var timeStr, diffStr string
-	for {
-		if diff == 0 {
-			break
-		}
-
+	for diff != 0 {
 		diff, diffStr = computeTimeDiff(diff)
 		timeStr += ", " + diffStr
 	}
@@ -309,10 +302,10 @@ func TimeSince(t time.Time, lang string) template.HTML {
 }
 
 // Subtract deals with subtraction of all types of number.
-func Subtract(left interface{}, right interface{}) interface{} {
+func Subtract(left, right any) any {
 	var rleft, rright int64
 	var fleft, fright float64
-	var isInt = true
+	isInt := true
 	switch left := left.(type) {
 	case int:
 		rleft = int64(left)
@@ -356,24 +349,6 @@ func Subtract(left interface{}, right interface{}) interface{} {
 	} else {
 		return fleft + float64(rleft) - (fright + float64(rright))
 	}
-}
-
-// EllipsisString returns a truncated short string,
-// it appends '...' in the end of the length of string is too large.
-func EllipsisString(str string, length int) string {
-	if len(str) < length {
-		return str
-	}
-	return str[:length-3] + "..."
-}
-
-// TruncateString returns a truncated string with given limit,
-// it returns input string if length is not reached limit.
-func TruncateString(str string, limit int) string {
-	if len(str) < limit {
-		return str
-	}
-	return str[:limit]
 }
 
 // StringsToInt64s converts a slice of string to a slice of int64.
