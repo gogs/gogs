@@ -1,10 +1,10 @@
 module gogs.io/gogs
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/derision-test/go-mockgen v1.3.7
+	github.com/derision-test/go-mockgen/v2 v2.1.1
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.3
 	github.com/go-ldap/ldap/v3 v3.4.11
 	github.com/go-macaron/binding v1.2.0
@@ -135,5 +135,5 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-// +heroku goVersion go1.24
+// +heroku goVersion go1.25
 // +heroku install ./
