@@ -123,13 +123,17 @@ func Wiki(c *context.Context) {
 		return
 	}
 
-	// Get last change information.
 	commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: pageName + ".md"})
-	if err != nil {
-		c.Error(err, "get commits by path")
-		return
+	if err == nil && len(commits) > 0 {
+		c.Data["Author"] = commits[0].Author
+	} else {
+		// creates a dummy author to prevent failure
+		c.Data["Author"] = &git.Signature{
+			Name:  "Unknown",
+			Email: "",
+			When:  time.Unix(0,0),
+		}
 	}
-	c.Data["Author"] = commits[0].Author
 
 	c.Success(tmplRepoWikiView)
 }
@@ -163,16 +167,25 @@ func WikiPages(c *context.Context) {
 	for i := range entries {
 		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
 			commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: entries[i].Name()})
-			if err != nil {
-				c.Error(err, "get commits by path")
-				return
-			}
+
+			if err != nil || len(commits) == 0{
+				//c.Error(err, "get commits by path")
+
+				// sets dummy commit time to prevent failure
+				name := strings.TrimSuffix(entries[i].Name(), ".md")
+				pages = append(pages, PageMeta{
+				Name:    name,
+				URL:     database.ToWikiPageURL(name),
+				Updated: time.Unix(0,0),
+			})
+			} else {
 			name := strings.TrimSuffix(entries[i].Name(), ".md")
 			pages = append(pages, PageMeta{
 				Name:    name,
 				URL:     database.ToWikiPageURL(name),
 				Updated: commits[0].Author.When,
 			})
+			}
 		}
 	}
 	c.Data["Pages"] = pages
