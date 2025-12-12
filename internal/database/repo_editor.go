@@ -188,6 +188,14 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 		}
 	}
 
+	// 🚨 SECURITY: Always check if the target path is a symlink before writing.
+	// This prevents symlink attacks where an attacker commits a symlink pointing
+	// to a sensitive file (e.g., .git/config) and then uses the API to write
+	// through the symlink. (CVE-2025-8110)
+	if osutil.IsSymlink(filePath) {
+		return fmt.Errorf("cannot write to symbolic link: %s", opts.NewTreeName)
+	}
+
 	if err = os.WriteFile(filePath, []byte(opts.Content), 0600); err != nil {
 		return fmt.Errorf("write file: %v", err)
 	}
