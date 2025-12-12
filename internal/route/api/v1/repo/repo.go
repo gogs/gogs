@@ -122,6 +122,16 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
+	// Load attributes for accessible repositories
+	accessibleRepoSlice := make([]*database.Repository, 0, len(accessibleRepos))
+	for repo := range accessibleRepos {
+		accessibleRepoSlice = append(accessibleRepoSlice, repo)
+	}
+	if err = database.RepositoryList(accessibleRepoSlice).LoadAttributes(); err != nil {
+		c.Error(err, "load attributes for accessible repositories")
+		return
+	}
+
 	numOwnRepos := len(ownRepos)
 	repos := make([]*api.Repository, 0, numOwnRepos+len(accessibleRepos))
 	for _, r := range ownRepos {
