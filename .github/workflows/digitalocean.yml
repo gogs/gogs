@@ -9,12 +9,15 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Trigger garbage collection
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Run garbage collection
         run: |
-          curl -f -v -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" \
-            "https://api.digitalocean.com/v2/registry/gogs/garbage-collection"
+          # --force: Required for CI to skip confirmation prompts
+          # --include-untagged-manifests: Deletes unreferenced manifests to maximize space
+          doctl registry garbage-collection start --force --include-untagged-manifests
       - name: Send email on failure
         uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
         if: ${{ failure() }}
