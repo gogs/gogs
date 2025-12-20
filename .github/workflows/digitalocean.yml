@@ -42,7 +42,7 @@ jobs:
           github.event_name == 'workflow_dispatch' ||
           (github.event_name == 'workflow_run' && steps.check-jobs.outputs.result == 'true')
         run: |
-          curl -X POST \
+          curl -f -v -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" \
             "https://api.digitalocean.com/v2/registry/gogs/garbage-collection"
