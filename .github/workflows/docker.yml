@@ -408,11 +408,15 @@ jobs:
   digitalocean-gc-buildx-next:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
     needs: buildx-next
+    permissions:
+      contents: read
     uses: ./.github/workflows/digitalocean.yml
     secrets: inherit
 
   digitalocean-gc-buildx-next-pull-request:
     if: ${{ github.event_name == 'pull_request' }}
     needs: buildx-next-pull-request
+    permissions:
+      contents: read
     uses: ./.github/workflows/digitalocean.yml
     secrets: inherit
