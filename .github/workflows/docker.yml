@@ -405,7 +405,7 @@ jobs:
 
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-  digitalocean-gc-buildx-next:
+  digitalocean-gc:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
     needs: buildx-next
     permissions:
@@ -413,7 +413,7 @@ jobs:
     uses: ./.github/workflows/digitalocean.yml
     secrets: inherit
 
-  digitalocean-gc-buildx-next-pull-request:
+  digitalocean-gc-pull-request:
     if: ${{ github.event_name == 'pull_request' }}
     needs: buildx-next-pull-request
     permissions:
