@@ -410,7 +410,7 @@ jobs:
     needs: buildx-next
     permissions:
       contents: read
-    uses: ./.github/workflows/digitalocean.yml
+    uses: ./.github/workflows/digitalocean_gc.yml
     secrets: inherit
 
   digitalocean-gc-pull-request:
@@ -418,5 +418,5 @@ jobs:
     needs: buildx-next-pull-request
     permissions:
       contents: read
-    uses: ./.github/workflows/digitalocean.yml
+    uses: ./.github/workflows/digitalocean_gc.yml
     secrets: inherit
