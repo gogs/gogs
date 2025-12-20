@@ -412,7 +412,7 @@ jobs:
     secrets: inherit
 
   digitalocean-gc-buildx-next-pull-request:
-    if: ${{ github.event_name == 'pull_request'}}
+    if: ${{ github.event_name == 'pull_request' }}
     needs: buildx-next-pull-request
     uses: ./.github/workflows/digitalocean.yml
     secrets: inherit
