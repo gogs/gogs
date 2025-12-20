@@ -1,46 +1,15 @@
 name: DigitalOcean
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Docker
-    types:
-      - completed
+  workflow_call:
 
 jobs:
   garbage-collection:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
     steps:
-      - name: Check if relevant jobs ran
-        id: check-jobs
-        if: github.event_name == 'workflow_run'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            const run_id = context.payload.workflow_run.id;
-            const jobs = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: run_id,
-            });
-            const jobNames = jobs.data.jobs.map(job => job.name);
-            const hasRelevantJob = jobNames.some(name => 
-              name === 'buildx-next' || name === 'buildx-next-pull-request'
-            );
-            console.log('Jobs in workflow run:', jobNames);
-            console.log('Has relevant job:', hasRelevantJob);
-            return hasRelevantJob;
-          result-encoding: string
       - name: Trigger garbage collection
-        if: |
-          github.event_name == 'workflow_dispatch' ||
-          (github.event_name == 'workflow_run' && steps.check-jobs.outputs.result == 'true')
         run: |
           curl -f -v -X POST \
             -H "Content-Type: application/json" \
