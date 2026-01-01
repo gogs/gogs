@@ -108,8 +108,24 @@
 									</div>
 									</div>*/}}
 
-								{{if .IsLogged}}
 									<div class="right menu">
+										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "theme"}}" data-variation="tiny inverted">
+											<span class="text">
+												<i id="theme-indicator" class="icon sun"><span class="sr-only">{{.i18n.Tr "theme"}}</span></i>
+											</span>
+											<div class="menu">
+												<a class="item theme-option" data-theme="light" href="#">
+														<i class="icon sun"></i> {{.i18n.Tr "theme_light"}}
+												</a>
+												<a class="item theme-option" data-theme="dark" href="#">
+														<i class="icon moon"></i> {{.i18n.Tr "theme_dark"}}
+												</a>
+												<a class="item theme-option" data-theme="system" href="#">
+														<i class="icon desktop"></i> {{.i18n.Tr "theme_system"}}
+												</a>
+											</div><!-- end content switch theme menu -->
+										</div><!-- end dropdown menu switch theme -->
+									{{if .IsLogged}}
 										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
 											<span class="text">
 												<i class="octicon octicon-plus"><span class="sr-only">{{.i18n.Tr "create_new"}}</span></i>
@@ -169,9 +185,9 @@
 												</form>
 											</div><!-- end content avatar menu -->
 										</div><!-- end dropdown avatar menu -->
-									</div><!-- end signed user right menu -->
 
 								{{else}}
+									</div><!-- end signed user right menu -->
 
 									<a class="item" target="_blank" rel="noopener noreferrer" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}</a>
 									<div class="right menu">
