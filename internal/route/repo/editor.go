@@ -442,24 +442,23 @@ func UploadFile(c *context.Context) {
 }
 
 func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
+	// UploadFilePost handles uploading files to repository via editor UI.
+	// The function performs validation and then delegates to `UploadRepoFiles`.
 	c.PageIs("Upload")
 	renderUploadSettings(c)
 
 	oldBranchName := c.Repo.BranchName
 	branchName := oldBranchName
-
 	if f.IsNewBrnach() {
 		branchName = f.NewBranchName
 	}
 
-	// 🚨 SECURITY: Prevent path traversal.
+	// Normalize path and parent fields for templates.
 	f.TreePath = pathutil.Clean(f.TreePath)
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 	if len(treeNames) == 0 {
-		// We must at least have one element for user to input.
 		treeNames = []string{""}
 	}
-
 	c.Data["TreePath"] = f.TreePath
 	c.Data["TreeNames"] = treeNames
 	c.Data["TreePaths"] = treePaths
@@ -469,9 +468,9 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	c.Data["commit_choice"] = f.CommitChoice
 	c.Data["new_branch_name"] = branchName
 
-	// CVE-2025-8110: Validate upload path
+	// Validate upload path and branch early.
 	repoPath := repoutil.RepositoryPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
-	if err := pathutil.ValidateRepoPath(repoPath, f.TreePath); err != nil {
+	if err := validateUploadPath(repoPath, f.TreePath); err != nil {
 		if pathutil.IsErrSymlinkTraversal(err) {
 			c.RenderWithErr("Invalid path: symlink traversal detected", tmplEditorUpload, &f)
 			return
@@ -485,41 +484,22 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		return
 	}
 
-	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
-			c.FormErr("NewBranchName")
-			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), tmplEditorUpload, &f)
-			return
-		}
+	if err := checkBranchAvailable(c.Repo.Repository, oldBranchName, branchName); err != nil {
+		c.FormErr("NewBranchName")
+		c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), tmplEditorUpload, &f)
+		return
 	}
 
-	var newTreePath string
-	for _, part := range treeNames {
-		newTreePath = path.Join(newTreePath, part)
-		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
-		if err != nil {
-			if gitutil.IsErrRevisionNotExist(err) {
-				// Means there is no item with that name, so we're good
-				break
-			}
-
-			c.Error(err, "get tree entry")
-			return
-		}
-
-		// User can only upload files to a directory.
-		if !entry.IsTree() {
-			c.FormErr("TreePath")
-			c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), tmplEditorUpload, &f)
-			return
-		}
+	if err := ensureUploadTargetIsDirectory(c, treeNames); err != nil {
+		c.FormErr("TreePath")
+		c.RenderWithErr(err.Error(), tmplEditorUpload, &f)
+		return
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
 	if message == "" {
 		message = c.Tr("repo.editor.upload_files_to_dir", f.TreePath)
 	}
-
 	f.CommitMessage = strings.TrimSpace(f.CommitMessage)
 	if len(f.CommitMessage) > 0 {
 		message += "\n\n" + f.CommitMessage
@@ -544,6 +524,43 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	} else {
 		c.Redirect(c.Repo.RepoLink + "/src/" + branchName + "/" + f.TreePath)
 	}
+}
+
+// validateUploadPath validates the tree path within the repository root.
+func validateUploadPath(repoPath, treePath string) error {
+	return pathutil.ValidateRepoPath(repoPath, treePath)
+}
+
+// checkBranchAvailable returns an error if the new branch already exists on server.
+func checkBranchAvailable(repo *database.Repository, oldBranch, newBranch string) error {
+	if oldBranch != newBranch {
+		if _, err := repo.GetBranch(newBranch); err == nil {
+			return fmt.Errorf("branch %s already exists", newBranch)
+		}
+	}
+	return nil
+}
+
+// ensureUploadTargetIsDirectory checks that each parent path in treeNames is
+// a directory/tree in the current commit. Returns a localized error message
+// suitable for rendering when violated.
+func ensureUploadTargetIsDirectory(c *context.Context, treeNames []string) error {
+	var newTreePath string
+	for _, part := range treeNames {
+		newTreePath = path.Join(newTreePath, part)
+		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
+		if err != nil {
+			if gitutil.IsErrRevisionNotExist(err) {
+				// no item with that name; acceptable
+				break
+			}
+			return fmt.Errorf("get tree entry: %v", err)
+		}
+		if !entry.IsTree() {
+			return fmt.Errorf("%s", c.Tr("repo.editor.directory_is_a_file", part))
+		}
+	}
+	return nil
 }
 
 func UploadFileToServer(c *context.Context) {
