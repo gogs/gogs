@@ -16,6 +16,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 // GetAllCommits returns a slice of commits starting from HEAD.
@@ -26,7 +27,8 @@ func GetAllCommits(c *context.APIContext) {
 		pageSize = 30
 	}
 
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -59,7 +61,8 @@ func GetSingleCommit(c *context.APIContext) {
 		return
 	}
 
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -78,7 +81,8 @@ func GetSingleCommit(c *context.APIContext) {
 }
 
 func GetReferenceSHA(c *context.APIContext) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return

@@ -19,6 +19,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/pathutil"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
@@ -348,6 +349,17 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.Repo.TreePath = pathutil.Clean(c.Repo.TreePath)
 	c.Data["TreePath"] = c.Repo.TreePath
 
+	// CVE-2025-8110: Validate delete path
+	repoPath := repoutil.RepositoryPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
+	if err := pathutil.ValidateRepoPath(repoPath, c.Repo.TreePath); err != nil {
+		if pathutil.IsErrSymlinkTraversal(err) {
+			c.RenderWithErr("Invalid path: symlink traversal detected", tmplEditorDelete, &f)
+			return
+		}
+		c.Error(err, "validate path")
+		return
+	}
+
 	oldBranchName := c.Repo.BranchName
 	branchName := oldBranchName
 
@@ -456,6 +468,17 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	c.Data["commit_message"] = f.CommitMessage
 	c.Data["commit_choice"] = f.CommitChoice
 	c.Data["new_branch_name"] = branchName
+
+	// CVE-2025-8110: Validate upload path
+	repoPath := repoutil.RepositoryPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
+	if err := pathutil.ValidateRepoPath(repoPath, f.TreePath); err != nil {
+		if pathutil.IsErrSymlinkTraversal(err) {
+			c.RenderWithErr("Invalid path: symlink traversal detected", tmplEditorUpload, &f)
+			return
+		}
+		c.Error(err, "validate path")
+		return
+	}
 
 	if c.HasError() {
 		c.Success(tmplEditorUpload)

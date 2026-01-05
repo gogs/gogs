@@ -11,10 +11,12 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 func GetRepoGitTree(c *context.APIContext) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return

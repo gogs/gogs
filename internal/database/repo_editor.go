@@ -119,22 +119,31 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.NewTreeName) {
-		return errors.Errorf("bad tree path %q", opts.NewTreeName)
-	}
-
+	// CVE-2025-8110: Validate treePath for symlink traversal
 	repoWorkingPool.CheckIn(com.ToStr(r.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
-	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
+	if err := r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
+		return fmt.Errorf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
 	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
 		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
 	repoPath := r.RepoPath()
 	localPath := r.LocalCopyPath()
+
+	// CVE-2025-8110: Validate path before file operations
+	if err := pathutil.ValidateRepoPath(repoPath, opts.OldTreeName); err != nil {
+		return fmt.Errorf("security: %w", err)
+	}
+	if err := pathutil.ValidateRepoPath(repoPath, opts.NewTreeName); err != nil {
+		return fmt.Errorf("security: %w", err)
+	}
+
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
+	if isRepositoryGitPath(opts.NewTreeName) {
+		return errors.Errorf("bad tree path %q", opts.NewTreeName)
+	}
 
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
