@@ -23,6 +23,7 @@ RUN addgroup -g ${GOGS_GID} -S git && \
 RUN apk --no-cache --no-progress add \
   bash \
   ca-certificates \
+  curl \
   git \
   linux-pam \
   openssh-keygen
