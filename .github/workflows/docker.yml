@@ -414,7 +414,7 @@ jobs:
     secrets: inherit
 
   digitalocean-gc-pull-request:
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' && github.repository == 'gogs/gogs' }}
     needs: buildx-next-pull-request
     permissions:
       contents: read

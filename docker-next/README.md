@@ -18,17 +18,27 @@ This Docker image is designed with Kubernetes security best practices in mind:
 
 ### Kubernetes Security Context example
 
+In the deployment YAML, make sure the following snippets exist:
+
 ```yaml
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-  allowPrivilegeEscalation: false
-  seccompProfile:
-    type: RuntimeDefault
-  capabilities:
-    drop:
-      - ALL
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+      - name: gogs
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop:
+              - ALL
 ```
 
 ### Custom UID/GID at build time
@@ -83,7 +93,7 @@ $ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v gogs-data:/data gogs/gog
 
 Most of the settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
 
-- **Repository Root Path**: keep it as default value `/home/git/gogs-repositories`
+- **Repository Root Path**: either `/data/git/gogs-repositories` or `/home/git/gogs-repositories` works.
 - **Run User**: default `git` (UID 1000)
 - **Domain**: fill in with Docker container IP (e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
 - **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `2222` inside Docker, **but** you expose it by `10022:2222`, then use `10022` for this value.
