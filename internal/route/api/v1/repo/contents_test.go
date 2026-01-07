@@ -46,8 +46,8 @@ func TestValidateRepoPathSymlink(t *testing.T) {
 		t.Skipf("symlink not supported: %v", err)
 	}
 
-	// ValidateRepoPath should detect symlink traversal when checking the link
-	err := pathutil.ValidateRepoPath(repoPath, "malicious_link")
+	// ValidatePathWithin should detect symlink traversal when checking the link
+	err := repoutil.ValidatePathWithin(repoPath, "malicious_link")
 	assert.Error(t, err)
 	assert.True(t, pathutil.IsErrSymlinkTraversal(err), "expected symlink traversal error")
 }

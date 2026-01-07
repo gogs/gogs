@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/pathutil"
 )
 
 // CloneLink represents different types of clone URLs of repository.
@@ -72,4 +73,14 @@ func RepositoryLocalPath(repoID int64) string {
 // wiki copy with the given ID.
 func RepositoryLocalWikiPath(repoID int64) string {
 	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", strconv.FormatInt(repoID, 10))
+}
+
+// ValidatePathWithin validates a repository tree path against the repository
+// root path. It ensures the tree path is cleaned and validated to be within
+// the repository directory, following through any symlinks.
+//
+// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
+func ValidatePathWithin(repoPath, treePath string) error {
+	cleaned := pathutil.Clean(treePath)
+	return pathutil.ValidatePathSecurity(cleaned, repoPath)
 }

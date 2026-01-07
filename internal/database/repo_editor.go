@@ -28,6 +28,7 @@ import (
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -119,7 +120,20 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
-	// CVE-2025-8110: Validate treePath for symlink traversal
+	// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
+	repoPath := r.RepoPath()
+	if err := repoutil.ValidatePathWithin(repoPath, opts.OldTreeName); err != nil {
+		return errors.Wrap(err, "validate old tree path")
+	}
+	if err := repoutil.ValidatePathWithin(repoPath, opts.NewTreeName); err != nil {
+		return errors.Wrap(err, "validate new tree path")
+	}
+
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
+	if isRepositoryGitPath(opts.NewTreeName) {
+		return errors.Errorf("bad tree path %q", opts.NewTreeName)
+	}
+
 	repoWorkingPool.CheckIn(com.ToStr(r.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
@@ -129,21 +143,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
-	repoPath := r.RepoPath()
 	localPath := r.LocalCopyPath()
-
-	// CVE-2025-8110: Validate path before file operations
-	if err := pathutil.ValidateRepoPath(repoPath, opts.OldTreeName); err != nil {
-		return fmt.Errorf("security: %w", err)
-	}
-	if err := pathutil.ValidateRepoPath(repoPath, opts.NewTreeName); err != nil {
-		return fmt.Errorf("security: %w", err)
-	}
-
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.NewTreeName) {
-		return errors.Errorf("bad tree path %q", opts.NewTreeName)
-	}
 
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server

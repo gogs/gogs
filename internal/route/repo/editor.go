@@ -349,9 +349,9 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.Repo.TreePath = pathutil.Clean(c.Repo.TreePath)
 	c.Data["TreePath"] = c.Repo.TreePath
 
-	// CVE-2025-8110: Validate delete path
+	// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
 	repoPath := repoutil.RepositoryPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
-	if err := pathutil.ValidateRepoPath(repoPath, c.Repo.TreePath); err != nil {
+	if err := repoutil.ValidatePathWithin(repoPath, c.Repo.TreePath); err != nil {
 		if pathutil.IsErrSymlinkTraversal(err) {
 			c.RenderWithErr("Invalid path: symlink traversal detected", tmplEditorDelete, &f)
 			return
@@ -528,7 +528,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 
 // validateUploadPath validates the tree path within the repository root.
 func validateUploadPath(repoPath, treePath string) error {
-	return pathutil.ValidateRepoPath(repoPath, treePath)
+	return repoutil.ValidatePathWithin(repoPath, treePath)
 }
 
 // checkBranchAvailable returns an error if the new branch already exists on server.

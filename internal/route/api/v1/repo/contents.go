@@ -181,13 +181,14 @@ type PutContentsRequest struct {
 
 // PUT /repos/:username/:reponame/contents/*
 func PutContents(c *context.APIContext, r PutContentsRequest) {
-	// CVE-2025-8110: Validate path for symlink traversal before any file operations
-	treePath := c.Repo.TreePath
+	// 🚨 SECURITY: Prevent path traversal.
+	treePath := pathutil.Clean(c.Params("*"))
 	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 
-	if err := pathutil.ValidateRepoPath(repoPath, treePath); err != nil {
+	// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
+	if err := repoutil.ValidatePathWithin(repoPath, treePath); err != nil {
 		if pathutil.IsErrSymlinkTraversal(err) {
-			c.JSON(400, map[string]string{
+			c.JSON(http.StatusBadRequest, map[string]string{
 				"message": "Invalid path: symlink traversal detected",
 				"error":   err.Error(),
 			})
@@ -207,9 +208,6 @@ func PutContents(c *context.APIContext, r PutContentsRequest) {
 		r.Branch = c.Repo.Repository.DefaultBranch
 	}
 
-	// 🚨 SECURITY: Prevent path traversal.
-	treePath = pathutil.Clean(c.Params("*"))
-
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
 		database.UpdateRepoFileOptions{
@@ -226,7 +224,6 @@ func PutContents(c *context.APIContext, r PutContentsRequest) {
 		return
 	}
 
-	repoPath = repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")

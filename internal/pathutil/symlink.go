@@ -2,8 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Security fix for CVE-2025-8110: Symlink bypass leading to RCE
-
 package pathutil
 
 import (
@@ -13,7 +11,7 @@ import (
 	"strings"
 )
 
-// ErrSymlinkTraversal is returned when a symlink points outside the allowed directory
+// ErrSymlinkTraversal is returned when the final path resolves outside the allowed directory by following through symlink(s).
 type ErrSymlinkTraversal struct {
 	Path       string
 	ResolvedTo string
@@ -62,12 +60,11 @@ func resolveRealPath(path string) (string, error) {
 // ValidatePathSecurity performs comprehensive path security validation
 // including symlink resolution checks.
 //
-// This function addresses CVE-2025-8110 by ensuring that:
+// 🚨 SECURITY: Ensures the path resolves within the allowed directory by following through symlink(s) (if any).
+// This function ensures that:
 // 1. The path does not contain traversal sequences (../)
 // 2. If the path is a symlink, it resolves to a location within allowedDir
 // 3. The final resolved path is within the allowed directory
-//
-// Security: CVE-2025-8110 fix
 func ValidatePathSecurity(path, allowedDir string) error {
 	cleanPath := filepath.Clean(path)
 	cleanAllowedDir := filepath.Clean(allowedDir)
@@ -215,12 +212,4 @@ func SafeWriteFile(path string, content []byte, perm os.FileMode, allowedDir str
 	}
 
 	return os.WriteFile(fullPath, content, perm)
-}
-
-// ValidateRepoPath validates a repository tree path against the repository
-// root path. It is a convenience wrapper that ensures the tree path is
-// cleaned and then validated with ValidatePathSecurity.
-func ValidateRepoPath(repoPath, treePath string) error {
-	cleaned := Clean(treePath)
-	return ValidatePathSecurity(cleaned, repoPath)
 }
