@@ -2,8 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Security tests for CVE-2025-8110: Symlink bypass leading to RCE
-
 package pathutil
 
 import (
