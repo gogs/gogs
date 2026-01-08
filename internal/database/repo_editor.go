@@ -149,7 +149,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	localPath := r.LocalCopyPath()
 
 	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// involves symlinks.
+	// that involve symlinks.
 	if hasSymlinkInPath(localPath, opts.OldTreeName) || hasSymlinkInPath(localPath, opts.NewTreeName) {
 		return errors.New("cannot update file with symbolic link in path")
 	}
