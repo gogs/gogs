@@ -253,7 +253,7 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 	filePath := path.Join(localPath, treePath)
 
 	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involves symlinks.
+	// that involve symlinks.
 	if hasSymlinkInPath(localPath, treePath) {
 		return nil, errors.New("cannot update file with symbolic link in path")
 	}
