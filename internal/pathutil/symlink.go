@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gogs.io/gogs/internal/osutil"
 )
 
 // ErrSymlinkTraversal is returned when the final path resolves outside the allowed directory by following through symlink(s).
@@ -181,18 +183,6 @@ func validateResolvedPath(path, allowedDir string) error {
 	return nil
 }
 
-// IsSymlink checks if the given path is a symbolic link
-func IsSymlink(path string) (bool, error) {
-	info, err := os.Lstat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return info.Mode()&os.ModeSymlink != 0, nil
-}
-
 // SafeWriteFile writes content to a file after validating the path is safe
 func SafeWriteFile(path string, content []byte, perm os.FileMode, allowedDir string) error {
 	if err := ValidatePathSecurity(path, allowedDir); err != nil {
@@ -200,12 +190,7 @@ func SafeWriteFile(path string, content []byte, perm os.FileMode, allowedDir str
 	}
 
 	fullPath := filepath.Join(allowedDir, path)
-	isLink, err := IsSymlink(fullPath)
-	if err != nil {
-		return fmt.Errorf("failed to check symlink status: %w", err)
-	}
-
-	if isLink {
+	if osutil.IsSymlink(fullPath) {
 		if err := validateSymlink(fullPath, allowedDir); err != nil {
 			return err
 		}

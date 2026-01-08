@@ -103,30 +103,6 @@ func TestValidatePathSecurity_ValidSymlink(t *testing.T) {
 	}
 }
 
-func TestIsSymlink(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	regularFile := filepath.Join(tmpDir, "regular.txt")
-	if err := os.WriteFile(regularFile, []byte("content"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	isLink, _ := IsSymlink(regularFile)
-	if isLink {
-		t.Error("IsSymlink() should return false for regular file")
-	}
-
-	symlinkFile := filepath.Join(tmpDir, "link")
-	if err := os.Symlink(regularFile, symlinkFile); err != nil {
-		t.Skipf("Cannot create symlinks: %v", err)
-	}
-
-	isLink, _ = IsSymlink(symlinkFile)
-	if !isLink {
-		t.Error("IsSymlink() should return true for symlink")
-	}
-}
-
 func TestSafeWriteFile(t *testing.T) {
 	repoDir := t.TempDir()
 	outsideDir := t.TempDir()

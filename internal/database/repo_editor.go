@@ -119,7 +119,7 @@ type UpdateRepoFileOptions struct {
 }
 
 // UpdateRepoFile adds or updates a file in repository.
-func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
+func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) error {
 	// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
 	repoPath := r.RepoPath()
 	if err := repoutil.ValidatePathWithin(repoPath, opts.OldTreeName); err != nil {
@@ -139,7 +139,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 
 	if err := r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return fmt.Errorf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
+	} else if err := r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
 		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
@@ -153,7 +153,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 
 		// Otherwise, delete branch from local copy in case out of sync
 		if git.RepoHasBranch(localPath, opts.NewBranch) {
-			if err = git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
+			if err := git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
 				Force: true,
 			}); err != nil {
 				return fmt.Errorf("delete branch %q: %v", opts.NewBranch, err)
@@ -167,7 +167,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 
 	oldFilePath := path.Join(localPath, opts.OldTreeName)
 	filePath := path.Join(localPath, opts.NewTreeName)
-	if err = os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -192,20 +192,20 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err
 			return fmt.Errorf("cannot move symbolic link: %s", opts.OldTreeName)
 		}
 
-		if err = git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
+		if err := git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return fmt.Errorf("git mv %q %q: %v", opts.OldTreeName, opts.NewTreeName, err)
 		}
 	}
 
-	if err = os.WriteFile(filePath, []byte(opts.Content), 0600); err != nil {
+	if err := os.WriteFile(filePath, []byte(opts.Content), 0600); err != nil {
 		return fmt.Errorf("write file: %v", err)
 	}
 
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
 	}
 
-	err = git.CreateCommit(
+	err := git.CreateCommit(
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),

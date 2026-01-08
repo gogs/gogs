@@ -79,7 +79,7 @@ func RepositoryLocalWikiPath(repoID int64) string {
 // root path. It ensures the tree path is cleaned and validated to be within
 // the repository directory, following through any symlinks.
 //
-// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
+// 🚨 SECURITY: This function MUST be called to validate any user-input tree path.
 func ValidatePathWithin(repoPath, treePath string) error {
 	cleaned := pathutil.Clean(treePath)
 	return pathutil.ValidatePathSecurity(cleaned, repoPath)

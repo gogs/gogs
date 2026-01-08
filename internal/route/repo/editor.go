@@ -441,9 +441,9 @@ func UploadFile(c *context.Context) {
 	c.Success(tmplEditorUpload)
 }
 
+// UploadFilePost handles uploading files to repository via editor UI.
+// The function performs validation and then delegates to `UploadRepoFiles`.
 func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
-	// UploadFilePost handles uploading files to repository via editor UI.
-	// The function performs validation and then delegates to `UploadRepoFiles`.
 	c.PageIs("Upload")
 	renderUploadSettings(c)
 
@@ -468,7 +468,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	c.Data["commit_choice"] = f.CommitChoice
 	c.Data["new_branch_name"] = branchName
 
-	// Validate upload path and branch early.
+	// 🚨 SECURITY: Ensure the path resolves within the repository directory by following through symlink(s) (if any).
 	repoPath := repoutil.RepositoryPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
 	if err := validateUploadPath(repoPath, f.TreePath); err != nil {
 		if pathutil.IsErrSymlinkTraversal(err) {
