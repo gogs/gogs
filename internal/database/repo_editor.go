@@ -193,7 +193,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		}
 	}
 
-	if err := os.WriteFile(newFilePath, []byte(opts.Content), 0600); err != nil {
+	if err := os.WriteFile(newFilePath, []byte(opts.Content), 0o600); err != nil {
 		return fmt.Errorf("write file: %v", err)
 	}
 
@@ -260,7 +260,7 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 
 	if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
 		return nil, errors.Wrap(err, "create parent directories")
-	} else if err = os.WriteFile(filePath, []byte(content), 0600); err != nil {
+	} else if err = os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %v", err)
 	}
 
