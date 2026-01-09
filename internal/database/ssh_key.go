@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -327,7 +323,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 	defer sshOpLocker.Unlock()
 
 	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
-	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return err
 	}
@@ -341,9 +337,9 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 		}
 
 		// .ssh directory should have mode 700, and authorized_keys file should have mode 600.
-		if fi.Mode().Perm() > 0600 {
+		if fi.Mode().Perm() > 0o600 {
 			log.Error("authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
-			if err = f.Chmod(0600); err != nil {
+			if err = f.Chmod(0o600); err != nil {
 				return err
 			}
 		}
@@ -376,7 +372,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
 	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
 	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
-	if err = os.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
+	if err = os.WriteFile(tmpPath, []byte(key.Content), 0o644); err != nil {
 		return err
 	}
 
@@ -529,7 +525,7 @@ func RewriteAuthorizedKeys() error {
 	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
 	fpath := authorizedKeysPath()
 	tmpPath := fpath + ".tmp"
-	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}

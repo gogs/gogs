@@ -1,7 +1,3 @@
-// Copyright 2015 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -121,7 +117,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	// The new file we created will be in normal text format.
 	os.Remove(filename)
 
-	if err = os.WriteFile(filename, []byte(content), 0666); err != nil {
+	if err = os.WriteFile(filename, []byte(content), 0o666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 

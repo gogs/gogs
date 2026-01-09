@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -708,7 +704,7 @@ func (r *Repository) SavePatch(index int64, patch []byte) error {
 	if err = os.MkdirAll(filepath.Dir(patchPath), os.ModePerm); err != nil {
 		return err
 	}
-	if err = os.WriteFile(patchPath, patch, 0644); err != nil {
+	if err = os.WriteFile(patchPath, patch, 0o644); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 
@@ -999,7 +995,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		"CloneURL.HTTPS": cloneLink.HTTPS,
 	}
 	if err = os.WriteFile(filepath.Join(tmpDir, "README.md"),
-		[]byte(com.Expand(string(data), match)), 0644); err != nil {
+		[]byte(com.Expand(string(data), match)), 0o644); err != nil {
 		return fmt.Errorf("write README.md: %v", err)
 	}
 
@@ -1018,7 +1014,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		}
 
 		if buf.Len() > 0 {
-			if err = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0644); err != nil {
+			if err = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0o644); err != nil {
 				return fmt.Errorf("write .gitignore: %v", err)
 			}
 		}
@@ -1031,7 +1027,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 			return fmt.Errorf("getRepoInitFile[%s]: %v", opts.License, err)
 		}
 
-		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0644); err != nil {
+		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0o644); err != nil {
 			return fmt.Errorf("write LICENSE: %v", err)
 		}
 	}
