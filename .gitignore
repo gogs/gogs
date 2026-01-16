@@ -16,3 +16,5 @@ output*
 /release
 .task
 .envrc
+# Things for the Nova (Mac-based) editor
+.nova
