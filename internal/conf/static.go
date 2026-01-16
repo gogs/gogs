@@ -249,6 +249,7 @@ type AuthOpts struct {
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
 	ReverseProxyAuthenticationHeader   string
+	CustomLogoutURL                    string `ini:"CUSTOM_LOGOUT_URL"`
 }
 
 // Authentication settings

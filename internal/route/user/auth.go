@@ -287,6 +287,10 @@ func SignOut(c *context.Context) {
 	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	if conf.Auth.CustomLogoutURL != "" {
+		c.Redirect(conf.Auth.CustomLogoutURL)
+		return
+	}
 	c.RedirectSubpath("/")
 }
 
