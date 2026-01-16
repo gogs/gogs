@@ -309,13 +309,13 @@
 						<dt>{{.i18n.Tr "admin.config.auth.reverse_proxy_authentication_header"}}</dt>
 						<dd><code>{{.Auth.ReverseProxyAuthenticationHeader}}</code></dd>
 						<dt>{{.i18n.Tr "admin.config.auth_custom_logout_url"}}</dt>
-<dd>
-    {{if .Auth.CustomLogoutURL}}
-        <code>{{.Auth.CustomLogoutURL}}</code>
-    {{else}}
-        <i>{{.i18n.Tr "admin.config.not_set"}}</i>
-    {{end}}
-</dd>
+						<dd>
+							{{if .Auth.CustomLogoutURL}}
+								<code>{{.Auth.CustomLogoutURL}}</code>
+							{{else}}
+								<i>{{.i18n.Tr "admin.config.not_set"}}</i>
+							{{end}}
+						</dd>
 					</dl>
 				</div>
 
