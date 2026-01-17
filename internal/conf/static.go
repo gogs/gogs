@@ -320,6 +320,7 @@ type RepositoryOpts struct {
 	EnableRawFileRenderMode  bool
 	CommitsFetchConcurrency  int
 	DefaultBranch            string
+	AutocreateWiki           bool
 
 	// Repository editor settings
 	Editor struct {
