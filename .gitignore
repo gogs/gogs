@@ -10,6 +10,7 @@ public/img/avatar/
 *.exe
 *.exe~
 /gogs
+/__debug_bin
 profile/
 *.pem
 output*
