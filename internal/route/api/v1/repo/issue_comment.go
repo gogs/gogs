@@ -10,9 +10,13 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
+// ListIssueComments list comments on an issue.
 func ListIssueComments(c *context.APIContext) {
+	// Initialize a variable to hold the "since" time
 	var since time.Time
+	// Check if the "since" query parameter is provided
 	if len(c.Query("since")) > 0 {
+		// Attempt to parse the "since" value as a time in RFC3339 format
 		var err error
 		since, err = time.Parse(time.RFC3339, c.Query("since"))
 		if err != nil {
@@ -21,29 +25,46 @@ func ListIssueComments(c *context.APIContext) {
 		}
 	}
 
-	// comments,err:=db.GetCommentsByIssueIDSince(, since)
+	// Retrieve the raw issue by its index
 	issue, err := database.GetRawIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+	// If an error occurs, return an error response
 	if err != nil {
 		c.Error(err, "get raw issue by index")
 		return
 	}
 
-	comments, err := database.GetCommentsByIssueIDSince(issue.ID, since.Unix())
+	// Initialize a boolean variable to determine the sort order
+	var isAsc bool = true
+	// Check if the "is_asc" query parameter is set to "false"
+	if c.Query("is_asc") == "false" {
+		// If so, set the sort order to descending
+		isAsc = false
+	}
+
+	// Retrieve comments for the issue since a given time
+	comments, err := database.GetCommentsByIssueIDSince(issue.ID, since.Unix(), isAsc)
+	// If an error occurs, return an error response
 	if err != nil {
 		c.Error(err, "get comments by issue ID")
 		return
 	}
 
+	// Create a slice of API comments to hold the formatted comments
 	apiComments := make([]*api.Comment, len(comments))
+	// Iterate over the comments and format them for the API
 	for i := range comments {
 		apiComments[i] = comments[i].APIFormat()
 	}
+	// Return the formatted comments as a JSON response
 	c.JSONSuccess(&apiComments)
 }
 
+// ListRepoIssueComments list comments for a given repo.
 func ListRepoIssueComments(c *context.APIContext) {
 	var since time.Time
+	// Check if the "since" query parameter is provided
 	if len(c.Query("since")) > 0 {
+		// Attempt to parse the "since" value as a time in RFC3339 format
 		var err error
 		since, err = time.Parse(time.RFC3339, c.Query("since"))
 		if err != nil {
@@ -52,7 +73,16 @@ func ListRepoIssueComments(c *context.APIContext) {
 		}
 	}
 
-	comments, err := database.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix())
+	// Initialize a boolean variable to determine the sort order
+	var isAsc bool = true
+	// Check if the "is_asc" query parameter is set to "false"
+	if c.Query("is_asc") == "false" {
+		// If so, set the sort order to descending
+		isAsc = false
+	}
+
+	// Retrieve comments for the repository since a given time
+	comments, err := database.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix(), isAsc)
 	if err != nil {
 		c.Error(err, "get comments by repository ID")
 		return
