@@ -3,7 +3,6 @@ package markup
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/unknwon/com"
@@ -165,7 +164,7 @@ var (
 	rightAngleBracket = []byte(">")
 )
 
-var noEndTags = []string{"input", "br", "hr", "img"}
+var noEndTags = []string{"input", "br", "hr", "img", "sup"}
 
 // wrapImgWithLink warps link to standalone <img> tags.
 func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
@@ -284,27 +283,27 @@ outerLoop:
 			}
 
 		case html.EndTagToken:
-			if len(startTags) == 0 {
-				buf.WriteString(token.String())
-				break
+			if com.IsSliceContainsStr(startTags, token.Data){
+				for startTags[len(startTags)-1] != token.Data && len(startTags) > 1 {
+					buf.WriteString(ClosingTag(startTags[len(startTags)-1]))
+					startTags = startTags[:len(startTags)-1]
+				}
+				buf.WriteString(ClosingTag(startTags[len(startTags)-1]))
+				startTags = startTags[:len(startTags)-1]
 			}
-
-			buf.Write(leftAngleBracket)
-			buf.WriteString(startTags[len(startTags)-1])
-			buf.Write(rightAngleBracket)
-			startTags = startTags[:len(startTags)-1]
 		default:
 			buf.WriteString(token.String())
 		}
 	}
 
-	if io.EOF == tokenizer.Err() {
-		return buf.Bytes()
+	for i := len(startTags)-1; i >= 0; i-- {
+		buf.WriteString(ClosingTag(startTags[i]))
 	}
 
-	// If we are not at the end of the input, then some other parsing error has occurred,
-	// so return the input verbatim.
-	return rawHTML
+	return buf.Bytes()
+}
+func ClosingTag(s string) string{
+	return string(leftAngleBracket) + s + string(rightAngleBracket)
 }
 
 type Type string
