@@ -4,8 +4,6 @@
 log/
 custom/
 data/
-.idea/
-*.iml
 public/img/avatar/
 *.exe
 *.exe~
@@ -16,3 +14,7 @@ output*
 /release
 .task
 .envrc
+
+# Editor configuration
+.nova/
+.idea/
