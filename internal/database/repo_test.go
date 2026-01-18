@@ -1,11 +1,14 @@
 package database
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/osutil"
 )
 
 func TestRepository_ComposeMetas(t *testing.T) {
@@ -51,4 +54,29 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		assert.Equal(t, "testrepo", metas["repo"])
 		assert.Equal(t, "https://someurl.com/{user}/{repo}/{issue}", metas["format"])
 	})
+}
+func Test_CreateRepository_PreventDeletion(t *testing.T) {
+	owner := &User{Name: "testuser"}
+	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
+
+	repoPath := RepoPath(owner.Name, opts.Name)
+
+	// Check the error for MkdirAll
+	err := os.MkdirAll(repoPath, os.ModePerm)
+	assert.NoError(t, err)
+
+	canary := filepath.Join(repoPath, "canary.txt")
+
+	// Check the error for WriteFile
+	err = os.WriteFile(canary, []byte("should survive"), 0644)
+	assert.NoError(t, err)
+
+	_, err = CreateRepository(owner, owner, opts)
+	if err == nil {
+		t.Fatal("Expected error when directory exists, but got nil")
+	}
+
+	if !osutil.IsExist(canary) {
+		t.Error("CRITICAL: The existing directory was deleted during CreateRepository failure!")
+	}
 }
