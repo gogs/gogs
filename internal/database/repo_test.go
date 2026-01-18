@@ -55,28 +55,20 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		assert.Equal(t, "https://someurl.com/{user}/{repo}/{issue}", metas["format"])
 	})
 }
-func Test_CreateRepository_PreventDeletion(t *testing.T) {
-	owner := &User{Name: "testuser"}
-	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
 
+func Test_CreateRepository_PreventDeletion(t *testing.T) {
+	owner := &User{Name: "testuser", IsAdmin: true}
+	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
 	repoPath := RepoPath(owner.Name, opts.Name)
 
-	// Check the error for MkdirAll
-	err := os.MkdirAll(repoPath, os.ModePerm)
-	assert.NoError(t, err)
+	assert.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
 
 	canary := filepath.Join(repoPath, "canary.txt")
+	assert.NoError(t, os.WriteFile(canary, []byte("should survive"), 0644))
 
-	// Check the error for WriteFile
-	err = os.WriteFile(canary, []byte("should survive"), 0644)
-	assert.NoError(t, err)
+	_, err := CreateRepository(owner, owner, opts)
 
-	_, err = CreateRepository(owner, owner, opts)
-	if err == nil {
-		t.Fatal("Expected error when directory exists, but got nil")
-	}
-
-	if !osutil.IsExist(canary) {
-		t.Error("CRITICAL: The existing directory was deleted during CreateRepository failure!")
-	}
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "repository directory already exists")
+	assert.True(t, osutil.IsExist(canary))
 }

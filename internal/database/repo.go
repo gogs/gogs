@@ -1205,7 +1205,7 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 	}
 	repoPath := RepoPath(owner.Name, opts.Name)
 	if osutil.IsExist(repoPath) {
-		return nil, fmt.Errorf("repository directory already exists: %s", repoPath)
+		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
 	}
 	repo := &Repository{
 		OwnerID:      owner.ID,
