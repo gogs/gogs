@@ -1207,6 +1207,7 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 	if !owner.canCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
+
 	repo := &Repository{
 		OwnerID:      owner.ID,
 		Owner:        owner,
