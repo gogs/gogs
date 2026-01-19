@@ -1037,7 +1037,6 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
-
 	// Init bare new repository.
 	if err = git.Init(repoPath, git.InitOptions{Bare: true}); err != nil {
 		return fmt.Errorf("init repository: %v", err)

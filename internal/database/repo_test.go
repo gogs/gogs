@@ -64,7 +64,7 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	require.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
 
 	canary := filepath.Join(repoPath, "canary.txt")
-	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0644))
+	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
 	_, err := CreateRepository(owner, owner, opts)
 	require.Error(t, err)
