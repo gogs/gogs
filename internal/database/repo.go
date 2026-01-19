@@ -1037,10 +1037,6 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
-	// Somehow the directory could exist.
-	if com.IsExist(repoPath) {
-		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
-	}
 
 	// Init bare new repository.
 	if err = git.Init(repoPath, git.InitOptions{Bare: true}); err != nil {
@@ -1204,6 +1200,10 @@ func (err ErrReachLimitOfRepo) Error() string {
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
+	repoPath := RepoPath(owner.Name, opts.Name)
+	if osutil.IsExist(repoPath) {
+		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
+	}
 	if !owner.canCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
@@ -1233,7 +1233,6 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 
 	// No need for init mirror.
 	if !opts.IsMirror {
-		repoPath := RepoPath(owner.Name, repo.Name)
 		if err = initRepository(sess, repoPath, doer, repo, opts); err != nil {
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, fmt.Errorf("initRepository: %v", err)
