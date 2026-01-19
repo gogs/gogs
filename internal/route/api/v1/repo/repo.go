@@ -112,19 +112,28 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
-	accessibleRepos, err := database.Handle.Repositories().GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
+	accessibleReposWithAccessMode, err := database.Handle.Repositories().GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
 	if err != nil {
 		c.Error(err, "get repositories accesses by collaborator")
 		return
 	}
 
+	accessibleRepos := make([]*database.Repository, 0, len(accessibleReposWithAccessMode))
+	for repo := range accessibleReposWithAccessMode {
+		accessibleRepos = append(accessibleRepos, repo)
+	}
+	if err = database.RepositoryList(accessibleRepos).LoadAttributes(); err != nil {
+		c.Error(err, "load attributes for accessible repositories")
+		return
+	}
+
 	numOwnRepos := len(ownRepos)
-	repos := make([]*api.Repository, 0, numOwnRepos+len(accessibleRepos))
+	repos := make([]*api.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
 		repos = append(repos, r.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
 	}
 
-	for repo, access := range accessibleRepos {
+	for repo, access := range accessibleReposWithAccessMode {
 		repos = append(repos,
 			repo.APIFormatLegacy(&api.Permission{
 				Admin: access >= database.AccessModeAdmin,
