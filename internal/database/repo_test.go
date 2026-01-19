@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
@@ -68,7 +69,7 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 
 	_, err := CreateRepository(owner, owner, opts)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osutil.IsExist(canary))
 }
