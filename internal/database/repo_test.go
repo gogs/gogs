@@ -58,17 +58,15 @@ func TestRepository_ComposeMetas(t *testing.T) {
 }
 
 func Test_CreateRepository_PreventDeletion(t *testing.T) {
-	owner := &User{Name: "testuser", IsAdmin: true}
+	owner := &User{Name: "testuser"}
 	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
 	repoPath := RepoPath(owner.Name, opts.Name)
-
-	assert.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
+	require.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
 
 	canary := filepath.Join(repoPath, "canary.txt")
-	assert.NoError(t, os.WriteFile(canary, []byte("should survive"), 0644))
+	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0644))
 
 	_, err := CreateRepository(owner, owner, opts)
-
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osutil.IsExist(canary))
