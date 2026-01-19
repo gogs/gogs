@@ -1200,12 +1200,12 @@ func (err ErrReachLimitOfRepo) Error() string {
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
-	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
-	}
 	repoPath := RepoPath(owner.Name, opts.Name)
 	if osutil.IsExist(repoPath) {
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
+	}
+	if !owner.canCreateRepo() {
+		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
 	repo := &Repository{
 		OwnerID:      owner.ID,
