@@ -6,8 +6,6 @@ import (
 	gotemplate "html/template"
 	"path"
 	"strings"
-	//"time"
-
 	"github.com/gogs/git-module"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
