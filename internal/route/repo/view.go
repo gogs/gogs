@@ -49,7 +49,8 @@ func renderDirectory(c *context.Context, treeLink string) {
 			Path: path.Join(c.Repo.TreePath, entry.Name()),
 		})
 		if err != nil {
-			// Skip problematic file to avoid failure
+			// Log error before skipping problematic file to avoid failure
+			log.Warn("Skipping file %q due to error in CommitByPath: %v", entry.Name(), err)
 			continue
 		}
 
