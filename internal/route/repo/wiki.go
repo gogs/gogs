@@ -165,7 +165,6 @@ func WikiPages(c *context.Context) {
 			commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: entries[i].Name()})
 
 			if err != nil || len(commits) == 0{
-				//c.Error(err, "get commits by path")
 
 				// sets dummy commit time to prevent failure
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
