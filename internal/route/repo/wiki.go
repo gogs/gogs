@@ -164,7 +164,7 @@ func WikiPages(c *context.Context) {
 		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
 			commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: entries[i].Name()})
 
-			if err != nil || len(commits) == 0{
+			if err != nil || len(commits) == 0 {
 
 				// sets dummy commit time to prevent failure
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
