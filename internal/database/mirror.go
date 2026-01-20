@@ -1,7 +1,3 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -332,7 +328,7 @@ func SyncMirrors() {
 
 		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
 		if err != nil {
-			log.Error("GetMirrorByRepoID [%d]: %v", m.RepoID, err)
+			log.Error("GetMirrorByRepoID [%v]: %v", repoID, err)
 			continue
 		}
 

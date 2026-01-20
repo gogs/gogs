@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package conf
 
 import (
@@ -253,6 +249,7 @@ type AuthOpts struct {
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
 	ReverseProxyAuthenticationHeader   string
+	CustomLogoutURL                    string `ini:"CUSTOM_LOGOUT_URL"`
 }
 
 // Authentication settings

@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package conf
 
 import (
@@ -108,8 +104,8 @@ func Init(customConf string) error {
 	if err != nil {
 		return errors.Wrapf(err, "parse '[server] UNIX_SOCKET_PERMISSION' %q", Server.UnixSocketPermission)
 	}
-	if unixSocketMode > 0777 {
-		unixSocketMode = 0666
+	if unixSocketMode > 0o777 {
+		unixSocketMode = 0o666
 	}
 	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
@@ -127,9 +123,9 @@ func Init(customConf string) error {
 
 	if !SSH.Disabled {
 		if !SSH.StartBuiltinServer {
-			if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
+			if err := os.MkdirAll(SSH.RootPath, 0o700); err != nil {
 				return errors.Wrap(err, "create SSH root directory")
-			} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
+			} else if err = os.MkdirAll(SSH.KeyTestPath, 0o644); err != nil {
 				return errors.Wrap(err, "create SSH key test directory")
 			}
 		} else {

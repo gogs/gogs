@@ -1,7 +1,3 @@
-// Copyright 2023 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -40,7 +36,7 @@ func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
 	}
 	fpath := authorizedKeysPath()
 	tempPath := fpath + ".tmp"
-	f, err := os.OpenFile(tempPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(tempPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return errors.Wrap(err, "create temporary file")
 	}

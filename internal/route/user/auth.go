@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package user
 
 import (
@@ -291,6 +287,10 @@ func SignOut(c *context.Context) {
 	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	if conf.Auth.CustomLogoutURL != "" {
+		c.Redirect(conf.Auth.CustomLogoutURL)
+		return
+	}
 	c.RedirectSubpath("/")
 }
 

@@ -404,3 +404,19 @@ jobs:
             The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
 
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  digitalocean-gc:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
+    needs: buildx-next
+    permissions:
+      contents: read
+    uses: ./.github/workflows/digitalocean_gc.yml
+    secrets: inherit
+
+  digitalocean-gc-pull-request:
+    if: ${{ github.event_name == 'pull_request' && github.repository == 'gogs/gogs' }}
+    needs: buildx-next-pull-request
+    permissions:
+      contents: read
+    uses: ./.github/workflows/digitalocean_gc.yml
+    secrets: inherit

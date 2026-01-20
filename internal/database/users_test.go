@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -575,7 +571,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = os.MkdirAll(tempPictureAvatarUploadPath, os.ModePerm)
 	require.NoError(t, err)
 	tempCustomAvatarPath := userutil.CustomAvatarPath(testUser.ID)
-	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0600)
+	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
 
 	// Verify mock data

@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package osutil
 
 import (
@@ -9,7 +5,8 @@ import (
 	"os/user"
 )
 
-// IsFile returns true if given path exists as a file (i.e. not a directory).
+// IsFile returns true if given path exists as a file (i.e. not a directory)
+// following any symlinks.
 func IsFile(path string) bool {
 	f, e := os.Stat(path)
 	if e != nil {
@@ -18,8 +15,8 @@ func IsFile(path string) bool {
 	return !f.IsDir()
 }
 
-// IsDir returns true if given path is a directory, and returns false when it's
-// a file or does not exist.
+// IsDir returns true if given path is a directory following any symlinks, and
+// returns false when it's a file or does not exist.
 func IsDir(dir string) bool {
 	f, e := os.Stat(dir)
 	if e != nil {
@@ -28,7 +25,7 @@ func IsDir(dir string) bool {
 	return f.IsDir()
 }
 
-// IsExist returns true if a file or directory exists.
+// IsExist returns true if a file or directory exists following any symlinks.
 func IsExist(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil || os.IsExist(err)
@@ -36,15 +33,10 @@ func IsExist(path string) bool {
 
 // IsSymlink returns true if given path is a symbolic link.
 func IsSymlink(path string) bool {
-	if !IsExist(path) {
-		return false
-	}
-
 	fileInfo, err := os.Lstat(path)
 	if err != nil {
 		return false
 	}
-
 	return fileInfo.Mode()&os.ModeSymlink != 0
 }
 

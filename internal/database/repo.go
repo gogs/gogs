@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -708,7 +704,7 @@ func (r *Repository) SavePatch(index int64, patch []byte) error {
 	if err = os.MkdirAll(filepath.Dir(patchPath), os.ModePerm); err != nil {
 		return err
 	}
-	if err = os.WriteFile(patchPath, patch, 0644); err != nil {
+	if err = os.WriteFile(patchPath, patch, 0o644); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 
@@ -999,7 +995,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		"CloneURL.HTTPS": cloneLink.HTTPS,
 	}
 	if err = os.WriteFile(filepath.Join(tmpDir, "README.md"),
-		[]byte(com.Expand(string(data), match)), 0644); err != nil {
+		[]byte(com.Expand(string(data), match)), 0o644); err != nil {
 		return fmt.Errorf("write README.md: %v", err)
 	}
 
@@ -1018,7 +1014,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		}
 
 		if buf.Len() > 0 {
-			if err = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0644); err != nil {
+			if err = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0o644); err != nil {
 				return fmt.Errorf("write .gitignore: %v", err)
 			}
 		}
@@ -1031,7 +1027,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 			return fmt.Errorf("getRepoInitFile[%s]: %v", opts.License, err)
 		}
 
-		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0644); err != nil {
+		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0o644); err != nil {
 			return fmt.Errorf("write LICENSE: %v", err)
 		}
 	}
@@ -1041,11 +1037,6 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
-	// Somehow the directory could exist.
-	if com.IsExist(repoPath) {
-		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
-	}
-
 	// Init bare new repository.
 	if err = git.Init(repoPath, git.InitOptions{Bare: true}); err != nil {
 		return fmt.Errorf("init repository: %v", err)
@@ -1208,6 +1199,10 @@ func (err ErrReachLimitOfRepo) Error() string {
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
+	repoPath := RepoPath(owner.Name, opts.Name)
+	if osutil.IsExist(repoPath) {
+		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
+	}
 	if !owner.canCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
@@ -1237,7 +1232,6 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 
 	// No need for init mirror.
 	if !opts.IsMirror {
-		repoPath := RepoPath(owner.Name, repo.Name)
 		if err = initRepository(sess, repoPath, doer, repo, opts); err != nil {
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, fmt.Errorf("initRepository: %v", err)
