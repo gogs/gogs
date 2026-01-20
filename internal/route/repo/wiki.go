@@ -172,7 +172,7 @@ func WikiPages(c *context.Context) {
 				pages = append(pages, PageMeta{
 				Name:    name,
 				URL:     database.ToWikiPageURL(name),
-				Updated: time.Unix(0,0),
+				Updated: time.Unix(0, 0),
 			})
 			} else {
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
