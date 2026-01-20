@@ -44,7 +44,6 @@ func renderDirectory(c *context.Context, treeLink string) {
 	var safeFiles []any
 
 	for _, entry := range entries {
-		var lastCommit *git.Commit
 		lastCommit, err := c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{
 			Path: path.Join(c.Repo.TreePath, entry.Name()),
 		})
