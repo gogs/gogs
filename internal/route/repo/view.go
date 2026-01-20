@@ -47,6 +47,8 @@ func renderDirectory(c *context.Context, treeLink string) {
 		lastCommit, err := c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{
 			Path: path.Join(c.Repo.TreePath, entry.Name()),
 		})
+		log.Info("LOGLOG", entry)
+
 		if err != nil {
 			// Log error before skipping problematic file to avoid failure
 			log.Warn("Skipping file %q due to error in CommitByPath: %v", entry.Name(), err)

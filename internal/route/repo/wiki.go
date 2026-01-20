@@ -165,14 +165,13 @@ func WikiPages(c *context.Context) {
 			commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: entries[i].Name()})
 
 			if err != nil || len(commits) == 0 {
-
 				// sets dummy commit time to prevent failure
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
 				pages = append(pages, PageMeta{
-				Name:    name,
-				URL:     database.ToWikiPageURL(name),
-				Updated: time.Unix(0, 0),
-			})
+					Name:    name,
+					URL:     database.ToWikiPageURL(name),
+					Updated: time.Unix(0,0),
+				})
 			} else {
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
 				pages = append(pages, PageMeta{
@@ -181,8 +180,7 @@ func WikiPages(c *context.Context) {
 					Updated: commits[0].Author.When,
 				})
 			}
-		}
-	}
+	}}
 	c.Data["Pages"] = pages
 
 	c.Success(tmplRepoWikiPages)
