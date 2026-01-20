@@ -175,12 +175,12 @@ func WikiPages(c *context.Context) {
 				Updated: time.Unix(0,0),
 			})
 			} else {
-			name := strings.TrimSuffix(entries[i].Name(), ".md")
-			pages = append(pages, PageMeta{
-				Name:    name,
-				URL:     database.ToWikiPageURL(name),
-				Updated: commits[0].Author.When,
-			})
+				name := strings.TrimSuffix(entries[i].Name(), ".md")
+				pages = append(pages, PageMeta{
+					Name:    name,
+					URL:     database.ToWikiPageURL(name),
+					Updated: commits[0].Author.When,
+				})
 			}
 		}
 	}
