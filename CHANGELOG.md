@@ -23,6 +23,7 @@ All notable changes to Gogs are documented in this file.
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
 - Route `GET /api/v1/user/repos` responses 500 when accessible repositories contain forks. [#8069](https://github.com/gogs/gogs/pull/8069)
+- Newer Git versions that uses default branch `main` cause wiki initialization to fail. [#8094](https://github.com/gogs/gogs/pull/8094)
 
 ## 0.13.3
 
