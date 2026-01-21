@@ -147,7 +147,9 @@ func WikiPages(c *context.Context) {
 		c.Error(err, "open repository")
 		return
 	}
-	commit, err := wikiRepo.BranchCommit(database.WikiBranch(wikiPath))
+
+	branch := database.WikiBranch(wikiPath)
+	commit, err := wikiRepo.BranchCommit(branch)
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return
