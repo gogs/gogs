@@ -20,6 +20,15 @@ import (
 
 var wikiWorkingPool = sync.NewExclusivePool()
 
+// WikiBranch returns the branch name used by the wiki repository. It checks if
+// "main" branch exists, otherwise falls back to "master".
+func WikiBranch(repoPath string) string {
+	if git.RepoHasBranch(repoPath, "main") {
+		return "main"
+	}
+	return "master"
+}
+
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
 	return url.QueryEscape(name)
@@ -75,11 +84,12 @@ func (r *Repository) LocalWikiPath() string {
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
 func (r *Repository) UpdateLocalWiki() error {
-	return UpdateLocalCopyBranch(r.WikiPath(), r.LocalWikiPath(), "master", true)
+	wikiPath := r.WikiPath()
+	return UpdateLocalCopyBranch(wikiPath, r.LocalWikiPath(), WikiBranch(wikiPath), true)
 }
 
 func discardLocalWikiChanges(localPath string) error {
-	return discardLocalRepoBranchChanges(localPath, "master")
+	return discardLocalRepoBranchChanges(localPath, WikiBranch(localPath))
 }
 
 // updateWikiPage adds new page to repository wiki.
@@ -139,7 +149,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	)
 	if err != nil {
 		return fmt.Errorf("commit changes: %v", err)
-	} else if err = git.Push(localPath, "origin", "master"); err != nil {
+	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
 		return fmt.Errorf("push: %v", err)
 	}
 
@@ -186,7 +196,7 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 	)
 	if err != nil {
 		return fmt.Errorf("commit changes: %v", err)
-	} else if err = git.Push(localPath, "origin", "master"); err != nil {
+	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
 		return fmt.Errorf("push: %v", err)
 	}
 
