@@ -79,6 +79,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repo.LowerName = strings.ToLower(newRepoName)
 
 		repo.Description = f.Description
+		repo.Alias = f.Alias
 		repo.Website = f.Website
 
 		// Visibility of forked repository is forced sync with base repository.

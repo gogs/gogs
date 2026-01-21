@@ -17,6 +17,11 @@
 							<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}<span class="text red hide" id="repo-name-change-prompt"> {{.i18n.Tr "repo.settings.change_reponame_prompt"}}</span></label>
 							<input id="repo_name" name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" required>
 						</div>
+						<div class="field {{if .Err_Alias}}error{{end}}">
+							<label for="alias">Repository Alias</label>
+							<input id="alias" name="alias" value="{{.Repository.Alias}}" placeholder="e.g. My 🚀 Project or 我的项目">
+							<p class="help">A customizable name for display purposes (supports Unicode and Emojis).</p>
+						</div>
 						<div class="field {{if .Err_Description}}error{{end}}">
 							<label for="description">{{$.i18n.Tr "repo.repo_desc"}}</label>
 							<textarea class="autosize" id="description" name="description" rows="3">{{.Repository.Description}}</textarea>

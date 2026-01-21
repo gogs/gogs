@@ -30,6 +30,7 @@ type CreateRepo struct {
 	Gitignores  string
 	License     string
 	Readme      string
+	Alias       string `binding:"MaxSize(255)"`
 }
 
 func (f *CreateRepo) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -91,6 +92,7 @@ func (f MigrateRepo) ParseRemoteAddr(user *database.User) (string, error) {
 
 type RepoSetting struct {
 	RepoName      string `binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Alias         string `binding:"MaxSize(255)"`
 	Description   string `binding:"MaxSize(512)"`
 	Website       string `binding:"Url;MaxSize(100)"`
 	Branch        string

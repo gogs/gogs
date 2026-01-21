@@ -38,6 +38,11 @@
 						<input id="repo_name" name="repo_name" value="{{.repo_name}}" autofocus required>
 						<span class="help">{{.i18n.Tr "repo.repo_name_helper" | Safe}}</span>
 					</div>
+					<div class="inline field {{if .Err_Alias}}error{{end}}">
+                        <label for="alias">Repository Alias</label>
+                        <input id="alias" name="alias" value="{{.alias}}" placeholder="e.g. 我的项目 or My 🚀 Project">
+                        <span class="help">A display name that supports Unicode and Emojis.</span>
+                    </div>
 					<div class="inline field">
 						<label>{{.i18n.Tr "repo.visibility"}}</label>
 						<div class="ui checkbox">
