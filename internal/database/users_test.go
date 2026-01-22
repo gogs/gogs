@@ -325,9 +325,9 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), updatedUnix)
 
-	assert.True(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
-	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
-	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+	assert.True(t, osutil.Exist(repoutil.UserPath(alice.Name)))
+	assert.True(t, osutil.Exist(repoutil.RepositoryLocalPath(repo.ID)))
+	assert.True(t, osutil.Exist(repoutil.RepositoryLocalWikiPath(repo.ID)))
 
 	const newUsername = "alice-new"
 	err = s.ChangeUsername(ctx, alice.ID, newUsername)
@@ -338,10 +338,10 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, headUserName, newUsername)
 
-	assert.True(t, osutil.IsExist(repoutil.UserPath(newUsername)))
-	assert.False(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
-	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
-	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+	assert.True(t, osutil.Exist(repoutil.UserPath(newUsername)))
+	assert.False(t, osutil.Exist(repoutil.UserPath(alice.Name)))
+	assert.False(t, osutil.Exist(repoutil.RepositoryLocalPath(repo.ID)))
+	assert.False(t, osutil.Exist(repoutil.RepositoryLocalWikiPath(repo.ID)))
 
 	alice, err = s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
@@ -616,8 +616,8 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.NotZero(t, count, "table for %T", table)
 	}
 
-	assert.True(t, osutil.IsExist(tempUserPath))
-	assert.True(t, osutil.IsExist(tempCustomAvatarPath))
+	assert.True(t, osutil.Exist(tempUserPath))
+	assert.True(t, osutil.Exist(tempCustomAvatarPath))
 
 	// Pull the trigger
 	err = s.DeleteByID(ctx, testUser.ID, false)
@@ -663,8 +663,8 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, int64(0), count, "table for %T", table)
 	}
 
-	assert.False(t, osutil.IsExist(tempUserPath))
-	assert.False(t, osutil.IsExist(tempCustomAvatarPath))
+	assert.False(t, osutil.Exist(tempUserPath))
+	assert.False(t, osutil.Exist(tempCustomAvatarPath))
 
 	_, err = s.GetByID(ctx, testUser.ID)
 	wantErr := ErrUserNotExist{errutil.Args{"userID": testUser.ID}}

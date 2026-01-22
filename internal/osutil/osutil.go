@@ -25,8 +25,8 @@ func IsDir(dir string) bool {
 	return f.IsDir()
 }
 
-// IsExist returns true if a file or directory exists following any symlinks.
-func IsExist(path string) bool {
+// Exist returns true if a file or directory exists following any symlinks.
+func Exist(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil || os.IsExist(err)
 }

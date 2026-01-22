@@ -683,7 +683,7 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 
 	headRefspec := fmt.Sprintf("refs/pull/%d/head", pr.Index)
 	headFile := filepath.Join(pr.BaseRepo.RepoPath(), headRefspec)
-	if osutil.IsExist(headFile) {
+	if osutil.Exist(headFile) {
 		err = os.Remove(headFile)
 		if err != nil {
 			return fmt.Errorf("remove head file [repo_id: %d]: %v", pr.BaseRepoID, err)

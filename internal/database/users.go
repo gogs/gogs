@@ -220,7 +220,7 @@ func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUserna
 
 		// Rename user directory if exists
 		userPath := repoutil.UserPath(user.Name)
-		if osutil.IsExist(userPath) {
+		if osutil.Exist(userPath) {
 			newUserPath := repoutil.UserPath(newUsername)
 			err = os.Rename(userPath, newUserPath)
 			if err != nil {

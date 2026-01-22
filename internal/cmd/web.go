@@ -747,7 +747,7 @@ func runWeb(c *cli.Context) error {
 		err = fcgi.Serve(nil, m)
 
 	case "unix":
-		if osutil.IsExist(listenAddr) {
+		if osutil.Exist(listenAddr) {
 			err = os.Remove(listenAddr)
 			if err != nil {
 				log.Fatal("Failed to remove existing Unix domain socket: %v", err)

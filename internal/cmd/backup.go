@@ -59,7 +59,7 @@ func runBackup(c *cli.Context) error {
 	}
 
 	tmpDir := c.String("tempdir")
-	if !osutil.IsExist(tmpDir) {
+	if !osutil.Exist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
 	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
