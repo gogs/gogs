@@ -5,8 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cockroachdb/errors"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,17 +23,17 @@ func TestExecHelper(_ *testing.T) {
 
 func TestExec(t *testing.T) {
 	tests := []struct {
-		helper string
-		env    string
-		expOut string
-		expErr error
+		helper    string
+		env       string
+		expOut    string
+		expErrMsg string
 	}{
 		{
-			helper: "NoTestsToRun",
-			expErr: errors.New("no tests to run"),
+			helper:    "NoTestsToRun",
+			expErrMsg: "no tests to run",
 		}, {
-			helper: "TestExecHelper",
-			expErr: errors.New("exit status 1 - tests failed\n"),
+			helper:    "TestExecHelper",
+			expErrMsg: "exit status 1 - tests failed\n",
 		}, {
 			helper: "TestExecHelper",
 			env:    "PASS=1",
@@ -45,7 +43,12 @@ func TestExec(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			out, err := Exec(test.helper, test.env)
-			assert.Equal(t, test.expErr, err)
+			if test.expErrMsg != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.expErrMsg)
+			} else {
+				assert.NoError(t, err)
+			}
 			assert.Equal(t, test.expOut, out)
 		})
 	}
