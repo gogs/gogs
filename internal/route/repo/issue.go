@@ -33,8 +33,8 @@ const (
 )
 
 var (
-	ErrFileTypeForbidden = errors.New("File type is not allowed")
-	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
+	ErrFileTypeForbidden = errors.New("file type is not allowed")
+	ErrTooManyFiles      = errors.New("maximum number of files to upload exceeded")
 
 	IssueTemplateCandidates = []string{
 		"ISSUE_TEMPLATE.md",
