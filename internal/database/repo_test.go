@@ -63,6 +63,13 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	repoPath := RepoPath(owner.Name, opts.Name)
 	require.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
 
+	// Cleanup the test directory after the test
+	t.Cleanup(func() {
+		// Remove the user directory (e.g., internal/database/testuser/)
+		userDir := filepath.Dir(repoPath) // Gets the testuser directory
+		os.RemoveAll(userDir)
+	})
+
 	canary := filepath.Join(repoPath, "canary.txt")
 	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
