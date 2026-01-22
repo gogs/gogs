@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
 )
@@ -58,22 +59,26 @@ func TestRepository_ComposeMetas(t *testing.T) {
 }
 
 func Test_CreateRepository_PreventDeletion(t *testing.T) {
+	tempRepositoryRoot := filepath.Join(os.TempDir(), "createRepository-tempRepositoryRoot")
+	conf.SetMockRepository(
+		t,
+		conf.RepositoryOpts{
+			Root: tempRepositoryRoot,
+		},
+	)
+	err := os.RemoveAll(tempRepositoryRoot)
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
+
 	owner := &User{Name: "testuser"}
 	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
 	repoPath := RepoPath(owner.Name, opts.Name)
 	require.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
 
-	// Cleanup the test directory after the test
-	t.Cleanup(func() {
-		// Remove the user directory (e.g., internal/database/testuser/)
-		userDir := filepath.Dir(repoPath) // Gets the testuser directory
-		os.RemoveAll(userDir)
-	})
-
 	canary := filepath.Join(repoPath, "canary.txt")
 	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
-	_, err := CreateRepository(owner, owner, opts)
+	_, err = CreateRepository(owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osutil.IsExist(canary))
