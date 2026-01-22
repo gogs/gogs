@@ -69,5 +69,5 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	_, err := CreateRepository(owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
-	assert.True(t, osutil.IsExist(canary))
+	assert.True(t, osutil.Exist(canary))
 }

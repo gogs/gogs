@@ -175,7 +175,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	newFilePath := path.Join(localPath, opts.NewTreeName)
 
 	// Prompt the user if the meant-to-be new file already exists.
-	if osutil.IsExist(newFilePath) && opts.IsNewFile {
+	if osutil.Exist(newFilePath) && opts.IsNewFile {
 		return ErrRepoFileAlreadyExist{newFilePath}
 	}
 

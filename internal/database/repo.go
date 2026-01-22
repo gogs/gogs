@@ -641,7 +641,7 @@ func (r *Repository) LocalCopyPath() string {
 // assume subsequent operations are against target branch when caller has confidence
 // about no race condition.
 func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
-	if !osutil.IsExist(localPath) {
+	if !osutil.Exist(localPath) {
 		// Checkout to a specific branch fails when wiki is an empty repository.
 		if isWiki {
 			branch = ""
@@ -1200,7 +1200,7 @@ func (err ErrReachLimitOfRepo) Error() string {
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	repoPath := RepoPath(owner.Name, opts.Name)
-	if osutil.IsExist(repoPath) {
+	if osutil.Exist(repoPath) {
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
 	}
 	if !owner.canCreateRepo() {

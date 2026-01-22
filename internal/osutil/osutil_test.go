@@ -54,7 +54,7 @@ func TestIsDir(t *testing.T) {
 	}
 }
 
-func TestIsExist(t *testing.T) {
+func TestExist(t *testing.T) {
 	tests := []struct {
 		path   string
 		expVal bool
@@ -72,7 +72,7 @@ func TestIsExist(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, IsExist(test.path))
+			assert.Equal(t, test.expVal, Exist(test.path))
 		})
 	}
 }

@@ -73,7 +73,7 @@ func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
 	if err != nil {
 		return errors.Wrap(err, "close temporary file")
 	}
-	if osutil.IsExist(fpath) {
+	if osutil.Exist(fpath) {
 		err = os.Remove(fpath)
 		if err != nil {
 			return errors.Wrap(err, "remove")
