@@ -1,11 +1,12 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
@@ -327,19 +328,19 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *database.Re
 	if f.Avatar != nil {
 		r, err := f.Avatar.Open()
 		if err != nil {
-			return fmt.Errorf("open avatar reader: %v", err)
+			return errors.Newf("open avatar reader: %v", err)
 		}
 		defer r.Close()
 
 		data, err := io.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("read avatar content: %v", err)
+			return errors.Newf("read avatar content: %v", err)
 		}
 		if !tool.IsImageFile(data) {
 			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxRepo.UploadAvatar(data); err != nil {
-			return fmt.Errorf("upload avatar: %v", err)
+			return errors.Newf("upload avatar: %v", err)
 		}
 	} else {
 		// No avatar is uploaded and reset setting back.
@@ -349,7 +350,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *database.Re
 	}
 
 	if err := database.UpdateRepository(ctxRepo, false); err != nil {
-		return fmt.Errorf("update repository: %v", err)
+		return errors.Newf("update repository: %v", err)
 	}
 
 	return nil

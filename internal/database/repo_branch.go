@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 
@@ -23,12 +24,12 @@ type Branch struct {
 func GetBranchesByPath(path string) ([]*Branch, error) {
 	gitRepo, err := git.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open repository: %v", err)
+		return nil, errors.Newf("open repository: %v", err)
 	}
 
 	names, err := gitRepo.Branches()
 	if err != nil {
-		return nil, fmt.Errorf("list branches")
+		return nil, errors.Newf("list branches")
 	}
 
 	branches := make([]*Branch, len(names))
@@ -77,7 +78,7 @@ func (r *Repository) GetBranches() ([]*Branch, error) {
 func (br *Branch) GetCommit() (*git.Commit, error) {
 	gitRepo, err := git.Open(br.RepoPath)
 	if err != nil {
-		return nil, fmt.Errorf("open repository: %v", err)
+		return nil, errors.Newf("open repository: %v", err)
 	}
 	return gitRepo.BranchCommit(br.Name)
 }
@@ -143,12 +144,12 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 
 	if protectBranch.ID == 0 {
 		if _, err = sess.Insert(protectBranch); err != nil {
-			return fmt.Errorf("insert: %v", err)
+			return errors.Newf("insert: %v", err)
 		}
 	}
 
 	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
-		return fmt.Errorf("update: %v", err)
+		return errors.Newf("update: %v", err)
 	}
 
 	return sess.Commit()
@@ -160,9 +161,9 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 // to avoid unnecessary whitelist delete and regenerate.
 func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whitelistUserIDs, whitelistTeamIDs string) (err error) {
 	if err = repo.GetOwner(); err != nil {
-		return fmt.Errorf("GetOwner: %v", err)
+		return errors.Newf("GetOwner: %v", err)
 	} else if !repo.Owner.IsOrganization() {
-		return fmt.Errorf("expect repository owner to be an organization")
+		return errors.Newf("expect repository owner to be an organization")
 	}
 
 	hasUsersChanged := false
@@ -194,7 +195,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		teamIDs := tool.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
 		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, AccessModeWrite)
 		if err != nil {
-			return fmt.Errorf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
+			return errors.Newf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
 		}
 		validTeamIDs = make([]int64, 0, len(teams))
 		for i := range teams {
@@ -209,7 +210,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	// Make sure protectBranch.ID is not 0 for whitelists
 	if protectBranch.ID == 0 {
 		if _, err = x.Insert(protectBranch); err != nil {
-			return fmt.Errorf("insert: %v", err)
+			return errors.Newf("insert: %v", err)
 		}
 	}
 
@@ -227,7 +228,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		for _, teamID := range validTeamIDs {
 			members, err := GetTeamMembers(teamID)
 			if err != nil {
-				return fmt.Errorf("GetTeamMembers [team_id: %d]: %v", teamID, err)
+				return errors.Newf("GetTeamMembers [team_id: %d]: %v", teamID, err)
 			}
 
 			for i := range members {
@@ -253,15 +254,15 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	}
 
 	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
-		return fmt.Errorf("Update: %v", err)
+		return errors.Newf("Update: %v", err)
 	}
 
 	// Refresh whitelists
 	if hasUsersChanged || hasTeamsChanged {
 		if _, err = sess.Delete(&ProtectBranchWhitelist{ProtectBranchID: protectBranch.ID}); err != nil {
-			return fmt.Errorf("delete old protect branch whitelists: %v", err)
+			return errors.Newf("delete old protect branch whitelists: %v", err)
 		} else if _, err = sess.Insert(whitelists); err != nil {
-			return fmt.Errorf("insert new protect branch whitelists: %v", err)
+			return errors.Newf("insert new protect branch whitelists: %v", err)
 		}
 	}
 

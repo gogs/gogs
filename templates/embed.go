@@ -3,13 +3,13 @@ package templates
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/osutil"
@@ -33,7 +33,7 @@ func (fs *fileSystem) Get(name string) (io.Reader, error) {
 			return bytes.NewReader(fs.files[i].Data()), nil
 		}
 	}
-	return nil, fmt.Errorf("file %q not found", name)
+	return nil, errors.Newf("file %q not found", name)
 }
 
 func mustNames(fsys fs.FS) []string {

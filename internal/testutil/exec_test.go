@@ -1,10 +1,11 @@
 package testutil
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/stretchr/testify/assert"
 )

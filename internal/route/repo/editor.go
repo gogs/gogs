@@ -1,11 +1,12 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"path"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 
 	log "unknwon.dev/clog/v2"
 

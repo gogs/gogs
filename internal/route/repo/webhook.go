@@ -1,12 +1,13 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"

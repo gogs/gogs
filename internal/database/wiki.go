@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"path"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
@@ -71,9 +71,9 @@ func (r *Repository) InitWiki() error {
 	}
 
 	if err := git.Init(r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
-		return fmt.Errorf("init repository: %v", err)
+		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
-		return fmt.Errorf("createDelegateHooks: %v", err)
+		return errors.Newf("createDelegateHooks: %v", err)
 	}
 	return nil
 }
@@ -98,14 +98,14 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
 
 	if err = r.InitWiki(); err != nil {
-		return fmt.Errorf("InitWiki: %v", err)
+		return errors.Newf("InitWiki: %v", err)
 	}
 
 	localPath := r.LocalWikiPath()
 	if err = discardLocalWikiChanges(localPath); err != nil {
-		return fmt.Errorf("discardLocalWikiChanges: %v", err)
+		return errors.Newf("discardLocalWikiChanges: %v", err)
 	} else if err = r.UpdateLocalWiki(); err != nil {
-		return fmt.Errorf("UpdateLocalWiki: %v", err)
+		return errors.Newf("UpdateLocalWiki: %v", err)
 	}
 
 	title = ToWikiPageName(title)
@@ -128,14 +128,14 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	os.Remove(filename)
 
 	if err = os.WriteFile(filename, []byte(content), 0o666); err != nil {
-		return fmt.Errorf("WriteFile: %v", err)
+		return errors.Newf("WriteFile: %v", err)
 	}
 
 	if message == "" {
 		message = "Update page '" + title + "'"
 	}
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("add all changes: %v", err)
+		return errors.Newf("add all changes: %v", err)
 	}
 
 	err = git.CreateCommit(
@@ -148,9 +148,9 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 		message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes: %v", err)
+		return errors.Newf("commit changes: %v", err)
 	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
-		return fmt.Errorf("push: %v", err)
+		return errors.Newf("push: %v", err)
 	}
 
 	return nil
@@ -170,9 +170,9 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	localPath := r.LocalWikiPath()
 	if err = discardLocalWikiChanges(localPath); err != nil {
-		return fmt.Errorf("discardLocalWikiChanges: %v", err)
+		return errors.Newf("discardLocalWikiChanges: %v", err)
 	} else if err = r.UpdateLocalWiki(); err != nil {
-		return fmt.Errorf("UpdateLocalWiki: %v", err)
+		return errors.Newf("UpdateLocalWiki: %v", err)
 	}
 
 	title = ToWikiPageName(title)
@@ -182,7 +182,7 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 	message := "Delete page '" + title + "'"
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("add all changes: %v", err)
+		return errors.Newf("add all changes: %v", err)
 	}
 
 	err = git.CreateCommit(
@@ -195,9 +195,9 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 		message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes: %v", err)
+		return errors.Newf("commit changes: %v", err)
 	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
-		return fmt.Errorf("push: %v", err)
+		return errors.Newf("push: %v", err)
 	}
 
 	return nil

@@ -2,10 +2,11 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -95,7 +96,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Repo == nil {
 		issue.Repo, err = getRepositoryByID(e, issue.RepoID)
 		if err != nil {
-			return fmt.Errorf("getRepositoryByID [%d]: %v", issue.RepoID, err)
+			return errors.Newf("getRepositoryByID [%d]: %v", issue.RepoID, err)
 		}
 	}
 
@@ -106,7 +107,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 				issue.PosterID = -1
 				issue.Poster = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", issue.PosterID, err)
+				return errors.Newf("getUserByID.(Poster) [%d]: %v", issue.PosterID, err)
 			}
 		}
 	}
@@ -114,21 +115,21 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Labels == nil {
 		issue.Labels, err = getLabelsByIssueID(e, issue.ID)
 		if err != nil {
-			return fmt.Errorf("getLabelsByIssueID [%d]: %v", issue.ID, err)
+			return errors.Newf("getLabelsByIssueID [%d]: %v", issue.ID, err)
 		}
 	}
 
 	if issue.Milestone == nil && issue.MilestoneID > 0 {
 		issue.Milestone, err = getMilestoneByRepoID(e, issue.RepoID, issue.MilestoneID)
 		if err != nil {
-			return fmt.Errorf("getMilestoneByRepoID [repo_id: %d, milestone_id: %d]: %v", issue.RepoID, issue.MilestoneID, err)
+			return errors.Newf("getMilestoneByRepoID [repo_id: %d, milestone_id: %d]: %v", issue.RepoID, issue.MilestoneID, err)
 		}
 	}
 
 	if issue.Assignee == nil && issue.AssigneeID > 0 {
 		issue.Assignee, err = getUserByID(e, issue.AssigneeID)
 		if err != nil {
-			return fmt.Errorf("getUserByID.(assignee) [%d]: %v", issue.AssigneeID, err)
+			return errors.Newf("getUserByID.(assignee) [%d]: %v", issue.AssigneeID, err)
 		}
 	}
 
@@ -136,21 +137,21 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 		// It is possible pull request is not yet created.
 		issue.PullRequest, err = getPullRequestByIssueID(e, issue.ID)
 		if err != nil && !IsErrPullRequestNotExist(err) {
-			return fmt.Errorf("getPullRequestByIssueID [%d]: %v", issue.ID, err)
+			return errors.Newf("getPullRequestByIssueID [%d]: %v", issue.ID, err)
 		}
 	}
 
 	if issue.Attachments == nil {
 		issue.Attachments, err = getAttachmentsByIssueID(e, issue.ID)
 		if err != nil {
-			return fmt.Errorf("getAttachmentsByIssueID [%d]: %v", issue.ID, err)
+			return errors.Newf("getAttachmentsByIssueID [%d]: %v", issue.ID, err)
 		}
 	}
 
 	if issue.Comments == nil {
 		issue.Comments, err = getCommentsByIssueID(e, issue.ID)
 		if err != nil {
-			return fmt.Errorf("getCommentsByIssueID [%d]: %v", issue.ID, err)
+			return errors.Newf("getCommentsByIssueID [%d]: %v", issue.ID, err)
 		}
 	}
 
@@ -302,7 +303,7 @@ func (issue *Issue) getLabels(e Engine) (err error) {
 
 	issue.Labels, err = getLabelsByIssueID(e, issue.ID)
 	if err != nil {
-		return fmt.Errorf("getLabelsByIssueID: %v", err)
+		return errors.Newf("getLabelsByIssueID: %v", err)
 	}
 	return nil
 }
@@ -323,7 +324,7 @@ func (issue *Issue) RemoveLabel(doer *User, label *Label) error {
 
 func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 	if err = issue.getLabels(e); err != nil {
-		return fmt.Errorf("getLabels: %v", err)
+		return errors.Newf("getLabels: %v", err)
 	}
 
 	// NOTE: issue.removeLabel slices issue.Labels, so we need to create another slice to be unaffected.
@@ -331,7 +332,7 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 	copy(labels, issue.Labels)
 	for i := range labels {
 		if err = issue.removeLabel(e, labels[i]); err != nil {
-			return fmt.Errorf("removeLabel: %v", err)
+			return errors.Newf("removeLabel: %v", err)
 		}
 	}
 
@@ -350,7 +351,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	if issue.IsPull {
@@ -391,9 +392,9 @@ func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 	}
 
 	if err = issue.clearLabels(sess); err != nil {
-		return fmt.Errorf("clearLabels: %v", err)
+		return errors.Newf("clearLabels: %v", err)
 	} else if err = issue.addLabels(sess, labels); err != nil {
-		return fmt.Errorf("addLabels: %v", err)
+		return errors.Newf("addLabels: %v", err)
 	}
 
 	return sess.Commit()
@@ -481,7 +482,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	if issue.IsPull {
@@ -524,7 +525,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 	oldTitle := issue.Title
 	issue.Title = title
 	if err = UpdateIssueCols(issue, "name"); err != nil {
-		return fmt.Errorf("UpdateIssueCols: %v", err)
+		return errors.Newf("UpdateIssueCols: %v", err)
 	}
 
 	if issue.IsPull {
@@ -566,7 +567,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	oldContent := issue.Content
 	issue.Content = content
 	if err = UpdateIssueCols(issue, "content"); err != nil {
-		return fmt.Errorf("UpdateIssueCols: %v", err)
+		return errors.Newf("UpdateIssueCols: %v", err)
 	}
 
 	if issue.IsPull {
@@ -607,7 +608,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	issue.AssigneeID = assigneeID
 	if err = UpdateIssueUserByAssignee(issue); err != nil {
-		return fmt.Errorf("UpdateIssueUserByAssignee: %v", err)
+		return errors.Newf("UpdateIssueUserByAssignee: %v", err)
 	}
 
 	issue.Assignee, err = Handle.Users().GetByID(context.TODO(), issue.AssigneeID)
@@ -668,7 +669,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	if opts.Issue.MilestoneID > 0 {
 		milestone, err := getMilestoneByRepoID(e, opts.Issue.RepoID, opts.Issue.MilestoneID)
 		if err != nil && !IsErrMilestoneNotExist(err) {
-			return fmt.Errorf("getMilestoneByID: %v", err)
+			return errors.Newf("getMilestoneByID: %v", err)
 		}
 
 		// Assume milestone is invalid and drop silently.
@@ -685,7 +686,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	if opts.Issue.AssigneeID > 0 {
 		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
 		if err != nil && !IsErrUserNotExist(err) {
-			return fmt.Errorf("get user by ID: %v", err)
+			return errors.Newf("get user by ID: %v", err)
 		}
 
 		if assignee != nil {
@@ -716,7 +717,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 		// So we have to get all needed labels first.
 		labels := make([]*Label, 0, len(opts.LableIDs))
 		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
-			return fmt.Errorf("find all labels [label_ids: %v]: %v", opts.LableIDs, err)
+			return errors.Newf("find all labels [label_ids: %v]: %v", opts.LableIDs, err)
 		}
 
 		for _, label := range labels {
@@ -726,7 +727,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 			}
 
 			if err = opts.Issue.addLabel(e, label); err != nil {
-				return fmt.Errorf("addLabel [id: %d]: %v", label.ID, err)
+				return errors.Newf("addLabel [id: %d]: %v", label.ID, err)
 			}
 		}
 	}
@@ -738,13 +739,13 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	if len(opts.Attachments) > 0 {
 		attachments, err := getAttachmentsByUUIDs(e, opts.Attachments)
 		if err != nil {
-			return fmt.Errorf("getAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
+			return errors.Newf("getAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
 
 		for i := 0; i < len(attachments); i++ {
 			attachments[i].IssueID = opts.Issue.ID
 			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
-				return fmt.Errorf("update attachment [id: %d]: %v", attachments[i].ID, err)
+				return errors.Newf("update attachment [id: %d]: %v", attachments[i].ID, err)
 			}
 		}
 	}
@@ -766,11 +767,11 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		LableIDs:    labelIDs,
 		Attachments: uuids,
 	}); err != nil {
-		return fmt.Errorf("new issue: %v", err)
+		return errors.Newf("new issue: %v", err)
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	if err = NotifyWatchers(&Action{
@@ -997,13 +998,13 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 
 	issues := make([]*Issue, 0, conf.UI.IssuePagingNum)
 	if err := sess.Find(&issues); err != nil {
-		return nil, fmt.Errorf("find: %v", err)
+		return nil, errors.Newf("find: %v", err)
 	}
 
 	// FIXME: use IssueList to improve performance.
 	for i := range issues {
 		if err := issues[i].LoadAttributes(); err != nil {
-			return nil, fmt.Errorf("LoadAttributes [%d]: %v", issues[i].ID, err)
+			return nil, errors.Newf("LoadAttributes [%d]: %v", issues[i].ID, err)
 		}
 	}
 
@@ -1017,7 +1018,7 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 		Where("issue_id = ?", issueID).
 		Distinct("poster_id").
 		Find(&userIDs); err != nil {
-		return nil, fmt.Errorf("get poster IDs: %v", err)
+		return nil, errors.Newf("get poster IDs: %v", err)
 	}
 	if len(userIDs) == 0 {
 		return nil, nil
@@ -1051,7 +1052,7 @@ type IssueUser struct {
 func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	assignees, err := repo.getAssignees(e)
 	if err != nil {
-		return fmt.Errorf("getAssignees: %v", err)
+		return errors.Newf("getAssignees: %v", err)
 	}
 
 	// Poster can be anyone, append later if not one of assignees.
@@ -1166,7 +1167,7 @@ func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 	users := make([]*User, 0, len(mentions))
 
 	if err := e.In("lower_name", mentions).Asc("lower_name").Find(&users); err != nil {
-		return fmt.Errorf("find mentioned users: %v", err)
+		return errors.Newf("find mentioned users: %v", err)
 	}
 
 	ids := make([]int64, 0, len(mentions))
@@ -1179,7 +1180,7 @@ func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 		memberIDs := make([]int64, 0, user.NumMembers)
 		orgUsers, err := getOrgUsersByOrgID(e, user.ID, 0)
 		if err != nil {
-			return fmt.Errorf("getOrgUsersByOrgID [%d]: %v", user.ID, err)
+			return errors.Newf("getOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
 		for _, orgUser := range orgUsers {
@@ -1190,7 +1191,7 @@ func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 	}
 
 	if err := updateIssueUsersByMentions(e, issueID, ids); err != nil {
-		return fmt.Errorf("UpdateIssueUsersByMentions: %v", err)
+		return errors.Newf("UpdateIssueUsersByMentions: %v", err)
 	}
 
 	return nil

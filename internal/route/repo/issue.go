@@ -1,12 +1,13 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"

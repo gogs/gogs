@@ -2,9 +2,10 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
+
+	"github.com/cockroachdb/errors"
 
 	"gorm.io/gorm"
 

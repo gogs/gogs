@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
-	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"

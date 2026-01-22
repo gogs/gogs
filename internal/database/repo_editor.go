@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	gouuid "github.com/satori/go.uuid"
 	"github.com/unknwon/com"
 
@@ -97,7 +97,7 @@ func discardLocalRepoBranchChanges(localPath, branch string) error {
 
 	rev := "origin/" + branch
 	if err := git.Reset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
-		return fmt.Errorf("reset [revision: %s]: %v", rev, err)
+		return errors.Newf("reset [revision: %s]: %v", rev, err)
 	}
 	return nil
 }
@@ -112,7 +112,7 @@ func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
 		BaseBranch: oldBranch,
 		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
-		return fmt.Errorf("checkout [base: %s, new: %s]: %v", oldBranch, newBranch, err)
+		return errors.Newf("checkout [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 	return nil
 }
@@ -151,9 +151,9 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
 	if err := r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
+		return errors.Newf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
 	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
-		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
+		return errors.Newf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
 	localPath := r.LocalCopyPath()
@@ -176,12 +176,12 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 			if err := git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
 				Force: true,
 			}); err != nil {
-				return fmt.Errorf("delete branch %q: %v", opts.NewBranch, err)
+				return errors.Newf("delete branch %q: %v", opts.NewBranch, err)
 			}
 		}
 
 		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
-			return fmt.Errorf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
+			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
 
@@ -204,11 +204,11 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	}
 
 	if err := os.WriteFile(newFilePath, []byte(opts.Content), 0o600); err != nil {
-		return fmt.Errorf("write file: %v", err)
+		return errors.Newf("write file: %v", err)
 	}
 
 	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("git add --all: %v", err)
+		return errors.Newf("git add --all: %v", err)
 	}
 	err := git.CreateCommit(
 		localPath,
@@ -220,7 +220,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		opts.Message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes on %q: %v", localPath, err)
+		return errors.Newf("commit changes on %q: %v", localPath, err)
 	}
 
 	err = git.Push(localPath, "origin", opts.NewBranch,
@@ -238,7 +238,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
+		return errors.Newf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
 }
@@ -254,9 +254,9 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
 	if err := r.DiscardLocalRepoBranchChanges(branch); err != nil {
-		return nil, fmt.Errorf("discard local repo branch[%s] changes: %v", branch, err)
+		return nil, errors.Newf("discard local repo branch[%s] changes: %v", branch, err)
 	} else if err = r.UpdateLocalCopyBranch(branch); err != nil {
-		return nil, fmt.Errorf("update local copy branch[%s]: %v", branch, err)
+		return nil, errors.Newf("update local copy branch[%s]: %v", branch, err)
 	}
 
 	localPath := r.LocalCopyPath()
@@ -271,7 +271,7 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 	if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
 		return nil, errors.Wrap(err, "create parent directories")
 	} else if err = os.WriteFile(filePath, []byte(content), 0o600); err != nil {
-		return nil, fmt.Errorf("write file: %v", err)
+		return nil, errors.Newf("write file: %v", err)
 	}
 
 	// 🚨 SECURITY: Prevent including unintended options in the path to the Git command.
@@ -281,11 +281,11 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("get stdout pipe: %v", err)
+		return nil, errors.Newf("get stdout pipe: %v", err)
 	}
 
 	if err = cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start: %v", err)
+		return nil, errors.Newf("start: %v", err)
 	}
 
 	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", r.RepoPath()), cmd)
@@ -293,10 +293,10 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 
 	diff, err := gitutil.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
 	if err != nil {
-		return nil, fmt.Errorf("parse diff: %v", err)
+		return nil, errors.Newf("parse diff: %v", err)
 	}
 	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("wait: %v", err)
+		return nil, errors.Newf("wait: %v", err)
 	}
 	return diff, nil
 }
@@ -327,9 +327,9 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
 	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
+		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
 	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
-		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
+		return errors.Newf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
 	localPath := r.LocalCopyPath()
@@ -342,17 +342,17 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 
 	if opts.OldBranch != opts.NewBranch {
 		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
-			return fmt.Errorf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
+			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
 
 	filePath := path.Join(localPath, opts.TreePath)
 	if err = os.Remove(filePath); err != nil {
-		return fmt.Errorf("remove file %q: %v", opts.TreePath, err)
+		return errors.Newf("remove file %q: %v", opts.TreePath, err)
 	}
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("git add --all: %v", err)
+		return errors.Newf("git add --all: %v", err)
 	}
 
 	err = git.CreateCommit(
@@ -365,7 +365,7 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		opts.Message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes to %q: %v", localPath, err)
+		return errors.Newf("commit changes to %q: %v", localPath, err)
 	}
 
 	err = git.Push(localPath, "origin", opts.NewBranch,
@@ -383,7 +383,7 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
+		return errors.Newf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
 }
@@ -416,7 +416,7 @@ func (upload *Upload) LocalPath() string {
 // NewUpload creates a new upload object.
 func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
 	if tool.IsMaliciousPath(name) {
-		return nil, fmt.Errorf("malicious path detected: %s", name)
+		return nil, errors.Newf("malicious path detected: %s", name)
 	}
 
 	upload := &Upload{
@@ -426,19 +426,19 @@ func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err err
 
 	localPath := upload.LocalPath()
 	if err = os.MkdirAll(path.Dir(localPath), os.ModePerm); err != nil {
-		return nil, fmt.Errorf("mkdir all: %v", err)
+		return nil, errors.Newf("mkdir all: %v", err)
 	}
 
 	fw, err := os.Create(localPath)
 	if err != nil {
-		return nil, fmt.Errorf("create: %v", err)
+		return nil, errors.Newf("create: %v", err)
 	}
 	defer func() { _ = fw.Close() }()
 
 	if _, err = fw.Write(buf); err != nil {
-		return nil, fmt.Errorf("write: %v", err)
+		return nil, errors.Newf("write: %v", err)
 	} else if _, err = io.Copy(fw, file); err != nil {
-		return nil, fmt.Errorf("copy: %v", err)
+		return nil, errors.Newf("copy: %v", err)
 	}
 
 	if _, err := x.Insert(upload); err != nil {
@@ -485,7 +485,7 @@ func DeleteUploads(uploads ...*Upload) (err error) {
 		ids[i] = uploads[i].ID
 	}
 	if _, err = sess.In("id", ids).Delete(new(Upload)); err != nil {
-		return fmt.Errorf("delete uploads: %v", err)
+		return errors.Newf("delete uploads: %v", err)
 	}
 
 	for _, upload := range uploads {
@@ -495,7 +495,7 @@ func DeleteUploads(uploads ...*Upload) (err error) {
 		}
 
 		if err := os.Remove(localPath); err != nil {
-			return fmt.Errorf("remove upload: %v", err)
+			return errors.Newf("remove upload: %v", err)
 		}
 	}
 
@@ -512,11 +512,11 @@ func DeleteUploadByUUID(uuid string) error {
 		if IsErrUploadNotExist(err) {
 			return nil
 		}
-		return fmt.Errorf("get upload by UUID[%s]: %v", uuid, err)
+		return errors.Newf("get upload by UUID[%s]: %v", uuid, err)
 	}
 
 	if err := DeleteUpload(upload); err != nil {
-		return fmt.Errorf("delete upload: %v", err)
+		return errors.Newf("delete upload: %v", err)
 	}
 
 	return nil
@@ -558,21 +558,21 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 	uploads, err := GetUploadsByUUIDs(opts.Files)
 	if err != nil {
-		return fmt.Errorf("get uploads by UUIDs[%v]: %v", opts.Files, err)
+		return errors.Newf("get uploads by UUIDs[%v]: %v", opts.Files, err)
 	}
 
 	repoWorkingPool.CheckIn(com.ToStr(r.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
 
 	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return fmt.Errorf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
+		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
 	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
-		return fmt.Errorf("update local copy branch[%s]: %v", opts.OldBranch, err)
+		return errors.Newf("update local copy branch[%s]: %v", opts.OldBranch, err)
 	}
 
 	if opts.OldBranch != opts.NewBranch {
 		if err = r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
-			return fmt.Errorf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
+			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
 
@@ -602,16 +602,16 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		// 🚨 SECURITY: Prevent updating files in surprising place, check if the target
 		// is a symlink.
 		if osutil.IsSymlink(targetPath) {
-			return fmt.Errorf("cannot overwrite symbolic link: %s", upload.Name)
+			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
 
 		if err = com.Copy(tmpPath, targetPath); err != nil {
-			return fmt.Errorf("copy: %v", err)
+			return errors.Newf("copy: %v", err)
 		}
 	}
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("git add --all: %v", err)
+		return errors.Newf("git add --all: %v", err)
 	}
 
 	err = git.CreateCommit(
@@ -624,7 +624,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		opts.Message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes on %q: %v", localPath, err)
+		return errors.Newf("commit changes on %q: %v", localPath, err)
 	}
 
 	err = git.Push(localPath, "origin", opts.NewBranch,
@@ -642,7 +642,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
+		return errors.Newf("git push origin %s: %v", opts.NewBranch, err)
 	}
 
 	return DeleteUploads(uploads...)

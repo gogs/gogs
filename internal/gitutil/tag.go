@@ -1,7 +1,7 @@
 package gitutil
 
 import (
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 )
 
 // TagsPage contains a list of tags and pagination information.

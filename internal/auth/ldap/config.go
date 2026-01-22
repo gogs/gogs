@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-ldap/ldap/v3"
 	log "unknwon.dev/clog/v2"
 )
@@ -162,13 +163,13 @@ func dial(ls *Config) (*ldap.Conn, error) {
 
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
 	if err != nil {
-		return nil, fmt.Errorf("dial: %v", err)
+		return nil, errors.Newf("dial: %v", err)
 	}
 
 	if ls.SecurityProtocol == SecurityProtocolStartTLS {
 		if err = conn.StartTLS(tlsCfg); err != nil {
 			conn.Close()
-			return nil, fmt.Errorf("StartTLS: %v", err)
+			return nil, errors.Newf("StartTLS: %v", err)
 		}
 	}
 

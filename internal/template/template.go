@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/microcosm-cc/bluemonday"
@@ -160,7 +161,7 @@ func ToUTF8WithErr(content []byte) (string, error) {
 
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
-		return string(content), fmt.Errorf("unknown encoding: %s", charsetLabel)
+		return string(content), errors.Newf("unknown encoding: %s", charsetLabel)
 	}
 
 	// If there is an error, we concatenate the nicely decoded part and the

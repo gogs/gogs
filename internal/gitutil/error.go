@@ -1,8 +1,8 @@
 package gitutil
 
 import (
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/errutil"
 )

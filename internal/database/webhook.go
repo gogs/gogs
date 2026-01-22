@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
 	gouuid "github.com/satori/go.uuid"
 	log "unknwon.dev/clog/v2"
@@ -605,17 +606,17 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 		case SLACK:
 			payloader, err = GetSlackPayload(p, event, w.Meta)
 			if err != nil {
-				return fmt.Errorf("GetSlackPayload: %v", err)
+				return errors.Newf("GetSlackPayload: %v", err)
 			}
 		case DISCORD:
 			payloader, err = GetDiscordPayload(p, event, w.Meta)
 			if err != nil {
-				return fmt.Errorf("GetDiscordPayload: %v", err)
+				return errors.Newf("GetDiscordPayload: %v", err)
 			}
 		case DINGTALK:
 			payloader, err = GetDingtalkPayload(p, event)
 			if err != nil {
-				return fmt.Errorf("GetDingtalkPayload: %v", err)
+				return errors.Newf("GetDingtalkPayload: %v", err)
 			}
 		default:
 			payloader = p
@@ -643,7 +644,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			EventType:   event,
 			IsSSL:       w.IsSSL,
 		}); err != nil {
-			return fmt.Errorf("createHookTask: %v", err)
+			return errors.Newf("createHookTask: %v", err)
 		}
 	}
 
@@ -657,7 +658,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payloader) error {
 	webhooks, err := getActiveWebhooksByRepoID(e, repo.ID)
 	if err != nil {
-		return fmt.Errorf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
+		return errors.Newf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
 	}
 
 	// check if repo belongs to org and append additional webhooks
@@ -665,7 +666,7 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 		// get hooks for org
 		orgws, err := getActiveWebhooksByOrgID(e, repo.OwnerID)
 		if err != nil {
-			return fmt.Errorf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
+			return errors.Newf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
 		}
 		webhooks = append(webhooks, orgws...)
 	}
@@ -686,7 +687,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhookID int64) error {
 	webhook, err := GetWebhookOfRepoByID(repo.ID, webhookID)
 	if err != nil {
-		return fmt.Errorf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
+		return errors.Newf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
 	}
 	return prepareHookTasks(x, repo, event, p, []*Webhook{webhook})
 }

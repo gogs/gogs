@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"

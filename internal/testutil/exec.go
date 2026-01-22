@@ -1,11 +1,11 @@
 package testutil
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // Exec executes "go test" on given helper with supplied environment variables.
@@ -34,7 +34,7 @@ func Exec(helper string, envs ...string) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("%v - %s", err, str)
+		return "", errors.Newf("%v - %s", err, str)
 	}
 	return "", errors.New(str)
 }

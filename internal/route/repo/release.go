@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 
@@ -27,11 +27,11 @@ func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *database.R
 		if repoCtx.GitRepo.HasBranch(release.Target) {
 			commit, err := repoCtx.GitRepo.BranchCommit(release.Target)
 			if err != nil {
-				return fmt.Errorf("get branch commit: %v", err)
+				return errors.Newf("get branch commit: %v", err)
 			}
 			countCache[release.Target], err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("count commits: %v", err)
+				return errors.Newf("count commits: %v", err)
 			}
 		} else {
 			// Use NumCommits of the newest release on that target

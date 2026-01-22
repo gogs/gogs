@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -287,7 +287,7 @@ func getSlackReleasePayload(p *api.ReleasePayload) *SlackPayload {
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("unmarshal: %v", err)
+		return nil, errors.Newf("unmarshal: %v", err)
 	}
 
 	switch event {

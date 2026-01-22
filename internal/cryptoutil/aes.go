@@ -4,7 +4,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"errors"
+
+	"github.com/cockroachdb/errors"
 )
 
 // AESGCMEncrypt encrypts plaintext with the given key using AES in GCM mode.

@@ -8,6 +8,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	gouuid "github.com/satori/go.uuid"
 	"xorm.io/xorm"
 
@@ -58,19 +59,19 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 
 	localPath := attach.LocalPath()
 	if err = os.MkdirAll(path.Dir(localPath), os.ModePerm); err != nil {
-		return nil, fmt.Errorf("MkdirAll: %v", err)
+		return nil, errors.Newf("MkdirAll: %v", err)
 	}
 
 	fw, err := os.Create(localPath)
 	if err != nil {
-		return nil, fmt.Errorf("Create: %v", err)
+		return nil, errors.Newf("Create: %v", err)
 	}
 	defer fw.Close()
 
 	if _, err = fw.Write(buf); err != nil {
-		return nil, fmt.Errorf("write: %v", err)
+		return nil, errors.Newf("write: %v", err)
 	} else if _, err = io.Copy(fw, file); err != nil {
-		return nil, fmt.Errorf("copy: %v", err)
+		return nil, errors.Newf("copy: %v", err)
 	}
 
 	if _, err := x.Insert(attach); err != nil {

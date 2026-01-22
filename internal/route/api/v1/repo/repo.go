@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
-	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
