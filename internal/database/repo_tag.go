@@ -29,7 +29,7 @@ func GetTagsByPath(path string) ([]*Tag, error) {
 
 	names, err := gitRepo.Tags()
 	if err != nil {
-		return nil, errors.Newf("list tags")
+		return nil, errors.Newf("list tags: %v", err)
 	}
 
 	tags := make([]*Tag, len(names))
