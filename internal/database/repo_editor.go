@@ -19,13 +19,27 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
-	dberrors "gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
 )
+
+// BranchAlreadyExists represents an error when branch already exists.
+type BranchAlreadyExists struct {
+	Name string
+}
+
+// IsBranchAlreadyExists returns true if the error is BranchAlreadyExists.
+func IsBranchAlreadyExists(err error) bool {
+	_, ok := err.(BranchAlreadyExists)
+	return ok
+}
+
+func (err BranchAlreadyExists) Error() string {
+	return fmt.Sprintf("branch already exists [name: %s]", err.Name)
+}
 
 const (
 	EnvAuthUserID          = "GOGS_AUTH_USER_ID"
@@ -154,7 +168,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
 		if git.RepoHasBranch(repoPath, opts.NewBranch) {
-			return dberrors.BranchAlreadyExists{Name: opts.NewBranch}
+			return BranchAlreadyExists{Name: opts.NewBranch}
 		}
 
 		// Otherwise, delete branch from local copy in case out of sync

@@ -2,12 +2,12 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/errutil"
 )
 

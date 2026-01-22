@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,7 +14,6 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
