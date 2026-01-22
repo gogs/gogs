@@ -3,7 +3,7 @@ package auth
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/errutil"
 )

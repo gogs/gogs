@@ -1,12 +1,12 @@
 package avatar
 
 import (
-	"fmt"
 	"image"
 	"image/color/palette"
 	"math/rand"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/issue9/identicon"
 )
 
@@ -27,7 +27,7 @@ func RandomImageWithSize(size int, data []byte) (image.Image, error) {
 	imgMaker, err := identicon.New(size,
 		palette.WebSafe[backColorIndex], palette.WebSafe[colorIndex:colorIndex+32]...)
 	if err != nil {
-		return nil, fmt.Errorf("identicon.New: %v", err)
+		return nil, errors.Newf("identicon.New: %v", err)
 	}
 	return imgMaker.Make(data), nil
 }

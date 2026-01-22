@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 )

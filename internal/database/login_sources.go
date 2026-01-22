@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
@@ -121,7 +121,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 		s.Provider = mockProvider
 
 	default:
-		return fmt.Errorf("unrecognized login source type: %v", s.Type)
+		return errors.Newf("unrecognized login source type: %v", s.Type)
 	}
 	return nil
 }

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -370,7 +370,7 @@ func getDiscordReleasePayload(p *api.ReleasePayload) *DiscordPayload {
 func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
 	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("jsoniter.Unmarshal: %v", err)
+		return nil, errors.Newf("jsoniter.Unmarshal: %v", err)
 	}
 
 	switch event {

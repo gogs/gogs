@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	gouuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 

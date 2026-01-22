@@ -3,8 +3,8 @@ package repo
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"

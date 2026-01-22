@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/dbutil"

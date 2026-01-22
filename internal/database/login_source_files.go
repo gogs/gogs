@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gopkg.in/ini.v1"
 
 	"gogs.io/gogs/internal/auth"
@@ -200,7 +200,7 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			loginSource.Provider = github.NewProvider(&cfg)
 
 		default:
-			return fmt.Errorf("unknown type %q", authType)
+			return errors.Newf("unknown type %q", authType)
 		}
 
 		store.sources = append(store.sources, loginSource)

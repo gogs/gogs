@@ -2,10 +2,10 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/errutil"
@@ -55,14 +55,14 @@ func (t *Team) IsMember(userID int64) bool {
 func (t *Team) getRepositories(e Engine) (err error) {
 	teamRepos := make([]*TeamRepo, 0, t.NumRepos)
 	if err = x.Where("team_id=?", t.ID).Find(&teamRepos); err != nil {
-		return fmt.Errorf("get team-repos: %v", err)
+		return errors.Newf("get team-repos: %v", err)
 	}
 
 	t.Repos = make([]*Repository, 0, len(teamRepos))
 	for i := range teamRepos {
 		repo, err := getRepositoryByID(e, teamRepos[i].RepoID)
 		if err != nil {
-			return fmt.Errorf("getRepositoryById(%d): %v", teamRepos[i].RepoID, err)
+			return errors.Newf("getRepositoryById(%d): %v", teamRepos[i].RepoID, err)
 		}
 		t.Repos = append(t.Repos, repo)
 	}
@@ -111,19 +111,19 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 
 	t.NumRepos++
 	if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
-		return fmt.Errorf("update team: %v", err)
+		return errors.Newf("update team: %v", err)
 	}
 
 	if err = repo.recalculateTeamAccesses(e, 0); err != nil {
-		return fmt.Errorf("recalculateAccesses: %v", err)
+		return errors.Newf("recalculateAccesses: %v", err)
 	}
 
 	if err = t.getMembers(e); err != nil {
-		return fmt.Errorf("getMembers: %v", err)
+		return errors.Newf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
 		if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
-			return fmt.Errorf("watchRepo: %v", err)
+			return errors.Newf("watchRepo: %v", err)
 		}
 	}
 	return nil
@@ -168,7 +168,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 	}
 
 	if err = t.getMembers(e); err != nil {
-		return fmt.Errorf("get team members: %v", err)
+		return errors.Newf("get team members: %v", err)
 	}
 
 	// TODO: Delete me when this method is migrated to use GORM.
@@ -387,18 +387,18 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	if _, err = sess.ID(t.ID).AllCols().Update(t); err != nil {
-		return fmt.Errorf("update: %v", err)
+		return errors.Newf("update: %v", err)
 	}
 
 	// Update access for team members if needed.
 	if authChanged {
 		if err = t.getRepositories(sess); err != nil {
-			return fmt.Errorf("getRepositories:%v", err)
+			return errors.Newf("getRepositories:%v", err)
 		}
 
 		for _, repo := range t.Repos {
 			if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
-				return fmt.Errorf("recalculateTeamAccesses: %v", err)
+				return errors.Newf("recalculateTeamAccesses: %v", err)
 			}
 		}
 	}
@@ -478,13 +478,13 @@ func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	teamUsers := make([]*TeamUser, 0, 10)
 	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id = ?", teamID).
 		Find(&teamUsers); err != nil {
-		return nil, fmt.Errorf("get team-users: %v", err)
+		return nil, errors.Newf("get team-users: %v", err)
 	}
 	members := make([]*User, 0, len(teamUsers))
 	for i := range teamUsers {
 		member := new(User)
 		if _, err = e.ID(teamUsers[i].UID).Get(member); err != nil {
-			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].UID, err)
+			return nil, errors.Newf("get user '%d': %v", teamUsers[i].UID, err)
 		}
 		members = append(members, member)
 	}

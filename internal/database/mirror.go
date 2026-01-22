@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
@@ -141,7 +142,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 
 	err := git.RemoteRemove(repoPath, "origin")
 	if err != nil {
-		return fmt.Errorf("remove remote 'origin': %v", err)
+		return errors.Newf("remove remote 'origin': %v", err)
 	}
 
 	addrURL, err := url.Parse(addr)
@@ -151,7 +152,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 
 	err = git.RemoteAdd(repoPath, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
 	if err != nil {
-		return fmt.Errorf("add remote 'origin': %v", err)
+		return errors.Newf("add remote 'origin': %v", err)
 	}
 
 	return nil

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
 	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"

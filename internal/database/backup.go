@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
@@ -125,14 +125,14 @@ func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 		tableFile := filepath.Join(dirPath, tableName+".json")
 		f, err := os.Create(tableFile)
 		if err != nil {
-			return fmt.Errorf("create JSON file: %v", err)
+			return errors.Newf("create JSON file: %v", err)
 		}
 
 		if err = x.Context(ctx).Asc("id").Iterate(table, func(idx int, bean any) (err error) {
 			return jsoniter.NewEncoder(f).Encode(bean)
 		}); err != nil {
 			_ = f.Close()
-			return fmt.Errorf("dump table '%s': %v", tableName, err)
+			return errors.Newf("dump table '%s': %v", tableName, err)
 		}
 		_ = f.Close()
 	}
@@ -256,25 +256,25 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 		}
 
 		if err := x.DropTables(table); err != nil {
-			return fmt.Errorf("drop table %q: %v", tableName, err)
+			return errors.Newf("drop table %q: %v", tableName, err)
 		} else if err = x.Sync2(table); err != nil {
-			return fmt.Errorf("sync table %q: %v", tableName, err)
+			return errors.Newf("sync table %q: %v", tableName, err)
 		}
 
 		f, err := os.Open(tableFile)
 		if err != nil {
-			return fmt.Errorf("open JSON file: %v", err)
+			return errors.Newf("open JSON file: %v", err)
 		}
 		rawTableName := x.TableName(table)
 		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			if err = jsoniter.Unmarshal(scanner.Bytes(), table); err != nil {
-				return fmt.Errorf("unmarshal to struct: %v", err)
+				return errors.Newf("unmarshal to struct: %v", err)
 			}
 
 			if _, err = x.Insert(table); err != nil {
-				return fmt.Errorf("insert strcut: %v", err)
+				return errors.Newf("insert strcut: %v", err)
 			}
 
 			var meta struct {
@@ -307,7 +307,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 			rawTableName := snakeMapper.Obj2Table(tableName)
 			seqName := rawTableName + "_id_seq"
 			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
-				return fmt.Errorf("reset table %q' sequence: %v", rawTableName, err)
+				return errors.Newf("reset table %q' sequence: %v", rawTableName, err)
 			}
 		}
 	}

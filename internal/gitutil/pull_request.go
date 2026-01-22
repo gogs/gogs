@@ -1,12 +1,11 @@
 package gitutil
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -28,7 +27,7 @@ func (module) PullRequestMeta(headPath, basePath, headBranch, baseBranch string)
 		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
 		err := Module.RemoteAdd(headPath, tmpRemote, basePath, git.RemoteAddOptions{Fetch: true})
 		if err != nil {
-			return nil, fmt.Errorf("add remote: %v", err)
+			return nil, errors.Newf("add remote: %v", err)
 		}
 		defer func() {
 			err := Module.RemoteRemove(headPath, tmpRemote)

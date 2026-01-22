@@ -1,7 +1,7 @@
 package lfsutil
 
 import (
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/lazyregexp"
 )

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 
@@ -45,9 +45,9 @@ func runImportLocale(c *cli.Context) error {
 		return errors.New("target directory is not specified")
 	}
 	if !com.IsDir(c.String("source")) {
-		return fmt.Errorf("source directory %q does not exist or is not a directory", c.String("source"))
+		return errors.Newf("source directory %q does not exist or is not a directory", c.String("source"))
 	} else if !com.IsDir(c.String("target")) {
-		return fmt.Errorf("target directory %q does not exist or is not a directory", c.String("target"))
+		return errors.Newf("target directory %q does not exist or is not a directory", c.String("target"))
 	}
 
 	err := conf.Init(c.String("config"))
@@ -74,12 +74,12 @@ func runImportLocale(c *cli.Context) error {
 		// this breaks INI parser, we need to fix that.
 		sr, err := os.Open(source)
 		if err != nil {
-			return fmt.Errorf("open: %v", err)
+			return errors.Newf("open: %v", err)
 		}
 
 		tw, err := os.Create(target)
 		if err != nil {
-			return fmt.Errorf("create: %v", err)
+			return errors.Newf("create: %v", err)
 		}
 
 		scanner := bufio.NewScanner(sr)

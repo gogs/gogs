@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pkg/errors"
 	"gopkg.in/DATA-DOG/go-sqlmock.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"

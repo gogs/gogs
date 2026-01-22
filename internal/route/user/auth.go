@@ -3,10 +3,10 @@ package user
 import (
 	gocontext "context"
 	"encoding/hex"
-	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/captcha"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -55,7 +55,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), uname)
 	if err != nil {
 		if !database.IsErrUserNotExist(err) {
-			return false, fmt.Errorf("get user by name: %v", err)
+			return false, errors.Newf("get user by name: %v", err)
 		}
 		return false, nil
 	}

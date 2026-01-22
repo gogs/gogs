@@ -1,7 +1,6 @@
 package conf
 
 import (
-	"fmt"
 	"net/mail"
 	"net/url"
 	"os"
@@ -10,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -189,7 +188,7 @@ func Init(customConf string) error {
 	if Security.InstallLock {
 		currentUser, match := CheckRunUser(App.RunUser)
 		if !match {
-			return fmt.Errorf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
+			return errors.Newf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
 		}
 	}
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/paginater"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"

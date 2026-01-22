@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"

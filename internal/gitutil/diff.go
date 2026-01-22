@@ -2,12 +2,12 @@ package gitutil
 
 import (
 	"bytes"
-	"fmt"
 	"html"
 	"html/template"
 	"io"
 	"sync"
 
+	"github.com/cockroachdb/errors"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -176,7 +176,7 @@ func ParseDiff(r io.Reader, maxFiles, maxFileLines, maxLineChars int) (*Diff, er
 
 	result := <-done
 	if result.Err != nil {
-		return nil, fmt.Errorf("stream parse diff: %v", result.Err)
+		return nil, errors.Newf("stream parse diff: %v", result.Err)
 	}
 	return NewDiff(result.Diff), nil
 }
@@ -185,7 +185,7 @@ func ParseDiff(r io.Reader, maxFiles, maxFileLines, maxLineChars int) (*Diff, er
 func RepoDiff(repo *git.Repository, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...git.DiffOptions) (*Diff, error) {
 	diff, err := repo.Diff(rev, maxFiles, maxFileLines, maxLineChars, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("get diff: %v", err)
+		return nil, errors.Newf("get diff: %v", err)
 	}
 	return NewDiff(diff), nil
 }

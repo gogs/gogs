@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
@@ -97,7 +98,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 				c.PosterID = -1
 				c.Poster = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)
+				return errors.Newf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)
 			}
 		}
 	}
@@ -105,12 +106,12 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Issue == nil {
 		c.Issue, err = getRawIssueByID(e, c.IssueID)
 		if err != nil {
-			return fmt.Errorf("getIssueByID [%d]: %v", c.IssueID, err)
+			return errors.Newf("getIssueByID [%d]: %v", c.IssueID, err)
 		}
 		if c.Issue.Repo == nil {
 			c.Issue.Repo, err = getRepositoryByID(e, c.Issue.RepoID)
 			if err != nil {
-				return fmt.Errorf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
+				return errors.Newf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
 			}
 		}
 	}
@@ -118,7 +119,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Attachments == nil {
 		c.Attachments, err = getAttachmentsByCommentID(e, c.ID)
 		if err != nil {
-			return fmt.Errorf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
+			return errors.Newf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
 		}
 	}
 
@@ -165,7 +166,7 @@ func (c *Comment) EventTag() string {
 func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
 	mentions := markup.FindAllMentions(c.Content)
 	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
+		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
 	switch opType {
@@ -227,7 +228,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 				if IsErrAttachmentNotExist(err) {
 					continue
 				}
-				return nil, fmt.Errorf("getAttachmentByUUID [%s]: %v", uuid, err)
+				return nil, errors.Newf("getAttachmentByUUID [%s]: %v", uuid, err)
 			}
 			attachments = append(attachments, attach)
 		}
@@ -237,7 +238,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			attachments[i].CommentID = comment.ID
 			// No assign value could be 0, so ignore AllCols().
 			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
-				return nil, fmt.Errorf("update attachment [%d]: %v", attachments[i].ID, err)
+				return nil, errors.Newf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
 		}
 
@@ -273,7 +274,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	}
 
 	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
-		return nil, fmt.Errorf("update issue 'updated_unix': %v", err)
+		return nil, errors.Newf("update issue 'updated_unix': %v", err)
 	}
 
 	// Notify watchers for whatever action comes in, ignore if no action type.
@@ -342,7 +343,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 		Attachments: attachments,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("CreateComment: %v", err)
+		return nil, errors.Newf("CreateComment: %v", err)
 	}
 
 	comment.Issue = issue
@@ -362,7 +363,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 // CreateRefComment creates a commit reference comment to issue.
 func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
 	if commitSHA == "" {
-		return fmt.Errorf("cannot create reference with empty commit SHA")
+		return errors.Newf("cannot create reference with empty commit SHA")
 	}
 
 	// Check if same reference from same commit has already existed.
@@ -372,7 +373,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 		CommitSHA: commitSHA,
 	})
 	if err != nil {
-		return fmt.Errorf("check reference comment: %v", err)
+		return errors.Newf("check reference comment: %v", err)
 	} else if has {
 		return nil
 	}
@@ -423,7 +424,7 @@ func GetCommentByID(id int64) (*Comment, error) {
 func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
 	for i := range comments {
 		if err = comments[i].loadAttributes(e); err != nil {
-			return fmt.Errorf("loadAttributes [%d]: %v", comments[i].ID, err)
+			return errors.Newf("loadAttributes [%d]: %v", comments[i].ID, err)
 		}
 	}
 
@@ -527,7 +528,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	_, err = DeleteAttachmentsByComment(comment.ID, true)

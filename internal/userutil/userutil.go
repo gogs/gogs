@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/nfnt/resize"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/pbkdf2"
 
 	"gogs.io/gogs/internal/avatar"

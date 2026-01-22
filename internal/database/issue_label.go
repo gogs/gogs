@@ -8,6 +8,7 @@ import (
 
 	"xorm.io/xorm"
 
+	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/errutil"
@@ -22,7 +23,7 @@ var labelColorPattern = lazyregexp.New("#([a-fA-F0-9]{6})")
 func GetLabelTemplateFile(name string) ([][2]string, error) {
 	data, err := getRepoInitFile("label", name)
 	if err != nil {
-		return nil, fmt.Errorf("getRepoInitFile: %v", err)
+		return nil, errors.Newf("getRepoInitFile: %v", err)
 	}
 
 	lines := strings.Split(string(data), "\n")
@@ -35,11 +36,11 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 
 		fields := strings.SplitN(line, " ", 2)
 		if len(fields) != 2 {
-			return nil, fmt.Errorf("line is malformed: %s", line)
+			return nil, errors.Newf("line is malformed: %s", line)
 		}
 
 		if !labelColorPattern.MatchString(fields[0]) {
-			return nil, fmt.Errorf("bad HTML color code in line: %s", line)
+			return nil, errors.Newf("bad HTML color code in line: %s", line)
 		}
 
 		fields[1] = strings.TrimSpace(fields[1])
@@ -192,7 +193,7 @@ func GetLabelsByRepoID(repoID int64) ([]*Label, error) {
 func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
 	issueLabels, err := getIssueLabels(e, issueID)
 	if err != nil {
-		return nil, fmt.Errorf("getIssueLabels: %v", err)
+		return nil, errors.Newf("getIssueLabels: %v", err)
 	} else if len(issueLabels) == 0 {
 		return []*Label{}, nil
 	}
@@ -284,7 +285,7 @@ func newIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 	}
 
 	if err = updateLabel(e, label); err != nil {
-		return fmt.Errorf("updateLabel: %v", err)
+		return errors.Newf("updateLabel: %v", err)
 	}
 
 	issue.Labels = append(issue.Labels, label)
@@ -317,7 +318,7 @@ func newIssueLabels(e *xorm.Session, issue *Issue, labels []*Label) (err error) 
 		}
 
 		if err = newIssueLabel(e, issue, labels[i]); err != nil {
-			return fmt.Errorf("newIssueLabel: %v", err)
+			return errors.Newf("newIssueLabel: %v", err)
 		}
 	}
 
@@ -362,7 +363,7 @@ func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 		label.NumClosedIssues--
 	}
 	if err = updateLabel(e, label); err != nil {
-		return fmt.Errorf("updateLabel: %v", err)
+		return errors.Newf("updateLabel: %v", err)
 	}
 
 	for i := range issue.Labels {

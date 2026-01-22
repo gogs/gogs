@@ -3,8 +3,8 @@ package user
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
-	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
