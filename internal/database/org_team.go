@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/errutil"

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-
 	"xorm.io/builder"
 	"xorm.io/xorm"
 
