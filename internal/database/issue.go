@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,13 +14,12 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
 )
 
-var ErrMissingIssueNumber = errors.New("No issue number specified")
+var ErrMissingIssueNumber = errors.New("no issue number specified")
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {

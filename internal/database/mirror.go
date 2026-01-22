@@ -15,12 +15,26 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
 
 var MirrorQueue = sync.NewUniqueQueue(1000)
+
+// MirrorNotExist represents an error when mirror does not exist.
+type MirrorNotExist struct {
+	RepoID int64
+}
+
+// IsMirrorNotExist returns true if the error is MirrorNotExist.
+func IsMirrorNotExist(err error) bool {
+	_, ok := err.(MirrorNotExist)
+	return ok
+}
+
+func (err MirrorNotExist) Error() string {
+	return fmt.Sprintf("mirror does not exist [repo_id: %d]", err.RepoID)
+}
 
 // Mirror represents mirror information of a repository.
 type Mirror struct {
@@ -268,7 +282,7 @@ func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.MirrorNotExist{RepoID: repoID}
+		return nil, MirrorNotExist{RepoID: repoID}
 	}
 	return m, nil
 }

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -14,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
@@ -33,8 +33,8 @@ const (
 )
 
 var (
-	ErrFileTypeForbidden = errors.New("File type is not allowed")
-	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
+	ErrFileTypeForbidden = errors.New("file type is not allowed")
+	ErrTooManyFiles      = errors.New("maximum number of files to upload exceeded")
 
 	IssueTemplateCandidates = []string{
 		"ISSUE_TEMPLATE.md",

@@ -29,7 +29,6 @@ import (
 	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
-	dberrors "gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
@@ -42,6 +41,21 @@ import (
 
 // RepoAvatarURLPrefix is used to identify a URL is to access repository avatar.
 const RepoAvatarURLPrefix = "repo-avatars"
+
+// InvalidRepoReference represents an error when repository reference is invalid.
+type InvalidRepoReference struct {
+	Ref string
+}
+
+// IsInvalidRepoReference returns true if the error is InvalidRepoReference.
+func IsInvalidRepoReference(err error) bool {
+	_, ok := err.(InvalidRepoReference)
+	return ok
+}
+
+func (err InvalidRepoReference) Error() string {
+	return fmt.Sprintf("invalid repository reference [ref: %s]", err.Ref)
+}
 
 var repoWorkingPool = sync.NewExclusivePool()
 
@@ -1751,7 +1765,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 func GetRepositoryByRef(ref string) (*Repository, error) {
 	n := strings.IndexByte(ref, byte('/'))
 	if n < 2 {
-		return nil, dberrors.InvalidRepoReference{Ref: ref}
+		return nil, InvalidRepoReference{Ref: ref}
 	}
 
 	userName, repoName := ref[:n], ref[n+1:]
