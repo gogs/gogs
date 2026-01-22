@@ -16,3 +16,4 @@ output*
 /release
 .task
 .envrc
+internal/database/testuser/
