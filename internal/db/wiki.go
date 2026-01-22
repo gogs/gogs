@@ -18,6 +18,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/sync"
 )
@@ -38,12 +39,12 @@ func ToWikiPageURL(name string) string {
 	return url.QueryEscape(name)
 }
 
-// ToWikiPageName formats a URL back to corresponding wiki page name,
-// and removes leading characters './' to prevent changing files
-// that are not belong to wiki repository.
+// ToWikiPageName formats a URL back to corresponding wiki page name. It enforces
+// single-level hierarchy by replacing all "/" with spaces.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(urlString)
-	return strings.ReplaceAll(strings.TrimLeft(path.Clean("/"+name), "/"), "/", " ")
+	name = pathutil.Clean(name)
+	return strings.ReplaceAll(name, "/", " ")
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
@@ -97,16 +98,16 @@ func discardLocalWikiChanges(localPath string) error {
 }
 
 // updateWikiPage adds new page to repository wiki.
-func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) (err error) {
+func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) error {
 	wikiWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer wikiWorkingPool.CheckOut(com.ToStr(repo.ID))
 
-	if err = repo.InitWiki(); err != nil {
+	if err := repo.InitWiki(); err != nil {
 		return fmt.Errorf("InitWiki: %v", err)
 	}
 
 	localPath := repo.LocalWikiPath()
-	if err = discardLocalWikiChanges(localPath); err != nil {
+	if err := discardLocalWikiChanges(localPath); err != nil {
 		return fmt.Errorf("discardLocalWikiChanges: %v", err)
 	} else if err = repo.UpdateLocalWiki(); err != nil {
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
@@ -121,7 +122,8 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 			return ErrWikiAlreadyExist{filename}
 		}
 	} else {
-		os.Remove(path.Join(localPath, oldTitle+".md"))
+		oldTitle = ToWikiPageName(oldTitle)
+		_ = os.Remove(path.Join(localPath, oldTitle+".md"))
 	}
 
 	// SECURITY: if new file is a symlink to non-exist critical file,
@@ -129,20 +131,20 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	// as a new page operation.
 	// So we want to make sure the symlink is removed before write anything.
 	// The new file we created will be in normal text format.
-	os.Remove(filename)
+	_ = os.Remove(filename)
 
-	if err = os.WriteFile(filename, []byte(content), 0666); err != nil {
+	if err := os.WriteFile(filename, []byte(content), 0o666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 
 	if message == "" {
 		message = "Update page '" + title + "'"
 	}
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("add all changes: %v", err)
 	}
 
-	err = git.CreateCommit(
+	err := git.CreateCommit(
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
@@ -180,8 +182,7 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 	}
 
 	title = ToWikiPageName(title)
-	filename := path.Join(localPath, title+".md")
-	os.Remove(filename)
+	_ = os.Remove(path.Join(localPath, title+".md"))
 
 	message := "Delete page '" + title + "'"
 

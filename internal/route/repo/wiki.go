@@ -49,7 +49,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		c.Error(err, "open repository")
 		return nil, ""
 	}
-	commit, err := wikiRepo.BranchCommit(database.WikiBranch(wikiPath))
+	commit, err := wikiRepo.BranchCommit(db.WikiBranch(wikiPath))
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return nil, ""
@@ -125,7 +125,7 @@ func Wiki(c *context.Context) {
 	}
 
 	// Get last change information.
-	branch := database.WikiBranch(c.Repo.Repository.WikiPath())
+	branch := db.WikiBranch(c.Repo.Repository.WikiPath())
 	commits, err := wikiRepo.Log(git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
 	if err != nil {
 		c.Error(err, "get commits by path")
@@ -152,7 +152,7 @@ func WikiPages(c *context.Context) {
 		return
 	}
 
-	branch := database.WikiBranch(wikiPath)
+	branch := db.WikiBranch(wikiPath)
 	commit, err := wikiRepo.BranchCommit(branch)
 	if err != nil {
 		c.Error(err, "get branch commit")
