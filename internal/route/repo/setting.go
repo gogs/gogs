@@ -582,13 +582,27 @@ func SettingsGitHooks(c *context.Context) {
 	c.Success(SETTINGS_GITHOOKS)
 }
 
+func isValidHookName(name git.HookName) bool {
+	for _, h := range git.ServerSideHooks {
+		if h == name {
+			return true
+		}
+	}
+	return false
+}
+
 func SettingsGitHooksEdit(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.githooks")
 	c.Data["PageIsSettingsGitHooks"] = true
 	c.Data["RequireSimpleMDE"] = true
 
-	name := c.Params(":name")
-	hook, err := c.Repo.GitRepo.Hook("custom_hooks", git.HookName(name))
+	name := git.HookName(c.Params(":name"))
+	if !isValidHookName(name) {
+		c.NotFound()
+		return
+	}
+
+	hook, err := c.Repo.GitRepo.Hook("custom_hooks", name)
 	if err != nil {
 		c.NotFoundOrError(osutil.NewError(err), "get hook")
 		return
@@ -598,8 +612,13 @@ func SettingsGitHooksEdit(c *context.Context) {
 }
 
 func SettingsGitHooksEditPost(c *context.Context) {
-	name := c.Params(":name")
-	hook, err := c.Repo.GitRepo.Hook("custom_hooks", git.HookName(name))
+	name := git.HookName(c.Params(":name"))
+	if !isValidHookName(name) {
+		c.NotFound()
+		return
+	}
+
+	hook, err := c.Repo.GitRepo.Hook("custom_hooks", name)
 	if err != nil {
 		c.NotFoundOrError(osutil.NewError(err), "get hook")
 		return
