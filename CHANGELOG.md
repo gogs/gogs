@@ -22,6 +22,19 @@ All notable changes to Gogs are documented in this file.
 
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
+
+## 0.13.4
+
+### Fixed
+
+- _Security:_ DoS in repository mirror sync. [#8065](https://github.com/gogs/gogs/pull/8065) - [GHSA-cr88-6mqm-4g57](https://github.com/gogs/gogs/security/advisories/GHSA-cr88-6mqm-4g57)
+- _Security:_ RCE in repository put contents API. [#8082](https://github.com/gogs/gogs/pull/8082) - [GHSA-gg64-xxr9-qhjp](https://github.com/gogs/gogs/security/advisories/GHSA-gg64-xxr9-qhjp)
+- _Security:_ Arbitrary file deletion via path traversal in wiki page update. [#8099](https://github.com/gogs/gogs/pull/8099) - [GHSA-jp7c-wj6q-3qf2](https://github.com/gogs/gogs/security/advisories/GHSA-jp7c-wj6q-3qf2)
+- _Security:_ 2FA bypass via recovery code. [#8100](https://github.com/gogs/gogs/pull/8100) - [GHSA-p6x6-9mx6-26wj](https://github.com/gogs/gogs/security/advisories/GHSA-p6x6-9mx6-26wj)
+- _Security:_ Authorization bypass in repository deletion API. [#8101](https://github.com/gogs/gogs/pull/8101) - [GHSA-rjv5-9px2-fqw6](https://github.com/gogs/gogs/security/advisories/GHSA-rjv5-9px2-fqw6)
+- _Security:_ Update repository content via API with read-only permission. [#8102](https://github.com/gogs/gogs/pull/8102) - [GHSA-5qhx-gwfj-6jqr](https://github.com/gogs/gogs/security/advisories/GHSA-5qhx-gwfj-6jqr)
+- _Security:_ Arbitrary file read/write via path traversal in Git hook editing. [#8103](https://github.com/gogs/gogs/pull/8103) - [GHSA-mrph-w4hh-gx3g](https://github.com/gogs/gogs/security/advisories/GHSA-mrph-w4hh-gx3g)
+- _Security:_ Stored XSS via Mermaid diagrams. [`2c88cd4`](https://github.com/gogs/gogs/commit/2c88cd4d9fdc346d8e06d82f5368d657c10e79c2) - [GHSA-26gq-grmh-6xm6](https://github.com/gogs/gogs/security/advisories/GHSA-26gq-grmh-6xm6)
 - Route `GET /api/v1/user/repos` responses 500 when accessible repositories contain forks. [#8069](https://github.com/gogs/gogs/pull/8069)
 - Newer Git versions that uses default branch `main` cause wiki initialization to fail. [#8094](https://github.com/gogs/gogs/pull/8094)
 
