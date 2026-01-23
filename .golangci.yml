@@ -30,6 +30,117 @@ linters:
       - third_party$
       - builtin$
       - examples$
+    rules:
+      - path: internal/auth/ldap/config.go
+        linters: [staticcheck]
+      - path: internal/cmd/import.go
+        linters: [staticcheck]
+      - path: internal/context/context.go
+        linters: [staticcheck]
+      - path: internal/db/attachment.go
+        linters: [staticcheck]
+      - path: internal/db/errors/errors.go
+        linters: [staticcheck]
+      - path: internal/db/issue.go
+        linters: [staticcheck]
+      - path: internal/db/issue_mail.go
+        linters: [staticcheck]
+      - path: internal/db/org.go
+        linters: [staticcheck]
+      - path: internal/db/repo.go
+        linters: [staticcheck]
+      - path: internal/db/schemadoc/main.go
+        linters: [staticcheck]
+      - path: internal/db/users.go
+        linters: [staticcheck]
+      - path: internal/db/webhook.go
+        linters: [staticcheck]
+      - path: internal/db/webhook_dingtalk.go
+        linters: [staticcheck]
+      - path: internal/email/email.go
+        linters: [staticcheck]
+      - path: internal/email/message.go
+        linters: [staticcheck]
+      - path: internal/form/repo.go
+        linters: [staticcheck]
+      - path: internal/form/user.go
+        linters: [staticcheck]
+      - path: internal/httplib/httplib.go
+        linters: [staticcheck]
+      - path: internal/markup/markdown.go
+        linters: [staticcheck]
+      - path: internal/route/api/v1/repo/commits.go
+        linters: [staticcheck]
+      - path: internal/route/api/v1/user/follower.go
+        linters: [staticcheck]
+      - path: internal/route/repo/branch.go
+        linters: [staticcheck]
+      - path: internal/route/repo/commit.go
+        linters: [staticcheck]
+      - path: internal/route/repo/issue.go
+        linters: [staticcheck]
+      - path: internal/route/user/profile.go
+        linters: [staticcheck]
+      - path: internal/template/template.go
+        linters: [staticcheck]
+      - path: internal/tool/tool.go
+        linters: [staticcheck]
+      - path: internal/cmd/serv.go
+        linters: [staticcheck]
+      - path: internal/db/actions_test.go
+        linters: [staticcheck]
+      - path: internal/db/milestone.go
+        linters: [staticcheck]
+      - path: internal/db/pull.go
+        linters: [staticcheck]
+      - path: internal/route/home.go
+        linters: [staticcheck]
+      - path: internal/db/release.go
+        linters: [staticcheck]
+      - path: internal/route/org/members.go
+        linters: [staticcheck]
+      - path: internal/route/org/setting.go
+        linters: [staticcheck]
+      - path: internal/db/repo_branch.go
+        linters: [staticcheck]
+      - path: internal/db/user_mail.go
+        linters: [staticcheck]
+      - path: internal/route/user/auth.go
+        linters: [staticcheck]
+      - path: internal/db/webhook_slack.go
+        linters: [staticcheck]
+      - path: internal/form/form.go
+        linters: [staticcheck]
+      - path: internal/route/org/teams.go
+        linters: [staticcheck]
+      - path: internal/route/admin/auths.go
+        linters: [staticcheck]
+      - path: internal/route/admin/users.go
+        linters: [staticcheck]
+      - path: internal/db/admin.go
+        linters: [staticcheck]
+      - path: internal/db/comment.go
+        linters: [staticcheck]
+      - path: internal/route/user/home.go
+        linters: [staticcheck]
+      - path: internal/route/user/setting.go
+        linters: [staticcheck]
+      - path: internal/db/org_team.go
+        linters: [staticcheck]
+      - path: internal/db/repo_editor.go
+        linters: [staticcheck]
+      - path: internal/process/manager.go
+        linters: [staticcheck]
+      - path: internal/db/ssh_key.go
+        linters: [staticcheck]
+      - path: internal/route/repo/pull.go
+        linters: [staticcheck]
+      - path: internal/route/repo/release.go
+        linters: [staticcheck]
+      - path: internal/route/repo/setting.go
+        linters: [staticcheck]
+      - path: internal/route/repo/wiki.go
+        linters: [staticcheck]
 formatters:
   enable:
     - gofmt
