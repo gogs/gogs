@@ -148,10 +148,20 @@ func reqRepoWriter() macaron.Handler {
 	}
 }
 
-// reqRepoWriter makes sure the context user has at least admin access to the repository.
+// reqRepoAdmin makes sure the context user has at least admin access to the repository.
 func reqRepoAdmin() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsAdmin() {
+			c.Status(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+// reqRepoOwner makes sure the context user has owner access to the repository.
+func reqRepoOwner() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.Repo.IsOwner() {
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -250,7 +260,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/repos", func() {
 			m.Post("/migrate", bind(form.MigrateRepo{}), repo.Migrate)
-			m.Delete("/:username/:reponame", repoAssignment(), repo.Delete)
+			m.Delete("/:username/:reponame", repoAssignment(), reqRepoOwner(), repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
 				m.Group("/hooks", func() {
