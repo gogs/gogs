@@ -267,7 +267,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	if err := db.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
+	if err := db.TwoFactors.UseRecoveryCode(c.Req.Context(), userID, c.Query("recovery_code")); err != nil {
 		if db.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.RedirectSubpath("/user/login/two_factor_recovery_code")

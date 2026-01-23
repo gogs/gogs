@@ -109,21 +109,3 @@ func IsTwoFactorRecoveryCodeNotFound(err error) bool {
 func (err ErrTwoFactorRecoveryCodeNotFound) Error() string {
 	return fmt.Sprintf("two-factor recovery code does not found [code: %s]", err.Code)
 }
-
-// UseRecoveryCode validates recovery code of given user and marks it is used if valid.
-func UseRecoveryCode(_ int64, code string) error {
-	recoveryCode := new(TwoFactorRecoveryCode)
-	has, err := x.Where("code = ?", code).And("is_used = ?", false).Get(recoveryCode)
-	if err != nil {
-		return fmt.Errorf("get unused code: %v", err)
-	} else if !has {
-		return ErrTwoFactorRecoveryCodeNotFound{Code: code}
-	}
-
-	recoveryCode.IsUsed = true
-	if _, err = x.Id(recoveryCode.ID).Cols("is_used").Update(recoveryCode); err != nil {
-		return fmt.Errorf("mark code as used: %v", err)
-	}
-
-	return nil
-}
