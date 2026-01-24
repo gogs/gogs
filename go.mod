@@ -57,7 +57,6 @@ require (
 	gorm.io/gorm v1.25.12
 	modernc.org/sqlite v1.38.2
 	unknwon.dev/clog/v2 v2.2.0
-	xorm.io/builder v0.3.13
 	xorm.io/core v0.7.3
 	xorm.io/xorm v1.3.11
 )
@@ -143,6 +142,7 @@ require (
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
+	xorm.io/builder v0.3.13 // indirect
 )
 
 // +heroku goVersion go1.25
