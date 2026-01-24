@@ -200,7 +200,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 			return errors.Newf("Issue.changeStatus: %v", err)
 		}
 
-			headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)
+		headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)
 		headGitRepo, err := git.Open(headRepoPath)
 		if err != nil {
 			return errors.Newf("open repository: %v", err)
@@ -450,13 +450,13 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		pr.BaseRepo = repo
 		if err := pr.testPatch(); err != nil {
 			return errors.Newf("testPatch: %v", err)
-	}
-	// No conflict appears after test means mergeable.
-	if pr.Status == PullRequestStatusChecking {
-		pr.Status = PullRequestStatusMergeable
-	}
+		}
+		// No conflict appears after test means mergeable.
+		if pr.Status == PullRequestStatusChecking {
+			pr.Status = PullRequestStatusMergeable
+		}
 
-	pr.IssueID = pull.ID
+		pr.IssueID = pull.ID
 		if err := tx.Create(pr).Error; err != nil {
 			return errors.Newf("insert pull repo: %v", err)
 		}
