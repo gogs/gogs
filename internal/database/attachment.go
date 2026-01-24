@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gorm.io/gorm"
 	gouuid "github.com/satori/go.uuid"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
