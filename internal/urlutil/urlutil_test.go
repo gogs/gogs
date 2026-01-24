@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_IsSameSite(t *testing.T) {
+func TestIsSameSite(t *testing.T) {
 	tests := []struct {
 		url    string
 		expVal bool
