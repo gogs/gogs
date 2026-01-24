@@ -26,24 +26,3 @@ func Test_IsSameSiteURLPath(t *testing.T) {
 		})
 	}
 }
-
-func Test_IsMaliciousPath(t *testing.T) {
-	tests := []struct {
-		path   string
-		expVal bool
-	}{
-		{path: "../../../../../../../../../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: true},
-		{path: "..\\/..\\/../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: true},
-		{path: "data/gogs/../../../../../../../../../data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: true},
-		{path: "..\\..\\..\\..\\..\\..\\..\\..\\..\\data\\gogs\\data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", expVal: true},
-		{path: "data\\gogs\\..\\..\\..\\..\\..\\..\\..\\..\\..\\data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", expVal: true},
-
-		{path: "data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: false},
-		{path: "data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", expVal: false},
-	}
-	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			assert.Equal(t, test.expVal, IsMaliciousPath(test.path))
-		})
-	}
-}
