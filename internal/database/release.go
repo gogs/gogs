@@ -22,7 +22,7 @@ type Release struct {
 	RepoID           int64
 	Repo             *Repository `gorm:"-" json:"-"`
 	PublisherID      int64
-	Publisher        *User   `gorm:"-" json:"-"`
+	Publisher        *User `gorm:"-" json:"-"`
 	TagName          string
 	LowerTagName     string
 	Target           string
