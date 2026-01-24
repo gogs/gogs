@@ -697,14 +697,14 @@ func newIssue(tx *gorm.DB, opts NewIssueOptions) (err error) {
 	}
 
 	// Milestone and assignee validation should happen before insert actual object.
-	if _, err = e.Insert(opts.Issue); err != nil {
+	if err = tx.Create(opts.Issue).Error; err != nil {
 		return err
 	}
 
 	if opts.IsPull {
-		_, err = e.Exec("UPDATE `repository` SET num_pulls = num_pulls + 1 WHERE id = ?", opts.Issue.RepoID)
+		err = tx.Exec("UPDATE `repository` SET num_pulls = num_pulls + 1 WHERE id = ?", opts.Issue.RepoID).Error
 	} else {
-		_, err = e.Exec("UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?", opts.Issue.RepoID)
+		err = tx.Exec("UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?", opts.Issue.RepoID).Error
 	}
 	if err != nil {
 		return err
@@ -714,7 +714,7 @@ func newIssue(tx *gorm.DB, opts NewIssueOptions) (err error) {
 		// During the session, SQLite3 driver cannot handle retrieve objects after update something.
 		// So we have to get all needed labels first.
 		labels := make([]*Label, 0, len(opts.LableIDs))
-		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
+		if err = tx.Where("id IN ?", opts.LableIDs).Find(&labels).Error; err != nil {
 			return errors.Newf("find all labels [label_ids: %v]: %v", opts.LableIDs, err)
 		}
 
@@ -724,18 +724,18 @@ func newIssue(tx *gorm.DB, opts NewIssueOptions) (err error) {
 				continue
 			}
 
-			if err = opts.Issue.addLabel(e, label); err != nil {
+			if err = opts.Issue.addLabel(tx, label); err != nil {
 				return errors.Newf("addLabel [id: %d]: %v", label.ID, err)
 			}
 		}
 	}
 
-	if err = newIssueUsers(e, opts.Repo, opts.Issue); err != nil {
+	if err = newIssueUsers(tx, opts.Repo, opts.Issue); err != nil {
 		return err
 	}
 
 	if len(opts.Attachments) > 0 {
-		attachments, err := getAttachmentsByUUIDs(e, opts.Attachments)
+		attachments, err := getAttachmentsByUUIDs(tx, opts.Attachments)
 		if err != nil {
 			return errors.Newf("getAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
