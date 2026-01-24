@@ -189,7 +189,7 @@ func writeTmpKeyFile(content, keyTestPath string) (string, error) {
 }
 
 // SSHKeyGenParsePublicKey extracts key type and length using ssh-keygen.
-func SSHKeyGenParsePublicKey(key string, keyTestPath string, keygenPath string) (string, int, error) {
+func SSHKeyGenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
 		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
