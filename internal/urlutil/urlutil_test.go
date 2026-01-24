@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_IsSameSiteURLPath(t *testing.T) {
+func Test_IsSameSite(t *testing.T) {
 	tests := []struct {
 		url    string
 		expVal bool
@@ -22,7 +22,7 @@ func Test_IsSameSiteURLPath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.url, func(t *testing.T) {
-			assert.Equal(t, test.expVal, IsSameSiteURLPath(test.url))
+			assert.Equal(t, test.expVal, IsSameSite(test.url))
 		})
 	}
 }

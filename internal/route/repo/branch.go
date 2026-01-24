@@ -109,7 +109,7 @@ func DeleteBranchPost(c *context.Context) {
 
 	defer func() {
 		redirectTo := c.Query("redirect_to")
-		if !urlutil.IsSameSiteURLPath(redirectTo) {
+		if !urlutil.IsSameSite(redirectTo) {
 			redirectTo = c.Repo.RepoLink
 		}
 		c.Redirect(redirectTo)

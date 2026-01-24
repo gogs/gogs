@@ -93,7 +93,7 @@ func Login(c *context.Context) {
 	}
 
 	if isSucceed {
-		if urlutil.IsSameSiteURLPath(redirectTo) {
+		if urlutil.IsSameSite(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
 			c.RedirectSubpath("/")
@@ -139,7 +139,7 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-	if urlutil.IsSameSiteURLPath(redirectTo) {
+	if urlutil.IsSameSite(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
