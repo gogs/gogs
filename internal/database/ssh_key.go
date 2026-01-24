@@ -188,15 +188,15 @@ func writeTmpKeyFile(content, keyTestPath string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
-// SSHKeyGenParsePublicKey extracts key type and length using ssh-keygen.
-func SSHKeyGenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
+// SSHKeygenParsePublicKey extracts key type and length using ssh-keygen.
+func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
 		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
 	}
 	defer os.Remove(tmpName)
 
-	stdout, stderr, err := process.Exec("SSHKeyGenParsePublicKey", keygenPath, "-lf", tmpName)
+	stdout, stderr, err := process.Exec("SSHKeygenParsePublicKey", keygenPath, "-lf", tmpName)
 	if err != nil {
 		return "", 0, errors.Newf("fail to parse public key: %s - %s", err, stderr)
 	}
@@ -301,8 +301,8 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		fnName = "SSHNativeParsePublicKey"
 		keyType, length, err = SSHNativeParsePublicKey(content)
 	} else {
-		fnName = "SSHKeyGenParsePublicKey"
-		keyType, length, err = SSHKeyGenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
+		fnName = "SSHKeygenParsePublicKey"
+		keyType, length, err = SSHKeygenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
 	}
 	if err != nil {
 		return "", errors.Newf("%s: %v", fnName, err)
