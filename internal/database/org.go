@@ -484,7 +484,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	}
 
 	var teamRepoIDs []int64
-	if err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs); err != nil {
+	if err = db.Table("team_repo").Where("team_id IN ?", teamIDs).Distinct("repo_id").Find(&teamRepoIDs).Error; err != nil {
 		return nil, 0, errors.Newf("get team repository IDs: %v", err)
 	}
 	if len(teamRepoIDs) == 0 {
@@ -496,22 +496,18 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 		page = 1
 	}
 	repos := make([]*Repository, 0, pageSize)
-	if err = x.Where("owner_id = ?", org.ID).
-		And(builder.Or(
-			builder.And(builder.Expr("is_private = ?", false), builder.Expr("is_unlisted = ?", false)),
-			builder.In("id", teamRepoIDs))).
-		Desc("updated_unix").
-		Limit(pageSize, (page-1)*pageSize).
-		Find(&repos); err != nil {
+	if err = db.Where("owner_id = ?", org.ID).
+		Where(db.Where("is_private = ? AND is_unlisted = ?", false, false).Or("id IN ?", teamRepoIDs)).
+		Order("updated_unix DESC").
+		Limit(pageSize).Offset((page - 1) * pageSize).
+		Find(&repos).Error; err != nil {
 		return nil, 0, errors.Newf("get user repositories: %v", err)
 	}
 
-	repoCount, err := x.Where("owner_id = ?", org.ID).
-		And(builder.Or(
-			builder.Expr("is_private = ?", false),
-			builder.In("id", teamRepoIDs))).
-		Count(new(Repository))
-	if err != nil {
+	var repoCount int64
+	if err = db.Model(&Repository{}).Where("owner_id = ?", org.ID).
+		Where(db.Where("is_private = ?", false).Or("id IN ?", teamRepoIDs)).
+		Count(&repoCount).Error; err != nil {
 		return nil, 0, errors.Newf("count user repositories: %v", err)
 	}
 
@@ -529,7 +525,7 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 	}
 
 	var teamRepoIDs []int64
-	err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs)
+	err = db.Table("team_repo").Where("team_id IN ?", teamIDs).Distinct("repo_id").Find(&teamRepoIDs).Error
 	if err != nil {
 		return nil, errors.Newf("get team repository ids: %v", err)
 	}
@@ -539,12 +535,12 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 	}
 
 	repos := make([]*Repository, 0, 10)
-	if err = x.Where("owner_id = ?", org.ID).
-		And("is_private = ?", false).
-		Or(builder.In("id", teamRepoIDs)).
-		And("is_mirror = ?", true). // Don't move up because it's an independent condition
-		Desc("updated_unix").
-		Find(&repos); err != nil {
+	if err = db.Where("owner_id = ?", org.ID).
+		Where("is_private = ?", false).
+		Or("id IN ?", teamRepoIDs).
+		Where("is_mirror = ?", true). // Don't move up because it's an independent condition
+		Order("updated_unix DESC").
+		Find(&repos).Error; err != nil {
 		return nil, errors.Newf("get user repositories: %v", err)
 	}
 	return repos, nil

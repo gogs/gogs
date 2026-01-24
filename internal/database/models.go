@@ -97,7 +97,7 @@ func getGormDB(gormLogger logger.Writer) (*gorm.DB, error) {
 
 func NewTestEngine() error {
 	var err error
-	db, err = getGormDB(&dbutil.Logger{Writer: log.NewConsoleWriter()})
+	db, err = getGormDB(&dbutil.Logger{Writer: os.Stdout})
 	if err != nil {
 		return errors.Newf("connect to database: %v", err)
 	}

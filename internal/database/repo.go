@@ -549,7 +549,7 @@ func (r *Repository) GetAssigneeByID(userID int64) (*User, error) {
 
 // GetWriters returns all users that have write access to the repository.
 func (r *Repository) GetWriters() (_ []*User, err error) {
-	return r.getUsersWithAccesMode(x, AccessModeWrite)
+	return r.getUsersWithAccesMode(db, AccessModeWrite)
 }
 
 // GetMilestoneByID returns the milestone belongs to repository by given ID.
@@ -1230,7 +1230,7 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 		EnablePulls:  true,
 	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		if err := createRepository(tx, doer, owner, repo); err != nil {
 			return err
 		}

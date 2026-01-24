@@ -35,12 +35,12 @@ func IsCollaborator(repoID, userID int64) bool {
 		RepoID: repoID,
 		UserID: userID,
 	}
-	has, err := x.Get(collaboration)
+	err := db.Where("repo_id = ? AND user_id = ?", repoID, userID).First(collaboration).Error
 	if err != nil {
 		log.Error("get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
 		return false
 	}
-	return has
+	return true
 }
 
 func (r *Repository) IsCollaborator(userID int64) bool {
@@ -54,27 +54,24 @@ func (r *Repository) AddCollaborator(u *User) error {
 		UserID: u.ID,
 	}
 
-	has, err := x.Get(collaboration)
-	if err != nil {
-		return err
-	} else if has {
+	var existing Collaboration
+	err := db.Where("repo_id = ? AND user_id = ?", r.ID, u.ID).First(&existing).Error
+	if err == nil {
 		return nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
 	}
 	collaboration.Mode = AccessModeWrite
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Insert(collaboration); err != nil {
-		return err
-	} else if err = r.recalculateAccesses(sess); err != nil {
-		return errors.Newf("recalculateAccesses [repo_id: %v]: %v", r.ID, err)
-	}
-
-	return sess.Commit()
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(collaboration).Error; err != nil {
+			return err
+		}
+		if err := r.recalculateAccesses(tx); err != nil {
+			return errors.Newf("recalculateAccesses [repo_id: %v]: %v", r.ID, err)
+		}
+		return nil
+	})
 }
 
 func (r *Repository) getCollaborations(e *gorm.DB) ([]*Collaboration, error) {
@@ -121,7 +118,7 @@ func (r *Repository) getCollaborators(e *gorm.DB) ([]*Collaborator, error) {
 
 // GetCollaborators returns the collaborators for a repository
 func (r *Repository) GetCollaborators() ([]*Collaborator, error) {
-	return r.getCollaborators(x)
+	return r.getCollaborators(db)
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
@@ -135,11 +132,11 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 		RepoID: r.ID,
 		UserID: userID,
 	}
-	has, err := x.Get(collaboration)
-	if err != nil {
-		return errors.Newf("get collaboration: %v", err)
-	} else if !has {
+	err := db.Where("repo_id = ? AND user_id = ?", r.ID, userID).First(collaboration).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil
+	} else if err != nil {
+		return errors.Newf("get collaboration: %v", err)
 	}
 
 	if collaboration.Mode == mode {
@@ -160,35 +157,31 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 		}
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&Collaboration{}).Where("id = ?", collaboration.ID).Updates(collaboration).Error; err != nil {
+			return errors.Newf("update collaboration: %v", err)
+		}
 
-	if _, err = sess.ID(collaboration.ID).AllCols().Update(collaboration); err != nil {
-		return errors.Newf("update collaboration: %v", err)
-	}
+		access := &Access{
+			UserID: userID,
+			RepoID: r.ID,
+		}
+		err := tx.Where("user_id = ? AND repo_id = ?", userID, r.ID).First(access).Error
+		if err == nil {
+			if err := tx.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, r.ID).Error; err != nil {
+				return errors.Newf("update access table: %v", err)
+			}
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			access.Mode = mode
+			if err := tx.Create(access).Error; err != nil {
+				return errors.Newf("insert access table: %v", err)
+			}
+		} else {
+			return errors.Newf("get access record: %v", err)
+		}
 
-	access := &Access{
-		UserID: userID,
-		RepoID: r.ID,
-	}
-	has, err = sess.Get(access)
-	if err != nil {
-		return errors.Newf("get access record: %v", err)
-	}
-	if has {
-		_, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, r.ID)
-	} else {
-		access.Mode = mode
-		_, err = sess.Insert(access)
-	}
-	if err != nil {
-		return errors.Newf("update/insert access table: %v", err)
-	}
-
-	return sess.Commit()
+		return nil
+	})
 }
 
 // DeleteCollaboration removes collaboration relation between the user and repository.
@@ -202,19 +195,20 @@ func DeleteCollaboration(repo *Repository, userID int64) (err error) {
 		UserID: userID,
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(collaboration, "repo_id = ? AND user_id = ?", repo.ID, userID)
+		if result.Error != nil {
+			return result.Error
+		} else if result.RowsAffected == 0 {
+			return nil
+		}
 
-	if has, err := sess.Delete(collaboration); err != nil || has == 0 {
-		return err
-	} else if err = repo.recalculateAccesses(sess); err != nil {
-		return err
-	}
+		if err := repo.recalculateAccesses(tx); err != nil {
+			return err
+		}
 
-	return sess.Commit()
+		return nil
+	})
 }
 
 func (r *Repository) DeleteCollaboration(userID int64) error {

@@ -176,7 +176,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 // and mentioned people.
 func (issue *Issue) MailParticipants() (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
-	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
+	if err = updateIssueMentions(db, issue.ID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
