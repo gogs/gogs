@@ -8,21 +8,21 @@ import (
 
 func TestIsSameSite(t *testing.T) {
 	tests := []struct {
-		url    string
-		expVal bool
+		url  string
+		want bool
 	}{
-		{url: "//github.com", expVal: false},
-		{url: "http://github.com", expVal: false},
-		{url: "https://github.com", expVal: false},
-		{url: "/\\github.com", expVal: false},
+		{url: "//github.com", want: false},
+		{url: "http://github.com", want: false},
+		{url: "https://github.com", want: false},
+		{url: "/\\github.com", want: false},
 
-		{url: "/admin", expVal: true},
-		{url: "/user/repo", expVal: true},
+		{url: "/admin", want: true},
+		{url: "/user/repo", want: true},
 	}
 
 	for _, test := range tests {
 		t.Run(test.url, func(t *testing.T) {
-			assert.Equal(t, test.expVal, IsSameSite(test.url))
+			assert.Equal(t, test.want, IsSameSite(test.url))
 		})
 	}
 }
