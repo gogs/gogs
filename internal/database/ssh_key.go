@@ -521,14 +521,20 @@ func RewriteAuthorizedKeys() error {
 	}
 	defer os.Remove(tmpPath)
 
-	err = x.Iterate(new(PublicKey), func(idx int, bean any) (err error) {
-		_, err = f.WriteString((bean.(*PublicKey)).AuthorizedString())
-		return err
-	})
-	_ = f.Close()
+	var keys []*PublicKey
+	err = db.Find(&keys).Error
 	if err != nil {
+		_ = f.Close()
 		return err
 	}
+
+	for _, key := range keys {
+		if _, err = f.WriteString(key.AuthorizedString()); err != nil {
+			_ = f.Close()
+			return err
+		}
+	}
+	_ = f.Close()
 
 	if com.IsExist(fpath) {
 		if err = os.Remove(fpath); err != nil {

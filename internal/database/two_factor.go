@@ -38,20 +38,16 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 }
 
 // DeleteTwoFactor removes two-factor authentication token and recovery codes of given user.
-func DeleteTwoFactor(userID int64) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Where("user_id = ?", userID).Delete(new(TwoFactor)); err != nil {
-		return errors.Newf("delete two-factor: %v", err)
-	} else if err = deleteRecoveryCodesByUserID(sess, userID); err != nil {
-		return errors.Newf("deleteRecoveryCodesByUserID: %v", err)
-	}
-
-	return sess.Commit()
+func DeleteTwoFactor(userID int64) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ?", userID).Delete(new(TwoFactor)).Error; err != nil {
+			return errors.Newf("delete two-factor: %v", err)
+		}
+		if err := deleteRecoveryCodesByUserID(tx, userID); err != nil {
+			return errors.Newf("deleteRecoveryCodesByUserID: %v", err)
+		}
+		return nil
+	})
 }
 
 // TwoFactorRecoveryCode represents a two-factor authentication recovery code.
@@ -65,7 +61,7 @@ type TwoFactorRecoveryCode struct {
 // GetRecoveryCodesByUserID returns all recovery codes of given user.
 func GetRecoveryCodesByUserID(userID int64) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, 0, 10)
-	return recoveryCodes, x.Where("user_id = ?", userID).Find(&recoveryCodes)
+	return recoveryCodes, db.Where("user_id = ?", userID).Find(&recoveryCodes).Error
 }
 
 func deleteRecoveryCodesByUserID(e *gorm.DB, userID int64) error {
@@ -79,19 +75,15 @@ func RegenerateRecoveryCodes(userID int64) error {
 		return errors.Newf("generateRecoveryCodes: %v", err)
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = deleteRecoveryCodesByUserID(sess, userID); err != nil {
-		return errors.Newf("deleteRecoveryCodesByUserID: %v", err)
-	} else if _, err = sess.Insert(recoveryCodes); err != nil {
-		return errors.Newf("insert new recovery codes: %v", err)
-	}
-
-	return sess.Commit()
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := deleteRecoveryCodesByUserID(tx, userID); err != nil {
+			return errors.Newf("deleteRecoveryCodesByUserID: %v", err)
+		}
+		if err := tx.Create(recoveryCodes).Error; err != nil {
+			return errors.Newf("insert new recovery codes: %v", err)
+		}
+		return nil
+	})
 }
 
 type ErrTwoFactorRecoveryCodeNotFound struct {
