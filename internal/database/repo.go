@@ -1618,7 +1618,7 @@ func updateRepository(e *gorm.DB, repo *Repository, visibilityChanged bool) (err
 
 func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
 	return db.Transaction(func(tx *gorm.DB) error {
-		if err := updateRepository(db, repo, visibilityChanged); err != nil {
+		if err := updateRepository(tx, repo, visibilityChanged); err != nil {
 			return errors.Newf("updateRepository: %v", err)
 		}
 		return nil
@@ -1729,7 +1729,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 		}
 
 		if repo.NumForks > 0 {
-			if err = db.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID).Error; err != nil {
+			if err = tx.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID).Error; err != nil {
 				log.Error("reset 'fork_id' and 'is_fork': %v", err)
 			}
 		}
