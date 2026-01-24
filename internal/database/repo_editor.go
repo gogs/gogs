@@ -416,6 +416,9 @@ func (upload *Upload) LocalPath() string {
 func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
 	// 🚨 SECURITY: Prevent path traversal.
 	name = pathutil.Clean(name)
+	if name == "" {
+		return nil, errors.New("empty file name")
+	}
 
 	upload := &Upload{
 		UUID: gouuid.NewV4().String(),
