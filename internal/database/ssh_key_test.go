@@ -5,12 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 func TestSSHParsePublicKey(t *testing.T) {
-	conf.MustInit("")
 	tempPath := t.TempDir()
 	tests := []struct {
 		name      string
@@ -68,7 +65,7 @@ func TestSSHParsePublicKey(t *testing.T) {
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
 
-			typ, length, err = SSHKeyGenParsePublicKey(test.content, tempPath)
+			typ, length, err = SSHKeyGenParsePublicKey(test.content, tempPath, "ssh-keygen")
 			require.NoError(t, err)
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
