@@ -16,7 +16,7 @@ import (
 // Milestone represents a milestone of repository.
 type Milestone struct {
 	ID              int64
-	RepoID          int64  `gorm:"index"`
+	RepoID          int64 `gorm:"index"`
 	Name            string
 	Content         string `gorm:"type:text"`
 	RenderedContent string `gorm:"-" json:"-"`
@@ -271,7 +271,7 @@ func changeMilestoneAssign(e *gorm.DB, issue *Issue, oldMilestoneID int64) error
 		if err = updateMilestone(e, m); err != nil {
 			return err
 		}
-		
+
 		if err = e.Exec("UPDATE `issue_user` SET milestone_id = 0 WHERE issue_id = ?", issue.ID).Error; err != nil {
 			return err
 		}
@@ -293,7 +293,7 @@ func changeMilestoneAssign(e *gorm.DB, issue *Issue, oldMilestoneID int64) error
 		if err = updateMilestone(e, m); err != nil {
 			return err
 		}
-		
+
 		if err = e.Exec("UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?", m.ID, issue.ID).Error; err != nil {
 			return err
 		}
@@ -378,7 +378,7 @@ func DeleteMilestoneOfRepoByID(repoID, id int64) error {
 		if err := tx.Exec("UPDATE `issue` SET milestone_id = 0 WHERE milestone_id = ?", m.ID).Error; err != nil {
 			return err
 		}
-		
+
 		return tx.Exec("UPDATE `issue_user` SET milestone_id = 0 WHERE milestone_id = ?", m.ID).Error
 	})
 }
