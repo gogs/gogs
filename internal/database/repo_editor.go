@@ -23,7 +23,6 @@ import (
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/tool"
 )
 
 // BranchAlreadyExists represents an error when branch already exists.
@@ -415,8 +414,10 @@ func (upload *Upload) LocalPath() string {
 
 // NewUpload creates a new upload object.
 func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
-	if tool.IsMaliciousPath(name) {
-		return nil, errors.Newf("malicious path detected: %s", name)
+	// 🚨 SECURITY: Prevent path traversal.
+	name = pathutil.Clean(name)
+	if name == "" {
+		return nil, errors.New("empty file name")
 	}
 
 	upload := &Upload{
