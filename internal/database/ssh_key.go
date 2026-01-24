@@ -194,7 +194,7 @@ func SSHKeyGenParsePublicKey(key string, tempPath ...string) (string, int, error
 	if len(tempPath) > 0 && tempPath[0] != "" {
 		keyTestPath = tempPath[0]
 	}
-	
+
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
 		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
