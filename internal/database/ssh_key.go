@@ -189,24 +189,7 @@ func writeTmpKeyFile(content string, keyTestPath string) (string, error) {
 }
 
 // SSHKeyGenParsePublicKey extracts key type and length using ssh-keygen.
-// If tempPath is provided, it will be used instead of conf.SSH.KeyTestPath.
-// If keygenPath is provided, it will be used instead of conf.SSH.KeygenPath.
-func SSHKeyGenParsePublicKey(key string, tempPath ...string) (string, int, error) {
-	keyTestPath := conf.SSH.KeyTestPath
-	keygenPath := conf.SSH.KeygenPath
-
-	if len(tempPath) > 0 && tempPath[0] != "" {
-		keyTestPath = tempPath[0]
-	}
-	if len(tempPath) > 1 && tempPath[1] != "" {
-		keygenPath = tempPath[1]
-	}
-
-	// Use default ssh-keygen if not configured.
-	if keygenPath == "" {
-		keygenPath = "ssh-keygen"
-	}
-
+func SSHKeyGenParsePublicKey(key string, keyTestPath string, keygenPath string) (string, int, error) {
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
 		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
@@ -319,7 +302,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		keyType, length, err = SSHNativeParsePublicKey(content)
 	} else {
 		fnName = "SSHKeyGenParsePublicKey"
-		keyType, length, err = SSHKeyGenParsePublicKey(content)
+		keyType, length, err = SSHKeyGenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
 	}
 	if err != nil {
 		return "", errors.Newf("%s: %v", fnName, err)
