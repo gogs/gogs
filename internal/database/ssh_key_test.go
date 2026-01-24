@@ -3,7 +3,7 @@ package database
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 )
@@ -63,18 +63,14 @@ func Test_SSHParsePublicKey(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			typ, length, err := SSHNativeParsePublicKey(test.content)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assert.Equal(t, test.expType, typ)
-			assert.Equal(t, test.expLength, length)
+			require.NoError(t, err)
+			require.Equal(t, test.expType, typ)
+			require.Equal(t, test.expLength, length)
 
 			typ, length, err = SSHKeyGenParsePublicKey(test.content)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assert.Equal(t, test.expType, typ)
-			assert.Equal(t, test.expLength, length)
+			require.NoError(t, err)
+			require.Equal(t, test.expType, typ)
+			require.Equal(t, test.expLength, length)
 		})
 	}
 }
