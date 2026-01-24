@@ -2425,7 +2425,7 @@ func GetWatchers(repoID int64) ([]*Watch, error) {
 // Repository.GetWatchers returns range of users watching given repository.
 func (r *Repository) GetWatchers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	query := db.Limit(ItemsPerPage).Offset((page - 1) * ItemsPerPage).Where("watch.repo_id = ?", r.ID)
+	query := db.Limit(ItemsPerPage).Offset((page-1)*ItemsPerPage).Where("watch.repo_id = ?", r.ID)
 	if conf.UsePostgreSQL {
 		query = query.Table(`"user"`).Joins("LEFT JOIN watch ON \"user\".id = watch.user_id")
 	} else {
@@ -2526,7 +2526,7 @@ func IsStaring(userID, repoID int64) bool {
 
 func (r *Repository) GetStargazers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	query := db.Limit(ItemsPerPage).Offset((page - 1) * ItemsPerPage).Where("star.repo_id = ?", r.ID)
+	query := db.Limit(ItemsPerPage).Offset((page-1)*ItemsPerPage).Where("star.repo_id = ?", r.ID)
 	if conf.UsePostgreSQL {
 		query = query.Table(`"user"`).Joins("LEFT JOIN star ON \"user\".id = star.uid")
 	} else {
