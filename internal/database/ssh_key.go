@@ -521,18 +521,22 @@ func RewriteAuthorizedKeys() error {
 	}
 	defer os.Remove(tmpPath)
 
-	var keys []*PublicKey
-	err = db.Find(&keys).Error
+	// Use FindInBatches to process keys in chunks to avoid memory issues with large datasets
+	err = db.FindInBatches(&[]PublicKey{}, 100, func(tx *gorm.DB, batch int) error {
+		var keys []PublicKey
+		if err := tx.Find(&keys).Error; err != nil {
+			return err
+		}
+		for _, key := range keys {
+			if _, err := f.WriteString(key.AuthorizedString()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}).Error
 	if err != nil {
 		_ = f.Close()
 		return err
-	}
-
-	for _, key := range keys {
-		if _, err = f.WriteString(key.AuthorizedString()); err != nil {
-			_ = f.Close()
-			return err
-		}
 	}
 	_ = f.Close()
 

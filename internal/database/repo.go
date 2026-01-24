@@ -1902,11 +1902,8 @@ func DeleteOldRepositoryArchives() {
 
 	formats := []string{"zip", "targz"}
 	oldestTime := time.Now().Add(-conf.Cron.RepoArchiveCleanup.OlderThan)
-	err := db.Where("id > 0").FindInBatches(&[]Repository{}, 100, func(tx *gorm.DB, batch int) error {
-		var repos []Repository
-		if err := tx.Find(&repos).Error; err != nil {
-			return err
-		}
+	var repos []Repository
+	err := db.Where("id > 0").FindInBatches(&repos, 100, func(tx *gorm.DB, batch int) error {
 		for _, repo := range repos {
 			basePath := filepath.Join(repo.RepoPath(), "archives")
 			for _, format := range formats {

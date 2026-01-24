@@ -844,8 +844,8 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 // TestPullRequests checks and tests untested patches of pull requests.
 // TODO: test more pull requests at same time.
 func TestPullRequests() {
-	prs := make([]*PullRequest, 0, 10)
-	db.Where("status = ?", PullRequestStatusChecking).FindInBatches(&prs, 100, func(tx *gorm.DB, batch int) error {
+	var prs []*PullRequest
+	_ = db.Where("status = ?", PullRequestStatusChecking).FindInBatches(&prs, 100, func(tx *gorm.DB, batch int) error {
 		for i := range prs {
 			pr := prs[i]
 
