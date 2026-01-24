@@ -443,11 +443,11 @@ func (org *User) getUserTeams(tx *gorm.DB, userID int64, cols ...string) ([]*Tea
 	query := tx.Table("team").
 		Joins("INNER JOIN team_user ON team_user.team_id = team.id").
 		Where("team_user.org_id = ? AND team_user.uid = ?", org.ID, userID)
-	
+
 	if len(cols) > 0 {
 		query = query.Select(cols)
 	}
-	
+
 	return teams, query.Find(&teams).Error
 }
 
