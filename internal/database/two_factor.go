@@ -8,6 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp/totp"
 	"github.com/unknwon/com"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
@@ -67,9 +68,8 @@ func GetRecoveryCodesByUserID(userID int64) ([]*TwoFactorRecoveryCode, error) {
 	return recoveryCodes, x.Where("user_id = ?", userID).Find(&recoveryCodes)
 }
 
-func deleteRecoveryCodesByUserID(e Engine, userID int64) error {
-	_, err := e.Where("user_id = ?", userID).Delete(new(TwoFactorRecoveryCode))
-	return err
+func deleteRecoveryCodesByUserID(e *gorm.DB, userID int64) error {
+	return e.Where("user_id = ?", userID).Delete(&TwoFactorRecoveryCode{}).Error
 }
 
 // RegenerateRecoveryCodes regenerates new set of recovery codes for given user.

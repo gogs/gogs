@@ -28,13 +28,6 @@ func (r *Repository) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
-// AfterFind implements the GORM query hook.
-func (r *Repository) AfterFind(_ *gorm.DB) error {
-	r.Created = time.Unix(r.CreatedUnix, 0).Local()
-	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
-	return nil
-}
-
 type RepositoryAPIFormatOptions struct {
 	Permission *api.Permission
 	Parent     *api.Repository

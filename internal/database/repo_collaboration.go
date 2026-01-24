@@ -5,6 +5,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
+	"gorm.io/gorm"
 )
 
 // Collaboration represent the relation between an individual and a repository.
@@ -76,9 +77,9 @@ func (r *Repository) AddCollaborator(u *User) error {
 	return sess.Commit()
 }
 
-func (r *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
+func (r *Repository) getCollaborations(e *gorm.DB) ([]*Collaboration, error) {
 	collaborations := make([]*Collaboration, 0)
-	return collaborations, e.Find(&collaborations, &Collaboration{RepoID: r.ID})
+	return collaborations, e.Where("repo_id = ?", r.ID).Find(&collaborations).Error
 }
 
 // Collaborator represents a user with collaboration details.
@@ -98,7 +99,7 @@ func (c *Collaborator) APIFormat() *api.Collaborator {
 	}
 }
 
-func (r *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
+func (r *Repository) getCollaborators(e *gorm.DB) ([]*Collaborator, error) {
 	collaborations, err := r.getCollaborations(e)
 	if err != nil {
 		return nil, errors.Newf("getCollaborations: %v", err)
