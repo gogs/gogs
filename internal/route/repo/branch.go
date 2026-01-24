@@ -10,7 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/urlutil"
 )
 
 const (
@@ -109,7 +109,7 @@ func DeleteBranchPost(c *context.Context) {
 
 	defer func() {
 		redirectTo := c.Query("redirect_to")
-		if !tool.IsSameSiteURLPath(redirectTo) {
+		if !urlutil.IsSameSiteURLPath(redirectTo) {
 			redirectTo = c.Repo.RepoLink
 		}
 		c.Redirect(redirectTo)

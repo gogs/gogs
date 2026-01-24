@@ -18,6 +18,7 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/urlutil"
 	"gogs.io/gogs/internal/userutil"
 )
 
@@ -92,7 +93,7 @@ func Login(c *context.Context) {
 	}
 
 	if isSucceed {
-		if tool.IsSameSiteURLPath(redirectTo) {
+		if urlutil.IsSameSiteURLPath(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
 			c.RedirectSubpath("/")
@@ -138,7 +139,7 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-	if tool.IsSameSiteURLPath(redirectTo) {
+	if urlutil.IsSameSiteURLPath(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
