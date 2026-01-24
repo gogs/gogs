@@ -52,7 +52,7 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 // Label represents a label of repository for issues.
 type Label struct {
 	ID              int64
-	RepoID          int64  `gorm:"index"`
+	RepoID          int64 `gorm:"index"`
 	Name            string
 	Color           string `gorm:"type:varchar(7)"`
 	NumIssues       int
