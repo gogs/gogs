@@ -3,14 +3,15 @@ package database
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 )
 
-func Test_SSHParsePublicKey(t *testing.T) {
-	// TODO: Refactor SSHKeyGenParsePublicKey to accept a tempPath and remove this init.
+func TestSSHParsePublicKey(t *testing.T) {
 	conf.MustInit("")
+	tempPath := t.TempDir()
 	tests := []struct {
 		name      string
 		content   string
@@ -64,13 +65,13 @@ func Test_SSHParsePublicKey(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			typ, length, err := SSHNativeParsePublicKey(test.content)
 			require.NoError(t, err)
-			require.Equal(t, test.expType, typ)
-			require.Equal(t, test.expLength, length)
+			assert.Equal(t, test.expType, typ)
+			assert.Equal(t, test.expLength, length)
 
-			typ, length, err = SSHKeyGenParsePublicKey(test.content)
+			typ, length, err = SSHKeyGenParsePublicKey(test.content, tempPath)
 			require.NoError(t, err)
-			require.Equal(t, test.expType, typ)
-			require.Equal(t, test.expLength, length)
+			assert.Equal(t, test.expType, typ)
+			assert.Equal(t, test.expLength, length)
 		})
 	}
 }
