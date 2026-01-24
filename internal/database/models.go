@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"path"
@@ -13,33 +12,16 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/core"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbutil"
 )
 
-// Engine represents a XORM engine or session.
-type Engine interface {
-	Delete(any) (int64, error)
-	Exec(...any) (sql.Result, error)
-	Find(any, ...any) error
-	Get(any) (bool, error)
-	ID(any) *xorm.Session
-	In(string, ...any) *xorm.Session
-	Insert(...any) (int64, error)
-	InsertOne(any) (int64, error)
-	Iterate(any, xorm.IterFunc) error
-	Sql(string, ...any) *xorm.Session
-	Table(any) *xorm.Session
-	Where(any, ...any) *xorm.Session
-}
-
 var (
-	x            *xorm.Engine
+	db           *gorm.DB
 	legacyTables []any
 	HasEngine    bool
 )
@@ -55,93 +37,90 @@ func init() {
 		new(ProtectBranch), new(ProtectBranchWhitelist),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 	)
-
-	gonicNames := []string{"SSL"}
-	for _, name := range gonicNames {
-		core.LintGonicMapper[name] = true
-	}
 }
 
-func getEngine() (*xorm.Engine, error) {
-	Param := "?"
-	if strings.Contains(conf.Database.Name, Param) {
-		Param = "&"
-	}
-
-	driver := conf.Database.Type
-	connStr := ""
-	switch conf.Database.Type {
-	case "mysql":
-		conf.UseMySQL = true
-		if conf.Database.Host[0] == '/' { // looks like a unix socket
-			connStr = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8mb4&parseTime=true",
-				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
-		} else {
-			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
-				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
-		}
-		engineParams := map[string]string{"rowFormat": "DYNAMIC"}
-		return xorm.NewEngineWithParams(conf.Database.Type, connStr, engineParams)
-
-	case "postgres":
-		conf.UsePostgreSQL = true
-		host, port := dbutil.ParsePostgreSQLHostPort(conf.Database.Host)
-		connStr = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
-			conf.Database.User, conf.Database.Password, host, port, conf.Database.Name, conf.Database.SSLMode, conf.Database.Schema)
-		driver = "pgx"
-
-	case "mssql":
-		conf.UseMSSQL = true
-		host, port := dbutil.ParseMSSQLHostPort(conf.Database.Host)
-		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Password)
-
-	case "sqlite3":
+func getGormDB(gormLogger logger.Writer) (*gorm.DB, error) {
+	if conf.Database.Type == "sqlite3" {
 		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {
 			return nil, errors.Newf("create directories: %v", err)
 		}
-		conf.UseSQLite3 = true
-		connStr = "file:" + conf.Database.Path + "?cache=shared&mode=rwc"
-
-	default:
-		return nil, errors.Newf("unknown database type: %s", conf.Database.Type)
 	}
-	return xorm.NewEngine(driver, connStr)
+
+	level := logger.Info
+	if conf.IsProdMode() {
+		level = logger.Warn
+	}
+
+	logger.Default = logger.New(gormLogger, logger.Config{
+		SlowThreshold: 100 * time.Millisecond,
+		LogLevel:      level,
+	})
+
+	gormDB, err := dbutil.OpenDB(
+		conf.Database,
+		&gorm.Config{
+			SkipDefaultTransaction: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+			NowFunc: func() time.Time {
+				return time.Now().UTC().Truncate(time.Microsecond)
+			},
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "open database")
+	}
+
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		return nil, errors.Wrap(err, "get underlying *sql.DB")
+	}
+	sqlDB.SetMaxOpenConns(conf.Database.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(conf.Database.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(time.Minute)
+
+	switch conf.Database.Type {
+	case "postgres":
+		conf.UsePostgreSQL = true
+	case "mysql":
+		conf.UseMySQL = true
+		gormDB = gormDB.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
+	case "sqlite3":
+		conf.UseSQLite3 = true
+	case "mssql":
+		conf.UseMSSQL = true
+	}
+
+	return gormDB, nil
 }
 
 func NewTestEngine() error {
-	x, err := getEngine()
+	var err error
+	db, err = getGormDB(&dbutil.Logger{Writer: log.NewConsoleWriter()})
 	if err != nil {
 		return errors.Newf("connect to database: %v", err)
 	}
 
-	if conf.UsePostgreSQL {
-		x.SetSchema(conf.Database.Schema)
+	for _, table := range legacyTables {
+		if db.Migrator().HasTable(table) {
+			continue
+		}
+		if err = db.Migrator().AutoMigrate(table); err != nil {
+			return errors.Wrap(err, "auto migrate")
+		}
 	}
-
-	x.SetMapper(core.GonicMapper{})
-	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
+	return nil
 }
 
 func SetEngine() (*gorm.DB, error) {
-	var err error
-	x, err = getEngine()
-	if err != nil {
-		return nil, errors.Newf("connect to database: %v", err)
-	}
-
-	if conf.UsePostgreSQL {
-		x.SetSchema(conf.Database.Schema)
-	}
-
-	x.SetMapper(core.GonicMapper{})
-
 	var logPath string
 	if conf.HookMode {
-		logPath = filepath.Join(conf.Log.RootPath, "hooks", "xorm.log")
+		logPath = filepath.Join(conf.Log.RootPath, "hooks", "gorm.log")
 	} else {
-		logPath = filepath.Join(conf.Log.RootPath, "xorm.log")
+		logPath = filepath.Join(conf.Log.RootPath, "gorm.log")
 	}
-	sec := conf.File.Section("log.xorm")
+	sec := conf.File.Section("log.gorm")
 	fileWriter, err := log.NewFileWriter(logPath,
 		log.FileRotationConfig{
 			Rotate:  sec.Key("ROTATE").MustBool(true),
@@ -151,19 +130,8 @@ func SetEngine() (*gorm.DB, error) {
 		},
 	)
 	if err != nil {
-		return nil, errors.Newf("create 'xorm.log': %v", err)
+		return nil, errors.Newf("create 'gorm.log': %v", err)
 	}
-
-	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
-	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
-	x.SetConnMaxLifetime(time.Second)
-
-	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
-	} else {
-		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
-	}
-	x.ShowSQL(true)
 
 	var gormLogger logger.Writer
 	if conf.HookMode {
@@ -174,23 +142,37 @@ func SetEngine() (*gorm.DB, error) {
 			return nil, errors.Wrap(err, "new log writer")
 		}
 	}
+
+	db, err = getGormDB(gormLogger)
+	if err != nil {
+		return nil, err
+	}
+
 	return NewConnection(gormLogger)
 }
 
 func NewEngine() error {
-	db, err := SetEngine()
+	gormDB, err := SetEngine()
 	if err != nil {
 		return err
 	}
 
-	if err = migrations.Migrate(db); err != nil {
+	if err = migrations.Migrate(gormDB); err != nil {
 		return errors.Newf("migrate: %v", err)
 	}
 
-	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
-		return errors.Wrap(err, "sync tables")
+	for _, table := range legacyTables {
+		if gormDB.Migrator().HasTable(table) {
+			continue
+		}
+		name := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
+		if err = gormDB.Migrator().AutoMigrate(table); err != nil {
+			return errors.Wrapf(err, "auto migrate %q", name)
+		}
+		log.Trace("Auto migrated %q", name)
 	}
 
+	HasEngine = true
 	return nil
 }
 
@@ -208,33 +190,54 @@ type Statistic struct {
 func GetStatistic(ctx context.Context) (stats Statistic) {
 	stats.Counter.User = Handle.Users().Count(ctx)
 	stats.Counter.Org = CountOrganizations()
-	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
+	var count int64
+	db.Model(new(PublicKey)).Count(&count)
+	stats.Counter.PublicKey = count
 	stats.Counter.Repo = CountRepositories(true)
-	stats.Counter.Watch, _ = x.Count(new(Watch))
-	stats.Counter.Star, _ = x.Count(new(Star))
-	stats.Counter.Action, _ = x.Count(new(Action))
-	stats.Counter.Access, _ = x.Count(new(Access))
-	stats.Counter.Issue, _ = x.Count(new(Issue))
-	stats.Counter.Comment, _ = x.Count(new(Comment))
+	db.Model(new(Watch)).Count(&count)
+	stats.Counter.Watch = count
+	db.Model(new(Star)).Count(&count)
+	stats.Counter.Star = count
+	db.Model(new(Action)).Count(&count)
+	stats.Counter.Action = count
+	db.Model(new(Access)).Count(&count)
+	stats.Counter.Access = count
+	db.Model(new(Issue)).Count(&count)
+	stats.Counter.Issue = count
+	db.Model(new(Comment)).Count(&count)
+	stats.Counter.Comment = count
 	stats.Counter.Oauth = 0
-	stats.Counter.Follow, _ = x.Count(new(Follow))
-	stats.Counter.Mirror, _ = x.Count(new(Mirror))
-	stats.Counter.Release, _ = x.Count(new(Release))
+	db.Model(new(Follow)).Count(&count)
+	stats.Counter.Follow = count
+	db.Model(new(Mirror)).Count(&count)
+	stats.Counter.Mirror = count
+	db.Model(new(Release)).Count(&count)
+	stats.Counter.Release = count
 	stats.Counter.LoginSource = Handle.LoginSources().Count(ctx)
-	stats.Counter.Webhook, _ = x.Count(new(Webhook))
-	stats.Counter.Milestone, _ = x.Count(new(Milestone))
-	stats.Counter.Label, _ = x.Count(new(Label))
-	stats.Counter.HookTask, _ = x.Count(new(HookTask))
-	stats.Counter.Team, _ = x.Count(new(Team))
-	stats.Counter.Attachment, _ = x.Count(new(Attachment))
+	db.Model(new(Webhook)).Count(&count)
+	stats.Counter.Webhook = count
+	db.Model(new(Milestone)).Count(&count)
+	stats.Counter.Milestone = count
+	db.Model(new(Label)).Count(&count)
+	stats.Counter.Label = count
+	db.Model(new(HookTask)).Count(&count)
+	stats.Counter.HookTask = count
+	db.Model(new(Team)).Count(&count)
+	stats.Counter.Team = count
+	db.Model(new(Attachment)).Count(&count)
+	stats.Counter.Attachment = count
 	return stats
 }
 
 func Ping() error {
-	if x == nil {
+	if db == nil {
 		return errors.New("database not available")
 	}
-	return x.Ping()
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Ping()
 }
 
 // The version table. Should have only one row with id==1
