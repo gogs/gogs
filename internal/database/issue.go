@@ -1201,16 +1201,6 @@ const (
 	FilterModeMention   FilterMode = "mentioned"
 )
 
-func parseCountResult(results []map[string][]byte) int64 {
-	if len(results) == 0 {
-		return 0
-	}
-	for _, result := range results[0] {
-		return com.StrTo(string(result)).MustInt64()
-	}
-	return 0
-}
-
 type IssueStatsOptions struct {
 	RepoID      int64
 	UserID      int64

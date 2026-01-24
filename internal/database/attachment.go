@@ -19,7 +19,7 @@ import (
 // Attachment represent a attachment of issue/comment/release.
 type Attachment struct {
 	ID        int64
-	UUID      string `gorm:"column:uuid;uniqueIndex"`
+	UUID      string `gorm:"column:uuid;type:varchar(191);uniqueIndex"`
 	IssueID   int64  `gorm:"index"`
 	CommentID int64
 	ReleaseID int64 `gorm:"index"`
