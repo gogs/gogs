@@ -151,11 +151,11 @@ func ListMyRepos(c *context.APIContext) {
 }
 
 func ListUserRepositories(c *context.APIContext) {
-	listUserRepositories(c, c.Params(":username"))
+	listUserRepositories(c, c.Param(":username"))
 }
 
 func ListOrgRepositories(c *context.APIContext) {
-	listUserRepositories(c, c.Params(":org"))
+	listUserRepositories(c, c.Param(":org"))
 }
 
 func CreateUserRepo(c *context.APIContext, owner *database.User, opt api.CreateRepoOption) {
@@ -196,7 +196,7 @@ func Create(c *context.APIContext, opt api.CreateRepoOption) {
 }
 
 func CreateOrgRepo(c *context.APIContext, opt api.CreateRepoOption) {
-	org, err := database.GetOrgByName(c.Params(":org"))
+	org, err := database.GetOrgByName(c.Param(":org"))
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
 		return
@@ -292,7 +292,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 
 // FIXME: inject in the handler chain
 func parseOwnerAndRepo(c *context.APIContext) (*database.User, *database.Repository) {
-	owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
+	owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Param(":username"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -302,7 +302,7 @@ func parseOwnerAndRepo(c *context.APIContext) (*database.User, *database.Reposit
 		return nil, nil
 	}
 
-	repo, err := database.GetRepositoryByName(owner.ID, c.Params(":reponame"))
+	repo, err := database.GetRepositoryByName(owner.ID, c.Param(":reponame"))
 	if err != nil {
 		c.NotFoundOrError(err, "get repository by name")
 		return nil, nil

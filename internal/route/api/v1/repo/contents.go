@@ -40,7 +40,7 @@ type repoContent struct {
 }
 
 func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commit, entry *git.TreeEntry) (*repoContent, error) {
-	repoURL := fmt.Sprintf("%s/repos/%s/%s", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+	repoURL := fmt.Sprintf("%s/repos/%s/%s", c.BaseURL, c.Param(":username"), c.Param(":reponame"))
 	selfURL := fmt.Sprintf("%s/contents/%s", repoURL, subpath)
 	htmlURL := fmt.Sprintf("%s/src/%s/%s", repoutil.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
 	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repoutil.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
@@ -99,7 +99,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 }
 
 func GetContents(c *context.APIContext) {
-	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := repoutil.RepositoryPath(c.Param(":username"), c.Param(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
@@ -118,7 +118,7 @@ func GetContents(c *context.APIContext) {
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathutil.Clean(c.Params("*"))
+	treePath := pathutil.Clean(c.Param("*"))
 	entry, err := commit.TreeEntry(treePath)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
@@ -188,7 +188,7 @@ func PutContents(c *context.APIContext, r PutContentsRequest) {
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathutil.Clean(c.Params("*"))
+	treePath := pathutil.Clean(c.Param("*"))
 
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
@@ -206,7 +206,7 @@ func PutContents(c *context.APIContext, r PutContentsRequest) {
 		return
 	}
 
-	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := repoutil.RepositoryPath(c.Param(":username"), c.Param(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")

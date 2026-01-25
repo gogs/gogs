@@ -24,6 +24,21 @@ import (
 	gogstemplate "gogs.io/gogs/internal/template"
 )
 
+// Resp is a wrapper for ResponseWriter to provide compatibility.
+type Resp struct {
+	http.ResponseWriter
+}
+
+// Write writes data to the response.
+func (r *Resp) Write(data []byte) (int, error) {
+	return r.ResponseWriter.Write(data)
+}
+
+// Req is a wrapper for http.Request to provide compatibility.
+type Req struct {
+	*http.Request
+}
+
 // Context represents context of a request.
 type Context struct {
 	flamego.Context
@@ -34,6 +49,8 @@ type Context struct {
 	Flash   *FlashData
 	Session session.Session
 
+	Resp *Resp
+	Req  *Req
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Data           template.Data
@@ -51,6 +68,26 @@ type Context struct {
 // FlashData represents flash data structure.
 type FlashData struct {
 	ErrorMsg, WarningMsg, InfoMsg, SuccessMsg string
+}
+
+// Error sets error message.
+func (f *FlashData) Error(msg string) {
+	f.ErrorMsg = msg
+}
+
+// Success sets success message.
+func (f *FlashData) Success(msg string) {
+	f.SuccessMsg = msg
+}
+
+// Info sets info message.
+func (f *FlashData) Info(msg string) {
+	f.InfoMsg = msg
+}
+
+// Warning sets warning message.
+func (f *FlashData) Warning(msg string) {
+	f.WarningMsg = msg
 }
 
 // RawTitle sets the "Title" field in template data.
@@ -154,6 +191,24 @@ func (c *Context) Written() bool {
 	// For now, we'll assume if status code is set, it's written
 	// This is a simplification - in production, you'd want a proper wrapper
 	return false // TODO: Implement proper tracking
+}
+
+// Write writes data to the response.
+func (c *Context) Write(data []byte) (int, error) {
+	return c.ResponseWriter.Write(data)
+}
+
+// ParamsInt64 returns value of the given bind parameter parsed as int64.
+func (c *Context) ParamsInt64(name string) int64 {
+	return c.Context.ParamInt64(name)
+}
+
+// Language returns the language tag from the current locale.
+func (c *Context) Language() string {
+	// Flamego's i18n.Locale doesn't have a Language() method
+	// We need to use a different approach or store the language
+	// For now, return empty string as a placeholder
+	return "" // TODO: Implement proper language tracking
 }
 
 // SetCookie sets a cookie.
@@ -310,6 +365,8 @@ func Contexter(store Store) flamego.Handler {
 			csrf:           x,
 			Flash:          flash,
 			Session:        sess,
+			Resp:           &Resp{w},
+			Req:            &Req{req},
 			ResponseWriter: w,
 			Request:        req,
 			Data:           make(template.Data),

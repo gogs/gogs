@@ -482,7 +482,7 @@ func UpdateDefaultBranch(c *context.Context) {
 }
 
 func SettingsProtectedBranch(c *context.Context) {
-	branch := c.Params("*")
+	branch := c.Param("*")
 	if !c.Repo.GitRepo.HasBranch(branch) {
 		c.NotFound()
 		return
@@ -527,7 +527,7 @@ func SettingsProtectedBranch(c *context.Context) {
 }
 
 func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
-	branch := c.Params("*")
+	branch := c.Param("*")
 	if !c.Repo.GitRepo.HasBranch(branch) {
 		c.NotFound()
 		return
@@ -592,7 +592,7 @@ func SettingsGitHooksEdit(c *context.Context) {
 	c.Data["PageIsSettingsGitHooks"] = true
 	c.Data["RequireSimpleMDE"] = true
 
-	name := git.HookName(c.Params(":name"))
+	name := git.HookName(c.Param(":name"))
 	if !isValidHookName(name) {
 		c.NotFound()
 		return
@@ -608,7 +608,7 @@ func SettingsGitHooksEdit(c *context.Context) {
 }
 
 func SettingsGitHooksEditPost(c *context.Context) {
-	name := git.HookName(c.Params(":name"))
+	name := git.HookName(c.Param(":name"))
 	if !isValidHookName(name) {
 		c.NotFound()
 		return

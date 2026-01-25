@@ -19,8 +19,8 @@ func TriggerTask(c *macaron.Context) {
 		return
 	}
 
-	username := c.Params(":username")
-	reponame := c.Params(":reponame")
+	username := c.Param(":username")
+	reponame := c.Param(":reponame")
 
 	owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), username)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#get-branch
 func GetBranch(c *context.APIContext) {
-	branch, err := c.Repo.Repository.GetBranch(c.Params("*"))
+	branch, err := c.Repo.Repository.GetBranch(c.Param("*"))
 	if err != nil {
 		c.NotFoundOrError(err, "get branch")
 		return

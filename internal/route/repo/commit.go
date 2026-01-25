@@ -120,7 +120,7 @@ func Diff(c *context.Context) {
 
 	userName := c.Repo.Owner.Name
 	repoName := c.Repo.Repository.Name
-	commitID := c.Params(":sha")
+	commitID := c.Param(":sha")
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
 	if err != nil {
@@ -175,8 +175,8 @@ func Diff(c *context.Context) {
 
 func RawDiff(c *context.Context) {
 	if err := c.Repo.GitRepo.RawDiff(
-		c.Params(":sha"),
-		git.RawDiffFormat(c.Params(":ext")),
+		c.Param(":sha"),
+		git.RawDiffFormat(c.Param(":ext")),
 		c.Resp,
 	); err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get raw diff")
@@ -215,8 +215,8 @@ func CompareDiff(c *context.Context) {
 	c.Data["IsDiffCompare"] = true
 	userName := c.Repo.Owner.Name
 	repoName := c.Repo.Repository.Name
-	beforeCommitID := c.Params(":before")
-	afterCommitID := c.Params(":after")
+	beforeCommitID := c.Param(":before")
+	afterCommitID := c.Param(":after")
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
 	if err != nil {

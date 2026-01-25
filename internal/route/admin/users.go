@@ -212,7 +212,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
-	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Param(":userid"))
 }
 
 func DeleteUser(c *context.Context) {
@@ -227,12 +227,12 @@ func DeleteUser(c *context.Context) {
 		case database.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
 			c.JSONSuccess(map[string]any{
-				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
+				"redirect": conf.Server.Subpath + "/admin/users/" + c.Param(":userid"),
 			})
 		case database.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
 			c.JSONSuccess(map[string]any{
-				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
+				"redirect": conf.Server.Subpath + "/admin/users/" + c.Param(":userid"),
 			})
 		default:
 			c.Error(err, "delete user")

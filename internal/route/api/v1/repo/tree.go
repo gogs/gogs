@@ -16,7 +16,7 @@ func GetRepoGitTree(c *context.APIContext) {
 		return
 	}
 
-	sha := c.Params(":sha")
+	sha := c.Param(":sha")
 	tree, err := gitRepo.LsTree(sha)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get tree")
@@ -43,7 +43,7 @@ func GetRepoGitTree(c *context.APIContext) {
 		Tree []*repoGitTreeEntry `json:"tree"`
 	}
 
-	treesURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+	treesURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Param(":username"), c.Param(":reponame"))
 
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{
@@ -78,7 +78,7 @@ func GetRepoGitTree(c *context.APIContext) {
 		})
 	}
 	c.JSONSuccess(&repoGitTree{
-		Sha:  c.Params(":sha"),
+		Sha:  c.Param(":sha"),
 		URL:  fmt.Sprintf(treesURL+"/%s", sha),
 		Tree: children,
 	})

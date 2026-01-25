@@ -241,7 +241,7 @@ func EditRelease(c *context.Context) {
 	c.Data["PageIsEditRelease"] = true
 	renderReleaseAttachmentSettings(c)
 
-	tagName := c.Params("*")
+	tagName := c.Param("*")
 	rel, err := database.GetRelease(c.Repo.Repository.ID, tagName)
 	if err != nil {
 		c.NotFoundOrError(err, "get release")
@@ -265,7 +265,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["PageIsEditRelease"] = true
 	renderReleaseAttachmentSettings(c)
 
-	tagName := c.Params("*")
+	tagName := c.Param("*")
 	rel, err := database.GetRelease(c.Repo.Repository.ID, tagName)
 	if err != nil {
 		c.NotFoundOrError(err, "get release")

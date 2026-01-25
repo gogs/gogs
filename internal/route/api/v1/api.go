@@ -23,8 +23,8 @@ import (
 // and makes sure the context user has at least the read access to the repository.
 func repoAssignment() macaron.Handler {
 	return func(c *context.APIContext) {
-		username := c.Params(":username")
-		reponame := c.Params(":reponame")
+		username := c.Param(":username")
+		reponame := c.Param(":reponame")
 
 		var err error
 		var owner *database.User
@@ -87,7 +87,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 
 		var err error
 		if assignOrg {
-			c.Org.Organization, err = database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":orgname"))
+			c.Org.Organization, err = database.Handle.Users().GetByUsername(c.Req.Context(), c.Param(":orgname"))
 			if err != nil {
 				c.NotFoundOrError(err, "get organization by name")
 				return

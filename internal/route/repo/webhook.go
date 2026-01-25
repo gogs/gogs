@@ -100,7 +100,7 @@ func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.PageIs("SettingsHooksNew")
 
 	allowed := false
-	hookType := strings.ToLower(c.Params(":type"))
+	hookType := strings.ToLower(c.Param(":type"))
 	for _, typ := range conf.Webhook.Types {
 		if hookType == typ {
 			allowed = true

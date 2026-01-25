@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -26,7 +26,7 @@ import (
 )
 
 type HTTPContext struct {
-	*macaron.Context
+	flamego.Context
 	OwnerName string
 	OwnerSalt string
 	RepoID    int64
@@ -35,13 +35,13 @@ type HTTPContext struct {
 }
 
 // askCredentials responses HTTP header and status which informs client to provide credentials.
-func askCredentials(c *macaron.Context, status int, text string) {
+func askCredentials(c flamego.Context, status int, text string) {
 	c.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	c.Error(status, text)
 }
 
-func HTTPContexter(store Store) macaron.Handler {
-	return func(c *macaron.Context) {
+func HTTPContexter(store Store) flamego.Handler {
+	return func(c flamego.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
@@ -54,8 +54,8 @@ func HTTPContexter(store Store) macaron.Handler {
 			}
 		}
 
-		ownerName := c.Params(":username")
-		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
+		ownerName := c.Param(":username")
+		repoName := strings.TrimSuffix(c.Param(":reponame"), ".git")
 		repoName = strings.TrimSuffix(repoName, ".wiki")
 
 		isPull := c.Query("service") == "git-upload-pack" ||
@@ -93,7 +93,7 @@ func HTTPContexter(store Store) macaron.Handler {
 		}
 
 		// In case user requested a wrong URL and not intended to access Git objects.
-		action := c.Params("*")
+		action := c.Param("*")
 		if !strings.Contains(action, "git-") &&
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&

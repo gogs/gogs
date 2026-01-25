@@ -71,7 +71,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		c.Data["Pages"] = pages
 	}
 
-	pageURL := c.Params(":page")
+	pageURL := c.Param(":page")
 	if pageURL == "" {
 		pageURL = "Home"
 	}
@@ -253,7 +253,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 }
 
 func DeleteWikiPagePost(c *context.Context) {
-	pageURL := c.Params(":page")
+	pageURL := c.Param(":page")
 	if pageURL == "" {
 		pageURL = "Home"
 	}
