@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
@@ -127,9 +127,8 @@ func TestAuthenticate(t *testing.T) {
 				test.mockStore = NewMockStore
 			}
 
-			m := macaron.New()
-			m.Use(macaron.Renderer())
-			m.Get("/", authenticate(test.mockStore()), func(w http.ResponseWriter, user *database.User) {
+			f := flamego.New()
+			f.Get("/", authenticate(test.mockStore()), func(w http.ResponseWriter, user *database.User) {
 				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 			})
 
@@ -140,7 +139,7 @@ func TestAuthenticate(t *testing.T) {
 			r.Header = test.header
 
 			rr := httptest.NewRecorder()
-			m.ServeHTTP(rr, r)
+			f.ServeHTTP(rr, r)
 
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
@@ -232,13 +231,12 @@ func TestAuthorize(t *testing.T) {
 				mockStore = test.mockStore()
 			}
 
-			m := macaron.New()
-			m.Use(macaron.Renderer())
-			m.Use(func(c *macaron.Context) {
+			f := flamego.New()
+			f.Use(func(c flamego.Context) {
 				c.Map(&database.User{})
 			})
-			m.Get(
-				"/:username/:reponame",
+			f.Get(
+				"/{username}/{reponame}",
 				authorize(mockStore, test.accessMode),
 				func(w http.ResponseWriter, owner *database.User, repo *database.Repository) {
 					_, _ = fmt.Fprintf(w, "owner.Name: %s, repo.Name: %s", owner.Name, repo.Name)
@@ -251,7 +249,7 @@ func TestAuthorize(t *testing.T) {
 			}
 
 			rr := httptest.NewRecorder()
-			m.ServeHTTP(rr, r)
+			f.ServeHTTP(rr, r)
 
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
@@ -268,7 +266,7 @@ func TestAuthorize(t *testing.T) {
 func Test_verifyHeader(t *testing.T) {
 	tests := []struct {
 		name          string
-		verifyHeader  macaron.Handler
+		verifyHeader  flamego.Handler
 		header        http.Header
 		expStatusCode int
 	}{
@@ -289,9 +287,8 @@ func Test_verifyHeader(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			m := macaron.New()
-			m.Use(macaron.Renderer())
-			m.Get("/", test.verifyHeader)
+			f := flamego.New()
+			f.Get("/", test.verifyHeader)
 
 			r, err := http.NewRequest("GET", "/", nil)
 			if err != nil {
@@ -300,7 +297,7 @@ func Test_verifyHeader(t *testing.T) {
 			r.Header = test.header
 
 			rr := httptest.NewRecorder()
-			m.ServeHTTP(rr, r)
+			f.ServeHTTP(rr, r)
 
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
@@ -309,8 +306,8 @@ func Test_verifyHeader(t *testing.T) {
 }
 
 func Test_verifyOID(t *testing.T) {
-	m := macaron.New()
-	m.Get("/:oid", verifyOID(), func(w http.ResponseWriter, oid lfsutil.OID) {
+	f := flamego.New()
+	f.Get("/{oid}", verifyOID(), func(w http.ResponseWriter, oid lfsutil.OID) {
 		fmt.Fprintf(w, "oid: %s", oid)
 	})
 
@@ -342,7 +339,7 @@ func Test_verifyOID(t *testing.T) {
 			}
 
 			rr := httptest.NewRecorder()
-			m.ServeHTTP(rr, r)
+			f.ServeHTTP(rr, r)
 
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)

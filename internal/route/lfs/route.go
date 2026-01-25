@@ -110,8 +110,8 @@ func authenticate(store Store) flamego.Handler {
 // authorize tries to authorize the user to the context repository with given access mode.
 func authorize(store Store, mode database.AccessMode) flamego.Handler {
 	return func(c flamego.Context, actor *database.User) {
-		username := c.Param(":username")
-		reponame := strings.TrimSuffix(c.Param(":reponame"), ".git")
+		username := c.Param("username")
+		reponame := strings.TrimSuffix(c.Param("reponame"), ".git")
 
 		owner, err := store.GetUserByUsername(c.Request().Context(), username)
 		if err != nil {
@@ -171,7 +171,7 @@ func verifyHeader(key, value string, failCode int) flamego.Handler {
 // verifyOID checks if the ":oid" URL parameter is valid.
 func verifyOID() flamego.Handler {
 	return func(c flamego.Context) {
-		oid := lfsutil.OID(c.Param(":oid"))
+		oid := lfsutil.OID(c.Param("oid"))
 		if !lfsutil.ValidOID(oid) {
 			responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: "Invalid oid",
