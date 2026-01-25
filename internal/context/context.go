@@ -36,7 +36,7 @@ type Context struct {
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Data           template.Data
-	
+
 	Link        string // Current request URL
 	User        *database.User
 	IsLogged    bool

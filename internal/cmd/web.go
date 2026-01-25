@@ -147,7 +147,7 @@ func newFlamego() *flamego.Flame {
 	f.Use(captcha.Captchaer(captcha.Options{
 		URLPrefix: conf.Server.Subpath,
 	}))
-	
+
 	// Custom health check endpoint (replaces toolbox)
 	f.Get("/-/healthz", func(w http.ResponseWriter) {
 		if err := database.Ping(); err != nil {
@@ -158,7 +158,7 @@ func newFlamego() *flamego.Flame {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "ok")
 	})
-	
+
 	return f
 }
 
@@ -172,23 +172,23 @@ func runWeb(c *cli.Context) error {
 
 	// Apply global middleware
 	f.Use(session.Sessioner(session.Options{
-		Provider: conf.Session.Provider,
-		Config:   conf.Session.ProviderConfig,
-		CookieName: conf.Session.CookieName,
-		CookiePath: conf.Server.Subpath,
-		Gclifetime: conf.Session.GCInterval,
+		Provider:    conf.Session.Provider,
+		Config:      conf.Session.ProviderConfig,
+		CookieName:  conf.Session.CookieName,
+		CookiePath:  conf.Server.Subpath,
+		Gclifetime:  conf.Session.GCInterval,
 		Maxlifetime: conf.Session.MaxLifeTime,
-		Secure: conf.Session.CookieSecure,
+		Secure:      conf.Session.CookieSecure,
 	}))
 	f.Use(csrf.Csrfer(csrf.Options{
-		Secret:     conf.Security.SecretKey,
-		Header:     "X-CSRF-Token",
-		Cookie:     conf.Session.CSRFCookieName,
-		Domain:     conf.Server.URL.Hostname(),
-		Path:       conf.Server.Subpath,
-		HTTPOnly:   true,
-		SetCookie:  true,
-		Secure:     conf.Server.URL.Scheme == "https",
+		Secret:    conf.Security.SecretKey,
+		Header:    "X-CSRF-Token",
+		Cookie:    conf.Session.CSRFCookieName,
+		Domain:    conf.Server.URL.Hostname(),
+		Path:      conf.Server.Subpath,
+		HTTPOnly:  true,
+		SetCookie: true,
+		Secure:    conf.Server.URL.Scheme == "https",
 	}))
 	f.Use(context.Contexter(context.NewStore()))
 

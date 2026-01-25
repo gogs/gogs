@@ -143,7 +143,7 @@ func authenticatedUserID(store AuthStore, c flamego.Context, sess session.Sessio
 	if !database.HasEngine {
 		return 0, false
 	}
-	
+
 	req := c.Request()
 
 	// Check access token.
@@ -204,7 +204,7 @@ func authenticatedUser(store AuthStore, ctx flamego.Context, sess session.Sessio
 	}
 
 	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
-	
+
 	req := ctx.Request()
 
 	if uid <= 0 {
