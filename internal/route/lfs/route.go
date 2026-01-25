@@ -15,6 +15,14 @@ import (
 	"gogs.io/gogs/internal/lfsutil"
 )
 
+// writeError writes an HTTP error response.
+func writeError(w http.ResponseWriter, status int, text string) {
+	w.WriteHeader(status)
+	if text != "" {
+		w.Write([]byte(text))
+	}
+}
+
 // RegisterRoutes registers LFS routes using given router, and inherits all
 // groups and middleware.
 func RegisterRoutes(r flamego.Router) {
@@ -66,7 +74,7 @@ func authenticate(store Store) flamego.Handler {
 		}
 
 		if err == nil && store.IsTwoFactorEnabled(c.Request().Context(), user.ID) {
-			c.Error(http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
 			return
 		}
 
@@ -85,7 +93,7 @@ func authenticate(store Store) flamego.Handler {
 					if database.IsErrAccessTokenNotExist(err) {
 						askCredentials(c.ResponseWriter())
 					} else {
-						c.Status(http.StatusInternalServerError)
+						c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 						log.Error("Failed to authenticate by access token via password: %v", err)
 					}
 					return
@@ -108,7 +116,7 @@ func authorize(store Store, mode database.AccessMode) flamego.Handler {
 		owner, err := store.GetUserByUsername(c.Request().Context(), username)
 		if err != nil {
 			if database.IsErrUserNotExist(err) {
-				c.Status(http.StatusNotFound)
+				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			} else {
 				internalServerError(c.ResponseWriter())
 				log.Error("Failed to get user [name: %s]: %v", username, err)
@@ -119,7 +127,7 @@ func authorize(store Store, mode database.AccessMode) flamego.Handler {
 		repo, err := store.GetRepositoryByName(c.Request().Context(), owner.ID, reponame)
 		if err != nil {
 			if database.IsErrRepoNotExist(err) {
-				c.Status(http.StatusNotFound)
+				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			} else {
 				internalServerError(c.ResponseWriter())
 				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
@@ -133,7 +141,7 @@ func authorize(store Store, mode database.AccessMode) flamego.Handler {
 				Private: repo.IsPrivate,
 			},
 		) {
-			c.Status(http.StatusNotFound)
+			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
 
@@ -156,7 +164,7 @@ func verifyHeader(key, value string, failCode int) flamego.Handler {
 		}
 
 		log.Trace("[LFS] HTTP header %q does not contain value %q", key, value)
-		c.Status(failCode)
+		c.ResponseWriter().WriteHeader(failCode)
 	}
 }
 
