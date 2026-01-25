@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/go-macaron/binding"
+	"github.com/flamego/binding"
 	"github.com/unknwon/com"
-	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/lazyregexp"
 )
 
@@ -18,6 +18,7 @@ var AlphaDashDotSlashPattern = lazyregexp.New("[^\\d\\w-_\\./]")
 
 func init() {
 	binding.SetNameMapper(com.ToSnakeCase)
+
 	binding.AddRule(&binding.Rule{
 		IsMatch: func(rule string) bool {
 			return rule == "AlphaDashDotSlash"
@@ -30,10 +31,6 @@ func init() {
 			return true, errs
 		},
 	})
-}
-
-type Form interface {
-	binding.Validator
 }
 
 // Assign assign form values back to the template data.
@@ -86,27 +83,20 @@ func getInclude(field reflect.StructField) string {
 	return getRuleBody(field, "Include(")
 }
 
-func validate(errs binding.Errors, data map[string]any, f Form, l macaron.Locale) binding.Errors {
+func validate(errs binding.Errors, data map[string]any, l email.Translator) binding.Errors {
 	if errs.Len() == 0 {
 		return errs
 	}
 
 	data["HasError"] = true
-	Assign(f, data)
 
-	typ := reflect.TypeOf(f)
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
+	typ := reflect.TypeOf(errs[0])
+	if typ == nil {
+		return errs
 	}
 
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
-
-		fieldName := field.Tag.Get("form")
-		// Allow ignored fields in the struct
-		if fieldName == "-" {
-			continue
-		}
 
 		if errs[0].FieldNames[0] == field.Name {
 			data["Err_"+field.Name] = true
@@ -145,5 +135,6 @@ func validate(errs binding.Errors, data map[string]any, f Form, l macaron.Locale
 			return errs
 		}
 	}
+
 	return errs
 }

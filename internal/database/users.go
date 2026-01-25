@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/binding"
 	api "github.com/gogs/go-gogs-client"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
@@ -27,6 +27,9 @@ import (
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
 )
+
+// alphaDashDotPattern is a regex to match alpha, numeric, dash, underscore and dot characters
+var alphaDashDotPattern = regexp.MustCompile(`[^\w-.]`)
 
 // UsersStore is the storage layer for users.
 type UsersStore struct {
@@ -129,7 +132,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 	}
 
 	// Validate username make sure it satisfies requirement.
-	if binding.AlphaDashDotPattern.MatchString(extAccount.Name) {
+	if alphaDashDotPattern.MatchString(extAccount.Name) {
 		return nil, errors.Newf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 

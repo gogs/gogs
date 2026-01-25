@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/database"

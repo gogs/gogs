@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/captcha"
+	"github.com/flamego/captcha"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 

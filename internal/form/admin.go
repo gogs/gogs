@@ -1,10 +1,8 @@
 package form
 
 import (
-	"github.com/go-macaron/binding"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/binding"
 )
-
 type AdminCrateUser struct {
 	LoginType  string `binding:"Required"`
 	LoginName  string
@@ -13,11 +11,8 @@ type AdminCrateUser struct {
 	Password   string `binding:"MaxSize(255)"`
 	SendNotify bool
 }
-
-func (f *AdminCrateUser) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
+func (f *AdminCrateUser) Validate(ctx http.ResponseWriter, req *http.Request, errs binding.Errors) binding.Errors {
+	return validate(errs, map[string]interface{}{}, f, req.Context().Value("locale"))
 type AdminEditUser struct {
 	LoginType        string `binding:"Required"`
 	LoginName        string
@@ -32,8 +27,4 @@ type AdminEditUser struct {
 	AllowGitHook     bool
 	AllowImportLocal bool
 	ProhibitLogin    bool
-}
-
-func (f *AdminEditUser) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
+func (f *AdminEditUser) Validate(ctx http.ResponseWriter, req *http.Request, errs binding.Errors) binding.Errors {

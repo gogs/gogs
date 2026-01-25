@@ -1,16 +1,14 @@
 package templates
 
 import (
-	"bytes"
 	"embed"
-	"io"
 	"io/fs"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/template"
 
 	"gogs.io/gogs/internal/osutil"
 )
@@ -18,22 +16,32 @@ import (
 //go:embed *.tmpl **/*
 var files embed.FS
 
-// fileSystem implements the macaron.TemplateFileSystem interface.
+// templateFile implements the template.File interface.
+type templateFile struct {
+	name string
+	data []byte
+	ext  string
+}
+
+func (tf *templateFile) Name() string {
+	return tf.name
+}
+
+func (tf *templateFile) Data() ([]byte, error) {
+	return tf.data, nil
+}
+
+func (tf *templateFile) Ext() string {
+	return tf.ext
+}
+
+// fileSystem implements the template.FileSystem interface.
 type fileSystem struct {
-	files []macaron.TemplateFile
+	files []template.File
 }
 
-func (fs *fileSystem) ListFiles() []macaron.TemplateFile {
+func (fs *fileSystem) Files() []template.File {
 	return fs.files
-}
-
-func (fs *fileSystem) Get(name string) (io.Reader, error) {
-	for i := range fs.files {
-		if fs.files[i].Name()+fs.files[i].Ext() == name {
-			return bytes.NewReader(fs.files[i].Data()), nil
-		}
-	}
-	return nil, errors.Newf("file %q not found", name)
 }
 
 func mustNames(fsys fs.FS) []string {
@@ -50,16 +58,16 @@ func mustNames(fsys fs.FS) []string {
 	return names
 }
 
-// NewTemplateFileSystem returns a macaron.TemplateFileSystem instance for embedded assets.
+// NewTemplateFileSystem returns a template.FileSystem instance for embedded assets.
 // The argument "dir" can be used to serve subset of embedded assets. Template file
 // found under the "customDir" on disk has higher precedence over embedded assets.
-func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
+func NewTemplateFileSystem(dir, customDir string) template.FileSystem {
 	if dir != "" && !strings.HasSuffix(dir, "/") {
 		dir += "/"
 	}
 
 	var err error
-	var tmplFiles []macaron.TemplateFile
+	var tmplFiles []template.File
 	names := mustNames(files)
 	for _, name := range names {
 		if !strings.HasPrefix(name, dir) {
@@ -79,7 +87,11 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		name = strings.TrimPrefix(name, dir)
 		ext := path.Ext(name)
 		name = strings.TrimSuffix(name, ext)
-		tmplFiles = append(tmplFiles, macaron.NewTplFile(name, data, ext))
+		tmplFiles = append(tmplFiles, &templateFile{
+			name: name,
+			data: data,
+			ext:  ext,
+		})
 	}
 	return &fileSystem{files: tmplFiles}
 }

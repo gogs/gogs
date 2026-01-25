@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/binding"
+	"github.com/flamego/binding"
 
 	api "github.com/gogs/go-gogs-client"
 

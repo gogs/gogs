@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	api "github.com/gogs/go-gogs-client"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"

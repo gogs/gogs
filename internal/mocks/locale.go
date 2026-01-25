@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/binding"
 )
 
 var _ macaron.Locale = (*Locale)(nil)

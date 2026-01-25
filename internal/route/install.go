@@ -11,7 +11,6 @@ import (
 	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"

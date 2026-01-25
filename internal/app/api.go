@@ -3,8 +3,8 @@ package app
 import (
 	"net/http"
 
+	"github.com/flamego/flamego"
 	"github.com/microcosm-cc/bluemonday"
-	"gopkg.in/macaron.v1"
 )
 
 func ipynbSanitizer() *bluemonday.Policy {
@@ -15,16 +15,18 @@ func ipynbSanitizer() *bluemonday.Policy {
 	return p
 }
 
-func SanitizeIpynb() macaron.Handler {
+func SanitizeIpynb() flamego.Handler {
 	p := ipynbSanitizer()
 
-	return func(c *macaron.Context) {
-		html, err := c.Req.Body().String()
+	return func(c flamego.Context) {
+		body, err := c.Request().Body().Bytes()
 		if err != nil {
-			c.Error(http.StatusInternalServerError, "read body")
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+			c.ResponseWriter().Write([]byte("read body"))
 			return
 		}
 
-		c.PlainText(http.StatusOK, []byte(p.Sanitize(html)))
+		c.ResponseWriter().WriteHeader(http.StatusOK)
+		c.ResponseWriter().Write([]byte(p.Sanitize(string(body))))
 	}
 }

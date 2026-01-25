@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
