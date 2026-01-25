@@ -4,8 +4,8 @@ import (
 	gocontext "context"
 	"net/http"
 
-	api "github.com/gogs/go-gogs-client"
 	"github.com/flamego/flamego"
+	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"

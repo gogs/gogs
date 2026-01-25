@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/flamego/flamego"
+	jsoniter "github.com/json-iterator/go"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
