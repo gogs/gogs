@@ -1,6 +1,7 @@
 ---
 name: "Dev: Release a minor version"
 about: ONLY USED BY MAINTAINERS.
+assignees: "unknwon"
 title: "Release [VERSION]"
 labels: 📸 release
 ---
