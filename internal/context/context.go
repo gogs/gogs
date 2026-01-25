@@ -49,8 +49,8 @@ type Context struct {
 	Flash   *FlashData
 	Session session.Session
 
-	Resp *Resp
-	Req  *Req
+	Resp           *Resp
+	Req            *Req
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Data           template.Data
