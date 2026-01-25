@@ -1,6 +1,7 @@
 ---
 name: "Dev: Release a patch version"
 about: ONLY USED BY MAINTAINERS.
+assignees: "unknwon"
 title: "Release [VERSION]"
 labels: 📸 release
 ---
@@ -13,7 +14,7 @@ On the release branch:
 
 - [ ] Make sure all commits are cherry-picked from the `main` branch by checking the patch milestone.
 	- Run `task build` for every cherry-picked commit to make sure there is no compilation error.
-- [ ] [Update CHANGELOG on the `main` branch](https://github.com/gogs/gogs/commit/e6c5633f580399c8f4dfc07166a63a01c6c70346) to include entries for the current patch release.
+- [ ] [Update CHANGELOG on the `main` branch](https://github.com/gogs/gogs/commit/f1102a7a7c545ec221d2906f02fa19170d96f96d) to include entries for the current patch release.
 
 ## During release
 
