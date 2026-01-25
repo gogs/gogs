@@ -118,7 +118,7 @@ func newFlamego() *flamego.Flame {
 			log.Fatal("Failed to read locale file %q: %v", name, err)
 		}
 	}
-	
+
 	// Convert string arrays to Flamego's Language type
 	languages := make([]i18n.Language, len(conf.I18n.Langs))
 	for i, lang := range conf.I18n.Langs {
@@ -126,7 +126,7 @@ func newFlamego() *flamego.Flame {
 			Name: lang,
 		}
 	}
-	
+
 	f.Use(i18n.I18n(i18n.Options{
 		Directory: filepath.Join(conf.CustomDir(), "conf", "locale"),
 		Languages: languages,

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-macaron/binding"
 	"github.com/flamego/flamego"
+	"github.com/go-macaron/binding"
 
 	api "github.com/gogs/go-gogs-client"
 
