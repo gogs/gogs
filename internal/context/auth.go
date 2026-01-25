@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/csrf"
-	"github.com/go-macaron/session"
+	"github.com/flamego/csrf"
+	"github.com/flamego/flamego"
+	"github.com/flamego/session"
 	gouuid "github.com/satori/go.uuid"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -26,7 +26,7 @@ type ToggleOptions struct {
 	DisableCSRF     bool
 }
 
-func Toggle(options *ToggleOptions) macaron.Handler {
+func Toggle(options *ToggleOptions) flamego.Handler {
 	return func(c *Context) {
 		// Cannot view any page before installation.
 		if !conf.Security.InstallLock {
@@ -42,18 +42,18 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		// Check non-logged users landing page.
-		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
+		if !c.IsLogged && c.Request.RequestURI == "/" && conf.Server.LandingURL != "/" {
 			c.RedirectSubpath(conf.Server.LandingURL)
 			return
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
-		if options.SignOutRequired && c.IsLogged && c.Req.RequestURI != "/" {
+		if options.SignOutRequired && c.IsLogged && c.Request.RequestURI != "/" {
 			c.RedirectSubpath("/")
 			return
 		}
 
-		if !options.SignOutRequired && !options.DisableCSRF && c.Req.Method == "POST" && !isAPIPath(c.Req.URL.Path) {
+		if !options.SignOutRequired && !options.DisableCSRF && c.Request.Method == "POST" && !isAPIPath(c.Request.URL.Path) {
 			csrf.Validate(c.Context, c.csrf)
 			if c.Written() {
 				return
@@ -63,14 +63,14 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		if options.SignInRequired {
 			if !c.IsLogged {
 				// Restrict API calls with error message.
-				if isAPIPath(c.Req.URL.Path) {
+				if isAPIPath(c.Request.URL.Path) {
 					c.JSON(http.StatusForbidden, map[string]string{
 						"message": "Only authenticated user is allowed to call APIs.",
 					})
 					return
 				}
 
-				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Request.RequestURI), 0, conf.Server.Subpath)
 				c.RedirectSubpath("/user/login")
 				return
 			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
@@ -81,9 +81,9 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		// Redirect to log in page if auto-signin info is provided and has not signed in.
-		if !options.SignOutRequired && !c.IsLogged && !isAPIPath(c.Req.URL.Path) &&
+		if !options.SignOutRequired && !c.IsLogged && !isAPIPath(c.Request.URL.Path) &&
 			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
-			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Request.RequestURI), 0, conf.Server.Subpath)
 			c.RedirectSubpath("/user/login")
 			return
 		}
@@ -139,20 +139,22 @@ type AuthStore interface {
 
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
-func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
+func authenticatedUserID(store AuthStore, c flamego.Context, sess session.Session) (_ int64, isTokenAuth bool) {
 	if !database.HasEngine {
 		return 0, false
 	}
+	
+	req := c.Request()
 
 	// Check access token.
-	if isAPIPath(c.Req.URL.Path) {
+	if isAPIPath(req.URL.Path) {
 		tokenSHA := c.Query("token")
 		if len(tokenSHA) <= 0 {
 			tokenSHA = c.Query("access_token")
 		}
 		if tokenSHA == "" {
 			// Well, check with header again.
-			auHead := c.Req.Header.Get("Authorization")
+			auHead := req.Header.Get("Authorization")
 			if len(auHead) > 0 {
 				auths := strings.Fields(auHead)
 				if len(auths) == 2 && auths[0] == "token" {
@@ -163,14 +165,14 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := store.GetAccessTokenBySHA1(c.Req.Context(), tokenSHA)
+			t, err := store.GetAccessTokenBySHA1(req.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {
 					log.Error("GetAccessTokenBySHA: %v", err)
 				}
 				return 0, false
 			}
-			if err = store.TouchAccessTokenByID(c.Req.Context(), t.ID); err != nil {
+			if err = store.TouchAccessTokenByID(req.Context(), t.ID); err != nil {
 				log.Error("Failed to touch access token: %v", err)
 			}
 			return t.UserID, true
@@ -182,7 +184,7 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
-		_, err := store.GetUserByID(c.Req.Context(), id)
+		_, err := store.GetUserByID(req.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
 				log.Error("Failed to get user by ID: %v", err)
@@ -196,18 +198,20 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
+func authenticatedUser(store AuthStore, ctx flamego.Context, sess session.Session) (_ *database.User, isBasicAuth, isTokenAuth bool) {
 	if !database.HasEngine {
 		return nil, false, false
 	}
 
 	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
+	
+	req := ctx.Request()
 
 	if uid <= 0 {
 		if conf.Auth.EnableReverseProxyAuthentication {
-			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
+			webAuthUser := req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
-				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
+				user, err := store.GetUserByUsername(req.Context(), webAuthUser)
 				if err != nil {
 					if !database.IsErrUserNotExist(err) {
 						log.Error("Failed to get user by name: %v", err)
@@ -217,7 +221,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 					// Check if enabled auto-registration.
 					if conf.Auth.EnableReverseProxyAutoRegistration {
 						user, err = store.CreateUser(
-							ctx.Req.Context(),
+							req.Context(),
 							webAuthUser,
 							gouuid.NewV4().String()+"@localhost",
 							database.CreateUserOptions{
@@ -235,13 +239,13 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		}
 
 		// Check with basic auth.
-		baHead := ctx.Req.Header.Get("Authorization")
+		baHead := req.Header.Get("Authorization")
 		if len(baHead) > 0 {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := store.AuthenticateUser(ctx.Req.Context(), uname, passwd, -1)
+				u, err := store.AuthenticateUser(req.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
 						log.Error("Failed to authenticate user: %v", err)
@@ -255,7 +259,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		return nil, false, false
 	}
 
-	u, err := store.GetUserByID(ctx.Req.Context(), uid)
+	u, err := store.GetUserByID(req.Context(), uid)
 	if err != nil {
 		log.Error("GetUserByID: %v", err)
 		return nil, false, false

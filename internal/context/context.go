@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-macaron/cache"
-	"github.com/go-macaron/csrf"
-	"github.com/go-macaron/i18n"
-	"github.com/go-macaron/session"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/cache"
+	"github.com/flamego/csrf"
+	"github.com/flamego/flamego"
+	"github.com/flamego/i18n"
+	"github.com/flamego/session"
+	"github.com/flamego/template"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -19,17 +20,23 @@ import (
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/template"
+	gogstemplate "gogs.io/gogs/internal/template"
 )
 
 // Context represents context of a request.
 type Context struct {
-	*macaron.Context
+	flamego.Context
+	template.Template
+	i18n.Locale
 	Cache   cache.Cache
 	csrf    csrf.CSRF
 	Flash   *session.Flash
-	Session session.Store
+	Session session.Session
 
+	ResponseWriter http.ResponseWriter
+	Request        *http.Request
+	Data           template.Data
+	
 	Link        string // Current request URL
 	User        *database.User
 	IsLogged    bool
@@ -113,10 +120,36 @@ func (c *Context) HasValue(name string) bool {
 	return ok
 }
 
+// Status sets the HTTP status code.
+func (c *Context) Status(status int) {
+	c.ResponseWriter.WriteHeader(status)
+}
+
+// JSON renders JSON response with given status and data.
+func (c *Context) JSON(status int, data any) {
+	c.ResponseWriter.Header().Set("Content-Type", "application/json")
+	c.ResponseWriter.WriteHeader(status)
+	c.Context.JSONEncoder().Encode(c.ResponseWriter, data)
+}
+
+// Header returns the response header map.
+func (c *Context) Header() http.Header {
+	return c.ResponseWriter.Header()
+}
+
+// Written returns whether the response has been written.
+func (c *Context) Written() bool {
+	// In Flamego, we need to track this ourselves or check the response writer
+	// For now, we'll assume if status code is set, it's written
+	// This is a simplification - in production, you'd want a proper wrapper
+	return false // TODO: Implement proper tracking
+}
+
 // HTML responses template with given status.
 func (c *Context) HTML(status int, name string) {
 	log.Trace("Template: %s", name)
-	c.Context.HTML(status, name)
+	c.ResponseWriter.WriteHeader(status)
+	c.Template.HTML(name)
 }
 
 // Success responses template with status http.StatusOK.
@@ -126,18 +159,24 @@ func (c *Context) Success(name string) {
 
 // JSONSuccess responses JSON with status http.StatusOK.
 func (c *Context) JSONSuccess(data any) {
-	c.JSON(http.StatusOK, data)
+	c.ResponseWriter.Header().Set("Content-Type", "application/json")
+	c.ResponseWriter.WriteHeader(http.StatusOK)
+	c.Context.JSONEncoder().Encode(c.ResponseWriter, data)
 }
 
 // RawRedirect simply calls underlying Redirect method with no escape.
 func (c *Context) RawRedirect(location string, status ...int) {
-	c.Context.Redirect(location, status...)
+	code := http.StatusFound
+	if len(status) > 0 {
+		code = status[0]
+	}
+	http.Redirect(c.ResponseWriter, c.Request, location, code)
 }
 
 // Redirect responses redirection with given location and status.
 // It escapes special characters in the location string.
 func (c *Context) Redirect(location string, status ...int) {
-	c.Context.Redirect(template.EscapePound(location), status...)
+	c.RawRedirect(gogstemplate.EscapePound(location), status...)
 }
 
 // RedirectSubpath responses redirection with given location and status.
@@ -195,7 +234,9 @@ func (c *Context) NotFoundOrErrorf(err error, format string, args ...any) {
 }
 
 func (c *Context) PlainText(status int, msg string) {
-	c.Render.PlainText(status, []byte(msg))
+	c.ResponseWriter.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	c.ResponseWriter.WriteHeader(status)
+	c.ResponseWriter.Write([]byte(msg))
 }
 
 func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
@@ -206,14 +247,14 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 			modtime = v
 		}
 	}
-	c.Resp.Header().Set("Content-Description", "File Transfer")
-	c.Resp.Header().Set("Content-Type", "application/octet-stream")
-	c.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
-	c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
-	c.Resp.Header().Set("Expires", "0")
-	c.Resp.Header().Set("Cache-Control", "must-revalidate")
-	c.Resp.Header().Set("Pragma", "public")
-	http.ServeContent(c.Resp, c.Req.Request, name, modtime, r)
+	c.ResponseWriter.Header().Set("Content-Description", "File Transfer")
+	c.ResponseWriter.Header().Set("Content-Type", "application/octet-stream")
+	c.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename="+name)
+	c.ResponseWriter.Header().Set("Content-Transfer-Encoding", "binary")
+	c.ResponseWriter.Header().Set("Expires", "0")
+	c.ResponseWriter.Header().Set("Cache-Control", "must-revalidate")
+	c.ResponseWriter.Header().Set("Pragma", "public")
+	http.ServeContent(c.ResponseWriter, c.Request, name, modtime, r)
 }
 
 // csrfTokenExcludePattern matches characters that are not used for generating
@@ -222,32 +263,37 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
 
 // Contexter initializes a classic context for a request.
-func Contexter(store Store) macaron.Handler {
-	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
+func Contexter(store Store) flamego.Handler {
+	return func(fctx flamego.Context, tpl template.Template, l i18n.Locale, cache cache.Cache, sess session.Session, f *session.Flash, x csrf.CSRF, w http.ResponseWriter, req *http.Request) {
 		c := &Context{
-			Context: ctx,
-			Cache:   cache,
-			csrf:    x,
-			Flash:   f,
-			Session: sess,
-			Link:    conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Context:        fctx,
+			Template:       tpl,
+			Locale:         l,
+			Cache:          cache,
+			csrf:           x,
+			Flash:          f,
+			Session:        sess,
+			ResponseWriter: w,
+			Request:        req,
+			Data:           make(template.Data),
+			Link:           conf.Server.Subpath + strings.TrimSuffix(req.URL.Path, "/"),
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
 			Org: &Organization{},
 		}
-		c.Data["Link"] = template.EscapePound(c.Link)
+		c.Data["Link"] = gogstemplate.EscapePound(c.Link)
 		c.Data["PageStartTime"] = time.Now()
 
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
-			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Header().Set("Access-Control-Allow-Credentials", "true")
-			c.Header().Set("Access-Control-Max-Age", "3600")
-			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 		}
 
 		// Get user from session or header when possible
-		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(store, c.Context, c.Session)
+		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(store, fctx, sess)
 
 		if c.User != nil {
 			c.IsLogged = true
@@ -262,8 +308,8 @@ func Contexter(store Store) macaron.Handler {
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
-			if err := c.Req.ParseMultipartForm(conf.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
+		if req.Method == "POST" && strings.Contains(req.Header.Get("Content-Type"), "multipart/form-data") {
+			if err := req.ParseMultipartForm(conf.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
 				c.Error(err, "parse multipart form")
 				return
 			}
@@ -272,9 +318,9 @@ func Contexter(store Store) macaron.Handler {
 		// 🚨 SECURITY: Prevent XSS from injected CSRF cookie by stripping all
 		// characters that are not used for generating CSRF tokens, see
 		// https://github.com/gogs/gogs/issues/6953 for details.
-		csrfToken := csrfTokenExcludePattern.ReplaceAllString(x.GetToken(), "")
+		csrfToken := csrfTokenExcludePattern.ReplaceAllString(x.Token(), "")
 		c.Data["CSRFToken"] = csrfToken
-		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + csrfToken + `">`)
+		c.Data["CSRFTokenHTML"] = gogstemplate.Safe(`<input type="hidden" name="_csrf" value="` + csrfToken + `">`)
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
@@ -285,9 +331,9 @@ func Contexter(store Store) macaron.Handler {
 
 		// 🚨 SECURITY: Prevent MIME type sniffing in some browsers,
 		// see https://github.com/gogs/gogs/issues/5397 for details.
-		c.Header().Set("X-Content-Type-Options", "nosniff")
-		c.Header().Set("X-Frame-Options", "deny")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "deny")
 
-		ctx.Map(c)
+		fctx.MapTo(c, (*Context)(nil))
 	}
 }

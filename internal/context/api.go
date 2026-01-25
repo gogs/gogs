@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/flamego"
 	"github.com/unknwon/paginater"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -74,16 +74,16 @@ func (c *APIContext) SetLinkHeader(total, pageSize int) {
 	page := paginater.New(total, pageSize, c.QueryInt("page"), 0)
 	links := make([]string, 0, 4)
 	if page.HasNext() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", conf.Server.ExternalURL, c.Req.URL.Path[1:], page.Next()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", conf.Server.ExternalURL, c.Request.URL.Path[1:], page.Next()))
 	}
 	if !page.IsLast() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", conf.Server.ExternalURL, c.Req.URL.Path[1:], page.TotalPages()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", conf.Server.ExternalURL, c.Request.URL.Path[1:], page.TotalPages()))
 	}
 	if !page.IsFirst() {
-		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", conf.Server.ExternalURL, c.Req.URL.Path[1:]))
+		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", conf.Server.ExternalURL, c.Request.URL.Path[1:]))
 	}
 	if page.HasPrevious() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", conf.Server.ExternalURL, c.Req.URL.Path[1:], page.Previous()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", conf.Server.ExternalURL, c.Request.URL.Path[1:], page.Previous()))
 	}
 
 	if len(links) > 0 {
@@ -91,12 +91,12 @@ func (c *APIContext) SetLinkHeader(total, pageSize int) {
 	}
 }
 
-func APIContexter() macaron.Handler {
+func APIContexter() flamego.Handler {
 	return func(ctx *Context) {
 		c := &APIContext{
 			Context: ctx,
 			BaseURL: conf.Server.ExternalURL + "api/v1",
 		}
-		ctx.Map(c)
+		ctx.Context.MapTo(c, (*APIContext)(nil))
 	}
 }
