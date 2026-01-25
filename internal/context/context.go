@@ -1,6 +1,7 @@
 package context
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,7 +31,7 @@ type Context struct {
 	i18n.Locale
 	Cache   cache.Cache
 	csrf    csrf.CSRF
-	Flash   *session.Flash
+	Flash   *FlashData
 	Session session.Session
 
 	ResponseWriter http.ResponseWriter
@@ -47,9 +48,19 @@ type Context struct {
 	Org  *Organization
 }
 
+// FlashData represents flash data structure.
+type FlashData struct {
+	ErrorMsg, WarningMsg, InfoMsg, SuccessMsg string
+}
+
 // RawTitle sets the "Title" field in template data.
 func (c *Context) RawTitle(title string) {
 	c.Data["Title"] = title
+}
+
+// Tr is a wrapper for i18n.Locale.Translate.
+func (c *Context) Tr(key string, args ...any) string {
+	return c.Locale.Translate(key, args...)
 }
 
 // Title localizes the "Title" field in template data.
@@ -129,7 +140,7 @@ func (c *Context) Status(status int) {
 func (c *Context) JSON(status int, data any) {
 	c.ResponseWriter.Header().Set("Content-Type", "application/json")
 	c.ResponseWriter.WriteHeader(status)
-	c.Context.JSONEncoder().Encode(c.ResponseWriter, data)
+	json.NewEncoder(c.ResponseWriter).Encode(data)
 }
 
 // Header returns the response header map.
@@ -145,11 +156,31 @@ func (c *Context) Written() bool {
 	return false // TODO: Implement proper tracking
 }
 
+// SetCookie sets a cookie.
+func (c *Context) SetCookie(name, value string, maxAge int, path string) {
+	http.SetCookie(c.ResponseWriter, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		MaxAge:   maxAge,
+		Path:     path,
+		HttpOnly: true,
+	})
+}
+
+// GetCookie gets a cookie value.
+func (c *Context) GetCookie(name string) string {
+	cookie, err := c.Request.Cookie(name)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
+}
+
 // HTML responses template with given status.
 func (c *Context) HTML(status int, name string) {
 	log.Trace("Template: %s", name)
 	c.ResponseWriter.WriteHeader(status)
-	c.Template.HTML(name)
+	c.Template.HTML(status, name)
 }
 
 // Success responses template with status http.StatusOK.
@@ -159,9 +190,7 @@ func (c *Context) Success(name string) {
 
 // JSONSuccess responses JSON with status http.StatusOK.
 func (c *Context) JSONSuccess(data any) {
-	c.ResponseWriter.Header().Set("Content-Type", "application/json")
-	c.ResponseWriter.WriteHeader(http.StatusOK)
-	c.Context.JSONEncoder().Encode(c.ResponseWriter, data)
+	c.JSON(http.StatusOK, data)
 }
 
 // RawRedirect simply calls underlying Redirect method with no escape.
@@ -264,14 +293,22 @@ var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
 
 // Contexter initializes a classic context for a request.
 func Contexter(store Store) flamego.Handler {
-	return func(fctx flamego.Context, tpl template.Template, l i18n.Locale, cache cache.Cache, sess session.Session, f *session.Flash, x csrf.CSRF, w http.ResponseWriter, req *http.Request) {
+	return func(fctx flamego.Context, tpl template.Template, l i18n.Locale, cache cache.Cache, sess session.Session, x csrf.CSRF, w http.ResponseWriter, req *http.Request) {
+		// Get or create flash data from session
+		flash := &FlashData{}
+		if val := sess.Get("flamego::session::flash"); val != nil {
+			if f, ok := val.(*FlashData); ok {
+				flash = f
+			}
+		}
+		
 		c := &Context{
 			Context:        fctx,
 			Template:       tpl,
 			Locale:         l,
 			Cache:          cache,
 			csrf:           x,
-			Flash:          f,
+			Flash:          flash,
 			Session:        sess,
 			ResponseWriter: w,
 			Request:        req,
