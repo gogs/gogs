@@ -301,7 +301,7 @@ func Contexter(store Store) flamego.Handler {
 				flash = f
 			}
 		}
-		
+
 		c := &Context{
 			Context:        fctx,
 			Template:       tpl,
