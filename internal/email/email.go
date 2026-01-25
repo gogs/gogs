@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	mailTemplates     map[string]*template.Template
+	mailTemplates map[string]*template.Template
 	templatesOnce sync.Once
 )
 
@@ -40,7 +40,7 @@ var (
 func render(tpl string, data map[string]any) (string, error) {
 	templatesOnce.Do(func() {
 		mailTemplates = make(map[string]*template.Template)
-		
+
 		funcMap := template.FuncMap{
 			"AppName": func() string {
 				return conf.App.BrandName
@@ -55,18 +55,18 @@ func render(tpl string, data map[string]any) (string, error) {
 				return template.HTML(markup.Sanitize(raw))
 			},
 		}
-		
+
 		// Load templates
 		templateDir := filepath.Join(conf.WorkDir(), "templates", "mail")
 		customDir := filepath.Join(conf.CustomDir(), "templates", "mail")
-		
+
 		// Parse templates from both directories
 		// For now, just use a simple approach - in production you'd want to handle this better
 		_ = templateDir
 		_ = customDir
 		_ = funcMap
 	})
-	
+
 	// For now, return a simple implementation
 	// TODO: Implement proper template rendering
 	return "", fmt.Errorf("template rendering not yet implemented for: %s", tpl)

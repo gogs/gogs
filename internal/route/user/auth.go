@@ -470,7 +470,7 @@ func Activate(c *context.Context) {
 		}
 		// Resend confirmation email.
 		if conf.Auth.RequireEmailConfirmation {
-		if _, err := c.Cache.Get(c.Req.Request.Context(), userutil.MailResendCacheKey(c.User.ID)); err == nil {
+			if _, err := c.Cache.Get(c.Req.Request.Context(), userutil.MailResendCacheKey(c.User.ID)); err == nil {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60

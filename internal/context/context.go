@@ -221,7 +221,7 @@ func (c *Context) SetCookie(name, value string, maxAge int, path string, args ..
 		Path:     path,
 		HttpOnly: true,
 	}
-	
+
 	// Handle optional parameters: domain, secure, httpOnly
 	for i, arg := range args {
 		switch i {
@@ -239,7 +239,7 @@ func (c *Context) SetCookie(name, value string, maxAge int, path string, args ..
 			}
 		}
 	}
-	
+
 	http.SetCookie(c.ResponseWriter, cookie)
 }
 
@@ -249,7 +249,7 @@ func (c *Context) GetSuperSecureCookie(secret, name string) (string, bool) {
 	if val == "" {
 		return "", false
 	}
-	
+
 	// In production, you'd want to verify the signature
 	// For now, just return the value
 	// TODO: Implement proper secure cookie verification
@@ -391,7 +391,7 @@ func (c *Context) ServeFile(file string, names ...string) {
 	} else {
 		name = filepath.Base(file)
 	}
-	
+
 	c.ResponseWriter.Header().Set("Content-Description", "File Transfer")
 	c.ResponseWriter.Header().Set("Content-Type", "application/octet-stream")
 	c.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename="+name)
