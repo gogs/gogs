@@ -11,7 +11,6 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 	jsoniter "github.com/json-iterator/go"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -27,7 +26,7 @@ const (
 	tmplOrgSettingsWebhookNew  = "org/settings/webhook_new"
 )
 
-func InjectOrgRepoContext() macaron.Handler {
+func InjectOrgRepoContext() func(*context.Context) {
 	return func(c *context.Context) {
 		orCtx, err := getOrgRepoContext(c)
 		if err != nil {
@@ -116,7 +115,12 @@ func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.Success(orCtx.TmplNew)
 }
 
-func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, ok bool) {
+// localeTranslator is an interface for locale translation.
+type localeTranslator interface {
+	Tr(key string, args ...any) string
+}
+
+func validateWebhook(l localeTranslator, w *database.Webhook) (field, msg string, ok bool) {
 	// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 	// see https://github.com/gogs/gogs/issues/5366 for details.
 	payloadURL, err := url.Parse(w.URL)
@@ -138,7 +142,7 @@ func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *data
 		return
 	}
 
-	field, msg, ok := validateWebhook(c.Locale, w)
+	field, msg, ok := validateWebhook(c, w)
 	if !ok {
 		c.FormErr(field)
 		c.RenderWithErr(msg, orCtx.TmplNew, nil)
@@ -342,7 +346,7 @@ func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *data
 		return
 	}
 
-	field, msg, ok := validateWebhook(c.Locale, w)
+	field, msg, ok := validateWebhook(c, w)
 	if !ok {
 		c.FormErr(field)
 		c.RenderWithErr(msg, orCtx.TmplNew, nil)

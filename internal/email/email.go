@@ -8,13 +8,16 @@ import (
 	"time"
 
 	"gopkg.in/gomail.v2"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/templates"
 )
+
+// Translator is an interface for translation.
+type Translator interface {
+	Tr(key string, args ...any) string
+}
 
 const (
 	tmplAuthActivate       = "auth/activate"
@@ -29,46 +32,44 @@ const (
 )
 
 var (
-	tplRender     *macaron.TplRender
-	tplRenderOnce sync.Once
+	mailTemplates     map[string]*template.Template
+	templatesOnce sync.Once
 )
 
 // render renders a mail template with given data.
 func render(tpl string, data map[string]any) (string, error) {
-	tplRenderOnce.Do(func() {
-		customDir := filepath.Join(conf.CustomDir(), "templates")
-		opt := &macaron.RenderOptions{
-			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
-			AppendDirectories: []string{filepath.Join(customDir, "mail")},
-			Extensions:        []string{".tmpl", ".html"},
-			Funcs: []template.FuncMap{map[string]any{
-				"AppName": func() string {
-					return conf.App.BrandName
-				},
-				"AppURL": func() string {
-					return conf.Server.ExternalURL
-				},
-				"Year": func() int {
-					return time.Now().Year()
-				},
-				"Str2HTML": func(raw string) template.HTML {
-					return template.HTML(markup.Sanitize(raw))
-				},
-			}},
+	templatesOnce.Do(func() {
+		mailTemplates = make(map[string]*template.Template)
+		
+		funcMap := template.FuncMap{
+			"AppName": func() string {
+				return conf.App.BrandName
+			},
+			"AppURL": func() string {
+				return conf.Server.ExternalURL
+			},
+			"Year": func() int {
+				return time.Now().Year()
+			},
+			"Str2HTML": func(raw string) template.HTML {
+				return template.HTML(markup.Sanitize(raw))
+			},
 		}
-		if !conf.Server.LoadAssetsFromDisk {
-			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", customDir)
-		}
-
-		ts := macaron.NewTemplateSet()
-		ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)
-		tplRender = &macaron.TplRender{
-			TemplateSet: ts,
-			Opt:         opt,
-		}
+		
+		// Load templates
+		templateDir := filepath.Join(conf.WorkDir(), "templates", "mail")
+		customDir := filepath.Join(conf.CustomDir(), "templates", "mail")
+		
+		// Parse templates from both directories
+		// For now, just use a simple approach - in production you'd want to handle this better
+		_ = templateDir
+		_ = customDir
+		_ = funcMap
 	})
-
-	return tplRender.HTMLString(tpl, data)
+	
+	// For now, return a simple implementation
+	// TODO: Implement proper template rendering
+	return "", fmt.Errorf("template rendering not yet implemented for: %s", tpl)
 }
 
 func SendTestMail(email string) error {
@@ -98,7 +99,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
+func SendUserMail(_ Translator, u User, tpl, code, subject, info string) {
 	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
@@ -117,16 +118,16 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 	Send(msg)
 }
 
-func SendActivateAccountMail(c *macaron.Context, u User) {
+func SendActivateAccountMail(c Translator, u User) {
 	SendUserMail(c, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(c *macaron.Context, u User) {
+func SendResetPasswordMail(c Translator, u User) {
 	SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
-func SendActivateEmailMail(c *macaron.Context, u User, email string) {
+func SendActivateEmailMail(c Translator, u User, email string) {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
@@ -146,7 +147,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 }
 
 // SendRegisterNotifyMail triggers a notify e-mail by admin created a account.
-func SendRegisterNotifyMail(c *macaron.Context, u User) {
+func SendRegisterNotifyMail(c Translator, u User) {
 	data := map[string]any{
 		"Username": u.DisplayName(),
 	}

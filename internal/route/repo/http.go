@@ -411,7 +411,7 @@ func HTTP(c *HTTPContext) {
 		}
 
 		if route.method != c.Request().Method {
-			writeError(c.ResponseWriter(), http.StatusNotFound)
+			writeError(c.ResponseWriter(), http.StatusNotFound, "")
 			return
 		}
 
@@ -426,12 +426,12 @@ func HTTP(c *HTTPContext) {
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
-			writeError(c.ResponseWriter(), http.StatusNotFound)
+			writeError(c.ResponseWriter(), http.StatusNotFound, "")
 			return
 		}
 
 		route.handler(serviceHandler{
-			w:    c.Resp,
+			w:    c.ResponseWriter(),
 			r:    c.Request().Request,
 			dir:  dir,
 			file: file,
@@ -445,5 +445,5 @@ func HTTP(c *HTTPContext) {
 		return
 	}
 
-	writeError(c.ResponseWriter(), http.StatusNotFound)
+	writeError(c.ResponseWriter(), http.StatusNotFound, "")
 }

@@ -385,7 +385,7 @@ func ShowSSHKeys(c *context.Context, uid int64) {
 }
 
 func showOrgProfile(c *context.Context) {
-	c.SetParams(":org", c.Param(":username"))
+	// Just call HandleOrgAssignment - it will use c.Param("username")
 	context.HandleOrgAssignment(c)
 	if c.Written() {
 		return

@@ -435,7 +435,7 @@ func SettingsBranches(c *context.Context) {
 	c.Data["PageIsSettingsBranches"] = true
 
 	if c.Repo.Repository.IsBare {
-		c.Flash.Info(c.Tr("repo.settings.branches_bare"), true)
+		c.Flash.Info(c.Tr("repo.settings.branches_bare"))
 		c.Success(tmplRepoSettingsBranches)
 		return
 	}

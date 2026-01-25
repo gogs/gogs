@@ -172,23 +172,17 @@ func runWeb(c *cli.Context) error {
 
 	// Apply global middleware
 	f.Use(session.Sessioner(session.Options{
-		Provider:    conf.Session.Provider,
-		Config:      conf.Session.ProviderConfig,
-		CookieName:  conf.Session.CookieName,
-		CookiePath:  conf.Server.Subpath,
-		Gclifetime:  conf.Session.GCInterval,
-		Maxlifetime: conf.Session.MaxLifeTime,
-		Secure:      conf.Session.CookieSecure,
+		Config: session.MemoryConfig{},
+		Cookie: session.CookieOptions{
+			Name:   conf.Session.CookieName,
+			Path:   conf.Server.Subpath,
+			MaxAge: int(conf.Session.MaxLifeTime),
+			Secure: conf.Session.CookieSecure,
+		},
 	}))
 	f.Use(csrf.Csrfer(csrf.Options{
-		Secret:    conf.Security.SecretKey,
-		Header:    "X-CSRF-Token",
-		Cookie:    conf.Session.CSRFCookieName,
-		Domain:    conf.Server.URL.Hostname(),
-		Path:      conf.Server.Subpath,
-		HTTPOnly:  true,
-		SetCookie: true,
-		Secure:    conf.Server.URL.Scheme == "https",
+		Secret: conf.Security.SecretKey,
+		Header: "X-CSRF-Token",
 	}))
 	f.Use(context.Contexter(context.NewStore()))
 
@@ -324,7 +318,7 @@ func runWeb(c *cli.Context) error {
 		}, context.InjectParamsUser())
 
 		f.Get("/attachments/<uuid>", func(c *context.Context) {
-			attach, err := database.GetAttachmentByUUID(c.Params("<uuid>"))
+			attach, err := database.GetAttachmentByUUID(c.Param("uuid"))
 			if err != nil {
 				c.NotFoundOrError(err, "get attachment by UUID")
 				return
@@ -357,7 +351,7 @@ func runWeb(c *cli.Context) error {
 		f.Post("/action/<action>", user.Action)
 	}, reqSignIn, context.InjectParamsUser())
 
-	if macaron.Env == macaron.DEV {
+	if conf.IsProdMode() {
 		f.Get("/template/*", dev.TemplatePreview)
 	}
 

@@ -49,8 +49,8 @@ func GetAllCommits(c *context.APIContext) {
 
 // GetSingleCommit will return a single Commit object based on the specified SHA.
 func GetSingleCommit(c *context.APIContext) {
-	if strings.Contains(c.Req.Header.Get("Accept"), api.MediaApplicationSHA) {
-		c.SetParams("*", c.Param(":sha"))
+	if strings.Contains(c.Req.Request.Header.Get("Accept"), api.MediaApplicationSHA) {
+		// Just call GetReferenceSHA directly - it will use c.Param("sha")
 		GetReferenceSHA(c)
 		return
 	}

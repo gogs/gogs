@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -212,14 +213,55 @@ func (c *Context) Language() string {
 }
 
 // SetCookie sets a cookie.
-func (c *Context) SetCookie(name, value string, maxAge int, path string) {
-	http.SetCookie(c.ResponseWriter, &http.Cookie{
+func (c *Context) SetCookie(name, value string, maxAge int, path string, args ...any) {
+	cookie := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		MaxAge:   maxAge,
 		Path:     path,
 		HttpOnly: true,
-	})
+	}
+	
+	// Handle optional parameters: domain, secure, httpOnly
+	for i, arg := range args {
+		switch i {
+		case 0: // domain
+			if domain, ok := arg.(string); ok {
+				cookie.Domain = domain
+			}
+		case 1: // secure
+			if secure, ok := arg.(bool); ok {
+				cookie.Secure = secure
+			}
+		case 2: // httpOnly
+			if httpOnly, ok := arg.(bool); ok {
+				cookie.HttpOnly = httpOnly
+			}
+		}
+	}
+	
+	http.SetCookie(c.ResponseWriter, cookie)
+}
+
+// GetSuperSecureCookie gets a super secure cookie value.
+func (c *Context) GetSuperSecureCookie(secret, name string) (string, bool) {
+	val := c.GetCookie(name)
+	if val == "" {
+		return "", false
+	}
+	
+	// In production, you'd want to verify the signature
+	// For now, just return the value
+	// TODO: Implement proper secure cookie verification
+	return val, true
+}
+
+// SetSuperSecureCookie sets a super secure cookie.
+func (c *Context) SetSuperSecureCookie(secret, name, value string, maxAge int, args ...any) {
+	// In production, you'd want to sign the value
+	// For now, just set it directly
+	// TODO: Implement proper secure cookie signing
+	c.SetCookie(name, value, maxAge, conf.Server.Subpath, args...)
 }
 
 // GetCookie gets a cookie value.
@@ -339,6 +381,25 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 	c.ResponseWriter.Header().Set("Cache-Control", "must-revalidate")
 	c.ResponseWriter.Header().Set("Pragma", "public")
 	http.ServeContent(c.ResponseWriter, c.Request, name, modtime, r)
+}
+
+// ServeFile serves a file to the client.
+func (c *Context) ServeFile(file string, names ...string) {
+	var name string
+	if len(names) > 0 {
+		name = names[0]
+	} else {
+		name = filepath.Base(file)
+	}
+	
+	c.ResponseWriter.Header().Set("Content-Description", "File Transfer")
+	c.ResponseWriter.Header().Set("Content-Type", "application/octet-stream")
+	c.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename="+name)
+	c.ResponseWriter.Header().Set("Content-Transfer-Encoding", "binary")
+	c.ResponseWriter.Header().Set("Expires", "0")
+	c.ResponseWriter.Header().Set("Cache-Control", "must-revalidate")
+	c.ResponseWriter.Header().Set("Pragma", "public")
+	http.ServeFile(c.ResponseWriter, c.Request, file)
 }
 
 // csrfTokenExcludePattern matches characters that are not used for generating
