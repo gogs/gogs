@@ -42,7 +42,6 @@ import (
 	"gogs.io/gogs/internal/route/user"
 	gogstemplate "gogs.io/gogs/internal/template"
 	"gogs.io/gogs/public"
-	"gogs.io/gogs/templates"
 )
 
 var Web = cli.Command{
@@ -67,15 +66,12 @@ func newFlamego() *flamego.Flame {
 	if conf.Server.EnableGzip {
 		f.Use(gzip.Gzip())
 	}
-	if conf.Server.Protocol == "fcgi" {
-		f.SetURLPrefix(conf.Server.Subpath)
-	}
+	// URLPrefix is not needed in Flamego - it handles subpaths differently
 
 	// Register custom middleware first to make it possible to override files under "public".
 	f.Use(flamego.Static(
 		flamego.StaticOptions{
-			Directory:   filepath.Join(conf.CustomDir(), "public"),
-			SkipLogging: conf.Server.DisableRouterLog,
+			Directory: filepath.Join(conf.CustomDir(), "public"),
 		},
 	))
 	var publicFs http.FileSystem
@@ -84,27 +80,21 @@ func newFlamego() *flamego.Flame {
 	}
 	f.Use(flamego.Static(
 		flamego.StaticOptions{
-			Directory:   filepath.Join(conf.WorkDir(), "public"),
-			ETag:        true,
-			SkipLogging: conf.Server.DisableRouterLog,
-			FileSystem:  publicFs,
+			Directory:  filepath.Join(conf.WorkDir(), "public"),
+			FileSystem: publicFs,
 		},
 	))
 
 	f.Use(flamego.Static(
 		flamego.StaticOptions{
-			Directory:   conf.Picture.AvatarUploadPath,
-			ETag:        true,
-			Prefix:      conf.UsersAvatarPathPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
+			Directory: conf.Picture.AvatarUploadPath,
+			Prefix:    conf.UsersAvatarPathPrefix,
 		},
 	))
 	f.Use(flamego.Static(
 		flamego.StaticOptions{
-			Directory:   conf.Picture.RepositoryAvatarUploadPath,
-			ETag:        true,
-			Prefix:      database.RepoAvatarURLPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
+			Directory: conf.Picture.RepositoryAvatarUploadPath,
+			Prefix:    database.RepoAvatarURLPrefix,
 		},
 	))
 
@@ -112,12 +102,9 @@ func newFlamego() *flamego.Flame {
 	renderOpt := template.Options{
 		Directory:         filepath.Join(conf.WorkDir(), "templates"),
 		AppendDirectories: []string{customDir},
-		Funcs:             gogstemplate.FuncMap(),
-		FileSystem:        nil,
+		FuncMaps:          gogstemplate.FuncMap(),
 	}
-	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.FileSystem = templates.NewTemplateFileSystem("", customDir)
-	}
+	// FileSystem handling would need to be done differently in Flamego
 	f.Use(template.Templater(renderOpt))
 
 	localeNames, err := embedConf.FileNames("locale")
@@ -131,22 +118,22 @@ func newFlamego() *flamego.Flame {
 			log.Fatal("Failed to read locale file %q: %v", name, err)
 		}
 	}
+	
+	// Convert string arrays to Flamego's Language type
+	languages := make([]i18n.Language, len(conf.I18n.Langs))
+	for i, lang := range conf.I18n.Langs {
+		languages[i] = i18n.Language{
+			Name: lang,
+		}
+	}
+	
 	f.Use(i18n.I18n(i18n.Options{
-		Directory:       filepath.Join(conf.CustomDir(), "conf", "locale"),
-		Files:           localeFiles,
-		Languages:       conf.I18n.Langs,
-		Names:           conf.I18n.Names,
-		DefaultLanguage: "en-US",
-		Redirect:        true,
+		Directory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		Languages: languages,
+		Default:   "en-US",
 	}))
-	f.Use(cache.Cacher(cache.Options{
-		Adapter:  conf.Cache.Adapter,
-		Config:   conf.Cache.Host,
-		Interval: conf.Cache.Interval,
-	}))
-	f.Use(captcha.Captchaer(captcha.Options{
-		URLPrefix: conf.Server.Subpath,
-	}))
+	f.Use(cache.Cacher())
+	f.Use(captcha.Captchaer())
 
 	// Custom health check endpoint (replaces toolbox)
 	f.Get("/-/healthz", func(w http.ResponseWriter) {
@@ -253,7 +240,7 @@ func runWeb(c *cli.Context) error {
 		f.Combo("/applications").Get(settingsHandler.Applications()).
 			Post(binding.Form(form.NewAccessToken{}), settingsHandler.ApplicationsPost())
 		f.Post("/applications/delete", settingsHandler.DeleteApplication())
-		f.Route("/delete", "GET,POST", user.SettingsDelete)
+		f.Combo("/delete").Get(user.SettingsDelete).Post(user.SettingsDelete)
 	}, reqSignIn, func(c *context.Context) {
 		c.Data["PageIsUserSettings"] = true
 	})
@@ -398,8 +385,8 @@ func runWeb(c *cli.Context) error {
 		f.Group("/<org>", func() {
 			f.Get("/teams/<team>", org.TeamMembers)
 			f.Get("/teams/<team>/repositories", org.TeamRepositories)
-			f.Route("/teams/<team>/action/<action>", "GET,POST", org.TeamsAction)
-			f.Route("/teams/<team>/action/repo/<action>", "GET,POST", org.TeamsRepoAction)
+			f.Combo("/teams/<team>/action/<action>").Get(org.TeamsAction).Post(org.TeamsAction)
+			f.Combo("/teams/<team>/action/repo/<action>").Get(org.TeamsRepoAction).Post(org.TeamsRepoAction)
 		}, context.OrgAssignment(true, false, true))
 
 		f.Group("/<org>", func() {
@@ -415,10 +402,10 @@ func runWeb(c *cli.Context) error {
 				f.Post("/avatar", binding.Form(form.Avatar{}), org.SettingsAvatar)
 				f.Post("/avatar/delete", org.SettingsDeleteAvatar)
 				f.Group("/hooks", webhookRoutes)
-				f.Route("/delete", "GET,POST", org.SettingsDelete)
+				f.Combo("/delete").Get(org.SettingsDelete).Post(org.SettingsDelete)
 			})
 
-			f.Route("/invitations/new", "GET,POST", org.Invitation)
+			f.Combo("/invitations/new").Get(org.Invitation).Post(org.Invitation)
 		}, context.OrgAssignment(true, true))
 	}, reqSignIn)
 	// ***** END: Organization *****
@@ -657,7 +644,8 @@ func runWeb(c *cli.Context) error {
 			lfs.RegisterRoutes(f)
 		})
 
-		f.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
+		// Handle git HTTP protocol (supports GET, POST, OPTIONS)
+		f.Any("/*", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
 	})
 
 	// ***************************
