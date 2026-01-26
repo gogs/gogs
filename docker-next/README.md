@@ -1,7 +1,7 @@
-# Docker for Gogs (Next Generation)
+# Docker for Gogs
 
 > [!NOTE]
-> This is the next-generation, security-focused Docker image. This will become the default image distribution (`gogs/gogs:latest`) starting 0.15.0.
+> This is the next-generation, security-focused Docker image.
 
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge)
 
@@ -52,14 +52,14 @@ docker build -f Dockerfile.next --build-arg GOGS_UID=1001 --build-arg GOGS_GID=1
 ## Usage
 
 ```zsh
-$ docker pull gogs/gogs:next-latest
+$ docker pull gogs/gogs:latest
 
 # Create local directory for volume.
 $ mkdir -p /var/gogs
 $ chown 1000:1000 /var/gogs
 
 # Use `docker run` for the first time.
-$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v /var/gogs:/data gogs/gogs:next-latest
+$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v /var/gogs:/data gogs/gogs:latest
 
 # Use `docker start` if you have stopped it.
 $ docker start gogs
@@ -84,7 +84,7 @@ Directory `/var/gogs` keeps Git repositories and Gogs data:
 
 ```zsh
 $ docker volume create --name gogs-data
-$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v gogs-data:/data gogs/gogs:next-latest
+$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v gogs-data:/data gogs/gogs:latest
 ```
 
 ## Settings
@@ -123,7 +123,7 @@ SSH_LISTEN_PORT  = 2222  # The port that builtin server listens on
 
 Steps to upgrade Gogs with Docker:
 
-- `docker pull gogs/gogs:next-latest`
+- `docker pull gogs/gogs:latest`
 - `docker stop gogs`
 - `docker rm gogs`
 - Create a container for the first time and don't forget to do the same for the volume and port mapping.
