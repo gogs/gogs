@@ -175,8 +175,8 @@ func parseKeyString(content string) (string, error) {
 
 // writeTmpKeyFile writes key content to a temporary file
 // and returns the name of that file, along with any possible errors.
-func writeTmpKeyFile(content string) (string, error) {
-	tmpFile, err := os.CreateTemp(conf.SSH.KeyTestPath, "gogs_keytest")
+func writeTmpKeyFile(content, keyTestPath string) (string, error) {
+	tmpFile, err := os.CreateTemp(keyTestPath, "gogs_keytest")
 	if err != nil {
 		return "", errors.Newf("TempFile: %v", err)
 	}
@@ -188,15 +188,15 @@ func writeTmpKeyFile(content string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
-// SSHKeyGenParsePublicKey extracts key type and length using ssh-keygen.
-func SSHKeyGenParsePublicKey(key string) (string, int, error) {
-	tmpName, err := writeTmpKeyFile(key)
+// SSHKeygenParsePublicKey extracts key type and length using ssh-keygen.
+func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
+	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
 		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
 	}
 	defer os.Remove(tmpName)
 
-	stdout, stderr, err := process.Exec("SSHKeyGenParsePublicKey", conf.SSH.KeygenPath, "-lf", tmpName)
+	stdout, stderr, err := process.Exec("SSHKeygenParsePublicKey", keygenPath, "-lf", tmpName)
 	if err != nil {
 		return "", 0, errors.Newf("fail to parse public key: %s - %s", err, stderr)
 	}
@@ -301,8 +301,8 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		fnName = "SSHNativeParsePublicKey"
 		keyType, length, err = SSHNativeParsePublicKey(content)
 	} else {
-		fnName = "SSHKeyGenParsePublicKey"
-		keyType, length, err = SSHKeyGenParsePublicKey(content)
+		fnName = "SSHKeygenParsePublicKey"
+		keyType, length, err = SSHKeygenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
 	}
 	if err != nil {
 		return "", errors.Newf("%s: %v", fnName, err)

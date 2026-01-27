@@ -4,13 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"gogs.io/gogs/internal/conf"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_SSHParsePublicKey(t *testing.T) {
-	// TODO: Refactor SSHKeyGenParsePublicKey to accept a tempPath and remove this init.
-	conf.MustInit("")
+func TestSSHParsePublicKey(t *testing.T) {
+	tempPath := t.TempDir()
 	tests := []struct {
 		name      string
 		content   string
@@ -53,20 +51,22 @@ func Test_SSHParsePublicKey(t *testing.T) {
 			expType:   "ecdsa",
 			expLength: 521,
 		},
+		{
+			name:      "ed25519-256",
+			content:   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICGYutovQfTewtcodVN1E1UUzMk4GQfiRI5ZoP/kTlDb nocomment",
+			expType:   "ed25519",
+			expLength: 256,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			typ, length, err := SSHNativeParsePublicKey(test.content)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
 
-			typ, length, err = SSHKeyGenParsePublicKey(test.content)
-			if err != nil {
-				t.Fatal(err)
-			}
+			typ, length, err = SSHKeygenParsePublicKey(test.content, tempPath, "ssh-keygen")
+			require.NoError(t, err)
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
 		})
