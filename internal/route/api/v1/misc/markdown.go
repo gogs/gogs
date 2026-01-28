@@ -1,6 +1,8 @@
 package misc
 
 import (
+	"io"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
@@ -17,7 +19,7 @@ func Markdown(c *context.APIContext, form api.MarkdownOption) {
 }
 
 func MarkdownRaw(c *context.APIContext) {
-	body, err := c.Req.Body().Bytes()
+	body, err := io.ReadAll(c.Req.Request.Body)
 	if err != nil {
 		c.Error(err, "read body")
 		return

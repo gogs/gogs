@@ -37,7 +37,7 @@ func MembersAction(c *context.Context) {
 
 	org := c.Org.Organization
 	var err error
-	switch c.Params(":action") {
+	switch c.Param(":action") {
 	case "private":
 		if c.User.ID != uid && !c.Org.IsOwner {
 			c.NotFound()
@@ -71,7 +71,7 @@ func MembersAction(c *context.Context) {
 	}
 
 	if err != nil {
-		log.Error("Action(%s): %v", c.Params(":action"), err)
+		log.Error("Action(%s): %v", c.Param(":action"), err)
 		c.JSONSuccess(map[string]any{
 			"ok":  false,
 			"err": err.Error(),
@@ -79,7 +79,7 @@ func MembersAction(c *context.Context) {
 		return
 	}
 
-	if c.Params(":action") != "leave" {
+	if c.Param(":action") != "leave" {
 		c.Redirect(c.Org.OrgLink + "/members")
 	} else {
 		c.Redirect(conf.Server.Subpath + "/")

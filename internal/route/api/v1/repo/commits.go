@@ -49,8 +49,8 @@ func GetAllCommits(c *context.APIContext) {
 
 // GetSingleCommit will return a single Commit object based on the specified SHA.
 func GetSingleCommit(c *context.APIContext) {
-	if strings.Contains(c.Req.Header.Get("Accept"), api.MediaApplicationSHA) {
-		c.SetParams("*", c.Params(":sha"))
+	if strings.Contains(c.Req.Request.Header.Get("Accept"), api.MediaApplicationSHA) {
+		// Just call GetReferenceSHA directly - it will use c.Param("sha")
 		GetReferenceSHA(c)
 		return
 	}
@@ -60,7 +60,7 @@ func GetSingleCommit(c *context.APIContext) {
 		c.Error(err, "open repository")
 		return
 	}
-	commit, err := gitRepo.CatFileCommit(c.Params(":sha"))
+	commit, err := gitRepo.CatFileCommit(c.Param(":sha"))
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get commit")
 		return
@@ -80,7 +80,7 @@ func GetReferenceSHA(c *context.APIContext) {
 		return
 	}
 
-	ref := c.Params("*")
+	ref := c.Param("*")
 	refType := 0 // 0-unknown, 1-branch, 2-tag
 	if strings.HasPrefix(ref, git.RefsHeads) {
 		ref = strings.TrimPrefix(ref, git.RefsHeads)

@@ -281,7 +281,7 @@ func DeleteAuthSource(c *context.Context) {
 			c.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
 		c.JSONSuccess(map[string]any{
-			"redirect": conf.Server.Subpath + "/admin/auths/" + c.Params(":authid"),
+			"redirect": conf.Server.Subpath + "/admin/auths/" + c.Param(":authid"),
 		})
 		return
 	}

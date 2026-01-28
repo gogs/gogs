@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/captcha"
+	"github.com/flamego/captcha"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
@@ -66,8 +67,8 @@ func AutoLogin(c *context.Context) (bool, error) {
 	}
 
 	isSucceed = true
-	_ = c.Session.Set("uid", u.ID)
-	_ = c.Session.Set("uname", u.Name)
+	c.Session.Set("uid", u.ID)
+	c.Session.Set("uname", u.Name)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
 		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
@@ -126,10 +127,10 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 		c.SetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
 	}
 
-	_ = c.Session.Set("uid", u.ID)
-	_ = c.Session.Set("uname", u.Name)
-	_ = c.Session.Delete("twoFactorRemember")
-	_ = c.Session.Delete("twoFactorUserID")
+	c.Session.Set("uid", u.ID)
+	c.Session.Set("uname", u.Name)
+	c.Session.Delete("twoFactorRemember")
+	c.Session.Delete("twoFactorUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -189,8 +190,8 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	_ = c.Session.Set("twoFactorRemember", f.Remember)
-	_ = c.Session.Set("twoFactorUserID", u.ID)
+	c.Session.Set("twoFactorRemember", f.Remember)
+	c.Session.Set("twoFactorUserID", u.ID)
 	c.RedirectSubpath("/user/login/two_factor")
 }
 
@@ -235,12 +236,12 @@ func LoginTwoFactorPost(c *context.Context) {
 	}
 
 	// Prevent same passcode from being reused
-	if c.Cache.IsExist(userutil.TwoFactorCacheKey(u.ID, passcode)) {
+	if _, err := c.Cache.Get(c.Req.Request.Context(), userutil.TwoFactorCacheKey(u.ID, passcode)); err == nil {
 		c.Flash.Error(c.Tr("settings.two_factor_reused_passcode"))
 		c.RedirectSubpath("/user/login/two_factor")
 		return
 	}
-	if err = c.Cache.Put(userutil.TwoFactorCacheKey(u.ID, passcode), 1, 60); err != nil {
+	if err = c.Cache.Set(c.Req.Request.Context(), userutil.TwoFactorCacheKey(u.ID, passcode), 1, 60*time.Second); err != nil {
 		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
@@ -283,8 +284,8 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 }
 
 func SignOut(c *context.Context) {
-	_ = c.Session.Flush()
-	_ = c.Session.Destory(c.Context)
+	c.Session.Flush()
+	c.Session.Delete(c.Session.ID())
 	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -324,10 +325,14 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
-		c.FormErr("Captcha")
-		c.RenderWithErr(c.Tr("form.captcha_incorrect"), tmplUserAuthSignup, &f)
-		return
+	if conf.Auth.EnableRegistrationCaptcha {
+		captchaID := c.Query("captcha_id")
+		captchaVal := c.Query("captcha")
+		if !cpt.Verify(captchaID, captchaVal) {
+			c.FormErr("Captcha")
+			c.RenderWithErr(c.Tr("form.captcha_incorrect"), tmplUserAuthSignup, &f)
+			return
+		}
 	}
 
 	if f.Password != f.Retype {
@@ -385,13 +390,13 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 	// Send confirmation email.
 	if conf.Auth.RequireEmailConfirmation && user.ID > 1 {
-		email.SendActivateAccountMail(c.Context, database.NewMailerUser(user))
+		email.SendActivateAccountMail(c, database.NewMailerUser(user))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = user.Email
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 		c.Success(TmplUserAuthActivate)
 
-		if err := c.Cache.Put(userutil.MailResendCacheKey(user.ID), 1, 180); err != nil {
+		if err := c.Cache.Set(c.Req.Request.Context(), userutil.MailResendCacheKey(user.ID), 1, time.Duration(180)*time.Second); err != nil {
 			log.Error("Failed to put cache key 'mail resend': %v", err)
 		}
 		return
@@ -465,13 +470,13 @@ func Activate(c *context.Context) {
 		}
 		// Resend confirmation email.
 		if conf.Auth.RequireEmailConfirmation {
-			if c.Cache.IsExist(userutil.MailResendCacheKey(c.User.ID)) {
+			if _, err := c.Cache.Get(c.Req.Request.Context(), userutil.MailResendCacheKey(c.User.ID)); err == nil {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-				email.SendActivateAccountMail(c.Context, database.NewMailerUser(c.User))
+				email.SendActivateAccountMail(c, database.NewMailerUser(c.User))
 
-				if err := c.Cache.Put(userutil.MailResendCacheKey(c.User.ID), 1, 180); err != nil {
+				if err := c.Cache.Set(c.Req.Request.Context(), userutil.MailResendCacheKey(c.User.ID), 1, time.Duration(180)*time.Second); err != nil {
 					log.Error("Failed to put cache key 'mail resend': %v", err)
 				}
 			}
@@ -500,8 +505,8 @@ func Activate(c *context.Context) {
 
 		log.Trace("User activated: %s", user.Name)
 
-		_ = c.Session.Set("uid", user.ID)
-		_ = c.Session.Set("uname", user.Name)
+		c.Session.Set("uid", user.ID)
+		c.Session.Set("uname", user.Name)
 		c.RedirectSubpath("/")
 		return
 	}
@@ -573,14 +578,14 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	if c.Cache.IsExist(userutil.MailResendCacheKey(u.ID)) {
+	if _, err := c.Cache.Get(c.Req.Request.Context(), userutil.MailResendCacheKey(u.ID)); err == nil {
 		c.Data["ResendLimited"] = true
 		c.Success(tmplUserAuthForgotPassword)
 		return
 	}
 
-	email.SendResetPasswordMail(c.Context, database.NewMailerUser(u))
-	if err = c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
+	email.SendResetPasswordMail(c, database.NewMailerUser(u))
+	if err = c.Cache.Set(c.Req.Request.Context(), userutil.MailResendCacheKey(u.ID), 1, time.Duration(180)*time.Second); err != nil {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 

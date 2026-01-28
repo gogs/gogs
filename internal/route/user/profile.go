@@ -19,7 +19,7 @@ const (
 
 func Profile(c *context.Context, puser *context.ParamsUser) {
 	// Show SSH keys.
-	if strings.HasSuffix(c.Params(":username"), ".keys") {
+	if strings.HasSuffix(c.Param(":username"), ".keys") {
 		ShowSSHKeys(c, puser.ID)
 		return
 	}
@@ -109,7 +109,7 @@ func Stars(_ *context.Context) {
 
 func Action(c *context.Context, puser *context.ParamsUser) {
 	var err error
-	switch c.Params(":action") {
+	switch c.Param(":action") {
 	case "follow":
 		err = database.Handle.Users().Follow(c.Req.Context(), c.UserID(), puser.ID)
 	case "unfollow":
@@ -117,7 +117,7 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	}
 
 	if err != nil {
-		c.Errorf(err, "action %q", c.Params(":action"))
+		c.Errorf(err, "action %q", c.Param(":action"))
 		return
 	}
 

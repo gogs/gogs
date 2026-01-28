@@ -6,7 +6,7 @@ import (
 )
 
 func GetRepositoryByParams(c *context.APIContext) *database.Repository {
-	repo, err := database.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
+	repo, err := database.GetRepositoryByName(c.Org.Team.OrgID, c.Param(":reponame"))
 	if err != nil {
 		c.NotFoundOrError(err, "get repository by name")
 		return nil

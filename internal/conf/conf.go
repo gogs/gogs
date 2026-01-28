@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	_ "github.com/go-macaron/cache/memcache"
-	_ "github.com/go-macaron/cache/redis"
-	_ "github.com/go-macaron/session/redis"
+	_ "github.com/flamego/cache/redis"
+	_ "github.com/flamego/session/redis"
 	"github.com/gogs/go-libravatar"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"

@@ -8,11 +8,11 @@ import (
 	"html/template"
 	"image/png"
 	"io"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -283,9 +283,9 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Send confirmation email
 	if conf.Auth.RequireEmailConfirmation {
-		email.SendActivateEmailMail(c.Context, database.NewMailerUser(c.User), f.Email)
+		email.SendActivateEmailMail(c, database.NewMailerUser(c.User), f.Email)
 
-		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
+		if err := c.Cache.Set(c.Req.Request.Context(), "MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180*time.Second); err != nil {
 			log.Error("Set cache 'MailResendLimit' failed: %v", err)
 		}
 		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", f.Email, conf.Auth.ActivateCodeLives/60))
@@ -444,8 +444,8 @@ func SettingsTwoFactorEnable(c *context.Context) {
 	}
 	c.Data["QRCode"] = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()))
 
-	_ = c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
-	_ = c.Session.Set("twoFactorURL", key.String())
+	c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
+	c.Session.Set("twoFactorURL", key.String())
 	c.Success(tmplUserSettingsTwoFactorEnable)
 }
 
@@ -468,8 +468,8 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	_ = c.Session.Delete("twoFactorSecret")
-	_ = c.Session.Delete("twoFactorURL")
+	c.Session.Delete("twoFactorSecret")
+	c.Session.Delete("twoFactorURL")
 	c.Flash.Success(c.Tr("settings.two_factor_enable_success"))
 	c.RedirectSubpath("/user/settings/security/two_factor_recovery_codes")
 }
@@ -590,7 +590,7 @@ func SettingsLeaveOrganization(c *context.Context) {
 	})
 }
 
-func (h *SettingsHandler) Applications() macaron.Handler {
+func (h *SettingsHandler) Applications() func(*context.Context) {
 	return func(c *context.Context) {
 		c.Title("settings.applications")
 		c.PageIs("SettingsApplications")
@@ -606,7 +606,7 @@ func (h *SettingsHandler) Applications() macaron.Handler {
 	}
 }
 
-func (h *SettingsHandler) ApplicationsPost() macaron.Handler {
+func (h *SettingsHandler) ApplicationsPost() func(*context.Context, form.NewAccessToken) {
 	return func(c *context.Context, f form.NewAccessToken) {
 		c.Title("settings.applications")
 		c.PageIs("SettingsApplications")
@@ -640,7 +640,7 @@ func (h *SettingsHandler) ApplicationsPost() macaron.Handler {
 	}
 }
 
-func (h *SettingsHandler) DeleteApplication() macaron.Handler {
+func (h *SettingsHandler) DeleteApplication() func(*context.Context) {
 	return func(c *context.Context) {
 		if err := h.store.DeleteAccessTokenByID(c.Req.Context(), c.User.ID, c.QueryInt64("id")); err != nil {
 			c.Flash.Error("DeleteAccessTokenByID: " + err.Error())

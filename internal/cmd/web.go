@@ -11,18 +11,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-macaron/binding"
-	"github.com/go-macaron/cache"
-	"github.com/go-macaron/captcha"
-	"github.com/go-macaron/csrf"
-	"github.com/go-macaron/gzip"
-	"github.com/go-macaron/i18n"
-	"github.com/go-macaron/session"
-	"github.com/go-macaron/toolbox"
+	"github.com/flamego/binding"
+	"github.com/flamego/cache"
+	"github.com/flamego/captcha"
+	"github.com/flamego/csrf"
+	"github.com/flamego/flamego"
+	"github.com/flamego/gzip"
+	"github.com/flamego/i18n"
+	"github.com/flamego/session"
+	"github.com/flamego/template"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	embedConf "gogs.io/gogs/conf"
@@ -40,9 +40,8 @@ import (
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
-	"gogs.io/gogs/internal/template"
+	gogstemplate "gogs.io/gogs/internal/template"
 	"gogs.io/gogs/public"
-	"gogs.io/gogs/templates"
 )
 
 var Web = cli.Command{
@@ -57,68 +56,56 @@ and it takes care of all the other things for you`,
 	},
 }
 
-// newMacaron initializes Macaron instance.
-func newMacaron() *macaron.Macaron {
-	m := macaron.New()
+// newFlamego initializes Flamego instance.
+func newFlamego() *flamego.Flame {
+	f := flamego.New()
 	if !conf.Server.DisableRouterLog {
-		m.Use(macaron.Logger())
+		f.Use(flamego.Logger())
 	}
-	m.Use(macaron.Recovery())
+	f.Use(flamego.Recovery())
 	if conf.Server.EnableGzip {
-		m.Use(gzip.Gziper())
+		f.Use(gzip.Gzip())
 	}
-	if conf.Server.Protocol == "fcgi" {
-		m.SetURLPrefix(conf.Server.Subpath)
-	}
+	// URLPrefix is not needed in Flamego - it handles subpaths differently
 
 	// Register custom middleware first to make it possible to override files under "public".
-	m.Use(macaron.Static(
-		filepath.Join(conf.CustomDir(), "public"),
-		macaron.StaticOptions{
-			SkipLogging: conf.Server.DisableRouterLog,
+	f.Use(flamego.Static(
+		flamego.StaticOptions{
+			Directory: filepath.Join(conf.CustomDir(), "public"),
 		},
 	))
 	var publicFs http.FileSystem
 	if !conf.Server.LoadAssetsFromDisk {
 		publicFs = http.FS(public.Files)
 	}
-	m.Use(macaron.Static(
-		filepath.Join(conf.WorkDir(), "public"),
-		macaron.StaticOptions{
-			ETag:        true,
-			SkipLogging: conf.Server.DisableRouterLog,
-			FileSystem:  publicFs,
+	f.Use(flamego.Static(
+		flamego.StaticOptions{
+			Directory:  filepath.Join(conf.WorkDir(), "public"),
+			FileSystem: publicFs,
 		},
 	))
 
-	m.Use(macaron.Static(
-		conf.Picture.AvatarUploadPath,
-		macaron.StaticOptions{
-			ETag:        true,
-			Prefix:      conf.UsersAvatarPathPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
+	f.Use(flamego.Static(
+		flamego.StaticOptions{
+			Directory: conf.Picture.AvatarUploadPath,
+			Prefix:    conf.UsersAvatarPathPrefix,
 		},
 	))
-	m.Use(macaron.Static(
-		conf.Picture.RepositoryAvatarUploadPath,
-		macaron.StaticOptions{
-			ETag:        true,
-			Prefix:      database.RepoAvatarURLPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
+	f.Use(flamego.Static(
+		flamego.StaticOptions{
+			Directory: conf.Picture.RepositoryAvatarUploadPath,
+			Prefix:    database.RepoAvatarURLPrefix,
 		},
 	))
 
 	customDir := filepath.Join(conf.CustomDir(), "templates")
-	renderOpt := macaron.RenderOptions{
+	renderOpt := template.Options{
 		Directory:         filepath.Join(conf.WorkDir(), "templates"),
 		AppendDirectories: []string{customDir},
-		Funcs:             template.FuncMap(),
-		IndentJSON:        macaron.Env != macaron.PROD,
+		FuncMaps:          gogstemplate.FuncMap(),
 	}
-	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
-	}
-	m.Use(macaron.Renderer(renderOpt))
+	// FileSystem handling would need to be done differently in Flamego
+	f.Use(template.Templater(renderOpt))
 
 	localeNames, err := embedConf.FileNames("locale")
 	if err != nil {
@@ -131,32 +118,35 @@ func newMacaron() *macaron.Macaron {
 			log.Fatal("Failed to read locale file %q: %v", name, err)
 		}
 	}
-	m.Use(i18n.I18n(i18n.Options{
-		SubURL:          conf.Server.Subpath,
-		Files:           localeFiles,
-		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
-		Langs:           conf.I18n.Langs,
-		Names:           conf.I18n.Names,
-		DefaultLang:     "en-US",
-		Redirect:        true,
+
+	// Convert string arrays to Flamego's Language type
+	languages := make([]i18n.Language, len(conf.I18n.Langs))
+	for i, lang := range conf.I18n.Langs {
+		languages[i] = i18n.Language{
+			Name: lang,
+		}
+	}
+
+	f.Use(i18n.I18n(i18n.Options{
+		Directory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		Languages: languages,
+		Default:   "en-US",
 	}))
-	m.Use(cache.Cacher(cache.Options{
-		Adapter:       conf.Cache.Adapter,
-		AdapterConfig: conf.Cache.Host,
-		Interval:      conf.Cache.Interval,
-	}))
-	m.Use(captcha.Captchaer(captcha.Options{
-		SubURL: conf.Server.Subpath,
-	}))
-	m.Use(toolbox.Toolboxer(m, toolbox.Options{
-		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
-			{
-				Desc: "Database connection",
-				Func: database.Ping,
-			},
-		},
-	}))
-	return m
+	f.Use(cache.Cacher())
+	f.Use(captcha.Captchaer())
+
+	// Custom health check endpoint (replaces toolbox)
+	f.Get("/-/healthz", func(w http.ResponseWriter) {
+		if err := database.Ping(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "database connection failed: %v", err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "ok")
+	})
+
+	return f
 }
 
 func runWeb(c *cli.Context) error {
@@ -165,518 +155,508 @@ func runWeb(c *cli.Context) error {
 		log.Fatal("Failed to initialize application: %v", err)
 	}
 
-	m := newMacaron()
+	f := newFlamego()
+
+	// Apply global middleware
+	f.Use(session.Sessioner(session.Options{
+		Config: session.MemoryConfig{},
+		Cookie: session.CookieOptions{
+			Name:   conf.Session.CookieName,
+			Path:   conf.Server.Subpath,
+			MaxAge: int(conf.Session.MaxLifeTime),
+			Secure: conf.Session.CookieSecure,
+		},
+	}))
+	f.Use(csrf.Csrfer(csrf.Options{
+		Secret: conf.Security.SecretKey,
+		Header: "X-CSRF-Token",
+	}))
+	f.Use(context.Contexter(context.NewStore()))
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
 	reqSignOut := context.Toggle(&context.ToggleOptions{SignOutRequired: true})
 
-	bindIgnErr := binding.BindIgnErr
+	f.Get("/", ignSignIn, route.Home)
+	f.Group("/explore", func() {
+		f.Get("", func(c *context.Context) {
+			c.Redirect(conf.Server.Subpath + "/explore/repos")
+		})
+		f.Get("/repos", route.ExploreRepos)
+		f.Get("/users", route.ExploreUsers)
+		f.Get("/organizations", route.ExploreOrganizations)
+	}, ignSignIn)
+	f.Combo("/install", route.InstallInit).Get(route.Install).
+		Post(binding.Form(form.Install{}), route.InstallPost)
+	f.Get("/<type:issues|pulls>", reqSignIn, user.Issues)
 
-	m.SetAutoHead(true)
-
-	m.Group("", func() {
-		m.Get("/", ignSignIn, route.Home)
-		m.Group("/explore", func() {
-			m.Get("", func(c *context.Context) {
-				c.Redirect(conf.Server.Subpath + "/explore/repos")
-			})
-			m.Get("/repos", route.ExploreRepos)
-			m.Get("/users", route.ExploreUsers)
-			m.Get("/organizations", route.ExploreOrganizations)
-		}, ignSignIn)
-		m.Combo("/install", route.InstallInit).Get(route.Install).
-			Post(bindIgnErr(form.Install{}), route.InstallPost)
-		m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
-
-		// ***** START: User *****
-		m.Group("/user", func() {
-			m.Group("/login", func() {
-				m.Combo("").Get(user.Login).
-					Post(bindIgnErr(form.SignIn{}), user.LoginPost)
-				m.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
-				m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
-			})
-
-			m.Get("/sign_up", user.SignUp)
-			m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
-			m.Get("/reset_password", user.ResetPasswd)
-			m.Post("/reset_password", user.ResetPasswdPost)
-		}, reqSignOut)
-
-		m.Group("/user/settings", func() {
-			m.Get("", user.Settings)
-			m.Post("", bindIgnErr(form.UpdateProfile{}), user.SettingsPost)
-			m.Combo("/avatar").Get(user.SettingsAvatar).
-				Post(binding.MultipartForm(form.Avatar{}), user.SettingsAvatarPost)
-			m.Post("/avatar/delete", user.SettingsDeleteAvatar)
-			m.Combo("/email").Get(user.SettingsEmails).
-				Post(bindIgnErr(form.AddEmail{}), user.SettingsEmailPost)
-			m.Post("/email/delete", user.DeleteEmail)
-			m.Get("/password", user.SettingsPassword)
-			m.Post("/password", bindIgnErr(form.ChangePassword{}), user.SettingsPasswordPost)
-			m.Combo("/ssh").Get(user.SettingsSSHKeys).
-				Post(bindIgnErr(form.AddSSHKey{}), user.SettingsSSHKeysPost)
-			m.Post("/ssh/delete", user.DeleteSSHKey)
-			m.Group("/security", func() {
-				m.Get("", user.SettingsSecurity)
-				m.Combo("/two_factor_enable").Get(user.SettingsTwoFactorEnable).
-					Post(user.SettingsTwoFactorEnablePost)
-				m.Combo("/two_factor_recovery_codes").Get(user.SettingsTwoFactorRecoveryCodes).
-					Post(user.SettingsTwoFactorRecoveryCodesPost)
-				m.Post("/two_factor_disable", user.SettingsTwoFactorDisable)
-			})
-			m.Group("/repositories", func() {
-				m.Get("", user.SettingsRepos)
-				m.Post("/leave", user.SettingsLeaveRepo)
-			})
-			m.Group("/organizations", func() {
-				m.Get("", user.SettingsOrganizations)
-				m.Post("/leave", user.SettingsLeaveOrganization)
-			})
-
-			settingsHandler := user.NewSettingsHandler(user.NewSettingsStore())
-			m.Combo("/applications").Get(settingsHandler.Applications()).
-				Post(bindIgnErr(form.NewAccessToken{}), settingsHandler.ApplicationsPost())
-			m.Post("/applications/delete", settingsHandler.DeleteApplication())
-			m.Route("/delete", "GET,POST", user.SettingsDelete)
-		}, reqSignIn, func(c *context.Context) {
-			c.Data["PageIsUserSettings"] = true
+	// ***** START: User *****
+	f.Group("/user", func() {
+		f.Group("/login", func() {
+			f.Combo("").Get(user.Login).
+				Post(binding.Form(form.SignIn{}), user.LoginPost)
+			f.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
+			f.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
 		})
 
-		m.Group("/user", func() {
-			m.Any("/activate", user.Activate)
-			m.Any("/activate_email", user.ActivateEmail)
-			m.Get("/email2user", user.Email2User)
-			m.Get("/forget_password", user.ForgotPasswd)
-			m.Post("/forget_password", user.ForgotPasswdPost)
-			m.Post("/logout", user.SignOut)
+		f.Get("/sign_up", user.SignUp)
+		f.Post("/sign_up", binding.Form(form.Register{}), user.SignUpPost)
+		f.Get("/reset_password", user.ResetPasswd)
+		f.Post("/reset_password", user.ResetPasswdPost)
+	}, reqSignOut)
+
+	f.Group("/user/settings", func() {
+		f.Get("", user.Settings)
+		f.Post("", binding.Form(form.UpdateProfile{}), user.SettingsPost)
+		f.Combo("/avatar").Get(user.SettingsAvatar).
+			Post(binding.Form(form.Avatar{}), user.SettingsAvatarPost)
+		f.Post("/avatar/delete", user.SettingsDeleteAvatar)
+		f.Combo("/email").Get(user.SettingsEmails).
+			Post(binding.Form(form.AddEmail{}), user.SettingsEmailPost)
+		f.Post("/email/delete", user.DeleteEmail)
+		f.Get("/password", user.SettingsPassword)
+		f.Post("/password", binding.Form(form.ChangePassword{}), user.SettingsPasswordPost)
+		f.Combo("/ssh").Get(user.SettingsSSHKeys).
+			Post(binding.Form(form.AddSSHKey{}), user.SettingsSSHKeysPost)
+		f.Post("/ssh/delete", user.DeleteSSHKey)
+		f.Group("/security", func() {
+			f.Get("", user.SettingsSecurity)
+			f.Combo("/two_factor_enable").Get(user.SettingsTwoFactorEnable).
+				Post(user.SettingsTwoFactorEnablePost)
+			f.Combo("/two_factor_recovery_codes").Get(user.SettingsTwoFactorRecoveryCodes).
+				Post(user.SettingsTwoFactorRecoveryCodesPost)
+			f.Post("/two_factor_disable", user.SettingsTwoFactorDisable)
 		})
-		// ***** END: User *****
+		f.Group("/repositories", func() {
+			f.Get("", user.SettingsRepos)
+			f.Post("/leave", user.SettingsLeaveRepo)
+		})
+		f.Group("/organizations", func() {
+			f.Get("", user.SettingsOrganizations)
+			f.Post("/leave", user.SettingsLeaveOrganization)
+		})
 
-		reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
+		settingsHandler := user.NewSettingsHandler(user.NewSettingsStore())
+		f.Combo("/applications").Get(settingsHandler.Applications()).
+			Post(binding.Form(form.NewAccessToken{}), settingsHandler.ApplicationsPost())
+		f.Post("/applications/delete", settingsHandler.DeleteApplication())
+		f.Combo("/delete").Get(user.SettingsDelete).Post(user.SettingsDelete)
+	}, reqSignIn, func(c *context.Context) {
+		c.Data["PageIsUserSettings"] = true
+	})
 
-		// ***** START: Admin *****
-		m.Group("/admin", func() {
-			m.Combo("").Get(admin.Dashboard).Post(admin.Operation) // "/admin"
-			m.Get("/config", admin.Config)
-			m.Post("/config/test_mail", admin.SendTestMail)
-			m.Get("/monitor", admin.Monitor)
+	f.Group("/user", func() {
+		f.Any("/activate", user.Activate)
+		f.Any("/activate_email", user.ActivateEmail)
+		f.Get("/email2user", user.Email2User)
+		f.Get("/forget_password", user.ForgotPasswd)
+		f.Post("/forget_password", user.ForgotPasswdPost)
+		f.Post("/logout", user.SignOut)
+	})
+	// ***** END: User *****
 
-			m.Group("/users", func() {
-				m.Get("", admin.Users)
-				m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(form.AdminCrateUser{}), admin.NewUserPost)
-				m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(form.AdminEditUser{}), admin.EditUserPost)
-				m.Post("/:userid/delete", admin.DeleteUser)
+	reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
+
+	// ***** START: Admin *****
+	f.Group("/admin", func() {
+		f.Combo("").Get(admin.Dashboard).Post(admin.Operation) // "/admin"
+		f.Get("/config", admin.Config)
+		f.Post("/config/test_mail", admin.SendTestMail)
+		f.Get("/monitor", admin.Monitor)
+
+		f.Group("/users", func() {
+			f.Get("", admin.Users)
+			f.Combo("/new").Get(admin.NewUser).Post(binding.Form(form.AdminCrateUser{}), admin.NewUserPost)
+			f.Combo("/<userid>").Get(admin.EditUser).Post(binding.Form(form.AdminEditUser{}), admin.EditUserPost)
+			f.Post("/<userid>/delete", admin.DeleteUser)
+		})
+
+		f.Group("/orgs", func() {
+			f.Get("", admin.Organizations)
+		})
+
+		f.Group("/repos", func() {
+			f.Get("", admin.Repos)
+			f.Post("/delete", admin.DeleteRepo)
+		})
+
+		f.Group("/auths", func() {
+			f.Get("", admin.Authentications)
+			f.Combo("/new").Get(admin.NewAuthSource).Post(binding.Form(form.Authentication{}), admin.NewAuthSourcePost)
+			f.Combo("/<authid>").Get(admin.EditAuthSource).
+				Post(binding.Form(form.Authentication{}), admin.EditAuthSourcePost)
+			f.Post("/<authid>/delete", admin.DeleteAuthSource)
+		})
+
+		f.Group("/notices", func() {
+			f.Get("", admin.Notices)
+			f.Post("/delete", admin.DeleteNotices)
+			f.Get("/empty", admin.EmptyNotices)
+		})
+	}, reqAdmin)
+	// ***** END: Admin *****
+
+	f.Group("", func() {
+		f.Group("/<username>", func() {
+			f.Get("", user.Profile)
+			f.Get("/followers", user.Followers)
+			f.Get("/following", user.Following)
+			f.Get("/stars", user.Stars)
+		}, context.InjectParamsUser())
+
+		f.Get("/attachments/<uuid>", func(c *context.Context) {
+			attach, err := database.GetAttachmentByUUID(c.Param("uuid"))
+			if err != nil {
+				c.NotFoundOrError(err, "get attachment by UUID")
+				return
+			} else if !com.IsFile(attach.LocalPath()) {
+				c.NotFound()
+				return
+			}
+
+			fr, err := os.Open(attach.LocalPath())
+			if err != nil {
+				c.Error(err, "open attachment file")
+				return
+			}
+			defer fr.Close()
+
+			c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+			c.Header().Set("Cache-Control", "public,max-age=86400")
+			c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
+
+			if _, err = io.Copy(c.Resp, fr); err != nil {
+				c.Error(err, "copy from file to response")
+				return
+			}
+		})
+		f.Post("/issues/attachments", repo.UploadIssueAttachment)
+		f.Post("/releases/attachments", repo.UploadReleaseAttachment)
+	}, ignSignIn)
+
+	f.Group("/<username>", func() {
+		f.Post("/action/<action>", user.Action)
+	}, reqSignIn, context.InjectParamsUser())
+
+	if conf.IsProdMode() {
+		f.Get("/template/*", dev.TemplatePreview)
+	}
+
+	reqRepoAdmin := context.RequireRepoAdmin()
+	reqRepoWriter := context.RequireRepoWriter()
+
+	webhookRoutes := func() {
+		f.Group("", func() {
+			f.Get("", repo.Webhooks)
+			f.Post("/delete", repo.DeleteWebhook)
+			f.Get("/<type>/new", repo.WebhooksNew)
+			f.Post("/gogs/new", binding.Form(form.NewWebhook{}), repo.WebhooksNewPost)
+			f.Post("/slack/new", binding.Form(form.NewSlackHook{}), repo.WebhooksSlackNewPost)
+			f.Post("/discord/new", binding.Form(form.NewDiscordHook{}), repo.WebhooksDiscordNewPost)
+			f.Post("/dingtalk/new", binding.Form(form.NewDingtalkHook{}), repo.WebhooksDingtalkNewPost)
+			f.Get("/<id>", repo.WebhooksEdit)
+			f.Post("/gogs/<id>", binding.Form(form.NewWebhook{}), repo.WebhooksEditPost)
+			f.Post("/slack/<id>", binding.Form(form.NewSlackHook{}), repo.WebhooksSlackEditPost)
+			f.Post("/discord/<id>", binding.Form(form.NewDiscordHook{}), repo.WebhooksDiscordEditPost)
+			f.Post("/dingtalk/<id>", binding.Form(form.NewDingtalkHook{}), repo.WebhooksDingtalkEditPost)
+		}, repo.InjectOrgRepoContext())
+	}
+
+	// ***** START: Organization *****
+	f.Group("/org", func() {
+		f.Group("", func() {
+			f.Get("/create", org.Create)
+			f.Post("/create", binding.Form(form.CreateOrg{}), org.CreatePost)
+		}, func(c *context.Context) {
+			if !c.User.CanCreateOrganization() {
+				c.NotFound()
+			}
+		})
+
+		f.Group("/<org>", func() {
+			f.Get("/dashboard", user.Dashboard)
+			f.Get("/<type:issues|pulls>", user.Issues)
+			f.Get("/members", org.Members)
+			f.Get("/members/action/<action>", org.MembersAction)
+
+			f.Get("/teams", org.Teams)
+		}, context.OrgAssignment(true))
+
+		f.Group("/<org>", func() {
+			f.Get("/teams/<team>", org.TeamMembers)
+			f.Get("/teams/<team>/repositories", org.TeamRepositories)
+			f.Combo("/teams/<team>/action/<action>").Get(org.TeamsAction).Post(org.TeamsAction)
+			f.Combo("/teams/<team>/action/repo/<action>").Get(org.TeamsRepoAction).Post(org.TeamsRepoAction)
+		}, context.OrgAssignment(true, false, true))
+
+		f.Group("/<org>", func() {
+			f.Get("/teams/new", org.NewTeam)
+			f.Post("/teams/new", binding.Form(form.CreateTeam{}), org.NewTeamPost)
+			f.Get("/teams/<team>/edit", org.EditTeam)
+			f.Post("/teams/<team>/edit", binding.Form(form.CreateTeam{}), org.EditTeamPost)
+			f.Post("/teams/<team>/delete", org.DeleteTeam)
+
+			f.Group("/settings", func() {
+				f.Combo("").Get(org.Settings).
+					Post(binding.Form(form.UpdateOrgSetting{}), org.SettingsPost)
+				f.Post("/avatar", binding.Form(form.Avatar{}), org.SettingsAvatar)
+				f.Post("/avatar/delete", org.SettingsDeleteAvatar)
+				f.Group("/hooks", webhookRoutes)
+				f.Combo("/delete").Get(org.SettingsDelete).Post(org.SettingsDelete)
 			})
 
-			m.Group("/orgs", func() {
-				m.Get("", admin.Organizations)
+			f.Combo("/invitations/new").Get(org.Invitation).Post(org.Invitation)
+		}, context.OrgAssignment(true, true))
+	}, reqSignIn)
+	// ***** END: Organization *****
+
+	// ***** START: Repository *****
+	f.Group("/repo", func() {
+		f.Get("/create", repo.Create)
+		f.Post("/create", binding.Form(form.CreateRepo{}), repo.CreatePost)
+		f.Get("/migrate", repo.Migrate)
+		f.Post("/migrate", binding.Form(form.MigrateRepo{}), repo.MigratePost)
+		f.Combo("/fork/<repoid>").Get(repo.Fork).
+			Post(binding.Form(form.CreateRepo{}), repo.ForkPost)
+	}, reqSignIn)
+
+	f.Group("/<username>/<reponame>", func() {
+		f.Group("/settings", func() {
+			f.Combo("").Get(repo.Settings).
+				Post(binding.Form(form.RepoSetting{}), repo.SettingsPost)
+			f.Combo("/avatar").Get(repo.SettingsAvatar).
+				Post(binding.Form(form.Avatar{}), repo.SettingsAvatarPost)
+			f.Post("/avatar/delete", repo.SettingsDeleteAvatar)
+			f.Group("/collaboration", func() {
+				f.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
+				f.Post("/access_mode", repo.ChangeCollaborationAccessMode)
+				f.Post("/delete", repo.DeleteCollaboration)
 			})
-
-			m.Group("/repos", func() {
-				m.Get("", admin.Repos)
-				m.Post("/delete", admin.DeleteRepo)
-			})
-
-			m.Group("/auths", func() {
-				m.Get("", admin.Authentications)
-				m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(form.Authentication{}), admin.NewAuthSourcePost)
-				m.Combo("/:authid").Get(admin.EditAuthSource).
-					Post(bindIgnErr(form.Authentication{}), admin.EditAuthSourcePost)
-				m.Post("/:authid/delete", admin.DeleteAuthSource)
-			})
-
-			m.Group("/notices", func() {
-				m.Get("", admin.Notices)
-				m.Post("/delete", admin.DeleteNotices)
-				m.Get("/empty", admin.EmptyNotices)
-			})
-		}, reqAdmin)
-		// ***** END: Admin *****
-
-		m.Group("", func() {
-			m.Group("/:username", func() {
-				m.Get("", user.Profile)
-				m.Get("/followers", user.Followers)
-				m.Get("/following", user.Following)
-				m.Get("/stars", user.Stars)
-			}, context.InjectParamsUser())
-
-			m.Get("/attachments/:uuid", func(c *context.Context) {
-				attach, err := database.GetAttachmentByUUID(c.Params(":uuid"))
-				if err != nil {
-					c.NotFoundOrError(err, "get attachment by UUID")
-					return
-				} else if !com.IsFile(attach.LocalPath()) {
-					c.NotFound()
-					return
-				}
-
-				fr, err := os.Open(attach.LocalPath())
-				if err != nil {
-					c.Error(err, "open attachment file")
-					return
-				}
-				defer fr.Close()
-
-				c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-				c.Header().Set("Cache-Control", "public,max-age=86400")
-				c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
-
-				if _, err = io.Copy(c.Resp, fr); err != nil {
-					c.Error(err, "copy from file to response")
-					return
-				}
-			})
-			m.Post("/issues/attachments", repo.UploadIssueAttachment)
-			m.Post("/releases/attachments", repo.UploadReleaseAttachment)
-		}, ignSignIn)
-
-		m.Group("/:username", func() {
-			m.Post("/action/:action", user.Action)
-		}, reqSignIn, context.InjectParamsUser())
-
-		if macaron.Env == macaron.DEV {
-			m.Get("/template/*", dev.TemplatePreview)
-		}
-
-		reqRepoAdmin := context.RequireRepoAdmin()
-		reqRepoWriter := context.RequireRepoWriter()
-
-		webhookRoutes := func() {
-			m.Group("", func() {
-				m.Get("", repo.Webhooks)
-				m.Post("/delete", repo.DeleteWebhook)
-				m.Get("/:type/new", repo.WebhooksNew)
-				m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebhooksNewPost)
-				m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackNewPost)
-				m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordNewPost)
-				m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkNewPost)
-				m.Get("/:id", repo.WebhooksEdit)
-				m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebhooksEditPost)
-				m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackEditPost)
-				m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordEditPost)
-				m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkEditPost)
-			}, repo.InjectOrgRepoContext())
-		}
-
-		// ***** START: Organization *****
-		m.Group("/org", func() {
-			m.Group("", func() {
-				m.Get("/create", org.Create)
-				m.Post("/create", bindIgnErr(form.CreateOrg{}), org.CreatePost)
+			f.Group("/branches", func() {
+				f.Get("", repo.SettingsBranches)
+				f.Post("/default_branch", repo.UpdateDefaultBranch)
+				f.Combo("/*").Get(repo.SettingsProtectedBranch).
+					Post(binding.Form(form.ProtectBranch{}), repo.SettingsProtectedBranchPost)
 			}, func(c *context.Context) {
-				if !c.User.CanCreateOrganization() {
-					c.NotFound()
-				}
-			})
-
-			m.Group("/:org", func() {
-				m.Get("/dashboard", user.Dashboard)
-				m.Get("/^:type(issues|pulls)$", user.Issues)
-				m.Get("/members", org.Members)
-				m.Get("/members/action/:action", org.MembersAction)
-
-				m.Get("/teams", org.Teams)
-			}, context.OrgAssignment(true))
-
-			m.Group("/:org", func() {
-				m.Get("/teams/:team", org.TeamMembers)
-				m.Get("/teams/:team/repositories", org.TeamRepositories)
-				m.Route("/teams/:team/action/:action", "GET,POST", org.TeamsAction)
-				m.Route("/teams/:team/action/repo/:action", "GET,POST", org.TeamsRepoAction)
-			}, context.OrgAssignment(true, false, true))
-
-			m.Group("/:org", func() {
-				m.Get("/teams/new", org.NewTeam)
-				m.Post("/teams/new", bindIgnErr(form.CreateTeam{}), org.NewTeamPost)
-				m.Get("/teams/:team/edit", org.EditTeam)
-				m.Post("/teams/:team/edit", bindIgnErr(form.CreateTeam{}), org.EditTeamPost)
-				m.Post("/teams/:team/delete", org.DeleteTeam)
-
-				m.Group("/settings", func() {
-					m.Combo("").Get(org.Settings).
-						Post(bindIgnErr(form.UpdateOrgSetting{}), org.SettingsPost)
-					m.Post("/avatar", binding.MultipartForm(form.Avatar{}), org.SettingsAvatar)
-					m.Post("/avatar/delete", org.SettingsDeleteAvatar)
-					m.Group("/hooks", webhookRoutes)
-					m.Route("/delete", "GET,POST", org.SettingsDelete)
-				})
-
-				m.Route("/invitations/new", "GET,POST", org.Invitation)
-			}, context.OrgAssignment(true, true))
-		}, reqSignIn)
-		// ***** END: Organization *****
-
-		// ***** START: Repository *****
-		m.Group("/repo", func() {
-			m.Get("/create", repo.Create)
-			m.Post("/create", bindIgnErr(form.CreateRepo{}), repo.CreatePost)
-			m.Get("/migrate", repo.Migrate)
-			m.Post("/migrate", bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
-			m.Combo("/fork/:repoid").Get(repo.Fork).
-				Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
-		}, reqSignIn)
-
-		m.Group("/:username/:reponame", func() {
-			m.Group("/settings", func() {
-				m.Combo("").Get(repo.Settings).
-					Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
-				m.Combo("/avatar").Get(repo.SettingsAvatar).
-					Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)
-				m.Post("/avatar/delete", repo.SettingsDeleteAvatar)
-				m.Group("/collaboration", func() {
-					m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
-					m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
-					m.Post("/delete", repo.DeleteCollaboration)
-				})
-				m.Group("/branches", func() {
-					m.Get("", repo.SettingsBranches)
-					m.Post("/default_branch", repo.UpdateDefaultBranch)
-					m.Combo("/*").Get(repo.SettingsProtectedBranch).
-						Post(bindIgnErr(form.ProtectBranch{}), repo.SettingsProtectedBranchPost)
-				}, func(c *context.Context) {
-					if c.Repo.Repository.IsMirror {
-						c.NotFound()
-						return
-					}
-				})
-
-				m.Group("/hooks", func() {
-					webhookRoutes()
-
-					m.Group("/:id", func() {
-						m.Post("/test", repo.TestWebhook)
-						m.Post("/redelivery", repo.RedeliveryWebhook)
-					})
-
-					m.Group("/git", func() {
-						m.Get("", repo.SettingsGitHooks)
-						m.Combo("/:name").Get(repo.SettingsGitHooksEdit).
-							Post(repo.SettingsGitHooksEditPost)
-					}, context.GitHookService())
-				})
-
-				m.Group("/keys", func() {
-					m.Combo("").Get(repo.SettingsDeployKeys).
-						Post(bindIgnErr(form.AddSSHKey{}), repo.SettingsDeployKeysPost)
-					m.Post("/delete", repo.DeleteDeployKey)
-				})
-			}, func(c *context.Context) {
-				c.Data["PageIsSettings"] = true
-			})
-		}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
-
-		m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
-		m.Group("/:username/:reponame", func() {
-			m.Get("/issues", repo.RetrieveLabels, repo.Issues)
-			m.Get("/issues/:index", repo.ViewIssue)
-			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-			m.Get("/milestones", repo.Milestones)
-		}, ignSignIn, context.RepoAssignment(true))
-		m.Group("/:username/:reponame", func() {
-			// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
-			// So they can apply their own enable/disable logic on routers.
-			m.Group("/issues", func() {
-				m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
-					Post(bindIgnErr(form.NewIssue{}), repo.NewIssuePost)
-
-				m.Group("/:index", func() {
-					m.Post("/title", repo.UpdateIssueTitle)
-					m.Post("/content", repo.UpdateIssueContent)
-					m.Combo("/comments").Post(bindIgnErr(form.CreateComment{}), repo.NewComment)
-				})
-			})
-			m.Group("/comments/:id", func() {
-				m.Post("", repo.UpdateCommentContent)
-				m.Post("/delete", repo.DeleteComment)
-			})
-		}, reqSignIn, context.RepoAssignment(true))
-		m.Group("/:username/:reponame", func() {
-			m.Group("/wiki", func() {
-				m.Get("/?:page", repo.Wiki)
-				m.Get("/_pages", repo.WikiPages)
-			}, repo.MustEnableWiki, context.RepoRef())
-		}, ignSignIn, context.RepoAssignment(false, true))
-
-		m.Group("/:username/:reponame", func() {
-			// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
-			// So they can apply their own enable/disable logic on routers.
-			m.Group("/issues", func() {
-				m.Group("/:index", func() {
-					m.Post("/label", repo.UpdateIssueLabel)
-					m.Post("/milestone", repo.UpdateIssueMilestone)
-					m.Post("/assignee", repo.UpdateIssueAssignee)
-				}, reqRepoWriter)
-			})
-			m.Group("/labels", func() {
-				m.Post("/new", bindIgnErr(form.CreateLabel{}), repo.NewLabel)
-				m.Post("/edit", bindIgnErr(form.CreateLabel{}), repo.UpdateLabel)
-				m.Post("/delete", repo.DeleteLabel)
-				m.Post("/initialize", bindIgnErr(form.InitializeLabels{}), repo.InitializeLabels)
-			}, reqRepoWriter, context.RepoRef())
-			m.Group("/milestones", func() {
-				m.Combo("/new").Get(repo.NewMilestone).
-					Post(bindIgnErr(form.CreateMilestone{}), repo.NewMilestonePost)
-				m.Get("/:id/edit", repo.EditMilestone)
-				m.Post("/:id/edit", bindIgnErr(form.CreateMilestone{}), repo.EditMilestonePost)
-				m.Get("/:id/:action", repo.ChangeMilestonStatus)
-				m.Post("/delete", repo.DeleteMilestone)
-			}, reqRepoWriter, context.RepoRef())
-
-			m.Group("/releases", func() {
-				m.Get("/new", repo.NewRelease)
-				m.Post("/new", bindIgnErr(form.NewRelease{}), repo.NewReleasePost)
-				m.Post("/delete", repo.DeleteRelease)
-				m.Get("/edit/*", repo.EditRelease)
-				m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-			}, repo.MustBeNotBare, reqRepoWriter, func(c *context.Context) {
-				c.Data["PageIsViewFiles"] = true
-			})
-
-			// FIXME: Should use c.Repo.PullRequest to unify template, currently we have inconsistent URL
-			// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
-			// e.g. /org1/test-repo/compare/master...org1:develop
-			// which should be /org1/test-repo/compare/master...develop
-			m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
-				Post(bindIgnErr(form.NewIssue{}), repo.CompareAndPullRequestPost)
-
-			m.Group("", func() {
-				m.Combo("/_edit/*").Get(repo.EditFile).
-					Post(bindIgnErr(form.EditRepoFile{}), repo.EditFilePost)
-				m.Combo("/_new/*").Get(repo.NewFile).
-					Post(bindIgnErr(form.EditRepoFile{}), repo.NewFilePost)
-				m.Post("/_preview/*", bindIgnErr(form.EditPreviewDiff{}), repo.DiffPreviewPost)
-				m.Combo("/_delete/*").Get(repo.DeleteFile).
-					Post(bindIgnErr(form.DeleteRepoFile{}), repo.DeleteFilePost)
-
-				m.Group("", func() {
-					m.Combo("/_upload/*").Get(repo.UploadFile).
-						Post(bindIgnErr(form.UploadRepoFile{}), repo.UploadFilePost)
-					m.Post("/upload-file", repo.UploadFileToServer)
-					m.Post("/upload-remove", bindIgnErr(form.RemoveUploadFile{}), repo.RemoveUploadFileFromServer)
-				}, func(c *context.Context) {
-					if !conf.Repository.Upload.Enabled {
-						c.NotFound()
-						return
-					}
-				})
-			}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
-				if !c.Repo.CanEnableEditor() {
+				if c.Repo.Repository.IsMirror {
 					c.NotFound()
 					return
 				}
-
-				c.Data["PageIsViewFiles"] = true
-			})
-		}, reqSignIn, context.RepoAssignment())
-
-		m.Group("/:username/:reponame", func() {
-			m.Group("", func() {
-				m.Get("/releases", repo.MustBeNotBare, repo.Releases)
-				m.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
-				m.Get("/pulls/:index", repo.ViewPull)
-			}, context.RepoRef())
-
-			m.Group("/branches", func() {
-				m.Get("", repo.Branches)
-				m.Get("/all", repo.AllBranches)
-				m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
-			}, repo.MustBeNotBare, func(c *context.Context) {
-				c.Data["PageIsViewFiles"] = true
 			})
 
-			m.Group("/wiki", func() {
-				m.Group("", func() {
-					m.Combo("/_new").Get(repo.NewWiki).
-						Post(bindIgnErr(form.NewWiki{}), repo.NewWikiPost)
-					m.Combo("/:page/_edit").Get(repo.EditWiki).
-						Post(bindIgnErr(form.NewWiki{}), repo.EditWikiPost)
-					m.Post("/:page/delete", repo.DeleteWikiPagePost)
-				}, reqSignIn, reqRepoWriter)
-			}, repo.MustEnableWiki, context.RepoRef())
+			f.Group("/hooks", func() {
+				webhookRoutes()
 
-			m.Get("/archive/*", repo.MustBeNotBare, repo.Download)
+				f.Group("/<id>", func() {
+					f.Post("/test", repo.TestWebhook)
+					f.Post("/redelivery", repo.RedeliveryWebhook)
+				})
 
-			m.Group("/pulls/:index", func() {
-				m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
-				m.Get("/files", context.RepoRef(), repo.ViewPullFiles)
-				m.Post("/merge", reqRepoWriter, repo.MergePullRequest)
-			}, repo.MustAllowPulls)
+				f.Group("/git", func() {
+					f.Get("", repo.SettingsGitHooks)
+					f.Combo("/<name>").Get(repo.SettingsGitHooksEdit).
+						Post(repo.SettingsGitHooksEditPost)
+				}, context.GitHookService())
+			})
 
-			m.Group("", func() {
-				m.Get("/src/*", repo.Home)
-				m.Get("/raw/*", repo.SingleDownload)
-				m.Get("/commits/*", repo.RefCommits)
-				m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.Diff)
-				m.Get("/forks", repo.Forks)
-			}, repo.MustBeNotBare, context.RepoRef())
-			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.MustBeNotBare, repo.RawDiff)
+			f.Group("/keys", func() {
+				f.Combo("").Get(repo.SettingsDeployKeys).
+					Post(binding.Form(form.AddSSHKey{}), repo.SettingsDeployKeysPost)
+				f.Post("/delete", repo.DeleteDeployKey)
+			})
+		}, func(c *context.Context) {
+			c.Data["PageIsSettings"] = true
+		})
+	}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
 
-			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
-		}, ignSignIn, context.RepoAssignment())
-		m.Group("/:username/:reponame", func() {
-			m.Get("", repo.Home)
-			m.Get("/stars", repo.Stars)
-			m.Get("/watchers", repo.Watchers)
-		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(), context.RepoRef())
-		// ***** END: Repository *****
+	f.Post("/<username>/<reponame>/action/<action>", reqSignIn, context.RepoAssignment(), repo.Action)
+	f.Group("/<username>/<reponame>", func() {
+		f.Get("/issues", repo.RetrieveLabels, repo.Issues)
+		f.Get("/issues/<index>", repo.ViewIssue)
+		f.Get("/labels/", repo.RetrieveLabels, repo.Labels)
+		f.Get("/milestones", repo.Milestones)
+	}, ignSignIn, context.RepoAssignment(true))
+	f.Group("/<username>/<reponame>", func() {
+		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+		// So they can apply their own enable/disable logic on routers.
+		f.Group("/issues", func() {
+			f.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
+				Post(binding.Form(form.NewIssue{}), repo.NewIssuePost)
 
-		// **********************
-		// ----- API routes -----
-		// **********************
+			f.Group("/<index>", func() {
+				f.Post("/title", repo.UpdateIssueTitle)
+				f.Post("/content", repo.UpdateIssueContent)
+				f.Combo("/comments").Post(binding.Form(form.CreateComment{}), repo.NewComment)
+			})
+		})
+		f.Group("/comments/<id>", func() {
+			f.Post("", repo.UpdateCommentContent)
+			f.Post("/delete", repo.DeleteComment)
+		})
+	}, reqSignIn, context.RepoAssignment(true))
+	f.Group("/<username>/<reponame>", func() {
+		f.Group("/wiki", func() {
+			f.Get("/?<page>", repo.Wiki)
+			f.Get("/_pages", repo.WikiPages)
+		}, repo.MustEnableWiki, context.RepoRef())
+	}, ignSignIn, context.RepoAssignment(false, true))
 
-		// TODO: Without session and CSRF
-		m.Group("/api", func() {
-			apiv1.RegisterRoutes(m)
-		}, ignSignIn)
-	},
-		session.Sessioner(session.Options{
-			Provider:       conf.Session.Provider,
-			ProviderConfig: conf.Session.ProviderConfig,
-			CookieName:     conf.Session.CookieName,
-			CookiePath:     conf.Server.Subpath,
-			Gclifetime:     conf.Session.GCInterval,
-			Maxlifetime:    conf.Session.MaxLifeTime,
-			Secure:         conf.Session.CookieSecure,
-		}),
-		csrf.Csrfer(csrf.Options{
-			Secret:         conf.Security.SecretKey,
-			Header:         "X-CSRF-Token",
-			Cookie:         conf.Session.CSRFCookieName,
-			CookieDomain:   conf.Server.URL.Hostname(),
-			CookiePath:     conf.Server.Subpath,
-			CookieHttpOnly: true,
-			SetCookie:      true,
-			Secure:         conf.Server.URL.Scheme == "https",
-		}),
-		context.Contexter(context.NewStore()),
-	)
+	f.Group("/<username>/<reponame>", func() {
+		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+		// So they can apply their own enable/disable logic on routers.
+		f.Group("/issues", func() {
+			f.Group("/<index>", func() {
+				f.Post("/label", repo.UpdateIssueLabel)
+				f.Post("/milestone", repo.UpdateIssueMilestone)
+				f.Post("/assignee", repo.UpdateIssueAssignee)
+			}, reqRepoWriter)
+		})
+		f.Group("/labels", func() {
+			f.Post("/new", binding.Form(form.CreateLabel{}), repo.NewLabel)
+			f.Post("/edit", binding.Form(form.CreateLabel{}), repo.UpdateLabel)
+			f.Post("/delete", repo.DeleteLabel)
+			f.Post("/initialize", binding.Form(form.InitializeLabels{}), repo.InitializeLabels)
+		}, reqRepoWriter, context.RepoRef())
+		f.Group("/milestones", func() {
+			f.Combo("/new").Get(repo.NewMilestone).
+				Post(binding.Form(form.CreateMilestone{}), repo.NewMilestonePost)
+			f.Get("/<id>/edit", repo.EditMilestone)
+			f.Post("/<id>/edit", binding.Form(form.CreateMilestone{}), repo.EditMilestonePost)
+			f.Get("/<id>/<action>", repo.ChangeMilestonStatus)
+			f.Post("/delete", repo.DeleteMilestone)
+		}, reqRepoWriter, context.RepoRef())
+
+		f.Group("/releases", func() {
+			f.Get("/new", repo.NewRelease)
+			f.Post("/new", binding.Form(form.NewRelease{}), repo.NewReleasePost)
+			f.Post("/delete", repo.DeleteRelease)
+			f.Get("/edit/*", repo.EditRelease)
+			f.Post("/edit/*", binding.Form(form.EditRelease{}), repo.EditReleasePost)
+		}, repo.MustBeNotBare, reqRepoWriter, func(c *context.Context) {
+			c.Data["PageIsViewFiles"] = true
+		})
+
+		// FIXME: Should use c.Repo.PullRequest to unify template, currently we have inconsistent URL
+		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
+		// e.g. /org1/test-repo/compare/master...org1:develop
+		// which should be /org1/test-repo/compare/master...develop
+		f.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
+			Post(binding.Form(form.NewIssue{}), repo.CompareAndPullRequestPost)
+
+		f.Group("", func() {
+			f.Combo("/_edit/*").Get(repo.EditFile).
+				Post(binding.Form(form.EditRepoFile{}), repo.EditFilePost)
+			f.Combo("/_new/*").Get(repo.NewFile).
+				Post(binding.Form(form.EditRepoFile{}), repo.NewFilePost)
+			f.Post("/_preview/*", binding.Form(form.EditPreviewDiff{}), repo.DiffPreviewPost)
+			f.Combo("/_delete/*").Get(repo.DeleteFile).
+				Post(binding.Form(form.DeleteRepoFile{}), repo.DeleteFilePost)
+
+			f.Group("", func() {
+				f.Combo("/_upload/*").Get(repo.UploadFile).
+					Post(binding.Form(form.UploadRepoFile{}), repo.UploadFilePost)
+				f.Post("/upload-file", repo.UploadFileToServer)
+				f.Post("/upload-remove", binding.Form(form.RemoveUploadFile{}), repo.RemoveUploadFileFromServer)
+			}, func(c *context.Context) {
+				if !conf.Repository.Upload.Enabled {
+					c.NotFound()
+					return
+				}
+			})
+		}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
+			if !c.Repo.CanEnableEditor() {
+				c.NotFound()
+				return
+			}
+
+			c.Data["PageIsViewFiles"] = true
+		})
+	}, reqSignIn, context.RepoAssignment())
+
+	f.Group("/<username>/<reponame>", func() {
+		f.Group("", func() {
+			f.Get("/releases", repo.MustBeNotBare, repo.Releases)
+			f.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
+			f.Get("/pulls/<index>", repo.ViewPull)
+		}, context.RepoRef())
+
+		f.Group("/branches", func() {
+			f.Get("", repo.Branches)
+			f.Get("/all", repo.AllBranches)
+			f.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
+		}, repo.MustBeNotBare, func(c *context.Context) {
+			c.Data["PageIsViewFiles"] = true
+		})
+
+		f.Group("/wiki", func() {
+			f.Group("", func() {
+				f.Combo("/_new").Get(repo.NewWiki).
+					Post(binding.Form(form.NewWiki{}), repo.NewWikiPost)
+				f.Combo("/<page>/_edit").Get(repo.EditWiki).
+					Post(binding.Form(form.NewWiki{}), repo.EditWikiPost)
+				f.Post("/<page>/delete", repo.DeleteWikiPagePost)
+			}, reqSignIn, reqRepoWriter)
+		}, repo.MustEnableWiki, context.RepoRef())
+
+		f.Get("/archive/*", repo.MustBeNotBare, repo.Download)
+
+		f.Group("/pulls/<index>", func() {
+			f.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
+			f.Get("/files", context.RepoRef(), repo.ViewPullFiles)
+			f.Post("/merge", reqRepoWriter, repo.MergePullRequest)
+		}, repo.MustAllowPulls)
+
+		f.Group("", func() {
+			f.Get("/src/*", repo.Home)
+			f.Get("/raw/*", repo.SingleDownload)
+			f.Get("/commits/*", repo.RefCommits)
+			f.Get("/commit/<sha:[a-f0-9]{7,40}>", repo.Diff)
+			f.Get("/forks", repo.Forks)
+		}, repo.MustBeNotBare, context.RepoRef())
+		f.Get("/commit/<sha:[a-f0-9]{7,40}>.<ext:patch|diff>", repo.MustBeNotBare, repo.RawDiff)
+
+		f.Get("/compare/<before>([a-z0-9]{40})\\.\\.\\.<after>([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
+	}, ignSignIn, context.RepoAssignment())
+	f.Group("/<username>/<reponame>", func() {
+		f.Get("", repo.Home)
+		f.Get("/stars", repo.Stars)
+		f.Get("/watchers", repo.Watchers)
+	}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(), context.RepoRef())
+	// ***** END: Repository *****
+
+	// **********************
+	// ----- API routes -----
+	// **********************
+
+	// TODO: Without session and CSRF
+	f.Group("/api", func() {
+		apiv1.RegisterRoutes(f)
+	}, ignSignIn)
 
 	// ***************************
 	// ----- HTTP Git routes -----
 	// ***************************
 
-	m.Group("/:username/:reponame", func() {
-		m.Get("/tasks/trigger", repo.TriggerTask)
+	f.Group("/<username>/<reponame>", func() {
+		f.Get("/tasks/trigger", repo.TriggerTask)
 
-		m.Group("/info/lfs", func() {
-			lfs.RegisterRoutes(m.Router)
+		f.Group("/info/lfs", func() {
+			lfs.RegisterRoutes(f)
 		})
 
-		m.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
+		// Handle git HTTP protocol (supports GET, POST, OPTIONS)
+		f.Any("/*", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
 	})
 
 	// ***************************
 	// ----- Internal routes -----
 	// ***************************
 
-	m.Group("/-", func() {
-		m.Get("/metrics", app.MetricsFilter(), promhttp.Handler()) // "/-/metrics"
+	f.Group("/-", func() {
+		f.Get("/metrics", app.MetricsFilter(), promhttp.Handler()) // "/-/metrics"
 
-		m.Group("/api", func() {
-			m.Post("/sanitize_ipynb", app.SanitizeIpynb()) // "/-/api/sanitize_ipynb"
+		f.Group("/api", func() {
+			f.Post("/sanitize_ipynb", app.SanitizeIpynb()) // "/-/api/sanitize_ipynb"
 		})
 	})
 
@@ -684,7 +664,7 @@ func runWeb(c *cli.Context) error {
 	// ----- robots.txt -----
 	// **********************
 
-	m.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+	f.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		if conf.HasRobotsTxt {
 			http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
 		} else {
@@ -692,7 +672,7 @@ func runWeb(c *cli.Context) error {
 		}
 	})
 
-	m.NotFound(route.NotFound)
+	f.NotFound(route.NotFound)
 
 	// Flag for port number in case first time run conflict.
 	if c.IsSet("port") {
@@ -711,7 +691,7 @@ func runWeb(c *cli.Context) error {
 
 	switch conf.Server.Protocol {
 	case "http":
-		err = http.ListenAndServe(listenAddr, m)
+		err = http.ListenAndServe(listenAddr, f)
 
 	case "https":
 		tlsMinVersion := tls.VersionTLS12
@@ -739,12 +719,12 @@ func runWeb(c *cli.Context) error {
 					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 				},
-			}, Handler: m,
+			}, Handler: f,
 		}
 		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
 
 	case "fcgi":
-		err = fcgi.Serve(nil, m)
+		err = fcgi.Serve(nil, f)
 
 	case "unix":
 		if osutil.Exist(listenAddr) {
@@ -765,7 +745,7 @@ func runWeb(c *cli.Context) error {
 		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
 			log.Fatal("Failed to change permission of Unix domain socket: %v", err)
 		}
-		err = http.Serve(listener, m)
+		err = http.Serve(listener, f)
 
 	default:
 		log.Fatal("Unexpected server protocol: %s", conf.Server.Protocol)

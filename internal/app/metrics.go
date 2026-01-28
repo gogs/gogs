@@ -3,13 +3,13 @@ package app
 import (
 	"net/http"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 
 	"gogs.io/gogs/internal/authutil"
 	"gogs.io/gogs/internal/conf"
 )
 
-func MetricsFilter() macaron.Handler {
+func MetricsFilter() flamego.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !conf.Prometheus.Enabled {
 			w.WriteHeader(http.StatusNotFound)

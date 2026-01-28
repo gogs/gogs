@@ -14,7 +14,7 @@ import (
 )
 
 func GetUserByParamsName(c *context.APIContext, name string) *database.User {
-	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(name))
+	user, err := database.Handle.Users().GetByUsername(c.Req.Request.Context(), c.Param(name))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return nil

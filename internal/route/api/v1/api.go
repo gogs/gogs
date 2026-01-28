@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-macaron/binding"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/binding"
+	"github.com/flamego/flamego"
 
 	api "github.com/gogs/go-gogs-client"
 
@@ -21,10 +21,10 @@ import (
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,
 // and makes sure the context user has at least the read access to the repository.
-func repoAssignment() macaron.Handler {
+func repoAssignment() flamego.Handler {
 	return func(c *context.APIContext) {
-		username := c.Params(":username")
-		reponame := c.Params(":reponame")
+		username := c.Param(":username")
+		reponame := c.Param(":reponame")
 
 		var err error
 		var owner *database.User
@@ -71,7 +71,7 @@ func repoAssignment() macaron.Handler {
 }
 
 // orgAssignment extracts information from URL parameters to retrieve the organization or team.
-func orgAssignment(args ...bool) macaron.Handler {
+func orgAssignment(args ...bool) flamego.Handler {
 	var (
 		assignOrg  bool
 		assignTeam bool
@@ -87,7 +87,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 
 		var err error
 		if assignOrg {
-			c.Org.Organization, err = database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":orgname"))
+			c.Org.Organization, err = database.Handle.Users().GetByUsername(c.Req.Context(), c.Param(":orgname"))
 			if err != nil {
 				c.NotFoundOrError(err, "get organization by name")
 				return
@@ -105,7 +105,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 }
 
 // reqToken makes sure the context user is authorized via access token.
-func reqToken() macaron.Handler {
+func reqToken() flamego.Handler {
 	return func(c *context.Context) {
 		if !c.IsTokenAuth {
 			c.Status(http.StatusUnauthorized)
@@ -115,7 +115,7 @@ func reqToken() macaron.Handler {
 }
 
 // reqBasicAuth makes sure the context user is authorized via HTTP Basic Auth.
-func reqBasicAuth() macaron.Handler {
+func reqBasicAuth() flamego.Handler {
 	return func(c *context.Context) {
 		if !c.IsBasicAuth {
 			c.Status(http.StatusUnauthorized)
@@ -125,7 +125,7 @@ func reqBasicAuth() macaron.Handler {
 }
 
 // reqAdmin makes sure the context user is a site admin.
-func reqAdmin() macaron.Handler {
+func reqAdmin() flamego.Handler {
 	return func(c *context.Context) {
 		if !c.IsLogged || !c.User.IsAdmin {
 			c.Status(http.StatusForbidden)
@@ -135,7 +135,7 @@ func reqAdmin() macaron.Handler {
 }
 
 // reqRepoWriter makes sure the context user has at least write access to the repository.
-func reqRepoWriter() macaron.Handler {
+func reqRepoWriter() flamego.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsWriter() {
 			c.Status(http.StatusForbidden)
@@ -145,7 +145,7 @@ func reqRepoWriter() macaron.Handler {
 }
 
 // reqRepoAdmin makes sure the context user has at least admin access to the repository.
-func reqRepoAdmin() macaron.Handler {
+func reqRepoAdmin() flamego.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsAdmin() {
 			c.Status(http.StatusForbidden)
@@ -155,7 +155,7 @@ func reqRepoAdmin() macaron.Handler {
 }
 
 // reqRepoOwner makes sure the context user has owner access to the repository.
-func reqRepoOwner() macaron.Handler {
+func reqRepoOwner() flamego.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsOwner() {
 			c.Status(http.StatusForbidden)
@@ -173,258 +173,258 @@ func mustEnableIssues(c *context.APIContext) {
 
 // RegisterRoutes registers all route in API v1 to the web application.
 // FIXME: custom form error response
-func RegisterRoutes(m *macaron.Macaron) {
+func RegisterRoutes(f flamego.Router) {
 	bind := binding.Bind
 
-	m.Group("/v1", func() {
+	f.Group("/v1", func() {
 		// Handle preflight OPTIONS request
-		m.Options("/*", func() {})
+		f.Options("/*", func() {})
 
 		// Miscellaneous
-		m.Post("/markdown", bind(api.MarkdownOption{}), misc.Markdown)
-		m.Post("/markdown/raw", misc.MarkdownRaw)
+		f.Post("/markdown", bind(api.MarkdownOption{}), misc.Markdown)
+		f.Post("/markdown/raw", misc.MarkdownRaw)
 
 		// Users
-		m.Group("/users", func() {
-			m.Get("/search", user.Search)
+		f.Group("/users", func() {
+			f.Get("/search", user.Search)
 
-			m.Group("/:username", func() {
-				m.Get("", user.GetInfo)
+			f.Group("/:username", func() {
+				f.Get("", user.GetInfo)
 
-				m.Group("/tokens", func() {
+				f.Group("/tokens", func() {
 					accessTokensHandler := user.NewAccessTokensHandler(user.NewAccessTokensStore())
-					m.Combo("").
+					f.Combo("").
 						Get(accessTokensHandler.List()).
 						Post(bind(api.CreateAccessTokenOption{}), accessTokensHandler.Create())
 				}, reqBasicAuth())
 			})
 		})
 
-		m.Group("/users", func() {
-			m.Group("/:username", func() {
-				m.Get("/keys", user.ListPublicKeys)
+		f.Group("/users", func() {
+			f.Group("/:username", func() {
+				f.Get("/keys", user.ListPublicKeys)
 
-				m.Get("/followers", user.ListFollowers)
-				m.Group("/following", func() {
-					m.Get("", user.ListFollowing)
-					m.Get("/:target", user.CheckFollowing)
+				f.Get("/followers", user.ListFollowers)
+				f.Group("/following", func() {
+					f.Get("", user.ListFollowing)
+					f.Get("/:target", user.CheckFollowing)
 				})
 			})
 		}, reqToken())
 
-		m.Group("/user", func() {
-			m.Get("", user.GetAuthenticatedUser)
-			m.Combo("/emails").
+		f.Group("/user", func() {
+			f.Get("", user.GetAuthenticatedUser)
+			f.Combo("/emails").
 				Get(user.ListEmails).
 				Post(bind(api.CreateEmailOption{}), user.AddEmail).
 				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
 
-			m.Get("/followers", user.ListMyFollowers)
-			m.Group("/following", func() {
-				m.Get("", user.ListMyFollowing)
-				m.Combo("/:username").
+			f.Get("/followers", user.ListMyFollowers)
+			f.Group("/following", func() {
+				f.Get("", user.ListMyFollowing)
+				f.Combo("/:username").
 					Get(user.CheckMyFollowing).
 					Put(user.Follow).
 					Delete(user.Unfollow)
 			})
 
-			m.Group("/keys", func() {
-				m.Combo("").
+			f.Group("/keys", func() {
+				f.Combo("").
 					Get(user.ListMyPublicKeys).
 					Post(bind(api.CreateKeyOption{}), user.CreatePublicKey)
-				m.Combo("/:id").
+				f.Combo("/:id").
 					Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
 
-			m.Get("/issues", repo.ListUserIssues)
+			f.Get("/issues", repo.ListUserIssues)
 		}, reqToken())
 
 		// Repositories
-		m.Get("/users/:username/repos", reqToken(), repo.ListUserRepositories)
-		m.Get("/orgs/:org/repos", reqToken(), repo.ListOrgRepositories)
-		m.Combo("/user/repos", reqToken()).
+		f.Get("/users/:username/repos", reqToken(), repo.ListUserRepositories)
+		f.Get("/orgs/:org/repos", reqToken(), repo.ListOrgRepositories)
+		f.Combo("/user/repos", reqToken()).
 			Get(repo.ListMyRepos).
 			Post(bind(api.CreateRepoOption{}), repo.Create)
-		m.Post("/org/:org/repos", reqToken(), bind(api.CreateRepoOption{}), repo.CreateOrgRepo)
+		f.Post("/org/:org/repos", reqToken(), bind(api.CreateRepoOption{}), repo.CreateOrgRepo)
 
-		m.Group("/repos", func() {
-			m.Get("/search", repo.Search)
+		f.Group("/repos", func() {
+			f.Get("/search", repo.Search)
 
-			m.Get("/:username/:reponame", repoAssignment(), repo.Get)
-			m.Get("/:username/:reponame/releases", repoAssignment(), repo.Releases)
+			f.Get("/:username/:reponame", repoAssignment(), repo.Get)
+			f.Get("/:username/:reponame/releases", repoAssignment(), repo.Releases)
 		})
 
-		m.Group("/repos", func() {
-			m.Post("/migrate", bind(form.MigrateRepo{}), repo.Migrate)
-			m.Delete("/:username/:reponame", repoAssignment(), reqRepoOwner(), repo.Delete)
+		f.Group("/repos", func() {
+			f.Post("/migrate", bind(form.MigrateRepo{}), repo.Migrate)
+			f.Delete("/:username/:reponame", repoAssignment(), reqRepoOwner(), repo.Delete)
 
-			m.Group("/:username/:reponame", func() {
-				m.Group("/hooks", func() {
-					m.Combo("").
+			f.Group("/:username/:reponame", func() {
+				f.Group("/hooks", func() {
+					f.Combo("").
 						Get(repo.ListHooks).
 						Post(bind(api.CreateHookOption{}), repo.CreateHook)
-					m.Combo("/:id").
+					f.Combo("/:id").
 						Patch(bind(api.EditHookOption{}), repo.EditHook).
 						Delete(repo.DeleteHook)
 				}, reqRepoAdmin())
 
-				m.Group("/collaborators", func() {
-					m.Get("", repo.ListCollaborators)
-					m.Combo("/:collaborator").
+				f.Group("/collaborators", func() {
+					f.Get("", repo.ListCollaborators)
+					f.Combo("/:collaborator").
 						Get(repo.IsCollaborator).
 						Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
 						Delete(repo.DeleteCollaborator)
 				}, reqRepoAdmin())
 
-				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
-				m.Group("/contents", func() {
-					m.Get("", repo.GetContents)
-					m.Combo("/*").
+				f.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
+				f.Group("/contents", func() {
+					f.Get("", repo.GetContents)
+					f.Combo("/*").
 						Get(repo.GetContents).
 						Put(reqRepoWriter(), bind(repo.PutContentsRequest{}), repo.PutContents)
 				})
-				m.Get("/archive/*", repo.GetArchive)
-				m.Group("/git", func() {
-					m.Group("/trees", func() {
-						m.Get("/:sha", repo.GetRepoGitTree)
+				f.Get("/archive/*", repo.GetArchive)
+				f.Group("/git", func() {
+					f.Group("/trees", func() {
+						f.Get("/:sha", repo.GetRepoGitTree)
 					})
-					m.Group("/blobs", func() {
-						m.Get("/:sha", repo.RepoGitBlob)
+					f.Group("/blobs", func() {
+						f.Get("/:sha", repo.RepoGitBlob)
 					})
 				})
-				m.Get("/forks", repo.ListForks)
-				m.Get("/tags", repo.ListTags)
-				m.Group("/branches", func() {
-					m.Get("", repo.ListBranches)
-					m.Get("/*", repo.GetBranch)
+				f.Get("/forks", repo.ListForks)
+				f.Get("/tags", repo.ListTags)
+				f.Group("/branches", func() {
+					f.Get("", repo.ListBranches)
+					f.Get("/*", repo.GetBranch)
 				})
-				m.Group("/commits", func() {
-					m.Get("/:sha", repo.GetSingleCommit)
-					m.Get("", repo.GetAllCommits)
-					m.Get("/*", repo.GetReferenceSHA)
+				f.Group("/commits", func() {
+					f.Get("/:sha", repo.GetSingleCommit)
+					f.Get("", repo.GetAllCommits)
+					f.Get("/*", repo.GetReferenceSHA)
 				})
 
-				m.Group("/keys", func() {
-					m.Combo("").
+				f.Group("/keys", func() {
+					f.Combo("").
 						Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
-					m.Combo("/:id").
+					f.Combo("/:id").
 						Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
 				}, reqRepoAdmin())
 
-				m.Group("/issues", func() {
-					m.Combo("").
+				f.Group("/issues", func() {
+					f.Combo("").
 						Get(repo.ListIssues).
 						Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
-					m.Group("/comments", func() {
-						m.Get("", repo.ListRepoIssueComments)
-						m.Patch("/:id", bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
+					f.Group("/comments", func() {
+						f.Get("", repo.ListRepoIssueComments)
+						f.Patch("/:id", bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
 					})
-					m.Group("/:index", func() {
-						m.Combo("").
+					f.Group("/:index", func() {
+						f.Combo("").
 							Get(repo.GetIssue).
 							Patch(bind(api.EditIssueOption{}), repo.EditIssue)
 
-						m.Group("/comments", func() {
-							m.Combo("").
+						f.Group("/comments", func() {
+							f.Combo("").
 								Get(repo.ListIssueComments).
 								Post(bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
-							m.Combo("/:id").
+							f.Combo("/:id").
 								Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment).
 								Delete(repo.DeleteIssueComment)
 						})
 
-						m.Get("/labels", repo.ListIssueLabels)
-						m.Group("/labels", func() {
-							m.Combo("").
+						f.Get("/labels", repo.ListIssueLabels)
+						f.Group("/labels", func() {
+							f.Combo("").
 								Post(bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
 								Put(bind(api.IssueLabelsOption{}), repo.ReplaceIssueLabels).
 								Delete(repo.ClearIssueLabels)
-							m.Delete("/:id", repo.DeleteIssueLabel)
+							f.Delete("/:id", repo.DeleteIssueLabel)
 						}, reqRepoWriter())
 					})
 				}, mustEnableIssues)
 
-				m.Group("/labels", func() {
-					m.Get("", repo.ListLabels)
-					m.Get("/:id", repo.GetLabel)
+				f.Group("/labels", func() {
+					f.Get("", repo.ListLabels)
+					f.Get("/:id", repo.GetLabel)
 				})
-				m.Group("/labels", func() {
-					m.Post("", bind(api.CreateLabelOption{}), repo.CreateLabel)
-					m.Combo("/:id").
+				f.Group("/labels", func() {
+					f.Post("", bind(api.CreateLabelOption{}), repo.CreateLabel)
+					f.Combo("/:id").
 						Patch(bind(api.EditLabelOption{}), repo.EditLabel).
 						Delete(repo.DeleteLabel)
 				}, reqRepoWriter())
 
-				m.Group("/milestones", func() {
-					m.Get("", repo.ListMilestones)
-					m.Get("/:id", repo.GetMilestone)
+				f.Group("/milestones", func() {
+					f.Get("", repo.ListMilestones)
+					f.Get("/:id", repo.GetMilestone)
 				})
-				m.Group("/milestones", func() {
-					m.Post("", bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
-					m.Combo("/:id").
+				f.Group("/milestones", func() {
+					f.Post("", bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
+					f.Combo("/:id").
 						Patch(bind(api.EditMilestoneOption{}), repo.EditMilestone).
 						Delete(repo.DeleteMilestone)
 				}, reqRepoWriter())
 
-				m.Patch("/issue-tracker", reqRepoWriter(), bind(api.EditIssueTrackerOption{}), repo.IssueTracker)
-				m.Patch("/wiki", reqRepoWriter(), bind(api.EditWikiOption{}), repo.Wiki)
-				m.Post("/mirror-sync", reqRepoWriter(), repo.MirrorSync)
-				m.Get("/editorconfig/:filename", context.RepoRef(), repo.GetEditorconfig)
+				f.Patch("/issue-tracker", reqRepoWriter(), bind(api.EditIssueTrackerOption{}), repo.IssueTracker)
+				f.Patch("/wiki", reqRepoWriter(), bind(api.EditWikiOption{}), repo.Wiki)
+				f.Post("/mirror-sync", reqRepoWriter(), repo.MirrorSync)
+				f.Get("/editorconfig/:filename", context.RepoRef(), repo.GetEditorconfig)
 			}, repoAssignment())
 		}, reqToken())
 
-		m.Get("/issues", reqToken(), repo.ListUserIssues)
+		f.Get("/issues", reqToken(), repo.ListUserIssues)
 
 		// Organizations
-		m.Combo("/user/orgs", reqToken()).
+		f.Combo("/user/orgs", reqToken()).
 			Get(org.ListMyOrgs).
 			Post(bind(api.CreateOrgOption{}), org.CreateMyOrg)
 
-		m.Get("/users/:username/orgs", org.ListUserOrgs)
-		m.Group("/orgs/:orgname", func() {
-			m.Combo("").
+		f.Get("/users/:username/orgs", org.ListUserOrgs)
+		f.Group("/orgs/:orgname", func() {
+			f.Combo("").
 				Get(org.Get).
 				Patch(bind(api.EditOrgOption{}), org.Edit)
-			m.Get("/teams", org.ListTeams)
+			f.Get("/teams", org.ListTeams)
 		}, orgAssignment(true))
 
-		m.Group("/admin", func() {
-			m.Group("/users", func() {
-				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
+		f.Group("/admin", func() {
+			f.Group("/users", func() {
+				f.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
 
-				m.Group("/:username", func() {
-					m.Combo("").
+				f.Group("/:username", func() {
+					f.Combo("").
 						Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
-					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
-					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
-					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
+					f.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
+					f.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					f.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
 			})
 
-			m.Group("/orgs/:orgname", func() {
-				m.Group("/teams", func() {
-					m.Post("", orgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
+			f.Group("/orgs/:orgname", func() {
+				f.Group("/teams", func() {
+					f.Post("", orgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
 				})
 			})
 
-			m.Group("/teams", func() {
-				m.Group("/:teamid", func() {
-					m.Get("/members", admin.ListTeamMembers)
-					m.Combo("/members/:username").
+			f.Group("/teams", func() {
+				f.Group("/:teamid", func() {
+					f.Get("/members", admin.ListTeamMembers)
+					f.Combo("/members/:username").
 						Put(admin.AddTeamMember).
 						Delete(admin.RemoveTeamMember)
-					m.Combo("/repos/:reponame").
+					f.Combo("/repos/:reponame").
 						Put(admin.AddTeamRepository).
 						Delete(admin.RemoveTeamRepository)
 				}, orgAssignment(false, true))
 			})
 		}, reqAdmin())
 
-		m.Any("/*", func(c *context.Context) {
+		f.Any("/*", func(c *context.Context) {
 			c.NotFound()
 		})
 	}, context.APIContexter())

@@ -31,7 +31,7 @@ func GetRawFile(c *context.APIContext) {
 }
 
 func GetArchive(c *context.APIContext) {
-	repoPath := database.RepoPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := database.RepoPath(c.Param(":username"), c.Param(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
@@ -49,7 +49,7 @@ func GetEditorconfig(c *context.APIContext) {
 		return
 	}
 
-	fileName := c.Params("filename")
+	fileName := c.Param("filename")
 	def, err := ec.GetDefinitionForFilename(fileName)
 	if err != nil {
 		c.Error(err, "get definition for filename")

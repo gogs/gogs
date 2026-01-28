@@ -229,7 +229,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 
 func Action(c *context.Context) {
 	var err error
-	switch c.Params(":action") {
+	switch c.Param(":action") {
 	case "watch":
 		err = database.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unwatch":
@@ -256,7 +256,7 @@ func Action(c *context.Context) {
 	}
 
 	if err != nil {
-		c.Errorf(err, "action %q", c.Params(":action"))
+		c.Errorf(err, "action %q", c.Param(":action"))
 		return
 	}
 
@@ -269,7 +269,7 @@ func Action(c *context.Context) {
 
 func Download(c *context.Context) {
 	var (
-		uri           = c.Params("*")
+		uri           = c.Param("*")
 		refName       string
 		ext           string
 		archivePath   string

@@ -27,7 +27,7 @@ func ListLabels(c *context.APIContext) {
 func GetLabel(c *context.APIContext) {
 	var label *database.Label
 	var err error
-	idStr := c.Params(":id")
+	idStr := c.Param(":id")
 	if id := com.StrTo(idStr).MustInt64(); id > 0 {
 		label, err = database.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
 	} else {

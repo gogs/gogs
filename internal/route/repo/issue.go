@@ -1224,7 +1224,7 @@ func ChangeMilestonStatus(c *context.Context) {
 		Path: "milestones",
 	}
 
-	switch c.Params(":action") {
+	switch c.Param(":action") {
 	case "open":
 		if m.IsClosed {
 			if err = database.ChangeMilestoneStatus(m, false); err != nil {

@@ -1,10 +1,8 @@
 package form
 
 import (
-	"github.com/go-macaron/binding"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/binding"
 )
-
 type Authentication struct {
 	ID                int64
 	Type              int    `binding:"Range(2,6)"`
@@ -39,7 +37,5 @@ type Authentication struct {
 	PAMServiceName    string
 	GitHubAPIEndpoint string `form:"github_api_endpoint" binding:"Url"`
 }
-
-func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
+func (f *Authentication) Validate(ctx http.ResponseWriter, req *http.Request, errs binding.Errors) binding.Errors {
+	return validate(errs, map[string]interface{}{}, f, req.Context().Value("locale"))

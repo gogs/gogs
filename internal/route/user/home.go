@@ -24,7 +24,7 @@ const (
 // getDashboardContextUser finds out dashboard is viewing as which context user.
 func getDashboardContextUser(c *context.Context) *database.User {
 	ctxUser := c.User
-	orgName := c.Params(":org")
+	orgName := c.Param(":org")
 	if len(orgName) > 0 {
 		// Organization.
 		org, err := database.Handle.Users().GetByUsername(c.Req.Context(), orgName)
@@ -183,7 +183,7 @@ func Dashboard(c *context.Context) {
 }
 
 func Issues(c *context.Context) {
-	isPullList := c.Params(":type") == "pulls"
+	isPullList := c.Param(":type") == "pulls"
 	if isPullList {
 		c.Data["Title"] = c.Tr("pull_requests")
 		c.Data["PageIsPulls"] = true
@@ -385,7 +385,7 @@ func ShowSSHKeys(c *context.Context, uid int64) {
 }
 
 func showOrgProfile(c *context.Context) {
-	c.SetParams(":org", c.Params(":username"))
+	// Just call HandleOrgAssignment - it will use c.Param("username")
 	context.HandleOrgAssignment(c)
 	if c.Written() {
 		return

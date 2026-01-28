@@ -12,13 +12,13 @@ import (
 )
 
 func RepoGitBlob(c *context.APIContext) {
-	gitRepo, err := git.Open(repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame")))
+	gitRepo, err := git.Open(repoutil.RepositoryPath(c.Param(":username"), c.Param(":reponame")))
 	if err != nil {
 		c.Error(err, "open repository")
 		return
 	}
 
-	sha := c.Params(":sha")
+	sha := c.Param(":sha")
 	blob, err := gitRepo.CatFileBlob(sha)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get blob")
@@ -42,7 +42,7 @@ func RepoGitBlob(c *context.APIContext) {
 	c.JSONSuccess(&repoGitBlob{
 		Content:  base64.StdEncoding.EncodeToString(content),
 		Encoding: "base64",
-		URL:      fmt.Sprintf("%s/repos/%s/%s/git/blobs/%s", c.BaseURL, c.Params(":username"), c.Params(":reponame"), sha),
+		URL:      fmt.Sprintf("%s/repos/%s/%s/git/blobs/%s", c.BaseURL, c.Param(":username"), c.Param(":reponame"), sha),
 		SHA:      sha,
 		Size:     blob.Size(),
 	})

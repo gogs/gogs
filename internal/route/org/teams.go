@@ -44,7 +44,7 @@ func TeamsAction(c *context.Context) {
 
 	page := c.Query("page")
 	var err error
-	switch c.Params(":action") {
+	switch c.Param(":action") {
 	case "join":
 		if !c.Org.IsOwner {
 			c.NotFound()
@@ -86,7 +86,7 @@ func TeamsAction(c *context.Context) {
 		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
-			log.Error("Action(%s): %v", c.Params(":action"), err)
+			log.Error("Action(%s): %v", c.Param(":action"), err)
 			c.JSONSuccess(map[string]any{
 				"ok":  false,
 				"err": err.Error(),
@@ -110,7 +110,7 @@ func TeamsRepoAction(c *context.Context) {
 	}
 
 	var err error
-	switch c.Params(":action") {
+	switch c.Param(":action") {
 	case "add":
 		repoName := path.Base(c.Query("repo_name"))
 		var repo *database.Repository
@@ -131,7 +131,7 @@ func TeamsRepoAction(c *context.Context) {
 	}
 
 	if err != nil {
-		c.Errorf(err, "action %q", c.Params(":action"))
+		c.Errorf(err, "action %q", c.Param(":action"))
 		return
 	}
 	c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName + "/repositories")

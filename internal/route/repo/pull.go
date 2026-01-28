@@ -437,7 +437,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	// format: <base branch>...[<head repo>:]<head branch>
 	// base<-head: master...head:feature
 	// same repo: master...feature
-	infos := strings.Split(c.Params("*"), "...")
+	infos := strings.Split(c.Param("*"), "...")
 	if len(infos) != 2 {
 		log.Trace("ParseCompareInfo[%d]: not enough compared branches information %s", baseRepo.ID, infos)
 		c.NotFound()

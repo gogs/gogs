@@ -104,7 +104,7 @@ func AllBranches(c *context.Context) {
 }
 
 func DeleteBranchPost(c *context.Context) {
-	branchName := c.Params("*")
+	branchName := c.Param("*")
 	commitID := c.Query("commit")
 
 	defer func() {

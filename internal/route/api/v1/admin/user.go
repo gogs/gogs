@@ -61,7 +61,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(user))
+		email.SendRegisterNotifyMail(c, database.NewMailerUser(user))
 	}
 
 	c.JSON(http.StatusCreated, user.APIFormat())

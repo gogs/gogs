@@ -8,7 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 
 	"github.com/gogs/git-module"
 
@@ -118,7 +118,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 }
 
 // [0]: issues, [1]: wiki
-func RepoAssignment(pages ...bool) macaron.Handler {
+func RepoAssignment(pages ...bool) flamego.Handler {
 	return func(c *Context) {
 		var (
 			owner        *database.User
@@ -134,14 +134,14 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			isWikiPage = pages[1]
 		}
 
-		ownerName := c.Params(":username")
-		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
+		ownerName := c.Param(":username")
+		repoName := strings.TrimSuffix(c.Param(":reponame"), ".git")
 
 		// Check if the user is the same as the repository owner
 		if c.IsLogged && c.User.LowerName == strings.ToLower(ownerName) {
 			owner = c.User
 		} else {
-			owner, err = database.Handle.Users().GetByUsername(c.Req.Context(), ownerName)
+			owner, err = database.Handle.Users().GetByUsername(c.Request.Context(), ownerName)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return
@@ -167,7 +167,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Request.Context(), c.UserID(), repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -178,7 +178,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If the authenticated user has no direct access, see if the repository is a fork
 		// and whether the user has access to the base repository.
 		if c.Repo.AccessMode == database.AccessModeNone && repo.BaseRepo != nil {
-			mode := database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
+			mode := database.Handle.Permissions().AccessMode(c.Request.Context(), c.UserID(), repo.BaseRepo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.BaseRepo.OwnerID,
 					Private: repo.BaseRepo.IsPrivate,
@@ -296,7 +296,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 }
 
 // RepoRef handles repository reference name including those contain `/`.
-func RepoRef() macaron.Handler {
+func RepoRef() flamego.Handler {
 	return func(c *Context) {
 		// Empty repository does not have reference information.
 		if c.Repo.Repository.IsBare {
@@ -319,7 +319,7 @@ func RepoRef() macaron.Handler {
 		}
 
 		// Get default branch.
-		if c.Params("*") == "" {
+		if c.Param("*") == "" {
 			refName = c.Repo.Repository.DefaultBranch
 			if !c.Repo.GitRepo.HasBranch(refName) {
 				branches, err := c.Repo.GitRepo.Branches()
@@ -339,7 +339,7 @@ func RepoRef() macaron.Handler {
 
 		} else {
 			hasMatched := false
-			parts := strings.Split(c.Params("*"), "/")
+			parts := strings.Split(c.Param("*"), "/")
 			for i, part := range parts {
 				refName = strings.TrimPrefix(refName+"/"+part, "/")
 
@@ -399,7 +399,7 @@ func RepoRef() macaron.Handler {
 		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
-		if c.Repo.IsWriter() || (c.IsLogged && database.Handle.Repositories().HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
+		if c.Repo.IsWriter() || (c.IsLogged && database.Handle.Repositories().HasForkedBy(c.Request.Context(), c.Repo.Repository.ID, c.User.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if c.Repo.Repository.BaseRepo != nil {
@@ -432,7 +432,7 @@ func RepoRef() macaron.Handler {
 	}
 }
 
-func RequireRepoAdmin() macaron.Handler {
+func RequireRepoAdmin() flamego.Handler {
 	return func(c *Context) {
 		if !c.IsLogged || (!c.Repo.IsAdmin() && !c.User.IsAdmin) {
 			c.NotFound()
@@ -441,7 +441,7 @@ func RequireRepoAdmin() macaron.Handler {
 	}
 }
 
-func RequireRepoWriter() macaron.Handler {
+func RequireRepoWriter() flamego.Handler {
 	return func(c *Context) {
 		if !c.IsLogged || (!c.Repo.IsWriter() && !c.User.IsAdmin) {
 			c.NotFound()
@@ -451,7 +451,7 @@ func RequireRepoWriter() macaron.Handler {
 }
 
 // GitHookService checks if repository Git hooks service has been enabled.
-func GitHookService() macaron.Handler {
+func GitHookService() flamego.Handler {
 	return func(c *Context) {
 		if !c.User.CanEditGitHook() {
 			c.NotFound()

@@ -24,7 +24,7 @@ func ListCollaborators(c *context.APIContext) {
 }
 
 func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Param(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -50,7 +50,7 @@ func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 }
 
 func IsCollaborator(c *context.APIContext) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Param(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -68,7 +68,7 @@ func IsCollaborator(c *context.APIContext) {
 }
 
 func DeleteCollaborator(c *context.APIContext) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Param(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)

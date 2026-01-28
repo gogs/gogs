@@ -11,7 +11,6 @@ import (
 	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -414,8 +413,8 @@ func InstallPost(c *context.Context, f form.Install) {
 		}
 
 		// Auto-login for admin
-		_ = c.Session.Set("uid", user.ID)
-		_ = c.Session.Set("uname", user.Name)
+		c.Session.Set("uid", user.ID)
+		c.Session.Set("uname", user.Name)
 	}
 
 	log.Info("First-time run install finished!")
