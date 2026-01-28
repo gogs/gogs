@@ -17,8 +17,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/core"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osutil"
@@ -122,19 +120,19 @@ func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 			log.Trace("Dumping table %q...", tableName)
 		}
 
-		tableFile := filepath.Join(dirPath, tableName+".json")
-		f, err := os.Create(tableFile)
-		if err != nil {
-			return errors.Newf("create JSON file: %v", err)
-		}
+		err := func() error {
+			tableFile := filepath.Join(dirPath, tableName+".json")
+			f, err := os.Create(tableFile)
+			if err != nil {
+				return errors.Wrap(err, "create JSON file")
+			}
+			defer func() { _ = f.Close() }()
 
-		if err = x.Context(ctx).Asc("id").Iterate(table, func(idx int, bean any) (err error) {
-			return jsoniter.NewEncoder(f).Encode(bean)
-		}); err != nil {
-			_ = f.Close()
-			return errors.Newf("dump table '%s': %v", tableName, err)
+			return dumpTable(ctx, db, table, f)
+		}()
+		if err != nil {
+			return errors.Wrapf(err, "dump table %q", tableName)
 		}
-		_ = f.Close()
 	}
 	return nil
 }
@@ -229,8 +227,6 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 }
 
 func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
-	snakeMapper := core.SnakeMapper{}
-
 	skipInsertProcessors := map[string]bool{
 		"mirror":    true,
 		"milestone": true,
@@ -255,9 +251,9 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 			log.Trace("Importing table %q...", tableName)
 		}
 
-		if err := x.DropTables(table); err != nil {
+		if err := db.WithContext(ctx).Migrator().DropTable(table); err != nil {
 			return errors.Newf("drop table %q: %v", tableName, err)
-		} else if err = x.Sync2(table); err != nil {
+		} else if err = db.WithContext(ctx).Migrator().AutoMigrate(table); err != nil {
 			return errors.Newf("sync table %q: %v", tableName, err)
 		}
 
@@ -265,16 +261,28 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 		if err != nil {
 			return errors.Newf("open JSON file: %v", err)
 		}
-		rawTableName := x.TableName(table)
-		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
+
+		s, err := schema.Parse(table, &sync.Map{}, db.NamingStrategy)
+		if err != nil {
+			_ = f.Close()
+			return errors.Wrap(err, "parse schema")
+		}
+		rawTableName := s.Table
+
+		_, isInsertProcessor := table.(interface{ BeforeCreate(*gorm.DB) error })
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
-			if err = jsoniter.Unmarshal(scanner.Bytes(), table); err != nil {
+			// PostgreSQL does not like the null characters (U+0000)
+			cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
+
+			if err = jsoniter.Unmarshal(cleaned, table); err != nil {
+				_ = f.Close()
 				return errors.Newf("unmarshal to struct: %v", err)
 			}
 
-			if _, err = x.Insert(table); err != nil {
-				return errors.Newf("insert strcut: %v", err)
+			if err = db.WithContext(ctx).Create(table).Error; err != nil {
+				_ = f.Close()
+				return errors.Newf("insert struct: %v", err)
 			}
 
 			var meta struct {
@@ -283,30 +291,30 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 				DeadlineUnix   int64
 				ClosedDateUnix int64
 			}
-			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
+			if err = jsoniter.Unmarshal(cleaned, &meta); err != nil {
 				log.Error("Failed to unmarshal to map: %v", err)
 			}
 
-			// Reset created_unix back to the date save in archive because Insert method updates its value
+			// Reset created_unix back to the date saved in archive because Create method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
+				if err = db.WithContext(ctx).Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID).Error; err != nil {
 					log.Error("Failed to reset '%s.created_unix': %v", rawTableName, err)
 				}
 			}
 
 			switch rawTableName {
 			case "milestone":
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
+				if err = db.WithContext(ctx).Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID).Error; err != nil {
 					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
 				}
 			}
 		}
+		_ = f.Close()
 
 		// PostgreSQL needs manually reset table sequence for auto increment keys
 		if conf.UsePostgreSQL {
-			rawTableName := snakeMapper.Obj2Table(tableName)
 			seqName := rawTableName + "_id_seq"
-			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
+			if err = db.WithContext(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)).Error; err != nil {
 				return errors.Newf("reset table %q' sequence: %v", rawTableName, err)
 			}
 		}

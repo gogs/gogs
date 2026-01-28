@@ -10,7 +10,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	gouuid "github.com/satori/go.uuid"
-	"xorm.io/xorm"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
@@ -19,25 +19,26 @@ import (
 // Attachment represent a attachment of issue/comment/release.
 type Attachment struct {
 	ID        int64
-	UUID      string `xorm:"uuid UNIQUE"`
-	IssueID   int64  `xorm:"INDEX"`
+	UUID      string `gorm:"column:uuid;type:varchar(191);uniqueIndex"`
+	IssueID   int64  `gorm:"index"`
 	CommentID int64
-	ReleaseID int64 `xorm:"INDEX"`
+	ReleaseID int64 `gorm:"index"`
 	Name      string
 
-	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
 }
 
-func (a *Attachment) BeforeInsert() {
-	a.CreatedUnix = time.Now().Unix()
+func (a *Attachment) BeforeCreate(tx *gorm.DB) error {
+	if a.CreatedUnix == 0 {
+		a.CreatedUnix = tx.NowFunc().Unix()
+	}
+	return nil
 }
 
-func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		a.Created = time.Unix(a.CreatedUnix, 0).Local()
-	}
+func (a *Attachment) AfterFind(tx *gorm.DB) error {
+	a.Created = time.Unix(a.CreatedUnix, 0).Local()
+	return nil
 }
 
 // AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.
@@ -74,7 +75,7 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 		return nil, errors.Newf("copy: %v", err)
 	}
 
-	if _, err := x.Insert(attach); err != nil {
+	if err := db.Create(attach).Error; err != nil {
 		return nil, err
 	}
 
@@ -100,60 +101,60 @@ func (ErrAttachmentNotExist) NotFound() bool {
 	return true
 }
 
-func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
-	attach := &Attachment{UUID: uuid}
-	has, err := e.Get(attach)
+func getAttachmentByUUID(e *gorm.DB, uuid string) (*Attachment, error) {
+	attach := &Attachment{}
+	err := e.Where("uuid = ?", uuid).First(attach).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAttachmentNotExist{args: map[string]any{"uuid": uuid}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrAttachmentNotExist{args: map[string]any{"uuid": uuid}}
 	}
 	return attach, nil
 }
 
-func getAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, error) {
+func getAttachmentsByUUIDs(e *gorm.DB, uuids []string) ([]*Attachment, error) {
 	if len(uuids) == 0 {
 		return []*Attachment{}, nil
 	}
 
-	// Silently drop invalid uuids.
 	attachments := make([]*Attachment, 0, len(uuids))
-	return attachments, e.In("uuid", uuids).Find(&attachments)
+	return attachments, e.Where("uuid IN ?", uuids).Find(&attachments).Error
 }
 
 // GetAttachmentByUUID returns attachment by given UUID.
 func GetAttachmentByUUID(uuid string) (*Attachment, error) {
-	return getAttachmentByUUID(x, uuid)
+	return getAttachmentByUUID(db, uuid)
 }
 
-func getAttachmentsByIssueID(e Engine, issueID int64) ([]*Attachment, error) {
+func getAttachmentsByIssueID(e *gorm.DB, issueID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 5)
-	return attachments, e.Where("issue_id = ? AND comment_id = 0", issueID).Find(&attachments)
+	return attachments, e.Where("issue_id = ? AND comment_id = 0", issueID).Find(&attachments).Error
 }
 
 // GetAttachmentsByIssueID returns all attachments of an issue.
 func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
-	return getAttachmentsByIssueID(x, issueID)
+	return getAttachmentsByIssueID(db, issueID)
 }
 
-func getAttachmentsByCommentID(e Engine, commentID int64) ([]*Attachment, error) {
+func getAttachmentsByCommentID(e *gorm.DB, commentID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 5)
-	return attachments, e.Where("comment_id=?", commentID).Find(&attachments)
+	return attachments, e.Where("comment_id = ?", commentID).Find(&attachments).Error
 }
 
 // GetAttachmentsByCommentID returns all attachments of a comment.
 func GetAttachmentsByCommentID(commentID int64) ([]*Attachment, error) {
-	return getAttachmentsByCommentID(x, commentID)
+	return getAttachmentsByCommentID(db, commentID)
 }
 
-func getAttachmentsByReleaseID(e Engine, releaseID int64) ([]*Attachment, error) {
+func getAttachmentsByReleaseID(e *gorm.DB, releaseID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	return attachments, e.Where("release_id = ?", releaseID).Find(&attachments)
+	return attachments, e.Where("release_id = ?", releaseID).Find(&attachments).Error
 }
 
 // GetAttachmentsByReleaseID returns all attachments of a release.
 func GetAttachmentsByReleaseID(releaseID int64) ([]*Attachment, error) {
-	return getAttachmentsByReleaseID(x, releaseID)
+	return getAttachmentsByReleaseID(db, releaseID)
 }
 
 // DeleteAttachment deletes the given attachment and optionally the associated file.
@@ -171,7 +172,7 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 			}
 		}
 
-		if _, err := x.Delete(a); err != nil {
+		if err := db.Delete(a).Error; err != nil {
 			return i, err
 		}
 	}

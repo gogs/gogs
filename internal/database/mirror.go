@@ -8,12 +8,11 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
-
-	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/process"
@@ -41,41 +40,41 @@ func (err MirrorNotExist) Error() string {
 type Mirror struct {
 	ID          int64
 	RepoID      int64
-	Repo        *Repository `xorm:"-" json:"-" gorm:"-"`
+	Repo        *Repository `gorm:"-" json:"-"`
 	Interval    int         // Hour.
-	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
+	EnablePrune bool        `gorm:"not null;default:true"`
 
 	// Last and next sync time of Git data from upstream
-	LastSync     time.Time `xorm:"-" json:"-" gorm:"-"`
-	LastSyncUnix int64     `xorm:"updated_unix"`
-	NextSync     time.Time `xorm:"-" json:"-" gorm:"-"`
-	NextSyncUnix int64     `xorm:"next_update_unix"`
+	LastSync     time.Time `gorm:"-" json:"-"`
+	LastSyncUnix int64     `gorm:"column:updated_unix"`
+	NextSync     time.Time `gorm:"-" json:"-"`
+	NextSyncUnix int64     `gorm:"column:next_update_unix"`
 
-	address string `xorm:"-"`
+	address string `gorm:"-"`
 }
 
-func (m *Mirror) BeforeInsert() {
+func (m *Mirror) BeforeCreate(tx *gorm.DB) error {
 	m.NextSyncUnix = m.NextSync.Unix()
+	return nil
 }
 
-func (m *Mirror) BeforeUpdate() {
+func (m *Mirror) BeforeUpdate(tx *gorm.DB) error {
 	m.LastSyncUnix = m.LastSync.Unix()
 	m.NextSyncUnix = m.NextSync.Unix()
+	return nil
 }
 
-func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
-	var err error
-	switch colName {
-	case "repo_id":
+func (m *Mirror) AfterFind(tx *gorm.DB) error {
+	if m.RepoID > 0 {
+		var err error
 		m.Repo, err = GetRepositoryByID(m.RepoID)
 		if err != nil {
 			log.Error("GetRepositoryByID [%d]: %v", m.ID, err)
 		}
-	case "updated_unix":
-		m.LastSync = time.Unix(m.LastSyncUnix, 0).Local()
-	case "next_update_unix":
-		m.NextSync = time.Unix(m.NextSyncUnix, 0).Local()
 	}
+	m.LastSync = time.Unix(m.LastSyncUnix, 0).Local()
+	m.NextSync = time.Unix(m.NextSyncUnix, 0).Local()
+	return nil
 }
 
 // ScheduleNextSync calculates and sets next sync time based on repository mirror setting.
@@ -277,34 +276,33 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	return parseRemoteUpdateOutput(output), true
 }
 
-func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
-	m := &Mirror{RepoID: repoID}
-	has, err := e.Get(m)
+func getMirrorByRepoID(e *gorm.DB, repoID int64) (*Mirror, error) {
+	m := &Mirror{}
+	err := e.Where("repo_id = ?", repoID).First(m).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, MirrorNotExist{RepoID: repoID}
+		}
 		return nil, err
-	} else if !has {
-		return nil, MirrorNotExist{RepoID: repoID}
 	}
 	return m, nil
 }
 
 // GetMirrorByRepoID returns mirror information of a repository.
 func GetMirrorByRepoID(repoID int64) (*Mirror, error) {
-	return getMirrorByRepoID(x, repoID)
+	return getMirrorByRepoID(db, repoID)
 }
 
-func updateMirror(e Engine, m *Mirror) error {
-	_, err := e.ID(m.ID).AllCols().Update(m)
-	return err
+func updateMirror(e *gorm.DB, m *Mirror) error {
+	return e.Model(m).Where("id = ?", m.ID).Updates(m).Error
 }
 
 func UpdateMirror(m *Mirror) error {
-	return updateMirror(x, m)
+	return updateMirror(db, m)
 }
 
 func DeleteMirrorByRepoID(repoID int64) error {
-	_, err := x.Delete(&Mirror{RepoID: repoID})
-	return err
+	return db.Where("repo_id = ?", repoID).Delete(&Mirror{}).Error
 }
 
 // MirrorUpdate checks and updates mirror repositories.
@@ -317,17 +315,18 @@ func MirrorUpdate() {
 
 	log.Trace("Doing: MirrorUpdate")
 
-	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean any) error {
-		m := bean.(*Mirror)
+	var mirrors []*Mirror
+	if err := db.Where("next_update_unix <= ?", time.Now().Unix()).Find(&mirrors).Error; err != nil {
+		log.Error("MirrorUpdate: find mirrors: %v", err)
+		return
+	}
+
+	for _, m := range mirrors {
 		if m.Repo == nil {
 			log.Error("Disconnected mirror repository found: %d", m.ID)
-			return nil
+			continue
 		}
-
 		MirrorQueue.Add(m.RepoID)
-		return nil
-	}); err != nil {
-		log.Error("MirrorUpdate: %v", err)
 	}
 }
 
@@ -454,7 +453,7 @@ func SyncMirrors() {
 			}
 		}
 
-		if _, err = x.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID); err != nil {
+		if err = db.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID).Error; err != nil {
 			log.Error("Update 'mirror.updated_unix' [%d]: %v", m.RepoID, err)
 			continue
 		}
@@ -469,7 +468,7 @@ func SyncMirrors() {
 			continue
 		}
 
-		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", latestCommitTime.Unix(), m.RepoID); err != nil {
+		if err = db.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", latestCommitTime.Unix(), m.RepoID).Error; err != nil {
 			log.Error("Update 'repository.updated_unix' [%d]: %v", m.RepoID, err)
 			continue
 		}
