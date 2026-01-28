@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gogs/go-libravatar"
-	"gogs.io/gogs/conf"
 	"gopkg.in/ini.v1"
-	log "unknwon.dev/clog/v2"
+
+	"gogs.io/gogs/conf"
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
@@ -434,20 +434,26 @@ func handleDeprecated() {
 	// }
 }
 
-// warnInvalidOptions warns about invalid (renamed/deleted) configuration sections and options.
+// checkInvalidOptions checks invalid (renamed/deleted) configuration sections
+// and options and returns a list of warnings.
+//
 // LEGACY [0.15]: Delete this function.
-func warnInvalidOptions(currentConfig *ini.File) []string {
+func checkInvalidOptions(config *ini.File) (warnings []string) {
 	renamedSections := map[string]string{
 		"mailer":  "email",
 		"service": "auth",
 	}
+	for oldSection, newSection := range renamedSections {
+		if config.Section(oldSection).KeyStrings() != nil {
+			warnings = append(warnings, fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection))
+		}
+	}
 
-	type sectionOptionPair struct {
+	type optionPath struct {
 		section string
 		option  string
 	}
-
-	renamedOptions := map[sectionOptionPair]sectionOptionPair{
+	renamedOptionPaths := map[optionPath]optionPath{
 		{"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
 		{"auth", "ACTIVE_CODE_LIVE_MINUTES"}:              {"auth", "ACTIVATE_CODE_LIVES"},
 		{"auth", "RESET_PASSWD_CODE_LIVE_MINUTES"}:        {"auth", "RESET_PASSWORD_CODE_LIVES"},
@@ -461,49 +467,43 @@ func warnInvalidOptions(currentConfig *ini.File) []string {
 		{"database", "DB_TYPE"}:                           {"database", "TYPE"},
 		{"database", "PASSWD"}:                            {"database", "PASSWORD"},
 	}
-
-	var warnings []string
-
-	for oldSection, newSection := range renamedSections {
-		if currentConfig.Section(oldSection).KeyStrings() != nil {
-			warning := fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection)
-			log.Warn(warning)
-			warnings = append(warnings, warning)
+	for oldPath, newPath := range renamedOptionPaths {
+		if config.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is invalid, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
 		}
 	}
 
-	for oldSectionOption, newSectionOption := range renamedOptions {
-		if currentConfig.Section(oldSectionOption.section).HasKey(oldSectionOption.option) {
-			warning := fmt.Sprintf("option [%s] %s is invalid, use [%s] %s instead",
-				oldSectionOption.section, oldSectionOption.option,
-				newSectionOption.section, newSectionOption.option)
-			log.Warn(warning)
-			warnings = append(warnings, warning)
+	// Check options that don't exist anymore.
+	defaultConfigData, err := conf.Files.ReadFile("app.ini")
+	if err != nil {
+		// Warning is best-effort, OK to skip on error.
+		return warnings
+	}
+	defaultConfig, err := ini.LoadSources(
+		ini.LoadOptions{IgnoreInlineComment: true},
+		defaultConfigData,
+	)
+	if err != nil {
+		// Warning is best-effort, OK to skip on error.
+		return warnings
+	}
+	for _, section := range config.Sections() {
+		// Skip sections already warned about.
+		if _, ok := renamedSections[section.Name()]; ok {
+			continue
 		}
-	}
-
-	// Compare available config with current config
-	availableConfigFS := conf.Files
-	availableConfigData, err := availableConfigFS.ReadFile("app.ini")
-	if err != nil {
-		log.Error("Failed to open available config: %v", err)
-		return warnings
-	}
-
-	availableConfig, err := ini.LoadSources(ini.LoadOptions{
-		IgnoreInlineComment: true,
-	}, availableConfigData)
-	if err != nil {
-		log.Error("Failed to parse available config: %v", err)
-		return warnings
-	}
-
-	for _, currentSection := range currentConfig.Sections() {
-		for _, currentOption := range currentSection.Keys() {
-			if !availableConfig.Section(currentSection.Name()).HasKey(currentOption.Name()) {
-				warning := fmt.Sprintf("option [%s] %s is invalid", currentSection.Name(), currentOption.Name())
-				log.Warn(warning)
-				warnings = append(warnings, warning)
+		for _, option := range section.Keys() {
+			if _, ok := renamedOptionPaths[optionPath{section.Name(), option.Name()}]; ok {
+				continue
+			}
+			if !defaultConfig.Section(section.Name()).HasKey(option.Name()) {
+				warnings = append(warnings, fmt.Sprintf("option [%s] %s is invalid", section.Name(), option.Name()))
 			}
 		}
 	}

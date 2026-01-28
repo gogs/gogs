@@ -346,7 +346,9 @@ func Init(customConf string) error {
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 
 	handleDeprecated()
-	warnInvalidOptions(File)
+	for _, warning := range checkInvalidOptions(File) {
+		log.Warn("%s", warning)
+	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")
