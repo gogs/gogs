@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"gorm.io/gorm/logger"
-	_ "modernc.org/sqlite"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/testutil"

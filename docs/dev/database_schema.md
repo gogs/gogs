@@ -1,12 +1,12 @@
 # Table "access"
 
 ```
-  FIELD  | COLUMN  |   POSTGRESQL    |         MYSQL         |     SQLITE3       
----------+---------+-----------------+-----------------------+-------------------
-  ID     | id      | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER           
-  UserID | user_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
-  RepoID | repo_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
-  Mode   | mode    | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
+  FIELD  | COLUMN  |   POSTGRESQL    |         MYSQL         |        SQLITE3         
+---------+---------+-----------------+-----------------------+------------------------
+  ID     | id      | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT  
+  UserID | user_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL       
+  RepoID | repo_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL       
+  Mode   | mode    | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL       
 
 Primary keys: id
 Indexes: 
@@ -18,7 +18,7 @@ Indexes:
 ```
      FIELD    |    COLUMN    |         POSTGRESQL          |            MYSQL            |           SQLITE3            
 --------------+--------------+-----------------------------+-----------------------------+------------------------------
-  ID          | id           | BIGSERIAL                   | BIGINT AUTO_INCREMENT       | INTEGER                      
+  ID          | id           | BIGSERIAL                   | BIGINT AUTO_INCREMENT       | INTEGER AUTOINCREMENT        
   UserID      | uid          | BIGINT                      | BIGINT                      | INTEGER                      
   Name        | name         | TEXT                        | LONGTEXT                    | TEXT                         
   Sha1        | sha1         | VARCHAR(40) UNIQUE          | VARCHAR(40) UNIQUE          | VARCHAR(40) UNIQUE           
@@ -36,7 +36,7 @@ Indexes:
 ```
      FIELD     |     COLUMN     |           POSTGRESQL           |             MYSQL              |            SQLITE3              
 ---------------+----------------+--------------------------------+--------------------------------+---------------------------------
-  ID           | id             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER                         
+  ID           | id             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER AUTOINCREMENT           
   UserID       | user_id        | BIGINT                         | BIGINT                         | INTEGER                         
   OpType       | op_type        | BIGINT                         | BIGINT                         | INTEGER                         
   ActUserID    | act_user_id    | BIGINT                         | BIGINT                         | INTEGER                         
@@ -60,7 +60,7 @@ Indexes:
 ```
      FIELD    |    COLUMN    |           POSTGRESQL           |             MYSQL              |            SQLITE3              
 --------------+--------------+--------------------------------+--------------------------------+---------------------------------
-  ID          | id           | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER                         
+  ID          | id           | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER AUTOINCREMENT           
   UserID      | uid          | BIGINT NOT NULL                | BIGINT NOT NULL                | INTEGER NOT NULL                
   Email       | email        | VARCHAR(254) NOT NULL          | VARCHAR(254) NOT NULL          | TEXT NOT NULL                   
   IsActivated | is_activated | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE  
@@ -74,11 +74,11 @@ Indexes:
 # Table "follow"
 
 ```
-   FIELD   |  COLUMN   |   POSTGRESQL    |         MYSQL         |     SQLITE3       
------------+-----------+-----------------+-----------------------+-------------------
-  ID       | id        | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER           
-  UserID   | user_id   | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
-  FollowID | follow_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
+   FIELD   |  COLUMN   |   POSTGRESQL    |         MYSQL         |        SQLITE3         
+-----------+-----------+-----------------+-----------------------+------------------------
+  ID       | id        | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT  
+  UserID   | user_id   | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL       
+  FollowID | follow_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL       
 
 Primary keys: id
 Indexes: 
@@ -102,16 +102,16 @@ Primary keys: repo_id, oid
 # Table "login_source"
 
 ```
-     FIELD    |    COLUMN    |    POSTGRESQL    |         MYSQL         |     SQLITE3       
---------------+--------------+------------------+-----------------------+-------------------
-  ID          | id           | BIGSERIAL        | BIGINT AUTO_INCREMENT | INTEGER           
-  Type        | type         | BIGINT           | BIGINT                | INTEGER           
-  Name        | name         | TEXT UNIQUE      | VARCHAR(191) UNIQUE   | TEXT UNIQUE       
-  IsActived   | is_actived   | BOOLEAN NOT NULL | BOOLEAN NOT NULL      | NUMERIC NOT NULL  
-  IsDefault   | is_default   | BOOLEAN          | BOOLEAN               | NUMERIC           
-  Config      | cfg          | TEXT             | TEXT                  | TEXT              
-  CreatedUnix | created_unix | BIGINT           | BIGINT                | INTEGER           
-  UpdatedUnix | updated_unix | BIGINT           | BIGINT                | INTEGER           
+     FIELD    |    COLUMN    |    POSTGRESQL    |         MYSQL         |        SQLITE3         
+--------------+--------------+------------------+-----------------------+------------------------
+  ID          | id           | BIGSERIAL        | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT  
+  Type        | type         | BIGINT           | BIGINT                | INTEGER                
+  Name        | name         | TEXT UNIQUE      | VARCHAR(191) UNIQUE   | TEXT UNIQUE            
+  IsActived   | is_actived   | BOOLEAN NOT NULL | BOOLEAN NOT NULL      | NUMERIC NOT NULL       
+  IsDefault   | is_default   | BOOLEAN          | BOOLEAN               | NUMERIC                
+  Config      | cfg          | TEXT             | TEXT                  | TEXT                   
+  CreatedUnix | created_unix | BIGINT           | BIGINT                | INTEGER                
+  UpdatedUnix | updated_unix | BIGINT           | BIGINT                | INTEGER                
 
 Primary keys: id
 ```
@@ -119,12 +119,12 @@ Primary keys: id
 # Table "notice"
 
 ```
-     FIELD    |    COLUMN    | POSTGRESQL |         MYSQL         | SQLITE3  
---------------+--------------+------------+-----------------------+----------
-  ID          | id           | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER  
-  Type        | type         | BIGINT     | BIGINT                | INTEGER  
-  Description | description  | TEXT       | TEXT                  | TEXT     
-  CreatedUnix | created_unix | BIGINT     | BIGINT                | INTEGER  
+     FIELD    |    COLUMN    | POSTGRESQL |         MYSQL         |        SQLITE3         
+--------------+--------------+------------+-----------------------+------------------------
+  ID          | id           | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT  
+  Type        | type         | BIGINT     | BIGINT                | INTEGER                
+  Description | description  | TEXT       | TEXT                  | TEXT                   
+  CreatedUnix | created_unix | BIGINT     | BIGINT                | INTEGER                
 
 Primary keys: id
 ```
