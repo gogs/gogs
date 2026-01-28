@@ -1798,3 +1798,135 @@ function showMessageMaxLength(maxLen, textElemId, counterId) {
 
   $msg.keyup(onMessageKey).keydown(onMessageKey);
 }
+
+// ===== Dark Theme Functionality =====
+
+(function() {
+  'use strict';
+
+  // Theme management functions
+  var ThemeManager = {
+    STORAGE_KEY: 'gogs-theme',
+
+    // Get current theme from localStorage
+    getTheme: function() {
+      try {
+        return localStorage.getItem(this.STORAGE_KEY) || 'system';
+      } catch (e) {
+        return 'system';
+      }
+    },
+
+    // Set theme in localStorage and apply it
+    setTheme: function(theme) {
+      try {
+        localStorage.setItem(this.STORAGE_KEY, theme);
+        this.applyTheme(theme);
+        this.updateActiveOption(theme);
+      } catch (e) {
+        console.warn('Failed to save theme:', e);
+      }
+    },
+
+    applyIcon: function (theme) {
+      var indicator = document.getElementById('theme-indicator');
+      indicator.classList.remove('sun');
+      indicator.classList.remove('moon');
+      indicator.classList.remove('desktop');
+
+      switch (theme) {
+        case "system":
+          indicator.classList.add('desktop');
+          break;
+        case "dark":
+          indicator.classList.add('moon');
+          break;
+        default:
+          indicator.classList.add('sun');
+      }
+
+    },
+
+    // Apply theme to document
+    applyTheme: function(theme) {
+      var htmlEl = document.documentElement;
+
+
+      if (theme === 'system') {
+        // Remove the data-theme attribute to let system preference decide
+        htmlEl.removeAttribute('data-theme');
+
+        // Apply system preference immediately
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          htmlEl.setAttribute('data-theme', 'dark');
+        }
+      } else {
+        htmlEl.setAttribute('data-theme', theme);
+      }
+
+      this.updateThemeColor();
+      this.applyIcon(theme);
+    },
+
+    // Update theme-color meta tag for browser UI
+    updateThemeColor: function() {
+      var metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (!metaThemeColor) return;
+
+      var currentTheme = this.getCurrentTheme();
+      var isDark = currentTheme === 'dark';
+      metaThemeColor.setAttribute('content', isDark ? '#1b1c1d' : '#ffffff');
+    },
+
+    // Get the currently applied theme (resolves 'system' to actual theme)
+    getCurrentTheme: function() {
+      var storedTheme = this.getTheme();
+      if (storedTheme === 'system') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      return storedTheme;
+    },
+
+    // Update active state in theme menu
+    updateActiveOption: function(theme) {
+      $('.theme-option').removeClass('active').removeAttr('data-active');
+      $('.theme-option[data-theme="' + theme + '"]').addClass('active').attr('data-active', 'true');
+    },
+
+    // Initialize theme functionality
+    init: function() {
+      var self = this;
+      var currentTheme = this.getTheme();
+
+      // Apply saved theme on page load
+      this.applyTheme(currentTheme);
+      this.updateActiveOption(currentTheme);
+
+      // Handle theme option clicks
+      $('.theme-option').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var theme = $(this).data('theme');
+        self.setTheme(theme);
+      });
+
+      // Listen for system preference changes when in system mode
+      if (currentTheme === 'system') {
+        var darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        darkModeQuery.addEventListener('change', function() {
+          self.applyTheme('system');
+        });
+      }
+    }
+  };
+
+  // Initialize theme when DOM is ready
+  $(function() {
+    // Only initialize if theme options exist (i.e., user is logged in)
+    if ($('.theme-option').length > 0) {
+      ThemeManager.init();
+    }
+  });
+
+})();
+
