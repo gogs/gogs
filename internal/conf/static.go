@@ -434,11 +434,10 @@ func handleDeprecated() {
 	// }
 }
 
-// warnDeprecated warns about deprecated configuration sections and options.
-// NOTE: Delete this function after 0.14.0 is released
-func warnDeprecated(currentConfig *ini.File) []string {
-	// Deprecated sections and options
-	deprecatedSections := map[string]string{
+// warnInvalidOptions warns about invalid (renamed/deleted) configuration sections and options.
+// LEGACY [0.15]: Delete this function.
+func warnInvalidOptions(currentConfig *ini.File) []string {
+	renamedSections := map[string]string{
 		"mailer":  "email",
 		"service": "auth",
 	}
@@ -448,7 +447,7 @@ func warnDeprecated(currentConfig *ini.File) []string {
 		option  string
 	}
 
-	deprecatedOptions := map[sectionOptionPair]sectionOptionPair{
+	renamedOptions := map[sectionOptionPair]sectionOptionPair{
 		{"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
 		{"auth", "ACTIVE_CODE_LIVE_MINUTES"}:              {"auth", "ACTIVATE_CODE_LIVES"},
 		{"auth", "RESET_PASSWD_CODE_LIVE_MINUTES"}:        {"auth", "RESET_PASSWORD_CODE_LIVES"},
@@ -465,17 +464,17 @@ func warnDeprecated(currentConfig *ini.File) []string {
 
 	var warnings []string
 
-	for oldSection, newSection := range deprecatedSections {
+	for oldSection, newSection := range renamedSections {
 		if currentConfig.Section(oldSection).KeyStrings() != nil {
-			warning := fmt.Sprintf("section %s is deprecated, use %s instead", oldSection, newSection)
+			warning := fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection)
 			log.Warn(warning)
 			warnings = append(warnings, warning)
 		}
 	}
 
-	for oldSectionOption, newSectionOption := range deprecatedOptions {
+	for oldSectionOption, newSectionOption := range renamedOptions {
 		if currentConfig.Section(oldSectionOption.section).HasKey(oldSectionOption.option) {
-			warning := fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
+			warning := fmt.Sprintf("option [%s] %s is invalid, use [%s] %s instead",
 				oldSectionOption.section, oldSectionOption.option,
 				newSectionOption.section, newSectionOption.option)
 			log.Warn(warning)
@@ -502,8 +501,7 @@ func warnDeprecated(currentConfig *ini.File) []string {
 	for _, currentSection := range currentConfig.Sections() {
 		for _, currentOption := range currentSection.Keys() {
 			if !availableConfig.Section(currentSection.Name()).HasKey(currentOption.Name()) {
-				warning := fmt.Sprintf("option [%s] %s is not in the available config",
-					currentSection.Name(), currentOption.Name())
+				warning := fmt.Sprintf("option [%s] %s is invalid", currentSection.Name(), currentOption.Name())
 				log.Warn(warning)
 				warnings = append(warnings, warning)
 			}

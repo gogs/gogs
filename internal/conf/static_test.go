@@ -32,10 +32,7 @@ func Test_i18n_DateLang(t *testing.T) {
 	}
 }
 
-// TestWarnDeprecated tests the warnDeprecated function.
-// It creates a new ini.File, adds some sections and keys,
-// and then checks if the expected warnings are returned by the function.
-func TestWarnDeprecated(t *testing.T) {
+func TestWarnInvalidOptions(t *testing.T) {
 	cfg := ini.Empty()
 	cfg.Section("mailer").NewKey("ENABLED", "true")
 	cfg.Section("service").NewKey("START_TYPE", "true")
@@ -56,44 +53,43 @@ func TestWarnDeprecated(t *testing.T) {
 	cfg.Section("email").NewKey("ENABLED", "true")
 	cfg.Section("email").NewKey("key_not_exist", "true")
 
-	expectedDeprecatedWarning := []string{
-		"option [auth] ACTIVE_CODE_LIVE_MINUTES is deprecated, use [auth] ACTIVATE_CODE_LIVES instead",
-		"option [auth] ENABLE_CAPTCHA is deprecated, use [auth] ENABLE_REGISTRATION_CAPTCHA instead",
-		"option [auth] ENABLE_NOTIFY_MAIL is deprecated, use [user] ENABLE_EMAIL_NOTIFICATION instead",
-		"option [auth] REGISTER_EMAIL_CONFIRM is deprecated, use [auth] REQUIRE_EMAIL_CONFIRMATION instead",
-		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is deprecated, use [auth] RESET_PASSWORD_CODE_LIVES instead",
-		"option [database] DB_TYPE is deprecated, use [database] TYPE instead",
-		"option [database] PASSWD is deprecated, use [database] PASSWORD instead",
-		"option [security] REVERSE_PROXY_AUTHENTICATION_USER is deprecated, use [auth] REVERSE_PROXY_AUTHENTICATION_HEADER instead",
-		"option [session] GC_INTERVAL_TIME is deprecated, use [session] GC_INTERVAL instead",
-		"option [session] SESSION_LIFE_TIME is deprecated, use [session] MAX_LIFE_TIME instead",
-		"section mailer is deprecated, use email instead",
-		"section service is deprecated, use auth instead",
-		"option [server] ROOT_URL is deprecated, use [server] EXTERNAL_URL instead",
-		"option [server] LANDING_PAGE is deprecated, use [server] LANDING_URL instead",
+	expectedRenamedWarnings := []string{
+		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid, use [auth] ACTIVATE_CODE_LIVES instead",
+		"option [auth] ENABLE_CAPTCHA is invalid, use [auth] ENABLE_REGISTRATION_CAPTCHA instead",
+		"option [auth] ENABLE_NOTIFY_MAIL is invalid, use [user] ENABLE_EMAIL_NOTIFICATION instead",
+		"option [auth] REGISTER_EMAIL_CONFIRM is invalid, use [auth] REQUIRE_EMAIL_CONFIRMATION instead",
+		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid, use [auth] RESET_PASSWORD_CODE_LIVES instead",
+		"option [database] DB_TYPE is invalid, use [database] TYPE instead",
+		"option [database] PASSWD is invalid, use [database] PASSWORD instead",
+		"option [security] REVERSE_PROXY_AUTHENTICATION_USER is invalid, use [auth] REVERSE_PROXY_AUTHENTICATION_HEADER instead",
+		"option [session] GC_INTERVAL_TIME is invalid, use [session] GC_INTERVAL instead",
+		"option [session] SESSION_LIFE_TIME is invalid, use [session] MAX_LIFE_TIME instead",
+		"section [mailer] is invalid, use [email] instead",
+		"section [service] is invalid, use [auth] instead",
+		"option [server] ROOT_URL is invalid, use [server] EXTERNAL_URL instead",
+		"option [server] LANDING_PAGE is invalid, use [server] LANDING_URL instead",
 	}
-	expectedUnusedWarning := []string{
-		"option [auth] ACTIVE_CODE_LIVE_MINUTES is not in the available config",
-		"option [auth] ENABLE_CAPTCHA is not in the available config",
-		"option [auth] ENABLE_NOTIFY_MAIL is not in the available config",
-		"option [auth] REGISTER_EMAIL_CONFIRM is not in the available config",
-		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is not in the available config",
-		"option [database] DB_TYPE is not in the available config",
-		"option [database] PASSWD is not in the available config",
-		"option [email] key_not_exist is not in the available config",
-		"option [mailer] ENABLED is not in the available config",
-		"option [security] REVERSE_PROXY_AUTHENTICATION_USER is not in the available config",
-		"option [server] LANDING_PAGE is not in the available config",
-		"option [server] ROOT_URL is not in the available config",
-		"option [service] START_TYPE is not in the available config",
-		"option [session] GC_INTERVAL_TIME is not in the available config",
-		"option [session] SESSION_LIFE_TIME is not in the available config",
+	expectedUnknownWarnings := []string{
+		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid",
+		"option [auth] ENABLE_CAPTCHA is invalid",
+		"option [auth] ENABLE_NOTIFY_MAIL is invalid",
+		"option [auth] REGISTER_EMAIL_CONFIRM is invalid",
+		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid",
+		"option [database] DB_TYPE is invalid",
+		"option [database] PASSWD is invalid",
+		"option [email] key_not_exist is invalid",
+		"option [mailer] ENABLED is invalid",
+		"option [security] REVERSE_PROXY_AUTHENTICATION_USER is invalid",
+		"option [server] LANDING_PAGE is invalid",
+		"option [server] ROOT_URL is invalid",
+		"option [service] START_TYPE is invalid",
+		"option [session] GC_INTERVAL_TIME is invalid",
+		"option [session] SESSION_LIFE_TIME is invalid",
 	}
 
-	expectedWarning := append(expectedDeprecatedWarning, expectedUnusedWarning...)
-	actualWarning := warnDeprecated(cfg)
-	sort.Strings(expectedWarning)
-	sort.Strings(actualWarning)
-	assert.Equal(t, expectedWarning, actualWarning)
-
+	expectedWarnings := append(expectedRenamedWarnings, expectedUnknownWarnings...)
+	actualWarnings := warnInvalidOptions(cfg)
+	sort.Strings(expectedWarnings)
+	sort.Strings(actualWarnings)
+	assert.Equal(t, expectedWarnings, actualWarnings)
 }
