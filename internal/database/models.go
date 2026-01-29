@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	log "unknwon.dev/clog/v2"
@@ -45,6 +46,9 @@ var (
 )
 
 func init() {
+	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.
+	sql.Register("sqlite3", &sqlite.Driver{})
+
 	legacyTables = append(legacyTables,
 		new(User), new(PublicKey), new(TwoFactor), new(TwoFactorRecoveryCode),
 		new(Repository), new(DeployKey), new(Collaboration), new(Upload),
