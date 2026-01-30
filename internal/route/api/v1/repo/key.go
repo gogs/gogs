@@ -49,6 +49,11 @@ func GetDeployKey(c *context.APIContext) {
 		return
 	}
 
+	if key.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
+		return
+	}
+
 	if err = key.GetContent(); err != nil {
 		c.Error(err, "get content")
 		return
@@ -98,7 +103,18 @@ func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
 func DeleteDeploykey(c *context.APIContext) {
-	if err := db.DeleteDeployKey(c.User, c.ParamsInt64(":id")); err != nil {
+	key, err := db.GetDeployKeyByID(c.ParamsInt64(":id"))
+	if err != nil {
+		c.NotFoundOrError(err, "get deploy key by ID")
+		return
+	}
+
+	if key.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
+		return
+	}
+
+	if err := db.DeleteDeployKey(c.User, key.ID); err != nil {
 		if db.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key"))
 		} else {
