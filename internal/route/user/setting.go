@@ -86,9 +86,9 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				c.FormErr("Name")
 				switch {
 				case database.IsErrUserAlreadyExist(errors.Cause(err)):
-					c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, SETTINGS_PROFILE, &f)
+					c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplUserSettingsProfile, &f)
 				case database.IsErrNameNotAllowed(errors.Cause(err)):
-					c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, SETTINGS_PROFILE, &f)
+					c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplUserSettingsProfile, &f)
 				default:
 					c.Error(err, "change user name")
 				}

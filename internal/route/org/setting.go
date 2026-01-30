@@ -42,9 +42,9 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 			c.Data["OrgName"] = true
 			switch {
 			case database.IsErrUserAlreadyExist(err):
-				c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, SETTINGS_OPTIONS, &f)
+				c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplOrgSettingsOptions, &f)
 			case database.IsErrNameNotAllowed(err):
-				c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, SETTINGS_OPTIONS, &f)
+				c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplOrgSettingsOptions, &f)
 			default:
 				c.Error(err, "change organization name")
 			}

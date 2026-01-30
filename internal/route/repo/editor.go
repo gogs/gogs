@@ -219,7 +219,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		// 🚨 SECURITY: Do not allow editing if the old file is a symlink.
 		if entry.IsSymlink() {
 			c.FormErr("TreePath")
-			c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", oldTreePath), tmplEditorEdit, &f)
+			c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", oldTreePath), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 			return
 		}
 
