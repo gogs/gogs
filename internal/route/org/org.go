@@ -1,6 +1,8 @@
 package org
 
 import (
+	"net/http"
+
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
@@ -21,7 +23,7 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 	c.Title("new_org")
 
 	if c.HasError() {
-		c.Success(CREATE)
+		c.HTML(http.StatusBadRequest, CREATE)
 		return
 	}
 
@@ -35,9 +37,9 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		c.Data["Err_OrgName"] = true
 		switch {
 		case database.IsErrUserAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
+			c.RenderWithErr(c.Tr("form.org_name_been_taken"), http.StatusUnprocessableEntity, CREATE, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), CREATE, &f)
+			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, CREATE, &f)
 		default:
 			c.Error(err, "create organization")
 		}

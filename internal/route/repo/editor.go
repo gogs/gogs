@@ -153,20 +153,20 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	c.Data["PreviewableFileModes"] = strings.Join(conf.Repository.Editor.PreviewableFileModes, ",")
 
 	if c.HasError() {
-		c.Success(tmplEditorEdit)
+		c.HTML(http.StatusBadRequest, tmplEditorEdit)
 		return
 	}
 
 	if f.TreePath == "" {
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.filename_cannot_be_empty"), tmplEditorEdit, &f)
+		c.RenderWithErr(c.Tr("repo.editor.filename_cannot_be_empty"), http.StatusBadRequest, tmplEditorEdit, &f)
 		return
 	}
 
 	if oldBranchName != branchName {
 		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
 			c.FormErr("NewBranchName")
-			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), tmplEditorEdit, &f)
+			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 			return
 		}
 	}
@@ -187,18 +187,18 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		if index != len(treeNames)-1 {
 			if !entry.IsTree() {
 				c.FormErr("TreePath")
-				c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), tmplEditorEdit, &f)
+				c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 				return
 			}
 		} else {
 			// 🚨 SECURITY: Do not allow editing if the target file is a symlink.
 			if entry.IsSymlink() {
 				c.FormErr("TreePath")
-				c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", part), tmplEditorEdit, &f)
+				c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", part), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 				return
 			} else if entry.IsTree() {
 				c.FormErr("TreePath")
-				c.RenderWithErr(c.Tr("repo.editor.filename_is_a_directory", part), tmplEditorEdit, &f)
+				c.RenderWithErr(c.Tr("repo.editor.filename_is_a_directory", part), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 				return
 			}
 		}
@@ -209,7 +209,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		if err != nil {
 			if gitutil.IsErrRevisionNotExist(err) {
 				c.FormErr("TreePath")
-				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), tmplEditorEdit, &f)
+				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), http.StatusNotFound, tmplEditorEdit, &f)
 			} else {
 				c.Error(err, "get tree entry")
 			}
@@ -219,7 +219,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		// 🚨 SECURITY: Do not allow editing if the old file is a symlink.
 		if entry.IsSymlink() {
 			c.FormErr("TreePath")
-			c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", oldTreePath), tmplEditorEdit, &f)
+			c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", oldTreePath), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 			return
 		}
 
@@ -232,7 +232,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 
 			for _, file := range files {
 				if file == f.TreePath {
-					c.RenderWithErr(c.Tr("repo.editor.file_changed_while_editing", c.Repo.RepoLink+"/compare/"+lastCommit+"..."+c.Repo.CommitID), tmplEditorEdit, &f)
+					c.RenderWithErr(c.Tr("repo.editor.file_changed_while_editing", c.Repo.RepoLink+"/compare/"+lastCommit+"..."+c.Repo.CommitID), http.StatusConflict, tmplEditorEdit, &f)
 					return
 				}
 			}
@@ -250,7 +250,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		}
 		if entry != nil {
 			c.FormErr("TreePath")
-			c.RenderWithErr(c.Tr("repo.editor.file_already_exists", f.TreePath), tmplEditorEdit, &f)
+			c.RenderWithErr(c.Tr("repo.editor.file_already_exists", f.TreePath), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 			return
 		}
 	}
@@ -280,7 +280,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}); err != nil {
 		log.Error("Failed to update repo file: %v", err)
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errInternalServerError), tmplEditorEdit, &f)
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorEdit, &f)
 		return
 	}
 
@@ -358,14 +358,14 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.Data["new_branch_name"] = branchName
 
 	if c.HasError() {
-		c.Success(tmplEditorDelete)
+		c.HTML(http.StatusBadRequest, tmplEditorDelete)
 		return
 	}
 
 	if oldBranchName != branchName {
 		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
 			c.FormErr("NewBranchName")
-			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), tmplEditorDelete, &f)
+			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorDelete, &f)
 			return
 		}
 	}
@@ -388,7 +388,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		Message:      message,
 	}); err != nil {
 		log.Error("Failed to delete repo file: %v", err)
-		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errInternalServerError), tmplEditorDelete, &f)
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorDelete, &f)
 		return
 	}
 
@@ -456,14 +456,14 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	c.Data["new_branch_name"] = branchName
 
 	if c.HasError() {
-		c.Success(tmplEditorUpload)
+		c.HTML(http.StatusBadRequest, tmplEditorUpload)
 		return
 	}
 
 	if oldBranchName != branchName {
 		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
 			c.FormErr("NewBranchName")
-			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), tmplEditorUpload, &f)
+			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorUpload, &f)
 			return
 		}
 	}
@@ -485,7 +485,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		// User can only upload files to a directory.
 		if !entry.IsTree() {
 			c.FormErr("TreePath")
-			c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), tmplEditorUpload, &f)
+			c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), http.StatusUnprocessableEntity, tmplEditorUpload, &f)
 			return
 		}
 	}
@@ -510,7 +510,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}); err != nil {
 		log.Error("Failed to upload files: %v", err)
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errInternalServerError), tmplEditorUpload, &f)
+		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorUpload, &f)
 		return
 	}
 

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -199,14 +200,14 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(tmplRepoWikiNew)
+		c.HTML(http.StatusBadRequest, tmplRepoWikiNew)
 		return
 	}
 
 	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), tmplRepoWikiNew, &f)
+			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), http.StatusUnprocessableEntity, tmplRepoWikiNew, &f)
 		} else {
 			c.Error(err, "add wiki page")
 		}
@@ -240,7 +241,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(tmplRepoWikiNew)
+		c.HTML(http.StatusBadRequest, tmplRepoWikiNew)
 		return
 	}
 

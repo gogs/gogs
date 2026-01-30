@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -169,12 +170,12 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	if c.HasError() {
-		c.Success(tmplRepoReleaseNew)
+		c.HTML(http.StatusBadRequest, tmplRepoReleaseNew)
 		return
 	}
 
 	if !c.Repo.GitRepo.HasBranch(f.Target) {
-		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), tmplRepoReleaseNew, &f)
+		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), http.StatusUnprocessableEntity, tmplRepoReleaseNew, &f)
 		return
 	}
 
@@ -222,9 +223,9 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		c.Data["Err_TagName"] = true
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), tmplRepoReleaseNew, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), http.StatusUnprocessableEntity, tmplRepoReleaseNew, &f)
 		case database.IsErrInvalidTagName(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), tmplRepoReleaseNew, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), http.StatusBadRequest, tmplRepoReleaseNew, &f)
 		default:
 			c.Error(err, "new release")
 		}
@@ -280,7 +281,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["IsDraft"] = rel.IsDraft
 
 	if c.HasError() {
-		c.Success(tmplRepoReleaseNew)
+		c.HTML(http.StatusBadRequest, tmplRepoReleaseNew)
 		return
 	}
 

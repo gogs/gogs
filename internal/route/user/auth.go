@@ -158,7 +158,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	c.Data["LoginSources"] = loginSources
 
 	if c.HasError() {
-		c.Success(tmplUserAuthLogin)
+		c.HTML(http.StatusBadRequest, tmplUserAuthLogin)
 		return
 	}
 
@@ -167,10 +167,10 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		switch {
 		case auth.IsErrBadCredentials(err):
 			c.FormErr("UserName", "Password")
-			c.RenderWithErr(c.Tr("form.username_password_incorrect"), tmplUserAuthLogin, &f)
+			c.RenderWithErr(c.Tr("form.username_password_incorrect"), http.StatusUnauthorized, tmplUserAuthLogin, &f)
 		case database.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
-			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), tmplUserAuthLogin, &f)
+			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), http.StatusUnprocessableEntity, tmplUserAuthLogin, &f)
 
 		default:
 			c.Error(err, "authenticate user")
@@ -320,19 +320,19 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	}
 
 	if c.HasError() {
-		c.Success(tmplUserAuthSignup)
+		c.HTML(http.StatusBadRequest, tmplUserAuthSignup)
 		return
 	}
 
 	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
 		c.FormErr("Captcha")
-		c.RenderWithErr(c.Tr("form.captcha_incorrect"), tmplUserAuthSignup, &f)
+		c.RenderWithErr(c.Tr("form.captcha_incorrect"), http.StatusUnauthorized, tmplUserAuthSignup, &f)
 		return
 	}
 
 	if f.Password != f.Retype {
 		c.FormErr("Password")
-		c.RenderWithErr(c.Tr("form.password_not_match"), tmplUserAuthSignup, &f)
+		c.RenderWithErr(c.Tr("form.password_not_match"), http.StatusBadRequest, tmplUserAuthSignup, &f)
 		return
 	}
 
@@ -349,13 +349,13 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("form.username_been_taken"), tmplUserAuthSignup, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplUserAuthSignup, &f)
 		case database.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
-			c.RenderWithErr(c.Tr("form.email_been_used"), tmplUserAuthSignup, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), http.StatusUnprocessableEntity, tmplUserAuthSignup, &f)
 		case database.IsErrNameNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplUserAuthSignup, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplUserAuthSignup, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -569,7 +569,7 @@ func ForgotPasswdPost(c *context.Context) {
 
 	if !u.IsLocal() {
 		c.FormErr("Email")
-		c.RenderWithErr(c.Tr("auth.non_local_account"), tmplUserAuthForgotPassword, nil)
+		c.RenderWithErr(c.Tr("auth.non_local_account"), http.StatusForbidden, tmplUserAuthForgotPassword, nil)
 		return
 	}
 
@@ -618,7 +618,7 @@ func ResetPasswdPost(c *context.Context) {
 		if len(password) < 6 {
 			c.Data["IsResetForm"] = true
 			c.Data["Err_Password"] = true
-			c.RenderWithErr(c.Tr("auth.password_too_short"), tmplUserAuthResetPassword, nil)
+			c.RenderWithErr(c.Tr("auth.password_too_short"), http.StatusBadRequest, tmplUserAuthResetPassword, nil)
 			return
 		}
 
