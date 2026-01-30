@@ -926,6 +926,17 @@ func UpdateCommentContent(c *context.Context) {
 		return
 	}
 
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
+		return
+	}
+
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
@@ -956,6 +967,17 @@ func DeleteComment(c *context.Context) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
+		return
+	}
+
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
 		return
 	}
 
