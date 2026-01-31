@@ -68,21 +68,11 @@ jobs:
           image-ref: gogs/gogs:latest
           exit-code: '1'
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   buildx-next:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
@@ -145,21 +135,11 @@ jobs:
           image-ref: gogs/gogs:next-latest
           exit-code: '1'
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   deploy-demo:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
@@ -181,21 +161,11 @@ jobs:
           kubectl rollout restart deployment gogs-demo -n gogs
           kubectl rollout status deployment gogs-demo -n gogs
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   buildx-pull-request:
     if: ${{ github.event_name == 'pull_request'}}
@@ -324,21 +294,11 @@ jobs:
             gogs/gogs:${{ env.IMAGE_TAG }}
             ghcr.io/gogs/gogs:${{ env.IMAGE_TAG }}
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   # Updates to the following section needs to be synced to all release branches within their lifecycles.
   buildx-next-release:
@@ -389,21 +349,11 @@ jobs:
             gogs/gogs:next-${{ env.IMAGE_TAG }}
             ghcr.io/gogs/gogs:next-${{ env.IMAGE_TAG }}
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   digitalocean-gc:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
