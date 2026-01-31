@@ -14,6 +14,7 @@ Existing vulnerability reports are being tracked in [GitHub Security Advisories]
 
 1. Report an advisory for the vulnerability.
     - Please be aware that **only advisories reported in plain English** will be reviewed.
+    - We DO NOT accept vulnerabilities cannot be reproduced on the latest `main` commit.
 1. Project maintainers review the advisory:
     - Ask clarifying questions
     - Make sure there was no prior advisory exists for the same vulnerability
