@@ -1,7 +1,7 @@
 ## Core principles
 
+- Stop telling me "You're right", it just shows how incompetent you are. Do it right on your first try, fact-check and review after changes. If you are not sure, ask for help.
 - When you see changes made outside your knowledge, use the current version as your new starting point. Do not blindly overwrite those changes or you suck. Even if you have to update the code, always respect the pattern in the surrounding context!
-- Do not tell me I am right, do it right on your first try, fact-check and review after changes. If you are not sure, ask for help.
 
 ## Style and mechanics
 

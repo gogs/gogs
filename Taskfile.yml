@@ -10,8 +10,10 @@ tasks:
   web:
     desc: Build the binary and start the web server
     deps: [build]
+    env:
+      GOGS_WORK_DIR: '{{.ROOT_DIR}}'
     cmds:
-      - ./gogs web
+      - .bin/gogs web
 
   build:
     desc: Build the binary
@@ -22,7 +24,7 @@ tasks:
           -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"
         '
         -tags '{{.TAGS}}'
-        -trimpath -o gogs{{.BINARY_EXT}}
+        -trimpath -o .bin/gogs{{.BINARY_EXT}}
     vars:
       PKG_PATH: gogs.io/gogs/internal/conf
       BUILD_TIME:

@@ -1,18 +1,16 @@
-.DS_Store
-*.db
-*.log
+# Build artifacts
+.bin/
+dist/
+
+# Runtime data
 log/
 custom/
 data/
+
+# Configuration and application files
 .idea/
-*.iml
-public/img/avatar/
-*.exe
-*.exe~
-/gogs
-profile/
-*.pem
-output*
-/release
-.task
+.task/
 .envrc
+
+# System junk
+.DS_Store
