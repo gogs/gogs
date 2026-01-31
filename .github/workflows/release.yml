@@ -101,7 +101,7 @@ jobs:
 
           if [ "${{ github.event_name }}" != "release" ]; then
             git tag -f "$RELEASE_TAG"
-            git push origin "$RELEASE_TAG" --force
+            git push origin "$RELEASE_TAG" --force || true
             gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "Release Archive Testing" --notes "Automated testing release for workflow development." --prerelease
           fi
 
