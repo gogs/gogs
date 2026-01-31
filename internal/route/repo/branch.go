@@ -118,6 +118,24 @@ func DeleteBranchPost(c *context.Context) {
 	if !c.Repo.GitRepo.HasBranch(branchName) {
 		return
 	}
+
+	// Prevent deletion of the default branch.
+	if branchName == c.Repo.Repository.DefaultBranch {
+		c.Flash.Error(c.Tr("repo.branch.default_branch_deletion_not_allowed"))
+		return
+	}
+
+	// Prevent deletion of protected branches.
+	protectBranch, err := database.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branchName)
+	if err != nil && !database.IsErrBranchNotExist(err) {
+		log.Error("Failed to get protected branch %q: %v", branchName, err)
+		return
+	}
+	if protectBranch != nil && protectBranch.Protected {
+		c.Flash.Error(c.Tr("repo.branch.protected_branch_deletion_not_allowed"))
+		return
+	}
+
 	if len(commitID) > 0 {
 		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(branchName)
 		if err != nil {
