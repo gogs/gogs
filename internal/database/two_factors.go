@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -11,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -112,6 +108,28 @@ func (s *TwoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
 		log.Error("Failed to count two factors [user_id: %d]: %v", userID, err)
 	}
 	return count > 0
+}
+
+// UseRecoveryCode validates a recovery code of given user and marks it as used
+// if valid. It returns ErrTwoFactorRecoveryCodeNotFound if the code is invalid
+// or already used.
+func (s *TwoFactorsStore) UseRecoveryCode(ctx context.Context, userID int64, code string) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var recoveryCode TwoFactorRecoveryCode
+		err := tx.Where("user_id = ? AND code = ? AND is_used = ?", userID, code, false).First(&recoveryCode).Error
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrTwoFactorRecoveryCodeNotFound{Code: code}
+			}
+			return errors.Wrap(err, "get unused recovery code")
+		}
+
+		err = tx.Model(&recoveryCode).Update("is_used", true).Error
+		if err != nil {
+			return errors.Wrap(err, "mark recovery code as used")
+		}
+		return nil
+	})
 }
 
 // generateRecoveryCodes generates N number of recovery codes for 2FA.

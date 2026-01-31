@@ -1,7 +1,3 @@
-// Copyright 2017 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -11,6 +7,7 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
@@ -343,7 +340,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	var hookAction api.HookIssueAction

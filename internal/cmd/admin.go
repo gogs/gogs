@@ -1,7 +1,3 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package cmd
 
 import (
@@ -10,7 +6,7 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli"
 
 	"gogs.io/gogs/internal/conf"
@@ -184,7 +180,7 @@ func adminDashboardOperation(operation func() error, successMessage string) func
 
 		if err := operation(); err != nil {
 			functionName := runtime.FuncForPC(reflect.ValueOf(operation).Pointer()).Name()
-			return fmt.Errorf("%s: %v", functionName, err)
+			return errors.Newf("%s: %v", functionName, err)
 		}
 
 		fmt.Printf("%s\n", successMessage)

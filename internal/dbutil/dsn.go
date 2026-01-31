@@ -1,17 +1,13 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package dbutil
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
+	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 
@@ -77,7 +73,7 @@ func NewDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 		dsn = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
 			host, port, opts.Name, opts.User, opts.Password)
 
-	case "sqlite3", "sqlite":
+	case "sqlite3":
 		dsn = "file:" + opts.Path + "?cache=shared&mode=rwc"
 
 	default:
@@ -105,9 +101,6 @@ func OpenDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
 		dialector = sqlserver.Open(dsn)
 	case "sqlite3":
 		dialector = sqlite.Open(dsn)
-	case "sqlite":
-		dialector = sqlite.Open(dsn)
-		dialector.(*sqlite.Dialector).DriverName = "sqlite"
 	default:
 		panic("unreachable")
 	}

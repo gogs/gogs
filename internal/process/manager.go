@@ -1,17 +1,12 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package process
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"os/exec"
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -129,7 +124,7 @@ func Kill(pid int64) error {
 			if proc.Cmd != nil && proc.Cmd.Process != nil &&
 				proc.Cmd.ProcessState != nil && !proc.Cmd.ProcessState.Exited() {
 				if err := proc.Cmd.Process.Kill(); err != nil {
-					return fmt.Errorf("fail to kill process [pid: %d, desc: %s]: %v", proc.PID, proc.Description, err)
+					return errors.Newf("fail to kill process [pid: %d, desc: %s]: %v", proc.PID, proc.Description, err)
 				}
 			}
 			Remove(pid)

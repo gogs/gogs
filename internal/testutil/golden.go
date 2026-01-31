@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package testutil
 
 import (
@@ -44,7 +40,7 @@ func AssertGolden(t testing.TB, path string, update bool, got any) {
 			t.Fatalf("create directories for golden file %q: %v", path, err)
 		}
 
-		err = os.WriteFile(path, data, 0640)
+		err = os.WriteFile(path, data, 0o640)
 		if err != nil {
 			t.Fatalf("update golden file %q: %v", path, err)
 		}

@@ -1,15 +1,11 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -291,7 +287,7 @@ func getSlackReleasePayload(p *api.ReleasePayload) *SlackPayload {
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("unmarshal: %v", err)
+		return nil, errors.Newf("unmarshal: %v", err)
 	}
 
 	switch event {

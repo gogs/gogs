@@ -1,7 +1,3 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package sync
 
 import (
@@ -36,7 +32,7 @@ func (q *UniqueQueue) Queue() <-chan string {
 	return q.queue
 }
 
-// Exist returns true if there is an instance with given indentity
+// Exist returns true if there is an instance with given identity
 // exists in the queue.
 func (q *UniqueQueue) Exist(id any) bool {
 	return q.table.IsRunning(com.ToStr(id))

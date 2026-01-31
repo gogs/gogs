@@ -1,14 +1,10 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
@@ -86,7 +82,7 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 			assignee, err := database.Handle.Users().GetByUsername(c.Req.Context(), form.Assignee)
 			if err != nil {
 				if database.IsErrUserNotExist(err) {
-					c.ErrorStatus(http.StatusUnprocessableEntity, fmt.Errorf("assignee does not exist: [name: %s]", form.Assignee))
+					c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee does not exist: [name: %s]", form.Assignee))
 				} else {
 					c.Error(err, "get user by name")
 				}
@@ -148,7 +144,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 			assignee, err := database.Handle.Users().GetByUsername(c.Req.Context(), *form.Assignee)
 			if err != nil {
 				if database.IsErrUserNotExist(err) {
-					c.ErrorStatus(http.StatusUnprocessableEntity, fmt.Errorf("assignee does not exist: [name: %s]", *form.Assignee))
+					c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee does not exist: [name: %s]", *form.Assignee))
 				} else {
 					c.Error(err, "get user by name")
 				}

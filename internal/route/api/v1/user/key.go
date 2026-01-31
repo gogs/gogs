@@ -1,14 +1,10 @@
-// Copyright 2015 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package user
 
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	api "github.com/gogs/go-gogs-client"
-	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"

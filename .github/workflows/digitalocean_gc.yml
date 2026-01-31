@@ -1,0 +1,36 @@
+name: DigitalOcean
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  garbage-collection:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@5727c67aa3c2c34ae9462d5a0ecfea8a1b31e5ce # v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Run garbage collection
+        run: |
+          # --force: Required for CI to skip confirmation prompts
+          # --include-untagged-manifests: Deletes unreferenced manifests to maximize space
+          doctl registry garbage-collection start --force --include-untagged-manifests
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        if: ${{ failure() }}
+        with:
+          server_address: smtp.mailgun.org
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: GitHub Actions (${{ github.repository }}) job result
+          to: github-actions-8ce6454@unknwon.io
+          from: GitHub Actions (${{ github.repository }})
+          reply_to: noreply@unknwon.io
+          body: |
+            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
+
+            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -13,10 +9,10 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 

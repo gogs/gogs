@@ -1,17 +1,12 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/pkg/errors"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -57,7 +52,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	isNewRef := strings.HasPrefix(opts.OldCommitID, git.EmptyID)
 	isDelRef := strings.HasPrefix(opts.NewCommitID, git.EmptyID)
 	if isNewRef && isDelRef {
-		return fmt.Errorf("both old and new revisions are %q", git.EmptyID)
+		return errors.Newf("both old and new revisions are %q", git.EmptyID)
 	}
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
@@ -65,26 +60,26 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	gitUpdate := exec.Command("git", "update-server-info")
 	gitUpdate.Dir = repoPath
 	if err = gitUpdate.Run(); err != nil {
-		return fmt.Errorf("run 'git update-server-info': %v", err)
+		return errors.Newf("run 'git update-server-info': %v", err)
 	}
 
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
-		return fmt.Errorf("open repository: %v", err)
+		return errors.Newf("open repository: %v", err)
 	}
 
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {
-		return fmt.Errorf("GetUserByName: %v", err)
+		return errors.Newf("GetUserByName: %v", err)
 	}
 
 	repo, err := GetRepositoryByName(owner.ID, opts.RepoName)
 	if err != nil {
-		return fmt.Errorf("GetRepositoryByName: %v", err)
+		return errors.Newf("GetRepositoryByName: %v", err)
 	}
 
 	if err = repo.UpdateSize(); err != nil {
-		return fmt.Errorf("UpdateSize: %v", err)
+		return errors.Newf("UpdateSize: %v", err)
 	}
 
 	// Push tags
@@ -110,19 +105,19 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		// Push new branch
 		newCommit, err := gitRepo.CatFileCommit(opts.NewCommitID)
 		if err != nil {
-			return fmt.Errorf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
+			return errors.Newf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}
 
 		if isNewRef {
 			commits, err = newCommit.Ancestors(git.LogOptions{MaxCount: 9})
 			if err != nil {
-				return fmt.Errorf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
+				return errors.Newf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}
 			commits = append([]*git.Commit{newCommit}, commits...)
 		} else {
 			commits, err = newCommit.CommitsAfter(opts.OldCommitID)
 			if err != nil {
-				return fmt.Errorf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
+				return errors.Newf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
 			}
 		}
 	}

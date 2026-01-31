@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package context
 
 import (
@@ -10,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
-	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"

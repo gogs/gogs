@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -13,9 +9,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/binding"
 	api "github.com/gogs/go-gogs-client"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -134,7 +130,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 
 	// Validate username make sure it satisfies requirement.
 	if binding.AlphaDashDotPattern.MatchString(extAccount.Name) {
-		return nil, fmt.Errorf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
+		return nil, errors.Newf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
 	return s.Create(ctx, extAccount.Name, extAccount.Email,
@@ -224,7 +220,7 @@ func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUserna
 
 		// Rename user directory if exists
 		userPath := repoutil.UserPath(user.Name)
-		if osutil.IsExist(userPath) {
+		if osutil.Exist(userPath) {
 			newUserPath := repoutil.UserPath(newUsername)
 			err = os.Rename(userPath, newUserPath)
 			if err != nil {

@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
@@ -112,7 +108,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.Success(tmplRepoPullsFork)
+		c.HTML(http.StatusBadRequest, tmplRepoPullsFork)
 		return
 	}
 
@@ -133,7 +129,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 
 	// Cannot fork to same owner
 	if ctxUser.ID == baseRepo.OwnerID {
-		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), tmplRepoPullsFork, &f)
+		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), http.StatusUnprocessableEntity, tmplRepoPullsFork, &f)
 		return
 	}
 
@@ -142,11 +138,11 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case database.IsErrReachLimitOfRepo(err):
-			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), tmplRepoPullsFork, &f)
+			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), http.StatusForbidden, tmplRepoPullsFork, &f)
 		case database.IsErrRepoAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), tmplRepoPullsFork, &f)
+			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), http.StatusUnprocessableEntity, tmplRepoPullsFork, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplRepoPullsFork, &f)
+			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplRepoPullsFork, &f)
 		default:
 			c.Error(err, "fork repository")
 		}
@@ -437,23 +433,23 @@ func MergePullRequest(c *context.Context) {
 func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository, *git.Repository, *gitutil.PullRequestMeta, string, string) {
 	baseRepo := c.Repo.Repository
 
-	// Get compared branches information
-	// format: <base branch>...[<head repo>:]<head branch>
+	// Get compared refs information
+	// format: <base ref>...[<head repo>:]<head ref>
 	// base<-head: master...head:feature
 	// same repo: master...feature
 	infos := strings.Split(c.Params("*"), "...")
 	if len(infos) != 2 {
-		log.Trace("ParseCompareInfo[%d]: not enough compared branches information %s", baseRepo.ID, infos)
+		log.Trace("ParseCompareInfo[%d]: not enough compared refs information %s", baseRepo.ID, infos)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
 
-	baseBranch := infos[0]
-	c.Data["BaseBranch"] = baseBranch
+	baseRef := infos[0]
+	c.Data["BaseBranch"] = baseRef
 
 	var (
 		headUser   *database.User
-		headBranch string
+		headRef    string
 		isSameRepo bool
 		err        error
 	)
@@ -463,7 +459,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	if len(headInfos) == 1 {
 		isSameRepo = true
 		headUser = c.Repo.Owner
-		headBranch = headInfos[0]
+		headRef = headInfos[0]
 
 	} else if len(headInfos) == 2 {
 		headUser, err = database.Handle.Users().GetByUsername(c.Req.Context(), headInfos[0])
@@ -471,7 +467,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			c.NotFoundOrError(err, "get user by name")
 			return nil, nil, nil, nil, "", ""
 		}
-		headBranch = headInfos[1]
+		headRef = headInfos[1]
 		isSameRepo = headUser.ID == baseRepo.OwnerID
 
 	} else {
@@ -479,11 +475,11 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 		return nil, nil, nil, nil, "", ""
 	}
 	c.Data["HeadUser"] = headUser
-	c.Data["HeadBranch"] = headBranch
+	c.Data["HeadBranch"] = headRef
 	c.Repo.PullRequest.SameRepo = isSameRepo
 
-	// Check if base branch is valid.
-	if !c.Repo.GitRepo.HasBranch(baseBranch) {
+	// Check if base ref is valid.
+	if _, err := c.Repo.GitRepo.RevParse(baseRef); err != nil {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -532,8 +528,8 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 		return nil, nil, nil, nil, "", ""
 	}
 
-	// Check if head branch is valid.
-	if !headGitRepo.HasBranch(headBranch) {
+	// Check if head ref is valid.
+	if _, err := headGitRepo.RevParse(headRef); err != nil {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -546,7 +542,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	c.Data["HeadBranches"] = headBranches
 
 	baseRepoPath := database.RepoPath(baseRepo.Owner.Name, baseRepo.Name)
-	meta, err := gitutil.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headBranch, baseBranch)
+	meta, err := gitutil.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headRef, baseRef)
 	if err != nil {
 		if gitutil.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
@@ -558,7 +554,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	}
 	c.Data["BeforeCommitID"] = meta.MergeBase
 
-	return headUser, headRepo, headGitRepo, meta, baseBranch, headBranch
+	return headUser, headRepo, headGitRepo, meta, baseRef, headRef
 }
 
 func PrepareCompareDiff(
@@ -567,7 +563,7 @@ func PrepareCompareDiff(
 	headRepo *database.Repository,
 	headGitRepo *git.Repository,
 	meta *gitutil.PullRequestMeta,
-	headBranch string,
+	headRef string,
 ) bool {
 	var (
 		repo = c.Repo.Repository
@@ -577,9 +573,9 @@ func PrepareCompareDiff(
 	// Get diff information.
 	c.Data["CommitRepoLink"] = headRepo.Link()
 
-	headCommitID, err := headGitRepo.BranchCommitID(headBranch)
+	headCommitID, err := headGitRepo.RevParse(headRef)
 	if err != nil {
-		c.Error(err, "get head branch commit ID")
+		c.Error(err, "get head commit ID")
 		return false
 	}
 	c.Data["AfterCommitID"] = headCommitID
@@ -629,12 +625,12 @@ func CompareAndPullRequest(c *context.Context) {
 	setTemplateIfExists(c, PullRequestTemplateKey, PullRequestTemplateCandidates)
 	renderAttachmentSettings(c)
 
-	headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(c)
+	headUser, headRepo, headGitRepo, prInfo, baseRef, headRef := ParseCompareInfo(c)
 	if c.Written() {
 		return
 	}
 
-	pr, err := database.GetUnmergedPullRequest(headRepo.ID, c.Repo.Repository.ID, headBranch, baseBranch)
+	pr, err := database.GetUnmergedPullRequest(headRepo.ID, c.Repo.Repository.ID, headRef, baseRef)
 	if err != nil {
 		if !database.IsErrPullRequestNotExist(err) {
 			c.Error(err, "get unmerged pull request")
@@ -647,7 +643,7 @@ func CompareAndPullRequest(c *context.Context) {
 		return
 	}
 
-	nothingToCompare := PrepareCompareDiff(c, headUser, headRepo, headGitRepo, prInfo, headBranch)
+	nothingToCompare := PrepareCompareDiff(c, headUser, headRepo, headGitRepo, prInfo, headRef)
 	if c.Written() {
 		return
 	}
@@ -670,7 +666,7 @@ func CompareAndPullRequest(c *context.Context) {
 
 	if c.Data[PullRequestTitleTemplateKey] != nil {
 		customTitle := c.Data[PullRequestTitleTemplateKey].(string)
-		r := strings.NewReplacer("{{headBranch}}", headBranch, "{{baseBranch}}", baseBranch)
+		r := strings.NewReplacer("{{headBranch}}", headRef, "{{baseBranch}}", baseRef)
 		c.Data["title"] = r.Replace(customTitle)
 	}
 
@@ -689,7 +685,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		attachments []string
 	)
 
-	headUser, headRepo, headGitRepo, meta, baseBranch, headBranch := ParseCompareInfo(c)
+	headUser, headRepo, headGitRepo, meta, baseRef, headRef := ParseCompareInfo(c)
 	if c.Written() {
 		return
 	}
@@ -708,16 +704,16 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 
 		// This stage is already stop creating new pull request, so it does not matter if it has
 		// something to compare or not.
-		PrepareCompareDiff(c, headUser, headRepo, headGitRepo, meta, headBranch)
+		PrepareCompareDiff(c, headUser, headRepo, headGitRepo, meta, headRef)
 		if c.Written() {
 			return
 		}
 
-		c.Success(tmplRepoPullsCompare)
+		c.HTML(http.StatusBadRequest, tmplRepoPullsCompare)
 		return
 	}
 
-	patch, err := headGitRepo.DiffBinary(meta.MergeBase, headBranch)
+	patch, err := headGitRepo.DiffBinary(meta.MergeBase, headRef)
 	if err != nil {
 		c.Error(err, "get patch")
 		return
@@ -738,8 +734,8 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		HeadRepoID:   headRepo.ID,
 		BaseRepoID:   repo.ID,
 		HeadUserName: headUser.Name,
-		HeadBranch:   headBranch,
-		BaseBranch:   baseBranch,
+		HeadBranch:   headRef,
+		BaseBranch:   baseRef,
 		HeadRepo:     headRepo,
 		BaseRepo:     repo,
 		MergeBase:    meta.MergeBase,

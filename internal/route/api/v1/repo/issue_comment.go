@@ -1,6 +1,3 @@
-// Copyright 2015 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
 package repo
 
 import (
@@ -91,6 +88,17 @@ func EditIssueComment(c *context.APIContext, form api.EditIssueCommentOption) {
 		return
 	}
 
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
+		return
+	}
+
 	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
 		c.Status(http.StatusForbidden)
 		return
@@ -112,6 +120,17 @@ func DeleteIssueComment(c *context.APIContext) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
+		return
+	}
+
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
 		return
 	}
 

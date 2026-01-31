@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -14,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
+	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	log "unknwon.dev/clog/v2"
@@ -49,6 +46,9 @@ var (
 )
 
 func init() {
+	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.
+	sql.Register("sqlite3", &sqlite.Driver{})
+
 	legacyTables = append(legacyTables,
 		new(User), new(PublicKey), new(TwoFactor), new(TwoFactorRecoveryCode),
 		new(Repository), new(DeployKey), new(Collaboration), new(Upload),
@@ -101,13 +101,13 @@ func getEngine() (*xorm.Engine, error) {
 
 	case "sqlite3":
 		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {
-			return nil, fmt.Errorf("create directories: %v", err)
+			return nil, errors.Newf("create directories: %v", err)
 		}
 		conf.UseSQLite3 = true
 		connStr = "file:" + conf.Database.Path + "?cache=shared&mode=rwc"
 
 	default:
-		return nil, fmt.Errorf("unknown database type: %s", conf.Database.Type)
+		return nil, errors.Newf("unknown database type: %s", conf.Database.Type)
 	}
 	return xorm.NewEngine(driver, connStr)
 }
@@ -115,7 +115,7 @@ func getEngine() (*xorm.Engine, error) {
 func NewTestEngine() error {
 	x, err := getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return errors.Newf("connect to database: %v", err)
 	}
 
 	if conf.UsePostgreSQL {
@@ -130,7 +130,7 @@ func SetEngine() (*gorm.DB, error) {
 	var err error
 	x, err = getEngine()
 	if err != nil {
-		return nil, fmt.Errorf("connect to database: %v", err)
+		return nil, errors.Newf("connect to database: %v", err)
 	}
 
 	if conf.UsePostgreSQL {
@@ -155,7 +155,7 @@ func SetEngine() (*gorm.DB, error) {
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create 'xorm.log': %v", err)
+		return nil, errors.Newf("create 'xorm.log': %v", err)
 	}
 
 	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
@@ -188,7 +188,7 @@ func NewEngine() error {
 	}
 
 	if err = migrations.Migrate(db); err != nil {
-		return fmt.Errorf("migrate: %v", err)
+		return errors.Newf("migrate: %v", err)
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {

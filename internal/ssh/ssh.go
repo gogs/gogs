@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package ssh
 
 import (
@@ -14,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
 	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
@@ -186,7 +182,7 @@ func setupHostKeys(appDataPath string, algorithms []string) ([]ssh.Signer, error
 	var hostKeys []ssh.Signer
 	for _, algo := range algorithms {
 		keyPath := filepath.Join(dir, "gogs."+algo)
-		if !osutil.IsExist(keyPath) {
+		if !osutil.Exist(keyPath) {
 			args := []string{
 				conf.SSH.KeygenPath,
 				"-t", algo,

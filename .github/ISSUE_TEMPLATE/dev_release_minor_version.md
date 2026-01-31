@@ -1,6 +1,7 @@
 ---
 name: "Dev: Release a minor version"
 about: ONLY USED BY MAINTAINERS.
+assignees: "unknwon"
 title: "Release [VERSION]"
 labels: 📸 release
 ---
@@ -13,7 +14,7 @@ On the `main` branch:
 
 - [ ] Close stale issues with the label [status: needs feedback](https://github.com/gogs/gogs/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs+feedback%22).
 - [ ] [Sync locales from Crowdin](https://github.com/gogs/gogs/blob/main/docs/dev/import_locale.md).
-- [ ] [Update CHANGELOG](https://github.com/gogs/gogs/commit/540134d4436d8da82247dd2cabe9312ca2f5b1f1) to include entries for the current minor release.
+- [ ] [Update CHANGELOG](https://github.com/gogs/gogs/commit/f1102a7a7c545ec221d2906f02fa19170d96f96d) to include entries for the current minor release.
 - [ ] Cut a new release branch `release/<MAJOR>.<MINOR>`, e.g. `release/0.12`.
 
 ## During release

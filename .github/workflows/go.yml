@@ -30,13 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
       - name: Install Task
-        uses: arduino/setup-task@v2
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check Go module tidiness and generated files
@@ -52,7 +52,7 @@ jobs:
             exit 1
           fi
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@9fae48acfc02a90574d7c304a1758ef9895495fa # v7.0.1
         with:
           version: latest
           args: --timeout=30m
@@ -61,25 +61,25 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [ 1.24.x ]
+        go-version: [ 1.25.x ]
         platform: [ ubuntu-latest, macos-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           file: ./coverage
           flags: unittests
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
         if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
           server_address: smtp.mailgun.org
@@ -101,25 +101,25 @@ jobs:
     name: Test Windows
     strategy:
       matrix:
-        go-version: [ 1.24.x ]
+        go-version: [ 1.25.x ]
         platform: [ windows-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
         run: go test -shuffle=on -v -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           file: ./coverage
           flags: unittests
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
         if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
           server_address: smtp.mailgun.org
@@ -139,7 +139,7 @@ jobs:
     name: Postgres
     strategy:
       matrix:
-        go-version: [ 1.24.x ]
+        go-version: [ 1.25.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     services:
@@ -156,9 +156,9 @@ jobs:
           - 5432:5432
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
@@ -175,16 +175,16 @@ jobs:
     name: MySQL
     strategy:
       matrix:
-        go-version: [ 1.24.x ]
+        go-version: [ 1.25.x ]
         platform: [ ubuntu-22.04 ] # Use the lowest version possible for backwards compatibility
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Start MySQL server
         run: sudo systemctl start mysql
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
@@ -195,22 +195,3 @@ jobs:
           MYSQL_PASSWORD: root
           MYSQL_HOST: localhost
           MYSQL_PORT: 3306
-
-  sqlite-go:
-    name: SQLite - Go
-    strategy:
-      matrix:
-        go-version: [ 1.24.x ]
-        platform: [ ubuntu-latest ]
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/database/...
-        env:
-          GOGS_DATABASE_TYPE: sqlite

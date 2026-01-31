@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
@@ -11,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
@@ -18,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
@@ -37,8 +33,8 @@ const (
 )
 
 var (
-	ErrFileTypeForbidden = errors.New("File type is not allowed")
-	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
+	ErrFileTypeForbidden = errors.New("file type is not allowed")
+	ErrTooManyFiles      = errors.New("maximum number of files to upload exceeded")
 
 	IssueTemplateCandidates = []string{
 		"ISSUE_TEMPLATE.md",
@@ -413,7 +409,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	if c.HasError() {
-		c.Success(tmplRepoIssueNew)
+		c.HTML(http.StatusBadRequest, tmplRepoIssueNew)
 		return
 	}
 
@@ -930,6 +926,17 @@ func UpdateCommentContent(c *context.Context) {
 		return
 	}
 
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
+		return
+	}
+
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
@@ -960,6 +967,17 @@ func DeleteComment(c *context.Context) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
+		return
+	}
+
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
 		return
 	}
 
@@ -1130,7 +1148,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
-		c.Success(tmplRepoIssueMilestoneNew)
+		c.HTML(http.StatusBadRequest, tmplRepoIssueMilestoneNew)
 		return
 	}
 
@@ -1140,7 +1158,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), tmplRepoIssueMilestoneNew, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), http.StatusBadRequest, tmplRepoIssueMilestoneNew, &f)
 		return
 	}
 
@@ -1186,7 +1204,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
-		c.Success(tmplRepoIssueMilestoneNew)
+		c.HTML(http.StatusBadRequest, tmplRepoIssueMilestoneNew)
 		return
 	}
 
@@ -1196,7 +1214,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), tmplRepoIssueMilestoneNew, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), http.StatusBadRequest, tmplRepoIssueMilestoneNew, &f)
 		return
 	}
 

@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package cmd
 
 import (
@@ -480,7 +476,7 @@ func runWeb(c *cli.Context) error {
 			m.Get("/milestones", repo.Milestones)
 		}, ignSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
-			// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
 			// So they can apply their own enable/disable logic on routers.
 			m.Group("/issues", func() {
 				m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
@@ -505,7 +501,7 @@ func runWeb(c *cli.Context) error {
 		}, ignSignIn, context.RepoAssignment(false, true))
 
 		m.Group("/:username/:reponame", func() {
-			// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
 			// So they can apply their own enable/disable logic on routers.
 			m.Group("/issues", func() {
 				m.Group("/:index", func() {
@@ -751,7 +747,7 @@ func runWeb(c *cli.Context) error {
 		err = fcgi.Serve(nil, m)
 
 	case "unix":
-		if osutil.IsExist(listenAddr) {
+		if osutil.Exist(listenAddr) {
 			err = os.Remove(listenAddr)
 			if err != nil {
 				log.Fatal("Failed to remove existing Unix domain socket: %v", err)

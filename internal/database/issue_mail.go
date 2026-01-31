@@ -1,14 +1,10 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
@@ -108,11 +104,11 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 	watchers, err := GetWatchers(issue.RepoID)
 	if err != nil {
-		return fmt.Errorf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
+		return errors.Newf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
 	}
 	participants, err := GetParticipantsByIssueID(issue.ID)
 	if err != nil {
-		return fmt.Errorf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
+		return errors.Newf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
 
 	// In case the issue poster is not watching the repository,
@@ -130,7 +126,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 		to, err := Handle.Users().GetByID(ctx, watchers[i].UserID)
 		if err != nil {
-			return fmt.Errorf("GetUserByID [%d]: %v", watchers[i].UserID, err)
+			return errors.Newf("GetUserByID [%d]: %v", watchers[i].UserID, err)
 		}
 		if to.IsOrganization() || !to.IsActive {
 			continue
@@ -181,7 +177,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 func (issue *Issue) MailParticipants() (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
 	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", issue.ID, err)
+		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
 	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {

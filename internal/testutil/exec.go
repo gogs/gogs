@@ -1,15 +1,11 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package testutil
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // Exec executes "go test" on given helper with supplied environment variables.
@@ -38,7 +34,7 @@ func Exec(helper string, envs ...string) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("%v - %s", err, str)
+		return "", errors.Newf("%v - %s", err, str)
 	}
 	return "", errors.New(str)
 }

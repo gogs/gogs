@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package user
 
 import (
@@ -12,8 +8,9 @@ import (
 	"html/template"
 	"image/png"
 	"io"
+	"net/http"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"gopkg.in/macaron.v1"
@@ -76,7 +73,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	c.Data["origin_name"] = c.User.Name
 
 	if c.HasError() {
-		c.Success(tmplUserSettingsProfile)
+		c.HTML(http.StatusBadRequest, tmplUserSettingsProfile)
 		return
 	}
 
@@ -87,18 +84,14 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 			err := database.Handle.Users().ChangeUsername(c.Req.Context(), c.User.ID, f.Name)
 			if err != nil {
 				c.FormErr("Name")
-				var msg string
 				switch {
 				case database.IsErrUserAlreadyExist(errors.Cause(err)):
-					msg = c.Tr("form.username_been_taken")
+					c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplUserSettingsProfile, &f)
 				case database.IsErrNameNotAllowed(errors.Cause(err)):
-					msg = c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+					c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplUserSettingsProfile, &f)
 				default:
 					c.Error(err, "change user name")
-					return
 				}
-
-				c.RenderWithErr(msg, tmplUserSettingsProfile, &f)
 				return
 			}
 
@@ -150,13 +143,13 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.Us
 	if f.Avatar != nil && f.Avatar.Filename != "" {
 		r, err := f.Avatar.Open()
 		if err != nil {
-			return fmt.Errorf("open avatar reader: %v", err)
+			return errors.Newf("open avatar reader: %v", err)
 		}
 		defer func() { _ = r.Close() }()
 
 		data, err := io.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("read avatar content: %v", err)
+			return errors.Newf("read avatar content: %v", err)
 		}
 		if !tool.IsImageFile(data) {
 			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
@@ -207,7 +200,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	c.PageIs("SettingsPassword")
 
 	if c.HasError() {
-		c.Success(tmplUserSettingsPassword)
+		c.HTML(http.StatusBadRequest, tmplUserSettingsPassword)
 		return
 	}
 
@@ -271,14 +264,14 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	c.Data["Emails"] = emails
 
 	if c.HasError() {
-		c.Success(tmplUserSettingsEmail)
+		c.HTML(http.StatusBadRequest, tmplUserSettingsEmail)
 		return
 	}
 
 	err = database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, f.Email, !conf.Auth.RequireEmailConfirmation)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
-			c.RenderWithErr(c.Tr("form.email_been_used"), tmplUserSettingsEmail, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), http.StatusUnprocessableEntity, tmplUserSettingsEmail, &f)
 		} else {
 			c.Errorf(err, "add email address")
 		}
@@ -348,7 +341,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Data["Keys"] = keys
 
 	if c.HasError() {
-		c.Success(tmplUserSettingsSSHKeys)
+		c.HTML(http.StatusBadRequest, tmplUserSettingsSSHKeys)
 		return
 	}
 
@@ -368,10 +361,10 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
 			c.FormErr("Content")
-			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), tmplUserSettingsSSHKeys, &f)
+			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), http.StatusUnprocessableEntity, tmplUserSettingsSSHKeys, &f)
 		case database.IsErrKeyNameAlreadyUsed(err):
 			c.FormErr("Title")
-			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), tmplUserSettingsSSHKeys, &f)
+			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), http.StatusUnprocessableEntity, tmplUserSettingsSSHKeys, &f)
 		default:
 			c.Errorf(err, "add public key")
 		}
@@ -623,7 +616,7 @@ func (h *SettingsHandler) ApplicationsPost() macaron.Handler {
 			}
 
 			c.Data["Tokens"] = tokens
-			c.Success(tmplUserSettingsApplications)
+			c.HTML(http.StatusBadRequest, tmplUserSettingsApplications)
 			return
 		}
 
@@ -665,7 +658,7 @@ func SettingsDelete(c *context.Context) {
 	if c.Req.Method == "POST" {
 		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), tmplUserSettingsDelete, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), http.StatusUnauthorized, tmplUserSettingsDelete, nil)
 			} else {
 				c.Errorf(err, "authenticate user")
 			}

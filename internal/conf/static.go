@@ -1,15 +1,15 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package conf
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"time"
 
 	"github.com/gogs/go-libravatar"
+	"gopkg.in/ini.v1"
+
+	"gogs.io/gogs/conf"
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
@@ -253,6 +253,7 @@ type AuthOpts struct {
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
 	ReverseProxyAuthenticationHeader   string
+	CustomLogoutURL                    string `ini:"CUSTOM_LOGOUT_URL"`
 }
 
 // Authentication settings
@@ -431,6 +432,83 @@ func handleDeprecated() {
 	// 	App.BrandName = App.AppName
 	// 	App.AppName = ""
 	// }
+}
+
+// checkInvalidOptions checks invalid (renamed/deleted) configuration sections
+// and options and returns a list of warnings.
+//
+// LEGACY [0.15]: Delete this function.
+func checkInvalidOptions(config *ini.File) (warnings []string) {
+	renamedSections := map[string]string{
+		"mailer":  "email",
+		"service": "auth",
+	}
+	for oldSection, newSection := range renamedSections {
+		if config.Section(oldSection).KeyStrings() != nil {
+			warnings = append(warnings, fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection))
+		}
+	}
+
+	type optionPath struct {
+		section string
+		option  string
+	}
+	renamedOptionPaths := map[optionPath]optionPath{
+		{"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
+		{"auth", "ACTIVE_CODE_LIVE_MINUTES"}:              {"auth", "ACTIVATE_CODE_LIVES"},
+		{"auth", "RESET_PASSWD_CODE_LIVE_MINUTES"}:        {"auth", "RESET_PASSWORD_CODE_LIVES"},
+		{"auth", "ENABLE_CAPTCHA"}:                        {"auth", "ENABLE_REGISTRATION_CAPTCHA"},
+		{"auth", "ENABLE_NOTIFY_MAIL"}:                    {"user", "ENABLE_EMAIL_NOTIFICATION"},
+		{"auth", "REGISTER_EMAIL_CONFIRM"}:                {"auth", "REQUIRE_EMAIL_CONFIRMATION"},
+		{"session", "GC_INTERVAL_TIME"}:                   {"session", "GC_INTERVAL"},
+		{"session", "SESSION_LIFE_TIME"}:                  {"session", "MAX_LIFE_TIME"},
+		{"server", "ROOT_URL"}:                            {"server", "EXTERNAL_URL"},
+		{"server", "LANDING_PAGE"}:                        {"server", "LANDING_URL"},
+		{"database", "DB_TYPE"}:                           {"database", "TYPE"},
+		{"database", "PASSWD"}:                            {"database", "PASSWORD"},
+	}
+	for oldPath, newPath := range renamedOptionPaths {
+		if config.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is invalid, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
+		}
+	}
+
+	// Check options that don't exist anymore.
+	defaultConfigData, err := conf.Files.ReadFile("app.ini")
+	if err != nil {
+		// Warning is best-effort, OK to skip on error.
+		return warnings
+	}
+	defaultConfig, err := ini.LoadSources(
+		ini.LoadOptions{IgnoreInlineComment: true},
+		defaultConfigData,
+	)
+	if err != nil {
+		// Warning is best-effort, OK to skip on error.
+		return warnings
+	}
+	for _, section := range config.Sections() {
+		// Skip sections already warned about.
+		if _, ok := renamedSections[section.Name()]; ok {
+			continue
+		}
+		for _, option := range section.Keys() {
+			if _, ok := renamedOptionPaths[optionPath{section.Name(), option.Name()}]; ok {
+				continue
+			}
+			if !defaultConfig.Section(section.Name()).HasKey(option.Name()) {
+				warnings = append(warnings, fmt.Sprintf("option [%s] %s is invalid", section.Name(), option.Name()))
+			}
+		}
+	}
+
+	return warnings
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.

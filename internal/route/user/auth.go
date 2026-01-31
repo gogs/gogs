@@ -1,16 +1,12 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package user
 
 import (
 	gocontext "context"
 	"encoding/hex"
-	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/captcha"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -22,6 +18,7 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/urlutil"
 	"gogs.io/gogs/internal/userutil"
 )
 
@@ -59,7 +56,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), uname)
 	if err != nil {
 		if !database.IsErrUserNotExist(err) {
-			return false, fmt.Errorf("get user by name: %v", err)
+			return false, errors.Newf("get user by name: %v", err)
 		}
 		return false, nil
 	}
@@ -96,7 +93,7 @@ func Login(c *context.Context) {
 	}
 
 	if isSucceed {
-		if tool.IsSameSiteURLPath(redirectTo) {
+		if urlutil.IsSameSite(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
 			c.RedirectSubpath("/")
@@ -142,7 +139,7 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-	if tool.IsSameSiteURLPath(redirectTo) {
+	if urlutil.IsSameSite(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
@@ -161,7 +158,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	c.Data["LoginSources"] = loginSources
 
 	if c.HasError() {
-		c.Success(tmplUserAuthLogin)
+		c.HTML(http.StatusBadRequest, tmplUserAuthLogin)
 		return
 	}
 
@@ -170,10 +167,10 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		switch {
 		case auth.IsErrBadCredentials(err):
 			c.FormErr("UserName", "Password")
-			c.RenderWithErr(c.Tr("form.username_password_incorrect"), tmplUserAuthLogin, &f)
+			c.RenderWithErr(c.Tr("form.username_password_incorrect"), http.StatusUnauthorized, tmplUserAuthLogin, &f)
 		case database.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
-			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), tmplUserAuthLogin, &f)
+			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), http.StatusUnprocessableEntity, tmplUserAuthLogin, &f)
 
 		default:
 			c.Error(err, "authenticate user")
@@ -267,7 +264,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	if err := database.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
+	if err := database.Handle.TwoFactors().UseRecoveryCode(c.Req.Context(), userID, c.Query("recovery_code")); err != nil {
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.RedirectSubpath("/user/login/two_factor_recovery_code")
@@ -291,6 +288,10 @@ func SignOut(c *context.Context) {
 	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	if conf.Auth.CustomLogoutURL != "" {
+		c.Redirect(conf.Auth.CustomLogoutURL)
+		return
+	}
 	c.RedirectSubpath("/")
 }
 
@@ -319,19 +320,19 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	}
 
 	if c.HasError() {
-		c.Success(tmplUserAuthSignup)
+		c.HTML(http.StatusBadRequest, tmplUserAuthSignup)
 		return
 	}
 
 	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
 		c.FormErr("Captcha")
-		c.RenderWithErr(c.Tr("form.captcha_incorrect"), tmplUserAuthSignup, &f)
+		c.RenderWithErr(c.Tr("form.captcha_incorrect"), http.StatusUnauthorized, tmplUserAuthSignup, &f)
 		return
 	}
 
 	if f.Password != f.Retype {
 		c.FormErr("Password")
-		c.RenderWithErr(c.Tr("form.password_not_match"), tmplUserAuthSignup, &f)
+		c.RenderWithErr(c.Tr("form.password_not_match"), http.StatusBadRequest, tmplUserAuthSignup, &f)
 		return
 	}
 
@@ -348,13 +349,13 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("form.username_been_taken"), tmplUserAuthSignup, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplUserAuthSignup, &f)
 		case database.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
-			c.RenderWithErr(c.Tr("form.email_been_used"), tmplUserAuthSignup, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), http.StatusUnprocessableEntity, tmplUserAuthSignup, &f)
 		case database.IsErrNameNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplUserAuthSignup, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplUserAuthSignup, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -568,7 +569,7 @@ func ForgotPasswdPost(c *context.Context) {
 
 	if !u.IsLocal() {
 		c.FormErr("Email")
-		c.RenderWithErr(c.Tr("auth.non_local_account"), tmplUserAuthForgotPassword, nil)
+		c.RenderWithErr(c.Tr("auth.non_local_account"), http.StatusForbidden, tmplUserAuthForgotPassword, nil)
 		return
 	}
 
@@ -617,7 +618,7 @@ func ResetPasswdPost(c *context.Context) {
 		if len(password) < 6 {
 			c.Data["IsResetForm"] = true
 			c.Data["Err_Password"] = true
-			c.RenderWithErr(c.Tr("auth.password_too_short"), tmplUserAuthResetPassword, nil)
+			c.RenderWithErr(c.Tr("auth.password_too_short"), http.StatusBadRequest, tmplUserAuthResetPassword, nil)
 			return
 		}
 

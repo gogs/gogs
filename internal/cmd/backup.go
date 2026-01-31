@@ -1,7 +1,3 @@
-// Copyright 2017 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package cmd
 
 import (
@@ -13,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/urfave/cli"
 	"gopkg.in/ini.v1"
@@ -63,7 +59,7 @@ func runBackup(c *cli.Context) error {
 	}
 
 	tmpDir := c.String("tempdir")
-	if !osutil.IsExist(tmpDir) {
+	if !osutil.Exist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
 	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")

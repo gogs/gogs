@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
@@ -40,7 +36,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		return
 	}
 
-	entries, err := tree.Entries()
+	entries, err := tree.Entries(git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.Error(err, "list entries")
 		return
@@ -129,6 +125,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 		return
 	}
 
+	c.Data["Title"] = blob.Name() + " - " + c.Data["Title"].(string)
 	c.Data["FileSize"] = blob.Size()
 	c.Data["FileName"] = blob.Name()
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())

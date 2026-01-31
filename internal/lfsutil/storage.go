@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package lfsutil
 
 import (
@@ -9,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/osutil"
 )

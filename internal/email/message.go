@@ -1,12 +1,7 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package email
 
 import (
 	"crypto/tls"
-	"fmt"
 	"io"
 	"net"
 	"net/smtp"
@@ -14,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/jaytaylor/html2text"
 	"gopkg.in/gomail.v2"
 	log "unknwon.dev/clog/v2"
@@ -89,7 +85,7 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 		case "Password:":
 			return []byte(a.password), nil
 		default:
-			return nil, fmt.Errorf("unknwon fromServer: %s", string(fromServer))
+			return nil, errors.Newf("unknwon fromServer: %s", string(fromServer))
 		}
 	}
 	return nil, nil
@@ -133,7 +129,7 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 	client, err := smtp.NewClient(conn, host)
 	if err != nil {
-		return fmt.Errorf("NewClient: %v", err)
+		return errors.Newf("NewClient: %v", err)
 	}
 
 	if !opts.DisableHELO {
@@ -146,7 +142,7 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 		}
 
 		if err = client.Hello(hostname); err != nil {
-			return fmt.Errorf("hello: %v", err)
+			return errors.Newf("hello: %v", err)
 		}
 	}
 
@@ -154,7 +150,7 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 	hasStartTLS, _ := client.Extension("STARTTLS")
 	if !isSecureConn && hasStartTLS {
 		if err = client.StartTLS(tlsconfig); err != nil {
-			return fmt.Errorf("StartTLS: %v", err)
+			return errors.Newf("StartTLS: %v", err)
 		}
 	}
 
@@ -173,28 +169,28 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 		if auth != nil {
 			if err = client.Auth(auth); err != nil {
-				return fmt.Errorf("auth: %v", err)
+				return errors.Newf("auth: %v", err)
 			}
 		}
 	}
 
 	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("mail: %v", err)
+		return errors.Newf("mail: %v", err)
 	}
 
 	for _, rec := range to {
 		if err = client.Rcpt(rec); err != nil {
-			return fmt.Errorf("rcpt: %v", err)
+			return errors.Newf("rcpt: %v", err)
 		}
 	}
 
 	w, err := client.Data()
 	if err != nil {
-		return fmt.Errorf("data: %v", err)
+		return errors.Newf("data: %v", err)
 	} else if _, err = msg.WriteTo(w); err != nil {
-		return fmt.Errorf("write to: %v", err)
+		return errors.Newf("write to: %v", err)
 	} else if err = w.Close(); err != nil {
-		return fmt.Errorf("close: %v", err)
+		return errors.Newf("close: %v", err)
 	}
 
 	return client.Quit()

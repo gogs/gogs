@@ -1,7 +1,3 @@
-// Copyright 2022 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -146,6 +142,11 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	now := time.Unix(1588568886, 0).UTC()
 
 	conf.SetMockSSH(t, conf.SSHOpts{})
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
 
 	t.Run("new commit", func(t *testing.T) {
 		t.Cleanup(func() {
@@ -436,6 +437,12 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -481,6 +488,12 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -522,6 +535,12 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -563,6 +582,12 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -628,6 +653,12 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -707,6 +738,11 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 	// to the mock server because this function holds a lock.
 	conf.SetMockServer(t, conf.ServerOpts{})
 	conf.SetMockSSH(t, conf.SSHOpts{})
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -800,6 +836,12 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -837,6 +879,12 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
+	conf.SetMockUI(t, conf.UIOpts{
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	})
+
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	bob, err := newUsersStore(s.db).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})

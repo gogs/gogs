@@ -1,7 +1,3 @@
-// Copyright 2015 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package v1
 
 import (
@@ -148,10 +144,20 @@ func reqRepoWriter() macaron.Handler {
 	}
 }
 
-// reqRepoWriter makes sure the context user has at least admin access to the repository.
+// reqRepoAdmin makes sure the context user has at least admin access to the repository.
 func reqRepoAdmin() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsAdmin() {
+			c.Status(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+// reqRepoOwner makes sure the context user has owner access to the repository.
+func reqRepoOwner() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.Repo.IsOwner() {
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -251,7 +257,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/repos", func() {
 			m.Post("/migrate", bind(form.MigrateRepo{}), repo.Migrate)
-			m.Delete("/:username/:reponame", repoAssignment(), repo.Delete)
+			m.Delete("/:username/:reponame", repoAssignment(), reqRepoOwner(), repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
 				m.Group("/hooks", func() {
@@ -276,7 +282,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("", repo.GetContents)
 					m.Combo("/*").
 						Get(repo.GetContents).
-						Put(bind(repo.PutContentsRequest{}), repo.PutContents)
+						Put(reqRepoWriter(), bind(repo.PutContentsRequest{}), repo.PutContents)
 				})
 				m.Get("/archive/*", repo.GetArchive)
 				m.Group("/git", func() {

@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -329,9 +325,9 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), updatedUnix)
 
-	assert.True(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
-	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
-	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+	assert.True(t, osutil.Exist(repoutil.UserPath(alice.Name)))
+	assert.True(t, osutil.Exist(repoutil.RepositoryLocalPath(repo.ID)))
+	assert.True(t, osutil.Exist(repoutil.RepositoryLocalWikiPath(repo.ID)))
 
 	const newUsername = "alice-new"
 	err = s.ChangeUsername(ctx, alice.ID, newUsername)
@@ -342,10 +338,10 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, headUserName, newUsername)
 
-	assert.True(t, osutil.IsExist(repoutil.UserPath(newUsername)))
-	assert.False(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
-	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
-	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+	assert.True(t, osutil.Exist(repoutil.UserPath(newUsername)))
+	assert.False(t, osutil.Exist(repoutil.UserPath(alice.Name)))
+	assert.False(t, osutil.Exist(repoutil.RepositoryLocalPath(repo.ID)))
+	assert.False(t, osutil.Exist(repoutil.RepositoryLocalWikiPath(repo.ID)))
 
 	alice, err = s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
@@ -469,7 +465,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	reposStore := newReposStore(s.db)
 
 	t.Run("user still has repository ownership", func(t *testing.T) {
-		alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+		alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
@@ -481,7 +477,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	})
 
 	t.Run("user still has organization membership", func(t *testing.T) {
-		bob, err := s.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+		bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
@@ -502,14 +498,14 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, wantErr, err)
 	})
 
-	cindy, err := s.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{})
+	cindy, err := s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	frank, err := s.Create(ctx, "frank", "frank@exmaple.com", CreateUserOptions{})
+	frank, err := s.Create(ctx, "frank", "frank@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo2, err := reposStore.Create(ctx, cindy.ID, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
-	testUser, err := s.Create(ctx, "testUser", "testUser@exmaple.com", CreateUserOptions{})
+	testUser, err := s.Create(ctx, "testUser", "testUser@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	// Mock watches, stars and follows
@@ -575,7 +571,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = os.MkdirAll(tempPictureAvatarUploadPath, os.ModePerm)
 	require.NoError(t, err)
 	tempCustomAvatarPath := userutil.CustomAvatarPath(testUser.ID)
-	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0600)
+	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
 
 	// Verify mock data
@@ -620,8 +616,8 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.NotZero(t, count, "table for %T", table)
 	}
 
-	assert.True(t, osutil.IsExist(tempUserPath))
-	assert.True(t, osutil.IsExist(tempCustomAvatarPath))
+	assert.True(t, osutil.Exist(tempUserPath))
+	assert.True(t, osutil.Exist(tempCustomAvatarPath))
 
 	// Pull the trigger
 	err = s.DeleteByID(ctx, testUser.ID, false)
@@ -667,8 +663,8 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, int64(0), count, "table for %T", table)
 	}
 
-	assert.False(t, osutil.IsExist(tempUserPath))
-	assert.False(t, osutil.IsExist(tempCustomAvatarPath))
+	assert.False(t, osutil.Exist(tempUserPath))
+	assert.False(t, osutil.Exist(tempCustomAvatarPath))
 
 	_, err = s.GetByID(ctx, testUser.ID)
 	wantErr := ErrUserNotExist{errutil.Args{"userID": testUser.ID}}
@@ -677,14 +673,14 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	// User with repository ownership should be skipped
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	reposStore := newReposStore(s.db)
 	_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
 	// User with organization membership should be skipped
-	bob, err := s.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+	bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
@@ -699,11 +695,11 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	// User activated state should be skipped
-	_, err = s.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
+	_, err = s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
 
 	// User meant to be deleted
-	david, err := s.Create(ctx, "david", "david@exmaple.com", CreateUserOptions{})
+	david, err := s.Create(ctx, "david", "david@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteInactivated-tempSSHRootPath")
@@ -730,7 +726,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	t.Run("ignore organization", func(t *testing.T) {
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org, err := s.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOptions{})
+		org, err := s.Create(ctx, "gogs", "gogs@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		err = s.db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserTypeOrganization).Error
@@ -742,7 +738,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 	})
 
 	t.Run("by primary email", func(t *testing.T) {
-		alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+		alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		_, err = s.GetByEmail(ctx, alice.Email)
@@ -764,7 +760,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 
 		// TODO: Use UserEmails.Create to replace SQL hack when the method is available.
-		email2 := "bob2@exmaple.com"
+		email2 := "bob2@example.com"
 		err = s.db.Exec(`INSERT INTO email_address (uid, email) VALUES (?, ?)`, bob.ID, email2).Error
 		require.NoError(t, err)
 
@@ -783,7 +779,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersGetByID(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	user, err := s.GetByID(ctx, alice.ID)
@@ -796,7 +792,7 @@ func usersGetByID(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersGetByUsername(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	user, err := s.GetByUsername(ctx, alice.Name)
@@ -809,7 +805,7 @@ func usersGetByUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersGetByKeyID(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	// TODO: Use PublicKeys.Create to replace SQL hack when the method is available.
@@ -834,11 +830,11 @@ func usersGetByKeyID(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersGetMailableEmailsByUsernames(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	bob, err := s.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{Activated: true})
+	bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
-	_, err = s.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
+	_, err = s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
 
 	got, err := s.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, "ignore-non-exist"})

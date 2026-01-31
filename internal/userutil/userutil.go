@@ -1,7 +1,3 @@
-// Copyright 2022 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package userutil
 
 import (
@@ -17,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/nfnt/resize"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/pbkdf2"
 
 	"gogs.io/gogs/internal/avatar"

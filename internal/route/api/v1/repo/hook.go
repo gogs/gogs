@@ -1,14 +1,10 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"

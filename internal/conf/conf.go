@@ -1,11 +1,6 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package conf
 
 import (
-	"fmt"
 	"net/mail"
 	"net/url"
 	"os"
@@ -14,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -59,6 +54,7 @@ func Init(customConf string) error {
 		return errors.Wrap(err, `parse "app.ini"`)
 	}
 	File.NameMapper = ini.SnackCase
+	File.ValueMapper = os.ExpandEnv
 
 	if customConf == "" {
 		customConf = filepath.Join(CustomDir(), "conf", "app.ini")
@@ -107,8 +103,8 @@ func Init(customConf string) error {
 	if err != nil {
 		return errors.Wrapf(err, "parse '[server] UNIX_SOCKET_PERMISSION' %q", Server.UnixSocketPermission)
 	}
-	if unixSocketMode > 0777 {
-		unixSocketMode = 0666
+	if unixSocketMode > 0o777 {
+		unixSocketMode = 0o666
 	}
 	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
@@ -126,9 +122,9 @@ func Init(customConf string) error {
 
 	if !SSH.Disabled {
 		if !SSH.StartBuiltinServer {
-			if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
+			if err := os.MkdirAll(SSH.RootPath, 0o700); err != nil {
 				return errors.Wrap(err, "create SSH root directory")
-			} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
+			} else if err = os.MkdirAll(SSH.KeyTestPath, 0o644); err != nil {
 				return errors.Wrap(err, "create SSH key test directory")
 			}
 		} else {
@@ -192,7 +188,7 @@ func Init(customConf string) error {
 	if Security.InstallLock {
 		currentUser, match := CheckRunUser(App.RunUser)
 		if !match {
-			return fmt.Errorf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
+			return errors.Newf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
 		}
 	}
 
@@ -350,6 +346,9 @@ func Init(customConf string) error {
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 
 	handleDeprecated()
+	for _, warning := range checkInvalidOptions(File) {
+		log.Warn("%s", warning)
+	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")

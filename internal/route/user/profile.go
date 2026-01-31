@@ -1,7 +1,3 @@
-// Copyright 2015 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package user
 
 import (
@@ -13,7 +9,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/repo"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/urlutil"
 )
 
 const (
@@ -126,7 +122,7 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	}
 
 	redirectTo := c.Query("redirect_to")
-	if !tool.IsSameSiteURLPath(redirectTo) {
+	if !urlutil.IsSameSite(redirectTo) {
 		redirectTo = puser.HomeURLPath()
 	}
 	c.Redirect(redirectTo)

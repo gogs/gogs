@@ -1,11 +1,14 @@
 module gogs.io/gogs
 
-go 1.24
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/derision-test/go-mockgen v1.3.7
+	github.com/cockroachdb/errors v1.12.0
+	github.com/derision-test/go-mockgen/v2 v2.1.1
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.3
+	github.com/glebarez/go-sqlite v1.21.2
+	github.com/glebarez/sqlite v1.11.0
 	github.com/go-ldap/ldap/v3 v3.4.11
 	github.com/go-macaron/binding v1.2.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
@@ -17,7 +20,7 @@ require (
 	github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
-	github.com/gogs/git-module v1.8.4
+	github.com/gogs/git-module v1.8.6
 	github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
@@ -30,7 +33,6 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/niklasfasching/go-org v1.9.1
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/russross/blackfriday v1.6.0
@@ -43,19 +45,17 @@ require (
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
 	github.com/urfave/cli v1.22.17
-	golang.org/x/crypto v0.41.0
-	golang.org/x/net v0.43.0
-	golang.org/x/text v0.28.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/net v0.47.0
+	golang.org/x/text v0.31.0
 	gopkg.in/DATA-DOG/go-sqlmock.v2 v2.0.0-20180914054222-c19298f520d0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/macaron.v1 v1.5.1
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.6.0
-	gorm.io/driver/sqlite v1.4.2
 	gorm.io/driver/sqlserver v1.4.1
 	gorm.io/gorm v1.25.12
-	modernc.org/sqlite v1.38.2
 	unknwon.dev/clog/v2 v2.2.0
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
@@ -70,6 +70,8 @@ require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
+	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denisenkom/go-mssqldb v0.12.0 // indirect
@@ -78,12 +80,14 @@ require (
 	github.com/djherbis/nio/v3 v3.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
@@ -98,6 +102,8 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -109,12 +115,14 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
@@ -122,9 +130,9 @@ require (
 	go.opentelemetry.io/otel v1.11.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/mod v0.26.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/bufio.v1 v1.0.0-20140618132640-567b2bfa514e // indirect
@@ -133,7 +141,8 @@ require (
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
+	modernc.org/sqlite v1.38.2 // indirect
 )
 
-// +heroku goVersion go1.24
+// +heroku goVersion go1.25
 // +heroku install ./

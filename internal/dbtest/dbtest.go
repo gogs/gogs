@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package dbtest
 
 import (
@@ -99,19 +95,6 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 
 			_, _ = sqlDB.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
 			_ = sqlDB.Close()
-		}
-	case "sqlite":
-		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
-		dbOpts = conf.DatabaseOpts{
-			Type: "sqlite",
-			Path: dbName,
-		}
-		cleanup = func(db *gorm.DB) {
-			sqlDB, err := db.DB()
-			if err == nil {
-				_ = sqlDB.Close()
-			}
-			_ = os.Remove(dbName)
 		}
 	default:
 		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))

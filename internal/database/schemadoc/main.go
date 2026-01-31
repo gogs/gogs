@@ -7,12 +7,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cockroachdb/errors"
+	"github.com/glebarez/sqlite"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pkg/errors"
 	"gopkg.in/DATA-DOG/go-sqlmock.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
@@ -65,11 +65,13 @@ func main() {
 		table.SetHeader([]string{"Field", "Column", "PostgreSQL", "MySQL", "SQLite3"})
 		table.SetBorder(false)
 		for j, f := range ti.Fields {
+			sqlite3Type := strings.ToUpper(collected[2][i].Fields[j].Type)
+			sqlite3Type = strings.ReplaceAll(sqlite3Type, "PRIMARY KEY ", "")
 			table.Append([]string{
 				f.Name, f.Column,
 				strings.ToUpper(f.Type),                         // PostgreSQL
 				strings.ToUpper(collected[1][i].Fields[j].Type), // MySQL
-				strings.ToUpper(collected[2][i].Fields[j].Type), // SQLite3
+				sqlite3Type,
 			})
 		}
 		table.Render()

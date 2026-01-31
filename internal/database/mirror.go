@@ -1,7 +1,3 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -11,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
@@ -19,12 +16,26 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
 
 var MirrorQueue = sync.NewUniqueQueue(1000)
+
+// MirrorNotExist represents an error when mirror does not exist.
+type MirrorNotExist struct {
+	RepoID int64
+}
+
+// IsMirrorNotExist returns true if the error is MirrorNotExist.
+func IsMirrorNotExist(err error) bool {
+	_, ok := err.(MirrorNotExist)
+	return ok
+}
+
+func (err MirrorNotExist) Error() string {
+	return fmt.Sprintf("mirror does not exist [repo_id: %d]", err.RepoID)
+}
 
 // Mirror represents mirror information of a repository.
 type Mirror struct {
@@ -131,7 +142,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 
 	err := git.RemoteRemove(repoPath, "origin")
 	if err != nil {
-		return fmt.Errorf("remove remote 'origin': %v", err)
+		return errors.Newf("remove remote 'origin': %v", err)
 	}
 
 	addrURL, err := url.Parse(addr)
@@ -141,7 +152,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 
 	err = git.RemoteAdd(repoPath, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
 	if err != nil {
-		return fmt.Errorf("add remote 'origin': %v", err)
+		return errors.Newf("add remote 'origin': %v", err)
 	}
 
 	return nil
@@ -272,7 +283,7 @@ func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.MirrorNotExist{RepoID: repoID}
+		return nil, MirrorNotExist{RepoID: repoID}
 	}
 	return m, nil
 }
@@ -332,7 +343,7 @@ func SyncMirrors() {
 
 		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
 		if err != nil {
-			log.Error("GetMirrorByRepoID [%d]: %v", m.RepoID, err)
+			log.Error("GetMirrorByRepoID [%v]: %v", repoID, err)
 			continue
 		}
 
