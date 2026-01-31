@@ -3,9 +3,16 @@ name: Release
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - main
   pull_request:
     paths:
       - '.github/workflows/release.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   GOPROXY: "https://proxy.golang.org"
@@ -45,6 +52,9 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
             echo "release_tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            echo "release_tag=latest-commit-build" >> "$GITHUB_OUTPUT"
           else
             echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
             echo "release_tag=release-archive-testing" >> "$GITHUB_OUTPUT"
@@ -102,7 +112,15 @@ jobs:
           if [ "${{ github.event_name }}" != "release" ]; then
             git tag -f "$RELEASE_TAG"
             git push origin "$RELEASE_TAG" --force || true
-            gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "Release Archive Testing" --notes "Automated testing release for workflow development." --prerelease
+            
+            RELEASE_TITLE="Release Archive Testing"
+            RELEASE_NOTES="Automated testing release for workflow development."
+            if [ "$RELEASE_TAG" = "latest-commit-build" ]; then
+              RELEASE_TITLE="Latest Commit Build"
+              RELEASE_NOTES="Automated build from the latest commit on main branch. This release is updated automatically with every push to main."
+            fi
+            
+            gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "$RELEASE_TITLE" --notes "$RELEASE_NOTES" --prerelease
           fi
 
           PATTERN="_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.suffix }}\."
