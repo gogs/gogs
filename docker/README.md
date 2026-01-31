@@ -5,6 +5,11 @@
 >
 > To use the next-generation, security-focused Docker image, see [docker-next/README.md](../docker-next/README.md).
 
+> [!IMPORTANT]
+> Image versions:
+>  - Every released version has its own tag , e.g., `gogs/gogs:0.13.4`, and a tag points to the latest patch of the minor version, e.g., `gogs/gogs:0.13`.
+>  - The `latest` tag is the image version built from the latest `main` branch.
+
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge)
 
 Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs) to see all available images and tags.
