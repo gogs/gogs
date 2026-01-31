@@ -117,7 +117,7 @@ type tableInfo struct {
 	Name        string
 	Fields      []*tableField
 	PrimaryKeys []string
-	Indexes     []schema.Index
+	Indexes     []*schema.Index
 }
 
 // This function is derived from gorm.io/gorm/migrator/migrator.go:Migrator.CreateTable.
@@ -173,10 +173,7 @@ func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
 				}
 			}
 
-			var indexes []schema.Index
-			for _, index := range stmt.Schema.ParseIndexes() {
-				indexes = append(indexes, index)
-			}
+			indexes := append([]*schema.Index{}, stmt.Schema.ParseIndexes()...)
 			sort.Slice(indexes, func(i, j int) bool {
 				return indexes[i].Name < indexes[j].Name
 			})
