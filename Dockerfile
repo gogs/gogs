@@ -32,7 +32,7 @@ COPY docker/nsswitch.conf /etc/nsswitch.conf
 
 WORKDIR /app/gogs
 COPY docker ./docker
-COPY --from=binarybuilder /gogs.io/gogs/gogs .
+COPY --from=binarybuilder /gogs.io/gogs/.bin/gogs .
 
 RUN ./docker/build/finalize.sh
 
