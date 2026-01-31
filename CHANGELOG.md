@@ -27,6 +27,7 @@ All notable changes to Gogs are documented in this file.
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
 - Unable to delete or display files with special characters in their names. [#7596](https://github.com/gogs/gogs/issues/7596)
+- Docker healthcheck fails when `HTTP_PROXY` or `HTTPS_PROXY` environment variables are set. [#7529](https://github.com/gogs/gogs/issues/7529)
 
 ## 0.13.4
 
