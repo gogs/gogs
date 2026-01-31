@@ -105,6 +105,11 @@ jobs:
             gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "Release Archive Testing" --notes "Automated testing release for workflow development." --prerelease
           fi
 
+          PATTERN="_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.suffix }}\."
+          gh release view "$RELEASE_TAG" --json assets --jq ".assets[].name" | grep "$PATTERN" | while read -r asset; do
+            gh release delete-asset "$RELEASE_TAG" "$asset" --yes || true
+          done
+
           gh release upload "$RELEASE_TAG" dist/gogs_*.zip --clobber
           if [ "${{ matrix.goos }}" = "linux" ]; then
             gh release upload "$RELEASE_TAG" dist/gogs_*.tar.gz --clobber
