@@ -22,7 +22,7 @@ On the `main` branch:
 
 On the release branch:
 
-- [ ] [Update the hard-coded version](https://github.com/gogs/gogs/commit/f17e7d5a2c36c52a1121d2315f3d75dcd8053b89) to the current release, e.g. `0.14.0+dev` -> `0.14.0`.
+- [ ] [Update the hard-coded version](https://github.com/gogs/gogs/commit/f0e3cd90f8d7695960eeef2e4e54b2e717302f6c) to the current release, e.g. `0.14.0+dev` -> `0.14.0`.
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
 - [ ] Publish new RC releases (e.g. `v0.14.0-rc.1`, `v0.14.0-rc.2`) to ensure Docker and release workflows both succeed.
 	- ⚠️ **Make sure the tag is created on the release branch**.
