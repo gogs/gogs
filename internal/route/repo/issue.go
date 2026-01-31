@@ -1056,9 +1056,9 @@ func NewLabel(c *context.Context, f form.CreateLabel) {
 }
 
 func UpdateLabel(c *context.Context, f form.CreateLabel) {
-	l, err := database.GetLabelByID(f.ID)
+	l, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, f.ID)
 	if err != nil {
-		c.NotFoundOrError(err, "get label by ID")
+		c.NotFoundOrError(err, "get label of repository by ID")
 		return
 	}
 
