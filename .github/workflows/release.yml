@@ -132,3 +132,28 @@ jobs:
           if [ "${{ matrix.goos }}" = "linux" ]; then
             gh release upload "$RELEASE_TAG" dist/gogs_*.tar.gz --clobber
           fi
+
+  notify-failure:
+    name: Notify on failure
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Send failure notification email
+        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21571c6a8d609c67ceeb # v3.12.0
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[Gogs CI] Release workflow failed on main"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: ${{ secrets.SMTP_FROM }}
+          body: |
+            The Release workflow failed on the main branch.
+
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            Message: ${{ github.event.head_commit.message }}
+
+            View the failed run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
