@@ -94,6 +94,8 @@ jobs:
             tar -czvf "${ARCHIVE_BASE}.tar.gz" gogs
           fi
       - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           RELEASE_TAG="${{ steps.version.outputs.release_tag }}"
 
