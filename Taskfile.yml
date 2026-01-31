@@ -59,18 +59,6 @@ tasks:
     cmds:
       - find . -name "*.DS_Store" -type f -delete
 
-  release:
-    desc: Build the binary and pack resources to a ZIP file
-    deps: [build]
-    cmds:
-      - rm -rf {{.RELEASE_GOGS}}
-      - mkdir -p {{.RELEASE_GOGS}}
-      - cp -r gogs{{.BINARY_EXT}} LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
-      - cd {{.RELEASE_ROOT}} && zip -r gogs.zip "gogs"
-    vars:
-      RELEASE_ROOT: release
-      RELEASE_GOGS: release/gogs
-
   less:
     desc: Generate CSS from LESS files
     cmds:

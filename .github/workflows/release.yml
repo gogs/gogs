@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+
+env:
+  GOPROXY: "https://proxy.golang.org"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.suffix }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {goos: linux, goarch: amd64}
+          - {goos: linux, goarch: arm64}
+          - {goos: linux, goarch: "386"}
+          - {goos: darwin, goarch: amd64}
+          - {goos: darwin, goarch: arm64}
+          - {goos: windows, goarch: amd64}
+          - {goos: windows, goarch: arm64}
+          - {goos: windows, goarch: "386"}
+          - {goos: windows, goarch: amd64, suffix: "_mws", tags: minwinsvc}
+          - {goos: windows, goarch: arm64, suffix: "_mws", tags: minwinsvc}
+          - {goos: windows, goarch: "386", suffix: "_mws", tags: minwinsvc}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: 1.25.x
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "release_tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            echo "release_tag=release-archive-testing" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          BINARY_NAME="gogs"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="gogs.exe"
+          fi
+
+          TAGS_FLAG=""
+          if [ -n "${{ matrix.tags }}" ]; then
+            TAGS_FLAG="-tags ${{ matrix.tags }}"
+          fi
+
+          go build -v \
+            -ldflags "
+              -X \"gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')\"
+              -X \"gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)\"
+            " \
+            $TAGS_FLAG \
+            -trimpath -o "$BINARY_NAME"
+      - name: Prepare archive contents
+        run: |
+          mkdir -p dist/gogs
+          BINARY_NAME="gogs"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="gogs.exe"
+          fi
+          cp "$BINARY_NAME" dist/gogs/
+          cp LICENSE README.md README_ZH.md dist/gogs/
+          cp -r scripts dist/gogs/
+      - name: Create archives
+        working-directory: dist
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ARCHIVE_BASE="gogs_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.suffix }}"
+
+          zip -r "${ARCHIVE_BASE}.zip" gogs
+
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            tar -czvf "${ARCHIVE_BASE}.tar.gz" gogs
+          fi
+      - name: Upload to release
+        run: |
+          RELEASE_TAG="${{ steps.version.outputs.release_tag }}"
+
+          if [ "${{ github.event_name }}" != "release" ]; then
+            git tag -f "$RELEASE_TAG"
+            git push origin "$RELEASE_TAG" --force
+            gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "Release Archive Testing" --notes "Automated testing release for workflow development." --prerelease
+          fi
+
+          gh release upload "$RELEASE_TAG" dist/gogs_*.zip --clobber
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            gh release upload "$RELEASE_TAG" dist/gogs_*.tar.gz --clobber
+          fi
