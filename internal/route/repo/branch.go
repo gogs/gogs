@@ -121,7 +121,7 @@ func DeleteBranchPost(c *context.Context) {
 
 	// Prevent deletion of the default branch.
 	if branchName == c.Repo.Repository.DefaultBranch {
-		c.Flash.Error(c.Tr("repo.branch.default_branch_deletion_not_allowed"))
+		c.Flash.Error(c.Tr("repo.branches.default_deletion_not_allowed"))
 		return
 	}
 
@@ -132,7 +132,7 @@ func DeleteBranchPost(c *context.Context) {
 		return
 	}
 	if protectBranch != nil && protectBranch.Protected {
-		c.Flash.Error(c.Tr("repo.branch.protected_branch_deletion_not_allowed"))
+		c.Flash.Error(c.Tr("repo.branches.protected_deletion_not_allowed"))
 		return
 	}
 
