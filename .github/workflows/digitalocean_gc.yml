@@ -15,13 +15,11 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Run garbage collection
         run: |
-          # Intentional failure to test email notification
-          exit 1
           # --force: Required for CI to skip confirmation prompts
           # --include-untagged-manifests: Deletes unreferenced manifests to maximize space
           doctl registry garbage-collection start --force --include-untagged-manifests
       - name: Send email on failure
-        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
           smtp_username: ${{ secrets.SMTP_USERNAME }}
