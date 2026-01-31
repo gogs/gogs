@@ -25,6 +25,7 @@ On the release branch:
 - [ ] Publish new RC releases in [GitHub release](https://github.com/gogs/gogs/releases) (e.g. `v0.12.0-rc.1`, `v0.12.0-rc.2`) to ensure Docker workflow succeeds.
 	- ⚠️ **Make sure the tag is created on the release branch**.
 	- Pull down the Docker image and [run through application setup](https://github.com/gogs/gogs/blob/main/docker/README.md) to make sure nothing blows up.
+	- [ ] Download one of the release archives and run through application setup to make sure nothing blows up.
 - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version.
 	- ⚠️ **Make sure the tag is created on the release branch**.
 - [ ] Update all previous GitHub releases with same minor version with the warning:
@@ -34,16 +35,8 @@ On the release branch:
 - [ ] [Wait for a new image tag for the current release](https://github.com/gogs/gogs/actions/workflows/docker.yml?query=event%3Arelease) to be created automatically on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 	- Pull down the Docker image and [run through application setup](https://github.com/gogs/gogs/blob/main/docker/README.md) to make sure nothing blows up.
 - [ ] [Update Docker image tag](https://www.notion.so/jcunknwon/Cheatsheet-and-playbooks-c3b053da42114411bd27285cd065b2a6?source=copy_link#1654f105c63f80958d96cd72e2f5df69) for the minor release `<MAJOR>.<MINOR>` on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
-- [ ] [Compile and pack binaries](https://www.notion.so/jcunknwon/Cheatsheet-and-playbooks-c3b053da42114411bd27285cd065b2a6?source=copy_link#1654f105c63f803f8bfcc117395d9747) (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
-	- [ ] macOS: `darwin_arm64.zip`, `darwin_amd64.zip`
-	- [ ] Linux: `linux_amd64.tar.gz`, `linux_amd64.zip`
-	- [ ] ARM: `linux_armv8.tar.gz`, `linux_armv8.zip`
-	- [ ] Windows: `windows_amd64.zip`, `windows_amd64_mws.zip`
-- [ ] [Generate SHA256 checksum](https://www.notion.so/jcunknwon/Cheatsheet-and-playbooks-c3b053da42114411bd27285cd065b2a6?source=copy_link#1654f105c63f80d4a74ad8821a403f52) for all binaries to the file `checksum_sha256.txt`.
-- [ ] Upload all binaries and `checksum_sha256.txt` to:
-	- [ ] GitHub release
-	- [ ] https://dl.gogs.io
-- [ ] Update content of [Install from binary](https://gogs.io/docs/installation/install_from_binary).
+- [ ] Download all release archives and [generate SHA256 checksum](https://github.com/gogs/gogs/blob/main/docs/dev/release/sha256.sh) for all binaries to the file `checksum_sha256.txt`.
+- [ ] Upload all archives and `checksum_sha256.txt` to https://dl.gogs.io.
 
 ## After release
 
@@ -55,5 +48,5 @@ On the `main` branch:
     ```
 - [ ] Create a new release announcement in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
 - [ ] Send a tweet on the [official Twitter account](https://twitter.com/GogsHQ) for the patch release.
-- [ ] Close the patch milestone.
+- [ ] Close the milestone for the patch release.
 - [ ] **After 14 days**, publish [GitHub security advisories](https://github.com/gogs/gogs/security) for security patches included in the release.

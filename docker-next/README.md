@@ -1,7 +1,7 @@
 # Docker for Gogs (Next Generation)
 
 > [!NOTE]
-> This is the next-generation, security-focused Docker image. This will become the default image distribution (`gogs/gogs:latest`) starting 0.15.0.
+> This is the next-generation, security-focused Docker image. This will become the default image distribution (`gogs/gogs:latest`) starting 0.16.0.
 
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge)
 

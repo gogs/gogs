@@ -1,7 +1,7 @@
 # Docker for Gogs
 
 > [!WARNING]
-> This is now the legacy Docker image that lacks modern security best practices. It will be published as `gogs/gogs:legacy-latest` starting 0.15.0, and be completely removed starting 0.16.0.
+> This is now the legacy Docker image that lacks modern security best practices. It will be published as `gogs/gogs:legacy-latest` starting 0.16.0, and be completely removed no earlier than 0.17.0.
 >
 > To use the next-generation, security-focused Docker image, see [docker-next/README.md](../docker-next/README.md).
 
