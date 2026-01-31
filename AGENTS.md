@@ -28,4 +28,5 @@ This applies to all texts, including but not limited to UI, documentation, code 
 ## Source code control
 
 - When pushing changes to a pull request from a fork, use SSH address and do not add remote.
-- Never automatically executes commands that touches Git history even if the session does not require approvals, including but not limited to `rebase`, `commit`, `push`, `pull`. One-time execution is only allowed when being explicitly asked to do so.
+- Never automatically executes commands that touches Git history even if the session does not require approvals, including but not limited to `rebase`, `commit`, `push`, `pull`, `reset`, `amend`. One-time execution is only allowed when being explicitly asked to do so.
+- Do not amend commits unless being explicitly asked to do so.
