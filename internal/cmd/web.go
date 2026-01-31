@@ -329,9 +329,12 @@ func runWeb(c *cli.Context) error {
 					return
 				}
 			})
+		}, ignSignIn)
+
+		m.Group("", func() {
 			m.Post("/issues/attachments", repo.UploadIssueAttachment)
 			m.Post("/releases/attachments", repo.UploadReleaseAttachment)
-		}, ignSignIn)
+		}, reqSignIn)
 
 		m.Group("/:username", func() {
 			m.Post("/action/:action", user.Action)
