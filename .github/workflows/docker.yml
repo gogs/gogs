@@ -255,8 +255,25 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Compute image tag name
-        run: echo "IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)" >> $GITHUB_ENV
+      - name: Compute image tags
+        run: |
+          IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+          TAGS="gogs/gogs:$IMAGE_TAG
+          ghcr.io/gogs/gogs:$IMAGE_TAG"
+
+          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          if [[ ! "$IMAGE_TAG" =~ - ]]; then
+            MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
+            TAGS="$TAGS
+          gogs/gogs:$MINOR_TAG
+          ghcr.io/gogs/gogs:$MINOR_TAG"
+          fi
+
+          echo "TAGS<<EOF" >> $GITHUB_ENV
+          echo "$TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
@@ -290,9 +307,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: |
-            gogs/gogs:${{ env.IMAGE_TAG }}
-            ghcr.io/gogs/gogs:${{ env.IMAGE_TAG }}
+          tags: ${{ env.TAGS }}
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
@@ -309,8 +324,25 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Compute image tag name
-        run: echo "IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)" >> $GITHUB_ENV
+      - name: Compute image tags
+        run: |
+          IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+          TAGS="gogs/gogs:next-$IMAGE_TAG
+          ghcr.io/gogs/gogs:next-$IMAGE_TAG"
+
+          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          if [[ ! "$IMAGE_TAG" =~ - ]]; then
+            MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
+            TAGS="$TAGS
+          gogs/gogs:next-$MINOR_TAG
+          ghcr.io/gogs/gogs:next-$MINOR_TAG"
+          fi
+
+          echo "TAGS<<EOF" >> $GITHUB_ENV
+          echo "$TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
@@ -345,9 +377,7 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: |
-            gogs/gogs:next-${{ env.IMAGE_TAG }}
-            ghcr.io/gogs/gogs:next-${{ env.IMAGE_TAG }}
+          tags: ${{ env.TAGS }}
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
