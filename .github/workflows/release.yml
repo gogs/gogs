@@ -10,6 +10,10 @@ on:
     paths:
       - '.github/workflows/release.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GOPROXY: "https://proxy.golang.org"
 
@@ -20,9 +24,6 @@ jobs:
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.suffix }}
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
