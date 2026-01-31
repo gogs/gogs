@@ -16,6 +16,16 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Use `github.com/cockroachdb/errors` for error handling.
 - Use `github.com/stretchr/testify` for assertions in tests. Be mindful about the choice of `require` and `assert`, the former should be used when the test cannot proceed meaningfully after a failed assertion.
 
+## Build instructions
+
+- Prefer `task` command over vanilla `go` command when available. Use `--force` flag when necessary.
+- Run `task lint` after every time you finish changing code, and fix all linter errors.
+
 ## Tool-use guidance
 
 - Use `gh` CLI to access information on github.com that is not publicly available.
+
+## Source code control
+
+- When pushing changes to a pull request from a fork, use SSH address and do not add remote.
+- Never automatically executes commands that touches Git history even if the session does not require approvals, including but not limited to `rebase`, `commit`, `push`, `pull`. One-time execution is only allowed when being explicitly asked to do so.
