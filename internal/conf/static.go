@@ -436,8 +436,6 @@ func handleDeprecated() {
 
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections
 // and options and returns a list of warnings.
-//
-// LEGACY [0.15]: Delete this function.
 func checkInvalidOptions(config *ini.File) (warnings []string) {
 	renamedSections := map[string]string{
 		"mailer":  "email",
@@ -454,18 +452,8 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		option  string
 	}
 	renamedOptionPaths := map[optionPath]optionPath{
-		{"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
-		{"auth", "ACTIVE_CODE_LIVE_MINUTES"}:              {"auth", "ACTIVATE_CODE_LIVES"},
-		{"auth", "RESET_PASSWD_CODE_LIVE_MINUTES"}:        {"auth", "RESET_PASSWORD_CODE_LIVES"},
-		{"auth", "ENABLE_CAPTCHA"}:                        {"auth", "ENABLE_REGISTRATION_CAPTCHA"},
-		{"auth", "ENABLE_NOTIFY_MAIL"}:                    {"user", "ENABLE_EMAIL_NOTIFICATION"},
-		{"auth", "REGISTER_EMAIL_CONFIRM"}:                {"auth", "REQUIRE_EMAIL_CONFIRMATION"},
-		{"session", "GC_INTERVAL_TIME"}:                   {"session", "GC_INTERVAL"},
-		{"session", "SESSION_LIFE_TIME"}:                  {"session", "MAX_LIFE_TIME"},
-		{"server", "ROOT_URL"}:                            {"server", "EXTERNAL_URL"},
-		{"server", "LANDING_PAGE"}:                        {"server", "LANDING_URL"},
-		{"database", "DB_TYPE"}:                           {"database", "TYPE"},
-		{"database", "PASSWD"}:                            {"database", "PASSWORD"},
+		// Example:
+		// {"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
 	}
 	for oldPath, newPath := range renamedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {

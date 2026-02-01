@@ -1,5 +1,3 @@
-//go:build go1.18
-
 // Gogs is a painless self-hosted Git Service.
 package main
 
