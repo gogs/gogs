@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"gogs.io/gogs/internal/osutil"
 )
 
-var Backup = cli.Command{
+var backupCommand = cli.Command{
 	Name:  "backup",
 	Usage: "Backup files and database",
 	Description: `Backup dumps and compresses all related files and database into zip file,

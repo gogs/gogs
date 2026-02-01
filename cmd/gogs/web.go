@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"crypto/tls"
@@ -45,7 +45,7 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-var Web = cli.Command{
+var webCommand = cli.Command{
 	Name:  "web",
 	Usage: "Start web server",
 	Description: `Gogs web server is the only thing you need to run,
