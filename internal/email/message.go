@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/jaytaylor/html2text"
+	"github.com/inbucket/html2text"
 	"gopkg.in/gomail.v2"
 	log "unknwon.dev/clog/v2"
 
