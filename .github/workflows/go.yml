@@ -76,11 +76,6 @@ jobs:
           go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
           go install github.com/mfridman/tparse@latest
           tparse -all -file=test-report.json
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
-        with:
-          file: ./coverage
-          flags: unittests
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -106,11 +101,6 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
         run: go test -shuffle=on -v -coverprofile=coverage -covermode=atomic ./...
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
-        with:
-          file: ./coverage
-          flags: unittests
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
