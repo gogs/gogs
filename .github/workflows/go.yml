@@ -72,7 +72,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./...
+        run: |
+          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
@@ -142,7 +145,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...
+        run: |
+          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json
         env:
           GOGS_DATABASE_TYPE: postgres
           PGPORT: 5432
@@ -168,7 +174,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/database/...
+        run: |
+          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json
         env:
           GOGS_DATABASE_TYPE: mysql
           MYSQL_USER: root
