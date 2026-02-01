@@ -4,11 +4,7 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
-### Fixed
-
-- Git clone via the built-in SSH server hangs. [#8132](https://github.com/gogs/gogs/issues/8132)
-
-## 0.14.0
+## 0.14.1
 
 ### Added
 
