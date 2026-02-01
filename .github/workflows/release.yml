@@ -81,7 +81,7 @@ jobs:
               -X \"gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)\"
             " \
             $TAGS_FLAG \
-            -trimpath -o "$BINARY_NAME"
+            -trimpath -o "$BINARY_NAME" ./cmd/gogs
       - name: Prepare archive contents
         run: |
           mkdir -p dist/gogs

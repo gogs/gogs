@@ -7,7 +7,6 @@ import (
 	"github.com/urfave/cli"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/cmd"
 	"gogs.io/gogs/internal/conf"
 )
 
@@ -21,14 +20,14 @@ func main() {
 	app.Usage = "A painless self-hosted Git service"
 	app.Version = conf.App.Version
 	app.Commands = []cli.Command{
-		cmd.Web,
-		cmd.Serv,
-		cmd.Hook,
-		cmd.Cert,
-		cmd.Admin,
-		cmd.Import,
-		cmd.Backup,
-		cmd.Restore,
+		webCommand,
+		servCommand,
+		hookCommand,
+		certCommand,
+		adminCommand,
+		importCommand,
+		backupCommand,
+		restoreCommand,
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal("Failed to start application: %v", err)

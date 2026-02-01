@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	Admin = cli.Command{
+	adminCommand = cli.Command{
 		Name:  "admin",
 		Usage: "Perform admin operations on command line",
 		Description: `Allow using internal logic of Gogs without hacking into the source code

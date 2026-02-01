@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -21,7 +21,7 @@ const (
 	accessDeniedMessage = "Repository does not exist or you do not have access"
 )
 
-var Serv = cli.Command{
+var servCommand = cli.Command{
 	Name:        "serv",
 	Usage:       "This command should only be called by SSH shell",
 	Description: `Serv provide access auth for repositories`,

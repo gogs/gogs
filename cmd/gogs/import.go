@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"bufio"
@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	Import = cli.Command{
+	importCommand = cli.Command{
 		Name:  "import",
 		Usage: "Import portable data as local Gogs data",
 		Description: `Allow user import data from other Gogs installations to local instance

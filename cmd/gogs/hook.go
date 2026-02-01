@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"bufio"
@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	Hook = cli.Command{
+	hookCommand = cli.Command{
 		Name:        "hook",
 		Usage:       "Delegate commands to corresponding Git hooks",
 		Description: "All sub-commands should only be called by Git",
