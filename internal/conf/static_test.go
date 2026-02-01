@@ -54,20 +54,20 @@ func TestCheckInvalidOptions(t *testing.T) {
 	_, _ = cfg.Section("server").NewKey("NONEXISTENT_OPTION", "true")
 
 	wantWarnings := []string{
-		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid",
-		"option [auth] ENABLE_CAPTCHA is invalid",
-		"option [auth] ENABLE_NOTIFY_MAIL is invalid",
-		"option [auth] REGISTER_EMAIL_CONFIRM is invalid",
-		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid",
-		"option [database] DB_TYPE is invalid",
-		"option [database] PASSWD is invalid",
-		"option [security] REVERSE_PROXY_AUTHENTICATION_USER is invalid",
-		"option [session] GC_INTERVAL_TIME is invalid",
-		"option [session] SESSION_LIFE_TIME is invalid",
+		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid, use [auth] ACTIVATE_CODE_LIVES instead",
+		"option [auth] ENABLE_CAPTCHA is invalid, use [auth] ENABLE_REGISTRATION_CAPTCHA instead",
+		"option [auth] ENABLE_NOTIFY_MAIL is invalid, use [user] ENABLE_EMAIL_NOTIFICATION instead",
+		"option [auth] REGISTER_EMAIL_CONFIRM is invalid, use [auth] REQUIRE_EMAIL_CONFIRMATION instead",
+		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid, use [auth] RESET_PASSWORD_CODE_LIVES instead",
+		"option [database] DB_TYPE is invalid, use [database] TYPE instead",
+		"option [database] PASSWD is invalid, use [database] PASSWORD instead",
+		"option [security] REVERSE_PROXY_AUTHENTICATION_USER is invalid, use [auth] REVERSE_PROXY_AUTHENTICATION_HEADER instead",
+		"option [session] GC_INTERVAL_TIME is invalid, use [session] GC_INTERVAL instead",
+		"option [session] SESSION_LIFE_TIME is invalid, use [session] MAX_LIFE_TIME instead",
 		"section [mailer] is invalid, use [email] instead",
 		"section [service] is invalid, use [auth] instead",
-		"option [server] ROOT_URL is invalid",
-		"option [server] LANDING_PAGE is invalid",
+		"option [server] ROOT_URL is invalid, use [server] EXTERNAL_URL instead",
+		"option [server] LANDING_PAGE is invalid, use [server] LANDING_URL instead",
 		"option [server] NONEXISTENT_OPTION is invalid",
 	}
 
