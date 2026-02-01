@@ -150,4 +150,4 @@ require (
 )
 
 // +heroku goVersion go1.25
-// +heroku install
+// +heroku install ./cmd/gogs
