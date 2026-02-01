@@ -444,7 +444,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		"service": "auth",
 	}
 	for oldSection, newSection := range renamedSections {
-		if config.Section(oldSection).KeyStrings() != nil {
+		if len(config.Section(oldSection).KeyStrings()) > 0 {
 			warnings = append(warnings, fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection))
 		}
 	}
