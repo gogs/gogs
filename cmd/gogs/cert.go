@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package cmd
+package main
 
 import (
 	"crypto/ecdsa"
@@ -22,7 +22,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var Cert = cli.Command{
+var certCommand = cli.Command{
 	Name:  "cert",
 	Usage: "Generate self-signed certificate",
 	Description: `Generate a self-signed X.509 certificate for a TLS server.

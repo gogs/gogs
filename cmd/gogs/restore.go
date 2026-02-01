@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/semverutil"
 )
 
-var Restore = cli.Command{
+var restoreCommand = cli.Command{
 	Name:  "restore",
 	Usage: "Restore files and database from backup",
 	Description: `Restore imports all related files and database from a backup archive.

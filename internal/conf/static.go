@@ -231,7 +231,7 @@ var (
 )
 
 type AppOpts struct {
-	// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
+	// ⚠️ WARNING: Should only be set by the main package (i.e. "cmd/gogs/main.go").
 	Version string `ini:"-"`
 
 	BrandName string
@@ -502,7 +502,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 // HookMode indicates whether program starts as Git server-side hook callback.
 // All operations should be done synchronously to prevent program exits before finishing.
 //
-// ⚠️ WARNING: Should only be set by "internal/cmd/serv.go".
+// ⚠️ WARNING: Should only be set by "cmd/gogs/serv.go".
 var HookMode bool
 
 // Indicates which database backend is currently being used.
