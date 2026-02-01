@@ -1,0 +1,123 @@
+{{template "base/head" .}}
+{{$root := .}}
+<div class="repository insights contributors">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/insights/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{DateFmtShort .RangeStart}} - {{DateFmtShort .RangeEnd}}
+					<div class="ui" style="float: right;">
+						<div class="ui dropdown jump item">
+							<span class="text">{{.i18n.Tr "repo.insights.contributions"}}</span>
+							<i class="dropdown icon"></i>
+							<div class="menu">
+								<a class="item" href="{{.RepoLink}}/graphs/contributors?from={{.RangeStartStr}}&to={{.RangeEndStr}}&type=c">{{.i18n.Tr "repo.insights.contributions_commits"}}</a>
+								<a class="item" href="{{.RepoLink}}/graphs/contributors?from={{.RangeStartStr}}&to={{.RangeEndStr}}&type=a">{{.i18n.Tr "repo.insights.contributions_additions"}}</a>
+								<a class="item" href="{{.RepoLink}}/graphs/contributors?from={{.RangeStartStr}}&to={{.RangeEndStr}}&type=d">{{.i18n.Tr "repo.insights.contributions_deletions"}}</a>
+							</div>
+						</div>
+					</div>
+				</h4>
+
+				<div class="ui attached segment">
+					<p>{{.i18n.Tr "repo.insights.contributors_desc" .DefaultBranch}}</p>
+					<canvas id="contributors-chart"></canvas>
+					<script>
+						var functionsToRunOnLoad = [];
+						function runFunctionsToRunOnLoad() {
+							for (var i = 0; i < functionsToRunOnLoad.length; i++) {
+								functionsToRunOnLoad[i]();
+							}
+						}
+						window.onload = runFunctionsToRunOnLoad;
+
+						functionsToRunOnLoad.push(function() {
+							var ctx = document.getElementById('contributors-chart').getContext('2d');
+							var chart = new Chart(ctx, {
+								type: 'line',
+								data: {
+									labels: {{.ContributorsMainChartData.Labels}},
+									datasets: [
+										{
+											label: {{.ContributorsMainChartData.Dataset.Label}},
+											data: {{.ContributorsMainChartData.Dataset.Data}},
+											fill: true,
+											pointStyle: false,
+											backgroundColor: [
+												'rgba(99, 255, 132, 0.2)'
+											],
+											borderColor: [
+												'rgba(99, 255, 132, 1)'
+											],
+											borderWidth: 1
+										}
+									]
+								},
+								options: {
+									scales: {
+										y: {
+											beginAtZero: true
+										}
+									}
+								}
+							});
+						});
+					</script>
+				</div>
+
+				{{range $index, $author := .Authors}}
+				<h4 class="ui top attached header">
+				{{if .User}}
+					<img class="ui avatar image" src="{{.User.AvatarURLPath}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubURL}}/{{.User.Name}}">{{.Author.Name}}</a>
+				{{else}}
+					<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
+				{{end}}
+				</h4>
+				<div class="ui attached segment">
+					<h5>{{$root.i18n.Tr "repo.insights.contributor.num_of_commits" .NumOfCommits}}
+					{{$root.i18n.Tr "repo.insights.contributor.num_of_additions" .NumOfAdditions}}
+					{{$root.i18n.Tr "repo.insights.contributor.num_of_deletions" .NumOfDeletions}}</h5>
+					<canvas id="user-contribution-chart-{{$index}}"></canvas>
+					<script>
+						functionsToRunOnLoad.push(function() {
+							var ctx = document.getElementById('user-contribution-chart-{{$index}}').getContext('2d');
+							var chart = new Chart(ctx, {
+								type: 'line',
+								data: {
+									labels: {{.ChartData.Labels}},
+									datasets: [
+										{
+											label: {{.ChartData.Dataset.Label}},
+											data: {{.ChartData.Dataset.Data}},
+											fill: true,
+											pointStyle: false,
+											backgroundColor: [
+												'rgba(255, 159, 64, 0.2)'
+											],
+											borderColor: [
+												'rgba(255, 159, 64, 1)'
+											],
+											borderWidth: 1
+										}
+									]
+								},
+								options: {
+									scales: {
+										y: {
+											beginAtZero: true
+										}
+									}
+								}
+							});
+						});
+					</script>
+				</div>
+				{{end}}
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -1,0 +1,15 @@
+<div class="four wide column">
+	<div class="ui vertical menu">
+		<div class="header item">{{.i18n.Tr "repo.insights"}}</div>
+		<a class="{{if .PageIsInsightsContributors}}active{{end}} item" href="{{.RepoLink}}/graphs/contributors">
+			{{.i18n.Tr "repo.insights.contributors"}}
+		</a>
+		<a class="{{if .PageIsInsightsCommits}}active{{end}} item" href="{{.RepoLink}}/graphs/commits">
+			{{.i18n.Tr "repo.insights.commits"}}
+		</a>
+		<a class="{{if .PageIsSettingsHooks}}active{{end}} item" href="{{.RepoLink}}/graphs/code_frequency">
+			{{.i18n.Tr "repo.insights.code_frequency"}}
+		</a>
+	</div>
+</div>
+
