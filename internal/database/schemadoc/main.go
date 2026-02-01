@@ -74,14 +74,14 @@ func main() {
 		for j, f := range ti.Fields {
 			sqlite3Type := strings.ToUpper(collected[2][i].Fields[j].Type)
 			sqlite3Type = strings.ReplaceAll(sqlite3Type, "PRIMARY KEY ", "")
-			table.Append([]string{
+			_ = table.Append([]string{
 				f.Name, f.Column,
 				strings.ToUpper(f.Type),                         // PostgreSQL
 				strings.ToUpper(collected[1][i].Fields[j].Type), // MySQL
 				sqlite3Type,
 			})
 		}
-		table.Render()
+		_ = table.Render()
 		_, _ = w.WriteString("\n")
 
 		_, _ = w.WriteString("Primary keys: ")
