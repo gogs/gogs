@@ -10,6 +10,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/sqlite"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 	"gopkg.in/DATA-DOG/go-sqlmock.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -61,20 +63,25 @@ func main() {
 
 		_, _ = w.WriteString("```\n")
 
-		table := tablewriter.NewWriter(w)
-		table.SetHeader([]string{"Field", "Column", "PostgreSQL", "MySQL", "SQLite3"})
-		table.SetBorder(false)
+		table := tablewriter.NewTable(w,
+			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.BorderNone,
+				Symbols: tw.NewSymbols(tw.StyleASCII),
+			})),
+			tablewriter.WithHeaderAutoFormat(tw.Off),
+		)
+		table.Header("Field", "Column", "PostgreSQL", "MySQL", "SQLite3")
 		for j, f := range ti.Fields {
 			sqlite3Type := strings.ToUpper(collected[2][i].Fields[j].Type)
 			sqlite3Type = strings.ReplaceAll(sqlite3Type, "PRIMARY KEY ", "")
-			table.Append([]string{
+			_ = table.Append([]string{
 				f.Name, f.Column,
 				strings.ToUpper(f.Type),                         // PostgreSQL
 				strings.ToUpper(collected[1][i].Fields[j].Type), // MySQL
 				sqlite3Type,
 			})
 		}
-		table.Render()
+		_ = table.Render()
 		_, _ = w.WriteString("\n")
 
 		_, _ = w.WriteString("Primary keys: ")
