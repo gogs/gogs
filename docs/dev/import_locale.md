@@ -6,7 +6,7 @@
 1. Run the `import` subcommand:
 
     ```
-    $ ./gogs import locale --source <path to the unzipped directory> --target ./conf/locale
+    $ ./.bin/gogs import locale --source <path to the unzipped directory> --target ./conf/locale
     Locale files has been successfully imported!
     ```
 
