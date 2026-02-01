@@ -70,7 +70,7 @@ func Init(customConf string) error {
 		if err = File.Append(customConf); err != nil {
 			return errors.Wrapf(err, "append %q", customConf)
 		}
-	} else {
+	} else if !HookMode {
 		log.Warn("Custom config %q not found. Ignore this warning if you're running for the first time", customConf)
 	}
 
@@ -142,9 +142,11 @@ func Init(customConf string) error {
 			}
 
 			if IsWindowsRuntime() || semverutil.Compare(sshVersion, "<", "5.1") {
-				log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+				if !HookMode {
+					log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
 	2. OpenSSH version is lower than 5.1`)
+				}
 			} else {
 				SSH.MinimumKeySizes = map[string]int{}
 				for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
@@ -346,8 +348,10 @@ func Init(customConf string) error {
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 
 	handleDeprecated()
-	for _, warning := range checkInvalidOptions(File) {
-		log.Warn("%s", warning)
+	if !HookMode {
+		for _, warning := range checkInvalidOptions(File) {
+			log.Warn("%s", warning)
+		}
 	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {

@@ -87,6 +87,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					_ = req.Reply(true, nil)
 					go func() {
 						_, _ = io.Copy(input, ch)
+						input.Close()
 					}()
 					_, _ = io.Copy(ch, stdout)
 					_, _ = io.Copy(ch.Stderr(), stderr)
@@ -187,7 +188,6 @@ func setupHostKeys(appDataPath string, algorithms []string) ([]ssh.Signer, error
 				conf.SSH.KeygenPath,
 				"-t", algo,
 				"-f", keyPath,
-				"-m", "PEM",
 				"-N", run.Arg(""),
 			}
 			err = run.Cmd(context.Background(), args...).Run().Wait()
