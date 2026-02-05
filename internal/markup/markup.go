@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -265,7 +266,7 @@ outerLoop:
 					buf.WriteString(token.String())
 
 					// Stack number doesn't increase for tags without end tags.
-					if token.Type == html.StartTagToken && !com.IsSliceContainsStr(noEndTags, token.Data) {
+					if token.Type == html.StartTagToken && !slices.Contains(noEndTags, token.Data) {
 						stackNum++
 					}
 
@@ -280,7 +281,7 @@ outerLoop:
 				continue outerLoop
 			}
 
-			if !com.IsSliceContainsStr(noEndTags, tagName) {
+			if !slices.Contains(noEndTags, tagName) {
 				startTags = append(startTags, tagName)
 			}
 

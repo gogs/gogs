@@ -3,9 +3,9 @@ package database
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -138,7 +138,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	for i := range participants {
 		if participants[i].ID == doer.ID {
 			continue
-		} else if com.IsSliceContainsStr(names, participants[i].Name) {
+		} else if slices.Contains(names, participants[i].Name) {
 			continue
 		}
 
@@ -146,7 +146,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		names = append(names, participants[i].Name)
 	}
 	if issue.Assignee != nil && issue.Assignee.ID != doer.ID {
-		if !com.IsSliceContainsStr(names, issue.Assignee.Name) {
+		if !slices.Contains(names, issue.Assignee.Name) {
 			tos = append(tos, issue.Assignee.Email)
 			names = append(names, issue.Assignee.Name)
 		}
@@ -157,7 +157,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	names = append(names, doer.Name)
 	toUsernames := make([]string, 0, len(mentions)) // list of user names.
 	for i := range mentions {
-		if com.IsSliceContainsStr(names, mentions[i]) {
+		if slices.Contains(names, mentions[i]) {
 			continue
 		}
 

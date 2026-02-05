@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -85,7 +86,7 @@ func LoadRepoConfig() {
 			}
 
 			for _, f := range customFiles {
-				if !com.IsSliceContainsStr(files, f) {
+				if !slices.Contains(files, f) {
 					files = append(files, f)
 				}
 			}
@@ -105,12 +106,12 @@ func LoadRepoConfig() {
 	// Filter out invalid names and promote preferred licenses.
 	sortedLicenses := make([]string, 0, len(Licenses))
 	for _, name := range conf.Repository.PreferredLicenses {
-		if com.IsSliceContainsStr(Licenses, name) {
+		if slices.Contains(Licenses, name) {
 			sortedLicenses = append(sortedLicenses, name)
 		}
 	}
 	for _, name := range Licenses {
-		if !com.IsSliceContainsStr(conf.Repository.PreferredLicenses, name) {
+		if !slices.Contains(conf.Repository.PreferredLicenses, name) {
 			sortedLicenses = append(sortedLicenses, name)
 		}
 	}

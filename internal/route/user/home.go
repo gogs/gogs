@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"slices"
 
-	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 
 	"gogs.io/gogs/internal/conf"
@@ -210,7 +210,7 @@ func Issues(c *context.Context) {
 			string(database.FilterModeAssign),
 			string(database.FilterModeCreate),
 		}
-		if !com.IsSliceContainsStr(types, viewType) {
+		if !slices.Contains(types, viewType) {
 			viewType = string(database.FilterModeYourRepos)
 		}
 		filterMode = database.FilterMode(viewType)
