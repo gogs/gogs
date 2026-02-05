@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -221,7 +222,8 @@ func issues(c *context.Context, isPullList bool) {
 	}
 
 	c.Data["IssueStats"] = issueStats
-	c.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
+	selectLabelsInt, _ := strconv.ParseInt(selectLabels, 10, 64)
+	c.Data["SelectLabels"] = selectLabelsInt
 	c.Data["ViewType"] = viewType
 	c.Data["SortType"] = sortType
 	c.Data["MilestoneID"] = milestoneID

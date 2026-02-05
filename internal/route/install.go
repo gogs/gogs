@@ -6,11 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -330,8 +330,8 @@ func InstallPost(c *context.Context, f form.Install) {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("true")
 	} else {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("false")
-		cfg.Section("server").Key("SSH_PORT").SetValue(com.ToStr(f.SSHPort))
-		cfg.Section("server").Key("START_SSH_SERVER").SetValue(com.ToStr(f.UseBuiltinSSHServer))
+		cfg.Section("server").Key("SSH_PORT").SetValue(strconv.Itoa(f.SSHPort))
+		cfg.Section("server").Key("START_SSH_SERVER").SetValue(strconv.FormatBool(f.UseBuiltinSSHServer))
 	}
 
 	if len(strings.TrimSpace(f.SMTPHost)) > 0 {
@@ -343,14 +343,14 @@ func InstallPost(c *context.Context, f form.Install) {
 	} else {
 		cfg.Section("email").Key("ENABLED").SetValue("false")
 	}
-	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(f.OfflineMode))
-	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(com.ToStr(f.RegisterConfirm))
-	cfg.Section("auth").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(f.DisableRegistration))
-	cfg.Section("auth").Key("ENABLE_REGISTRATION_CAPTCHA").SetValue(com.ToStr(f.EnableCaptcha))
-	cfg.Section("auth").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(f.RequireSignInView))
-	cfg.Section("user").Key("ENABLE_EMAIL_NOTIFICATION").SetValue(com.ToStr(f.MailNotify))
-	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(f.DisableGravatar))
-	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(f.EnableFederatedAvatar))
+	cfg.Section("server").Key("OFFLINE_MODE").SetValue(strconv.FormatBool(f.OfflineMode))
+	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(strconv.FormatBool(f.RegisterConfirm))
+	cfg.Section("auth").Key("DISABLE_REGISTRATION").SetValue(strconv.FormatBool(f.DisableRegistration))
+	cfg.Section("auth").Key("ENABLE_REGISTRATION_CAPTCHA").SetValue(strconv.FormatBool(f.EnableCaptcha))
+	cfg.Section("auth").Key("REQUIRE_SIGNIN_VIEW").SetValue(strconv.FormatBool(f.RequireSignInView))
+	cfg.Section("user").Key("ENABLE_EMAIL_NOTIFICATION").SetValue(strconv.FormatBool(f.MailNotify))
+	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(strconv.FormatBool(f.DisableGravatar))
+	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(strconv.FormatBool(f.EnableFederatedAvatar))
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 

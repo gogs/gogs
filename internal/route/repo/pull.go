@@ -3,10 +3,10 @@ package repo
 import (
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
@@ -427,7 +427,7 @@ func MergePullRequest(c *context.Context) {
 	}
 
 	log.Trace("Pull request merged: %d", pr.ID)
-	c.Redirect(c.Repo.RepoLink + "/pulls/" + com.ToStr(pr.Index))
+	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pr.Index, 10))
 }
 
 func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository, *git.Repository, *gitutil.PullRequestMeta, string, string) {
@@ -752,5 +752,5 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 	}
 
 	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)
-	c.Redirect(c.Repo.RepoLink + "/pulls/" + com.ToStr(pullIssue.Index))
+	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pullIssue.Index, 10))
 }

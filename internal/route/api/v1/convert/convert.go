@@ -3,8 +3,7 @@ package convert
 import (
 	"context"
 	"fmt"
-
-	"github.com/unknwon/com"
+	"strconv"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -72,7 +71,7 @@ func ToPublicKey(apiLink string, key *database.PublicKey) *api.PublicKey {
 	return &api.PublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
-		URL:     apiLink + com.ToStr(key.ID),
+		URL:     apiLink + strconv.FormatInt(key.ID, 10),
 		Title:   key.Name,
 		Created: key.Created,
 	}
@@ -107,7 +106,7 @@ func ToDeployKey(apiLink string, key *database.DeployKey) *api.DeployKey {
 	return &api.DeployKey{
 		ID:       key.ID,
 		Key:      key.Content,
-		URL:      apiLink + com.ToStr(key.ID),
+		URL:      apiLink + strconv.FormatInt(key.ID, 10),
 		Title:    key.Name,
 		Created:  key.Created,
 		ReadOnly: true, // All deploy keys are read-only.
