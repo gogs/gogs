@@ -7,7 +7,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp/totp"
-	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
@@ -29,7 +28,7 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 	if err != nil {
 		return false, errors.Newf("DecodeString: %v", err)
 	}
-	decryptSecret, err := com.AESGCMDecrypt(cryptoutil.MD5Bytes(conf.Security.SecretKey), secret)
+	decryptSecret, err := cryptoutil.AESGCMDecrypt(cryptoutil.MD5Bytes(conf.Security.SecretKey), secret)
 	if err != nil {
 		return false, errors.Newf("AESGCMDecrypt: %v", err)
 	}
