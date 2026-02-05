@@ -80,12 +80,13 @@ func LoadRepoConfig() {
 
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
 		if osutil.IsDir(customPath) {
-			customFiles, err := com.StatDir(customPath)
+			entries, err := os.ReadDir(customPath)
 			if err != nil {
 				log.Fatal("Failed to get custom %s files: %v", t, err)
 			}
 
-			for _, f := range customFiles {
+			for _, entry := range entries {
+				f := entry.Name()
 				if !slices.Contains(files, f) {
 					files = append(files, f)
 				}
@@ -844,9 +845,11 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 
 	// Check if repository is empty.
-	_, stderr, err := com.ExecCmdDir(repoPath, "git", "log", "-1")
+	cmd := exec.Command("git", "log", "-1")
+	cmd.Dir = repoPath
+	stderr, err := cmd.CombinedOutput()
 	if err != nil {
-		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
+		if strings.Contains(string(stderr), "fatal: bad default revision 'HEAD'") {
 			repo.IsBare = true
 		} else {
 			return repo, errors.Newf("check bare: %v - %s", err, stderr)

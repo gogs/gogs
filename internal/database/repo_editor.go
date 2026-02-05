@@ -14,7 +14,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	gouuid "github.com/satori/go.uuid"
-	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 
@@ -607,7 +606,20 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
 
-		if err = com.Copy(tmpPath, targetPath); err != nil {
+		// Copy file
+		src, err := os.Open(tmpPath)
+		if err != nil {
+			return errors.Newf("open source: %v", err)
+		}
+		defer src.Close()
+
+		dst, err := os.Create(targetPath)
+		if err != nil {
+			return errors.Newf("create target: %v", err)
+		}
+		defer dst.Close()
+
+		if _, err = io.Copy(dst, src); err != nil {
 			return errors.Newf("copy: %v", err)
 		}
 	}
