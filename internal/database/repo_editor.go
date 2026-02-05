@@ -617,10 +617,18 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		if err != nil {
 			return errors.Newf("create target: %v", err)
 		}
-		defer dst.Close()
+		defer func() {
+			if cerr := dst.Close(); cerr != nil && err == nil {
+				err = errors.Newf("close target: %v", cerr)
+			}
+		}()
 
 		if _, err = io.Copy(dst, src); err != nil {
 			return errors.Newf("copy: %v", err)
+		}
+
+		if err = dst.Sync(); err != nil {
+			return errors.Newf("sync target: %v", err)
 		}
 	}
 

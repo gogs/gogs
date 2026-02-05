@@ -348,6 +348,7 @@ func Subtract(left, right any) any {
 }
 
 // StringsToInt64s converts a slice of string to a slice of int64.
+// Invalid strings are converted to 0 (parse errors are silently ignored).
 func StringsToInt64s(strs []string) []int64 {
 	ints := make([]int64, len(strs))
 	for i := range strs {
