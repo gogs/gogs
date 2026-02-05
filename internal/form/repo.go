@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"github.com/go-macaron/binding"
-	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/netutil"
+	"gogs.io/gogs/internal/osutil"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -82,7 +82,7 @@ func (f MigrateRepo) ParseRemoteAddr(user *database.User) (string, error) {
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
 		return "", database.ErrInvalidCloneAddr{IsPermissionDenied: true}
-	} else if !com.IsDir(remoteAddr) {
+	} else if !osutil.IsDir(remoteAddr) {
 		return "", database.ErrInvalidCloneAddr{IsInvalidPath: true}
 	}
 

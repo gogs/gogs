@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "unknwon.dev/clog/v2"
 
@@ -21,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/httplib"
+	"gogs.io/gogs/internal/osutil"
 )
 
 var (
@@ -131,7 +131,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "pre-receive")
-	if !com.IsFile(customHooksPath) {
+	if !osutil.IsFile(customHooksPath) {
 		return nil
 	}
 
@@ -165,7 +165,7 @@ func runHookUpdate(c *cli.Context) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "update")
-	if !com.IsFile(customHooksPath) {
+	if !osutil.IsFile(customHooksPath) {
 		return nil
 	}
 
@@ -249,7 +249,7 @@ func runHookPostReceive(c *cli.Context) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "post-receive")
-	if !com.IsFile(customHooksPath) {
+	if !osutil.IsFile(customHooksPath) {
 		return nil
 	}
 

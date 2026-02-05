@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/sync"
@@ -61,7 +61,7 @@ func (r *Repository) WikiPath() string {
 
 // HasWiki returns true if repository has wiki.
 func (r *Repository) HasWiki() bool {
-	return com.IsDir(r.WikiPath())
+	return osutil.IsDir(r.WikiPath())
 }
 
 // InitWiki initializes a wiki for repository,
@@ -114,7 +114,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 
 	// If not a new file, show perform update not create.
 	if isNew {
-		if com.IsExist(filename) {
+		if osutil.Exist(filename) {
 			return ErrWikiAlreadyExist{filename}
 		}
 	} else {

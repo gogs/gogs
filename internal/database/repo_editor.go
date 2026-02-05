@@ -85,7 +85,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 // discardLocalRepoBranchChanges discards local commits/changes of
 // given branch to make sure it is even to remote branch.
 func discardLocalRepoBranchChanges(localPath, branch string) error {
-	if !com.IsExist(localPath) {
+	if !osutil.Exist(localPath) {
 		return nil
 	}
 

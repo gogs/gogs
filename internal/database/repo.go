@@ -77,7 +77,7 @@ func LoadRepoConfig() {
 		}
 
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
-		if com.IsDir(customPath) {
+		if osutil.IsDir(customPath) {
 			customFiles, err := com.StatDir(customPath)
 			if err != nil {
 				log.Fatal("Failed to get custom %s files: %v", t, err)
@@ -317,7 +317,7 @@ func (r *Repository) CustomAvatarPath() string {
 // Since Gravatar support not needed here - just check for image path.
 func (r *Repository) RelAvatarLink() string {
 	defaultImgURL := ""
-	if !com.IsExist(r.CustomAvatarPath()) {
+	if !osutil.Exist(r.CustomAvatarPath()) {
 		return defaultImgURL
 	}
 	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, RepoAvatarURLPrefix, r.ID)
@@ -730,7 +730,7 @@ func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 		OwnerID:   u.ID,
 		LowerName: strings.ToLower(repoName),
 	})
-	return has && com.IsDir(RepoPath(u.Name, repoName)), err
+	return has && osutil.IsDir(RepoPath(u.Name, repoName)), err
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -1493,7 +1493,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Rename remote wiki repository to new path and delete local copy.
 	wikiPath := WikiPath(owner.Name, repo.Name)
-	if com.IsExist(wikiPath) {
+	if osutil.Exist(wikiPath) {
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
@@ -1535,7 +1535,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	}
 
 	wikiPath := repo.WikiPath()
-	if com.IsExist(wikiPath) {
+	if osutil.Exist(wikiPath) {
 		if err = os.Rename(wikiPath, WikiPath(u.Name, newRepoName)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
 		}
@@ -1593,11 +1593,11 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 
 		// Create/Remove git-daemon-export-ok for git-daemon
 		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
-		if repo.IsPrivate && com.IsExist(daemonExportFile) {
+		if repo.IsPrivate && osutil.Exist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
 				log.Error("Failed to remove %s: %v", daemonExportFile, err)
 			}
-		} else if !repo.IsPrivate && !com.IsExist(daemonExportFile) {
+		} else if !repo.IsPrivate && !osutil.Exist(daemonExportFile) {
 			if f, err := os.Create(daemonExportFile); err != nil {
 				log.Error("Failed to create %s: %v", daemonExportFile, err)
 			} else {
@@ -1929,7 +1929,7 @@ func DeleteOldRepositoryArchives() {
 			basePath := filepath.Join(repo.RepoPath(), "archives")
 			for _, format := range formats {
 				dirPath := filepath.Join(basePath, format)
-				if !com.IsDir(dirPath) {
+				if !osutil.IsDir(dirPath) {
 					continue
 				}
 
@@ -1992,7 +1992,7 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
-			if !com.IsDir(repo.RepoPath()) {
+			if !osutil.IsDir(repo.RepoPath()) {
 				repos = append(repos, repo)
 			}
 			return nil

@@ -14,13 +14,13 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -540,7 +540,7 @@ func RewriteAuthorizedKeys() error {
 		return err
 	}
 
-	if com.IsExist(fpath) {
+	if osutil.Exist(fpath) {
 		if err = os.Remove(fpath); err != nil {
 			return err
 		}

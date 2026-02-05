@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/osutil"
 )
 
 var (
@@ -44,9 +44,9 @@ func runImportLocale(c *cli.Context) error {
 	} else if !c.IsSet("target") {
 		return errors.New("target directory is not specified")
 	}
-	if !com.IsDir(c.String("source")) {
+	if !osutil.IsDir(c.String("source")) {
 		return errors.Newf("source directory %q does not exist or is not a directory", c.String("source"))
-	} else if !com.IsDir(c.String("target")) {
+	} else if !osutil.IsDir(c.String("target")) {
 		return errors.Newf("target directory %q does not exist or is not a directory", c.String("target"))
 	}
 
@@ -66,7 +66,7 @@ func runImportLocale(c *cli.Context) error {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		source := filepath.Join(c.String("source"), name)
 		target := filepath.Join(c.String("target"), name)
-		if !com.IsFile(source) {
+		if !osutil.IsFile(source) {
 			continue
 		}
 
