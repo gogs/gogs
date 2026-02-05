@@ -1,7 +1,6 @@
 # Build artifacts
 .bin/
 dist/
-gogs
 
 # Runtime data
 log/
