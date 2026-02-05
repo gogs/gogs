@@ -6,12 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"html/template"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/unknwon/com"
 	"github.com/unknwon/i18n"
 	log "unknwon.dev/clog/v2"
 
@@ -67,7 +67,7 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	// split code
 	start := code[:12]
 	lives := code[12:18]
-	if d, err := com.StrTo(lives).Int(); err == nil {
+	if d, err := strconv.Atoi(lives); err == nil {
 		minutes = d
 	}
 
@@ -111,7 +111,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 
 	// create sha1 encode string
 	sh := sha1.New()
-	_, _ = sh.Write([]byte(data + conf.Security.SecretKey + startStr + endStr + com.ToStr(minutes)))
+	_, _ = sh.Write([]byte(data + conf.Security.SecretKey + startStr + endStr + strconv.Itoa(minutes)))
 	encoded := hex.EncodeToString(sh.Sum(nil))
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
@@ -148,9 +148,9 @@ func AvatarLink(email string) (url string) {
 // AppendAvatarSize appends avatar size query parameter to the URL in the correct format.
 func AppendAvatarSize(url string, size int) string {
 	if strings.Contains(url, "?") {
-		return url + "&s=" + com.ToStr(size)
+		return url + "&s=" + strconv.Itoa(size)
 	}
-	return url + "?s=" + com.ToStr(size)
+	return url + "?s=" + strconv.Itoa(size)
 }
 
 // Seconds-based time units
@@ -351,7 +351,8 @@ func Subtract(left, right any) any {
 func StringsToInt64s(strs []string) []int64 {
 	ints := make([]int64, len(strs))
 	for i := range strs {
-		ints[i] = com.StrTo(strs[i]).MustInt64()
+		val, _ := strconv.ParseInt(strs[i], 10, 64)
+		ints[i] = val
 	}
 	return ints
 }
@@ -360,7 +361,7 @@ func StringsToInt64s(strs []string) []int64 {
 func Int64sToStrings(ints []int64) []string {
 	strs := make([]string, len(ints))
 	for i := range ints {
-		strs[i] = com.ToStr(ints[i])
+		strs[i] = strconv.FormatInt(ints[i], 10)
 	}
 	return strs
 }

@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -309,7 +310,7 @@ func (r *Repository) HTMLURL() string {
 
 // CustomAvatarPath returns repository custom avatar file path.
 func (r *Repository) CustomAvatarPath() string {
-	return filepath.Join(conf.Picture.RepositoryAvatarUploadPath, com.ToStr(r.ID))
+	return filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(r.ID, 10))
 }
 
 // RelAvatarLink returns relative avatar link to the site domain,
@@ -645,7 +646,7 @@ func (r *Repository) NextIssueIndex() int64 {
 }
 
 func (r *Repository) LocalCopyPath() string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-r", com.ToStr(r.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-r", strconv.FormatInt(r.ID, 10))
 }
 
 // UpdateLocalCopy fetches latest changes of given branch from repoPath to localPath.
@@ -705,7 +706,7 @@ func (r *Repository) PatchPath(index int64) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(RepoPath(r.Owner.Name, r.Name), "pulls", com.ToStr(index)+".patch"), nil
+	return filepath.Join(RepoPath(r.Owner.Name, r.Name), "pulls", strconv.FormatInt(index, 10)+".patch"), nil
 }
 
 // SavePatch saves patch data to corresponding location by given issue ID.
@@ -1070,7 +1071,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		return errors.Wrap(err, "set default branch")
 	}
 
-	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
+	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+strconv.Itoa(time.Now().Nanosecond()))
 
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
@@ -1504,8 +1505,8 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 }
 
 func deleteRepoLocalCopy(repoID int64) {
-	repoWorkingPool.CheckIn(com.ToStr(repoID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repoID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(repoID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(repoID, 10))
 	RemoveAllWithNotice(fmt.Sprintf("Delete repository %d local copy", repoID), repoutil.RepositoryLocalPath(repoID))
 }
 
@@ -2143,7 +2144,7 @@ func repoStatsCheck(checker *repoChecker) {
 		return
 	}
 	for _, result := range results {
-		id := com.StrTo(result["id"]).MustInt64()
+		id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
 		log.Trace("Updating %s: %d", checker.desc, id)
 		_, err = x.Exec(checker.correctSQL, id, id)
 		if err != nil {
@@ -2204,7 +2205,7 @@ func CheckRepoStats() {
 		log.Error("Select %s: %v", desc, err)
 	} else {
 		for _, result := range results {
-			id := com.StrTo(result["id"]).MustInt64()
+			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
 			log.Trace("Updating %s: %d", desc, id)
 			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
 			if err != nil {
@@ -2221,7 +2222,7 @@ func CheckRepoStats() {
 		log.Error("Select repository count 'num_forks': %v", err)
 	} else {
 		for _, result := range results {
-			id := com.StrTo(result["id"]).MustInt64()
+			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
 			log.Trace("Updating repository count 'num_forks': %d", id)
 
 			repo, err := GetRepositoryByID(id)
@@ -2632,8 +2633,8 @@ func (r *Repository) GetForks() ([]*Repository, error) {
 //
 
 func (r *Repository) CreateNewBranch(oldBranch, newBranch string) (err error) {
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	localPath := r.LocalCopyPath()
 

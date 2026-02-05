@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -221,7 +221,7 @@ func (issue *Issue) APIFormat() *api.Issue {
 
 // HashTag returns unique hash tag for issue.
 func (issue *Issue) HashTag() string {
-	return "issue-" + com.ToStr(issue.ID)
+	return "issue-" + strconv.FormatInt(issue.ID, 10)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -828,7 +828,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
 
-	index := com.StrTo(after).MustInt64()
+	index, _ := strconv.ParseInt(after, 10, 64)
 	if index == 0 {
 		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
@@ -1219,7 +1219,8 @@ func parseCountResult(results []map[string][]byte) int64 {
 		return 0
 	}
 	for _, result := range results[0] {
-		return com.StrTo(string(result)).MustInt64()
+		count, _ := strconv.ParseInt(string(result), 10, 64)
+		return count
 	}
 	return 0
 }

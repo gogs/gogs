@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,12 +64,12 @@ type ComposeHookEnvsOptions struct {
 func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 	envs := []string{
 		"SSH_ORIGINAL_COMMAND=1",
-		EnvAuthUserID + "=" + com.ToStr(opts.AuthUser.ID),
+		EnvAuthUserID + "=" + strconv.FormatInt(opts.AuthUser.ID, 10),
 		EnvAuthUserName + "=" + opts.AuthUser.Name,
 		EnvAuthUserEmail + "=" + opts.AuthUser.Email,
 		EnvRepoOwnerName + "=" + opts.OwnerName,
 		EnvRepoOwnerSaltMd5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
-		EnvRepoID + "=" + com.ToStr(opts.RepoID),
+		EnvRepoID + "=" + strconv.FormatInt(opts.RepoID, 10),
 		EnvRepoName + "=" + opts.RepoName,
 		EnvRepoCustomHooksPath + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
 	}
@@ -146,8 +147,8 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err := r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return errors.Newf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
@@ -249,8 +250,8 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err := r.DiscardLocalRepoBranchChanges(branch); err != nil {
 		return nil, errors.Newf("discard local repo branch[%s] changes: %v", branch, err)
@@ -322,8 +323,8 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
@@ -562,8 +563,8 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		return errors.Newf("get uploads by UUIDs[%v]: %v", opts.Files, err)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)

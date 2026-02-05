@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -210,7 +211,8 @@ func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, 
 	}
 
 	keyType := strings.Trim(fields[len(fields)-1], "()\r\n")
-	return strings.ToLower(keyType), com.StrTo(fields[0]).MustInt(), nil
+	length, _ := strconv.Atoi(fields[0])
+	return strings.ToLower(keyType), length, nil
 }
 
 // SSHNativeParsePublicKey extracts the key type and length using the golang SSH library.
