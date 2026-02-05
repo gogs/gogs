@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -230,11 +231,9 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 				return
 			}
 
-			for _, file := range files {
-				if file == f.TreePath {
-					c.RenderWithErr(c.Tr("repo.editor.file_changed_while_editing", c.Repo.RepoLink+"/compare/"+lastCommit+"..."+c.Repo.CommitID), http.StatusConflict, tmplEditorEdit, &f)
-					return
-				}
+			if slices.Contains(files, f.TreePath) {
+				c.RenderWithErr(c.Tr("repo.editor.file_changed_while_editing", c.Repo.RepoLink+"/compare/"+lastCommit+"..."+c.Repo.CommitID), http.StatusConflict, tmplEditorEdit, &f)
+				return
 			}
 		}
 	}

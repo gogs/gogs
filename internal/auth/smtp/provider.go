@@ -3,6 +3,7 @@ package smtp
 import (
 	"net/smtp"
 	"net/textproto"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -34,13 +35,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 		}
 		domain := fields[1]
 
-		isAllowed := false
-		for _, allowed := range strings.Split(p.config.AllowedDomains, ",") {
-			if domain == allowed {
-				isAllowed = true
-				break
-			}
-		}
+		isAllowed := slices.Contains(strings.Split(p.config.AllowedDomains, ","), domain)
 
 		if !isAllowed {
 			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
@@ -72,9 +67,9 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	username := login
 
 	// NOTE: It is not required to have "@" in `login` for a successful SMTP authentication.
-	idx := strings.Index(login, "@")
-	if idx > -1 {
-		username = login[:idx]
+	before, _, ok := strings.Cut(login, "@")
+	if ok {
+		username = before
 	}
 
 	return &auth.ExternalAccount{

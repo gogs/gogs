@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -580,12 +581,7 @@ func SettingsGitHooks(c *context.Context) {
 }
 
 func isValidHookName(name git.HookName) bool {
-	for _, h := range git.ServerSideHooks {
-		if h == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(git.ServerSideHooks, name)
 }
 
 func SettingsGitHooksEdit(c *context.Context) {

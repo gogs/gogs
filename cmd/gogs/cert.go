@@ -121,8 +121,8 @@ func runCert(ctx *cli.Context) error {
 		BasicConstraintsValid: true,
 	}
 
-	hosts := strings.Split(ctx.String("host"), ",")
-	for _, h := range hosts {
+	hosts := strings.SplitSeq(ctx.String("host"), ",")
+	for h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
 		} else {

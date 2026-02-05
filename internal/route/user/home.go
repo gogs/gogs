@@ -216,10 +216,7 @@ func Issues(c *context.Context) {
 		filterMode = database.FilterMode(viewType)
 	}
 
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	repoID := c.QueryInt64("repo")
 	isShowClosed := c.Query("state") == "closed"
