@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/captcha"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -427,7 +427,7 @@ func verifyUserActiveCode(code string) (user *database.User) {
 	if user = parseUserFromCode(code); user != nil {
 		// time limit code
 		prefix := code[:tool.TimeLimitCodeLength]
-		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Password + user.Rands
+		data := strconv.FormatInt(user.ID, 10) + user.Email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
 			return user
@@ -443,7 +443,7 @@ func verifyActiveEmailCode(code, email string) *database.EmailAddress {
 	if user := parseUserFromCode(code); user != nil {
 		// time limit code
 		prefix := code[:tool.TimeLimitCodeLength]
-		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
+		data := strconv.FormatInt(user.ID, 10) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
 			emailAddress, err := database.Handle.Users().GetEmail(gocontext.TODO(), user.ID, email, false)

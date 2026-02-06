@@ -7,12 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
-	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 
@@ -107,7 +107,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 }
 
 func listen(config *ssh.ServerConfig, host string, port int) {
-	listener, err := net.Listen("tcp", host+":"+com.ToStr(port))
+	listener, err := net.Listen("tcp", host+":"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal("Failed to start SSH server: %v", err)
 	}
@@ -158,7 +158,7 @@ func Listen(opts conf.SSHOpts, appDataPath string) {
 				}
 				return nil, err
 			}
-			return &ssh.Permissions{Extensions: map[string]string{"key-id": com.ToStr(pkey.ID)}}, nil
+			return &ssh.Permissions{Extensions: map[string]string{"key-id": strconv.FormatInt(pkey.ID, 10)}}, nil
 		},
 	}
 

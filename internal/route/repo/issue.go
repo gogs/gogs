@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
@@ -103,7 +103,7 @@ func issues(c *context.Context, isPullList bool) {
 	viewType := c.Query("type")
 	sortType := c.Query("sort")
 	types := []string{"assigned", "created_by", "mentioned"}
-	if !com.IsSliceContainsStr(types, viewType) {
+	if !slices.Contains(types, viewType) {
 		viewType = "all"
 	}
 
@@ -221,7 +221,8 @@ func issues(c *context.Context, isPullList bool) {
 	}
 
 	c.Data["IssueStats"] = issueStats
-	c.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
+	selectLabelsInt, _ := strconv.ParseInt(selectLabels, 10, 64)
+	c.Data["SelectLabels"] = selectLabelsInt
 	c.Data["ViewType"] = viewType
 	c.Data["SortType"] = sortType
 	c.Data["MilestoneID"] = milestoneID

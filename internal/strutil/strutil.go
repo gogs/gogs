@@ -3,6 +3,7 @@ package strutil
 import (
 	"crypto/rand"
 	"math/big"
+	"strings"
 	"unicode"
 )
 
@@ -58,4 +59,14 @@ func Truncate(str string, limit int) string {
 		return str
 	}
 	return str[:limit]
+}
+
+// ContainsFold reports whether s is within the slice, ignoring case.
+func ContainsFold(ss []string, s string) bool {
+	for _, v := range ss {
+		if strings.EqualFold(v, s) {
+			return true
+		}
+	}
+	return false
 }

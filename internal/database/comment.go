@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -148,7 +148,7 @@ func (c *Comment) APIFormat() *api.Comment {
 }
 
 func CommentHashTag(id int64) string {
-	return "issuecomment-" + com.ToStr(id)
+	return "issuecomment-" + strconv.FormatInt(id, 10)
 }
 
 // HashTag returns unique hash tag for comment.
@@ -158,7 +158,7 @@ func (c *Comment) HashTag() string {
 
 // EventTag returns unique event hash tag for comment.
 func (c *Comment) EventTag() string {
-	return "event-" + com.ToStr(c.ID)
+	return "event-" + strconv.FormatInt(c.ID, 10)
 }
 
 // mailParticipants sends new comment emails to repository watchers

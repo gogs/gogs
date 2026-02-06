@@ -8,18 +8,19 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	gouuid "github.com/satori/go.uuid"
-	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/ioutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
@@ -63,12 +64,12 @@ type ComposeHookEnvsOptions struct {
 func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 	envs := []string{
 		"SSH_ORIGINAL_COMMAND=1",
-		EnvAuthUserID + "=" + com.ToStr(opts.AuthUser.ID),
+		EnvAuthUserID + "=" + strconv.FormatInt(opts.AuthUser.ID, 10),
 		EnvAuthUserName + "=" + opts.AuthUser.Name,
 		EnvAuthUserEmail + "=" + opts.AuthUser.Email,
 		EnvRepoOwnerName + "=" + opts.OwnerName,
 		EnvRepoOwnerSaltMd5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
-		EnvRepoID + "=" + com.ToStr(opts.RepoID),
+		EnvRepoID + "=" + strconv.FormatInt(opts.RepoID, 10),
 		EnvRepoName + "=" + opts.RepoName,
 		EnvRepoCustomHooksPath + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
 	}
@@ -85,7 +86,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 // discardLocalRepoBranchChanges discards local commits/changes of
 // given branch to make sure it is even to remote branch.
 func discardLocalRepoBranchChanges(localPath, branch string) error {
-	if !com.IsExist(localPath) {
+	if !osutil.Exist(localPath) {
 		return nil
 	}
 
@@ -146,8 +147,8 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err := r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return errors.Newf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
@@ -249,8 +250,8 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err := r.DiscardLocalRepoBranchChanges(branch); err != nil {
 		return nil, errors.Newf("discard local repo branch[%s] changes: %v", branch, err)
@@ -322,8 +323,8 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
@@ -562,8 +563,8 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		return errors.Newf("get uploads by UUIDs[%v]: %v", opts.Files, err)
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
 		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
@@ -606,7 +607,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
 
-		if err = com.Copy(tmpPath, targetPath); err != nil {
+		if err = ioutil.CopyFile(tmpPath, targetPath); err != nil {
 			return errors.Newf("copy: %v", err)
 		}
 	}

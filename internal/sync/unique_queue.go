@@ -1,7 +1,7 @@
 package sync
 
 import (
-	"github.com/unknwon/com"
+	"fmt"
 )
 
 // UniqueQueue is a queue which guarantees only one instance of same
@@ -35,7 +35,7 @@ func (q *UniqueQueue) Queue() <-chan string {
 // Exist returns true if there is an instance with given identity
 // exists in the queue.
 func (q *UniqueQueue) Exist(id any) bool {
-	return q.table.IsRunning(com.ToStr(id))
+	return q.table.IsRunning(fmt.Sprintf("%v", id))
 }
 
 // AddFunc adds new instance to the queue with a custom runnable function,
@@ -45,7 +45,7 @@ func (q *UniqueQueue) AddFunc(id any, fn func()) {
 		return
 	}
 
-	idStr := com.ToStr(id)
+	idStr := fmt.Sprintf("%v", id)
 	q.table.Lock()
 	q.table.pool[idStr] = true
 	if fn != nil {
@@ -62,5 +62,5 @@ func (q *UniqueQueue) Add(id any) {
 
 // Remove removes instance from the queue.
 func (q *UniqueQueue) Remove(id any) {
-	q.table.Stop(com.ToStr(id))
+	q.table.Stop(fmt.Sprintf("%v", id))
 }

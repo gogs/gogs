@@ -11,7 +11,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,6 +38,7 @@ import (
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -77,14 +80,15 @@ func LoadRepoConfig() {
 		}
 
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
-		if com.IsDir(customPath) {
-			customFiles, err := com.StatDir(customPath)
+		if osutil.IsDir(customPath) {
+			entries, err := os.ReadDir(customPath)
 			if err != nil {
 				log.Fatal("Failed to get custom %s files: %v", t, err)
 			}
 
-			for _, f := range customFiles {
-				if !com.IsSliceContainsStr(files, f) {
+			for _, entry := range entries {
+				f := entry.Name()
+				if !strutil.ContainsFold(files, f) {
 					files = append(files, f)
 				}
 			}
@@ -104,12 +108,12 @@ func LoadRepoConfig() {
 	// Filter out invalid names and promote preferred licenses.
 	sortedLicenses := make([]string, 0, len(Licenses))
 	for _, name := range conf.Repository.PreferredLicenses {
-		if com.IsSliceContainsStr(Licenses, name) {
+		if slices.Contains(Licenses, name) {
 			sortedLicenses = append(sortedLicenses, name)
 		}
 	}
 	for _, name := range Licenses {
-		if !com.IsSliceContainsStr(conf.Repository.PreferredLicenses, name) {
+		if !slices.Contains(conf.Repository.PreferredLicenses, name) {
 			sortedLicenses = append(sortedLicenses, name)
 		}
 	}
@@ -309,7 +313,7 @@ func (r *Repository) HTMLURL() string {
 
 // CustomAvatarPath returns repository custom avatar file path.
 func (r *Repository) CustomAvatarPath() string {
-	return filepath.Join(conf.Picture.RepositoryAvatarUploadPath, com.ToStr(r.ID))
+	return filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(r.ID, 10))
 }
 
 // RelAvatarLink returns relative avatar link to the site domain,
@@ -317,7 +321,7 @@ func (r *Repository) CustomAvatarPath() string {
 // Since Gravatar support not needed here - just check for image path.
 func (r *Repository) RelAvatarLink() string {
 	defaultImgURL := ""
-	if !com.IsExist(r.CustomAvatarPath()) {
+	if !osutil.Exist(r.CustomAvatarPath()) {
 		return defaultImgURL
 	}
 	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, RepoAvatarURLPrefix, r.ID)
@@ -645,7 +649,7 @@ func (r *Repository) NextIssueIndex() int64 {
 }
 
 func (r *Repository) LocalCopyPath() string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-r", com.ToStr(r.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-r", strconv.FormatInt(r.ID, 10))
 }
 
 // UpdateLocalCopy fetches latest changes of given branch from repoPath to localPath.
@@ -705,7 +709,7 @@ func (r *Repository) PatchPath(index int64) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(RepoPath(r.Owner.Name, r.Name), "pulls", com.ToStr(index)+".patch"), nil
+	return filepath.Join(RepoPath(r.Owner.Name, r.Name), "pulls", strconv.FormatInt(index, 10)+".patch"), nil
 }
 
 // SavePatch saves patch data to corresponding location by given issue ID.
@@ -730,7 +734,7 @@ func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 		OwnerID:   u.ID,
 		LowerName: strings.ToLower(repoName),
 	})
-	return has && com.IsDir(RepoPath(u.Name, repoName)), err
+	return has && osutil.IsDir(RepoPath(u.Name, repoName)), err
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -842,12 +846,14 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 
 	// Check if repository is empty.
-	_, stderr, err := com.ExecCmdDir(repoPath, "git", "log", "-1")
+	cmd := exec.Command("git", "log", "-1")
+	cmd.Dir = repoPath
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
+		if strings.Contains(string(output), "fatal: bad default revision 'HEAD'") {
 			repo.IsBare = true
 		} else {
-			return repo, errors.Newf("check bare: %v - %s", err, stderr)
+			return repo, errors.Newf("check bare: %v - %s", err, output)
 		}
 	}
 
@@ -1070,7 +1076,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		return errors.Wrap(err, "set default branch")
 	}
 
-	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
+	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+strconv.Itoa(time.Now().Nanosecond()))
 
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
@@ -1493,7 +1499,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Rename remote wiki repository to new path and delete local copy.
 	wikiPath := WikiPath(owner.Name, repo.Name)
-	if com.IsExist(wikiPath) {
+	if osutil.Exist(wikiPath) {
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
@@ -1504,8 +1510,8 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 }
 
 func deleteRepoLocalCopy(repoID int64) {
-	repoWorkingPool.CheckIn(com.ToStr(repoID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repoID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(repoID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(repoID, 10))
 	RemoveAllWithNotice(fmt.Sprintf("Delete repository %d local copy", repoID), repoutil.RepositoryLocalPath(repoID))
 }
 
@@ -1535,7 +1541,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	}
 
 	wikiPath := repo.WikiPath()
-	if com.IsExist(wikiPath) {
+	if osutil.Exist(wikiPath) {
 		if err = os.Rename(wikiPath, WikiPath(u.Name, newRepoName)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
 		}
@@ -1593,11 +1599,11 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 
 		// Create/Remove git-daemon-export-ok for git-daemon
 		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
-		if repo.IsPrivate && com.IsExist(daemonExportFile) {
+		if repo.IsPrivate && osutil.Exist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
 				log.Error("Failed to remove %s: %v", daemonExportFile, err)
 			}
-		} else if !repo.IsPrivate && !com.IsExist(daemonExportFile) {
+		} else if !repo.IsPrivate && !osutil.Exist(daemonExportFile) {
 			if f, err := os.Create(daemonExportFile); err != nil {
 				log.Error("Failed to create %s: %v", daemonExportFile, err)
 			} else {
@@ -1929,7 +1935,7 @@ func DeleteOldRepositoryArchives() {
 			basePath := filepath.Join(repo.RepoPath(), "archives")
 			for _, format := range formats {
 				dirPath := filepath.Join(basePath, format)
-				if !com.IsDir(dirPath) {
+				if !osutil.IsDir(dirPath) {
 					continue
 				}
 
@@ -1992,7 +1998,7 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
-			if !com.IsDir(repo.RepoPath()) {
+			if !osutil.IsDir(repo.RepoPath()) {
 				repos = append(repos, repo)
 			}
 			return nil
@@ -2143,7 +2149,7 @@ func repoStatsCheck(checker *repoChecker) {
 		return
 	}
 	for _, result := range results {
-		id := com.StrTo(result["id"]).MustInt64()
+		id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
 		log.Trace("Updating %s: %d", checker.desc, id)
 		_, err = x.Exec(checker.correctSQL, id, id)
 		if err != nil {
@@ -2204,7 +2210,7 @@ func CheckRepoStats() {
 		log.Error("Select %s: %v", desc, err)
 	} else {
 		for _, result := range results {
-			id := com.StrTo(result["id"]).MustInt64()
+			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
 			log.Trace("Updating %s: %d", desc, id)
 			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
 			if err != nil {
@@ -2221,7 +2227,7 @@ func CheckRepoStats() {
 		log.Error("Select repository count 'num_forks': %v", err)
 	} else {
 		for _, result := range results {
-			id := com.StrTo(result["id"]).MustInt64()
+			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
 			log.Trace("Updating repository count 'num_forks': %d", id)
 
 			repo, err := GetRepositoryByID(id)
@@ -2632,8 +2638,8 @@ func (r *Repository) GetForks() ([]*Repository, error) {
 //
 
 func (r *Repository) CreateNewBranch(oldBranch, newBranch string) (err error) {
-	repoWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(r.ID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	localPath := r.LocalCopyPath()
 

@@ -9,9 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "unknwon.dev/clog/v2"
 
@@ -21,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/httplib"
+	"gogs.io/gogs/internal/osutil"
 )
 
 var (
@@ -85,7 +86,7 @@ func runHookPreReceive(c *cli.Context) error {
 		branchName := git.RefShortName(string(fields[2]))
 
 		// Branch protection
-		repoID := com.StrTo(os.Getenv(database.EnvRepoID)).MustInt64()
+		repoID, _ := strconv.ParseInt(os.Getenv(database.EnvRepoID), 10, 64)
 		protectBranch, err := database.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
 			if database.IsErrBranchNotExist(err) {
@@ -101,7 +102,7 @@ func runHookPreReceive(c *cli.Context) error {
 		bypassRequirePullRequest := false
 
 		// Check if user is in whitelist when enabled
-		userID := com.StrTo(os.Getenv(database.EnvAuthUserID)).MustInt64()
+		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		if protectBranch.EnableWhitelist {
 			if !database.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
 				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
@@ -131,7 +132,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "pre-receive")
-	if !com.IsFile(customHooksPath) {
+	if !osutil.IsFile(customHooksPath) {
 		return nil
 	}
 
@@ -165,7 +166,7 @@ func runHookUpdate(c *cli.Context) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "update")
-	if !com.IsFile(customHooksPath) {
+	if !osutil.IsFile(customHooksPath) {
 		return nil
 	}
 
@@ -213,11 +214,12 @@ func runHookPostReceive(c *cli.Context) error {
 			continue
 		}
 
+		pusherID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		options := database.PushUpdateOptions{
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
 			FullRefspec:  string(fields[2]),
-			PusherID:     com.StrTo(os.Getenv(database.EnvAuthUserID)).MustInt64(),
+			PusherID:     pusherID,
 			PusherName:   os.Getenv(database.EnvAuthUserName),
 			RepoUserName: os.Getenv(database.EnvRepoOwnerName),
 			RepoName:     os.Getenv(database.EnvRepoName),
@@ -249,7 +251,7 @@ func runHookPostReceive(c *cli.Context) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "post-receive")
-	if !com.IsFile(customHooksPath) {
+	if !osutil.IsFile(customHooksPath) {
 		return nil
 	}
 

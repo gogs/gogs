@@ -5,15 +5,16 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/sync"
@@ -61,7 +62,7 @@ func (r *Repository) WikiPath() string {
 
 // HasWiki returns true if repository has wiki.
 func (r *Repository) HasWiki() bool {
-	return com.IsDir(r.WikiPath())
+	return osutil.IsDir(r.WikiPath())
 }
 
 // InitWiki initializes a wiki for repository,
@@ -80,7 +81,7 @@ func (r *Repository) InitWiki() error {
 }
 
 func (r *Repository) LocalWikiPath() string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", com.ToStr(r.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", strconv.FormatInt(r.ID, 10))
 }
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
@@ -95,8 +96,8 @@ func discardLocalWikiChanges(localPath string) error {
 
 // updateWikiPage adds new page to repository wiki.
 func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) error {
-	wikiWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
+	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if err := r.InitWiki(); err != nil {
 		return errors.Newf("InitWiki: %v", err)
@@ -114,7 +115,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 
 	// If not a new file, show perform update not create.
 	if isNew {
-		if com.IsExist(filename) {
+		if osutil.Exist(filename) {
 			return ErrWikiAlreadyExist{filename}
 		}
 	} else {
@@ -167,8 +168,8 @@ func (r *Repository) EditWikiPage(doer *User, oldTitle, title, content, message 
 }
 
 func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
-	wikiWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
+	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	localPath := r.LocalWikiPath()
 	if err = discardLocalWikiChanges(localPath); err != nil {

@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "unknwon.dev/clog/v2"
 
@@ -188,7 +188,8 @@ func runServ(c *cli.Context) error {
 	// Allow anonymous (user is nil) clone for public repositories.
 	var user *database.User
 
-	key, err := database.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
+	keyID, _ := strconv.ParseInt(strings.TrimPrefix(c.Args()[0], "key-"), 10, 64)
+	key, err := database.GetPublicKeyByID(keyID)
 	if err != nil {
 		fail("Invalid key ID", "Invalid key ID '%s': %v", c.Args()[0], err)
 	}

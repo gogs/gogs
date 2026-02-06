@@ -20,7 +20,6 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -308,7 +307,7 @@ func runWeb(c *cli.Context) error {
 				if err != nil {
 					c.NotFoundOrError(err, "get attachment by UUID")
 					return
-				} else if !com.IsFile(attach.LocalPath()) {
+				} else if !osutil.IsFile(attach.LocalPath()) {
 					c.NotFound()
 					return
 				}

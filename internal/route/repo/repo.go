@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
@@ -16,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/urlutil"
 )
@@ -292,7 +292,7 @@ func Download(c *context.Context) {
 	}
 	refName = strings.TrimSuffix(uri, ext)
 
-	if !com.IsDir(archivePath) {
+	if !osutil.IsDir(archivePath) {
 		if err := os.MkdirAll(archivePath, os.ModePerm); err != nil {
 			c.Error(err, "create archive directory")
 			return
@@ -329,7 +329,7 @@ func Download(c *context.Context) {
 	}
 
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
-	if !com.IsFile(archivePath) {
+	if !osutil.IsFile(archivePath) {
 		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
 			c.Error(err, "creates archive")
 			return

@@ -2,10 +2,10 @@ package repo
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/cockroachdb/errors"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"
 
@@ -57,14 +57,14 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 		HookEvent: &database.HookEvent{
 			ChooseEvents: true,
 			HookEvents: database.HookEvents{
-				Create:       com.IsSliceContainsStr(form.Events, string(database.HookEventTypeCreate)),
-				Delete:       com.IsSliceContainsStr(form.Events, string(database.HookEventTypeDelete)),
-				Fork:         com.IsSliceContainsStr(form.Events, string(database.HookEventTypeFork)),
-				Push:         com.IsSliceContainsStr(form.Events, string(database.HookEventTypePush)),
-				Issues:       com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssues)),
-				IssueComment: com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssueComment)),
-				PullRequest:  com.IsSliceContainsStr(form.Events, string(database.HookEventTypePullRequest)),
-				Release:      com.IsSliceContainsStr(form.Events, string(database.HookEventTypeRelease)),
+				Create:       slices.Contains(form.Events, string(database.HookEventTypeCreate)),
+				Delete:       slices.Contains(form.Events, string(database.HookEventTypeDelete)),
+				Fork:         slices.Contains(form.Events, string(database.HookEventTypeFork)),
+				Push:         slices.Contains(form.Events, string(database.HookEventTypePush)),
+				Issues:       slices.Contains(form.Events, string(database.HookEventTypeIssues)),
+				IssueComment: slices.Contains(form.Events, string(database.HookEventTypeIssueComment)),
+				PullRequest:  slices.Contains(form.Events, string(database.HookEventTypePullRequest)),
+				Release:      slices.Contains(form.Events, string(database.HookEventTypeRelease)),
 			},
 		},
 		IsActive:     form.Active,
@@ -144,14 +144,14 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 	w.PushOnly = false
 	w.SendEverything = false
 	w.ChooseEvents = true
-	w.Create = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeCreate))
-	w.Delete = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeDelete))
-	w.Fork = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeFork))
-	w.Push = com.IsSliceContainsStr(form.Events, string(database.HookEventTypePush))
-	w.Issues = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssues))
-	w.IssueComment = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeIssueComment))
-	w.PullRequest = com.IsSliceContainsStr(form.Events, string(database.HookEventTypePullRequest))
-	w.Release = com.IsSliceContainsStr(form.Events, string(database.HookEventTypeRelease))
+	w.Create = slices.Contains(form.Events, string(database.HookEventTypeCreate))
+	w.Delete = slices.Contains(form.Events, string(database.HookEventTypeDelete))
+	w.Fork = slices.Contains(form.Events, string(database.HookEventTypeFork))
+	w.Push = slices.Contains(form.Events, string(database.HookEventTypePush))
+	w.Issues = slices.Contains(form.Events, string(database.HookEventTypeIssues))
+	w.IssueComment = slices.Contains(form.Events, string(database.HookEventTypeIssueComment))
+	w.PullRequest = slices.Contains(form.Events, string(database.HookEventTypePullRequest))
+	w.Release = slices.Contains(form.Events, string(database.HookEventTypeRelease))
 	if err = w.UpdateEvent(); err != nil {
 		c.Errorf(err, "update event")
 		return

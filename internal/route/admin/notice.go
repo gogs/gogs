@@ -2,8 +2,8 @@ package admin
 
 import (
 	"net/http"
+	"strconv"
 
-	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
@@ -40,7 +40,7 @@ func DeleteNotices(c *context.Context) {
 	strs := c.QueryStrings("ids[]")
 	ids := make([]int64, 0, len(strs))
 	for i := range strs {
-		id := com.StrTo(strs[i]).MustInt64()
+		id, _ := strconv.ParseInt(strs[i], 10, 64)
 		if id > 0 {
 			ids = append(ids, id)
 		}
