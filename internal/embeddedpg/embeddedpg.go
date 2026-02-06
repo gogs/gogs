@@ -38,7 +38,9 @@ func Initialize(workDir string) *LocalPostgres {
 // Launch starts the embedded PostgreSQL server and blocks until ready.
 func (pg *LocalPostgres) Launch() error {
 	log.Info("Launching local PostgreSQL server...")
+	log.Trace("Base directory: %s", pg.baseDir)
 
+	// Create base directory
 	if err := os.MkdirAll(pg.baseDir, 0o700); err != nil {
 		return errors.Wrap(err, "mkdir local postgres base")
 	}
@@ -49,9 +51,6 @@ func (pg *LocalPostgres) Launch() error {
 		Database(pg.database).
 		Port(pg.tcpPort).
 		DataPath(pg.baseDir).
-		RuntimePath(filepath.Join(pg.baseDir, "rt")).
-		BinariesPath(filepath.Join(pg.baseDir, "bin")).
-		CachePath(filepath.Join(pg.baseDir, "dl")).
 		StartTimeout(45 * time.Second).
 		Logger(os.Stderr)
 

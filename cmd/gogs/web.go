@@ -162,6 +162,13 @@ func newMacaron() *macaron.Macaron {
 }
 
 func runWeb(c *cli.Context) error {
+	// Initialize configuration first to get WorkDir
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		log.Fatal("Failed to initialize configuration: %v", err)
+	}
+	conf.InitLogging(false)
+
 	var localPg *embeddedpg.LocalPostgres
 
 	if c.Bool("embedded-postgres") {
@@ -177,7 +184,7 @@ func runWeb(c *cli.Context) error {
 		localPg.ConfigureGlobalDatabase()
 	}
 
-	err := route.GlobalInit(c.String("config"))
+	err = route.GlobalInit(c.String("config"))
 	if err != nil {
 		log.Fatal("Failed to initialize application: %v", err)
 	}
