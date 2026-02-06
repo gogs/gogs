@@ -185,7 +185,9 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 						OwnerID: repo.BaseRepo.OwnerID,
 						Private: repo.BaseRepo.IsPrivate,
 					},
-				), database.AccessModeWrite)
+				), 
+				database.AccessModeWrite
+			)
 			c.Repo.AccessMode = mode
 		}
 
