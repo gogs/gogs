@@ -20,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/ioutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
@@ -606,29 +607,8 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
 
-		// Copy file
-		src, err := os.Open(tmpPath)
-		if err != nil {
-			return errors.Newf("open source: %v", err)
-		}
-		defer src.Close()
-
-		dst, err := os.Create(targetPath)
-		if err != nil {
-			return errors.Newf("create target: %v", err)
-		}
-		defer func() {
-			if cerr := dst.Close(); cerr != nil && err == nil {
-				err = errors.Newf("close target: %v", cerr)
-			}
-		}()
-
-		if _, err = io.Copy(dst, src); err != nil {
+		if err = ioutil.CopyFile(tmpPath, targetPath); err != nil {
 			return errors.Newf("copy: %v", err)
-		}
-
-		if err = dst.Sync(); err != nil {
-			return errors.Newf("sync target: %v", err)
 		}
 	}
 

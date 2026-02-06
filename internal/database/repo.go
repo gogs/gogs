@@ -38,6 +38,7 @@ import (
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -87,7 +88,7 @@ func LoadRepoConfig() {
 
 			for _, entry := range entries {
 				f := entry.Name()
-				if !slices.Contains(files, f) {
+				if !strutil.ContainsFold(files, f) {
 					files = append(files, f)
 				}
 			}
@@ -847,12 +848,12 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	// Check if repository is empty.
 	cmd := exec.Command("git", "log", "-1")
 	cmd.Dir = repoPath
-	stderr, err := cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if strings.Contains(string(stderr), "fatal: bad default revision 'HEAD'") {
+		if strings.Contains(string(output), "fatal: bad default revision 'HEAD'") {
 			repo.IsBare = true
 		} else {
-			return repo, errors.Newf("check bare: %v - %s", err, stderr)
+			return repo, errors.Newf("check bare: %v - %s", err, output)
 		}
 	}
 

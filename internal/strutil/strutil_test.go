@@ -131,3 +131,15 @@ func TestTruncate(t *testing.T) {
 		})
 	}
 }
+
+func TestContainsFold(t *testing.T) {
+	ss := []string{"Alice", "Bob", "Charlie"}
+
+	assert.True(t, ContainsFold(ss, "alice"))
+	assert.True(t, ContainsFold(ss, "Alice"))
+	assert.True(t, ContainsFold(ss, "ALICE"))
+	assert.True(t, ContainsFold(ss, "bob"))
+	assert.False(t, ContainsFold(ss, "dave"))
+	assert.False(t, ContainsFold(nil, "alice"))
+	assert.False(t, ContainsFold([]string{}, "alice"))
+}
