@@ -39,7 +39,7 @@ func Initialize(workDir string) *LocalPostgres {
 func (pg *LocalPostgres) Launch() error {
 	log.Info("Launching local PostgreSQL server...")
 
-	if err := os.MkdirAll(pg.baseDir, 0700); err != nil {
+	if err := os.MkdirAll(pg.baseDir, 0o700); err != nil {
 		return errors.Wrap(err, "mkdir local postgres base")
 	}
 

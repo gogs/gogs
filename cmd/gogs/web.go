@@ -163,7 +163,7 @@ func newMacaron() *macaron.Macaron {
 
 func runWeb(c *cli.Context) error {
 	var localPg *embeddedpg.LocalPostgres
-	
+
 	if c.Bool("embedded-postgres") {
 		localPg = embeddedpg.Initialize(conf.WorkDir())
 		if err := localPg.Launch(); err != nil {
@@ -176,7 +176,7 @@ func runWeb(c *cli.Context) error {
 		}()
 		localPg.ConfigureGlobalDatabase()
 	}
-	
+
 	err := route.GlobalInit(c.String("config"))
 	if err != nil {
 		log.Fatal("Failed to initialize application: %v", err)
