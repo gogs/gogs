@@ -352,8 +352,7 @@ func Subtract(left, right any) any {
 func StringsToInt64s(strs []string) []int64 {
 	ints := make([]int64, len(strs))
 	for i := range strs {
-		val, _ := strconv.ParseInt(strs[i], 10, 64)
-		ints[i] = val
+		ints[i], _ = strconv.ParseInt(strs[i], 10, 64)
 	}
 	return ints
 }
