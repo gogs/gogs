@@ -151,7 +151,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = m[bytes.Index(m, []byte("@")):]
-		rawBytes = bytes.ReplaceAll(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)))
+		rawBytes = bytes.ReplaceAll(rawBytes, m, fmt.Appendf(nil, `<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m))
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)

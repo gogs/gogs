@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -148,10 +149,7 @@ func issues(c *context.Context, isPullList bool) {
 		IsPull:      isPullList,
 	})
 
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	var total int
 	if !isShowClosed {
@@ -623,13 +621,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 			marked[comment.PosterID] = comment.ShowTag
 
-			isAdded := false
-			for j := range participants {
-				if comment.Poster == participants[j] {
-					isAdded = true
-					break
-				}
-			}
+			isAdded := slices.Contains(participants, comment.Poster)
 			if !isAdded && !issue.IsPoster(comment.Poster.ID) {
 				participants = append(participants, comment.Poster)
 			}
@@ -1019,7 +1011,7 @@ func InitializeLabels(c *context.Context, f form.InitializeLabels) {
 	}
 
 	labels := make([]*database.Label, len(list))
-	for i := 0; i < len(list); i++ {
+	for i := range list {
 		labels[i] = &database.Label{
 			RepoID: c.Repo.Repository.ID,
 			Name:   list[i][0],
@@ -1093,10 +1085,7 @@ func Milestones(c *context.Context) {
 	c.Data["OpenCount"] = openCount
 	c.Data["ClosedCount"] = closedCount
 
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	var total int
 	if !isShowClosed {

@@ -909,7 +909,7 @@ func createDelegateHooks(repoPath string) (err error) {
 	for _, name := range git.ServerSideHooks {
 		hookPath := filepath.Join(repoPath, "hooks", string(name))
 		if err = os.WriteFile(hookPath,
-			[]byte(fmt.Sprintf(hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf)),
+			fmt.Appendf(nil, hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
 			os.ModePerm); err != nil {
 			return errors.Newf("create delegate hook '%s': %v", hookPath, err)
 		}
@@ -1016,8 +1016,8 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 	// .gitignore
 	if len(opts.Gitignores) > 0 {
 		var buf bytes.Buffer
-		names := strings.Split(opts.Gitignores, ",")
-		for _, name := range names {
+		names := strings.SplitSeq(opts.Gitignores, ",")
+		for name := range names {
 			data, err = getRepoInitFile("gitignore", name)
 			if err != nil {
 				return errors.Newf("getRepoInitFile[%s]: %v", name, err)

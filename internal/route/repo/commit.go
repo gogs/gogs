@@ -41,10 +41,7 @@ func renderCommits(c *context.Context, filename string) {
 	c.Data["PageIsCommits"] = true
 	c.Data["FileName"] = filename
 
-	page := c.QueryInt("page")
-	if page < 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 	pageSize := c.QueryInt("pageSize")
 	if pageSize < 1 {
 		pageSize = conf.UI.User.CommitsPagingNum

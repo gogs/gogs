@@ -37,10 +37,7 @@ func (module) ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error
 
 	// No filter but has a limit, returns first X tags
 	if after == "" && limit > 0 {
-		endIdx := limit
-		if limit > total {
-			endIdx = total
-		}
+		endIdx := min(limit, total)
 		return &TagsPage{
 			Tags:      all[:endIdx],
 			HasLatest: true,

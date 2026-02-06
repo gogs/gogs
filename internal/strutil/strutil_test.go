@@ -40,7 +40,7 @@ func TestToUpperFirst(t *testing.T) {
 
 func TestRandomChars(t *testing.T) {
 	cache := make(map[string]bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		chars, err := RandomChars(10)
 		if err != nil {
 			t.Fatal(err)

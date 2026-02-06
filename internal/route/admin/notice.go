@@ -22,10 +22,7 @@ func Notices(c *context.Context) {
 	c.Data["PageIsAdminNotices"] = true
 
 	total := database.Handle.Notices().Count(c.Req.Context())
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 	c.Data["Page"] = paginater.New(int(total), conf.UI.Admin.NoticePagingNum, page, 5)
 
 	notices, err := database.Handle.Notices().List(c.Req.Context(), page, conf.UI.Admin.NoticePagingNum)

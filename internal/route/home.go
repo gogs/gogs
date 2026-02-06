@@ -89,10 +89,7 @@ type UserSearchOptions struct {
 }
 
 func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	var (
 		users []*database.User

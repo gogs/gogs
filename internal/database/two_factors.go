@@ -135,7 +135,7 @@ func (s *TwoFactorsStore) UseRecoveryCode(ctx context.Context, userID int64, cod
 // generateRecoveryCodes generates N number of recovery codes for 2FA.
 func generateRecoveryCodes(userID int64, n int) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		code, err := strutil.RandomChars(10)
 		if err != nil {
 			return nil, errors.Wrap(err, "generate random characters")
