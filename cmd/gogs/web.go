@@ -30,6 +30,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/embeddedpg"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/route"
@@ -54,6 +55,7 @@ and it takes care of all the other things for you`,
 	Flags: []cli.Flag{
 		stringFlag("port, p", "3000", "Temporary port number to prevent conflict"),
 		stringFlag("config, c", "", "Custom configuration file path"),
+		boolFlag("embedded-postgres", "Use embedded PostgreSQL database"),
 	},
 }
 
@@ -160,7 +162,29 @@ func newMacaron() *macaron.Macaron {
 }
 
 func runWeb(c *cli.Context) error {
-	err := route.GlobalInit(c.String("config"))
+	// Initialize configuration first to get WorkDir
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		log.Fatal("Failed to initialize configuration: %v", err)
+	}
+	conf.InitLogging(false)
+
+	var localPg *embeddedpg.LocalPostgres
+
+	if c.Bool("embedded-postgres") {
+		localPg = embeddedpg.Initialize(conf.WorkDir())
+		if err := localPg.Launch(); err != nil {
+			log.Fatal("Failed to launch embedded postgres: %v", err)
+		}
+		defer func() {
+			if err := localPg.Shutdown(); err != nil {
+				log.Error("Failed to shutdown embedded postgres: %v", err)
+			}
+		}()
+		localPg.ConfigureGlobalDatabase()
+	}
+
+	err = route.GlobalInit(c.String("config"))
 	if err != nil {
 		log.Fatal("Failed to initialize application: %v", err)
 	}
