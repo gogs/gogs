@@ -23,7 +23,6 @@ func main() {
 		webCommand,
 		servCommand,
 		hookCommand,
-		certCommand,
 		adminCommand,
 		importCommand,
 		backupCommand,
