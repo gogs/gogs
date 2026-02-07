@@ -157,6 +157,36 @@ Steps to upgrade Gogs with Docker:
 - `docker rm gogs`
 - Create a container for the first time and don't forget to do the same for the volume and port mapping.
 
+## Fail2ban
+
+It's a bit tricky to setup fail2ban to protect sshd inside the container.
+
+1. setup docker to use journald to log: `daemon.json`.
+```json
+{
+  "log-driver": "journald"
+}
+```
+2. confirm gogs container's name and accessable with `journalctl -e CONTAINER_NAME=git-gogs-1`.
+3. fail2ban accessable to journald (with `python3-systemd`, and `ipset`)
+4. setup the following jail `/etc/fail2ban/jail.d/gogs.conf`
+```
+[gogs]
+enabled = true
+backend = systemd[journalflags=2]
+port    = ssh
+findtime  = 90m
+bantime = 7d
+maxretry = 5
+chain = DOCKER-USER
+banaction = iptables-ipset-proto6[blocktype=DROP,protocol=all]
+journalmatch = CONTAINER_NAME=git-gogs-1
+filter = sshd[__prefix_line="^\s*\S+\s+[^[]+\[\w+\]:[^\]]+\]:\s+", __pref="",_daemon=git-gogs-1]
+ignoreip = 127.0.0.1/8 ::1
+```
+
+**Explain**: the jail adds ban rules into the iptables `DOCKER-USER` chain, which is located in filter-FORWARD chain, which is after a nat-PREROUTING (dest port already rewrited), so whatever port you set the container's external port (10022) is, the rule should match the to internal port (22, `port = ssh`).
+
 ## Known issues
 
 - The docker container cannot currently be built on Raspberry 1 (armv6l) as our base image `alpine` does not have a `go` package available for this platform.
