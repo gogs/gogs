@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Changed
+
+- The `gogs cert` subcommand has been removed. [#8153](https://github.com/gogs/gogs/pull/8153)
+
 ## 0.14.1
 
 ### Added
@@ -18,7 +22,7 @@ All notable changes to Gogs are documented in this file.
 ### Changed
 
 - The required Go version to compile source code changed to 1.25.
-- The `gogs cert` subcommand has been removed. [#8153](https://github.com/gogs/gogs/pull/8153)
+- The build tag `cert` has been removed, and the `gogs cert` subcommand is now always available. [#7883](https://github.com/gogs/gogs/pull/7883)
 - Switched to pure-Go SQLite driver, CGO is no longer required to compile Gogs. [#7882](https://github.com/gogs/gogs/issues/7882)
 - Updated Mermaid JS to 11.9.0. [#8009](https://github.com/gogs/gogs/pull/8009)
 - Halt the repository creation and leave the directory untouched if the repository root already exists. [#8091](https://github.com/gogs/gogs/pull/8091)
