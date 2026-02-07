@@ -1,0 +1,93 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about using and administering Gogs"
+icon: "circle-question"
+---
+
+Answers to common questions about Gogs configuration, administration, and usage.
+
+## Deployment
+
+<AccordionGroup>
+  <Accordion title="What do I do if another service is already using port 3000?">
+    You can change the listening port on the first run by passing the `-port` flag:
+
+    ```bash
+    ./gogs web -port 3001
+    ```
+
+    This flag also updates the port number shown on the install page, so pick the port you intend to keep using.
+  </Accordion>
+
+  <Accordion title="How do I run Gogs in offline mode or on an intranet?">
+    Set the `OFFLINE_MODE` option to `true` in the `[server]` section of your `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    OFFLINE_MODE = true
+    ```
+
+    This disables external network calls such as CDN resource loading and Gravatar avatar fetching.
+  </Accordion>
+
+  <Accordion title="How do I make a custom robots.txt?">
+    Create a file named `robots.txt` in the `custom` directory at the root of your Gogs installation:
+
+    ```
+    custom/robots.txt
+    ```
+
+    Gogs will serve this file automatically at `/robots.txt`.
+  </Accordion>
+</AccordionGroup>
+
+## Administration
+
+<AccordionGroup>
+  <Accordion title="How can I become an administrator?">
+    The first user to register (with `ID = 1`) is automatically granted administrator privileges. No email confirmation is required for this account, even if email confirmation is enabled.
+
+    Once logged in, the administrator can promote other users by navigating to **Admin Panel** > **Users** and editing user accounts. A user who registers through the initial install page is also made an administrator.
+  </Accordion>
+
+  <Accordion title="How do I reset a forgotten administrator password?">
+    If you have shell access to the server, follow these steps:
+
+    1. **Stop Gogs**, then create a temporary admin user from the command line:
+
+       ```bash
+       su git
+       cd /home/git/gogs
+       ./gogs admin create-user --name tmpuser --password tmppassword --admin --email tmp@example.com
+       ```
+
+    2. **Start Gogs** again, then log in as `tmpuser` in your browser. Navigate to **Admin Panel** > **Users**, click **Edit** next to the original administrator account, and set a new password.
+
+    3. **Clean up** by logging out, logging back in as the original administrator with the new password, then deleting the `tmpuser` account from **Admin Panel** > **Users**.
+
+    It is safest to stop Gogs before creating the temporary user via the command line, then start it again afterward.
+  </Accordion>
+</AccordionGroup>
+
+## Repository management
+
+<AccordionGroup>
+  <Accordion title="How do I give Git hooks permission to users?">
+    **Git hooks permission is a high-level privilege** that can allow arbitrary code execution on the server. Only grant it to users you fully trust.
+
+    To enable or disable this permission, go to the **Admin Panel** > **Users**, select the user, and toggle the Git hooks permission in their account settings (`/admin/users/:userid`).
+  </Accordion>
+</AccordionGroup>
+
+## Other
+
+<AccordionGroup>
+  <Accordion title="Why can't I create a wiki for my mirrored repository?">
+    Mirrored repositories cannot have their own wiki because the mirror is a read-only copy of the upstream repository.
+
+    If you see the "Welcome to Wiki!" page but no green "Create the first page" button, your repository was likely created as a mirror. You have two options:
+
+    1. Edit the wiki on the upstream repository that is being mirrored.
+    2. Convert the mirror to a regular repository under **Settings** > **Danger Zone** if you no longer need it to be a mirror.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,77 @@
+---
+title: "Installation"
+description: "Get your own Git service up and running in minutes"
+icon: "download"
+---
+
+## Prerequisites
+
+1. Gogs requires use of one of the following database backends:
+    - MySQL, >= 5.7
+    - PostgreSQL, >= 9.6
+    - SQLite 3
+1. Git, >= 1.8.3, on both server and client side
+1. SSH server
+    - Only required when enable Git over SSH, e.g., `git clone git@gogs.example.com:...`
+    - Builtin SSH server is also available
+
+<Note>
+**For Windows users:**
+
+- When using builtin SSH server, you still need to have `ssh-keygen` installed and available via the `%PATH%` environment variable.
+- Use [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse) on Windows 10 or newer.
+- [Cygwin OpenSSH](http://docs.oracle.com/cd/E24628_01/install.121/e22624/preinstall_req_cygwin_ssh.htm) or [Copssh](https://www.itefix.net/copssh) are available on older versions of Windows.
+</Note>
+
+## Initialize database
+
+If you choose to use MySQL or PostgreSQL as your database backend, you need to first complete the initial database creation.
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    Create a database user and database:
+
+    ```bash
+    psql -c "CREATE USER gogs WITH PASSWORD '{YOUR_PASSWORD}';"
+    psql -c "CREATE DATABASE gogs OWNER gogs ENCODING 'UTF8';"
+    ```
+  </Tab>
+  <Tab title="MySQL">
+    Use the [bundled script](https://github.com/gogs/gogs/blob/main/scripts/mysql.sql) to create the database with proper encoding:
+
+    ```zsh
+    mysql -u root -p < scripts/mysql.sql
+    ```
+  </Tab>
+</Tabs>
+
+## Installation methods
+
+<Tabs>
+  <Tab title="Pre-built binary">
+    All release archives containing pre-built binaries are available in [dl.gogs.io](https://dl.gogs.io) and [GitHub releases](https://github.com/gogs/gogs/releases).
+
+    <Note>
+    **For Windows users:**
+
+    Release archives containing `mws` come with built-in Windows service support. If you prefer to manage the service using [NSSM](https://nssm.cc), download the standard version instead.
+    </Note>
+
+    Once extracted the archive, run `./gogs web` to start the server. Use `./gogs web --help` to see all available options.
+  </Tab>
+  <Tab title="Docker">
+    Two types of Docker images are provided:
+    1. [docker-next](https://github.com/gogs/gogs/blob/main/docker-next/README.md): The modern, non-root, and cloud-native version, but with no container options.
+    1. [docker](https://github.com/gogs/gogs/blob/main/docker/README.md): The traditional, root-privileged version, with extensive container options.
+  </Tab>
+  <Tab title="Packages">
+    <Warning>
+    All packages listed below are packaged by third-party maintainers. Use at your own risk.
+    </Warning>
+
+    |Source| Description                              | Note|
+    |------|------------------------------------------|-----|
+    |Packager.io ([link](https://packager.io/gh/gogs/gogs))|Every commit of `main`|After installation, place custom configuration in `/etc/default/gogs`.|
+    |Arch User Repository ([link](https://aur.archlinux.org/packages/gogs/))| Stable releases | Detailed instructions available in the [Arch Linux Wiki entry](https://wiki.archlinux.org/title/Gogs). |
+  </Tab>
+</Tabs>

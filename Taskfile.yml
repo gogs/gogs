@@ -94,3 +94,8 @@ tasks:
     desc: Run all linters
     cmds:
       - golangci-lint run
+
+  docs:
+    desc: Start docs server
+    cmds:
+      - cd docs && mint dev --port 3333

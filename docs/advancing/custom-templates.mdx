@@ -1,0 +1,100 @@
+---
+title: "Custom templates"
+description: "Override HTML templates, static files, and inject custom content"
+icon: "paintbrush"
+---
+
+Gogs allows you to customize the appearance and behavior of your instance by overriding HTML templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
+
+<Warning>
+  Be careful when overriding templates and static files, as changes to the upstream Gogs codebase may break your customizations in future releases. Keep track of what you have overridden.
+</Warning>
+
+## Override HTML templates
+
+You can replace any HTML template (including email templates) by placing a customized version under the `custom/templates/` directory.
+
+<Steps>
+  <Step title="Find the original template">
+    Locate the template file you want to customize in the `templates/` directory of the Gogs source code. For example, to customize the home page, find `templates/home.tmpl`.
+  </Step>
+  <Step title="Copy and edit">
+    Copy the content of the template file and save your edited version to the corresponding path under `custom/templates/`. For example:
+
+    ```
+    custom/templates/home.tmpl
+    ```
+  </Step>
+  <Step title="Restart Gogs">
+    Edits to custom HTML templates **require restarting Gogs** to take effect.
+  </Step>
+</Steps>
+
+<Warning>
+  Override for email templates is disabled when `[server] LOAD_ASSETS_FROM_DISK = true` is set in your configuration. If you are using this setting, email template overrides will not be applied.
+</Warning>
+
+## Override static files
+
+You can replace static files (CSS, JavaScript, images, etc.) by placing customized versions under the `custom/public/` directory.
+
+For example, to override the site favicon, place your version at:
+
+```
+custom/public/img/favicon.png
+```
+
+<Tip>
+  Edits to custom static files **do not** require restarting Gogs. Changes take effect immediately.
+</Tip>
+
+## Inject custom content
+
+You can inject custom HTML into the head or footer of every page without touching the main repository source code. This is useful for adding analytics code, custom stylesheets, or other static resources.
+
+This approach is **recommended whenever possible** because it has the minimum impact on templates and is less likely to break during upgrades.
+
+The injection points are:
+
+| File | Location | Purpose |
+|---|---|---|
+| `custom/templates/inject/head.tmpl` | Inside `<head>` | Add stylesheets, meta tags, analytics scripts |
+| `custom/templates/inject/footer.tmpl` | Before `</body>` | Add scripts, tracking code, custom footer content |
+
+### Example: custom CSS file
+
+The following example shows how to include a custom CSS file in your Gogs instance:
+
+<Steps>
+  <Step title="Create the CSS file">
+    Create a file named `custom.css` under the `custom/public/css/` directory:
+
+    ```
+    custom/public/css/custom.css
+    ```
+  </Step>
+  <Step title="Add your CSS rules">
+    Write your CSS rules in the file. For example:
+
+    ```css
+    /* custom/public/css/custom.css */
+    .dashboard .news .news-item .header {
+      color: #333;
+    }
+
+    footer {
+      background-color: #f5f5f5;
+    }
+    ```
+  </Step>
+  <Step title="Link the stylesheet">
+    Edit the file `custom/templates/inject/head.tmpl` and add a link to your CSS file:
+
+    ```html
+    <link rel="stylesheet" href="/css/custom.css">
+    ```
+  </Step>
+  <Step title="Restart Gogs">
+    Restart Gogs to load the new `head.tmpl` injection template. After the initial restart, future edits to the custom CSS file **do not** require restarting Gogs.
+  </Step>
+</Steps>

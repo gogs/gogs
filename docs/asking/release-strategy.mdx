@@ -1,0 +1,49 @@
+---
+title: "Release strategy"
+description: "What you need to know about backwards compatibility"
+icon: "code-branch"
+---
+
+Understanding the Gogs release strategy helps you plan upgrades safely and avoid breaking changes.
+
+## Semantic versioning
+
+Starting with version **0.12.0**, Gogs follows [semantic versioning](https://semver.org/). Version numbers use the format `MAJOR.MINOR.PATCH`:
+
+| Version   | Type          | Description                                               |
+|-----------|---------------|-----------------------------------------------------------|
+| `0.12.0`  | Minor release | Introduces new features or breaking changes within `0.x`  |
+| `0.12.1`  | Patch release | First bug-fix release for the `0.12` series               |
+| `0.12`    | Release series| Refers collectively to `0.12.0`, `0.12.1`, `0.12.2`, etc.|
+
+Each minor release has its own **release branch** with the prefix `release/`. For example, `release/0.12` is the branch for version 0.12.0 and all of its patch releases (`0.12.1`, `0.12.2`, and so on).
+
+## Backwards compatibility
+
+### Upgrading from versions before 0.12
+
+<Warning>
+  If you are running any version of Gogs **below 0.12**, you must first upgrade to **0.12** before upgrading further. This version includes essential database migrations that later versions depend on.
+</Warning>
+
+### Upgrading from 0.12 and later
+
+Gogs maintains backwards compatibility across **one minor version** at a time. Patch release numbers are disregarded when determining compatibility.
+
+**Supported upgrade paths:**
+
+| From      | To        | Supported |
+|-----------|-----------|-----------|
+| `0.12.0`  | `0.13.0`  | Yes       |
+| `0.12.1`  | `0.13.4`  | Yes       |
+| `0.12.4`  | `0.14.0`  | **No** -- skips a minor version |
+
+<Info>
+  Always upgrade **one minor version at a time**. For example, to go from `0.12` to `0.14`, first upgrade to `0.13`, verify everything works, and then upgrade to `0.14`.
+</Info>
+
+## Source build update frequency
+
+<Tip>
+  If you run Gogs from a source build rather than an official binary, update **at least once per week**. This prevents you from falling behind and potentially missing incremental database migrations that cannot be applied out of order.
+</Tip>

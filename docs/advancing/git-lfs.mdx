@@ -1,0 +1,102 @@
+---
+title: "Git LFS"
+description: "Managing large binary files with some magic"
+icon: "file-arrow-up"
+---
+
+Git Large File Storage (LFS) helps manage large binary files in Git repositories. Instead of storing large files directly in the repository, Git LFS replaces them with lightweight pointers while storing the actual file contents on a separate server.
+
+## How it works
+
+The Git LFS client communicates with the Gogs server over HTTP/HTTPS. It uses HTTP Basic Authentication to authorize client requests. Once a request is authorized, the Git LFS client receives instructions on where to fetch or push the large file.
+
+## Server configuration
+
+Git LFS works out of the box with the default configuration for any supported version of Gogs.
+
+All configuration options for Git LFS are located in the `[lfs]` section of `custom/conf/app.ini`:
+
+```ini
+[lfs]
+; The storage backend for uploading new objects.
+STORAGE = local
+; The root path to store LFS objects on the local file system.
+OBJECTS_PATH = data/lfs-objects
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `STORAGE` | `local` | The storage backend for LFS objects. Currently only `local` is supported. |
+| `OBJECTS_PATH` | `data/lfs-objects` | The root path on the local file system where LFS objects are stored. |
+
+## Version requirements
+
+To use Git LFS with your Gogs instance, you need:
+
+- Gogs version **0.12** or later
+- [Git LFS client](https://git-lfs.github.com/) version **1.0.1** or later
+
+## Using Git LFS
+
+Git LFS endpoints in a Gogs server are automatically discovered by the Git LFS client, so you do not need to configure anything upfront.
+
+<Steps>
+  <Step title="Install Git LFS">
+    Install the [Git LFS client](https://git-lfs.github.com/) on your machine. Most package managers include it:
+
+    ```bash
+    # macOS
+    brew install git-lfs
+
+    # Debian/Ubuntu
+    sudo apt install git-lfs
+
+    # Then initialize Git LFS
+    git lfs install
+    ```
+  </Step>
+  <Step title="Track large files">
+    In your repository, tell Git LFS which file patterns to track:
+
+    ```bash
+    git lfs track "*.psd"
+    git lfs track "*.zip"
+    ```
+
+    This creates or updates a `.gitattributes` file. Make sure to commit it:
+
+    ```bash
+    git add .gitattributes
+    git commit -m "Track large files with Git LFS"
+    ```
+  </Step>
+  <Step title="Push as usual">
+    Add, commit, and push your files normally. Git LFS will automatically handle the large files:
+
+    ```bash
+    git add design.psd
+    git commit -m "Add design file"
+    git push origin main
+    ```
+  </Step>
+</Steps>
+
+For a complete walkthrough, see the official [Git LFS Tutorial](https://github.com/git-lfs/git-lfs/wiki/Tutorial).
+
+## Known limitations
+
+<Warning>
+  Be aware of the following limitations when using Git LFS with Gogs.
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="No S3 or object storage support">
+    Only local storage is supported. All LFS objects are stored on the same server where Gogs runs. Support for Object Storage Services like Amazon S3 is being tracked in [gogs/gogs#6065](https://github.com/gogs/gogs/issues/6065).
+  </Accordion>
+  <Accordion title="SSH remotes use HTTP for LFS transfers">
+    When SSH is set as a remote, Git LFS objects still go through HTTP/HTTPS. Any Git LFS request will prompt for HTTP/HTTPS credentials, so a good Git credentials store is recommended.
+  </Accordion>
+  <Accordion title="No file locking support">
+    File locking is not supported. This feature is being tracked in [gogs/gogs#6064](https://github.com/gogs/gogs/issues/6064).
+  </Accordion>
+</AccordionGroup>

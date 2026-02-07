@@ -1,0 +1,373 @@
+---
+title: "Reverse proxy"
+description: "Host-sharing your Git service with HTTPS"
+icon: "shield-halved"
+---
+
+Running Gogs behind a reverse proxy allows you to serve it on standard ports (80/443) with a clean and nice URL in the browser address bar, add TLS termination, and integrate with existing web server infrastructure.
+
+<Note>
+  Make sure the `EXTERNAL_URL` in your `custom/conf/app.ini` matches the actual URL users will access. When using a reverse proxy for TLS termination, keep `PROTOCOL = http` in Gogs and set `EXTERNAL_URL` to `https://`. The reverse proxy handles the encryption, and Gogs communicates with it over plain HTTP on the local network.
+</Note>
+
+## Caddy
+
+<Tabs>
+  <Tab title="Standard">
+    Add the following server block to your `Caddyfile` and reload:
+
+    ```caddy
+    gogs.example.com {
+        proxy / http://localhost:3000
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = https://gogs.example.com/
+    ```
+
+    <Tip>
+      Caddy automatically provisions TLS certificates via Let's Encrypt when you use a domain name.
+    </Tip>
+  </Tab>
+  <Tab title="Subpath">
+    To serve Gogs under a subpath, note the trailing `/`:
+
+    ```caddy
+    example.com {
+        proxy /gogs/ http://localhost:3000
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = https://example.com/gogs/
+    ```
+  </Tab>
+</Tabs>
+
+## NGINX
+
+<Tabs>
+  <Tab title="Standard">
+    Add the following `server` block inside the `http` section of your `nginx.conf` (or in a file under `sites-available`), then reload the NGINX configuration:
+
+    ```nginx
+    server {
+        listen 80;
+        server_name gogs.example.com;
+
+        location / {
+            proxy_pass http://localhost:3000;
+        }
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = http://gogs.example.com/
+    ```
+  </Tab>
+  <Tab title="Subpath">
+    To serve Gogs under a subpath, note the trailing `/` on both the `location` and `proxy_pass` directives:
+
+    ```nginx
+    server {
+        listen 80;
+        server_name example.com;
+
+        location /gogs/ {
+            proxy_pass http://localhost:3000/;
+        }
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = http://example.com/gogs/
+    ```
+  </Tab>
+  <Tab title="HTTPS">
+    Install [Certbot](https://certbot.eff.org/) and obtain a [Let's Encrypt](https://letsencrypt.org/) certificate:
+
+    ```bash
+    sudo apt install certbot python3-certbot-nginx
+    sudo certbot --nginx -d gogs.example.com
+    ```
+
+    Certbot will automatically modify your Nginx configuration to use HTTPS. Your Nginx server block will look similar to:
+
+    ```nginx
+    server {
+        listen 443 ssl;
+        server_name gogs.example.com;
+
+        ssl_certificate     /etc/letsencrypt/live/gogs.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/gogs.example.com/privkey.pem;
+
+        location / {
+            proxy_pass http://localhost:3000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name gogs.example.com;
+        return 301 https://$host$request_uri;
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = https://gogs.example.com/
+    ```
+
+    Certbot sets up automatic renewal via a cron job or systemd timer. Verify with:
+
+    ```bash
+    sudo certbot renew --dry-run
+    ```
+  </Tab>
+</Tabs>
+
+### Large file uploads
+
+If you encounter HTTP `413 Request Entity Too Large` errors when pushing large files through NGINX, add `client_max_body_size` to your server block:
+
+```nginx
+server {
+    listen 80;
+    server_name gogs.example.com;
+
+    client_max_body_size 50m;
+
+    location / {
+        proxy_pass http://localhost:3000;
+    }
+}
+```
+
+<Tip>
+  Adjust the `client_max_body_size` value to match or exceed the maximum file size you expect users to push. The default NGINX limit is only 1 MB.
+</Tip>
+
+## Apache 2
+
+<Tabs>
+  <Tab title="Standard">
+    Create or edit your virtual host configuration file (e.g. `/etc/apache2/vhost.d/gogs.conf`):
+
+    ```apache
+    <VirtualHost *:80>
+        ServerName gogs.example.com
+
+        ProxyPreserveHost On
+        ProxyRequests off
+        ProxyPass / http://127.0.0.1:3000
+        ProxyPassReverse / http://127.0.0.1:3000
+    </VirtualHost>
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = http://gogs.example.com/
+    ```
+  </Tab>
+  <Tab title="Subpath">
+    To serve Gogs under a subpath, omit the trailing slash after the port number in the `ProxyPass` directives:
+
+    ```apache
+    <VirtualHost *:80>
+        ServerName example.com
+
+        <Proxy *>
+            Order allow,deny
+            Allow from all
+        </Proxy>
+
+        ProxyPass /gogs http://127.0.0.1:3000
+        ProxyPassReverse /gogs http://127.0.0.1:3000
+    </VirtualHost>
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = http://example.com/gogs/
+    ```
+  </Tab>
+  <Tab title="HTTPS">
+    Enable the `ssl` module in addition to the proxy modules:
+
+    ```bash
+    sudo a2enmod proxy proxy_http ssl
+    sudo systemctl restart apache2
+    ```
+
+    Apache virtual host configuration:
+
+    ```apache
+    <VirtualHost *:443>
+        ServerName gogs.example.com
+
+        SSLEngine on
+        SSLCertificateFile    /path/to/cert.pem
+        SSLCertificateKeyFile /path/to/key.pem
+
+        ProxyPreserveHost On
+        ProxyRequests off
+        ProxyPass / http://127.0.0.1:3000/
+        ProxyPassReverse / http://127.0.0.1:3000/
+    </VirtualHost>
+
+    # Redirect HTTP to HTTPS
+    <VirtualHost *:80>
+        ServerName gogs.example.com
+        Redirect permanent / https://gogs.example.com/
+    </VirtualHost>
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = https://gogs.example.com/
+    ```
+  </Tab>
+</Tabs>
+
+## lighttpd
+
+<Tabs>
+  <Tab title="Standard">
+    Add the following to your lighttpd configuration:
+
+    ```lighttpd
+    server.modules += ( "mod_proxy" )
+
+    $HTTP["host"] == "gogs.example.com" {
+        proxy.server = ( "" => ( ( "host" => "127.0.0.1", "port" => "3000" ) ) )
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = http://gogs.example.com/
+    ```
+  </Tab>
+  <Tab title="Subpath">
+    To serve Gogs under a subpath, requires lighttpd **1.4.46 or later** for the `proxy.header` directive:
+
+    ```lighttpd
+    server.modules += ( "mod_proxy" )
+
+    $HTTP["url"] =~ "^/gogs/" {
+        proxy.server = ( "" => ( ( "host" => "localhost", "port" => "3000" ) ) )
+        proxy.header = ( "map-urlpath" => ( "/gogs/" => "/" ) )
+    }
+    ```
+
+    Set the matching external URL in `custom/conf/app.ini`:
+
+    ```ini
+    [server]
+    EXTERNAL_URL = http://example.com/gogs/
+    ```
+  </Tab>
+</Tabs>
+
+## IIS
+
+Create a new website in IIS and use the following `web.config` file.
+
+<Note>
+  If you do not need HTTPS handled by IIS, remove the entire `RedirectToHttps` rule section from the configuration below.
+</Note>
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <rules>
+                <rule name="RedirectToHttps" stopProcessing="true">
+                    <match url=".*" />
+                    <conditions>
+                        <add input="{HTTPS}" pattern="off" ignoreCase="true" />
+                    </conditions>
+                    <action type="Redirect"
+                            url="https://{HTTP_HOST}{REQUEST_URI}"
+                            redirectType="Permanent"
+                            appendQueryString="false" />
+                </rule>
+                <rule name="ReverseProxyInboundRule" stopProcessing="true">
+                    <match url="(.*)" />
+                    <action type="Rewrite"
+                            url="http://localhost:3000/{R:1}" />
+                </rule>
+            </rules>
+            <outboundRules>
+                <rule name="ReverseProxyOutboundRule"
+                      preCondition="ResponseIsHtml">
+                    <match filterByTags="A, Form, Img"
+                           pattern="^http(s)?://localhost:3000/(.*)" />
+                    <action type="Rewrite"
+                            value="http{R:1}://gogs.example.com/{R:2}" />
+                </rule>
+                <preConditions>
+                    <preCondition name="ResponseIsHtml">
+                        <add input="{RESPONSE_CONTENT_TYPE}"
+                             pattern="^text/html" />
+                    </preCondition>
+                </preConditions>
+            </outboundRules>
+        </rewrite>
+    </system.webServer>
+</configuration>
+```
+
+Then set the matching external URL in `custom/conf/app.ini`:
+
+```ini
+[server]
+EXTERNAL_URL = https://gogs.example.com/
+```
+
+## Native HTTPS
+
+If you are not using a reverse proxy, Gogs can serve HTTPS directly. Update the `[server]` section of `custom/conf/app.ini`:
+
+```ini
+[server]
+PROTOCOL  = https
+EXTERNAL_URL = https://gogs.example.com/
+CERT_FILE = custom/https/cert.pem
+KEY_FILE  = custom/https/key.pem
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `PROTOCOL` | Set to `https` to enable native TLS. | `http` |
+| `CERT_FILE` | Path to the TLS certificate file (PEM format). | `custom/https/cert.pem` |
+| `KEY_FILE` | Path to the TLS private key file (PEM format). | `custom/https/key.pem` |
+| `TLS_MIN_VERSION` | Minimum TLS version. Options: `TLS10`, `TLS11`, `TLS12`, `TLS13`. | `TLS12` |

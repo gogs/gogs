@@ -1,0 +1,116 @@
+---
+title: "Introduction"
+sidebarTitle: "Introduction"
+description: "Overview of the Gogs API including authentication, pagination, and schema"
+---
+
+The Gogs API provides a RESTful interface for interacting with your Gogs instance programmatically. It aims to follow a format similar to the [GitHub REST API v3](https://developer.github.com/v3/).
+
+<Info>
+  The API is bundled with every Gogs installation. No additional setup is required.
+</Info>
+
+<Warning>
+  The API is still in its early stages. Content and endpoints are subject to change.
+</Warning>
+
+## Current version
+
+All Gogs APIs are under **v1** using the request path prefix `/api/v1`.
+
+```
+https://gogs.example.com/api/v1
+```
+
+## Schema
+
+All data is sent and received as **JSON** unless specified otherwise.
+
+```http
+HTTP/2 200
+Content-Type: application/json; charset=UTF-8
+```
+
+All timestamps are returned in **RFC 3339** format:
+
+```
+YYYY-MM-DDTHH:MM:SSZ
+2006-01-02T15:04:05Z07:00
+```
+
+## Authentication
+
+There are two ways to authenticate through the Gogs API. Requests that require authentication will return `404 Not Found` instead of `403 Forbidden` in some places. This is to prevent the accidental leakage of private resources to unauthorized users.
+
+<Tabs>
+  <Tab title="Basic authentication">
+    Basic authentication is used to obtain access tokens. Supply your username (you will be prompted for your password):
+
+    ```bash
+    curl -u "alice" https://gogs.example.com/api/v1/users/alice/tokens
+    ```
+
+    <Warning>
+      Basic authentication should only be used to generate access tokens. Do not use it for regular API requests.
+    </Warning>
+  </Tab>
+  <Tab title="Access token">
+    Personal access tokens are the recommended way to authenticate. They can be sent via a request **header** or a **URL query parameter**.
+
+    **Using a header:**
+
+    ```bash
+    curl -H "Authorization: token {YOUR_ACCESS_TOKEN}" https://gogs.example.com/api/v1/user/repos
+    ```
+
+    **Using a query parameter:**
+
+    ```bash
+    curl https://gogs.example.com/api/v1/user/repos?token={YOUR_ACCESS_TOKEN}
+    ```
+
+    <Tip>
+      Using the `Authorization` header is preferred over the query parameter, as URLs may be logged by proxies and servers.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Pagination
+
+API responses that return multiple items are paginated. You can specify further pages with the `?page` query parameter.
+
+```bash
+curl https://gogs.example.com/api/v1/repos/alice/hello/issues?page=1
+```
+
+Page numbering is **1-based**. Omitting the `?page` parameter returns the first page.
+
+### Link header
+
+Pagination info is included in the [Link header](http://tools.ietf.org/html/rfc5988) of each response. Use this to navigate between pages programmatically.
+
+```http
+Link: <https://gogs.example.com/api/v1/repos/alice/hello/issues?page=3>; rel="next",
+  <https://gogs.example.com/api/v1/repos/alice/hello/issues?page=50>; rel="last"
+```
+
+The possible `rel` values are:
+
+| Name | Description |
+|---|---|
+| `next` | The link relation for the immediate next page of results. |
+| `last` | The link relation for the last page of results. |
+| `first` | The link relation for the first page of results. |
+| `prev` | The link relation for the immediate previous page of results. |
+
+<Tip>
+  Always use the Link header values to navigate between pages rather than constructing URLs manually.
+</Tip>
+
+## SDKs
+
+The following best-effort-maintained SDKs are available:
+
+| Language | Repository |
+|---|---|
+| Go | [gogs/go-gogs-client](https://github.com/gogs/go-gogs-client) |
