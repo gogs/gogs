@@ -148,7 +148,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	}
 
 	if issue.Comments == nil {
-		issue.Comments, err = getCommentsByIssueID(e, issue.ID)
+		issue.Comments, err = getCommentsByIssueID(e, issue.ID, true)
 		if err != nil {
 			return errors.Newf("getCommentsByIssueID [%d]: %v", issue.ID, err)
 		}

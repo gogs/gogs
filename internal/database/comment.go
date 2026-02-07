@@ -431,9 +431,14 @@ func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
 	return nil
 }
 
-func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
+func getCommentsByIssueIDSince(e Engine, issueID, since int64, isAsc bool) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue_id = ?", issueID).Asc("created_unix")
+	sess := e.Where("issue_id = ?", issueID)
+	if isAsc {
+		sess.Asc("created_unix")
+	} else {
+		sess.Desc("created_unix")
+	}
 	if since > 0 {
 		sess.And("updated_unix >= ?", since)
 	}
@@ -444,9 +449,14 @@ func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, erro
 	return comments, loadCommentsAttributes(e, comments)
 }
 
-func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
+func getCommentsByRepoIDSince(e Engine, repoID, since int64, isAsc bool) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id").Asc("comment.created_unix")
+	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id")
+	if isAsc {
+		sess.Asc("comment.created_unix")
+	} else {
+		sess.Desc("comment.created_unix")
+	}
 	if since > 0 {
 		sess.And("comment.updated_unix >= ?", since)
 	}
@@ -456,23 +466,25 @@ func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error)
 	return comments, loadCommentsAttributes(e, comments)
 }
 
-func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueIDSince(e, issueID, -1)
+func getCommentsByIssueID(e Engine, issueID int64, isAsc bool) ([]*Comment, error) {
+	return getCommentsByIssueIDSince(e, issueID, -1, isAsc)
 }
 
-// GetCommentsByIssueID returns all comments of an issue.
-func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueID(x, issueID)
+// GetCommentsByIssueID returns all comments of an issue, sorted by created time.
+func GetCommentsByIssueID(issueID int64, isAsc bool) ([]*Comment, error) {
+	return getCommentsByIssueID(x, issueID, isAsc)
 }
 
-// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
-func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
-	return getCommentsByIssueIDSince(x, issueID, since)
+// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point, sorted
+// by created time.
+func GetCommentsByIssueIDSince(issueID, since int64, isAsc bool) ([]*Comment, error) {
+	return getCommentsByIssueIDSince(x, issueID, since, isAsc)
 }
 
-// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
-func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
-	return getCommentsByRepoIDSince(x, repoID, since)
+// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time
+// point, sorted by created time.
+func GetCommentsByRepoIDSince(repoID, since int64, isAsc bool) ([]*Comment, error) {
+	return getCommentsByRepoIDSince(x, repoID, since, isAsc)
 }
 
 // UpdateComment updates information of comment.
