@@ -4,9 +4,9 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
-### Changed
+### Removed
 
-- The `gogs cert` subcommand has been removed. [#8153](https://github.com/gogs/gogs/pull/8153)
+- The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
 
 ## 0.14.1
 
