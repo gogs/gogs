@@ -1,0 +1,254 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "fonts": {
+    "family": "DM Sans"
+  },
+  "name": "Gogs: A painless self-hosted Git service",
+  "colors": {
+    "primary": "#e45858",
+    "light": "#e45858",
+    "dark": "#e53170"
+  },
+  "api": {
+    "playground": {
+      "display": "simple"
+    },
+    "examples": {
+      "languages": ["curl"]
+    }
+  },
+  "favicon": "/images/favicon.svg",
+  "logo": {
+    "light": "/images/logo-light.svg",
+    "dark": "/images/logo-dark.svg"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "getting-started/introduction",
+              "getting-started/installation"
+            ]
+          },
+          {
+            "group": "Fine-tuning",
+            "pages": [
+              "fine-tuning/configuration-primer",
+              "fine-tuning/reverse-proxy",
+              "fine-tuning/run-as-service"
+            ]
+          },
+          {
+            "group": "Advancing",
+            "pages": [
+              "advancing/authentication",
+              "advancing/webhooks",
+              "advancing/git-lfs",
+              "advancing/custom-templates",
+              "advancing/localization"
+            ]
+          },
+          {
+            "group": "Asking",
+            "pages": [
+              "asking/release-strategy",
+              "asking/troubleshooting",
+              "asking/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Repositories",
+            "pages": [
+              "api-reference/repositories/search-repositories",
+              "api-reference/repositories/list-your-repositories",
+              "api-reference/repositories/create-a-repository",
+              "api-reference/repositories/list-user-repositories",
+              "api-reference/repositories/list-organization-repositories",
+              "api-reference/repositories/create-a-repository-in-an-organization",
+              "api-reference/repositories/migrate-a-repository",
+              "api-reference/repositories/get-a-repository",
+              "api-reference/repositories/delete-a-repository",
+              "api-reference/repositories/edit-issue-tracker-settings",
+              "api-reference/repositories/mirror-sync",
+              "api-reference/repositories/list-branches",
+              "api-reference/repositories/get-a-branch",
+              "api-reference/repositories/get-a-single-commit",
+              "api-reference/repositories/download-raw-content",
+              "api-reference/repositories/download-archive",
+              "api-reference/repositories/get-contents",
+              "api-reference/repositories/create-or-update-a-file",
+              "api-reference/repositories/list-forks",
+              "api-reference/repositories/list-tags",
+              "api-reference/repositories/list-all-commits",
+              "api-reference/repositories/edit-wiki-settings",
+              "api-reference/repositories/get-editorconfig-definition"
+            ]
+          },
+          {
+            "group": "Collaborators and deploy keys",
+            "pages": [
+              "api-reference/collaborators-and-deploy-keys/list-collaborators",
+              "api-reference/collaborators-and-deploy-keys/check-if-user-is-collaborator",
+              "api-reference/collaborators-and-deploy-keys/add-a-collaborator",
+              "api-reference/collaborators-and-deploy-keys/remove-a-collaborator",
+              "api-reference/collaborators-and-deploy-keys/list-deploy-keys",
+              "api-reference/collaborators-and-deploy-keys/add-a-deploy-key",
+              "api-reference/collaborators-and-deploy-keys/get-a-deploy-key",
+              "api-reference/collaborators-and-deploy-keys/remove-a-deploy-key"
+            ]
+          },
+          {
+            "group": "Releases",
+            "pages": [
+              "api-reference/releases/list-releases"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/list-hooks",
+              "api-reference/webhooks/create-a-hook",
+              "api-reference/webhooks/edit-a-hook",
+              "api-reference/webhooks/delete-a-hook"
+            ]
+          },
+          {
+            "group": "Issues",
+            "pages": [
+              "api-reference/issues/list-user-issues",
+              "api-reference/issues/list-issues-for-a-repository",
+              "api-reference/issues/create-an-issue",
+              "api-reference/issues/get-a-single-issue",
+              "api-reference/issues/edit-an-issue",
+              "api-reference/issues/list-comments-on-an-issue",
+              "api-reference/issues/create-a-comment",
+              "api-reference/issues/list-comments-in-a-repository",
+              "api-reference/issues/edit-a-comment",
+              "api-reference/issues/delete-a-comment",
+              "api-reference/issues/list-all-labels-for-a-repository",
+              "api-reference/issues/create-a-label",
+              "api-reference/issues/get-a-single-label",
+              "api-reference/issues/update-a-label",
+              "api-reference/issues/delete-a-label",
+              "api-reference/issues/list-labels-on-an-issue",
+              "api-reference/issues/add-labels-to-an-issue",
+              "api-reference/issues/replace-all-labels-for-an-issue",
+              "api-reference/issues/remove-all-labels-from-an-issue",
+              "api-reference/issues/remove-a-label-from-an-issue",
+              "api-reference/issues/list-milestones-for-a-repository",
+              "api-reference/issues/create-a-milestone",
+              "api-reference/issues/get-a-single-milestone",
+              "api-reference/issues/edit-a-milestone",
+              "api-reference/issues/delete-a-milestone"
+            ]
+          },
+          {
+            "group": "Users",
+            "pages": [
+              "api-reference/users/search-for-users",
+              "api-reference/users/get-a-single-user",
+              "api-reference/users/get-the-authenticated-user",
+              "api-reference/users/list-access-tokens",
+              "api-reference/users/create-an-access-token",
+              "api-reference/users/list-email-addresses",
+              "api-reference/users/add-email-addresses",
+              "api-reference/users/delete-email-addresses",
+              "api-reference/users/list-followers-of-a-user",
+              "api-reference/users/list-your-followers",
+              "api-reference/users/list-users-followed-by-a-user",
+              "api-reference/users/list-who-you-are-following",
+              "api-reference/users/check-if-you-follow-a-user",
+              "api-reference/users/follow-a-user",
+              "api-reference/users/unfollow-a-user",
+              "api-reference/users/check-if-a-user-follows-another",
+              "api-reference/users/list-public-keys-for-a-user",
+              "api-reference/users/get-a-single-public-key",
+              "api-reference/users/delete-a-public-key",
+              "api-reference/users/list-your-public-keys",
+              "api-reference/users/create-a-public-key"
+            ]
+          },
+          {
+            "group": "Organizations",
+            "pages": [
+              "api-reference/organizations/create-an-organization-for-user",
+              "api-reference/organizations/list-your-organizations",
+              "api-reference/organizations/list-user-organizations",
+              "api-reference/organizations/get-an-organization",
+              "api-reference/organizations/edit-an-organization",
+              "api-reference/organizations/list-teams-of-an-organization"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "api-reference/administration/create-a-new-user",
+              "api-reference/administration/edit-an-existing-user",
+              "api-reference/administration/delete-a-user",
+              "api-reference/administration/create-a-public-key-for-a-user",
+              "api-reference/administration/create-a-repository-for-a-user",
+              "api-reference/administration/create-an-organization",
+              "api-reference/administration/create-a-team",
+              "api-reference/administration/list-all-members-of-a-team",
+              "api-reference/administration/add-team-membership",
+              "api-reference/administration/remove-team-membership",
+              "api-reference/administration/add-or-update-team-repository",
+              "api-reference/administration/remove-team-repository"
+            ]
+          },
+          {
+            "group": "Miscellaneous",
+            "pages": [
+              "api-reference/miscellaneous/render-a-markdown-document",
+              "api-reference/miscellaneous/render-a-markdown-document-in-raw-mode",
+              "api-reference/miscellaneous/get-a-tree",
+              "api-reference/miscellaneous/get-a-git-blob"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Demo",
+        "href": "https://try.gogs.io"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/gogs/gogs"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/GogsHQ",
+      "github": "https://github.com/gogs/gogs"
+    }
+  },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
+  "integrations": {
+    "plausible": {
+      "domain": "gogs.io"
+    }
+  }
+}

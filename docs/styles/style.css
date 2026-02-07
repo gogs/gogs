@@ -1,0 +1,48 @@
+/* Fix sidebar HTTP method badge overflow for PATCH (5-char badge exceeds the default 32px container) */
+.method-nav-pill {
+  width: 2.5rem !important;
+}
+
+/* Carbon Ads — below table of contents */
+#gogs-carbon-ad {
+  margin-top: 1rem;
+  border-top: 1px solid hsl(0 0% 90%);
+}
+.dark #gogs-carbon-ad {
+  border-top-color: hsl(0 0% 22%);
+}
+#carbonads {
+  margin-top: 1.5rem;
+  display: block;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: hsl(0 0% 98%);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+.dark #carbonads {
+  color: darkgray;
+  background: hsl(0 0% 12%);
+}
+#carbonads .carbon-img {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+#carbonads .carbon-img img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* wwads — above table of contents */
+#gogs-wwads {
+  margin-top: -1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid hsl(0 0% 90%);
+}
+.dark #gogs-wwads {
+  color: darkgray;
+  background: hsl(0 0% 12%);
+  border-bottom-color: hsl(0 0% 22%);
+}

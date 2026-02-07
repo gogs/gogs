@@ -1,0 +1,131 @@
+---
+title: "Configuration primer"
+description: "Fine tune your instance exactly the way you want."
+icon: "sliders"
+---
+
+Gogs uses a layered configuration system. A default configuration is embedded in the binary, and you provide overrides in a custom file. Beyond `app.ini`, the `custom/` directory lets you override templates, static assets, locale files, and more.
+
+## Two-layer configuration
+
+Gogs reads configuration from two sources, in order:
+
+1. **Embedded defaults**: The [`conf/app.ini`](https://github.com/gogs/gogs/blob/main/conf/app.ini) file is compiled into the binary. You should never edit this file directly.
+2. **Custom overrides**: Your `custom/conf/app.ini` file. Any value you set here takes precedence over the embedded default.
+
+This separation means binary users can upgrade without losing their settings, and source installers benefit from `custom/` being in `.gitignore`.
+
+<Tip>
+  The embedded [`conf/app.ini`](https://github.com/gogs/gogs/blob/main/conf/app.ini) contains every available option with detailed inline comments. Use it as your canonical reference.
+</Tip>
+
+### Overriding a value
+
+You only need to include the values you want to change. For example, to set a custom repository storage path and switch to production mode:
+
+```ini
+RUN_MODE = prod
+
+[repository]
+ROOT = /home/git/gogs-repositories
+```
+
+Values support INI variable interpolation with the `%(KEY)s` syntax. The embedded defaults use this extensively, for example:
+
+```ini
+EXTERNAL_URL = %(PROTOCOL)s://%(DOMAIN)s:%(HTTP_PORT)s/
+```
+
+Values also support environment variable expansion, so you can reference system environment variables directly in your configuration:
+
+```ini
+[database]
+PASSWORD = ${DATABASE_PASSWORD}
+```
+
+<Warning>
+  If a password or value contains special characters (like backticks or `#`), wrap it in backticks, e.g., <code>PASSWORD = \`p@ss#word!\`</code>.
+</Warning>
+
+<Tip>
+  Gogs uses [go-ini/ini](https://ini.unknwon.io/) as the configuration library, please refer to its documentation for the full syntax specification including multi-line values, key/value separators, and section handling.
+</Tip>
+
+## The `custom/` directory
+
+The `custom/` directory is Gogs' extension point. It sits alongside the binary by default, and contains much more than just `app.ini`.
+
+### Finding the path
+
+Run `gogs web --help` to see the custom directory path in the output. You can also override it:
+
+| Method | Example |
+|--------|---------|
+| Default | The `custom/` subdirectory next to the binary |
+| Environment variable | `GOGS_CUSTOM=/etc/gogs` |
+
+The work directory (parent of `custom/`) can also be overridden with `GOGS_WORK_DIR`.
+
+### Specifying a custom config path
+
+Every Gogs subcommand accepts `-c, --config` to point to a configuration file at a non-default location:
+
+```bash
+./gogs web --config /etc/gogs/app.ini
+```
+
+### What lives in `custom/`
+
+```
+custom/
+├── conf/
+│   ├── app.ini              # Your configuration overrides
+│   ├── auth.d/              # Authentication source files
+│   │   └── *.conf
+│   ├── gitignore/           # Custom .gitignore templates
+│   ├── license/             # Custom license templates
+│   ├── readme/              # Custom README templates
+│   ├── label/               # Custom issue label sets
+│   └── locale/              # Translation overrides
+│       └── locale_*.ini
+├── templates/               # HTML template overrides
+├── public/                  # Static asset overrides (CSS, JS, images)
+└── robots.txt               # Search engine crawling rules
+```
+
+All of these are optional. Gogs falls back to embedded defaults when a custom file does not exist.
+
+## Repository templates
+
+Gogs ships with embedded templates used when creating new repositories:
+
+| Template type | Embedded location |
+|---------------|-------------------|
+| `.gitignore` | `conf/gitignore/` |
+| License | `conf/license/` |
+| README | `conf/readme/` |
+| Issue labels | `conf/label/` |
+
+You can add your own by placing files in the corresponding `custom/conf/` subdirectory. Custom files take priority over embedded ones with the same name, so you can also override built-in templates.
+
+For example, to add a custom `.gitignore` template that appears in the repository creation form:
+
+```
+custom/conf/gitignore/MyFramework
+```
+
+The `[repository] PREFERRED_LICENSES` option controls which licenses appear at the top of the selection list. The names must match filenames in `conf/license/` or `custom/conf/license/`.
+
+## Custom templates and static assets
+
+You can override any of Gogs' HTML templates or static assets by mirroring the file structure under `custom/`.
+
+**Templates** -- Place files in `custom/templates/` matching the path of the [embedded template](https://github.com/gogs/gogs/tree/main/templates) you want to override. See [Custom templates](/advancing/custom-templates) for details.
+
+**Static assets** -- Place files in `custom/public/` to override CSS, JavaScript, or images. Custom public files are served with higher priority than embedded ones.
+
+**Locale overrides** -- Place `locale_*.ini` files in `custom/conf/locale/` to override translation strings for any supported language.
+
+## Loading assets from disk
+
+By default, Gogs serves templates, locale files, and public assets from the binary's embedded data. If you set `LOAD_ASSETS_FROM_DISK = true` in `[server]`, Gogs will load them from the work directory instead. This is mainly useful during development.
