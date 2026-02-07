@@ -1,0 +1,12 @@
+version: '3'
+services:
+  gogs:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/app/gogs/src
+      - ./app.ini:/data/gogs/conf/app.ini
+    ports:
+      - 22:22
+      - 3000:3000
