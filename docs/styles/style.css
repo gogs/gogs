@@ -41,8 +41,10 @@
   padding-bottom: 1.5rem;
   border-bottom: 1px solid hsl(0 0% 90%);
 }
-.dark #gogs-wwads {
-  color: darkgray;
+.dark .wwads-cn {
   background: hsl(0 0% 12%);
   border-bottom-color: hsl(0 0% 22%);
+}
+.dark .wwads-cn .wwads-text {
+  color: darkgray;
 }
