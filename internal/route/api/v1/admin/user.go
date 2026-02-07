@@ -144,5 +144,5 @@ func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
 	if c.Written() {
 		return
 	}
-	user.CreateUserPublicKey(c, form, u.ID)
+	user.CreateUserPublicKey(c, user.PkReq{KeyTxt: form.Key, TitleTxt: form.Title}, u.ID)
 }

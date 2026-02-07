@@ -1,13 +1,17 @@
 package misc
 
 import (
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/markup"
 )
 
-func Markdown(c *context.APIContext, form api.MarkdownOption) {
+// MarkdownRequest represents the request body for rendering markdown.
+type MarkdownRequest struct {
+	Text    string
+	Context string
+}
+
+func Markdown(c *context.APIContext, form MarkdownRequest) {
 	if form.Text == "" {
 		_, _ = c.Write([]byte(""))
 		return

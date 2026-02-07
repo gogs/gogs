@@ -1,17 +1,41 @@
 package user
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/repo"
 )
+
+// PkResp holds public key response data.
+type PkResp struct {
+	IdVal     int64     `json:"id"`
+	KeyTxt    string    `json:"key"`
+	UrlStr    string    `json:"url"`
+	TitleTxt  string    `json:"title"`
+	CreatedTm time.Time `json:"created_at"`
+}
+
+// PkReq holds public key request data.
+type PkReq struct {
+	KeyTxt   string `json:"key" binding:"Required"`
+	TitleTxt string `json:"title" binding:"Required"`
+}
+
+func buildPkResp(apiLink string, k *database.PublicKey) *PkResp {
+	r := PkResp{IdVal: k.ID}
+	r.KeyTxt = k.Content
+	r.TitleTxt = k.Name
+	r.CreatedTm = k.Created
+	r.UrlStr = fmt.Sprintf("%s%d", apiLink, r.IdVal)
+	return &r
+}
 
 func GetUserByParamsName(c *context.APIContext, name string) *database.User {
 	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(name))
@@ -22,7 +46,6 @@ func GetUserByParamsName(c *context.APIContext, name string) *database.User {
 	return user
 }
 
-// GetUserByParams returns user whose name is presented in URL parameter.
 func GetUserByParams(c *context.APIContext) *database.User {
 	return GetUserByParamsName(c, ":username")
 }
@@ -39,12 +62,12 @@ func listPublicKeys(c *context.APIContext, uid int64) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	apiKeys := make([]*api.PublicKey, len(keys))
+	resps := make([]*PkResp, len(keys))
 	for i := range keys {
-		apiKeys[i] = convert.ToPublicKey(apiLink, keys[i])
+		resps[i] = buildPkResp(apiLink, keys[i])
 	}
 
-	c.JSONSuccess(&apiKeys)
+	c.JSONSuccess(&resps)
 }
 
 func ListMyPublicKeys(c *context.APIContext) {
@@ -67,27 +90,26 @@ func GetPublicKey(c *context.APIContext) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	c.JSONSuccess(convert.ToPublicKey(apiLink, key))
+	c.JSONSuccess(buildPkResp(apiLink, key))
 }
 
-// CreateUserPublicKey creates new public key to given user by ID.
-func CreateUserPublicKey(c *context.APIContext, form api.CreateKeyOption, uid int64) {
-	content, err := database.CheckPublicKeyString(form.Key)
+func CreateUserPublicKey(c *context.APIContext, form PkReq, uid int64) {
+	content, err := database.CheckPublicKeyString(form.KeyTxt)
 	if err != nil {
 		repo.HandleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := database.AddPublicKey(uid, form.Title, content)
+	key, err := database.AddPublicKey(uid, form.TitleTxt, content)
 	if err != nil {
 		repo.HandleAddKeyError(c, err)
 		return
 	}
 	apiLink := composePublicKeysAPILink()
-	c.JSON(http.StatusCreated, convert.ToPublicKey(apiLink, key))
+	c.JSON(http.StatusCreated, buildPkResp(apiLink, key))
 }
 
-func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
+func CreatePublicKey(c *context.APIContext, form PkReq) {
 	CreateUserPublicKey(c, form, c.User.ID)
 }
 
