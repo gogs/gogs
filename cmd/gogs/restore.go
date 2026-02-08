@@ -8,7 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -42,10 +42,10 @@ be skipped and remain unchanged.`,
 // format that is able to import.
 var lastSupportedVersionOfFormat = map[int]string{}
 
-func runRestore(c *cli.Context) error {
-	zip.Verbose = c.Bool("verbose")
+func runRestore(_ context.Context, cmd *cli.Command) error {
+	zip.Verbose = cmd.Bool("verbose")
 
-	tmpDir := c.String("tempdir")
+	tmpDir := cmd.String("tempdir")
 	if !osutil.IsDir(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
@@ -58,8 +58,8 @@ func runRestore(c *cli.Context) error {
 	}
 	defer func() { _ = os.RemoveAll(archivePath) }()
 
-	log.Info("Restoring backup from: %s", c.String("from"))
-	err = zip.ExtractTo(c.String("from"), tmpDir)
+	log.Info("Restoring backup from: %s", cmd.String("from"))
+	err = zip.ExtractTo(cmd.String("from"), tmpDir)
 	if err != nil {
 		log.Fatal("Failed to extract backup archive: %v", err)
 	}
@@ -90,8 +90,8 @@ func runRestore(c *cli.Context) error {
 	// Otherwise, it's optional to set config file flag.
 	configFile := filepath.Join(archivePath, "custom", "conf", "app.ini")
 	var customConf string
-	if c.IsSet("config") {
-		customConf = c.String("config")
+	if cmd.IsSet("config") {
+		customConf = cmd.String("config")
 	} else if !osutil.IsFile(configFile) {
 		log.Fatal("'--config' is not specified and custom config file is not found in backup")
 	} else {
@@ -111,11 +111,11 @@ func runRestore(c *cli.Context) error {
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = database.ImportDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = database.ImportDatabase(context.Background(), conn, dbDir, cmd.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 
-	if !c.Bool("database-only") {
+	if !cmd.Bool("database-only") {
 		// Custom files
 		if osutil.IsDir(conf.CustomDir()) {
 			if err = os.Rename(conf.CustomDir(), conf.CustomDir()+".bak"); err != nil {
@@ -149,7 +149,7 @@ func runRestore(c *cli.Context) error {
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
-	if !c.Bool("exclude-repos") && !c.Bool("database-only") && osutil.IsFile(reposPath) {
+	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osutil.IsFile(reposPath) {
 		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
 			log.Fatal("Failed to extract 'repositories.zip': %v", err)
 		}

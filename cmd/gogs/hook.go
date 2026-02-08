@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/url"
@@ -12,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
@@ -32,10 +33,10 @@ var (
 		Flags: []cli.Flag{
 			stringFlag("config, c", "", "Custom configuration file path"),
 		},
-		Subcommands: []cli.Command{
-			subcmdHookPreReceive,
-			subcmdHookUpadte,
-			subcmdHookPostReceive,
+		Commands: []*cli.Command{
+			&subcmdHookPreReceive,
+			&subcmdHookUpadte,
+			&subcmdHookPostReceive,
 		},
 	}
 
@@ -59,11 +60,11 @@ var (
 	}
 )
 
-func runHookPreReceive(c *cli.Context) error {
+func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(c, "pre-receive.log", true)
+	setup(cmd, "pre-receive.log", true)
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
@@ -152,13 +153,13 @@ func runHookPreReceive(c *cli.Context) error {
 	return nil
 }
 
-func runHookUpdate(c *cli.Context) error {
+func runHookUpdate(_ context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(c, "update.log", false)
+	setup(cmd, "update.log", false)
 
-	args := c.Args()
+	args := cmd.Args().Slice()
 	if len(args) != 3 {
 		fail("Arguments received are not equal to three", "Arguments received are not equal to three")
 	} else if args[0] == "" {
@@ -186,11 +187,11 @@ func runHookUpdate(c *cli.Context) error {
 	return nil
 }
 
-func runHookPostReceive(c *cli.Context) error {
+func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(c, "post-receive.log", true)
+	setup(cmd, "post-receive.log", true)
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
