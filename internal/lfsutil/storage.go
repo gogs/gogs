@@ -107,7 +107,7 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 		return 0, ErrOIDMismatch
 	}
 
-	if err := os.Rename(tmpPath, fpath); err != nil {
+	if err := os.Rename(tmpPath, fpath); err != nil && !os.IsExist(err) {
 		return 0, errors.Wrap(err, "publish object file")
 	}
 	return written, nil
