@@ -22,7 +22,7 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-//go:generate go run main.go ../../../docs-old/dev/database_schema.md
+//go:generate go run main.go ../../../docs/dev/database_schema.md
 
 func main() {
 	w, err := os.Create(os.Args[1])
