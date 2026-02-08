@@ -63,50 +63,47 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 		return 0, ErrInvalidOID
 	}
 
-	var err error
 	fpath := s.storagePath(oid)
-	defer func() {
-		rc.Close()
+	dir := filepath.Dir(fpath)
 
-		if err != nil {
-			_ = os.Remove(fpath)
-		}
-	}()
+	defer rc.Close()
 
-	err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return 0, errors.Wrap(err, "create directories")
 	}
 
-	w, err := os.OpenFile(fpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o666)
-	if err != nil {
-		if os.IsExist(err) {
-			// The file was already written by a previous upload (possibly for a
-			// different repo). Since the OID is a content hash, the existing file
-			// is guaranteed to have the correct content. Drain the reader and
-			// return the existing file's size.
-			_, _ = io.Copy(io.Discard, rc)
-			fi, statErr := os.Stat(fpath)
-			if statErr != nil {
-				err = errors.Wrap(statErr, "stat existing file")
-				return 0, err
-			}
-			err = nil
-			return fi.Size(), nil
-		}
-		return 0, errors.Wrap(err, "create file")
+	// If the object file already exists, skip the upload and return the
+	// existing file's size.
+	if fi, err := os.Stat(fpath); err == nil {
+		_, _ = io.Copy(io.Discard, rc)
+		return fi.Size(), nil
 	}
-	defer w.Close()
+
+	// Write to a temp file and verify the content hash before publishing.
+	// This ensures the final path always contains a complete, hash-verified
+	// file, even when concurrent uploads of the same OID race.
+	tmp, err := os.CreateTemp(dir, ".lfs-upload-*")
+	if err != nil {
+		return 0, errors.Wrap(err, "create temp file")
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
 
 	hash := sha256.New()
-	written, err := io.Copy(w, io.TeeReader(rc, hash))
+	written, err := io.Copy(tmp, io.TeeReader(rc, hash))
+	if closeErr := tmp.Close(); err == nil && closeErr != nil {
+		err = closeErr
+	}
 	if err != nil {
-		return 0, errors.Wrap(err, "copy file")
+		return 0, errors.Wrap(err, "write object file")
 	}
 
 	if computed := hex.EncodeToString(hash.Sum(nil)); computed != string(oid) {
-		err = ErrOIDMismatch
-		return 0, err
+		return 0, ErrOIDMismatch
+	}
+
+	if err := os.Rename(tmpPath, fpath); err != nil {
+		return 0, errors.Wrap(err, "publish object file")
 	}
 	return written, nil
 }
