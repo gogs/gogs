@@ -52,8 +52,11 @@ func setup(cmd *cli.Command, logFile string, connectDB bool) {
 	conf.HookMode = true
 
 	var customConf string
-	if cmd.IsSet("config") {
-		customConf = cmd.String("config")
+	for _, c := range cmd.Lineage() {
+		if c.IsSet("config") {
+			customConf = c.String("config")
+			break
+		}
 	}
 
 	err := conf.Init(customConf)
