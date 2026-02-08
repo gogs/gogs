@@ -44,6 +44,8 @@ var _ Storager = (*LocalStorage)(nil)
 type LocalStorage struct {
 	// The root path for storing LFS objects.
 	Root string
+	// The path for storing temporary files during upload verification.
+	TempDir string
 }
 
 func (*LocalStorage) Storage() Storage {
@@ -82,11 +84,10 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 	// Write to a temp file and verify the content hash before publishing.
 	// This ensures the final path always contains a complete, hash-verified
 	// file, even when concurrent uploads of the same OID race.
-	tmpDir := filepath.Join(s.Root, ".tmp")
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-		return 0, errors.Wrap(err, "create temp directories")
+	if err := os.MkdirAll(s.TempDir, os.ModePerm); err != nil {
+		return 0, errors.Wrap(err, "create temp directory")
 	}
-	tmp, err := os.CreateTemp(tmpDir, ".lfs-upload-*")
+	tmp, err := os.CreateTemp(s.TempDir, ".lfs-upload-*")
 	if err != nil {
 		return 0, errors.Wrap(err, "create temp file")
 	}

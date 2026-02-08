@@ -346,6 +346,7 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [lfs] section")
 	}
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
+	LFS.TempPath = ensureAbs(LFS.TempPath)
 
 	handleDeprecated()
 	if !HookMode {

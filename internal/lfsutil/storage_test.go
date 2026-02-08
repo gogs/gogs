@@ -49,8 +49,10 @@ func TestLocalStorage_storagePath(t *testing.T) {
 }
 
 func TestLocalStorage_Upload(t *testing.T) {
+	base := t.TempDir()
 	s := &LocalStorage{
-		Root: filepath.Join(t.TempDir(), "lfs-objects"),
+		Root:    filepath.Join(base, "lfs-objects"),
+		TempDir: filepath.Join(base, "tmp", "lfs"),
 	}
 
 	const helloWorldOID = OID("c0535e4be2b79ffd93291305436bf889314e4a3faec05ecffcbb7df31ad9e51a") // "Hello world!"

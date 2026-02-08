@@ -162,6 +162,7 @@ func NewRepoContext() {
 	}
 
 	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(conf.Server.AppDataPath, "tmp"))
+	RemoveAllWithNotice("Clean up LFS temporary data", conf.LFS.TempPath)
 }
 
 // Repository contains information of a repository.
