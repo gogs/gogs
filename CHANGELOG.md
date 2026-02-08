@@ -6,6 +6,10 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Security:_ Cross-repository LFS object overwrite via missing content hash verification. [#8166](https://github.com/gogs/gogs/pull/8166) - [GHSA-gmf8-978x-2fg2](https://github.com/gogs/gogs/security/advisories/GHSA-gmf8-978x-2fg2)
+
+### Removed
+
 - Git clone via the built-in SSH server hangs. [#8132](https://github.com/gogs/gogs/issues/8132)
 
 ## 0.14.0

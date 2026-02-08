@@ -30,7 +30,7 @@ func RegisterRoutes(r *macaron.Router) {
 				store:          store,
 				defaultStorage: lfsutil.Storage(conf.LFS.Storage),
 				storagers: map[lfsutil.Storage]lfsutil.Storager{
-					lfsutil.StorageLocal: &lfsutil.LocalStorage{Root: conf.LFS.ObjectsPath},
+					lfsutil.StorageLocal: &lfsutil.LocalStorage{Root: conf.LFS.ObjectsPath, TempDir: conf.LFS.ObjectsTempPath},
 				},
 			}
 			r.Combo("/:oid", verifyOID()).

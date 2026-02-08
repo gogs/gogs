@@ -1,6 +1,8 @@
 package lfsutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
@@ -10,7 +12,10 @@ import (
 	"gogs.io/gogs/internal/osutil"
 )
 
-var ErrObjectNotExist = errors.New("Object does not exist")
+var (
+	ErrObjectNotExist = errors.New("object does not exist")
+	ErrOIDMismatch    = errors.New("content hash does not match OID")
+)
 
 // Storager is an storage backend for uploading and downloading LFS objects.
 type Storager interface {
@@ -39,6 +44,8 @@ var _ Storager = (*LocalStorage)(nil)
 type LocalStorage struct {
 	// The root path for storing LFS objects.
 	Root string
+	// The path for storing temporary files during upload verification.
+	TempDir string
 }
 
 func (*LocalStorage) Storage() Storage {
@@ -58,29 +65,50 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 		return 0, ErrInvalidOID
 	}
 
-	var err error
 	fpath := s.storagePath(oid)
-	defer func() {
-		rc.Close()
+	dir := filepath.Dir(fpath)
 
-		if err != nil {
-			_ = os.Remove(fpath)
-		}
-	}()
+	defer rc.Close()
 
-	err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return 0, errors.Wrap(err, "create directories")
 	}
-	w, err := os.Create(fpath)
-	if err != nil {
-		return 0, errors.Wrap(err, "create file")
-	}
-	defer w.Close()
 
-	written, err := io.Copy(w, rc)
+	// If the object file already exists, skip the upload and return the
+	// existing file's size.
+	if fi, err := os.Stat(fpath); err == nil {
+		_, _ = io.Copy(io.Discard, rc)
+		return fi.Size(), nil
+	}
+
+	// Write to a temp file and verify the content hash before publishing.
+	// This ensures the final path always contains a complete, hash-verified
+	// file, even when concurrent uploads of the same OID race.
+	if err := os.MkdirAll(s.TempDir, os.ModePerm); err != nil {
+		return 0, errors.Wrap(err, "create temp directory")
+	}
+	tmp, err := os.CreateTemp(s.TempDir, "upload-*")
 	if err != nil {
-		return 0, errors.Wrap(err, "copy file")
+		return 0, errors.Wrap(err, "create temp file")
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	hash := sha256.New()
+	written, err := io.Copy(tmp, io.TeeReader(rc, hash))
+	if closeErr := tmp.Close(); err == nil && closeErr != nil {
+		err = closeErr
+	}
+	if err != nil {
+		return 0, errors.Wrap(err, "write object file")
+	}
+
+	if computed := hex.EncodeToString(hash.Sum(nil)); computed != string(oid) {
+		return 0, ErrOIDMismatch
+	}
+
+	if err := os.Rename(tmpPath, fpath); err != nil && !os.IsExist(err) {
+		return 0, errors.Wrap(err, "publish object file")
 	}
 	return written, nil
 }
