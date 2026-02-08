@@ -9,7 +9,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
-	gouuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -219,7 +219,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 						user, err = store.CreateUser(
 							ctx.Req.Context(),
 							webAuthUser,
-							gouuid.NewV4().String()+"@localhost",
+							uuid.New().String()+"@localhost",
 							database.CreateUserOptions{
 								Activated: true,
 							},

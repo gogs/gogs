@@ -26,6 +26,7 @@ require (
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
 	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/uuid v1.6.0
 	github.com/inbucket/html2text v1.0.0
 	github.com/issue9/identicon v1.2.1
 	github.com/json-iterator/go v1.1.12
@@ -36,7 +37,6 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/russross/blackfriday v1.6.0
-	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
 	github.com/stretchr/testify v1.11.1
@@ -94,7 +94,6 @@ require (
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.11 // indirect
 	github.com/itchyny/timefmt-go v0.1.5 // indirect
