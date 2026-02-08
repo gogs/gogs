@@ -1,6 +1,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"mime"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -249,7 +249,7 @@ func ActionIcon(opType int) string {
 
 func ActionContent2Commits(act Actioner) *database.PushCommits {
 	push := database.NewPushCommits()
-	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
+	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
 		log.Error("Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push

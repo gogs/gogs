@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
-	jsoniter "github.com/json-iterator/go"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -126,7 +126,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "events":
 		w.HookEvent = &HookEvent{}
-		if err = jsoniter.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 			log.Error("Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
@@ -138,7 +138,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 
 func (w *Webhook) SlackMeta() *SlackMeta {
 	s := &SlackMeta{}
-	if err := jsoniter.Unmarshal([]byte(w.Meta), s); err != nil {
+	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
 		log.Error("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
 	}
 	return s
@@ -151,7 +151,7 @@ func (w *Webhook) History(page int) ([]*HookTask, error) {
 
 // UpdateEvent handles conversion from HookEvent to Events.
 func (w *Webhook) UpdateEvent() error {
-	data, err := jsoniter.Marshal(w.HookEvent)
+	data, err := json.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
 }
@@ -475,7 +475,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.RequestInfo = &HookRequest{}
-		if err = jsoniter.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
+		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
 			log.Error("Unmarshal[%d]: %v", t.ID, err)
 		}
 
@@ -485,14 +485,14 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.ResponseInfo = &HookResponse{}
-		if err = jsoniter.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
 			log.Error("Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
 
 func (t *HookTask) ToJSON(v any) string {
-	p, err := jsoniter.Marshal(v)
+	p, err := json.Marshal(v)
 	if err != nil {
 		log.Error("Marshal [%d]: %v", t.ID, err)
 	}

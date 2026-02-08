@@ -1,12 +1,12 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -47,7 +47,7 @@ type DiscordPayload struct {
 }
 
 func (p *DiscordPayload) JSONPayload() ([]byte, error) {
-	data, err := jsoniter.MarshalIndent(p, "", "  ")
+	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}
@@ -370,8 +370,8 @@ func getDiscordReleasePayload(p *api.ReleasePayload) *DiscordPayload {
 
 func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
-	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, errors.Newf("jsoniter.Unmarshal: %v", err)
+	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
+		return nil, errors.Newf("unmarshal: %v", err)
 	}
 
 	switch event {

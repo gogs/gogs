@@ -1,10 +1,10 @@
 package lfs
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
-	jsoniter "github.com/json-iterator/go"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -19,7 +19,7 @@ func serveBatch(store Store) macaron.Handler {
 	return func(c *macaron.Context, owner *database.User, repo *database.Repository) {
 		var request batchRequest
 		defer func() { _ = c.Req.Request.Body.Close() }()
-		err := jsoniter.NewDecoder(c.Req.Request.Body).Decode(&request)
+		err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 		if err != nil {
 			responseJSON(c.Resp, http.StatusBadRequest, responseError{
 				Message: strutil.ToUpperFirst(err.Error()),
@@ -172,7 +172,7 @@ func responseJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 
-	err := jsoniter.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
 		log.Error("Failed to encode JSON: %v", err)
 		return
