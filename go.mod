@@ -35,7 +35,7 @@ require (
 	github.com/olekukonko/tablewriter v1.1.3
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.0
-	github.com/russross/blackfriday v1.6.0
+	github.com/russross/blackfriday/v2 v2.1.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
@@ -128,7 +128,6 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
-	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	go.bobheadxi.dev/streamline v1.2.1 // indirect

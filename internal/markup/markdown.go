@@ -3,11 +3,12 @@ package markup
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/russross/blackfriday"
+	"github.com/russross/blackfriday/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
@@ -25,9 +26,9 @@ func IsMarkdownFile(name string) bool {
 	return false
 }
 
-// MarkdownRenderer is a extended version of underlying Markdown render object.
+// MarkdownRenderer is an extended version of the underlying Markdown render object.
 type MarkdownRenderer struct {
-	blackfriday.Renderer
+	*blackfriday.HTMLRenderer
 	urlPrefix string
 }
 
@@ -38,27 +39,49 @@ func isLink(link []byte) bool {
 	return validLinksPattern.Match(link)
 }
 
-// Link defines how formal links should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
-	if len(link) > 0 && !isLink(link) {
-		if link[0] != '#' {
-			link = []byte(path.Join(r.urlPrefix, string(link)))
+// isAutoLink reports whether the link node was generated from an autolink
+// (the child text matches the destination).
+func isAutoLink(node *blackfriday.Node) bool {
+	if node.FirstChild == nil {
+		return false
+	}
+	return bytes.Equal(node.FirstChild.Literal, node.Destination)
+}
+
+func (r *MarkdownRenderer) RenderNode(w io.Writer, node *blackfriday.Node, entering bool) blackfriday.WalkStatus {
+	switch node.Type {
+	case blackfriday.Link:
+		if isAutoLink(node) {
+			return r.renderAutoLink(w, node, entering)
+		}
+		return r.renderLink(w, node, entering)
+
+	case blackfriday.Item:
+		if entering {
+			return r.renderListItem(w, node)
 		}
 	}
 
-	r.Renderer.Link(out, link, title, content)
+	return r.HTMLRenderer.RenderNode(w, node, entering)
 }
 
-// AutoLink defines how auto-detected links should be processed to produce corresponding HTML elements.
-// Reference for kind: https://github.com/russross/blackfriday/blob/master/markdown.go#L69-L76
-func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
-	if kind != blackfriday.LINK_TYPE_NORMAL {
-		r.Renderer.AutoLink(out, link, kind)
-		return
+func (r *MarkdownRenderer) renderLink(w io.Writer, node *blackfriday.Node, entering bool) blackfriday.WalkStatus {
+	if entering {
+		dest := node.Destination
+		if len(dest) > 0 && !isLink(dest) && dest[0] != '#' {
+			node.Destination = []byte(path.Join(r.urlPrefix, string(dest)))
+		}
+	}
+	return r.HTMLRenderer.RenderNode(w, node, entering)
+}
+
+func (r *MarkdownRenderer) renderAutoLink(w io.Writer, node *blackfriday.Node, entering bool) blackfriday.WalkStatus {
+	if !entering {
+		return r.HTMLRenderer.RenderNode(w, node, entering)
 	}
 
-	// Since this method could only possibly serve one link at a time,
-	// we do not need to find all.
+	link := node.Destination
+
 	if bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
 		m := CommitPattern.Find(link)
 		if m != nil {
@@ -68,8 +91,8 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			if j == -1 {
 				j = len(m)
 			}
-			_, _ = fmt.Fprintf(out, ` <code><a href="%s">%s</a></code>`, m, tool.ShortSHA1(string(m[i+7:j])))
-			return
+			_, _ = fmt.Fprintf(w, ` <code><a href="%s">%s</a></code>`, m, tool.ShortSHA1(string(m[i+7:j])))
+			return blackfriday.SkipChildren
 		}
 
 		m = IssueFullPattern.Find(link)
@@ -83,77 +106,77 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 
 			index := string(m[i+7 : j])
 			fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(r.urlPrefix, "/")
-			var link string
+			var result string
 			if strings.HasPrefix(string(m), fullRepoURL) {
-				// Use a short issue reference if the URL refers to this repository
-				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
+				result = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
 			} else {
-				// Use a cross-repository issue reference if the URL refers to a different repository
 				repo := string(m[len(conf.Server.ExternalURL) : i-1])
-				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
+				result = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
 			}
-			out.WriteString(link)
-			return
+			_, _ = io.WriteString(w, result)
+			return blackfriday.SkipChildren
 		}
 	}
 
-	r.Renderer.AutoLink(out, link, kind)
+	return r.HTMLRenderer.RenderNode(w, node, entering)
 }
 
-// ListItem defines how list items should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
-	// Detect procedures to draw checkboxes.
-	switch {
-	case bytes.HasPrefix(text, []byte("[ ] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" />`), text[3:]...)
-	case bytes.HasPrefix(text, []byte("[x] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
+func (r *MarkdownRenderer) renderListItem(w io.Writer, node *blackfriday.Node) blackfriday.WalkStatus {
+	if node.FirstChild != nil && node.FirstChild.Type == blackfriday.Paragraph && node.FirstChild.FirstChild != nil {
+		textNode := node.FirstChild.FirstChild
+		if textNode.Type == blackfriday.Text {
+			text := textNode.Literal
+			switch {
+			case bytes.HasPrefix(text, []byte("[ ] ")):
+				textNode.Literal = append([]byte(`<input type="checkbox" disabled="" />`), text[3:]...)
+			case bytes.HasPrefix(text, []byte("[x] ")):
+				textNode.Literal = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
+			}
+		}
 	}
-	r.Renderer.ListItem(out, text, flags)
+	return r.HTMLRenderer.RenderNode(w, node, true)
 }
 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
 func RawMarkdown(body []byte, urlPrefix string) []byte {
-	htmlFlags := 0
-	htmlFlags |= blackfriday.HTML_SKIP_STYLE
-	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
+	var htmlFlags blackfriday.HTMLFlags
+	htmlFlags |= blackfriday.SkipHTML
 
 	if conf.Smartypants.Enabled {
-		htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
+		htmlFlags |= blackfriday.Smartypants
 		if conf.Smartypants.Fractions {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
+			htmlFlags |= blackfriday.SmartypantsFractions
 		}
 		if conf.Smartypants.Dashes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_DASHES
+			htmlFlags |= blackfriday.SmartypantsDashes
 		}
 		if conf.Smartypants.LatexDashes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+			htmlFlags |= blackfriday.SmartypantsLatexDashes
 		}
 		if conf.Smartypants.AngledQuotes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_ANGLED_QUOTES
+			htmlFlags |= blackfriday.SmartypantsAngledQuotes
 		}
 	}
 
 	renderer := &MarkdownRenderer{
-		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
-		urlPrefix: urlPrefix,
+		HTMLRenderer: blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{Flags: htmlFlags}),
+		urlPrefix:    urlPrefix,
 	}
 
-	// set up the parser
-	extensions := 0
-	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
-	extensions |= blackfriday.EXTENSION_TABLES
-	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
-	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
-	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
+	var extensions blackfriday.Extensions
+	extensions |= blackfriday.NoIntraEmphasis
+	extensions |= blackfriday.Tables
+	extensions |= blackfriday.FencedCode
+	extensions |= blackfriday.Autolink
+	extensions |= blackfriday.Strikethrough
+	extensions |= blackfriday.SpaceHeadings
+	extensions |= blackfriday.NoEmptyLineBeforeBlock
 
 	if conf.Markdown.EnableHardLineBreak {
-		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
+		extensions |= blackfriday.HardLineBreak
 	}
 
-	return blackfriday.Markdown(body, renderer, extensions)
+	return blackfriday.Run(body, blackfriday.WithRenderer(renderer), blackfriday.WithExtensions(extensions))
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
