@@ -50,7 +50,8 @@
               "advancing/webhooks",
               "advancing/git-lfs",
               "advancing/custom-templates",
-              "advancing/localization"
+              "advancing/localization",
+              "advancing/cli-reference"
             ]
           },
           {
