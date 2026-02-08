@@ -44,10 +44,10 @@ const (
 	archiveRootDir             = "gogs-backup"
 )
 
-func runBackup(_ context.Context, cmd *cli.Command) error {
+func runBackup(ctx context.Context, cmd *cli.Command) error {
 	zip.Verbose = cmd.Bool("verbose")
 
-	err := conf.Init(cmd.String("config"))
+	err := conf.Init(configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
@@ -91,7 +91,7 @@ func runBackup(_ context.Context, cmd *cli.Command) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = database.DumpDatabase(context.Background(), conn, dbDir, cmd.Bool("verbose")); err != nil {
+	if err = database.DumpDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {

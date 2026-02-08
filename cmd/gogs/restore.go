@@ -42,7 +42,7 @@ be skipped and remain unchanged.`,
 // format that is able to import.
 var lastSupportedVersionOfFormat = map[int]string{}
 
-func runRestore(_ context.Context, cmd *cli.Command) error {
+func runRestore(ctx context.Context, cmd *cli.Command) error {
 	zip.Verbose = cmd.Bool("verbose")
 
 	tmpDir := cmd.String("tempdir")
@@ -90,8 +90,8 @@ func runRestore(_ context.Context, cmd *cli.Command) error {
 	// Otherwise, it's optional to set config file flag.
 	configFile := filepath.Join(archivePath, "custom", "conf", "app.ini")
 	var customConf string
-	if cmd.IsSet("config") {
-		customConf = cmd.String("config")
+	if lineageConf := configFromLineage(cmd); lineageConf != "" {
+		customConf = lineageConf
 	} else if !osutil.IsFile(configFile) {
 		log.Fatal("'--config' is not specified and custom config file is not found in backup")
 	} else {
@@ -111,7 +111,7 @@ func runRestore(_ context.Context, cmd *cli.Command) error {
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = database.ImportDatabase(context.Background(), conn, dbDir, cmd.Bool("verbose")); err != nil {
+	if err = database.ImportDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 

@@ -129,7 +129,7 @@ to make automatic initialization process more smoothly`,
 	}
 )
 
-func runCreateUser(_ context.Context, cmd *cli.Command) error {
+func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 	if !cmd.IsSet("name") {
 		return errors.New("Username is not specified")
 	} else if !cmd.IsSet("password") {
@@ -138,7 +138,7 @@ func runCreateUser(_ context.Context, cmd *cli.Command) error {
 		return errors.New("Email is not specified")
 	}
 
-	err := conf.Init(cmd.String("config"))
+	err := conf.Init(configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
@@ -149,7 +149,7 @@ func runCreateUser(_ context.Context, cmd *cli.Command) error {
 	}
 
 	user, err := database.Handle.Users().Create(
-		context.Background(),
+		ctx,
 		cmd.String("name"),
 		cmd.String("email"),
 		database.CreateUserOptions{
@@ -168,7 +168,7 @@ func runCreateUser(_ context.Context, cmd *cli.Command) error {
 
 func adminDashboardOperation(operation func() error, successMessage string) func(context.Context, *cli.Command) error {
 	return func(_ context.Context, cmd *cli.Command) error {
-		err := conf.Init(cmd.String("config"))
+		err := conf.Init(configFromLineage(cmd))
 		if err != nil {
 			return errors.Wrap(err, "init configuration")
 		}

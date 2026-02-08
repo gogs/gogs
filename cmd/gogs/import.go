@@ -51,7 +51,7 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 		return errors.Newf("target directory %q does not exist or is not a directory", cmd.String("target"))
 	}
 
-	err := conf.Init(cmd.String("config"))
+	err := conf.Init(configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}

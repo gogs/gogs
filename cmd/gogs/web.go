@@ -160,7 +160,7 @@ func newMacaron() *macaron.Macaron {
 }
 
 func runWeb(_ stdctx.Context, cmd *cli.Command) error {
-	err := route.GlobalInit(cmd.String("config"))
+	err := route.GlobalInit(configFromLineage(cmd))
 	if err != nil {
 		log.Fatal("Failed to initialize application: %v", err)
 	}

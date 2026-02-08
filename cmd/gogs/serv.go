@@ -51,13 +51,7 @@ func fail(userMessage, errMessage string, args ...any) {
 func setup(cmd *cli.Command, logFile string, connectDB bool) {
 	conf.HookMode = true
 
-	var customConf string
-	for _, c := range cmd.Lineage() {
-		if c.IsSet("config") {
-			customConf = c.String("config")
-			break
-		}
-	}
+	customConf := configFromLineage(cmd)
 
 	err := conf.Init(customConf)
 	if err != nil {
