@@ -12,8 +12,10 @@ import (
 	"gogs.io/gogs/internal/osutil"
 )
 
-var ErrObjectNotExist = errors.New("Object does not exist")
-var ErrOIDMismatch = errors.New("content hash does not match OID")
+var (
+	ErrObjectNotExist = errors.New("Object does not exist")
+	ErrOIDMismatch    = errors.New("content hash does not match OID")
+)
 
 // Storager is an storage backend for uploading and downloading LFS objects.
 type Storager interface {
@@ -76,7 +78,7 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 		return 0, errors.Wrap(err, "create directories")
 	}
 
-	w, err := os.OpenFile(fpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	w, err := os.OpenFile(fpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o666)
 	if err != nil {
 		if os.IsExist(err) {
 			// The file was already written by a previous upload (possibly for a
