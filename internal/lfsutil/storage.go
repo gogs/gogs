@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrObjectNotExist = errors.New("Object does not exist")
+	ErrObjectNotExist = errors.New("object does not exist")
 	ErrOIDMismatch    = errors.New("content hash does not match OID")
 )
 
@@ -82,7 +82,11 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 	// Write to a temp file and verify the content hash before publishing.
 	// This ensures the final path always contains a complete, hash-verified
 	// file, even when concurrent uploads of the same OID race.
-	tmp, err := os.CreateTemp(dir, ".lfs-upload-*")
+	tmpDir := filepath.Join(s.Root, ".tmp")
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+		return 0, errors.Wrap(err, "create temp directories")
+	}
+	tmp, err := os.CreateTemp(tmpDir, ".lfs-upload-*")
 	if err != nil {
 		return 0, errors.Wrap(err, "create temp file")
 	}
