@@ -3,6 +3,7 @@ module gogs.io/gogs
 go 1.25.0
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/cockroachdb/errors v1.12.0
 	github.com/derision-test/go-mockgen/v2 v2.1.1
@@ -48,7 +49,6 @@ require (
 	golang.org/x/crypto v0.47.0
 	golang.org/x/net v0.48.0
 	golang.org/x/text v0.33.0
-	gopkg.in/DATA-DOG/go-sqlmock.v2 v2.0.0-20180914054222-c19298f520d0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/macaron.v1 v1.5.1
