@@ -43,6 +43,14 @@ The `admin` command lets you perform maintenance tasks without going through the
   `rewrite-authorized-keys` replaces the entire `authorized_keys` file. Any non-Gogs keys in that file will be lost.
 </Warning>
 
+## Importing data
+
+```bash
+gogs import locale --source <dir> --target <dir>
+```
+
+The `import` command helps you bring portable data from other Gogs installations into your local instance. Currently the only subcommand is `locale`, which merges locale files from a source directory into a target directory.
+
 ## Backup and restore
 
 ```bash
@@ -53,14 +61,6 @@ gogs restore --from <archive>
 `backup` dumps the database, repositories, and related files into a single zip archive. `restore` imports everything back from an archive, which is useful for migrating Gogs to another server or switching database engines.
 
 Both commands support `--database-only` and `--exclude-repos` flags to narrow the scope. `backup` additionally supports `--exclude-mirror-repos` and `--target` to control where the archive is saved.
-
-## Importing data
-
-```bash
-gogs import locale --source <dir> --target <dir>
-```
-
-The `import` command helps you bring portable data from other Gogs installations into your local instance. Currently the only subcommand is `locale`, which merges locale files from a source directory into a target directory.
 
 ## Internal commands
 

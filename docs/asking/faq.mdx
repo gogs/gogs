@@ -13,7 +13,7 @@ Answers to common questions about Gogs configuration, administration, and usage.
     You can change the listening port on the first run by passing the `-port` flag:
 
     ```bash
-    ./gogs web -port 3001
+    gogs web -port 3001
     ```
 
     This flag also updates the port number shown on the install page, so pick the port you intend to keep using.
@@ -58,7 +58,7 @@ Answers to common questions about Gogs configuration, administration, and usage.
        ```bash
        su git
        cd /home/git/gogs
-       ./gogs admin create-user --name tmpuser --password tmppassword --admin --email tmp@example.com
+       gogs admin create-user --name tmpuser --password tmppassword --admin --email tmp@example.com
        ```
 
     2. **Start Gogs** again, then log in as `tmpuser` in your browser. Navigate to **Admin Panel** > **Users**, click **Edit** next to the original administrator account, and set a new password.
