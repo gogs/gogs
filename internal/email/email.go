@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -72,7 +71,8 @@ func render(tpl string, data map[string]any) (string, error) {
 }
 
 func SendTestMail(email string) error {
-	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!").Message)
+	msg := NewMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
+	return sendMessage(&Sender{}, msg)
 }
 
 /*
@@ -200,7 +200,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := gomail.NewMessage().FormatAddress(conf.Email.FromEmail, doer.DisplayName())
+	from := FormatAddress(conf.Email.FromEmail, doer.DisplayName())
 	msg := NewMessageFrom(tos, from, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg
