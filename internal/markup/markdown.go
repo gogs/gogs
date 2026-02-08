@@ -35,8 +35,10 @@ func IsMarkdownFile(name string) bool {
 	return false
 }
 
-var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
-var linkifyURLRegexp = regexp.MustCompile(`^(?:http|https|ftp)://[-a-zA-Z0-9@:%._+~#=]{1,256}(?:\.[a-z]+)?(?::\d+)?(?:[/#?][-a-zA-Z0-9@:%_+.~#$!?&/=();,'\^{}\[\]` + "`" + `]*)?`)
+var (
+	validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
+	linkifyURLRegexp  = regexp.MustCompile(`^(?:http|https|ftp)://[-a-zA-Z0-9@:%._+~#=]{1,256}(?:\.[a-z]+)?(?::\d+)?(?:[/#?][-a-zA-Z0-9@:%_+.~#$!?&/=();,'\^{}\[\]` + "`" + `]*)?`)
+)
 
 func isLink(link []byte) bool {
 	return validLinksPattern.Match(link)
