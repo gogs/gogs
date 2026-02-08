@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	gouuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/gogs/git-module"
 
@@ -422,7 +422,7 @@ func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err err
 	}
 
 	upload := &Upload{
-		UUID: gouuid.NewV4().String(),
+		UUID: uuid.New().String(),
 		Name: name,
 	}
 

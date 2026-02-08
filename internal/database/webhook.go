@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
-	gouuid "github.com/satori/go.uuid"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -512,7 +512,7 @@ func createHookTask(e Engine, t *HookTask) error {
 	if err != nil {
 		return err
 	}
-	t.UUID = gouuid.NewV4().String()
+	t.UUID = uuid.New().String()
 	t.PayloadContent = string(data)
 	_, err = e.Insert(t)
 	return err
