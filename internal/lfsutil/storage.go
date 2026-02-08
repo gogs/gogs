@@ -87,7 +87,7 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 	if err := os.MkdirAll(s.TempDir, os.ModePerm); err != nil {
 		return 0, errors.Wrap(err, "create temp directory")
 	}
-	tmp, err := os.CreateTemp(s.TempDir, ".lfs-upload-*")
+	tmp, err := os.CreateTemp(s.TempDir, "upload-*")
 	if err != nil {
 		return 0, errors.Wrap(err, "create temp file")
 	}

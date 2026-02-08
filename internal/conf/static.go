@@ -361,9 +361,9 @@ type DatabaseOpts struct {
 var Database DatabaseOpts
 
 type LFSOpts struct {
-	Storage     string
-	ObjectsPath string
-	TempPath    string
+	Storage         string
+	ObjectsPath     string
+	ObjectsTempPath string
 }
 
 // LFS settings
