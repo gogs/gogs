@@ -1,11 +1,11 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -39,7 +39,7 @@ type DingtalkPayload struct {
 }
 
 func (p *DingtalkPayload) JSONPayload() ([]byte, error) {
-	data, err := jsoniter.MarshalIndent(p, "", "  ")
+	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}

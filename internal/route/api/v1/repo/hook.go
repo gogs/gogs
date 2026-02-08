@@ -1,11 +1,11 @@
 package repo
 
 import (
+	"encoding/json"
 	"net/http"
 	"slices"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 
 	api "github.com/gogs/go-gogs-client"
 
@@ -76,7 +76,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Missing config option: channel"))
 			return
 		}
-		meta, err := jsoniter.Marshal(&database.SlackMeta{
+		meta, err := json.Marshal(&database.SlackMeta{
 			Channel:  channel,
 			Username: form.Config["username"],
 			IconURL:  form.Config["icon_url"],
@@ -122,7 +122,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 
 		if w.HookTaskType == database.SLACK {
 			if channel, ok := form.Config["channel"]; ok {
-				meta, err := jsoniter.Marshal(&database.SlackMeta{
+				meta, err := json.Marshal(&database.SlackMeta{
 					Channel:  channel,
 					Username: form.Config["username"],
 					IconURL:  form.Config["icon_url"],

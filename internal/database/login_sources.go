@@ -2,12 +2,12 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
@@ -41,7 +41,8 @@ func (s *LoginSource) BeforeSave(_ *gorm.DB) (err error) {
 	if s.Provider == nil {
 		return nil
 	}
-	s.Config, err = jsoniter.MarshalToString(s.Provider.Config())
+	data, err := json.Marshal(s.Provider.Config())
+	s.Config = string(data)
 	return err
 }
 
@@ -72,7 +73,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 	switch s.Type {
 	case auth.LDAP:
 		var cfg ldap.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.DLDAP:
 		var cfg ldap.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -88,7 +89,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.SMTP:
 		var cfg smtp.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -96,7 +97,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.PAM:
 		var cfg pam.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -104,7 +105,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.GitHub:
 		var cfg github.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -112,7 +113,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.Mock:
 		var cfg mockProviderConfig
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -215,7 +216,8 @@ func (s *LoginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOp
 		IsActived: opts.Activated,
 		IsDefault: opts.Default,
 	}
-	source.Config, err = jsoniter.MarshalToString(opts.Config)
+	data, err := json.Marshal(opts.Config)
+	source.Config = string(data)
 	if err != nil {
 		return nil, err
 	}

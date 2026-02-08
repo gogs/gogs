@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -10,7 +11,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
-	jsoniter "github.com/json-iterator/go"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
@@ -213,7 +213,7 @@ func WebhooksSlackNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewS
 	}
 	c.Data["SlackMeta"] = meta
 
-	p, err := jsoniter.Marshal(meta)
+	p, err := json.Marshal(meta)
 	if err != nil {
 		c.Error(err, "marshal JSON")
 		return
@@ -245,7 +245,7 @@ func WebhooksDiscordNewPost(c *context.Context, orCtx *orgRepoContext, f form.Ne
 	}
 	c.Data["SlackMeta"] = meta
 
-	p, err := jsoniter.Marshal(meta)
+	p, err := json.Marshal(meta)
 	if err != nil {
 		c.Error(err, "marshal JSON")
 		return
@@ -394,7 +394,7 @@ func WebhooksSlackEditPost(c *context.Context, orCtx *orgRepoContext, f form.New
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&database.SlackMeta{
+	meta, err := json.Marshal(&database.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -422,7 +422,7 @@ func WebhooksDiscordEditPost(c *context.Context, orCtx *orgRepoContext, f form.N
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&database.SlackMeta{
+	meta, err := json.Marshal(&database.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,

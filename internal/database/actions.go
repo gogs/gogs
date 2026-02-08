@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
-	jsoniter "github.com/json-iterator/go"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -245,7 +245,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 		return errors.Wrap(err, "prepare webhooks")
 	}
 
-	data, err := jsoniter.Marshal(opts.Commits)
+	data, err := json.Marshal(opts.Commits)
 	if err != nil {
 		return errors.Wrap(err, "marshal JSON")
 	}
@@ -529,7 +529,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
-	data, err := jsoniter.Marshal(opts.Commits)
+	data, err := json.Marshal(opts.Commits)
 	if err != nil {
 		return errors.Wrap(err, "marshal JSON")
 	}
