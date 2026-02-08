@@ -286,7 +286,7 @@ func getSlackReleasePayload(p *api.ReleasePayload) *SlackPayload {
 
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
-	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
+	if err := json.Unmarshal([]byte(meta), slack); err != nil {
 		return nil, errors.Newf("unmarshal: %v", err)
 	}
 
