@@ -36,7 +36,6 @@ require (
 	github.com/olekukonko/tablewriter v1.1.3
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.0
-	github.com/russross/blackfriday v1.6.0
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
 	github.com/stretchr/testify v1.11.1
@@ -45,6 +44,7 @@ require (
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
 	github.com/urfave/cli v1.22.17
+	github.com/yuin/goldmark v1.7.16
 	golang.org/x/crypto v0.47.0
 	golang.org/x/image v0.35.0
 	golang.org/x/net v0.48.0

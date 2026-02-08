@@ -3,11 +3,21 @@ package markup
 import (
 	"bytes"
 	"fmt"
+	"html"
+	"log"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
-	"github.com/russross/blackfriday"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
+	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
@@ -25,40 +35,55 @@ func IsMarkdownFile(name string) bool {
 	return false
 }
 
-// MarkdownRenderer is a extended version of underlying Markdown render object.
-type MarkdownRenderer struct {
-	blackfriday.Renderer
-	urlPrefix string
-}
-
 var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
+var linkifyURLRegexp = regexp.MustCompile(`^(?:http|https|ftp)://[-a-zA-Z0-9@:%._+~#=]{1,256}(?:\.[a-z]+)?(?::\d+)?(?:[/#?][-a-zA-Z0-9@:%_+.~#$!?&/=();,'\^{}\[\]` + "`" + `]*)?`)
 
-// isLink reports whether link fits valid format.
 func isLink(link []byte) bool {
 	return validLinksPattern.Match(link)
 }
 
-// Link defines how formal links should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
-	if len(link) > 0 && !isLink(link) {
-		if link[0] != '#' {
-			link = []byte(path.Join(r.urlPrefix, string(link)))
-		}
-	}
-
-	r.Renderer.Link(out, link, title, content)
+type linkTransformer struct {
+	urlPrefix string
 }
 
-// AutoLink defines how auto-detected links should be processed to produce corresponding HTML elements.
-// Reference for kind: https://github.com/russross/blackfriday/blob/master/markdown.go#L69-L76
-func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
-	if kind != blackfriday.LINK_TYPE_NORMAL {
-		r.Renderer.AutoLink(out, link, kind)
-		return
+func (t *linkTransformer) Transform(node *ast.Document, reader text.Reader, _ parser.Context) {
+	_ = ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if link, ok := n.(*ast.Link); ok {
+			dest := link.Destination
+			if len(dest) > 0 && !isLink(dest) && dest[0] != '#' {
+				link.Destination = []byte(path.Join(t.urlPrefix, string(dest)))
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
+type gogsRenderer struct {
+	urlPrefix string
+}
+
+func (r *gogsRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(ast.KindAutoLink, r.renderAutoLink)
+}
+
+func (r *gogsRenderer) renderAutoLink(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	n := node.(*ast.AutoLink)
+	if !entering {
+		return ast.WalkContinue, nil
 	}
 
-	// Since this method could only possibly serve one link at a time,
-	// we do not need to find all.
+	if n.AutoLinkType != ast.AutoLinkURL {
+		url := n.URL(source)
+		escaped := html.EscapeString(string(url))
+		_, _ = fmt.Fprintf(w, `<a href="mailto:%s">%s</a>`, escaped, escaped)
+		return ast.WalkContinue, nil
+	}
+
+	link := n.URL(source)
+
 	if bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
 		m := CommitPattern.Find(link)
 		if m != nil {
@@ -68,8 +93,9 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			if j == -1 {
 				j = len(m)
 			}
-			_, _ = fmt.Fprintf(out, ` <code><a href="%s">%s</a></code>`, m, tool.ShortSHA1(string(m[i+7:j])))
-			return
+			escapedURL := html.EscapeString(string(m))
+			_, _ = fmt.Fprintf(w, ` <code><a href="%s">%s</a></code>`, escapedURL, tool.ShortSHA1(string(m[i+7:j])))
+			return ast.WalkContinue, nil
 		}
 
 		m = IssueFullPattern.Find(link)
@@ -82,78 +108,65 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			}
 
 			index := string(m[i+7 : j])
+			escapedURL := html.EscapeString(string(m))
 			fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(r.urlPrefix, "/")
-			var link string
+			var href string
 			if strings.HasPrefix(string(m), fullRepoURL) {
-				// Use a short issue reference if the URL refers to this repository
-				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
+				href = fmt.Sprintf(`<a href="%s">#%s</a>`, escapedURL, html.EscapeString(index))
 			} else {
-				// Use a cross-repository issue reference if the URL refers to a different repository
-				repo := string(m[len(conf.Server.ExternalURL) : i-1])
-				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
+				repo := html.EscapeString(string(m[len(conf.Server.ExternalURL) : i-1]))
+				href = fmt.Sprintf(`<a href="%s">%s#%s</a>`, escapedURL, repo, html.EscapeString(index))
 			}
-			out.WriteString(link)
-			return
+			_, _ = w.WriteString(href)
+			return ast.WalkContinue, nil
 		}
 	}
 
-	r.Renderer.AutoLink(out, link, kind)
-}
-
-// ListItem defines how list items should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
-	// Detect procedures to draw checkboxes.
-	switch {
-	case bytes.HasPrefix(text, []byte("[ ] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" />`), text[3:]...)
-	case bytes.HasPrefix(text, []byte("[x] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
-	}
-	r.Renderer.ListItem(out, text, flags)
+	escapedLink := html.EscapeString(string(link))
+	_, _ = fmt.Fprintf(w, `<a href="%s">%s</a>`, escapedLink, escapedLink)
+	return ast.WalkContinue, nil
 }
 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
 func RawMarkdown(body []byte, urlPrefix string) []byte {
-	htmlFlags := 0
-	htmlFlags |= blackfriday.HTML_SKIP_STYLE
-	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
+	extensions := []goldmark.Extender{
+		extension.Table,
+		extension.Strikethrough,
+		extension.TaskList,
+		extension.NewLinkify(extension.WithLinkifyURLRegexp(linkifyURLRegexp)),
+	}
 
 	if conf.Smartypants.Enabled {
-		htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-		if conf.Smartypants.Fractions {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
-		}
-		if conf.Smartypants.Dashes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_DASHES
-		}
-		if conf.Smartypants.LatexDashes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-		}
-		if conf.Smartypants.AngledQuotes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_ANGLED_QUOTES
-		}
+		extensions = append(extensions, extension.Typographer)
 	}
 
-	renderer := &MarkdownRenderer{
-		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
-		urlPrefix: urlPrefix,
+	rendererOpts := []renderer.Option{
+		goldmarkhtml.WithUnsafe(),
+		renderer.WithNodeRenderers(
+			util.Prioritized(&gogsRenderer{urlPrefix: urlPrefix}, 0),
+		),
 	}
-
-	// set up the parser
-	extensions := 0
-	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
-	extensions |= blackfriday.EXTENSION_TABLES
-	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
-	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
-	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
 	if conf.Markdown.EnableHardLineBreak {
-		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
+		rendererOpts = append(rendererOpts, goldmarkhtml.WithHardWraps())
 	}
 
-	return blackfriday.Markdown(body, renderer, extensions)
+	md := goldmark.New(
+		goldmark.WithExtensions(extensions...),
+		goldmark.WithParserOptions(
+			parser.WithASTTransformers(
+				util.Prioritized(&linkTransformer{urlPrefix: urlPrefix}, 0),
+			),
+		),
+		goldmark.WithRendererOptions(rendererOpts...),
+	)
+
+	var buf bytes.Buffer
+	if err := md.Convert(body, &buf); err != nil {
+		log.Printf("markup: failed to convert Markdown: %v", err)
+		return nil
+	}
+	return buf.Bytes()
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
