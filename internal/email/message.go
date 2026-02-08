@@ -1,37 +1,124 @@
 package email
 
 import (
+	"bytes"
 	"crypto/tls"
+	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net"
+	"net/mail"
 	"net/smtp"
+	"net/textproto"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/inbucket/html2text"
-	"gopkg.in/gomail.v2"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 )
 
 type Message struct {
-	Info string // Message information for log purpose.
-	*gomail.Message
+	Info        string
+	header      map[string][]string
+	contentType string
+	body        string
+	altParts    []altPart
 	confirmChan chan struct{}
+}
+
+type altPart struct {
+	contentType string
+	body        string
+}
+
+func (m *Message) GetHeader(field string) []string {
+	return m.header[field]
+}
+
+func (m *Message) WriteTo(w io.Writer) (int64, error) {
+	var buf bytes.Buffer
+
+	for _, field := range []string{"From", "To", "Subject", "Date"} {
+		vals := m.header[field]
+		for _, v := range vals {
+			encoded := v
+			if field == "Subject" {
+				encoded = mime.QEncoding.Encode("utf-8", v)
+			}
+			fmt.Fprintf(&buf, "%s: %s\r\n", field, encoded)
+		}
+	}
+
+	if len(m.altParts) > 0 {
+		mw := multipart.NewWriter(&buf)
+		fmt.Fprintf(&buf, "MIME-Version: 1.0\r\n")
+		fmt.Fprintf(&buf, "Content-Type: multipart/alternative; boundary=%s\r\n\r\n", mw.Boundary())
+
+		mainHeader := textproto.MIMEHeader{}
+		mainHeader.Set("Content-Type", m.contentType+"; charset=UTF-8")
+		mainHeader.Set("Content-Transfer-Encoding", "quoted-printable")
+		part, err := mw.CreatePart(mainHeader)
+		if err != nil {
+			return 0, errors.Wrap(err, "create main part")
+		}
+		qpWrite(part, m.body)
+
+		for _, alt := range m.altParts {
+			altHeader := textproto.MIMEHeader{}
+			altHeader.Set("Content-Type", alt.contentType+"; charset=UTF-8")
+			altHeader.Set("Content-Transfer-Encoding", "quoted-printable")
+			part, err := mw.CreatePart(altHeader)
+			if err != nil {
+				return 0, errors.Wrap(err, "create alternative part")
+			}
+			qpWrite(part, alt.body)
+		}
+		mw.Close()
+	} else {
+		fmt.Fprintf(&buf, "MIME-Version: 1.0\r\n")
+		fmt.Fprintf(&buf, "Content-Type: %s; charset=UTF-8\r\n", m.contentType)
+		fmt.Fprintf(&buf, "Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+		qpWrite(&buf, m.body)
+	}
+
+	n, err := w.Write(buf.Bytes())
+	return int64(n), err
+}
+
+func qpWrite(w io.Writer, s string) {
+	for i := 0; i < len(s); i++ {
+		b := s[i]
+		switch {
+		case b == '\r' || b == '\n':
+			fmt.Fprintf(w, "%c", b)
+		case b == '=' || b > 126 || (b < 32 && b != '\t'):
+			fmt.Fprintf(w, "=%02X", b)
+		default:
+			fmt.Fprintf(w, "%c", b)
+		}
+	}
+}
+
+// FormatAddress formats an email address with a display name per RFC 5322.
+func FormatAddress(address, name string) string {
+	addr := mail.Address{Name: name, Address: address}
+	return addr.String()
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
 func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
 
-	msg := gomail.NewMessage()
-	msg.SetHeader("From", from)
-	msg.SetHeader("To", to...)
-	msg.SetHeader("Subject", conf.Email.SubjectPrefix+subject)
-	msg.SetDateHeader("Date", time.Now())
+	header := make(map[string][]string)
+	header["From"] = []string{from}
+	header["To"] = to
+	header["Subject"] = []string{conf.Email.SubjectPrefix + subject}
+	header["Date"] = []string{time.Now().Format(time.RFC1123Z)}
 
 	contentType := "text/html"
 	body := htmlBody
@@ -46,17 +133,21 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 			switchedToPlaintext = true
 		}
 	}
-	msg.SetBody(contentType, body)
-	if switchedToPlaintext && conf.Email.AddPlainTextAlt && !conf.Email.UsePlainText {
-		// The AddAlternative method name is confusing - adding html as an "alternative" will actually cause mail
-		// clients to show it as first priority, and the text "main body" is the 2nd priority fallback.
-		// See: https://godoc.org/gopkg.in/gomail.v2#Message.AddAlternative
-		msg.AddAlternative("text/html", htmlBody)
-	}
-	return &Message{
-		Message:     msg,
+
+	msg := &Message{
+		header:      header,
+		contentType: contentType,
+		body:        body,
 		confirmChan: make(chan struct{}),
 	}
+
+	if switchedToPlaintext && conf.Email.AddPlainTextAlt && !conf.Email.UsePlainText {
+		msg.altParts = append(msg.altParts, altPart{
+			contentType: "text/html",
+			body:        htmlBody,
+		})
+	}
+	return msg
 }
 
 // NewMessage creates new mail message object with default From header.
@@ -68,7 +159,7 @@ type loginAuth struct {
 	username, password string
 }
 
-// SMTP AUTH LOGIN Auth Handler
+// LoginAuth returns an smtp.Auth implementing the LOGIN authentication mechanism.
 func LoginAuth(username, password string) smtp.Auth {
 	return &loginAuth{username, password}
 }
@@ -163,7 +254,6 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 		} else if strings.Contains(options, "PLAIN") {
 			auth = smtp.PlainAuth("", opts.User, opts.Password, host)
 		} else if strings.Contains(options, "LOGIN") {
-			// Patch for AUTH LOGIN
 			auth = LoginAuth(opts.User, opts.Password)
 		}
 
@@ -196,11 +286,34 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 	return client.Quit()
 }
 
+func sendMessage(sender *Sender, msg *Message) error {
+	from := msg.header["From"]
+	if len(from) == 0 {
+		return errors.New("missing From header")
+	}
+	addr, err := mail.ParseAddress(from[0])
+	if err != nil {
+		return errors.Wrap(err, "parse From address")
+	}
+
+	var to []string
+	for _, toAddr := range msg.header["To"] {
+		parsed, err := mail.ParseAddress(toAddr)
+		if err != nil {
+			to = append(to, toAddr)
+		} else {
+			to = append(to, parsed.Address)
+		}
+	}
+
+	return sender.Send(addr.Address, to, msg)
+}
+
 func processMailQueue() {
 	sender := &Sender{}
 	for msg := range mailQueue {
 		log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
-		if err := gomail.Send(sender, msg.Message); err != nil {
+		if err := sendMessage(sender, msg); err != nil {
 			log.Error("Failed to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 		} else {
 			log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
