@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/nfnt/resize"
 	"golang.org/x/crypto/pbkdf2"
+	"golang.org/x/image/draw"
 
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
@@ -100,8 +100,9 @@ func SaveAvatar(userID int64, data []byte) error {
 	}
 	defer func() { _ = f.Close() }()
 
-	m := resize.Resize(avatar.DefaultSize, avatar.DefaultSize, img, resize.NearestNeighbor)
-	if err = png.Encode(f, m); err != nil {
+	dst := image.NewRGBA(image.Rect(0, 0, avatar.DefaultSize, avatar.DefaultSize))
+	draw.NearestNeighbor.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
+	if err = png.Encode(f, dst); err != nil {
 		return errors.Wrap(err, "encode avatar image to file")
 	}
 	return nil

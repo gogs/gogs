@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/nfnt/resize"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
+	"golang.org/x/image/draw"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
@@ -351,8 +351,9 @@ func (r *Repository) UploadAvatar(data []byte) error {
 	}
 	defer fw.Close()
 
-	m := resize.Resize(avatar.DefaultSize, avatar.DefaultSize, img, resize.NearestNeighbor)
-	if err = png.Encode(fw, m); err != nil {
+	dst := image.NewRGBA(image.Rect(0, 0, avatar.DefaultSize, avatar.DefaultSize))
+	draw.NearestNeighbor.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
+	if err = png.Encode(fw, dst); err != nil {
 		return errors.Newf("encode image: %v", err)
 	}
 
