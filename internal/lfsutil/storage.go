@@ -1,6 +1,8 @@
 package lfsutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +13,7 @@ import (
 )
 
 var ErrObjectNotExist = errors.New("Object does not exist")
+var ErrOIDMismatch = errors.New("content hash does not match OID")
 
 // Storager is an storage backend for uploading and downloading LFS objects.
 type Storager interface {
@@ -72,15 +75,36 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "create directories")
 	}
-	w, err := os.Create(fpath)
+
+	w, err := os.OpenFile(fpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
+		if os.IsExist(err) {
+			// The file was already written by a previous upload (possibly for a
+			// different repo). Since the OID is a content hash, the existing file
+			// is guaranteed to have the correct content. Drain the reader and
+			// return the existing file's size.
+			_, _ = io.Copy(io.Discard, rc)
+			fi, statErr := os.Stat(fpath)
+			if statErr != nil {
+				err = errors.Wrap(statErr, "stat existing file")
+				return 0, err
+			}
+			err = nil
+			return fi.Size(), nil
+		}
 		return 0, errors.Wrap(err, "create file")
 	}
 	defer w.Close()
 
-	written, err := io.Copy(w, rc)
+	hash := sha256.New()
+	written, err := io.Copy(w, io.TeeReader(rc, hash))
 	if err != nil {
 		return 0, errors.Wrap(err, "copy file")
+	}
+
+	if computed := hex.EncodeToString(hash.Sum(nil)); computed != string(oid) {
+		err = ErrOIDMismatch
+		return 0, err
 	}
 	return written, nil
 }
