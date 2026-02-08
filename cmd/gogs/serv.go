@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -48,15 +48,10 @@ func fail(userMessage, errMessage string, args ...any) {
 	os.Exit(1)
 }
 
-func setup(c *cli.Context, logFile string, connectDB bool) {
+func setup(cmd *cli.Command, logFile string, connectDB bool) {
 	conf.HookMode = true
 
-	var customConf string
-	if c.IsSet("config") {
-		customConf = c.String("config")
-	} else if c.GlobalIsSet("config") {
-		customConf = c.GlobalString("config")
-	}
+	customConf := configFromLineage(cmd)
 
 	err := conf.Init(customConf)
 	if err != nil {
@@ -128,16 +123,15 @@ var allowedCommands = map[string]database.AccessMode{
 	"git-receive-pack":   database.AccessModeWrite,
 }
 
-func runServ(c *cli.Context) error {
-	ctx := context.Background()
-	setup(c, "serv.log", true)
+func runServ(ctx context.Context, cmd *cli.Command) error {
+	setup(cmd, "serv.log", true)
 
 	if conf.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
 		return nil
 	}
 
-	if len(c.Args()) < 1 {
+	if cmd.Args().Len() < 1 {
 		fail("Not enough arguments", "Not enough arguments")
 	}
 
@@ -188,10 +182,10 @@ func runServ(c *cli.Context) error {
 	// Allow anonymous (user is nil) clone for public repositories.
 	var user *database.User
 
-	keyID, _ := strconv.ParseInt(strings.TrimPrefix(c.Args()[0], "key-"), 10, 64)
+	keyID, _ := strconv.ParseInt(strings.TrimPrefix(cmd.Args().Get(0), "key-"), 10, 64)
 	key, err := database.GetPublicKeyByID(keyID)
 	if err != nil {
-		fail("Invalid key ID", "Invalid key ID '%s': %v", c.Args()[0], err)
+		fail("Invalid key ID", "Invalid key ID '%s': %v", cmd.Args().Get(0), err)
 	}
 
 	if requestMode == database.AccessModeWrite || repo.IsPrivate {

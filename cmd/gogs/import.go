@@ -3,13 +3,14 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osutil"
@@ -21,8 +22,8 @@ var (
 		Usage: "Import portable data as local Gogs data",
 		Description: `Allow user import data from other Gogs installations to local instance
 without manually hacking the data files`,
-		Subcommands: []cli.Command{
-			subcmdImportLocale,
+		Commands: []*cli.Command{
+			&subcmdImportLocale,
 		},
 	}
 
@@ -38,19 +39,19 @@ without manually hacking the data files`,
 	}
 )
 
-func runImportLocale(c *cli.Context) error {
-	if !c.IsSet("source") {
+func runImportLocale(_ context.Context, cmd *cli.Command) error {
+	if !cmd.IsSet("source") {
 		return errors.New("source directory is not specified")
-	} else if !c.IsSet("target") {
+	} else if !cmd.IsSet("target") {
 		return errors.New("target directory is not specified")
 	}
-	if !osutil.IsDir(c.String("source")) {
-		return errors.Newf("source directory %q does not exist or is not a directory", c.String("source"))
-	} else if !osutil.IsDir(c.String("target")) {
-		return errors.Newf("target directory %q does not exist or is not a directory", c.String("target"))
+	if !osutil.IsDir(cmd.String("source")) {
+		return errors.Newf("source directory %q does not exist or is not a directory", cmd.String("source"))
+	} else if !osutil.IsDir(cmd.String("target")) {
+		return errors.Newf("target directory %q does not exist or is not a directory", cmd.String("target"))
 	}
 
-	err := conf.Init(c.String("config"))
+	err := conf.Init(configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
@@ -64,8 +65,8 @@ func runImportLocale(c *cli.Context) error {
 	// Cut out en-US.
 	for _, lang := range conf.I18n.Langs[1:] {
 		name := fmt.Sprintf("locale_%s.ini", lang)
-		source := filepath.Join(c.String("source"), name)
-		target := filepath.Join(c.String("target"), name)
+		source := filepath.Join(cmd.String("source"), name)
+		target := filepath.Join(cmd.String("target"), name)
 		if !osutil.IsFile(source) {
 			continue
 		}

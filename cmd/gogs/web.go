@@ -1,6 +1,7 @@
 package main
 
 import (
+	stdctx "context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -20,7 +21,7 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -158,8 +159,8 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
-func runWeb(c *cli.Context) error {
-	err := route.GlobalInit(c.String("config"))
+func runWeb(_ stdctx.Context, cmd *cli.Command) error {
+	err := route.GlobalInit(configFromLineage(cmd))
 	if err != nil {
 		log.Fatal("Failed to initialize application: %v", err)
 	}
@@ -697,10 +698,10 @@ func runWeb(c *cli.Context) error {
 	m.NotFound(route.NotFound)
 
 	// Flag for port number in case first time run conflict.
-	if c.IsSet("port") {
-		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+c.String("port"), 1)
+	if cmd.IsSet("port") {
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+cmd.String("port"), 1)
 		conf.Server.ExternalURL = conf.Server.URL.String()
-		conf.Server.HTTPPort = c.String("port")
+		conf.Server.HTTPPort = cmd.String("port")
 	}
 
 	var listenAddr string
