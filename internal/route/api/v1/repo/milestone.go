@@ -6,8 +6,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateMilestoneRequest struct {
@@ -30,7 +30,7 @@ func ListMilestones(c *context.APIContext) {
 		return
 	}
 
-	apiMilestones := make([]*apitype.Milestone, len(milestones))
+	apiMilestones := make([]*types.Milestone, len(milestones))
 	for i := range milestones {
 		apiMilestones[i] = convert.ToMilestone(milestones[i])
 	}
@@ -84,7 +84,7 @@ func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
 	}
 
 	if form.State != nil {
-		if err = milestone.ChangeStatus(apitype.StateClosed == apitype.StateType(*form.State)); err != nil {
+		if err = milestone.ChangeStatus(types.StateClosed == types.StateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}

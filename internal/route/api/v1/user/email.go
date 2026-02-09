@@ -8,8 +8,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateEmailRequest struct {
@@ -22,7 +22,7 @@ func ListEmails(c *context.APIContext) {
 		c.Error(err, "get email addresses")
 		return
 	}
-	apiEmails := make([]*apitype.Email, len(emails))
+	apiEmails := make([]*types.Email, len(emails))
 	for i := range emails {
 		apiEmails[i] = convert.ToEmail(emails[i])
 	}
@@ -35,7 +35,7 @@ func AddEmail(c *context.APIContext, form CreateEmailRequest) {
 		return
 	}
 
-	apiEmails := make([]*apitype.Email, 0, len(form.Emails))
+	apiEmails := make([]*types.Email, 0, len(form.Emails))
 	for _, email := range form.Emails {
 		err := database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
 		if err != nil {
@@ -47,7 +47,7 @@ func AddEmail(c *context.APIContext, form CreateEmailRequest) {
 			return
 		}
 
-		apiEmails = append(apiEmails, &apitype.Email{
+		apiEmails = append(apiEmails, &types.Email{
 			Email:    email,
 			Verified: !conf.Auth.RequireEmailConfirmation,
 		})

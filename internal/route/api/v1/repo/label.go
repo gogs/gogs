@@ -6,8 +6,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateLabelRequest struct {
@@ -27,7 +27,7 @@ func ListLabels(c *context.APIContext) {
 		return
 	}
 
-	apiLabels := make([]*apitype.Label, len(labels))
+	apiLabels := make([]*types.Label, len(labels))
 	for i := range labels {
 		apiLabels[i] = convert.ToLabel(labels[i])
 	}

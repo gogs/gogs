@@ -5,8 +5,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type AddCollaboratorRequest struct {
@@ -20,7 +20,7 @@ func ListCollaborators(c *context.APIContext) {
 		return
 	}
 
-	apiCollaborators := make([]*apitype.Collaborator, len(collaborators))
+	apiCollaborators := make([]*types.Collaborator, len(collaborators))
 	for i := range collaborators {
 		apiCollaborators[i] = convert.ToCollaborator(collaborators[i])
 	}

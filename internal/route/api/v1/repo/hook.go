@@ -9,8 +9,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateHookRequest struct {
@@ -34,7 +34,7 @@ func ListHooks(c *context.APIContext) {
 		return
 	}
 
-	apiHooks := make([]*apitype.Hook, len(hooks))
+	apiHooks := make([]*types.Hook, len(hooks))
 	for i := range hooks {
 		apiHooks[i] = convert.ToHook(c.Repo.RepoLink, hooks[i])
 	}

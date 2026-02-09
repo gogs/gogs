@@ -5,8 +5,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type IssueLabelsRequest struct {
@@ -20,7 +20,7 @@ func ListIssueLabels(c *context.APIContext) {
 		return
 	}
 
-	apiLabels := make([]*apitype.Label, len(issue.Labels))
+	apiLabels := make([]*types.Label, len(issue.Labels))
 	for i := range issue.Labels {
 		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
@@ -51,7 +51,7 @@ func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 		return
 	}
 
-	apiLabels := make([]*apitype.Label, len(labels))
+	apiLabels := make([]*types.Label, len(labels))
 	for i := range labels {
 		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
@@ -107,7 +107,7 @@ func ReplaceIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 		return
 	}
 
-	apiLabels := make([]*apitype.Label, len(labels))
+	apiLabels := make([]*types.Label, len(labels))
 	for i := range labels {
 		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}

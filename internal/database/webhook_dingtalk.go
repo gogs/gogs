@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
+
+	apitypes "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 const (
@@ -55,31 +55,31 @@ func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
 }
 
 // TODO: add content
-func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
+func GetDingtalkPayload(p apitypes.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
 	switch event {
 	case HookEventTypeCreate:
-		payload = getDingtalkCreatePayload(p.(*api.CreatePayload))
+		payload = getDingtalkCreatePayload(p.(*apitypes.CreatePayload))
 	case HookEventTypeDelete:
-		payload = getDingtalkDeletePayload(p.(*api.DeletePayload))
+		payload = getDingtalkDeletePayload(p.(*apitypes.DeletePayload))
 	case HookEventTypeFork:
-		payload = getDingtalkForkPayload(p.(*api.ForkPayload))
+		payload = getDingtalkForkPayload(p.(*apitypes.ForkPayload))
 	case HookEventTypePush:
-		payload = getDingtalkPushPayload(p.(*api.PushPayload))
+		payload = getDingtalkPushPayload(p.(*apitypes.PushPayload))
 	case HookEventTypeIssues:
-		payload = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
+		payload = getDingtalkIssuesPayload(p.(*apitypes.IssuesPayload))
 	case HookEventTypeIssueComment:
-		payload = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
+		payload = getDingtalkIssueCommentPayload(p.(*apitypes.IssueCommentPayload))
 	case HookEventTypePullRequest:
-		payload = getDingtalkPullRequestPayload(p.(*api.PullRequestPayload))
+		payload = getDingtalkPullRequestPayload(p.(*apitypes.PullRequestPayload))
 	case HookEventTypeRelease:
-		payload = getDingtalkReleasePayload(p.(*api.ReleasePayload))
+		payload = getDingtalkReleasePayload(p.(*apitypes.ReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)
 	}
 	return payload, nil
 }
 
-func getDingtalkCreatePayload(p *api.CreatePayload) *DingtalkPayload {
+func getDingtalkCreatePayload(p *apitypes.CreatePayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
@@ -94,7 +94,7 @@ func getDingtalkCreatePayload(p *api.CreatePayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkDeletePayload(p *api.DeletePayload) *DingtalkPayload {
+func getDingtalkDeletePayload(p *apitypes.DeletePayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
@@ -109,7 +109,7 @@ func getDingtalkDeletePayload(p *api.DeletePayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkForkPayload(p *api.ForkPayload) *DingtalkPayload {
+func getDingtalkForkPayload(p *apitypes.ForkPayload) *DingtalkPayload {
 	actionCard := NewDingtalkActionCard("View Fork", p.Forkee.HTMLURL)
 	actionCard.Text += "# Repo Fork Event"
 	actionCard.Text += "\n- From Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
@@ -121,7 +121,7 @@ func getDingtalkForkPayload(p *api.ForkPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkPushPayload(p *api.PushPayload) *DingtalkPayload {
+func getDingtalkPushPayload(p *apitypes.PushPayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 
 	pusher := p.Pusher.FullName
@@ -150,7 +150,7 @@ func getDingtalkPushPayload(p *api.PushPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkIssuesPayload(p *api.IssuesPayload) *DingtalkPayload {
+func getDingtalkIssuesPayload(p *apitypes.IssuesPayload) *DingtalkPayload {
 	issueName := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	issueURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
 
@@ -159,11 +159,11 @@ func getDingtalkIssuesPayload(p *api.IssuesPayload) *DingtalkPayload {
 	actionCard.Text += "\n- Issue: **" + MarkdownLinkFormatter(issueURL, issueName) + "**"
 
 	switch p.Action {
-	case api.HOOK_ISSUE_ASSIGNED:
+	case apitypes.HookIssueAssigned:
 		actionCard.Text += "\n- New Assignee: **" + p.Issue.Assignee.UserName + "**"
-	case api.HOOK_ISSUE_MILESTONED:
+	case apitypes.HookIssueMilestoned:
 		actionCard.Text += "\n- New Milestone: **" + p.Issue.Milestone.Title + "**"
-	case api.HOOK_ISSUE_LABEL_UPDATED:
+	case apitypes.HookIssueLabelUpdated:
 		if len(p.Issue.Labels) > 0 {
 			labels := make([]string, len(p.Issue.Labels))
 			for i, label := range p.Issue.Labels {
@@ -185,10 +185,10 @@ func getDingtalkIssuesPayload(p *api.IssuesPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) *DingtalkPayload {
+func getDingtalkIssueCommentPayload(p *apitypes.IssueCommentPayload) *DingtalkPayload {
 	issueName := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 	commentURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
-	if p.Action != api.HOOK_ISSUE_COMMENT_DELETED {
+	if p.Action != apitypes.HookIssueCommentDeleted {
 		commentURL += "#" + CommentHashTag(p.Comment.ID)
 	}
 
@@ -206,9 +206,9 @@ func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) *DingtalkPayload
 	}
 }
 
-func getDingtalkPullRequestPayload(p *api.PullRequestPayload) *DingtalkPayload {
+func getDingtalkPullRequestPayload(p *apitypes.PullRequestPayload) *DingtalkPayload {
 	title := "# Pull Request " + strings.Title(string(p.Action))
-	if p.Action == api.HOOK_ISSUE_CLOSED && p.PullRequest.HasMerged {
+	if p.Action == apitypes.HookIssueClosed && p.PullRequest.HasMerged {
 		title = "# Pull Request Merged"
 	}
 
@@ -216,11 +216,11 @@ func getDingtalkPullRequestPayload(p *api.PullRequestPayload) *DingtalkPayload {
 
 	content := "- PR: " + MarkdownLinkFormatter(pullRequestURL, fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
 	switch p.Action {
-	case api.HOOK_ISSUE_ASSIGNED:
+	case apitypes.HookIssueAssigned:
 		content += "\n- New Assignee: **" + p.PullRequest.Assignee.UserName + "**"
-	case api.HOOK_ISSUE_MILESTONED:
+	case apitypes.HookIssueMilestoned:
 		content += "\n- New Milestone: *" + p.PullRequest.Milestone.Title + "*"
-	case api.HOOK_ISSUE_LABEL_UPDATED:
+	case apitypes.HookIssueLabelUpdated:
 		labels := make([]string, len(p.PullRequest.Labels))
 		for i, label := range p.PullRequest.Labels {
 			labels[i] = "**" + label.Name + "**"
@@ -231,7 +231,7 @@ func getDingtalkPullRequestPayload(p *api.PullRequestPayload) *DingtalkPayload {
 	actionCard := NewDingtalkActionCard("View Pull Request", pullRequestURL)
 	actionCard.Text += title + "\n" + content
 
-	if p.Action == api.HOOK_ISSUE_OPENED || p.Action == api.HOOK_ISSUE_EDITED {
+	if p.Action == apitypes.HookIssueOpened || p.Action == apitypes.HookIssueEdited {
 		actionCard.Text += "\n> " + p.PullRequest.Body
 	}
 
@@ -241,7 +241,7 @@ func getDingtalkPullRequestPayload(p *api.PullRequestPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkReleasePayload(p *api.ReleasePayload) *DingtalkPayload {
+func getDingtalkReleasePayload(p *apitypes.ReleasePayload) *DingtalkPayload {
 	releaseURL := p.Repository.HTMLURL + "/src/" + p.Release.TagName
 
 	author := p.Release.Author.FullName

@@ -5,8 +5,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 func Search(c *context.APIContext) {
@@ -23,7 +23,7 @@ func Search(c *context.APIContext) {
 		return
 	}
 
-	results := make([]*apitype.User, len(users))
+	results := make([]*types.User, len(users))
 	for i := range users {
 		results[i] = convert.ToUserSanitized(users[i])
 		if !c.IsLogged {

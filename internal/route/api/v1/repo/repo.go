@@ -11,8 +11,8 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateRepoRequest struct {
@@ -85,7 +85,7 @@ func Search(c *context.APIContext) {
 		return
 	}
 
-	results := make([]*apitype.Repository, len(repos))
+	results := make([]*types.Repository, len(repos))
 	for i := range repos {
 		results[i] = convert.ToRepository(repos[i], nil)
 	}
@@ -129,9 +129,9 @@ func listUserRepositories(c *context.APIContext, username string) {
 
 	// Early return for querying other user's repositories
 	if c.User.ID != user.ID {
-		repos := make([]*apitype.Repository, len(ownRepos))
+		repos := make([]*types.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = convert.ToRepository(ownRepos[i], &apitype.Permission{Admin: true, Push: true, Pull: true})
+			repos[i] = convert.ToRepository(ownRepos[i], &types.Permission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -153,14 +153,14 @@ func listUserRepositories(c *context.APIContext, username string) {
 	}
 
 	numOwnRepos := len(ownRepos)
-	repos := make([]*apitype.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
+	repos := make([]*types.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
-		repos = append(repos, convert.ToRepository(r, &apitype.Permission{Admin: true, Push: true, Pull: true}))
+		repos = append(repos, convert.ToRepository(r, &types.Permission{Admin: true, Push: true, Pull: true}))
 	}
 
 	for repo, access := range accessibleReposWithAccessMode {
 		repos = append(repos,
-			convert.ToRepository(repo, &apitype.Permission{
+			convert.ToRepository(repo, &types.Permission{
 				Admin: access >= database.AccessModeAdmin,
 				Push:  access >= database.AccessModeWrite,
 				Pull:  true,
@@ -208,7 +208,7 @@ func CreateUserRepo(c *context.APIContext, owner *database.User, opt CreateRepoR
 		return
 	}
 
-	c.JSON(201, convert.ToRepository(repo, &apitype.Permission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, convert.ToRepository(repo, &types.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 func Create(c *context.APIContext, opt CreateRepoRequest) {
@@ -312,7 +312,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, convert.ToRepository(repo, &apitype.Permission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, convert.ToRepository(repo, &types.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
@@ -342,7 +342,7 @@ func Get(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(convert.ToRepository(repo, &apitype.Permission{
+	c.JSONSuccess(convert.ToRepository(repo, &types.Permission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
@@ -376,7 +376,7 @@ func ListForks(c *context.APIContext) {
 		return
 	}
 
-	apiForks := make([]*apitype.Repository, len(forks))
+	apiForks := make([]*types.Repository, len(forks))
 	for i := range forks {
 		if err := forks[i].GetOwner(); err != nil {
 			c.Error(err, "get owner")
@@ -394,7 +394,7 @@ func ListForks(c *context.APIContext) {
 		)
 
 		apiForks[i] = convert.ToRepository(forks[i],
-			&apitype.Permission{
+			&types.Permission{
 				Admin: accessMode >= database.AccessModeAdmin,
 				Push:  accessMode >= database.AccessModeWrite,
 				Pull:  true,
@@ -481,7 +481,7 @@ func Releases(c *context.APIContext) {
 		c.Error(err, "get releases by repository ID")
 		return
 	}
-	apiReleases := make([]*apitype.Release, 0, len(releases))
+	apiReleases := make([]*types.Release, 0, len(releases))
 	for _, r := range releases {
 		publisher, err := database.Handle.Users().GetByID(c.Req.Context(), r.PublisherID)
 		if err != nil {

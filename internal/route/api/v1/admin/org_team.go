@@ -5,8 +5,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
@@ -69,7 +69,7 @@ func ListTeamMembers(c *context.APIContext) {
 		return
 	}
 
-	apiMembers := make([]*apitype.User, len(team.Members))
+	apiMembers := make([]*types.User, len(team.Members))
 	for i := range team.Members {
 		apiMembers[i] = convert.ToUser(team.Members[i])
 	}

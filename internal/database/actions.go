@@ -12,13 +12,13 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/repoutil"
+	apitypes "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/testutil"
 	"gogs.io/gogs/internal/tool"
@@ -230,7 +230,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 	err = PrepareWebhooks(
 		opts.Repo,
 		HookEventTypePush,
-		&api.PushPayload{
+		&apitypes.PushPayload{
 			Ref:        opts.RefName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
@@ -496,10 +496,10 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeDelete,
-			&api.DeletePayload{
+			&apitypes.DeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
-				PusherType: api.PUSHER_TYPE_USER,
+				PusherType: apitypes.PusherTypeUser,
 				Repo:       apiRepo,
 				Sender:     apiPusher,
 			},
@@ -540,7 +540,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeCreate,
-			&api.CreatePayload{
+			&apitypes.CreatePayload{
 				Ref:           refName,
 				RefType:       "branch",
 				DefaultBranch: opts.Repo.DefaultBranch,
@@ -573,7 +573,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	err = PrepareWebhooks(
 		opts.Repo,
 		HookEventTypePush,
-		&api.PushPayload{
+		&apitypes.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
@@ -635,10 +635,10 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeDelete,
-			&api.DeletePayload{
+			&apitypes.DeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
-				PusherType: api.PUSHER_TYPE_USER,
+				PusherType: apitypes.PusherTypeUser,
 				Repo:       apiRepo,
 				Sender:     apiPusher,
 			},
@@ -658,7 +658,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 	err = PrepareWebhooks(
 		opts.Repo,
 		HookEventTypeCreate,
-		&api.CreatePayload{
+		&apitypes.CreatePayload{
 			Ref:           refName,
 			RefType:       "tag",
 			Sha:           opts.NewCommitID,
@@ -848,7 +848,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*apitypes.PayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {
@@ -870,7 +870,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 		return user.Name, nil
 	}
 
-	commits := make([]*api.PayloadCommit, len(pcs.Commits))
+	commits := make([]*apitypes.PayloadCommit, len(pcs.Commits))
 	for i, commit := range pcs.Commits {
 		authorUsername, err := getUsernameByEmail(commit.AuthorEmail)
 		if err != nil {
@@ -890,16 +890,16 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 			}
 		}
 
-		commits[i] = &api.PayloadCommit{
+		commits[i] = &apitypes.PayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
 			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
-			Author: &api.PayloadUser{
+			Author: &apitypes.PayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
 				UserName: authorUsername,
 			},
-			Committer: &api.PayloadUser{
+			Committer: &apitypes.PayloadUser{
 				Name:     commit.CommitterName,
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,

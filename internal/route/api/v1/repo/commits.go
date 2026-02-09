@@ -11,8 +11,8 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 const mediaApplicationSHA = "application/vnd.gogs.sha"
@@ -32,7 +32,7 @@ func GetAllCommits(c *context.APIContext) {
 	}
 
 	// The response object returned as JSON
-	result := make([]*apitype.Commit, 0, pageSize)
+	result := make([]*types.Commit, 0, pageSize)
 	commits, err := gitRepo.Log("HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
@@ -117,9 +117,9 @@ func GetReferenceSHA(c *context.APIContext) {
 }
 
 // gitCommitToApiCommit is a helper function to convert git commit object to API commit.
-func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*apitype.Commit, error) {
+func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*types.Commit, error) {
 	// Retrieve author and committer information
-	var apiAuthor, apiCommitter *apitype.User
+	var apiAuthor, apiCommitter *types.User
 	author, err := database.Handle.Users().GetByEmail(c.Req.Context(), commit.Author.Email)
 	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
@@ -140,35 +140,35 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*apitype.C
 	}
 
 	// Retrieve parent(s) of the commit
-	apiParents := make([]*apitype.CommitMeta, commit.ParentsCount())
+	apiParents := make([]*types.CommitMeta, commit.ParentsCount())
 	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, _ := commit.ParentID(i)
-		apiParents[i] = &apitype.CommitMeta{
+		apiParents[i] = &types.CommitMeta{
 			URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/commits/" + sha.String(),
 			SHA: sha.String(),
 		}
 	}
 
-	return &apitype.Commit{
-		CommitMeta: &apitype.CommitMeta{
+	return &types.Commit{
+		CommitMeta: &types.CommitMeta{
 			URL: conf.Server.ExternalURL + c.Link[1:],
 			SHA: commit.ID.String(),
 		},
 		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID.String(),
-		RepoCommit: &apitype.RepoCommit{
+		RepoCommit: &types.RepoCommit{
 			URL: conf.Server.ExternalURL + c.Link[1:],
-			Author: &apitype.CommitUser{
+			Author: &types.CommitUser{
 				Name:  commit.Author.Name,
 				Email: commit.Author.Email,
 				Date:  commit.Author.When.Format(time.RFC3339),
 			},
-			Committer: &apitype.CommitUser{
+			Committer: &types.CommitUser{
 				Name:  commit.Committer.Name,
 				Email: commit.Committer.Email,
 				Date:  commit.Committer.When.Format(time.RFC3339),
 			},
 			Message: commit.Summary(),
-			Tree: &apitype.CommitMeta{
+			Tree: &types.CommitMeta{
 				URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/tree/" + commit.ID.String(),
 				SHA: commit.ID.String(),
 			},

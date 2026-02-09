@@ -8,9 +8,9 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/repo"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateKeyRequest struct {
@@ -43,7 +43,7 @@ func listPublicKeys(c *context.APIContext, uid int64) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	apiKeys := make([]*apitype.PublicKey, len(keys))
+	apiKeys := make([]*types.PublicKey, len(keys))
 	for i := range keys {
 		apiKeys[i] = convert.ToPublicKey(apiLink, keys[i])
 	}

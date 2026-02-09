@@ -8,7 +8,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateAccessTokenRequest struct {
@@ -36,9 +36,9 @@ func (h *AccessTokensHandler) List() macaron.Handler {
 			return
 		}
 
-		apiTokens := make([]*apitype.AccessToken, len(tokens))
+		apiTokens := make([]*types.AccessToken, len(tokens))
 		for i := range tokens {
-			apiTokens[i] = &apitype.AccessToken{
+			apiTokens[i] = &types.AccessToken{
 				Name: tokens[i].Name,
 				Sha1: tokens[i].Sha1,
 			}
@@ -58,7 +58,7 @@ func (h *AccessTokensHandler) Create() macaron.Handler {
 			}
 			return
 		}
-		c.JSON(http.StatusCreated, &apitype.AccessToken{
+		c.JSON(http.StatusCreated, &types.AccessToken{
 			Name: t.Name,
 			Sha1: t.Sha1,
 		})

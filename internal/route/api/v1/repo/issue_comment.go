@@ -6,8 +6,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateIssueCommentRequest struct {
@@ -42,7 +42,7 @@ func ListIssueComments(c *context.APIContext) {
 		return
 	}
 
-	apiComments := make([]*apitype.Comment, len(comments))
+	apiComments := make([]*types.Comment, len(comments))
 	for i := range comments {
 		apiComments[i] = convert.ToComment(comments[i])
 	}
@@ -66,7 +66,7 @@ func ListRepoIssueComments(c *context.APIContext) {
 		return
 	}
 
-	apiComments := make([]*apitype.Comment, len(comments))
+	apiComments := make([]*types.Comment, len(comments))
 	for i := range comments {
 		apiComments[i] = convert.ToComment(comments[i])
 	}

@@ -5,8 +5,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
@@ -65,7 +65,7 @@ func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
 		return
 	}
 
-	apiOrgs := make([]*apitype.Organization, len(orgs))
+	apiOrgs := make([]*types.Organization, len(orgs))
 	for i := range orgs {
 		apiOrgs[i] = convert.ToOrganization(orgs[i])
 	}

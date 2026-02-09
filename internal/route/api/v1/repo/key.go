@@ -8,8 +8,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateKeyRequest struct {
@@ -30,7 +30,7 @@ func ListDeployKeys(c *context.APIContext) {
 	}
 
 	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
-	apiKeys := make([]*apitype.DeployKey, len(keys))
+	apiKeys := make([]*types.DeployKey, len(keys))
 	for i := range keys {
 		if err = keys[i].GetContent(); err != nil {
 			c.Error(err, "get content")

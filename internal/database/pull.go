@@ -13,12 +13,12 @@ import (
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
+	apitypes "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -127,11 +127,11 @@ func (pr *PullRequest) LoadIssue() (err error) {
 // This method assumes following fields have been assigned with valid values:
 // Required - Issue, BaseRepo
 // Optional - HeadRepo, Merger
-func (pr *PullRequest) APIFormat() *api.PullRequest {
+func (pr *PullRequest) APIFormat() *apitypes.PullRequest {
 	// In case of head repo has been deleted.
-	var apiHeadRepo *api.Repository
+	var apiHeadRepo *apitypes.Repository
 	if pr.HeadRepo == nil {
-		apiHeadRepo = &api.Repository{
+		apiHeadRepo = &apitypes.Repository{
 			Name: "deleted",
 		}
 	} else {
@@ -139,7 +139,7 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 	}
 
 	apiIssue := pr.Issue.APIFormat()
-	apiPullRequest := &api.PullRequest{
+	apiPullRequest := &apitypes.PullRequest{
 		ID:         pr.ID,
 		Index:      pr.Index,
 		Poster:     apiIssue.Poster,
@@ -341,8 +341,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		log.Error("LoadAttributes: %v", err)
 		return nil
 	}
-	if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
-		Action:      api.HOOK_ISSUE_CLOSED,
+	if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &apitypes.PullRequestPayload{
+		Action:      apitypes.HookIssueClosed,
 		Index:       pr.Index,
 		PullRequest: pr.APIFormat(),
 		Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
@@ -376,7 +376,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return nil
 	}
 
-	p := &api.PushPayload{
+	p := &apitypes.PushPayload{
 		Ref:        git.RefsHeads + pr.BaseBranch,
 		Before:     pr.MergeBase,
 		After:      mergeCommit.ID.String(),
@@ -500,8 +500,8 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 	pr.Issue = pull
 	pull.PullRequest = pr
-	if err = PrepareWebhooks(repo, HookEventTypePullRequest, &api.PullRequestPayload{
-		Action:      api.HOOK_ISSUE_OPENED,
+	if err = PrepareWebhooks(repo, HookEventTypePullRequest, &apitypes.PullRequestPayload{
+		Action:      apitypes.HookIssueOpened,
 		Index:       pull.Index,
 		PullRequest: pr.APIFormat(),
 		Repository:  repo.APIFormatLegacy(nil),
@@ -792,8 +792,8 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 					log.Error("LoadAttributes: %v", err)
 					continue
 				}
-				if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
-					Action:      api.HOOK_ISSUE_SYNCHRONIZED,
+				if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &apitypes.PullRequestPayload{
+					Action:      apitypes.HookIssueSynchronized,
 					Index:       pr.Issue.Index,
 					PullRequest: pr.Issue.PullRequest.APIFormat(),
 					Repository:  pr.Issue.Repo.APIFormatLegacy(nil),

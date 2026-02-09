@@ -9,8 +9,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type CreateIssueRequest struct {
@@ -44,7 +44,7 @@ func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	}
 
 	// FIXME: use IssueList to improve performance.
-	apiIssues := make([]*apitype.Issue, len(issues))
+	apiIssues := make([]*types.Issue, len(issues))
 	for i := range issues {
 		if err = issues[i].LoadAttributes(); err != nil {
 			c.Error(err, "load attributes")
@@ -61,7 +61,7 @@ func ListUserIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
-		IsClosed:   apitype.StateType(c.Query("state")) == apitype.StateClosed,
+		IsClosed:   types.StateType(c.Query("state")) == types.StateClosed,
 	}
 
 	listIssues(c, &opts)
@@ -71,7 +71,7 @@ func ListIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
 		Page:     c.QueryInt("page"),
-		IsClosed: apitype.StateType(c.Query("state")) == apitype.StateClosed,
+		IsClosed: types.StateType(c.Query("state")) == types.StateClosed,
 	}
 
 	listIssues(c, &opts)
@@ -191,7 +191,7 @@ func EditIssue(c *context.APIContext, form EditIssueRequest) {
 		return
 	}
 	if form.State != nil {
-		if err = issue.ChangeStatus(c.User, c.Repo.Repository, apitype.StateClosed == apitype.StateType(*form.State)); err != nil {
+		if err = issue.ChangeStatus(c.User, c.Repo.Repository, types.StateClosed == types.StateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}

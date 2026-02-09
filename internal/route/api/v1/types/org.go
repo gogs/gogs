@@ -1,4 +1,4 @@
-package apitype
+package types
 
 type Organization struct {
 	ID          int64  `json:"id"`

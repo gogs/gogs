@@ -10,7 +10,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
@@ -18,6 +17,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/netutil"
+	apitypes "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 const (
@@ -513,21 +513,21 @@ func TestWebhook(c *context.Context) {
 	}
 
 	apiUser := c.User.APIFormat()
-	p := &api.PushPayload{
+	p := &apitypes.PushPayload{
 		Ref:    git.RefsHeads + c.Repo.Repository.DefaultBranch,
 		Before: commitID,
 		After:  commitID,
-		Commits: []*api.PayloadCommit{
+		Commits: []*apitypes.PayloadCommit{
 			{
 				ID:      commitID,
 				Message: commitMessage,
 				URL:     c.Repo.Repository.HTMLURL() + "/commit/" + commitID,
-				Author: &api.PayloadUser{
+				Author: &apitypes.PayloadUser{
 					Name:     author.Name,
 					Email:    author.Email,
 					UserName: authorUsername,
 				},
-				Committer: &api.PayloadUser{
+				Committer: &apitypes.PayloadUser{
 					Name:     committer.Name,
 					Email:    committer.Email,
 					UserName: committerUsername,
