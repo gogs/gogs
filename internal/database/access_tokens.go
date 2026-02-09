@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	gouuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/cryptoutil"
@@ -80,7 +80,7 @@ func (s *AccessTokensStore) Create(ctx context.Context, userID int64, name strin
 		return nil, err
 	}
 
-	token := cryptoutil.SHA1(gouuid.NewV4().String())
+	token := cryptoutil.SHA1(uuid.New().String())
 	sha256 := cryptoutil.SHA256(token)
 
 	accessToken := &AccessToken{

@@ -1,0 +1,6268 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gogs API",
+    "version": "v1",
+    "description": "RESTful API for interacting with your Gogs instance. Follows a format similar to the GitHub REST API v3."
+  },
+  "servers": [
+    {
+      "url": "https://gogs.example.com/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "AccessToken": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Repositories",
+      "description": "Create, search, and manage repositories, branches, commits, and contents"
+    },
+    {
+      "name": "Collaborators and Deploy Keys",
+      "description": "Manage repository collaborators and deploy keys"
+    },
+    {
+      "name": "Releases",
+      "description": "List repository releases"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Create, edit, and delete repository webhooks"
+    },
+    {
+      "name": "Issues",
+      "description": "Manage issues, comments, labels, and milestones"
+    },
+    {
+      "name": "Users",
+      "description": "Search users, manage access tokens, emails, followers, and public keys"
+    },
+    {
+      "name": "Organizations",
+      "description": "Manage organizations, members, and teams"
+    },
+    {
+      "name": "Administration",
+      "description": "Site administration endpoints (requires admin privileges)"
+    },
+    {
+      "name": "Miscellaneous",
+      "description": "Markdown rendering and Git data endpoints"
+    }
+  ],
+  "paths": {
+    "/repos/search": {
+      "get": {
+        "operationId": "searchRepos",
+        "summary": "Search repositories",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Repository"
+                      }
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search keyword"
+          },
+          {
+            "name": "uid",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "User ID to filter by"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Max results"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          }
+        ]
+      }
+    },
+    "/user/repos": {
+      "get": {
+        "operationId": "listYourRepos",
+        "summary": "List your repositories",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Repository"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createRepo",
+        "summary": "Create a repository",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Repository"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "private": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "auto_init": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "gitignores": {
+                    "type": "string"
+                  },
+                  "license": {
+                    "type": "string"
+                  },
+                  "readme": {
+                    "type": "string",
+                    "default": "Default"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{username}/repos": {
+      "get": {
+        "operationId": "listUserRepos",
+        "summary": "List user repositories",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Repository"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ]
+      }
+    },
+    "/orgs/{orgname}/repos": {
+      "get": {
+        "operationId": "listOrgRepos",
+        "summary": "List organization repositories",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Repository"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgname",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization name"
+          }
+        ]
+      }
+    },
+    "/org/{org}/repos": {
+      "post": {
+        "operationId": "createOrgRepo",
+        "summary": "Create a repository in an organization",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Repository"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "org",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "private": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "auto_init": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "gitignores": {
+                    "type": "string"
+                  },
+                  "license": {
+                    "type": "string"
+                  },
+                  "readme": {
+                    "type": "string",
+                    "default": "Default"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "description": "The authenticated user must be an owner of the specified organization."
+      }
+    },
+    "/repos/migrate": {
+      "post": {
+        "operationId": "migrateRepo",
+        "summary": "Migrate a repository",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Repository"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clone_addr": {
+                    "type": "string"
+                  },
+                  "auth_username": {
+                    "type": "string"
+                  },
+                  "auth_password": {
+                    "type": "string"
+                  },
+                  "uid": {
+                    "type": "integer"
+                  },
+                  "repo_name": {
+                    "type": "string"
+                  },
+                  "mirror": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "private": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "clone_addr",
+                  "uid",
+                  "repo_name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}": {
+      "get": {
+        "operationId": "getRepo",
+        "summary": "Get a repository",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Repository"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "deleteRepo",
+        "summary": "Delete a repository",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "description": "Requires owner access to the repository."
+      }
+    },
+    "/repos/{owner}/{repo}/issue-tracker": {
+      "patch": {
+        "operationId": "editIssueTracker",
+        "summary": "Edit issue tracker settings",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "204": {
+            "description": "Settings updated successfully."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enable_issues": {
+                    "type": "boolean"
+                  },
+                  "enable_external_tracker": {
+                    "type": "boolean"
+                  },
+                  "external_tracker_url": {
+                    "type": "string"
+                  },
+                  "tracker_url_format": {
+                    "type": "string"
+                  },
+                  "tracker_issue_style": {
+                    "type": "string",
+                    "enum": [
+                      "numeric",
+                      "alphanumeric"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/mirror-sync": {
+      "post": {
+        "operationId": "mirrorSync",
+        "summary": "Mirror sync",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "202": {
+            "description": "Mirror sync has been queued."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "description": "Add a mirror repository to the sync queue. Returns 404 if the repository is not a mirror."
+      }
+    },
+    "/repos/{owner}/{repo}/branches": {
+      "get": {
+        "operationId": "listBranches",
+        "summary": "List branches",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Branch"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/branches/{branch}": {
+      "get": {
+        "operationId": "getBranch",
+        "summary": "Get a branch",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Branch"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "branch",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Branch name"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/commits/{sha}": {
+      "get": {
+        "operationId": "getCommit",
+        "summary": "Get a single commit",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Commit"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Commit SHA"
+          }
+        ],
+        "description": "Get details for a single commit. Set Accept header to application/vnd.gogs.sha to return only the SHA-1 hash of a commit reference."
+      }
+    },
+    "/repos/{owner}/{repo}/raw/{ref}/{filepath}": {
+      "get": {
+        "operationId": "getRawContent",
+        "summary": "Download raw content",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw file content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Branch, tag, or commit"
+          },
+          {
+            "name": "filepath",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "File path"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/archive/{archive}": {
+      "get": {
+        "operationId": "downloadArchive",
+        "summary": "Download archive",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Archive file",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "archive",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ref and format, e.g. master.zip or master.tar.gz"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/contents/{path}": {
+      "get": {
+        "operationId": "getContents",
+        "summary": "Get contents",
+        "tags": [
+          "Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Content"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "File or directory path"
+          },
+          {
+            "name": "ref",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Branch, tag, or commit. Defaults to the default branch."
+          }
+        ],
+        "description": "Get the contents of a file, directory, symlink, or submodule in a repository."
+      },
+      "put": {
+        "operationId": "putContents",
+        "summary": "Create or update a file",
+        "description": "Creates or updates a file in the repository. The content must be base64 encoded.",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path of the file to create or update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Commit message"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Base64-encoded file content"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "description": "Branch to commit to. Defaults to the repository's default branch."
+                  }
+                },
+                "required": [
+                  "message",
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File created or updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "$ref": "#/components/schemas/Content"
+                    },
+                    "commit": {
+                      "$ref": "#/components/schemas/Commit"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Repository not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/collaborators": {
+      "get": {
+        "operationId": "listCollaborators",
+        "summary": "List collaborators",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Collaborator"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/collaborators/{collaborator}": {
+      "put": {
+        "operationId": "addCollaborator",
+        "summary": "Add a collaborator",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "204": {
+            "description": "Collaborator has been added."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "collaborator",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Collaborator username"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "permission": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write",
+                      "admin"
+                    ],
+                    "default": "write"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCollaborator",
+        "summary": "Remove a collaborator",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "collaborator",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Collaborator username"
+          }
+        ]
+      },
+      "get": {
+        "operationId": "isCollaborator",
+        "summary": "Check if a user is a collaborator",
+        "description": "Returns 204 if the user is a collaborator, 404 if not.",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          },
+          {
+            "name": "collaborator",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username to check"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User is a collaborator."
+          },
+          "404": {
+            "description": "User is not a collaborator."
+          },
+          "422": {
+            "description": "The specified user does not exist."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/keys": {
+      "get": {
+        "operationId": "listDeployKeys",
+        "summary": "List deploy keys",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeployKey"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createDeployKey",
+        "summary": "Add a deploy key",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "key"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/keys/{id}": {
+      "get": {
+        "operationId": "getDeployKey",
+        "summary": "Get a deploy key",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Key ID"
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "removeDeployKey",
+        "summary": "Remove a deploy key",
+        "tags": [
+          "Collaborators and Deploy Keys"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Key ID"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/releases": {
+      "get": {
+        "operationId": "listReleases",
+        "summary": "List releases",
+        "tags": [
+          "Releases"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Release"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/hooks": {
+      "get": {
+        "operationId": "listHooks",
+        "summary": "List hooks",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Hook"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createHook",
+        "summary": "Create a hook",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hook"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "gogs",
+                      "slack",
+                      "discord",
+                      "dingtalk"
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "type": "string"
+                      },
+                      "content_type": {
+                        "type": "string",
+                        "enum": [
+                          "json",
+                          "form"
+                        ]
+                      },
+                      "secret": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "url",
+                      "content_type"
+                    ]
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": [
+                      "push"
+                    ]
+                  },
+                  "active": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "type",
+                  "config"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/hooks/{id}": {
+      "patch": {
+        "operationId": "editHook",
+        "summary": "Edit a hook",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hook"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hook ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "config": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "type": "string"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      },
+                      "secret": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "config"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteHook",
+        "summary": "Delete a hook",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hook ID"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/issues": {
+      "get": {
+        "operationId": "listIssues",
+        "summary": "List issues for a repository",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Issue"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "description": "This endpoint may also return pull requests. If an issue is a pull request, the object will include a pull_request key."
+      },
+      "post": {
+        "operationId": "createIssue",
+        "summary": "Create an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "assignee": {
+                    "type": "string"
+                  },
+                  "milestone": {
+                    "type": "integer"
+                  },
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "closed": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}": {
+      "get": {
+        "operationId": "getIssue",
+        "summary": "Get a single issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "editIssue",
+        "summary": "Edit an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "assignee": {
+                    "type": "string"
+                  },
+                  "milestone": {
+                    "type": "integer"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}/comments": {
+      "get": {
+        "operationId": "listIssueComments",
+        "summary": "List comments on an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Comment"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only comments updated at or after this time (RFC 3339)"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createComment",
+        "summary": "Create a comment",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/issues/comments": {
+      "get": {
+        "operationId": "listRepoComments",
+        "summary": "List comments in a repository",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Comment"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only comments updated at or after this time (RFC 3339)"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}/comments/{id}": {
+      "patch": {
+        "operationId": "editComment",
+        "summary": "Edit a comment",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comment ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteComment",
+        "summary": "Delete a comment",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comment ID"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/labels": {
+      "get": {
+        "operationId": "listLabels",
+        "summary": "List all labels for a repository",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Label"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createLabel",
+        "summary": "Create a label",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Label"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "Hex color code with leading #"
+                  }
+                },
+                "required": [
+                  "name",
+                  "color"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/labels/{id}": {
+      "get": {
+        "operationId": "getLabel",
+        "summary": "Get a single label",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Label"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Label ID"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "updateLabel",
+        "summary": "Update a label",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Label"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Label ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteLabel",
+        "summary": "Delete a label",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Label ID"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}/labels": {
+      "get": {
+        "operationId": "listIssueLabels",
+        "summary": "List labels on an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Label"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "addIssueLabels",
+        "summary": "Add labels to an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Label"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "labels"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceIssueLabels",
+        "summary": "Replace all labels for an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Label"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "labels"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeAllIssueLabels",
+        "summary": "Remove all labels from an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}/labels/{id}": {
+      "delete": {
+        "operationId": "removeIssueLabel",
+        "summary": "Remove a label from an issue",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issue index"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Label ID"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/milestones": {
+      "get": {
+        "operationId": "listMilestones",
+        "summary": "List milestones for a repository",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Milestone"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createMilestone",
+        "summary": "Create a milestone",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Milestone"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "due_on": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/milestones/{id}": {
+      "get": {
+        "operationId": "getMilestone",
+        "summary": "Get a single milestone",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Milestone"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Milestone ID"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "editMilestone",
+        "summary": "Edit a milestone",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Milestone"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Milestone ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "due_on": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMilestone",
+        "summary": "Delete a milestone",
+        "tags": [
+          "Issues"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Milestone ID"
+          }
+        ],
+        "description": "Only users with write access to a repository can delete a milestone."
+      }
+    },
+    "/users/search": {
+      "get": {
+        "operationId": "searchUsers",
+        "summary": "Search for users",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Keyword of username"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Max results"
+          }
+        ],
+        "description": "Requests without authentication will return an empty email field for anti-spam purposes."
+      }
+    },
+    "/users/{username}": {
+      "get": {
+        "operationId": "getUser",
+        "summary": "Get a single user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ]
+      }
+    },
+    "/user": {
+      "get": {
+        "operationId": "getAuthenticatedUser",
+        "summary": "Get the authenticated user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{username}/tokens": {
+      "get": {
+        "operationId": "listAccessTokens",
+        "summary": "List access tokens",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccessToken"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "description": "Requires basic authentication."
+      },
+      "post": {
+        "operationId": "createAccessToken",
+        "summary": "Create an access token",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessToken"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "description": "Requires basic authentication."
+      }
+    },
+    "/user/emails": {
+      "get": {
+        "operationId": "listEmails",
+        "summary": "List email addresses",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Email"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "addEmails",
+        "summary": "Add email addresses",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Email"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  }
+                },
+                "required": [
+                  "emails"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEmails",
+        "summary": "Delete email addresses",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  }
+                },
+                "required": [
+                  "emails"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{username}/followers": {
+      "get": {
+        "operationId": "listUserFollowers",
+        "summary": "List followers of a user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ]
+      }
+    },
+    "/user/followers": {
+      "get": {
+        "operationId": "listMyFollowers",
+        "summary": "List your followers",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{username}/following": {
+      "get": {
+        "operationId": "listUserFollowing",
+        "summary": "List users followed by a user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ]
+      }
+    },
+    "/user/following": {
+      "get": {
+        "operationId": "listMyFollowing",
+        "summary": "List who you are following",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/following/{target}": {
+      "get": {
+        "operationId": "checkFollowing",
+        "summary": "Check if you follow a user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "The user is being followed."
+          },
+          "404": {
+            "description": "Not following"
+          }
+        },
+        "parameters": [
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Target username"
+          }
+        ]
+      },
+      "put": {
+        "operationId": "followUser",
+        "summary": "Follow a user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully followed the user."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Target username"
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "unfollowUser",
+        "summary": "Unfollow a user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Target username"
+          }
+        ]
+      }
+    },
+    "/users/{username}/following/{target}": {
+      "get": {
+        "operationId": "checkUserFollowing",
+        "summary": "Check if a user follows another",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "The user is being followed."
+          },
+          "404": {
+            "description": "Not following"
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          },
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Target username"
+          }
+        ]
+      }
+    },
+    "/users/{username}/keys": {
+      "get": {
+        "operationId": "listUserKeys",
+        "summary": "List public keys for a user",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicKey"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ]
+      }
+    },
+    "/user/keys/{id}": {
+      "get": {
+        "operationId": "getPublicKey",
+        "summary": "Get a single public key",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Key ID"
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "deletePublicKey",
+        "summary": "Delete a public key",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Key ID"
+          }
+        ]
+      }
+    },
+    "/user/keys": {
+      "get": {
+        "operationId": "listMyKeys",
+        "summary": "List your public keys",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicKey"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPublicKey",
+        "summary": "Create a public key",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicKey"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "key"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/orgs": {
+      "get": {
+        "operationId": "listMyOrgs",
+        "summary": "List your organizations",
+        "tags": [
+          "Organizations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Organization"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createMyOrg",
+        "summary": "Create an organization",
+        "description": "Creates an organization for the authenticated user.",
+        "tags": [
+          "Organizations"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "website": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "username"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Organization created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Organization name already exists or is not allowed."
+          }
+        }
+      }
+    },
+    "/users/{username}/orgs": {
+      "get": {
+        "operationId": "listUserOrgs",
+        "summary": "List user organizations",
+        "tags": [
+          "Organizations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Organization"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ]
+      }
+    },
+    "/orgs/{orgname}": {
+      "get": {
+        "operationId": "getOrg",
+        "summary": "Get an organization",
+        "tags": [
+          "Organizations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgname",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization name"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "editOrg",
+        "summary": "Edit an organization",
+        "tags": [
+          "Organizations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgname",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "website": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgname}/teams": {
+      "get": {
+        "operationId": "listOrgTeams",
+        "summary": "List teams of an organization",
+        "tags": [
+          "Organizations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgname",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization name"
+          }
+        ]
+      }
+    },
+    "/admin/users": {
+      "post": {
+        "operationId": "adminCreateUser",
+        "summary": "Create a new user",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source_id": {
+                    "type": "integer"
+                  },
+                  "login_name": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "send_notify": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "username",
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/users/{username}": {
+      "patch": {
+        "operationId": "adminEditUser",
+        "summary": "Edit an existing user",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source_id": {
+                    "type": "integer"
+                  },
+                  "login_name": {
+                    "type": "string"
+                  },
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "website": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  },
+                  "admin": {
+                    "type": "boolean"
+                  },
+                  "allow_git_hook": {
+                    "type": "boolean"
+                  },
+                  "allow_import_local": {
+                    "type": "boolean"
+                  },
+                  "max_repo_creation": {
+                    "type": "integer",
+                    "description": "Maximum number of repositories the user can create. -1 means no limit."
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated user to be a site administrator."
+      },
+      "delete": {
+        "operationId": "adminDeleteUser",
+        "summary": "Delete a user",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/users/{username}/keys": {
+      "post": {
+        "operationId": "adminCreateUserKey",
+        "summary": "Create a public key for a user",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/users/{username}/repos": {
+      "post": {
+        "operationId": "adminCreateRepo",
+        "summary": "Create a repository for a user",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Repository"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "private": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "auto_init": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "gitignores": {
+                    "type": "string"
+                  },
+                  "license": {
+                    "type": "string"
+                  },
+                  "readme": {
+                    "type": "string",
+                    "default": "Default"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/users/{username}/orgs": {
+      "post": {
+        "operationId": "adminCreateOrg",
+        "summary": "Create an organization",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "website": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "username"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/orgs/{orgname}/teams": {
+      "post": {
+        "operationId": "adminCreateTeam",
+        "summary": "Create a team",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgname",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "permission": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write",
+                      "admin"
+                    ],
+                    "default": "read"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/teams/{teamid}/members": {
+      "get": {
+        "operationId": "adminListTeamMembers",
+        "summary": "List all members of a team",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "teamid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Team ID"
+          }
+        ],
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/teams/{teamid}/members/{username}": {
+      "put": {
+        "operationId": "adminAddTeamMember",
+        "summary": "Add team membership",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "204": {
+            "description": "Team membership has been updated."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "teamid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Team ID"
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "description": "Requires the authenticated user to be a site administrator."
+      },
+      "delete": {
+        "operationId": "adminRemoveTeamMember",
+        "summary": "Remove team membership",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "teamid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Team ID"
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          }
+        ],
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/admin/teams/{teamid}/repos/{reponame}": {
+      "put": {
+        "operationId": "adminAddTeamRepo",
+        "summary": "Add or update team repository",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "204": {
+            "description": "Team repository has been updated."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "teamid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Team ID"
+          },
+          {
+            "name": "reponame",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "description": "Requires the authenticated user to be a site administrator."
+      },
+      "delete": {
+        "operationId": "adminRemoveTeamRepo",
+        "summary": "Remove team repository",
+        "tags": [
+          "Administration"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "teamid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Team ID"
+          },
+          {
+            "name": "reponame",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "description": "Requires the authenticated user to be a site administrator."
+      }
+    },
+    "/markdown": {
+      "post": {
+        "operationId": "renderMarkdown",
+        "summary": "Render a Markdown document",
+        "tags": [
+          "Miscellaneous"
+        ],
+        "responses": {
+          "200": {
+            "description": "Rendered HTML",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "context": {
+                    "type": "string",
+                    "description": "Repository context URL"
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markdown/raw": {
+      "post": {
+        "operationId": "renderMarkdownRaw",
+        "summary": "Render a Markdown document in raw mode",
+        "tags": [
+          "Miscellaneous"
+        ],
+        "responses": {
+          "200": {
+            "description": "Rendered HTML",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "description": "Takes a Markdown document as plaintext and renders it without a repository context."
+      }
+    },
+    "/repos/{owner}/{repo}/git/trees/{sha}": {
+      "get": {
+        "operationId": "getTree",
+        "summary": "Get a tree",
+        "tags": [
+          "Miscellaneous"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitTree"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tree SHA"
+          }
+        ]
+      }
+    },
+    "/repos/{owner}/{repo}/forks": {
+      "get": {
+        "operationId": "listForks",
+        "summary": "List forks",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Repository"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Repository not found."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/tags": {
+      "get": {
+        "operationId": "listTags",
+        "summary": "List tags",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Repository not found."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/commits": {
+      "get": {
+        "operationId": "getAllCommits",
+        "summary": "List all commits",
+        "description": "Returns commits from the HEAD of the default branch.",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30
+            },
+            "description": "Number of commits to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Commit"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Repository not found."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/wiki": {
+      "patch": {
+        "operationId": "editWiki",
+        "summary": "Edit wiki settings",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enable_wiki": {
+                    "type": "boolean",
+                    "description": "Whether to enable the wiki"
+                  },
+                  "allow_public_wiki": {
+                    "type": "boolean",
+                    "description": "Whether the wiki is publicly accessible"
+                  },
+                  "enable_external_wiki": {
+                    "type": "boolean",
+                    "description": "Whether to use an external wiki"
+                  },
+                  "external_wiki_url": {
+                    "type": "string",
+                    "description": "URL of the external wiki"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Wiki settings updated successfully."
+          },
+          "404": {
+            "description": "Repository not found."
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/editorconfig/{filename}": {
+      "get": {
+        "operationId": "getEditorconfig",
+        "summary": "Get editorconfig definition",
+        "description": "Returns the editorconfig definition for the given filename in the repository.",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filename to get the editorconfig definition for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorConfigDefinition"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No editorconfig file exists or no matching definition for the filename."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/git/blobs/{sha}": {
+      "get": {
+        "operationId": "getGitBlob",
+        "summary": "Get a git blob",
+        "description": "Returns the content of a git blob object, base64 encoded.",
+        "tags": [
+          "Miscellaneous"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          },
+          {
+            "name": "sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SHA of the git blob"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitBlob"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Blob not found."
+          }
+        }
+      }
+    },
+    "/user/issues": {
+      "get": {
+        "operationId": "listUserIssues",
+        "summary": "List issues assigned to the authenticated user",
+        "description": "Lists issues across all repositories assigned to the authenticated user. Also available at `GET /issues`.",
+        "tags": [
+          "Issues"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed"
+              ],
+              "default": "open"
+            },
+            "description": "Filter by state"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Issue"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "AccessToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Personal access token. Use format: token {YOUR_ACCESS_TOKEN}"
+      },
+      "TokenQuery": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "token",
+        "description": "Access token as query parameter"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "login": {
+            "type": "string",
+            "description": "Alias of username for GitHub API compatibility"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "avatar_url": {
+            "type": "string"
+          }
+        }
+      },
+      "Collaborator": {
+        "description": "A repository collaborator with permission information",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/User"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "permissions": {
+                "type": "object",
+                "properties": {
+                  "admin": {
+                    "type": "boolean"
+                  },
+                  "push": {
+                    "type": "boolean"
+                  },
+                  "pull": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Repository": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "name": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "fork": {
+            "type": "boolean"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Repository",
+            "nullable": true,
+            "description": "Present when fork is true"
+          },
+          "empty": {
+            "type": "boolean"
+          },
+          "mirror": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "ssh_url": {
+            "type": "string"
+          },
+          "clone_url": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "stars_count": {
+            "type": "integer"
+          },
+          "forks_count": {
+            "type": "integer"
+          },
+          "watchers_count": {
+            "type": "integer"
+          },
+          "open_issues_count": {
+            "type": "integer"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "admin": {
+                "type": "boolean"
+              },
+              "push": {
+                "type": "boolean"
+              },
+              "pull": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "Branch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              },
+              "committer": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "Commit": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "date": {
+                    "type": "string"
+                  }
+                }
+              },
+              "committer": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "date": {
+                    "type": "string"
+                  }
+                }
+              },
+              "tree": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "sha": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "author": {
+            "$ref": "#/components/schemas/User"
+          },
+          "committer": {
+            "$ref": "#/components/schemas/User"
+          },
+          "parents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "sha": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Issue": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            }
+          },
+          "assignee": {
+            "$ref": "#/components/schemas/User",
+            "nullable": true
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/Milestone",
+            "nullable": true
+          },
+          "comments": {
+            "type": "integer"
+          },
+          "pull_request": {
+            "type": "object",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Label": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "Milestone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "open_issues": {
+            "type": "integer"
+          },
+          "closed_issues": {
+            "type": "integer"
+          },
+          "closed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "due_on": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "Hook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "gogs",
+              "slack",
+              "discord",
+              "dingtalk"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Release": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "tag_name": {
+            "type": "string"
+          },
+          "target_commitish": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "draft": {
+            "type": "boolean"
+          },
+          "prerelease": {
+            "type": "boolean"
+          },
+          "author": {
+            "$ref": "#/components/schemas/User"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeployKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "read_only": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PublicKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AccessToken": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sha1": {
+            "type": "string"
+          }
+        }
+      },
+      "Email": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "primary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Organization": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "avatar_url": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "admin",
+              "owner"
+            ]
+          }
+        }
+      },
+      "Content": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "dir",
+              "symlink",
+              "submodule"
+            ]
+          },
+          "encoding": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "git_url": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "download_url": {
+            "type": "string"
+          },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "git": {
+                "type": "string"
+              },
+              "self": {
+                "type": "string"
+              },
+              "html": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "GitTree": {
+        "type": "object",
+        "properties": {
+          "sha": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "tree": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                },
+                "sha": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "GitBlob": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Base64-encoded blob content"
+          },
+          "encoding": {
+            "type": "string",
+            "example": "base64"
+          },
+          "url": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
+      },
+      "Tag": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              },
+              "committer": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "EditorConfigDefinition": {
+        "type": "object",
+        "properties": {
+          "charset": {
+            "type": "string"
+          },
+          "indent_style": {
+            "type": "string"
+          },
+          "indent_size": {
+            "type": "string"
+          },
+          "end_of_line": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

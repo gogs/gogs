@@ -7,7 +7,7 @@ import (
 	"runtime"
 
 	"github.com/cockroachdb/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -19,15 +19,15 @@ var (
 		Usage: "Perform admin operations on command line",
 		Description: `Allow using internal logic of Gogs without hacking into the source code
 to make automatic initialization process more smoothly`,
-		Subcommands: []cli.Command{
-			subcmdCreateUser,
-			subcmdDeleteInactivateUsers,
-			subcmdDeleteRepositoryArchives,
-			subcmdDeleteMissingRepositories,
-			subcmdGitGcRepos,
-			subcmdRewriteAuthorizedKeys,
-			subcmdSyncRepositoryHooks,
-			subcmdReinitMissingRepositories,
+		Commands: []*cli.Command{
+			&subcmdCreateUser,
+			&subcmdDeleteInactivateUsers,
+			&subcmdDeleteRepositoryArchives,
+			&subcmdDeleteMissingRepositories,
+			&subcmdGitGcRepos,
+			&subcmdRewriteAuthorizedKeys,
+			&subcmdSyncRepositoryHooks,
+			&subcmdReinitMissingRepositories,
 		},
 	}
 
@@ -129,16 +129,16 @@ to make automatic initialization process more smoothly`,
 	}
 )
 
-func runCreateUser(c *cli.Context) error {
-	if !c.IsSet("name") {
+func runCreateUser(ctx context.Context, cmd *cli.Command) error {
+	if !cmd.IsSet("name") {
 		return errors.New("Username is not specified")
-	} else if !c.IsSet("password") {
+	} else if !cmd.IsSet("password") {
 		return errors.New("Password is not specified")
-	} else if !c.IsSet("email") {
+	} else if !cmd.IsSet("email") {
 		return errors.New("Email is not specified")
 	}
 
-	err := conf.Init(c.String("config"))
+	err := conf.Init(configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
@@ -149,13 +149,13 @@ func runCreateUser(c *cli.Context) error {
 	}
 
 	user, err := database.Handle.Users().Create(
-		context.Background(),
-		c.String("name"),
-		c.String("email"),
+		ctx,
+		cmd.String("name"),
+		cmd.String("email"),
 		database.CreateUserOptions{
-			Password:  c.String("password"),
+			Password:  cmd.String("password"),
 			Activated: true,
-			Admin:     c.Bool("admin"),
+			Admin:     cmd.Bool("admin"),
 		},
 	)
 	if err != nil {
@@ -166,9 +166,9 @@ func runCreateUser(c *cli.Context) error {
 	return nil
 }
 
-func adminDashboardOperation(operation func() error, successMessage string) func(*cli.Context) error {
-	return func(c *cli.Context) error {
-		err := conf.Init(c.String("config"))
+func adminDashboardOperation(operation func() error, successMessage string) func(context.Context, *cli.Command) error {
+	return func(_ context.Context, cmd *cli.Command) error {
+		err := conf.Init(configFromLineage(cmd))
 		if err != nil {
 			return errors.Wrap(err, "init configuration")
 		}

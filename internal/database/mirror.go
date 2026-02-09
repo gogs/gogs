@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
@@ -341,7 +341,8 @@ func SyncMirrors() {
 		log.Trace("SyncMirrors [repo_id: %s]", repoID)
 		MirrorQueue.Remove(repoID)
 
-		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
+		id, _ := strconv.ParseInt(repoID, 10, 64)
+		m, err := GetMirrorByRepoID(id)
 		if err != nil {
 			log.Error("GetMirrorByRepoID [%v]: %v", repoID, err)
 			continue

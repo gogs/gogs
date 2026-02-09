@@ -91,7 +91,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 	s := h.DefaultStorager()
 	written, err := s.Upload(oid, c.Req.Request.Body)
 	if err != nil {
-		if err == lfsutil.ErrInvalidOID {
+		if err == lfsutil.ErrInvalidOID || err == lfsutil.ErrOIDMismatch {
 			responseJSON(c.Resp, http.StatusBadRequest, responseError{
 				Message: err.Error(),
 			})
@@ -105,8 +105,8 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 	err = h.store.CreateLFSObject(c.Req.Context(), repo.ID, oid, written, s.Storage())
 	if err != nil {
 		// NOTE: It is OK to leave the file when the whole operation failed
-		// with a DB error, a retry on client side can safely overwrite the
-		// same file as OID is seen as unique to every file.
+		// with a DB error, a retry on client side will skip the upload as
+		// the file already exists on disk.
 		internalServerError(c.Resp)
 		log.Error("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return

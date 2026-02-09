@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -221,7 +221,7 @@ func (issue *Issue) APIFormat() *api.Issue {
 
 // HashTag returns unique hash tag for issue.
 func (issue *Issue) HashTag() string {
-	return "issue-" + com.ToStr(issue.ID)
+	return "issue-" + strconv.FormatInt(issue.ID, 10)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -741,7 +741,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 			return errors.Newf("getAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
 
-		for i := 0; i < len(attachments); i++ {
+		for i := range attachments {
 			attachments[i].IssueID = opts.Issue.ID
 			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
 				return errors.Newf("update attachment [id: %d]: %v", attachments[i].ID, err)
@@ -823,17 +823,17 @@ func (ErrIssueNotExist) NotFound() bool {
 
 // GetIssueByRef returns an Issue specified by a GFM reference, e.g. owner/repo#123.
 func GetIssueByRef(ref string) (*Issue, error) {
-	n := strings.IndexByte(ref, byte('#'))
-	if n == -1 {
+	before, after, ok := strings.Cut(ref, "#")
+	if !ok {
 		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
 
-	index := com.StrTo(ref[n+1:]).MustInt64()
+	index, _ := strconv.ParseInt(after, 10, 64)
 	if index == 0 {
 		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
 
-	repo, err := GetRepositoryByRef(ref[:n])
+	repo, err := GetRepositoryByRef(before)
 	if err != nil {
 		return nil, err
 	}
@@ -1219,7 +1219,8 @@ func parseCountResult(results []map[string][]byte) int64 {
 		return 0
 	}
 	for _, result := range results[0] {
-		return com.StrTo(string(result)).MustInt64()
+		count, _ := strconv.ParseInt(string(result), 10, 64)
+		return count
 	}
 	return 0
 }

@@ -7,12 +7,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/sqlite"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/renderer"
 	"github.com/olekukonko/tablewriter/tw"
-	"gopkg.in/DATA-DOG/go-sqlmock.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

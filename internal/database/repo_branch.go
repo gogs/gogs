@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/tool"
@@ -199,7 +199,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		}
 		validTeamIDs = make([]int64, 0, len(teams))
 		for i := range teams {
-			if teams[i].HasWriteAccess() && com.IsSliceContainsInt64(teamIDs, teams[i].ID) {
+			if teams[i].HasWriteAccess() && slices.Contains(teamIDs, teams[i].ID) {
 				validTeamIDs = append(validTeamIDs, teams[i].ID)
 			}
 		}

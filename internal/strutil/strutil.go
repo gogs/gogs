@@ -3,6 +3,7 @@ package strutil
 import (
 	"crypto/rand"
 	"math/big"
+	"strings"
 	"unicode"
 )
 
@@ -29,7 +30,7 @@ func RandomChars(n int) (string, error) {
 
 	buffer := make([]byte, n)
 	max := big.NewInt(int64(len(alphanum)))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		index, err := randomInt(max)
 		if err != nil {
 			return "", err
@@ -58,4 +59,14 @@ func Truncate(str string, limit int) string {
 		return str
 	}
 	return str[:limit]
+}
+
+// ContainsFold reports whether s is within the slice, ignoring case.
+func ContainsFold(ss []string, s string) bool {
+	for _, v := range ss {
+		if strings.EqualFold(v, s) {
+			return true
+		}
+	}
+	return false
 }

@@ -40,7 +40,7 @@ func TestToUpperFirst(t *testing.T) {
 
 func TestRandomChars(t *testing.T) {
 	cache := make(map[string]bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		chars, err := RandomChars(10)
 		if err != nil {
 			t.Fatal(err)
@@ -130,4 +130,16 @@ func TestTruncate(t *testing.T) {
 			assert.Equal(t, test.want, got)
 		})
 	}
+}
+
+func TestContainsFold(t *testing.T) {
+	ss := []string{"Alice", "Bob", "Charlie"}
+
+	assert.True(t, ContainsFold(ss, "alice"))
+	assert.True(t, ContainsFold(ss, "Alice"))
+	assert.True(t, ContainsFold(ss, "ALICE"))
+	assert.True(t, ContainsFold(ss, "bob"))
+	assert.False(t, ContainsFold(ss, "dave"))
+	assert.False(t, ContainsFold(nil, "alice"))
+	assert.False(t, ContainsFold([]string{}, "alice"))
 }

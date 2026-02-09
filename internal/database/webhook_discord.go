@@ -1,12 +1,12 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -47,7 +47,7 @@ type DiscordPayload struct {
 }
 
 func (p *DiscordPayload) JSONPayload() ([]byte, error) {
-	data, err := jsoniter.MarshalIndent(p, "", "  ")
+	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}
@@ -140,14 +140,15 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) *DiscordPayload
 
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	branchLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+branchName, branchName)
-	content := fmt.Sprintf("Pushed %s to %s/%s\n", commitString, repoLink, branchLink)
+	var content strings.Builder
+	content.WriteString(fmt.Sprintf("Pushed %s to %s/%s\n", commitString, repoLink, branchLink))
 
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
-		content += fmt.Sprintf("%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), DiscordTextFormatter(commit.Message), commit.Author.Name)
+		content.WriteString(fmt.Sprintf("%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), DiscordTextFormatter(commit.Message), commit.Author.Name))
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
-			content += "\n"
+			content.WriteString("\n")
 		}
 	}
 
@@ -156,7 +157,7 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) *DiscordPayload
 		Username:  slack.Username,
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
-			Description: content,
+			Description: content.String(),
 			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
@@ -369,8 +370,8 @@ func getDiscordReleasePayload(p *api.ReleasePayload) *DiscordPayload {
 
 func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
-	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, errors.Newf("jsoniter.Unmarshal: %v", err)
+	if err := json.Unmarshal([]byte(meta), slack); err != nil {
+		return nil, errors.Newf("unmarshal: %v", err)
 	}
 
 	switch event {

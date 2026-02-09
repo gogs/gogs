@@ -1,0 +1,229 @@
+---
+title: "Troubleshooting"
+description: "Common issues and their solutions when running Gogs"
+icon: "wrench"
+---
+
+This page covers common problems you may encounter when installing, configuring, or running Gogs, organized by category.
+
+## SSH
+
+<AccordionGroup>
+  <Accordion title="SSH connection hangs for 60 seconds">
+    **Possible cause**: Gogs makes an HTTP request back to its own web service after every SSH push. If the server firewall or ISP blocks this loopback connection, the request will hang until it times out.
+
+    **Solution**: Ensure that the server can reach itself on the configured HTTP port. Check firewall rules and any network policies that may prevent loopback connections.
+  </Accordion>
+
+  <Accordion title="Incorrect binary path for update hook">
+    **Possible cause**: You moved the Gogs binary to a different location from where it was originally installed, so the Git hooks reference a stale path.
+
+    **Solution**: Go to the **Admin Panel** (`/admin`) and run these two tasks:
+
+    1. **Rewrite `.ssh/authorized_keys` file**
+    2. **Resync pre-receive, update and post-receive hooks of all repositories**
+  </Accordion>
+
+  <Accordion title="Push succeeds but the dashboard timeline does not update">
+    **Possible cause**: When using Git over SSH, Gogs relies on hook scripts to update the timeline and repository display. Several conditions can prevent these scripts from executing, especially when repositories are stored on a mounted device.
+
+    **Solution**:
+
+    - Ensure the mount point containing the repositories is **not** set as `noexec`. Run `mount` to check, and if necessary add the `exec` option to the mount point in `/etc/fstab`.
+    - For `vfat` (and possibly `cifs`) mounts, ensure the `uid`, `gid`, and `fmask` options permit the Gogs user (or a group it belongs to) to execute files.
+    - For network-mounted shares (NFS, Samba), ensure the server is not configured to disallow execution on the remote filesystem.
+  </Accordion>
+</AccordionGroup>
+
+## Git
+
+<AccordionGroup>
+  <Accordion title="Public key conflict: 'does not appear to be a git repository'">
+    **Error**:
+
+    ```text
+    fatal: 'XX/XX.git' does not appear to be a git repository
+    ```
+
+    Or: pushed commits but the repository still shows as bare.
+
+    **Possible cause**: There are duplicate SSH keys in `~/.ssh/authorized_keys`. This commonly happens if you are (or were) running GitLab on the same system user.
+
+    **Solution**: Edit `~/.ssh/authorized_keys` and remove the old duplicate entry, keeping only the key that was added by Gogs.
+  </Accordion>
+
+  <Accordion title="Cannot call 'git' command by Gogs">
+    **Error**:
+
+    ```text
+    repo.NewRepoContext(fail to set git user.email):
+    ```
+
+    **Possible cause**: On Windows, this occurs when Git Bash was installed without enabling the `cmd` option, so `git` is not available on the system PATH.
+
+    **Solution**: Reinstall Git for Windows and make sure the option to add Git to the system PATH (the `cmd` option) is enabled.
+  </Accordion>
+</AccordionGroup>
+
+## Database
+
+<AccordionGroup>
+  <Accordion title="Incorrect MySQL storage engine (key too long)">
+    **Error**:
+
+    ```text
+    Error 1071: Specified key was too long; max key length is 1000 bytes
+    ```
+
+    **Possible cause**: The database is using the MyISAM storage engine, which has a shorter maximum key length than InnoDB.
+
+    **Solution**: After importing the initial schema, log into MySQL and switch the storage engine:
+
+    ```sql
+    USE gogs;
+    SET GLOBAL storage_engine=INNODB;
+    ```
+
+    Then re-run the Gogs installer at `http://localhost:3000/install`.
+  </Accordion>
+
+  <Accordion title="Outdated MySQL password authentication">
+    **Error**:
+
+    ```text
+    Database setting is not correct: This server only supports the insecure old password authentication.
+    ```
+
+    **Possible cause**: The MySQL user's password was only updated for the `@localhost` entry. A second entry in the user table (such as `@%`) still has the old-format password.
+
+    **Solution**: Update the password for all host entries of the MySQL user. See [this GitHub discussion](https://github.com/gogs/gogs/issues/385#issuecomment-54357073) for detailed steps.
+  </Accordion>
+
+  <Accordion title="Wrong SQLite3 database file">
+    **Error**: Pushing to a repository shows that the owner is not registered, or the `user` table does not exist.
+
+    **Possible cause**: Gogs may be running as a system service and loading a different SQLite3 file than expected (for example, a relative path resolved differently).
+
+    **Solution**: Use an **absolute path** for the SQLite3 database file in your `custom/conf/app.ini` configuration.
+  </Accordion>
+</AccordionGroup>
+
+## Email
+
+<AccordionGroup>
+  <Accordion title="Gmail error 534: 'Please log in via your web browser'">
+    **Possible cause**: Google does not trust the server sending the email and requires additional verification.
+
+    **Solution**:
+
+    1. Visit [https://accounts.google.com](https://accounts.google.com) and log in.
+    2. Go to [https://accounts.google.com/DisplayUnlockCaptcha](https://accounts.google.com/DisplayUnlockCaptcha) and click **Continue**.
+    3. Copy the `ContinueSignIn` link from the Gogs server log and complete the sign-in.
+    4. Check your spam folder in case your mail provider flagged the messages.
+  </Accordion>
+
+  <Accordion title="Authentication failed (error 535)">
+    **Error**:
+
+    ```text
+    gomail: could not send email 1: Auth: 535
+    ```
+
+    **Possible cause**: The SMTP password contains special characters that are not being interpreted correctly.
+
+    **Solution**: Wrap the password in single quotes in your `custom/conf/app.ini`:
+
+    ```ini
+    PASSWORD = 'P4§$w0rd'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Windows
+
+<AccordionGroup>
+  <Accordion title="Cygwin path conflict">
+    **Error**:
+
+    ```text
+    cygwin warning: MS-DOS style path detected ...
+    fatal: '/cygdrive/d/.../C:\Users\...' does not appear to be a git repository
+    ```
+
+    **Possible cause**: Another shell (such as Cygwin) is installed on the system and its path style conflicts with the native Windows paths Gogs expects.
+
+    **Solution**: Start Gogs using the default Windows Command Prompt (`cmd.exe`) instead of Cygwin or other alternative shells.
+  </Accordion>
+
+  <Accordion title="CSS loaded with wrong MIME type">
+    **Error**:
+
+    ```text
+    Resource interpreted as Stylesheet but transferred with MIME type application/x-css
+    ```
+
+    **Possible cause**: The Windows registry has an incorrect `Content Type` value for the `.css` file extension.
+
+    **Solution**: Open the Windows Registry Editor, navigate to `HKEY_CLASSES_ROOT\.css`, and change the `Content Type` value to `text/css`.
+  </Accordion>
+</AccordionGroup>
+
+## Other
+
+<AccordionGroup>
+  <Accordion title="Extremely slow page response despite low reported render time">
+    **Possible cause**: This can happen for two reasons:
+
+    1. Nginx is trying to resolve `localhost` as an IPv6 address, causing a delay.
+    2. Gravatar avatar lookups are being attempted without a valid email address.
+
+    **Solution**:
+
+    1. Use the explicit hostname `127.0.0.1` instead of `localhost` during the initial setup at `http://gogs-server:3000/install`.
+    2. Either use a valid Gravatar email address for the administrator account or disable avatar lookup during the initial setup.
+  </Accordion>
+
+  <Accordion title="Duplicate entry for SSH key name">
+    **Error**:
+
+    ```text
+    Error 1062: Duplicate entry 'Unknown-Mac' for key 'UQE_public_key_name'
+    ```
+
+    **Possible cause**: A very early version of Gogs had a unique constraint (`UQE_public_key_name`) on SSH key names in the `public_key` table. This constraint is no longer needed.
+
+    **Solution**: Manually delete the `UQE_public_key_name` unique index from the `public_key` table in your database.
+  </Accordion>
+
+  <Accordion title="GLIBC_2.14 not found">
+    **Solution**: Update the C library on your system:
+
+    ```bash
+    sudo apt-get -t testing install libc6-dev
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied when creating session data directory">
+    **Error**:
+
+    ```text
+    [Macaron] PANIC: session(start): mkdir data: permission denied
+    ```
+
+    **Possible cause**: Gogs creates a `data` subdirectory in the same directory as the Gogs binary. The process does not have write permission to that directory.
+
+    **Solution**: Ensure the user running Gogs has permission to create subdirectories in the directory where the Gogs binary is located.
+  </Accordion>
+
+  <Accordion title="remote rejected: hook declined">
+    **Error**:
+
+    ```text
+    ! [remote rejected] master -> master (hook declined)
+    ```
+
+    **Possible cause**: Git is unable to execute the update hook script.
+
+    **Solution**: Make sure the `bash` shell is available on your system. All Gogs hook scripts require `bash` to run.
+  </Accordion>
+</AccordionGroup>

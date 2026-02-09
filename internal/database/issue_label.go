@@ -28,7 +28,7 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 
 	lines := strings.Split(string(data), "\n")
 	list := make([][2]string, 0, len(lines))
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		line := strings.TrimSpace(lines[i])
 		if line == "" {
 			continue

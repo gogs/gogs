@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -217,7 +217,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 
 	// Create temporary directory to store temporary copy of the base repository,
 	// and clean it up when operation finished regardless of succeed or not.
-	tmpBasePath := filepath.Join(conf.Server.AppDataPath, "tmp", "repos", com.ToStr(time.Now().Nanosecond())+".git")
+	tmpBasePath := filepath.Join(conf.Server.AppDataPath, "tmp", "repos", strconv.Itoa(time.Now().Nanosecond())+".git")
 	if err = os.MkdirAll(filepath.Dir(tmpBasePath), os.ModePerm); err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		}
 
 		// Name non-branch commit state to a new temporary branch in order to save changes.
-		tmpBranch := com.ToStr(time.Now().UnixNano(), 10)
+		tmpBranch := strconv.FormatInt(time.Now().UnixNano(), 10)
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 			fmt.Sprintf("PullRequest.Merge (git checkout): %s", tmpBasePath),
 			"git", "checkout", "-b", tmpBranch); err != nil {
@@ -414,8 +414,8 @@ func (pr *PullRequest) testPatch() (err error) {
 		return nil
 	}
 
-	repoWorkingPool.CheckIn(com.ToStr(pr.BaseRepoID))
-	defer repoWorkingPool.CheckOut(com.ToStr(pr.BaseRepoID))
+	repoWorkingPool.CheckIn(strconv.FormatInt(pr.BaseRepoID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(pr.BaseRepoID, 10))
 
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
@@ -625,7 +625,7 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	}
 
 	// Add a temporary remote.
-	tmpRemote := com.ToStr(time.Now().UnixNano())
+	tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
 	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
 	err = headGitRepo.RemoteAdd(tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
 	if err != nil {
@@ -868,7 +868,8 @@ func TestPullRequests() {
 		log.Trace("TestPullRequests[%v]: processing test task", prID)
 		PullRequestQueue.Remove(prID)
 
-		pr, err := GetPullRequestByID(com.StrTo(prID).MustInt64())
+		id, _ := strconv.ParseInt(prID, 10, 64)
+		pr, err := GetPullRequestByID(id)
 		if err != nil {
 			log.Error("GetPullRequestByID[%s]: %v", prID, err)
 			continue

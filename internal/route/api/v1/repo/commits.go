@@ -82,11 +82,11 @@ func GetReferenceSHA(c *context.APIContext) {
 
 	ref := c.Params("*")
 	refType := 0 // 0-unknown, 1-branch, 2-tag
-	if strings.HasPrefix(ref, git.RefsHeads) {
-		ref = strings.TrimPrefix(ref, git.RefsHeads)
+	if after, ok := strings.CutPrefix(ref, git.RefsHeads); ok {
+		ref = after
 		refType = 1
-	} else if strings.HasPrefix(ref, git.RefsTags) {
-		ref = strings.TrimPrefix(ref, git.RefsTags)
+	} else if after, ok := strings.CutPrefix(ref, git.RefsTags); ok {
+		ref = after
 		refType = 2
 	} else {
 		if gitRepo.HasBranch(ref) {

@@ -9,18 +9,19 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -210,7 +211,8 @@ func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, 
 	}
 
 	keyType := strings.Trim(fields[len(fields)-1], "()\r\n")
-	return strings.ToLower(keyType), com.StrTo(fields[0]).MustInt(), nil
+	length, _ := strconv.Atoi(fields[0])
+	return strings.ToLower(keyType), length, nil
 }
 
 // SSHNativeParsePublicKey extracts the key type and length using the golang SSH library.
@@ -540,7 +542,7 @@ func RewriteAuthorizedKeys() error {
 		return err
 	}
 
-	if com.IsExist(fpath) {
+	if osutil.Exist(fpath) {
 		if err = os.Remove(fpath); err != nil {
 			return err
 		}

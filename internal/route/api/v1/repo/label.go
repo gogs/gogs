@@ -2,9 +2,9 @@ package repo
 
 import (
 	"net/http"
+	"strconv"
 
 	api "github.com/gogs/go-gogs-client"
-	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -28,7 +28,7 @@ func GetLabel(c *context.APIContext) {
 	var label *database.Label
 	var err error
 	idStr := c.Params(":id")
-	if id := com.StrTo(idStr).MustInt64(); id > 0 {
+	if id, _ := strconv.ParseInt(idStr, 10, 64); id > 0 {
 		label, err = database.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
 	} else {
 		label, err = database.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)

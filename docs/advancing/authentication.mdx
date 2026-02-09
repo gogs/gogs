@@ -1,0 +1,270 @@
+---
+title: "Authentication"
+description: "Integrate with your existing IAM system"
+icon: "key"
+---
+
+Gogs supports authentication through various external sources. Currently supported backends are **LDAP**, **SMTP**, **PAM**, and **HTTP header**. Authentication sources can be configured in two ways:
+
+- **Admin Panel**: Navigate to **Admin Panel > Authentication Sources**
+- **Configuration files**: Place `.conf` files in the `custom/conf/auth.d/` directory. Each file describes one source using INI format. Files are loaded once at startup and keyed by `id`. See the "Configuration file" subsection under each backend below for examples.
+
+## LDAP
+
+Gogs supports two variants of LDAP authentication: **Simple Auth** and **Bind DN**. In both cases, authentication is performed by attempting to bind to the LDAP server with the User DN and password. The difference is that with Bind DN, a preliminary query is performed (using the Bind DN credentials) to find the User DN first.
+
+<Tabs>
+  <Tab title="When to use Bind DN">
+    The Bind DN mechanism has these advantages:
+
+    - It may be more secure than blindly attempting to bind with a possibly non-existent User DN.
+    - It supports login with attributes such as email address or phone number. The preliminary search can look up the User DN using `mail` or `mobile` attributes.
+    - It is required when the LDAP does not allow the User DN to query its own attributes or group memberships.
+
+    The downside is that, unless the LDAP allows anonymous queries, it requires a bind DN to be defined and Gogs needs to store its credentials. Gogs currently does not encrypt these credentials.
+  </Tab>
+  <Tab title="When to use Simple Auth">
+    In the ideal situation where you know the exact DN template for your users and the LDAP allows the User DN to query its own attributes, Simple Auth is the simpler option. It requires no separate bind account and no stored credentials beyond what the user provides at login.
+  </Tab>
+</Tabs>
+
+### Shared fields
+
+The following fields are shared between both **Bind DN** and **Simple Auth** configurations:
+
+| Field | Required | Description | Example |
+|---|---|---|---|
+| **Authentication Name** | Yes | A friendly name for the authentication source. | `My LDAP` |
+| **Security Protocol** | Yes | Connection security: Unencrypted, LDAPS, or StartTLS. | `LDAPS` |
+| **Host** | Yes | The address of the LDAP server. | `ldap.mydomain.com` |
+| **Port** | Yes | The port for the LDAP connection. Usually `389` for LDAP/StartTLS, `636` for LDAPS. | `389` |
+| **User Filter** | Yes | An LDAP filter declaring which users can log in. The `%s` parameter is substituted with the login name. | `(&(objectClass=posixAccount)(uid=%s))` |
+| **Email Attribute** | Yes | The LDAP attribute containing the user's email address. | `mail` |
+| **Admin Filter** | No | An LDAP filter applied to the User DN context to determine Gogs administrator privileges. | `(memberOf=cn=admins,cn=groups,dc=mydomain,dc=com)` |
+| **Username Attribute** | No | The LDAP attribute containing the username. Used for the Gogs account name after first sign-in. Leave empty to use the login name from the sign-in form. | `uid` |
+| **First Name Attribute** | No | The LDAP attribute containing the user's first name. | `givenName` |
+| **Surname Attribute** | No | The LDAP attribute containing the user's last name. | `sn` |
+
+<Tip>
+  The **User Filter** field can be used to filter on group membership if the User DN object has `memberOf` attributes. For example:
+  ```
+  (&(objectClass=posixAccount)(uid=%s)(memberOf=cn=gogs_users,cn=groups,dc=mydomain,dc=com))
+  ```
+  In the Bind DN authenticator, the User Filter can also match against multiple user attributes:
+  ```
+  (&(objectClass=Person)(|(uid=%s)(mail=%s)(mobile=%s)))
+  ```
+</Tip>
+
+### Simple Auth fields
+
+LDAP via Simple Auth adds the following field:
+
+| Field | Required | Description | Example |
+|---|---|---|---|
+| **User DN** | Yes | A template for the user's DN. The `%s` parameter is substituted with the login name. | `cn=%s,ou=Users,dc=mydomain,dc=com` or `uid=%s,ou=Users,dc=mydomain,dc=com` |
+
+### Bind DN fields
+
+LDAP via Bind DN adds the following fields:
+
+| Field | Required | Description | Example |
+|---|---|---|---|
+| **Bind DN** | No | The DN used to bind to the LDAP server when searching for the user. Leave blank for anonymous search. | `cn=Search,dc=mydomain,dc=com` |
+| **Bind Password** | No | The password for the Bind DN specified above. | -- |
+| **User Search Base** | Yes | The LDAP base below which user accounts will be searched. | `ou=Users,dc=mydomain,dc=com` |
+| **Fetch Attributes in Bind DN Context** | No | When enabled, user attributes are retrieved while bound as the Bind DN instead of the User DN. | -- |
+
+<Warning>
+  The Bind Password is stored in plaintext on the server. Ensure that your Bind DN has the minimum privileges necessary.
+</Warning>
+
+### Group membership verification
+
+You can optionally verify LDAP group membership using the following fields:
+
+| Field | Required | Description | Example |
+|---|---|---|---|
+| **Group Search Base DN** | No | The LDAP base below which groups will be searched. | `ou=group,dc=mydomain,dc=com` |
+| **Group Filter** | No | An LDAP filter declaring the groups that grant access. | `(\|(cn=gogs_users)(cn=admins))` |
+| **Group Attribute Containing List of Users** | No | The multi-valued attribute containing the group's members. | `memberUid` or `member` |
+| **User Attribute Listed in Group** | No | The user attribute referenced in the group membership attributes. | `uid` or `dn` |
+
+### Configuration files
+
+LDAP sources can also be defined as `.conf` files in `custom/conf/auth.d/` instead of through the admin panel. Files are loaded at startup and keyed by `id`.
+
+<Tabs>
+  <Tab title="Bind DN">
+    ```ini
+    id           = 101
+    type         = ldap_bind_dn
+    name         = LDAP BindDN
+    is_activated = true
+
+    [config]
+    host               = mydomain.com
+    port               = 636
+    # 0 - Unencrypted, 1 - LDAPS, 2 - StartTLS
+    security_protocol  = 0
+    skip_verify        = false
+    bind_dn            =
+    bind_password      =
+    user_base          = ou=Users,dc=mydomain,dc=com
+    attribute_username =
+    attribute_name     =
+    attribute_surname  =
+    attribute_mail     = mail
+    attributes_in_bind = false
+    filter             = (&(objectClass=posixAccount)(cn=%s))
+    admin_filter       =
+    group_enabled      = false
+    group_dn           =
+    group_filter       =
+    group_member_uid   =
+    user_uid           =
+    ```
+  </Tab>
+  <Tab title="Simple Auth">
+    ```ini
+    id           = 102
+    type         = ldap_simple_auth
+    name         = LDAP Simple Auth
+    is_activated = true
+
+    [config]
+    host               = mydomain.com
+    port               = 636
+    # 0 - Unencrypted, 1 - LDAPS, 2 - StartTLS
+    security_protocol  = 0
+    skip_verify        = false
+    bind_dn            =
+    bind_password      =
+    user_base          =
+    user_dn            = cn=%s,ou=Users,dc=mydomain,dc=com
+    attribute_username =
+    attribute_name     =
+    attribute_surname  =
+    attribute_mail     = mail
+    attributes_in_bind = false
+    filter             = (&(objectClass=posixAccount)(cn=%s))
+    admin_filter       =
+    group_enabled      = false
+    group_dn           =
+    group_filter       =
+    group_member_uid   =
+    user_uid           =
+    ```
+  </Tab>
+</Tabs>
+
+### FreeIPA examples
+
+It is possible to use either Bind DN or Simple Auth with FreeIPA. The examples below assume your domain is `domain.com` and that users must be a member of the `gogs_users` group to get access.
+
+<AccordionGroup>
+  <Accordion title="FreeIPA with Simple Auth">
+    Setting up access using Simple Auth is straightforward:
+
+    ```ini
+    user_dn            = uid=%s,cn=users,cn=accounts,dc=domain,dc=com
+    filter             = (&(objectClass=posixAccount)(memberOf=cn=gogs_users,cn=groups,cn=accounts,dc=domain,dc=com))
+    attribute_username = uid
+    attribute_name     = givenName
+    attribute_surname  = sn
+    attribute_mail     = mail
+    admin_filter       = (memberOf=cn=admins,cn=groups,cn=accounts,dc=domain,dc=com)
+    group_enabled      = false
+    ```
+  </Accordion>
+  <Accordion title="FreeIPA with Bind DN">
+    If you want to allow login by email address, note that FreeIPA by default does not grant anonymous search access to the `mail` attribute. This can be changed in IPA:
+
+    ```bash
+    ipa permission-mod --includedattrs=mail 'System: Read User Standard Attributes'
+    ```
+
+    Alternatively, you can ask your LDAP administrators for a dedicated bind user account.
+
+    <Info>
+      Allowing email-based login via Bind DN may no longer be necessary. Gogs translates email logins to the corresponding user ID before making the authentication call to the backend LDAP. The only requirement is that the user's **first login** is with their user ID. After that, they can use either user ID or email address.
+    </Info>
+
+    More precisely, Gogs maps the login name onto the user's "Authentication Login Name", which administrators can edit on the user's **Edit Account** page.
+  </Accordion>
+</AccordionGroup>
+
+## PAM
+
+To configure PAM authentication, set the **PAM Service Name** to a filename in `/etc/pam.d/`.
+
+<Warning>
+  If you want PAM authentication to work with normal Linux passwords, the user running Gogs must have read access to `/etc/shadow`.
+</Warning>
+
+### Configuration file
+
+```ini
+id           = 104
+type         = pam
+name         = System Auth
+is_activated = true
+
+[config]
+service_name = system-auth
+```
+
+## SMTP
+
+SMTP authentication allows Gogs to log in to your SMTP host to verify user credentials. Configure the following fields:
+
+| Field | Required | Description | Example |
+|---|---|---|---|
+| **Authentication Name** | Yes | A name for this authentication source. | `Company SMTP` |
+| **SMTP Authentication Type** | Yes | The authentication type: `PLAIN` or `LOGIN`. | `PLAIN` |
+| **Host** | Yes | The address of the SMTP server. | `smtp.mydomain.com` |
+| **Port** | Yes | The port for the SMTP connection. | `587` |
+| **Allowed Domains** | No | Restrict login to specific email domains. Separate multiple domains with commas. | `gogs.io,mydomain.com` |
+| **Enable TLS Encryption** | No | Enable TLS encryption for the authentication connection. | -- |
+| **Skip TLS Verify** | No | Disable TLS certificate verification. | -- |
+| **This Authentication is Activated** | No | Enable or disable this authentication method. | -- |
+
+### Configuration file
+
+```ini
+id           = 103
+type         = smtp
+name         = GMail
+is_activated = true
+
+[config]
+# Either "PLAIN" or "LOGIN"
+auth            = PLAIN
+host            = smtp.gmail.com
+port            = 587
+allowed_domains =
+tls             = true
+skip_verify     = false
+```
+
+## HTTP header
+
+If your reverse proxy already handles user authentication (e.g. via SSO, OAuth, or client certificates), Gogs can trust the authenticated username from an HTTP header. This is configured in `custom/conf/app.ini` under `[auth]`:
+
+```ini
+[auth]
+ENABLE_REVERSE_PROXY_AUTHENTICATION = true
+REVERSE_PROXY_AUTHENTICATION_HEADER = X-WEBAUTH-USER
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `ENABLE_REVERSE_PROXY_AUTHENTICATION` | `false` | Enable reading the authenticated username from a request header. |
+| `REVERSE_PROXY_AUTHENTICATION_HEADER` | `X-WEBAUTH-USER` | The HTTP header containing the authenticated username. |
+| `ENABLE_REVERSE_PROXY_AUTO_REGISTRATION` | `false` | Automatically create a Gogs account for users that do not yet exist. |
+
+When auto-registration is enabled, Gogs creates new accounts with an activated status and a placeholder email address. The user can update their email after first login.
+
+<Warning>
+  Only enable this feature if Gogs is exclusively accessed through a trusted reverse proxy that sets the header. Exposing Gogs directly to the internet with this enabled would allow anyone to impersonate any user by setting the header themselves.
+</Warning>

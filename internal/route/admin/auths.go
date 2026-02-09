@@ -3,9 +3,9 @@ package admin
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -269,7 +269,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	log.Trace("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
-	c.Redirect(conf.Server.Subpath + "/admin/auths/" + com.ToStr(f.ID))
+	c.Redirect(conf.Server.Subpath + "/admin/auths/" + strconv.FormatInt(f.ID, 10))
 }
 
 func DeleteAuthSource(c *context.Context) {

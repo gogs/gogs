@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	gouuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
@@ -53,7 +53,7 @@ func (a *Attachment) LocalPath() string {
 // NewAttachment creates a new attachment object.
 func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
 	attach := &Attachment{
-		UUID: gouuid.NewV4().String(),
+		UUID: uuid.New().String(),
 		Name: name,
 	}
 

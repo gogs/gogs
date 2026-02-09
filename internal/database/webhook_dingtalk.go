@@ -1,11 +1,11 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -39,7 +39,7 @@ type DingtalkPayload struct {
 }
 
 func (p *DingtalkPayload) JSONPayload() ([]byte, error) {
-	data, err := jsoniter.MarshalIndent(p, "", "  ")
+	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}
@@ -129,11 +129,11 @@ func getDingtalkPushPayload(p *api.PushPayload) *DingtalkPayload {
 		pusher = p.Pusher.UserName
 	}
 
-	var detail string
+	var detail strings.Builder
 	for i, commit := range p.Commits {
 		msg := strings.Split(commit.Message, "\n")[0]
 		commitLink := MarkdownLinkFormatter(commit.URL, commit.ID[:7])
-		detail += fmt.Sprintf("> %d. %s %s - %s\n", i, commitLink, commit.Author.Name, msg)
+		detail.WriteString(fmt.Sprintf("> %d. %s %s - %s\n", i, commitLink, commit.Author.Name, msg))
 	}
 
 	actionCard := NewDingtalkActionCard("View Changes", p.CompareURL)
@@ -142,7 +142,7 @@ func getDingtalkPushPayload(p *api.PushPayload) *DingtalkPayload {
 	actionCard.Text += "\n- Ref: **" + MarkdownLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName) + "**"
 	actionCard.Text += "\n- Pusher: **" + pusher + "**"
 	actionCard.Text += "\n## " + fmt.Sprintf("Total %d commits(s)", len(p.Commits))
-	actionCard.Text += "\n" + detail
+	actionCard.Text += "\n" + detail.String()
 
 	return &DingtalkPayload{
 		MsgType:    "actionCard",

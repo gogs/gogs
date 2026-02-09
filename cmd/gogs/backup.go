@@ -11,7 +11,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -44,10 +44,10 @@ const (
 	archiveRootDir             = "gogs-backup"
 )
 
-func runBackup(c *cli.Context) error {
-	zip.Verbose = c.Bool("verbose")
+func runBackup(ctx context.Context, cmd *cli.Command) error {
+	zip.Verbose = cmd.Bool("verbose")
 
-	err := conf.Init(c.String("config"))
+	err := conf.Init(configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
@@ -58,7 +58,7 @@ func runBackup(c *cli.Context) error {
 		return errors.Wrap(err, "set engine")
 	}
 
-	tmpDir := c.String("tempdir")
+	tmpDir := cmd.String("tempdir")
 	if !osutil.Exist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
@@ -78,7 +78,7 @@ func runBackup(c *cli.Context) error {
 		log.Fatal("Failed to save metadata '%s': %v", metaFile, err)
 	}
 
-	archiveName := filepath.Join(c.String("target"), c.String("archive-name"))
+	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
 	log.Info("Packing backup files to: %s", archiveName)
 
 	z, err := zip.Create(archiveName)
@@ -91,14 +91,14 @@ func runBackup(c *cli.Context) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = database.DumpDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = database.DumpDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
 		log.Fatal("Failed to include 'db': %v", err)
 	}
 
-	if !c.Bool("database-only") {
+	if !cmd.Bool("database-only") {
 		// Custom files
 		err = addCustomDirToBackup(z)
 		if err != nil {
@@ -119,10 +119,10 @@ func runBackup(c *cli.Context) error {
 	}
 
 	// Repositories
-	if !c.Bool("exclude-repos") && !c.Bool("database-only") {
+	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
 		log.Info("Dumping repositories in %q", conf.Repository.Root)
-		if c.Bool("exclude-mirror-repos") {
+		if cmd.Bool("exclude-mirror-repos") {
 			repos, err := database.GetNonMirrorRepositories()
 			if err != nil {
 				log.Fatal("Failed to get non-mirror repositories: %v", err)

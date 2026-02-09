@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/cockroachdb/errors"
-	jsoniter "github.com/json-iterator/go"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
@@ -99,7 +99,7 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 			e.CreatedAt = e.CreatedAt.UTC()
 		}
 
-		err = jsoniter.NewEncoder(w).Encode(elem)
+		err = json.NewEncoder(w).Encode(elem)
 		if err != nil {
 			return errors.Wrap(err, "encode JSON")
 		}
@@ -129,7 +129,7 @@ func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 		}
 
 		if err = x.Context(ctx).Asc("id").Iterate(table, func(idx int, bean any) (err error) {
-			return jsoniter.NewEncoder(f).Encode(bean)
+			return json.NewEncoder(f).Encode(bean)
 		}); err != nil {
 			_ = f.Close()
 			return errors.Newf("dump table '%s': %v", tableName, err)
@@ -207,7 +207,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
 
 		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
-		err = jsoniter.Unmarshal(cleaned, elem)
+		err = json.Unmarshal(cleaned, elem)
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
@@ -269,7 +269,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
-			if err = jsoniter.Unmarshal(scanner.Bytes(), table); err != nil {
+			if err = json.Unmarshal(scanner.Bytes(), table); err != nil {
 				return errors.Newf("unmarshal to struct: %v", err)
 			}
 
@@ -283,7 +283,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 				DeadlineUnix   int64
 				ClosedDateUnix int64
 			}
-			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
+			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
 				log.Error("Failed to unmarshal to map: %v", err)
 			}
 

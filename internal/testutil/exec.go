@@ -28,9 +28,9 @@ func Exec(helper string, envs ...string) (string, error) {
 	// it is passed first.
 	if strings.Contains(str, "no tests to run") {
 		return "", errors.New("no tests to run")
-	} else if i := strings.Index(str, "PASS"); i >= 0 {
+	} else if before, _, ok := strings.Cut(str, "PASS"); ok {
 		// Collect helper result
-		return strings.TrimSpace(str[:i]), nil
+		return strings.TrimSpace(before), nil
 	}
 
 	if err != nil {

@@ -9,7 +9,7 @@
 :: Make sure Gogs work running manually with "gogs web" before running
 :: this script.
 :: And, please, read carefully the installation docs first:
-:: https://gogs.io/docs/installation
+:: https://gogs.io/fine-tuning/run-as-service#windows
 :: To uninstall the service, run "nssm remove gogs" and restart Windows.
 
 :: Set the folder where you extracted Gogs. Omit the last slash.

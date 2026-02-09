@@ -4,11 +4,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -16,7 +16,7 @@ import (
 // on all pages.
 func (c *Context) renderNoticeBanner() {
 	fpath := filepath.Join(conf.CustomDir(), "notice", "banner.md")
-	if !com.IsExist(fpath) {
+	if !osutil.Exist(fpath) {
 		return
 	}
 

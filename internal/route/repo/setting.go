@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -344,7 +344,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *database.Re
 		}
 	} else {
 		// No avatar is uploaded and reset setting back.
-		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
+		if !osutil.IsFile(ctxRepo.CustomAvatarPath()) {
 			ctxRepo.UseCustomAvatar = false
 		}
 	}
@@ -580,12 +580,7 @@ func SettingsGitHooks(c *context.Context) {
 }
 
 func isValidHookName(name git.HookName) bool {
-	for _, h := range git.ServerSideHooks {
-		if h == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(git.ServerSideHooks, name)
 }
 
 func SettingsGitHooksEdit(c *context.Context) {
