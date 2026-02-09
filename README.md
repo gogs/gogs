@@ -13,10 +13,10 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Please visit [our home page](https://gogs.io) for user documentation.
 - Please refer to [CHANGELOG.md](CHANGELOG.md) for list of changes in each releases.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
-- Having trouble? Help yourself with [troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
-- Want to help with localization? Check out the [localization documentation](https://gogs.io/docs/features/i18n.html).
+- Having trouble? Help yourself with [troubleshooting](https://gogs.io/asking/troubleshooting) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
+- Want to help with localization? Check out the [localization documentation](https://gogs.io/advancing/localization).
 - Ready to get hands dirty? Read our [contributing guide](.github/CONTRIBUTING.md).
-- Hmm... What about APIs? We have experimental support with [documentation](https://github.com/gogs/docs-api).
+- Hmm... What about APIs? We have experimental support with [documentation](https://gogs.io/api-reference).
 
 ## 💌 Features
 
@@ -47,15 +47,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 📜 Installation
 
-Make sure you install the [prerequisites](https://gogs.io/docs/installation) first.
-
-There are 6 ways to install Gogs:
-
-- [Install from binary](https://gogs.io/docs/installation/install_from_binary.html)
-- [Install from source](https://gogs.io/docs/installation/install_from_source.html)
-- [Install from packages](https://gogs.io/docs/installation/install_from_packages.html)
-- [Ship with Docker](https://github.com/gogs/gogs/tree/main/docker)
-- [Try with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
 
 ### Deploy to cloud
 
@@ -94,7 +86,8 @@ There are 6 ways to install Gogs:
 Other acknowledgments:
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing the original version of the logo.
-- Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
+- Thanks [Mintlify](https://mintlify.com) for sponsoring open source documentation plan.
+- Thanks [Crowdin](https://crowdin.com) for sponsoring open source translation plan.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
 ## 👋 Contributors

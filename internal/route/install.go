@@ -228,13 +228,8 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Set test engine.
 	if err := database.NewTestEngine(); err != nil {
-		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
-			c.FormErr("DbType")
-			c.RenderWithErr(c.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), http.StatusInternalServerError, INSTALL, &f)
-		} else {
-			c.FormErr("DbSetting")
-			c.RenderWithErr(c.Tr("install.invalid_db_setting", err), http.StatusBadRequest, INSTALL, &f)
-		}
+		c.FormErr("DbSetting")
+		c.RenderWithErr(c.Tr("install.invalid_db_setting", err), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
