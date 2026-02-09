@@ -107,8 +107,13 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 		return 0, ErrOIDMismatch
 	}
 
-	if err := os.Rename(tmpPath, fpath); err != nil && !os.IsExist(err) {
-		return 0, errors.Wrap(err, "publish object file")
+	if err := os.Rename(tmpPath, fpath); err != nil {
+		if !os.IsExist(err) {
+			return 0, errors.Wrap(err, "publish object file")
+		}
+		// Destination already exists from a concurrent upload of the same OID.
+		// Remove the temp file since we no longer need it.
+		_ = os.Remove(tmpPath)
 	}
 	return written, nil
 }

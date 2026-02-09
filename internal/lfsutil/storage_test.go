@@ -67,6 +67,8 @@ func TestLocalStorage_Upload(t *testing.T) {
 		written, err := s.Upload(helloWorldOID, io.NopCloser(strings.NewReader("Hello world!")))
 		require.NoError(t, err)
 		assert.Equal(t, int64(12), written)
+
+		assertNoTempFiles(t, s.TempDir)
 	})
 
 	t.Run("valid OID but wrong content", func(t *testing.T) {
@@ -77,6 +79,7 @@ func TestLocalStorage_Upload(t *testing.T) {
 
 		// File should have been cleaned up.
 		assert.False(t, osutil.IsFile(s.storagePath(oid)))
+		assertNoTempFiles(t, s.TempDir)
 	})
 
 	t.Run("duplicate upload returns existing size", func(t *testing.T) {
@@ -134,4 +137,14 @@ func TestLocalStorage_Download(t *testing.T) {
 			assert.Equal(t, test.expErr, err)
 		})
 	}
+}
+
+func assertNoTempFiles(t *testing.T, tempDir string) {
+	t.Helper()
+	entries, err := os.ReadDir(tempDir)
+	if os.IsNotExist(err) {
+		return
+	}
+	require.NoError(t, err)
+	assert.Empty(t, entries, "temp directory should have no leftover files")
 }
