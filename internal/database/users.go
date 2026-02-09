@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -1298,8 +1298,8 @@ func (u *User) IsOrganization() bool {
 }
 
 // APIFormat returns the API format of a user.
-func (u *User) APIFormat() *apitypes.User {
-	return &apitypes.User{
+func (u *User) APIFormat() *apiv1types.User {
+	return &apiv1types.User{
 		ID:        u.ID,
 		UserName:  u.Name,
 		Login:     u.Name,

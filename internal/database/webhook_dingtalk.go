@@ -8,7 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 const (
@@ -55,31 +55,31 @@ func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
 }
 
 // TODO: add content
-func GetDingtalkPayload(p apitypes.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
+func GetDingtalkPayload(p apiv1types.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
 	switch event {
 	case HookEventTypeCreate:
-		payload = getDingtalkCreatePayload(p.(*apitypes.CreatePayload))
+		payload = getDingtalkCreatePayload(p.(*apiv1types.CreatePayload))
 	case HookEventTypeDelete:
-		payload = getDingtalkDeletePayload(p.(*apitypes.DeletePayload))
+		payload = getDingtalkDeletePayload(p.(*apiv1types.DeletePayload))
 	case HookEventTypeFork:
-		payload = getDingtalkForkPayload(p.(*apitypes.ForkPayload))
+		payload = getDingtalkForkPayload(p.(*apiv1types.ForkPayload))
 	case HookEventTypePush:
-		payload = getDingtalkPushPayload(p.(*apitypes.PushPayload))
+		payload = getDingtalkPushPayload(p.(*apiv1types.PushPayload))
 	case HookEventTypeIssues:
-		payload = getDingtalkIssuesPayload(p.(*apitypes.IssuesPayload))
+		payload = getDingtalkIssuesPayload(p.(*apiv1types.IssuesPayload))
 	case HookEventTypeIssueComment:
-		payload = getDingtalkIssueCommentPayload(p.(*apitypes.IssueCommentPayload))
+		payload = getDingtalkIssueCommentPayload(p.(*apiv1types.IssueCommentPayload))
 	case HookEventTypePullRequest:
-		payload = getDingtalkPullRequestPayload(p.(*apitypes.PullRequestPayload))
+		payload = getDingtalkPullRequestPayload(p.(*apiv1types.PullRequestPayload))
 	case HookEventTypeRelease:
-		payload = getDingtalkReleasePayload(p.(*apitypes.ReleasePayload))
+		payload = getDingtalkReleasePayload(p.(*apiv1types.ReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)
 	}
 	return payload, nil
 }
 
-func getDingtalkCreatePayload(p *apitypes.CreatePayload) *DingtalkPayload {
+func getDingtalkCreatePayload(p *apiv1types.CreatePayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
@@ -94,7 +94,7 @@ func getDingtalkCreatePayload(p *apitypes.CreatePayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkDeletePayload(p *apitypes.DeletePayload) *DingtalkPayload {
+func getDingtalkDeletePayload(p *apiv1types.DeletePayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
@@ -109,7 +109,7 @@ func getDingtalkDeletePayload(p *apitypes.DeletePayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkForkPayload(p *apitypes.ForkPayload) *DingtalkPayload {
+func getDingtalkForkPayload(p *apiv1types.ForkPayload) *DingtalkPayload {
 	actionCard := NewDingtalkActionCard("View Fork", p.Forkee.HTMLURL)
 	actionCard.Text += "# Repo Fork Event"
 	actionCard.Text += "\n- From Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
@@ -121,7 +121,7 @@ func getDingtalkForkPayload(p *apitypes.ForkPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkPushPayload(p *apitypes.PushPayload) *DingtalkPayload {
+func getDingtalkPushPayload(p *apiv1types.PushPayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 
 	pusher := p.Pusher.FullName
@@ -150,7 +150,7 @@ func getDingtalkPushPayload(p *apitypes.PushPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkIssuesPayload(p *apitypes.IssuesPayload) *DingtalkPayload {
+func getDingtalkIssuesPayload(p *apiv1types.IssuesPayload) *DingtalkPayload {
 	issueName := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	issueURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
 
@@ -159,11 +159,11 @@ func getDingtalkIssuesPayload(p *apitypes.IssuesPayload) *DingtalkPayload {
 	actionCard.Text += "\n- Issue: **" + MarkdownLinkFormatter(issueURL, issueName) + "**"
 
 	switch p.Action {
-	case apitypes.HookIssueAssigned:
+	case apiv1types.HookIssueAssigned:
 		actionCard.Text += "\n- New Assignee: **" + p.Issue.Assignee.UserName + "**"
-	case apitypes.HookIssueMilestoned:
+	case apiv1types.HookIssueMilestoned:
 		actionCard.Text += "\n- New Milestone: **" + p.Issue.Milestone.Title + "**"
-	case apitypes.HookIssueLabelUpdated:
+	case apiv1types.HookIssueLabelUpdated:
 		if len(p.Issue.Labels) > 0 {
 			labels := make([]string, len(p.Issue.Labels))
 			for i, label := range p.Issue.Labels {
@@ -185,10 +185,10 @@ func getDingtalkIssuesPayload(p *apitypes.IssuesPayload) *DingtalkPayload {
 	}
 }
 
-func getDingtalkIssueCommentPayload(p *apitypes.IssueCommentPayload) *DingtalkPayload {
+func getDingtalkIssueCommentPayload(p *apiv1types.IssueCommentPayload) *DingtalkPayload {
 	issueName := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 	commentURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
-	if p.Action != apitypes.HookIssueCommentDeleted {
+	if p.Action != apiv1types.HookIssueCommentDeleted {
 		commentURL += "#" + CommentHashTag(p.Comment.ID)
 	}
 
@@ -206,9 +206,9 @@ func getDingtalkIssueCommentPayload(p *apitypes.IssueCommentPayload) *DingtalkPa
 	}
 }
 
-func getDingtalkPullRequestPayload(p *apitypes.PullRequestPayload) *DingtalkPayload {
+func getDingtalkPullRequestPayload(p *apiv1types.PullRequestPayload) *DingtalkPayload {
 	title := "# Pull Request " + strings.Title(string(p.Action))
-	if p.Action == apitypes.HookIssueClosed && p.PullRequest.HasMerged {
+	if p.Action == apiv1types.HookIssueClosed && p.PullRequest.HasMerged {
 		title = "# Pull Request Merged"
 	}
 
@@ -216,11 +216,11 @@ func getDingtalkPullRequestPayload(p *apitypes.PullRequestPayload) *DingtalkPayl
 
 	content := "- PR: " + MarkdownLinkFormatter(pullRequestURL, fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
 	switch p.Action {
-	case apitypes.HookIssueAssigned:
+	case apiv1types.HookIssueAssigned:
 		content += "\n- New Assignee: **" + p.PullRequest.Assignee.UserName + "**"
-	case apitypes.HookIssueMilestoned:
+	case apiv1types.HookIssueMilestoned:
 		content += "\n- New Milestone: *" + p.PullRequest.Milestone.Title + "*"
-	case apitypes.HookIssueLabelUpdated:
+	case apiv1types.HookIssueLabelUpdated:
 		labels := make([]string, len(p.PullRequest.Labels))
 		for i, label := range p.PullRequest.Labels {
 			labels[i] = "**" + label.Name + "**"
@@ -231,7 +231,7 @@ func getDingtalkPullRequestPayload(p *apitypes.PullRequestPayload) *DingtalkPayl
 	actionCard := NewDingtalkActionCard("View Pull Request", pullRequestURL)
 	actionCard.Text += title + "\n" + content
 
-	if p.Action == apitypes.HookIssueOpened || p.Action == apitypes.HookIssueEdited {
+	if p.Action == apiv1types.HookIssueOpened || p.Action == apiv1types.HookIssueEdited {
 		actionCard.Text += "\n> " + p.PullRequest.Body
 	}
 
@@ -241,7 +241,7 @@ func getDingtalkPullRequestPayload(p *apitypes.PullRequestPayload) *DingtalkPayl
 	}
 }
 
-func getDingtalkReleasePayload(p *apitypes.ReleasePayload) *DingtalkPayload {
+func getDingtalkReleasePayload(p *apiv1types.ReleasePayload) *DingtalkPayload {
 	releaseURL := p.Repository.HTMLURL + "/src/" + p.Release.TagName
 
 	author := p.Release.Author.FullName

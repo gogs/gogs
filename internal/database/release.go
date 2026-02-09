@@ -14,7 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/process"
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Release represents a release of repository.
@@ -90,8 +90,8 @@ func (r *Release) LoadAttributes() error {
 
 // This method assumes some fields assigned with values:
 // Required - Publisher
-func (r *Release) APIFormat() *apitypes.Release {
-	return &apitypes.Release{
+func (r *Release) APIFormat() *apiv1types.Release {
+	return &apiv1types.Release{
 		ID:              r.ID,
 		TagName:         r.TagName,
 		TargetCommitish: r.Target,
@@ -147,8 +147,8 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 }
 
 func (r *Release) preparePublishWebhooks() {
-	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &apitypes.ReleasePayload{
-		Action:     apitypes.HookReleasePublished,
+	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &apiv1types.ReleasePayload{
+		Action:     apiv1types.HookReleasePublished,
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormatLegacy(nil),
 		Sender:     r.Publisher.APIFormat(),

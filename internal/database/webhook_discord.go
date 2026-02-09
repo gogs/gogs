@@ -10,7 +10,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type DiscordEmbedFooterObject struct {
@@ -66,7 +66,7 @@ func DiscordSHALinkFormatter(url, text string) string {
 }
 
 // getDiscordCreatePayload composes Discord payload for create new branch or tag.
-func getDiscordCreatePayload(p *apitypes.CreatePayload) *DiscordPayload {
+func getDiscordCreatePayload(p *apiv1types.CreatePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
@@ -84,7 +84,7 @@ func getDiscordCreatePayload(p *apitypes.CreatePayload) *DiscordPayload {
 }
 
 // getDiscordDeletePayload composes Discord payload for delete a branch or tag.
-func getDiscordDeletePayload(p *apitypes.DeletePayload) *DiscordPayload {
+func getDiscordDeletePayload(p *apiv1types.DeletePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	content := fmt.Sprintf("Deleted %s: %s/%s", p.RefType, repoLink, refName)
@@ -101,7 +101,7 @@ func getDiscordDeletePayload(p *apitypes.DeletePayload) *DiscordPayload {
 }
 
 // getDiscordForkPayload composes Discord payload for forked by a repository.
-func getDiscordForkPayload(p *apitypes.ForkPayload) *DiscordPayload {
+func getDiscordForkPayload(p *apiv1types.ForkPayload) *DiscordPayload {
 	baseLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	forkLink := DiscordLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
 	content := fmt.Sprintf("%s is forked to %s", baseLink, forkLink)
@@ -117,7 +117,7 @@ func getDiscordForkPayload(p *apitypes.ForkPayload) *DiscordPayload {
 	}
 }
 
-func getDiscordPushPayload(p *apitypes.PushPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordPushPayload(p *apiv1types.PushPayload, slack *SlackMeta) *DiscordPayload {
 	// n new commits
 	var (
 		branchName   = git.RefShortName(p.Ref)
@@ -167,31 +167,31 @@ func getDiscordPushPayload(p *apitypes.PushPayload, slack *SlackMeta) *DiscordPa
 	}
 }
 
-func getDiscordIssuesPayload(p *apitypes.IssuesPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordIssuesPayload(p *apiv1types.IssuesPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	url := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
 	content := ""
 	fields := make([]*DiscordEmbedFieldObject, 0, 1)
 	switch p.Action {
-	case apitypes.HookIssueOpened:
+	case apiv1types.HookIssueOpened:
 		title = "New issue: " + title
 		content = p.Issue.Body
-	case apitypes.HookIssueClosed:
+	case apiv1types.HookIssueClosed:
 		title = "Issue closed: " + title
-	case apitypes.HookIssueReopened:
+	case apiv1types.HookIssueReopened:
 		title = "Issue re-opened: " + title
-	case apitypes.HookIssueEdited:
+	case apiv1types.HookIssueEdited:
 		title = "Issue edited: " + title
 		content = p.Issue.Body
-	case apitypes.HookIssueAssigned:
+	case apiv1types.HookIssueAssigned:
 		title = "Issue assigned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Assignee",
 			Value: p.Issue.Assignee.UserName,
 		}}
-	case apitypes.HookIssueUnassigned:
+	case apiv1types.HookIssueUnassigned:
 		title = "Issue unassigned: " + title
-	case apitypes.HookIssueLabelUpdated:
+	case apiv1types.HookIssueLabelUpdated:
 		title = "Issue labels updated: " + title
 		labels := make([]string, len(p.Issue.Labels))
 		for i := range p.Issue.Labels {
@@ -204,17 +204,17 @@ func getDiscordIssuesPayload(p *apitypes.IssuesPayload, slack *SlackMeta) *Disco
 			Name:  "Labels",
 			Value: strings.Join(labels, ", "),
 		}}
-	case apitypes.HookIssueLabelCleared:
+	case apiv1types.HookIssueLabelCleared:
 		title = "Issue labels cleared: " + title
-	case apitypes.HookIssueSynchronized:
+	case apiv1types.HookIssueSynchronized:
 		title = "Issue synchronized: " + title
-	case apitypes.HookIssueMilestoned:
+	case apiv1types.HookIssueMilestoned:
 		title = "Issue milestoned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Milestone",
 			Value: p.Issue.Milestone.Title,
 		}}
-	case apitypes.HookIssueDemilestoned:
+	case apiv1types.HookIssueDemilestoned:
 		title = "Issue demilestoned: " + title
 	}
 
@@ -239,19 +239,19 @@ func getDiscordIssuesPayload(p *apitypes.IssuesPayload, slack *SlackMeta) *Disco
 	}
 }
 
-func getDiscordIssueCommentPayload(p *apitypes.IssueCommentPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordIssueCommentPayload(p *apiv1types.IssueCommentPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 	url := fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID))
 	content := ""
 	fields := make([]*DiscordEmbedFieldObject, 0, 1)
 	switch p.Action {
-	case apitypes.HookIssueCommentCreated:
+	case apiv1types.HookIssueCommentCreated:
 		title = "New comment: " + title
 		content = p.Comment.Body
-	case apitypes.HookIssueCommentEdited:
+	case apiv1types.HookIssueCommentEdited:
 		title = "Comment edited: " + title
 		content = p.Comment.Body
-	case apitypes.HookIssueCommentDeleted:
+	case apiv1types.HookIssueCommentDeleted:
 		title = "Comment deleted: " + title
 		url = fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
 		content = p.Comment.Body
@@ -278,35 +278,35 @@ func getDiscordIssueCommentPayload(p *apitypes.IssueCommentPayload, slack *Slack
 	}
 }
 
-func getDiscordPullRequestPayload(p *apitypes.PullRequestPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordPullRequestPayload(p *apiv1types.PullRequestPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	url := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
 	content := ""
 	fields := make([]*DiscordEmbedFieldObject, 0, 1)
 	switch p.Action {
-	case apitypes.HookIssueOpened:
+	case apiv1types.HookIssueOpened:
 		title = "New pull request: " + title
 		content = p.PullRequest.Body
-	case apitypes.HookIssueClosed:
+	case apiv1types.HookIssueClosed:
 		if p.PullRequest.HasMerged {
 			title = "Pull request merged: " + title
 		} else {
 			title = "Pull request closed: " + title
 		}
-	case apitypes.HookIssueReopened:
+	case apiv1types.HookIssueReopened:
 		title = "Pull request re-opened: " + title
-	case apitypes.HookIssueEdited:
+	case apiv1types.HookIssueEdited:
 		title = "Pull request edited: " + title
 		content = p.PullRequest.Body
-	case apitypes.HookIssueAssigned:
+	case apiv1types.HookIssueAssigned:
 		title = "Pull request assigned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Assignee",
 			Value: p.PullRequest.Assignee.UserName,
 		}}
-	case apitypes.HookIssueUnassigned:
+	case apiv1types.HookIssueUnassigned:
 		title = "Pull request unassigned: " + title
-	case apitypes.HookIssueLabelUpdated:
+	case apiv1types.HookIssueLabelUpdated:
 		title = "Pull request labels updated: " + title
 		labels := make([]string, len(p.PullRequest.Labels))
 		for i := range p.PullRequest.Labels {
@@ -316,17 +316,17 @@ func getDiscordPullRequestPayload(p *apitypes.PullRequestPayload, slack *SlackMe
 			Name:  "Labels",
 			Value: strings.Join(labels, ", "),
 		}}
-	case apitypes.HookIssueLabelCleared:
+	case apiv1types.HookIssueLabelCleared:
 		title = "Pull request labels cleared: " + title
-	case apitypes.HookIssueSynchronized:
+	case apiv1types.HookIssueSynchronized:
 		title = "Pull request synchronized: " + title
-	case apitypes.HookIssueMilestoned:
+	case apiv1types.HookIssueMilestoned:
 		title = "Pull request milestoned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Milestone",
 			Value: p.PullRequest.Milestone.Title,
 		}}
-	case apitypes.HookIssueDemilestoned:
+	case apiv1types.HookIssueDemilestoned:
 		title = "Pull request demilestoned: " + title
 	}
 
@@ -351,7 +351,7 @@ func getDiscordPullRequestPayload(p *apitypes.PullRequestPayload, slack *SlackMe
 	}
 }
 
-func getDiscordReleasePayload(p *apitypes.ReleasePayload) *DiscordPayload {
+func getDiscordReleasePayload(p *apiv1types.ReleasePayload) *DiscordPayload {
 	repoLink := DiscordLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
 	refLink := DiscordLinkFormatter(p.Repository.HTMLURL+"/src/"+p.Release.TagName, p.Release.TagName)
 	content := fmt.Sprintf("Published new release %s of %s", refLink, repoLink)
@@ -367,7 +367,7 @@ func getDiscordReleasePayload(p *apitypes.ReleasePayload) *DiscordPayload {
 	}
 }
 
-func GetDiscordPayload(p apitypes.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
+func GetDiscordPayload(p apiv1types.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), slack); err != nil {
 		return nil, errors.Newf("unmarshal: %v", err)
@@ -375,21 +375,21 @@ func GetDiscordPayload(p apitypes.Payloader, event HookEventType, meta string) (
 
 	switch event {
 	case HookEventTypeCreate:
-		payload = getDiscordCreatePayload(p.(*apitypes.CreatePayload))
+		payload = getDiscordCreatePayload(p.(*apiv1types.CreatePayload))
 	case HookEventTypeDelete:
-		payload = getDiscordDeletePayload(p.(*apitypes.DeletePayload))
+		payload = getDiscordDeletePayload(p.(*apiv1types.DeletePayload))
 	case HookEventTypeFork:
-		payload = getDiscordForkPayload(p.(*apitypes.ForkPayload))
+		payload = getDiscordForkPayload(p.(*apiv1types.ForkPayload))
 	case HookEventTypePush:
-		payload = getDiscordPushPayload(p.(*apitypes.PushPayload), slack)
+		payload = getDiscordPushPayload(p.(*apiv1types.PushPayload), slack)
 	case HookEventTypeIssues:
-		payload = getDiscordIssuesPayload(p.(*apitypes.IssuesPayload), slack)
+		payload = getDiscordIssuesPayload(p.(*apiv1types.IssuesPayload), slack)
 	case HookEventTypeIssueComment:
-		payload = getDiscordIssueCommentPayload(p.(*apitypes.IssueCommentPayload), slack)
+		payload = getDiscordIssueCommentPayload(p.(*apiv1types.IssueCommentPayload), slack)
 	case HookEventTypePullRequest:
-		payload = getDiscordPullRequestPayload(p.(*apitypes.PullRequestPayload), slack)
+		payload = getDiscordPullRequestPayload(p.(*apiv1types.PullRequestPayload), slack)
 	case HookEventTypeRelease:
-		payload = getDiscordReleasePayload(p.(*apitypes.ReleasePayload))
+		payload = getDiscordReleasePayload(p.(*apiv1types.ReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)
 	}

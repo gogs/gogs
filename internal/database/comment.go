@@ -13,7 +13,7 @@ import (
 
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
@@ -135,8 +135,8 @@ func (c *Comment) HTMLURL() string {
 
 // This method assumes following fields have been assigned with valid values:
 // Required - Poster, Issue
-func (c *Comment) APIFormat() *apitypes.Comment {
-	return &apitypes.Comment{
+func (c *Comment) APIFormat() *apiv1types.Comment {
+	return &apiv1types.Comment{
 		ID:      c.ID,
 		HTMLURL: c.HTMLURL(),
 		Poster:  c.Poster.APIFormat(),
@@ -346,8 +346,8 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 	}
 
 	comment.Issue = issue
-	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &apitypes.IssueCommentPayload{
-		Action:     apitypes.HookIssueCommentCreated,
+	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &apiv1types.IssueCommentPayload{
+		Action:     apiv1types.HookIssueCommentCreated,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
 		Repository: repo.APIFormatLegacy(nil),
@@ -482,12 +482,12 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 
 	if err = c.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
-	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &apitypes.IssueCommentPayload{
-		Action:  apitypes.HookIssueCommentEdited,
+	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.IssueCommentPayload{
+		Action:  apiv1types.HookIssueCommentEdited,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
-		Changes: &apitypes.ChangesPayload{
-			Body: &apitypes.ChangesFromPayload{
+		Changes: &apiv1types.ChangesPayload{
+			Body: &apiv1types.ChangesFromPayload{
 				From: oldContent,
 			},
 		},
@@ -537,8 +537,8 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
-	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &apitypes.IssueCommentPayload{
-		Action:     apitypes.HookIssueCommentDeleted,
+	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.IssueCommentPayload{
+		Action:     apiv1types.HookIssueCommentDeleted,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),
 		Repository: comment.Issue.Repo.APIFormatLegacy(nil),

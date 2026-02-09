@@ -36,7 +36,7 @@ import (
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/repoutil"
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/semverutil"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/sync"
@@ -377,9 +377,9 @@ func (r *Repository) DeleteAvatar() error {
 // Arguments that are allowed to be nil: permission
 //
 // Deprecated: Use APIFormat instead.
-func (r *Repository) APIFormatLegacy(permission *apitypes.Permission, user ...*User) *apitypes.Repository {
+func (r *Repository) APIFormatLegacy(permission *apiv1types.Permission, user ...*User) *apiv1types.Repository {
 	cloneLink := r.CloneLink()
-	apiRepo := &apitypes.Repository{
+	apiRepo := &apiv1types.Repository{
 		ID:            r.ID,
 		Owner:         r.Owner.APIFormat(),
 		Name:          r.Name,
@@ -406,7 +406,7 @@ func (r *Repository) APIFormatLegacy(permission *apitypes.Permission, user ...*U
 		//		AvatarUrl:     r.AvatarLink(),
 	}
 	if r.IsFork {
-		p := &apitypes.Permission{Pull: true}
+		p := &apiv1types.Permission{Pull: true}
 		if len(user) != 0 {
 			accessMode := Handle.Permissions().AccessMode(
 				context.TODO(),
@@ -2609,7 +2609,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	if err = repo.UpdateSize(); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 	}
-	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &apitypes.ForkPayload{
+	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &apiv1types.ForkPayload{
 		Forkee: repo.APIFormatLegacy(nil),
 		Repo:   baseRepo.APIFormatLegacy(nil),
 		Sender: doer.APIFormat(),

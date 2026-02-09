@@ -17,7 +17,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/netutil"
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 const (
@@ -513,21 +513,21 @@ func TestWebhook(c *context.Context) {
 	}
 
 	apiUser := c.User.APIFormat()
-	p := &apitypes.PushPayload{
+	p := &apiv1types.PushPayload{
 		Ref:    git.RefsHeads + c.Repo.Repository.DefaultBranch,
 		Before: commitID,
 		After:  commitID,
-		Commits: []*apitypes.PayloadCommit{
+		Commits: []*apiv1types.PayloadCommit{
 			{
 				ID:      commitID,
 				Message: commitMessage,
 				URL:     c.Repo.Repository.HTMLURL() + "/commit/" + commitID,
-				Author: &apitypes.PayloadUser{
+				Author: &apiv1types.PayloadUser{
 					Name:     author.Name,
 					Email:    author.Email,
 					UserName: authorUsername,
 				},
-				Committer: &apitypes.PayloadUser{
+				Committer: &apiv1types.PayloadUser{
 					Name:     committer.Name,
 					Email:    committer.Email,
 					UserName: committerUsername,

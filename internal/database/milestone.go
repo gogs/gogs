@@ -11,7 +11,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
-	apitypes "gogs.io/gogs/internal/route/api/v1/types"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Milestone represents a milestone of repository.
@@ -72,19 +72,19 @@ func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 }
 
 // State returns string representation of milestone status.
-func (m *Milestone) State() apitypes.StateType {
+func (m *Milestone) State() apiv1types.StateType {
 	if m.IsClosed {
-		return apitypes.StateClosed
+		return apiv1types.StateClosed
 	}
-	return apitypes.StateOpen
+	return apiv1types.StateOpen
 }
 
 func (m *Milestone) ChangeStatus(isClosed bool) error {
 	return ChangeMilestoneStatus(m, isClosed)
 }
 
-func (m *Milestone) APIFormat() *apitypes.Milestone {
-	apiMilestone := &apitypes.Milestone{
+func (m *Milestone) APIFormat() *apiv1types.Milestone {
+	apiMilestone := &apiv1types.Milestone{
 		ID:           m.ID,
 		State:        m.State(),
 		Title:        m.Name,
@@ -343,11 +343,11 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 		return errors.Newf("commit: %v", err)
 	}
 
-	var hookAction apitypes.HookIssueAction
+	var hookAction apiv1types.HookIssueAction
 	if issue.MilestoneID > 0 {
-		hookAction = apitypes.HookIssueMilestoned
+		hookAction = apiv1types.HookIssueMilestoned
 	} else {
-		hookAction = apitypes.HookIssueDemilestoned
+		hookAction = apiv1types.HookIssueDemilestoned
 	}
 
 	if issue.IsPull {
@@ -356,7 +356,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 			log.Error("LoadIssue: %v", err)
 			return err
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apitypes.PullRequestPayload{
+		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.PullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
@@ -364,7 +364,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apitypes.IssuesPayload{
+		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.IssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
