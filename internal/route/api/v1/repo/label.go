@@ -4,11 +4,21 @@ import (
 	"net/http"
 	"strconv"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateLabelRequest struct {
+	Name  string `json:"name" binding:"Required"`
+	Color string `json:"color" binding:"Required;Size(7)"`
+}
+
+type EditLabelRequest struct {
+	Name  *string `json:"name"`
+	Color *string `json:"color"`
+}
 
 func ListLabels(c *context.APIContext) {
 	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
@@ -17,9 +27,9 @@ func ListLabels(c *context.APIContext) {
 		return
 	}
 
-	apiLabels := make([]*api.Label, len(labels))
+	apiLabels := make([]*apitype.Label, len(labels))
 	for i := range labels {
-		apiLabels[i] = labels[i].APIFormat()
+		apiLabels[i] = convert.ToLabel(labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -38,10 +48,10 @@ func GetLabel(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(label.APIFormat())
+	c.JSONSuccess(convert.ToLabel(label))
 }
 
-func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
+func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
 	label := &database.Label{
 		Name:   form.Name,
 		Color:  form.Color,
@@ -51,10 +61,10 @@ func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
 		c.Error(err, "new labels")
 		return
 	}
-	c.JSON(http.StatusCreated, label.APIFormat())
+	c.JSON(http.StatusCreated, convert.ToLabel(label))
 }
 
-func EditLabel(c *context.APIContext, form api.EditLabelOption) {
+func EditLabel(c *context.APIContext, form EditLabelRequest) {
 	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get label of repository by ID")
@@ -71,7 +81,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 		c.Error(err, "update label")
 		return
 	}
-	c.JSONSuccess(label.APIFormat())
+	c.JSONSuccess(convert.ToLabel(label))
 }
 
 func DeleteLabel(c *context.APIContext) {

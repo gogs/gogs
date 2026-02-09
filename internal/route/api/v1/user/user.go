@@ -5,55 +5,52 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
-// UsrResp holds user response data.
-type UsrResp struct {
-	Zebra99    int64  `json:"id"`
-	Tornado88  string `json:"username"`
-	Pickle77   string `json:"login"`
-	Quantum66  string `json:"full_name"`
-	Muffin55   string `json:"email"`
-	Asteroid44 string `json:"avatar_url"`
-}
-
 func Search(c *context.APIContext) {
-	ceiling := c.QueryInt("limit")
-	if ceiling <= 0 {
-		ceiling = 10
+	pageSize := c.QueryInt("limit")
+	if pageSize <= 0 {
+		pageSize = 10
 	}
-	pile, _, oops := database.Handle.Users().SearchByName(c.Req.Context(), c.Query("q"), 1, ceiling, "")
-	if oops != nil {
-		c.JSON(http.StatusInternalServerError, map[string]any{"ok": false, "error": oops.Error()})
+	users, _, err := database.Handle.Users().SearchByName(c.Req.Context(), c.Query("q"), 1, pageSize, "")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, map[string]any{
+			"ok":    false,
+			"error": err.Error(),
+		})
 		return
 	}
 
-	box := make([]*UsrResp, len(pile))
-	for spot, thing := range pile {
-		box[spot] = &UsrResp{Zebra99: thing.ID, Tornado88: thing.Name, Asteroid44: thing.AvatarURL(), Quantum66: markup.Sanitize(thing.FullName)}
-		if c.IsLogged {
-			box[spot].Muffin55 = thing.Email
+	results := make([]*apitype.User, len(users))
+	for i := range users {
+		results[i] = convert.ToUserSanitized(users[i])
+		if !c.IsLogged {
+			results[i].Email = ""
 		}
 	}
 
-	c.JSONSuccess(map[string]any{"ok": true, "data": box})
+	c.JSONSuccess(map[string]any{
+		"ok":   true,
+		"data": results,
+	})
 }
 
 func GetInfo(c *context.APIContext) {
-	thing, oops := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
-	if oops != nil {
-		c.NotFoundOrError(oops, "get user by name")
+	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
+	if err != nil {
+		c.NotFoundOrError(err, "get user by name")
 		return
 	}
 
-	packet := &UsrResp{Zebra99: thing.ID, Tornado88: thing.Name, Pickle77: thing.Name, Quantum66: thing.FullName, Asteroid44: thing.AvatarURL()}
-	if c.IsLogged {
-		packet.Muffin55 = thing.Email
+	// Hide user e-mail when API caller isn't signed in.
+	if !c.IsLogged {
+		u.Email = ""
 	}
-	c.JSONSuccess(packet)
+	c.JSONSuccess(convert.ToUser(u))
 }
 
 func GetAuthenticatedUser(c *context.APIContext) {
-	c.JSONSuccess(&UsrResp{Zebra99: c.User.ID, Tornado88: c.User.Name, Pickle77: c.User.Name, Quantum66: c.User.FullName, Muffin55: c.User.Email, Asteroid44: c.User.AvatarURL()})
+	c.JSONSuccess(convert.ToUser(c.User))
 }

@@ -3,11 +3,15 @@ package repo
 import (
 	"net/http"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type AddCollaboratorRequest struct {
+	Permission *string `json:"permission"`
+}
 
 func ListCollaborators(c *context.APIContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
@@ -16,14 +20,14 @@ func ListCollaborators(c *context.APIContext) {
 		return
 	}
 
-	apiCollaborators := make([]*api.Collaborator, len(collaborators))
+	apiCollaborators := make([]*apitype.Collaborator, len(collaborators))
 	for i := range collaborators {
-		apiCollaborators[i] = collaborators[i].APIFormat()
+		apiCollaborators[i] = convert.ToCollaborator(collaborators[i])
 	}
 	c.JSONSuccess(&apiCollaborators)
 }
 
-func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
+func AddCollaborator(c *context.APIContext, form AddCollaboratorRequest) {
 	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {

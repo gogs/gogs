@@ -5,12 +5,30 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateIssueRequest struct {
+	Title     string  `json:"title" binding:"Required"`
+	Body      string  `json:"body"`
+	Assignee  string  `json:"assignee"`
+	Milestone int64   `json:"milestone"`
+	Labels    []int64 `json:"labels"`
+	Closed    bool    `json:"closed"`
+}
+
+type EditIssueRequest struct {
+	Title     string  `json:"title"`
+	Body      *string `json:"body"`
+	Assignee  *string `json:"assignee"`
+	Milestone *int64  `json:"milestone"`
+	State     *string `json:"state"`
+}
 
 func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	issues, err := database.Issues(opts)
@@ -26,13 +44,13 @@ func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	}
 
 	// FIXME: use IssueList to improve performance.
-	apiIssues := make([]*api.Issue, len(issues))
+	apiIssues := make([]*apitype.Issue, len(issues))
 	for i := range issues {
 		if err = issues[i].LoadAttributes(); err != nil {
 			c.Error(err, "load attributes")
 			return
 		}
-		apiIssues[i] = issues[i].APIFormat()
+		apiIssues[i] = convert.ToIssue(issues[i])
 	}
 
 	c.SetLinkHeader(int(count), conf.UI.IssuePagingNum)
@@ -43,7 +61,7 @@ func ListUserIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
-		IsClosed:   api.StateType(c.Query("state")) == api.STATE_CLOSED,
+		IsClosed:   apitype.StateType(c.Query("state")) == apitype.StateClosed,
 	}
 
 	listIssues(c, &opts)
@@ -53,7 +71,7 @@ func ListIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
 		Page:     c.QueryInt("page"),
-		IsClosed: api.StateType(c.Query("state")) == api.STATE_CLOSED,
+		IsClosed: apitype.StateType(c.Query("state")) == apitype.StateClosed,
 	}
 
 	listIssues(c, &opts)
@@ -65,10 +83,10 @@ func GetIssue(c *context.APIContext) {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
-	c.JSONSuccess(issue.APIFormat())
+	c.JSONSuccess(convert.ToIssue(issue))
 }
 
-func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
+func CreateIssue(c *context.APIContext, form CreateIssueRequest) {
 	issue := &database.Issue{
 		RepoID:   c.Repo.Repository.ID,
 		Title:    form.Title,
@@ -114,10 +132,10 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 		c.Error(err, "get issue by ID")
 		return
 	}
-	c.JSON(http.StatusCreated, issue.APIFormat())
+	c.JSON(http.StatusCreated, convert.ToIssue(issue))
 }
 
-func EditIssue(c *context.APIContext, form api.EditIssueOption) {
+func EditIssue(c *context.APIContext, form EditIssueRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -173,7 +191,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		return
 	}
 	if form.State != nil {
-		if err = issue.ChangeStatus(c.User, c.Repo.Repository, api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
+		if err = issue.ChangeStatus(c.User, c.Repo.Repository, apitype.StateClosed == apitype.StateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}
@@ -185,5 +203,5 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		c.Error(err, "get issue by ID")
 		return
 	}
-	c.JSON(http.StatusCreated, issue.APIFormat())
+	c.JSON(http.StatusCreated, convert.ToIssue(issue))
 }

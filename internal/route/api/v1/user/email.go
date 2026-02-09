@@ -8,26 +8,12 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
-// EmResp holds email response data.
-type EmResp struct {
-	EmStr string `json:"email"`
-	VfBl  bool   `json:"verified"`
-	PrBl  bool   `json:"primary"`
-}
-
-// EmReq holds email request data.
-type EmReq struct {
-	EmStrs []string `json:"emails"`
-}
-
-func toEmResp(e *database.EmailAddress) *EmResp {
-	return &EmResp{
-		EmStr: e.Email,
-		VfBl:  e.IsActivated,
-		PrBl:  e.IsPrimary,
-	}
+type CreateEmailRequest struct {
+	Emails []string `json:"emails"`
 }
 
 func ListEmails(c *context.APIContext) {
@@ -36,21 +22,21 @@ func ListEmails(c *context.APIContext) {
 		c.Error(err, "get email addresses")
 		return
 	}
-	resps := make([]*EmResp, len(emails))
+	apiEmails := make([]*apitype.Email, len(emails))
 	for i := range emails {
-		resps[i] = toEmResp(emails[i])
+		apiEmails[i] = convert.ToEmail(emails[i])
 	}
-	c.JSONSuccess(&resps)
+	c.JSONSuccess(&apiEmails)
 }
 
-func AddEmail(c *context.APIContext, form EmReq) {
-	if len(form.EmStrs) == 0 {
+func AddEmail(c *context.APIContext, form CreateEmailRequest) {
+	if len(form.Emails) == 0 {
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 
-	resps := make([]*EmResp, 0, len(form.EmStrs))
-	for _, email := range form.EmStrs {
+	apiEmails := make([]*apitype.Email, 0, len(form.Emails))
+	for _, email := range form.Emails {
 		err := database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
 		if err != nil {
 			if database.IsErrEmailAlreadyUsed(err) {
@@ -61,16 +47,16 @@ func AddEmail(c *context.APIContext, form EmReq) {
 			return
 		}
 
-		resps = append(resps, &EmResp{
-			EmStr: email,
-			VfBl:  !conf.Auth.RequireEmailConfirmation,
+		apiEmails = append(apiEmails, &apitype.Email{
+			Email:    email,
+			Verified: !conf.Auth.RequireEmailConfirmation,
 		})
 	}
-	c.JSON(http.StatusCreated, &resps)
+	c.JSON(http.StatusCreated, &apiEmails)
 }
 
-func DeleteEmail(c *context.APIContext, form EmReq) {
-	for _, email := range form.EmStrs {
+func DeleteEmail(c *context.APIContext, form CreateEmailRequest) {
+	for _, email := range form.Emails {
 		if email == c.User.Email {
 			c.ErrorStatus(http.StatusBadRequest, errors.Errorf("cannot delete primary email %q", email))
 			return

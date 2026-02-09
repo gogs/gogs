@@ -4,11 +4,24 @@ import (
 	"net/http"
 	"time"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateMilestoneRequest struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Deadline    *time.Time `json:"due_on"`
+}
+
+type EditMilestoneRequest struct {
+	Title       string     `json:"title"`
+	Description *string    `json:"description"`
+	State       *string    `json:"state"`
+	Deadline    *time.Time `json:"due_on"`
+}
 
 func ListMilestones(c *context.APIContext) {
 	milestones, err := database.GetMilestonesByRepoID(c.Repo.Repository.ID)
@@ -17,9 +30,9 @@ func ListMilestones(c *context.APIContext) {
 		return
 	}
 
-	apiMilestones := make([]*api.Milestone, len(milestones))
+	apiMilestones := make([]*apitype.Milestone, len(milestones))
 	for i := range milestones {
-		apiMilestones[i] = milestones[i].APIFormat()
+		apiMilestones[i] = convert.ToMilestone(milestones[i])
 	}
 	c.JSONSuccess(&apiMilestones)
 }
@@ -30,10 +43,10 @@ func GetMilestone(c *context.APIContext) {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
-	c.JSONSuccess(milestone.APIFormat())
+	c.JSONSuccess(convert.ToMilestone(milestone))
 }
 
-func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
+func CreateMilestone(c *context.APIContext, form CreateMilestoneRequest) {
 	if form.Deadline == nil {
 		defaultDeadline, _ := time.ParseInLocation("2006-01-02", "9999-12-31", time.Local)
 		form.Deadline = &defaultDeadline
@@ -50,10 +63,10 @@ func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
 		c.Error(err, "new milestone")
 		return
 	}
-	c.JSON(http.StatusCreated, milestone.APIFormat())
+	c.JSON(http.StatusCreated, convert.ToMilestone(milestone))
 }
 
-func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
+func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
 	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
@@ -71,7 +84,7 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 	}
 
 	if form.State != nil {
-		if err = milestone.ChangeStatus(api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
+		if err = milestone.ChangeStatus(apitype.StateClosed == apitype.StateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}
@@ -80,7 +93,7 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 		return
 	}
 
-	c.JSONSuccess(milestone.APIFormat())
+	c.JSONSuccess(convert.ToMilestone(milestone))
 }
 
 func DeleteMilestone(c *context.APIContext) {

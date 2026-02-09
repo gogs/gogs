@@ -6,13 +6,16 @@ import (
 	"time"
 
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+const mediaApplicationSHA = "application/vnd.gogs.sha"
 
 // GetAllCommits returns a slice of commits starting from HEAD.
 func GetAllCommits(c *context.APIContext) {
@@ -29,7 +32,7 @@ func GetAllCommits(c *context.APIContext) {
 	}
 
 	// The response object returned as JSON
-	result := make([]*api.Commit, 0, pageSize)
+	result := make([]*apitype.Commit, 0, pageSize)
 	commits, err := gitRepo.Log("HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
@@ -49,7 +52,7 @@ func GetAllCommits(c *context.APIContext) {
 
 // GetSingleCommit will return a single Commit object based on the specified SHA.
 func GetSingleCommit(c *context.APIContext) {
-	if strings.Contains(c.Req.Header.Get("Accept"), api.MediaApplicationSHA) {
+	if strings.Contains(c.Req.Header.Get("Accept"), mediaApplicationSHA) {
 		c.SetParams("*", c.Params(":sha"))
 		GetReferenceSHA(c)
 		return
@@ -114,14 +117,14 @@ func GetReferenceSHA(c *context.APIContext) {
 }
 
 // gitCommitToApiCommit is a helper function to convert git commit object to API commit.
-func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commit, error) {
+func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*apitype.Commit, error) {
 	// Retrieve author and committer information
-	var apiAuthor, apiCommitter *api.User
+	var apiAuthor, apiCommitter *apitype.User
 	author, err := database.Handle.Users().GetByEmail(c.Req.Context(), commit.Author.Email)
 	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
 	} else if err == nil {
-		apiAuthor = author.APIFormat()
+		apiAuthor = convert.ToUser(author)
 	}
 
 	// Save one query if the author is also the committer
@@ -132,40 +135,40 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commi
 		if err != nil && !database.IsErrUserNotExist(err) {
 			return nil, err
 		} else if err == nil {
-			apiCommitter = committer.APIFormat()
+			apiCommitter = convert.ToUser(committer)
 		}
 	}
 
 	// Retrieve parent(s) of the commit
-	apiParents := make([]*api.CommitMeta, commit.ParentsCount())
+	apiParents := make([]*apitype.CommitMeta, commit.ParentsCount())
 	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, _ := commit.ParentID(i)
-		apiParents[i] = &api.CommitMeta{
+		apiParents[i] = &apitype.CommitMeta{
 			URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/commits/" + sha.String(),
 			SHA: sha.String(),
 		}
 	}
 
-	return &api.Commit{
-		CommitMeta: &api.CommitMeta{
+	return &apitype.Commit{
+		CommitMeta: &apitype.CommitMeta{
 			URL: conf.Server.ExternalURL + c.Link[1:],
 			SHA: commit.ID.String(),
 		},
 		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID.String(),
-		RepoCommit: &api.RepoCommit{
+		RepoCommit: &apitype.RepoCommit{
 			URL: conf.Server.ExternalURL + c.Link[1:],
-			Author: &api.CommitUser{
+			Author: &apitype.CommitUser{
 				Name:  commit.Author.Name,
 				Email: commit.Author.Email,
 				Date:  commit.Author.When.Format(time.RFC3339),
 			},
-			Committer: &api.CommitUser{
+			Committer: &apitype.CommitUser{
 				Name:  commit.Committer.Name,
 				Email: commit.Committer.Email,
 				Date:  commit.Committer.When.Format(time.RFC3339),
 			},
 			Message: commit.Summary(),
-			Tree: &api.CommitMeta{
+			Tree: &apitype.CommitMeta{
 				URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/tree/" + commit.ID.String(),
 				SHA: commit.ID.String(),
 			},

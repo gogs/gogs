@@ -4,13 +4,18 @@ import (
 	"net/http"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateKeyRequest struct {
+	Title string `json:"title" binding:"Required"`
+	Key   string `json:"key" binding:"Required"`
+}
 
 func composeDeployKeysAPILink(repoPath string) string {
 	return conf.Server.ExternalURL + "api/v1/repos/" + repoPath + "/keys/"
@@ -25,7 +30,7 @@ func ListDeployKeys(c *context.APIContext) {
 	}
 
 	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
-	apiKeys := make([]*api.DeployKey, len(keys))
+	apiKeys := make([]*apitype.DeployKey, len(keys))
 	for i := range keys {
 		if err = keys[i].GetContent(); err != nil {
 			c.Error(err, "get content")
@@ -79,7 +84,7 @@ func HandleAddKeyError(c *context.APIContext, err error) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
-func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
+func CreateDeployKey(c *context.APIContext, form CreateKeyRequest) {
 	content, err := database.CheckPublicKeyString(form.Key)
 	if err != nil {
 		HandleCheckKeyStringError(c, err)

@@ -1,9 +1,8 @@
 package repo
 
 import (
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
@@ -32,7 +31,7 @@ func ListBranches(c *context.APIContext) {
 		return
 	}
 
-	apiBranches := make([]*api.Branch, len(branches))
+	apiBranches := make([]*apitype.Branch, len(branches))
 	for i := range branches {
 		commit, err := branches[i].GetCommit()
 		if err != nil {

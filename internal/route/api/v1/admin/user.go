@@ -3,15 +3,40 @@ package admin
 import (
 	"net/http"
 
-	api "github.com/gogs/go-gogs-client"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
+
+type CreateUserRequest struct {
+	SourceID   int64  `json:"source_id"`
+	LoginName  string `json:"login_name"`
+	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
+	FullName   string `json:"full_name" binding:"MaxSize(100)"`
+	Email      string `json:"email" binding:"Required;Email;MaxSize(254)"`
+	Password   string `json:"password" binding:"MaxSize(255)"`
+	SendNotify bool   `json:"send_notify"`
+}
+
+type EditUserRequest struct {
+	SourceID         int64  `json:"source_id"`
+	LoginName        string `json:"login_name"`
+	FullName         string `json:"full_name" binding:"MaxSize(100)"`
+	Email            string `json:"email" binding:"Required;Email;MaxSize(254)"`
+	Password         string `json:"password" binding:"MaxSize(255)"`
+	Website          string `json:"website" binding:"MaxSize(50)"`
+	Location         string `json:"location" binding:"MaxSize(50)"`
+	Active           *bool  `json:"active"`
+	Admin            *bool  `json:"admin"`
+	AllowGitHook     *bool  `json:"allow_git_hook"`
+	AllowImportLocal *bool  `json:"allow_import_local"`
+	MaxRepoCreation  *int   `json:"max_repo_creation"`
+}
 
 func parseLoginSource(c *context.APIContext, sourceID int64) {
 	if sourceID == 0 {
@@ -29,13 +54,13 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 	}
 }
 
-func CreateUser(c *context.APIContext, form api.CreateUserOption) {
+func CreateUser(c *context.APIContext, form CreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
 	}
 
-	user, err := database.Handle.Users().Create(
+	u, err := database.Handle.Users().Create(
 		c.Req.Context(),
 		form.Username,
 		form.Email,
@@ -57,17 +82,17 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		}
 		return
 	}
-	log.Trace("Account %q created by admin %q", user.Name, c.User.Name)
+	log.Trace("Account %q created by admin %q", u.Name, c.User.Name)
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(user))
+		email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u))
 	}
 
-	c.JSON(http.StatusCreated, user.APIFormat())
+	c.JSON(http.StatusCreated, convert.ToUser(u))
 }
 
-func EditUser(c *context.APIContext, form api.EditUserOption) {
+func EditUser(c *context.APIContext, form EditUserRequest) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
@@ -116,7 +141,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		c.Error(err, "get user")
 		return
 	}
-	c.JSONSuccess(u.APIFormat())
+	c.JSONSuccess(convert.ToUser(u))
 }
 
 func DeleteUser(c *context.APIContext) {
@@ -139,10 +164,10 @@ func DeleteUser(c *context.APIContext) {
 	c.NoContent()
 }
 
-func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
+func CreatePublicKey(c *context.APIContext, form user.CreateKeyRequest) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
-	user.CreateUserPublicKey(c, user.PkReq{KeyTxt: form.Key, TitleTxt: form.Title}, u.ID)
+	user.CreateUserPublicKey(c, form, u.ID)
 }

@@ -8,17 +8,11 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 )
 
-// TokenResponse represents an access token in API responses.
-type TokenResponse struct {
-	TokenName     string `json:"name"`
-	TokenHashSha1 string `json:"sha1"`
-}
-
-// CreateTokenRequest represents the request body for creating an access token.
-type CreateTokenRequest struct {
-	TokenName string `json:"name" binding:"Required"`
+type CreateAccessTokenRequest struct {
+	Name string `json:"name" binding:"Required"`
 }
 
 // AccessTokensHandler is the handler for users access tokens API endpoints.
@@ -42,11 +36,11 @@ func (h *AccessTokensHandler) List() macaron.Handler {
 			return
 		}
 
-		apiTokens := make([]*TokenResponse, len(tokens))
+		apiTokens := make([]*apitype.AccessToken, len(tokens))
 		for i := range tokens {
-			apiTokens[i] = &TokenResponse{
-				TokenName:     tokens[i].Name,
-				TokenHashSha1: tokens[i].Sha1,
+			apiTokens[i] = &apitype.AccessToken{
+				Name: tokens[i].Name,
+				Sha1: tokens[i].Sha1,
 			}
 		}
 		c.JSONSuccess(&apiTokens)
@@ -54,8 +48,8 @@ func (h *AccessTokensHandler) List() macaron.Handler {
 }
 
 func (h *AccessTokensHandler) Create() macaron.Handler {
-	return func(c *context.APIContext, form CreateTokenRequest) {
-		t, err := h.store.CreateAccessToken(c.Req.Context(), c.User.ID, form.TokenName)
+	return func(c *context.APIContext, form CreateAccessTokenRequest) {
+		t, err := h.store.CreateAccessToken(c.Req.Context(), c.User.ID, form.Name)
 		if err != nil {
 			if database.IsErrAccessTokenAlreadyExist(err) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -64,9 +58,9 @@ func (h *AccessTokensHandler) Create() macaron.Handler {
 			}
 			return
 		}
-		c.JSON(http.StatusCreated, &TokenResponse{
-			TokenName:     t.Name,
-			TokenHashSha1: t.Sha1,
+		c.JSON(http.StatusCreated, &apitype.AccessToken{
+			Name: t.Name,
+			Sha1: t.Sha1,
 		})
 	}
 }

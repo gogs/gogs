@@ -7,12 +7,24 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateHookRequest struct {
+	Type   string            `json:"type" binding:"Required"`
+	Config map[string]string `json:"config" binding:"Required"`
+	Events []string          `json:"events"`
+	Active bool              `json:"active"`
+}
+
+type EditHookRequest struct {
+	Config map[string]string `json:"config"`
+	Events []string          `json:"events"`
+	Active *bool             `json:"active"`
+}
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
 func ListHooks(c *context.APIContext) {
@@ -22,7 +34,7 @@ func ListHooks(c *context.APIContext) {
 		return
 	}
 
-	apiHooks := make([]*api.Hook, len(hooks))
+	apiHooks := make([]*apitype.Hook, len(hooks))
 	for i := range hooks {
 		apiHooks[i] = convert.ToHook(c.Repo.RepoLink, hooks[i])
 	}
@@ -30,7 +42,7 @@ func ListHooks(c *context.APIContext) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
-func CreateHook(c *context.APIContext, form api.CreateHookOption) {
+func CreateHook(c *context.APIContext, form CreateHookRequest) {
 	if !database.IsValidHookTaskType(form.Type) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid hook type."))
 		return
@@ -101,7 +113,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
-func EditHook(c *context.APIContext, form api.EditHookOption) {
+func EditHook(c *context.APIContext, form EditHookRequest) {
 	w, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook of repository by ID")

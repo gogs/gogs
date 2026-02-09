@@ -3,15 +3,29 @@ package org
 import (
 	"net/http"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
-func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *database.User) {
+type CreateOrgRequest struct {
+	UserName    string `json:"username" binding:"Required"`
+	FullName    string `json:"full_name"`
+	Description string `json:"description"`
+	Website     string `json:"website"`
+	Location    string `json:"location"`
+}
+
+type EditOrgRequest struct {
+	FullName    string `json:"full_name"`
+	Description string `json:"description"`
+	Website     string `json:"website"`
+	Location    string `json:"location"`
+}
+
+func CreateOrgForUser(c *context.APIContext, apiForm CreateOrgRequest, user *database.User) {
 	if c.Written() {
 		return
 	}
@@ -51,7 +65,7 @@ func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
 		return
 	}
 
-	apiOrgs := make([]*api.Organization, len(orgs))
+	apiOrgs := make([]*apitype.Organization, len(orgs))
 	for i := range orgs {
 		apiOrgs[i] = convert.ToOrganization(orgs[i])
 	}
@@ -62,7 +76,7 @@ func ListMyOrgs(c *context.APIContext) {
 	listUserOrgs(c, c.User, true)
 }
 
-func CreateMyOrg(c *context.APIContext, apiForm api.CreateOrgOption) {
+func CreateMyOrg(c *context.APIContext, apiForm CreateOrgRequest) {
 	CreateOrgForUser(c, apiForm, c.User)
 }
 
@@ -78,7 +92,7 @@ func Get(c *context.APIContext) {
 	c.JSONSuccess(convert.ToOrganization(c.Org.Organization))
 }
 
-func Edit(c *context.APIContext, form api.EditOrgOption) {
+func Edit(c *context.APIContext, form EditOrgRequest) {
 	org := c.Org.Organization
 	if !org.IsOwnedBy(c.User.ID) {
 		c.Status(http.StatusForbidden)

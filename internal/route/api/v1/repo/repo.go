@@ -5,15 +5,40 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateRepoRequest struct {
+	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Description string `json:"description" binding:"MaxSize(255)"`
+	Private     bool   `json:"private"`
+	AutoInit    bool   `json:"auto_init"`
+	Gitignores  string `json:"gitignores"`
+	License     string `json:"license"`
+	Readme      string `json:"readme"`
+}
+
+type EditIssueTrackerRequest struct {
+	EnableIssues          *bool   `json:"enable_issues"`
+	EnableExternalTracker *bool   `json:"enable_external_tracker"`
+	ExternalTrackerURL    *string `json:"external_tracker_url"`
+	TrackerURLFormat      *string `json:"tracker_url_format"`
+	TrackerIssueStyle     *string `json:"tracker_issue_style"`
+}
+
+type EditWikiRequest struct {
+	EnableWiki         *bool   `json:"enable_wiki"`
+	AllowPublicWiki    *bool   `json:"allow_public_wiki"`
+	EnableExternalWiki *bool   `json:"enable_external_wiki"`
+	ExternalWikiURL    *string `json:"external_wiki_url"`
+}
 
 func Search(c *context.APIContext) {
 	opts := &database.SearchRepoOptions{
@@ -60,9 +85,9 @@ func Search(c *context.APIContext) {
 		return
 	}
 
-	results := make([]*api.Repository, len(repos))
+	results := make([]*apitype.Repository, len(repos))
 	for i := range repos {
-		results[i] = repos[i].APIFormatLegacy(nil)
+		results[i] = convert.ToRepository(repos[i], nil)
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
@@ -104,9 +129,9 @@ func listUserRepositories(c *context.APIContext, username string) {
 
 	// Early return for querying other user's repositories
 	if c.User.ID != user.ID {
-		repos := make([]*api.Repository, len(ownRepos))
+		repos := make([]*apitype.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = ownRepos[i].APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true})
+			repos[i] = convert.ToRepository(ownRepos[i], &apitype.Permission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -128,14 +153,14 @@ func listUserRepositories(c *context.APIContext, username string) {
 	}
 
 	numOwnRepos := len(ownRepos)
-	repos := make([]*api.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
+	repos := make([]*apitype.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
-		repos = append(repos, r.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
+		repos = append(repos, convert.ToRepository(r, &apitype.Permission{Admin: true, Push: true, Pull: true}))
 	}
 
 	for repo, access := range accessibleReposWithAccessMode {
 		repos = append(repos,
-			repo.APIFormatLegacy(&api.Permission{
+			convert.ToRepository(repo, &apitype.Permission{
 				Admin: access >= database.AccessModeAdmin,
 				Push:  access >= database.AccessModeWrite,
 				Pull:  true,
@@ -158,7 +183,7 @@ func ListOrgRepositories(c *context.APIContext) {
 	listUserRepositories(c, c.Params(":org"))
 }
 
-func CreateUserRepo(c *context.APIContext, owner *database.User, opt api.CreateRepoOption) {
+func CreateUserRepo(c *context.APIContext, owner *database.User, opt CreateRepoRequest) {
 	repo, err := database.CreateRepository(c.User, owner, database.CreateRepoOptionsLegacy{
 		Name:        opt.Name,
 		Description: opt.Description,
@@ -183,10 +208,10 @@ func CreateUserRepo(c *context.APIContext, owner *database.User, opt api.CreateR
 		return
 	}
 
-	c.JSON(201, repo.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, convert.ToRepository(repo, &apitype.Permission{Admin: true, Push: true, Pull: true}))
 }
 
-func Create(c *context.APIContext, opt api.CreateRepoOption) {
+func Create(c *context.APIContext, opt CreateRepoRequest) {
 	// Shouldn't reach this condition, but just in case.
 	if c.User.IsOrganization() {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Not allowed to create repository for organization."))
@@ -195,7 +220,7 @@ func Create(c *context.APIContext, opt api.CreateRepoOption) {
 	CreateUserRepo(c, c.User, opt)
 }
 
-func CreateOrgRepo(c *context.APIContext, opt api.CreateRepoOption) {
+func CreateOrgRepo(c *context.APIContext, opt CreateRepoRequest) {
 	org, err := database.GetOrgByName(c.Params(":org"))
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
@@ -287,7 +312,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, repo.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, convert.ToRepository(repo, &apitype.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
@@ -317,7 +342,7 @@ func Get(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(repo.APIFormatLegacy(&api.Permission{
+	c.JSONSuccess(convert.ToRepository(repo, &apitype.Permission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
@@ -351,7 +376,7 @@ func ListForks(c *context.APIContext) {
 		return
 	}
 
-	apiForks := make([]*api.Repository, len(forks))
+	apiForks := make([]*apitype.Repository, len(forks))
 	for i := range forks {
 		if err := forks[i].GetOwner(); err != nil {
 			c.Error(err, "get owner")
@@ -368,8 +393,8 @@ func ListForks(c *context.APIContext) {
 			},
 		)
 
-		apiForks[i] = forks[i].APIFormatLegacy(
-			&api.Permission{
+		apiForks[i] = convert.ToRepository(forks[i],
+			&apitype.Permission{
 				Admin: accessMode >= database.AccessModeAdmin,
 				Push:  accessMode >= database.AccessModeWrite,
 				Pull:  true,
@@ -380,7 +405,7 @@ func ListForks(c *context.APIContext) {
 	c.JSONSuccess(&apiForks)
 }
 
-func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
+func IssueTracker(c *context.APIContext, form EditIssueTrackerRequest) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -410,7 +435,7 @@ func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
 	c.NoContent()
 }
 
-func Wiki(c *context.APIContext, form api.EditWikiOption) {
+func Wiki(c *context.APIContext, form EditWikiRequest) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -456,7 +481,7 @@ func Releases(c *context.APIContext) {
 		c.Error(err, "get releases by repository ID")
 		return
 	}
-	apiReleases := make([]*api.Release, 0, len(releases))
+	apiReleases := make([]*apitype.Release, 0, len(releases))
 	for _, r := range releases {
 		publisher, err := database.Handle.Users().GetByID(c.Req.Context(), r.PublisherID)
 		if err != nil {
@@ -466,7 +491,7 @@ func Releases(c *context.APIContext) {
 		r.Publisher = publisher
 	}
 	for _, r := range releases {
-		apiReleases = append(apiReleases, r.APIFormat())
+		apiReleases = append(apiReleases, convert.ToRelease(r))
 	}
 
 	c.JSONSuccess(&apiReleases)

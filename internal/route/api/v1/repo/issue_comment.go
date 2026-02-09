@@ -4,11 +4,19 @@ import (
 	"net/http"
 	"time"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type CreateIssueCommentRequest struct {
+	Body string `json:"body" binding:"Required"`
+}
+
+type EditIssueCommentRequest struct {
+	Body string `json:"body" binding:"Required"`
+}
 
 func ListIssueComments(c *context.APIContext) {
 	var since time.Time
@@ -34,9 +42,9 @@ func ListIssueComments(c *context.APIContext) {
 		return
 	}
 
-	apiComments := make([]*api.Comment, len(comments))
+	apiComments := make([]*apitype.Comment, len(comments))
 	for i := range comments {
-		apiComments[i] = comments[i].APIFormat()
+		apiComments[i] = convert.ToComment(comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
@@ -58,14 +66,14 @@ func ListRepoIssueComments(c *context.APIContext) {
 		return
 	}
 
-	apiComments := make([]*api.Comment, len(comments))
+	apiComments := make([]*apitype.Comment, len(comments))
 	for i := range comments {
-		apiComments[i] = comments[i].APIFormat()
+		apiComments[i] = convert.ToComment(comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
 
-func CreateIssueComment(c *context.APIContext, form api.CreateIssueCommentOption) {
+func CreateIssueComment(c *context.APIContext, form CreateIssueCommentRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.Error(err, "get issue by index")
@@ -78,10 +86,10 @@ func CreateIssueComment(c *context.APIContext, form api.CreateIssueCommentOption
 		return
 	}
 
-	c.JSON(http.StatusCreated, comment.APIFormat())
+	c.JSON(http.StatusCreated, convert.ToComment(comment))
 }
 
-func EditIssueComment(c *context.APIContext, form api.EditIssueCommentOption) {
+func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
@@ -113,7 +121,7 @@ func EditIssueComment(c *context.APIContext, form api.EditIssueCommentOption) {
 		c.Error(err, "update comment")
 		return
 	}
-	c.JSONSuccess(comment.APIFormat())
+	c.JSONSuccess(convert.ToComment(comment))
 }
 
 func DeleteIssueComment(c *context.APIContext) {

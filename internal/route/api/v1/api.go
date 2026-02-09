@@ -7,8 +7,6 @@ import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
@@ -181,7 +179,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Options("/*", func() {})
 
 		// Miscellaneous
-		m.Post("/markdown", bind(api.MarkdownOption{}), misc.Markdown)
+		m.Post("/markdown", bind(misc.MarkdownRequest{}), misc.Markdown)
 		m.Post("/markdown/raw", misc.MarkdownRaw)
 
 		// Users
@@ -195,7 +193,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					accessTokensHandler := user.NewAccessTokensHandler(user.NewAccessTokensStore())
 					m.Combo("").
 						Get(accessTokensHandler.List()).
-						Post(bind(api.CreateAccessTokenOption{}), accessTokensHandler.Create())
+						Post(bind(user.CreateAccessTokenRequest{}), accessTokensHandler.Create())
 				}, reqBasicAuth())
 			})
 		})
@@ -216,8 +214,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 			m.Get("", user.GetAuthenticatedUser)
 			m.Combo("/emails").
 				Get(user.ListEmails).
-				Post(bind(api.CreateEmailOption{}), user.AddEmail).
-				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
+				Post(bind(user.CreateEmailRequest{}), user.AddEmail).
+				Delete(bind(user.CreateEmailRequest{}), user.DeleteEmail)
 
 			m.Get("/followers", user.ListMyFollowers)
 			m.Group("/following", func() {
@@ -231,7 +229,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 			m.Group("/keys", func() {
 				m.Combo("").
 					Get(user.ListMyPublicKeys).
-					Post(bind(api.CreateKeyOption{}), user.CreatePublicKey)
+					Post(bind(user.CreateKeyRequest{}), user.CreatePublicKey)
 				m.Combo("/:id").
 					Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
@@ -245,8 +243,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Get("/orgs/:org/repos", reqToken(), repo.ListOrgRepositories)
 		m.Combo("/user/repos", reqToken()).
 			Get(repo.ListMyRepos).
-			Post(bind(api.CreateRepoOption{}), repo.Create)
-		m.Post("/org/:org/repos", reqToken(), bind(api.CreateRepoOption{}), repo.CreateOrgRepo)
+			Post(bind(repo.CreateRepoRequest{}), repo.Create)
+		m.Post("/org/:org/repos", reqToken(), bind(repo.CreateRepoRequest{}), repo.CreateOrgRepo)
 
 		m.Group("/repos", func() {
 			m.Get("/search", repo.Search)
@@ -263,9 +261,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Group("/hooks", func() {
 					m.Combo("").
 						Get(repo.ListHooks).
-						Post(bind(api.CreateHookOption{}), repo.CreateHook)
+						Post(bind(repo.CreateHookRequest{}), repo.CreateHook)
 					m.Combo("/:id").
-						Patch(bind(api.EditHookOption{}), repo.EditHook).
+						Patch(bind(repo.EditHookRequest{}), repo.EditHook).
 						Delete(repo.DeleteHook)
 				}, reqRepoAdmin())
 
@@ -273,7 +271,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("", repo.ListCollaborators)
 					m.Combo("/:collaborator").
 						Get(repo.IsCollaborator).
-						Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
+						Put(bind(repo.AddCollaboratorRequest{}), repo.AddCollaborator).
 						Delete(repo.DeleteCollaborator)
 				}, reqRepoAdmin())
 
@@ -308,7 +306,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Group("/keys", func() {
 					m.Combo("").
 						Get(repo.ListDeployKeys).
-						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
+						Post(bind(repo.CreateKeyRequest{}), repo.CreateDeployKey)
 					m.Combo("/:id").
 						Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
@@ -317,30 +315,30 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Group("/issues", func() {
 					m.Combo("").
 						Get(repo.ListIssues).
-						Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
+						Post(bind(repo.CreateIssueRequest{}), repo.CreateIssue)
 					m.Group("/comments", func() {
 						m.Get("", repo.ListRepoIssueComments)
-						m.Patch("/:id", bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
+						m.Patch("/:id", bind(repo.EditIssueCommentRequest{}), repo.EditIssueComment)
 					})
 					m.Group("/:index", func() {
 						m.Combo("").
 							Get(repo.GetIssue).
-							Patch(bind(api.EditIssueOption{}), repo.EditIssue)
+							Patch(bind(repo.EditIssueRequest{}), repo.EditIssue)
 
 						m.Group("/comments", func() {
 							m.Combo("").
 								Get(repo.ListIssueComments).
-								Post(bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
+								Post(bind(repo.CreateIssueCommentRequest{}), repo.CreateIssueComment)
 							m.Combo("/:id").
-								Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment).
+								Patch(bind(repo.EditIssueCommentRequest{}), repo.EditIssueComment).
 								Delete(repo.DeleteIssueComment)
 						})
 
 						m.Get("/labels", repo.ListIssueLabels)
 						m.Group("/labels", func() {
 							m.Combo("").
-								Post(bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
-								Put(bind(api.IssueLabelsOption{}), repo.ReplaceIssueLabels).
+								Post(bind(repo.IssueLabelsRequest{}), repo.AddIssueLabels).
+								Put(bind(repo.IssueLabelsRequest{}), repo.ReplaceIssueLabels).
 								Delete(repo.ClearIssueLabels)
 							m.Delete("/:id", repo.DeleteIssueLabel)
 						}, reqRepoWriter())
@@ -352,9 +350,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("/:id", repo.GetLabel)
 				})
 				m.Group("/labels", func() {
-					m.Post("", bind(api.CreateLabelOption{}), repo.CreateLabel)
+					m.Post("", bind(repo.CreateLabelRequest{}), repo.CreateLabel)
 					m.Combo("/:id").
-						Patch(bind(api.EditLabelOption{}), repo.EditLabel).
+						Patch(bind(repo.EditLabelRequest{}), repo.EditLabel).
 						Delete(repo.DeleteLabel)
 				}, reqRepoWriter())
 
@@ -363,14 +361,14 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("/:id", repo.GetMilestone)
 				})
 				m.Group("/milestones", func() {
-					m.Post("", bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
+					m.Post("", bind(repo.CreateMilestoneRequest{}), repo.CreateMilestone)
 					m.Combo("/:id").
-						Patch(bind(api.EditMilestoneOption{}), repo.EditMilestone).
+						Patch(bind(repo.EditMilestoneRequest{}), repo.EditMilestone).
 						Delete(repo.DeleteMilestone)
 				}, reqRepoWriter())
 
-				m.Patch("/issue-tracker", reqRepoWriter(), bind(api.EditIssueTrackerOption{}), repo.IssueTracker)
-				m.Patch("/wiki", reqRepoWriter(), bind(api.EditWikiOption{}), repo.Wiki)
+				m.Patch("/issue-tracker", reqRepoWriter(), bind(repo.EditIssueTrackerRequest{}), repo.IssueTracker)
+				m.Patch("/wiki", reqRepoWriter(), bind(repo.EditWikiRequest{}), repo.Wiki)
 				m.Post("/mirror-sync", reqRepoWriter(), repo.MirrorSync)
 				m.Get("/editorconfig/:filename", context.RepoRef(), repo.GetEditorconfig)
 			}, repoAssignment())
@@ -381,33 +379,33 @@ func RegisterRoutes(m *macaron.Macaron) {
 		// Organizations
 		m.Combo("/user/orgs", reqToken()).
 			Get(org.ListMyOrgs).
-			Post(bind(api.CreateOrgOption{}), org.CreateMyOrg)
+			Post(bind(org.CreateOrgRequest{}), org.CreateMyOrg)
 
 		m.Get("/users/:username/orgs", org.ListUserOrgs)
 		m.Group("/orgs/:orgname", func() {
 			m.Combo("").
 				Get(org.Get).
-				Patch(bind(api.EditOrgOption{}), org.Edit)
+				Patch(bind(org.EditOrgRequest{}), org.Edit)
 			m.Get("/teams", org.ListTeams)
 		}, orgAssignment(true))
 
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
-				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
+				m.Post("", bind(admin.CreateUserRequest{}), admin.CreateUser)
 
 				m.Group("/:username", func() {
 					m.Combo("").
-						Patch(bind(api.EditUserOption{}), admin.EditUser).
+						Patch(bind(admin.EditUserRequest{}), admin.EditUser).
 						Delete(admin.DeleteUser)
-					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
-					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
-					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
+					m.Post("/keys", bind(user.CreateKeyRequest{}), admin.CreatePublicKey)
+					m.Post("/orgs", bind(org.CreateOrgRequest{}), admin.CreateOrg)
+					m.Post("/repos", bind(repo.CreateRepoRequest{}), admin.CreateRepo)
 				})
 			})
 
 			m.Group("/orgs/:orgname", func() {
 				m.Group("/teams", func() {
-					m.Post("", orgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
+					m.Post("", orgAssignment(true), bind(admin.CreateTeamRequest{}), admin.CreateTeam)
 				})
 			})
 

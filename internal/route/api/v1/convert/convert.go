@@ -4,41 +4,61 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 )
 
-func ToEmail(email *database.EmailAddress) *api.Email {
-	return &api.Email{
+func ToUser(u *database.User) *apitype.User {
+	return &apitype.User{
+		ID:        u.ID,
+		UserName:  u.Name,
+		Login:     u.Name,
+		FullName:  u.FullName,
+		Email:     u.Email,
+		AvatarURL: u.AvatarURL(),
+	}
+}
+
+// ToUserSanitized returns a user with the full name sanitized for safe HTML rendering.
+func ToUserSanitized(u *database.User) *apitype.User {
+	r := ToUser(u)
+	r.FullName = markup.Sanitize(u.FullName)
+	return r
+}
+
+func ToEmail(email *database.EmailAddress) *apitype.Email {
+	return &apitype.Email{
 		Email:    email.Email,
 		Verified: email.IsActivated,
 		Primary:  email.IsPrimary,
 	}
 }
 
-func ToBranch(b *database.Branch, c *git.Commit) *api.Branch {
-	return &api.Branch{
+func ToBranch(b *database.Branch, c *git.Commit) *apitype.Branch {
+	return &apitype.Branch{
 		Name:   b.Name,
-		Commit: ToCommit(c),
+		Commit: ToPayloadCommit(c),
 	}
 }
 
 type Tag struct {
-	Name   string             `json:"name"`
-	Commit *api.PayloadCommit `json:"commit"`
+	Name   string                 `json:"name"`
+	Commit *apitype.PayloadCommit `json:"commit"`
 }
 
 func ToTag(b *database.Tag, c *git.Commit) *Tag {
 	return &Tag{
 		Name:   b.Name,
-		Commit: ToCommit(c),
+		Commit: ToPayloadCommit(c),
 	}
 }
 
-func ToCommit(c *git.Commit) *api.PayloadCommit {
+func ToPayloadCommit(c *git.Commit) *apitype.PayloadCommit {
 	authorUsername := ""
 	author, err := database.Handle.Users().GetByEmail(context.TODO(), c.Author.Email)
 	if err == nil {
@@ -49,16 +69,16 @@ func ToCommit(c *git.Commit) *api.PayloadCommit {
 	if err == nil {
 		committerUsername = committer.Name
 	}
-	return &api.PayloadCommit{
+	return &apitype.PayloadCommit{
 		ID:      c.ID.String(),
 		Message: c.Message,
 		URL:     "Not implemented",
-		Author: &api.PayloadUser{
+		Author: &apitype.PayloadUser{
 			Name:     c.Author.Name,
 			Email:    c.Author.Email,
 			UserName: authorUsername,
 		},
-		Committer: &api.PayloadUser{
+		Committer: &apitype.PayloadUser{
 			Name:     c.Committer.Name,
 			Email:    c.Committer.Email,
 			UserName: committerUsername,
@@ -67,8 +87,8 @@ func ToCommit(c *git.Commit) *api.PayloadCommit {
 	}
 }
 
-func ToPublicKey(apiLink string, key *database.PublicKey) *api.PublicKey {
-	return &api.PublicKey{
+func ToPublicKey(apiLink string, key *database.PublicKey) *apitype.PublicKey {
+	return &apitype.PublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
 		URL:     apiLink + strconv.FormatInt(key.ID, 10),
@@ -77,7 +97,7 @@ func ToPublicKey(apiLink string, key *database.PublicKey) *api.PublicKey {
 	}
 }
 
-func ToHook(repoLink string, w *database.Webhook) *api.Hook {
+func ToHook(repoLink string, w *database.Webhook) *apitype.Hook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
@@ -90,7 +110,7 @@ func ToHook(repoLink string, w *database.Webhook) *api.Hook {
 		config["color"] = s.Color
 	}
 
-	return &api.Hook{
+	return &apitype.Hook{
 		ID:      w.ID,
 		Type:    w.HookTaskType.Name(),
 		URL:     fmt.Sprintf("%s/settings/hooks/%d", repoLink, w.ID),
@@ -102,8 +122,8 @@ func ToHook(repoLink string, w *database.Webhook) *api.Hook {
 	}
 }
 
-func ToDeployKey(apiLink string, key *database.DeployKey) *api.DeployKey {
-	return &api.DeployKey{
+func ToDeployKey(apiLink string, key *database.DeployKey) *apitype.DeployKey {
+	return &apitype.DeployKey{
 		ID:       key.ID,
 		Key:      key.Content,
 		URL:      apiLink + strconv.FormatInt(key.ID, 10),
@@ -113,10 +133,10 @@ func ToDeployKey(apiLink string, key *database.DeployKey) *api.DeployKey {
 	}
 }
 
-func ToOrganization(org *database.User) *api.Organization {
-	return &api.Organization{
+func ToOrganization(org *database.User) *apitype.Organization {
+	return &apitype.Organization{
 		ID:          org.ID,
-		AvatarUrl:   org.AvatarURL(),
+		AvatarURL:   org.AvatarURL(),
 		UserName:    org.Name,
 		FullName:    org.FullName,
 		Description: org.Description,
@@ -125,11 +145,218 @@ func ToOrganization(org *database.User) *api.Organization {
 	}
 }
 
-func ToTeam(team *database.Team) *api.Team {
-	return &api.Team{
+func ToTeam(team *database.Team) *apitype.Team {
+	return &apitype.Team{
 		ID:          team.ID,
 		Name:        team.Name,
 		Description: team.Description,
 		Permission:  team.Authorize.String(),
 	}
+}
+
+func ToLabel(l *database.Label) *apitype.Label {
+	return &apitype.Label{
+		ID:    l.ID,
+		Name:  l.Name,
+		Color: strings.TrimLeft(l.Color, "#"),
+	}
+}
+
+func issueState(isClosed bool) apitype.StateType {
+	if isClosed {
+		return apitype.StateClosed
+	}
+	return apitype.StateOpen
+}
+
+// ToIssue converts a database issue to an API issue.
+// It assumes the following fields have been assigned with valid values:
+// Required - Poster, Labels
+// Optional - Milestone, Assignee, PullRequest
+func ToIssue(issue *database.Issue) *apitype.Issue {
+	labels := make([]*apitype.Label, len(issue.Labels))
+	for i := range issue.Labels {
+		labels[i] = ToLabel(issue.Labels[i])
+	}
+
+	apiIssue := &apitype.Issue{
+		ID:       issue.ID,
+		Index:    issue.Index,
+		Poster:   ToUser(issue.Poster),
+		Title:    issue.Title,
+		Body:     issue.Content,
+		Labels:   labels,
+		State:    issueState(issue.IsClosed),
+		Comments: issue.NumComments,
+		Created:  issue.Created,
+		Updated:  issue.Updated,
+	}
+
+	if issue.Milestone != nil {
+		apiIssue.Milestone = ToMilestone(issue.Milestone)
+	}
+	if issue.Assignee != nil {
+		apiIssue.Assignee = ToUser(issue.Assignee)
+	}
+	if issue.IsPull {
+		apiIssue.PullRequest = &apitype.PullRequestMeta{
+			HasMerged: issue.PullRequest.HasMerged,
+		}
+		if issue.PullRequest.HasMerged {
+			apiIssue.PullRequest.Merged = &issue.PullRequest.Merged
+		}
+	}
+
+	return apiIssue
+}
+
+func ToComment(c *database.Comment) *apitype.Comment {
+	return &apitype.Comment{
+		ID:      c.ID,
+		HTMLURL: c.HTMLURL(),
+		Poster:  ToUser(c.Poster),
+		Body:    c.Content,
+		Created: c.Created,
+		Updated: c.Updated,
+	}
+}
+
+func ToMilestone(m *database.Milestone) *apitype.Milestone {
+	ms := &apitype.Milestone{
+		ID:           m.ID,
+		State:        issueState(m.IsClosed),
+		Title:        m.Name,
+		Description:  m.Content,
+		OpenIssues:   m.NumOpenIssues,
+		ClosedIssues: m.NumClosedIssues,
+	}
+	if m.IsClosed {
+		ms.Closed = &m.ClosedDate
+	}
+	if m.Deadline.Year() < 9999 {
+		ms.Deadline = &m.Deadline
+	}
+	return ms
+}
+
+// ToRelease converts a database release to an API release.
+// It assumes the Publisher field has been assigned.
+func ToRelease(r *database.Release) *apitype.Release {
+	return &apitype.Release{
+		ID:              r.ID,
+		TagName:         r.TagName,
+		TargetCommitish: r.Target,
+		Name:            r.Title,
+		Body:            r.Note,
+		Draft:           r.IsDraft,
+		Prerelease:      r.IsPrerelease,
+		Author:          ToUser(r.Publisher),
+		Created:         r.Created,
+	}
+}
+
+func ToCollaborator(c *database.Collaborator) *apitype.Collaborator {
+	return &apitype.Collaborator{
+		User: ToUser(c.User),
+		Permissions: apitype.Permission{
+			Admin: c.Collaboration.Mode >= database.AccessModeAdmin,
+			Push:  c.Collaboration.Mode >= database.AccessModeWrite,
+			Pull:  c.Collaboration.Mode >= database.AccessModeRead,
+		},
+	}
+}
+
+// ToRepository converts a database repository to an API repository.
+// It assumes the Owner field has been loaded on the repo.
+func ToRepository(repo *database.Repository, perm *apitype.Permission, user ...*database.User) *apitype.Repository {
+	cloneLink := repo.CloneLink()
+	apiRepo := &apitype.Repository{
+		ID:            repo.ID,
+		Owner:         ToUser(repo.Owner),
+		Name:          repo.Name,
+		FullName:      repo.FullName(),
+		Description:   repo.Description,
+		Private:       repo.IsPrivate,
+		Fork:          repo.IsFork,
+		Empty:         repo.IsBare,
+		Mirror:        repo.IsMirror,
+		Size:          repo.Size,
+		HTMLURL:       repo.HTMLURL(),
+		SSHURL:        cloneLink.SSH,
+		CloneURL:      cloneLink.HTTPS,
+		Website:       repo.Website,
+		Stars:         repo.NumStars,
+		Forks:         repo.NumForks,
+		Watchers:      repo.NumWatches,
+		OpenIssues:    repo.NumOpenIssues,
+		DefaultBranch: repo.DefaultBranch,
+		Created:       repo.Created,
+		Updated:       repo.Updated,
+		Permissions:   perm,
+	}
+	if repo.IsFork {
+		p := &apitype.Permission{Pull: true}
+		if len(user) != 0 {
+			accessMode := database.Handle.Permissions().AccessMode(
+				context.TODO(),
+				user[0].ID,
+				repo.ID,
+				database.AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			)
+			p.Admin = accessMode >= database.AccessModeAdmin
+			p.Push = accessMode >= database.AccessModeWrite
+		}
+		apiRepo.Parent = ToRepository(repo.BaseRepo, p)
+	}
+	return apiRepo
+}
+
+// ToPullRequest converts a database pull request to an API pull request.
+// It assumes the following fields have been assigned with valid values:
+// Required - Issue, BaseRepo
+// Optional - HeadRepo, Merger
+func ToPullRequest(pr *database.PullRequest) *apitype.PullRequest {
+	var apiHeadRepo *apitype.Repository
+	if pr.HeadRepo == nil {
+		apiHeadRepo = &apitype.Repository{
+			Name: "deleted",
+		}
+	} else {
+		apiHeadRepo = ToRepository(pr.HeadRepo, nil)
+	}
+
+	apiIssue := ToIssue(pr.Issue)
+	apiPullRequest := &apitype.PullRequest{
+		ID:         pr.ID,
+		Index:      pr.Index,
+		Poster:     apiIssue.Poster,
+		Title:      apiIssue.Title,
+		Body:       apiIssue.Body,
+		Labels:     apiIssue.Labels,
+		Milestone:  apiIssue.Milestone,
+		Assignee:   apiIssue.Assignee,
+		State:      apiIssue.State,
+		Comments:   apiIssue.Comments,
+		HeadBranch: pr.HeadBranch,
+		HeadRepo:   apiHeadRepo,
+		BaseBranch: pr.BaseBranch,
+		BaseRepo:   ToRepository(pr.BaseRepo, nil),
+		HTMLURL:    pr.Issue.HTMLURL(),
+		HasMerged:  pr.HasMerged,
+	}
+
+	if pr.Status != database.PullRequestStatusChecking {
+		mergeable := pr.Status != database.PullRequestStatusConflict
+		apiPullRequest.Mergeable = &mergeable
+	}
+	if pr.HasMerged {
+		apiPullRequest.Merged = &pr.Merged
+		apiPullRequest.MergedCommitID = &pr.MergedCommitID
+		apiPullRequest.MergedBy = ToUser(pr.Merger)
+	}
+
+	return apiPullRequest
 }

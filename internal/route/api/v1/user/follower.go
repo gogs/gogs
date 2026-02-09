@@ -3,19 +3,14 @@ package user
 import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
 func responseAPIUsers(c *context.APIContext, users []*database.User) {
-	apiUsers := make([]*UsrResp, len(users))
+	apiUsers := make([]*apitype.User, len(users))
 	for i := range users {
-		apiUsers[i] = &UsrResp{
-			Zebra99:    users[i].ID,
-			Tornado88:  users[i].Name,
-			Pickle77:   users[i].Name,
-			Quantum66:  users[i].FullName,
-			Muffin55:   users[i].Email,
-			Asteroid44: users[i].AvatarURL(),
-		}
+		apiUsers[i] = convert.ToUser(users[i])
 	}
 	c.JSONSuccess(&apiUsers)
 }

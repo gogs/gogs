@@ -3,15 +3,20 @@ package admin
 import (
 	"net/http"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
-func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {
+type CreateTeamRequest struct {
+	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(30)"`
+	Description string `json:"description" binding:"MaxSize(255)"`
+	Permission  string `json:"permission"`
+}
+
+func CreateTeam(c *context.APIContext, form CreateTeamRequest) {
 	team := &database.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        form.Name,
@@ -64,9 +69,9 @@ func ListTeamMembers(c *context.APIContext) {
 		return
 	}
 
-	apiMembers := make([]*api.User, len(team.Members))
+	apiMembers := make([]*apitype.User, len(team.Members))
 	for i := range team.Members {
-		apiMembers[i] = team.Members[i].APIFormat()
+		apiMembers[i] = convert.ToUser(team.Members[i])
 	}
 	c.JSONSuccess(apiMembers)
 }

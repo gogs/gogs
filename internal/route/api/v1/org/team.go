@@ -1,9 +1,8 @@
 package org
 
 import (
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
@@ -14,7 +13,7 @@ func ListTeams(c *context.APIContext) {
 		return
 	}
 
-	apiTeams := make([]*api.Team, len(org.Teams))
+	apiTeams := make([]*apitype.Team, len(org.Teams))
 	for i := range org.Teams {
 		apiTeams[i] = convert.ToTeam(org.Teams[i])
 	}

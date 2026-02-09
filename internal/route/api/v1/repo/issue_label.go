@@ -3,11 +3,15 @@ package repo
 import (
 	"net/http"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/apitype"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
+
+type IssueLabelsRequest struct {
+	Labels []int64 `json:"labels"`
+}
 
 func ListIssueLabels(c *context.APIContext) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
@@ -16,14 +20,14 @@ func ListIssueLabels(c *context.APIContext) {
 		return
 	}
 
-	apiLabels := make([]*api.Label, len(issue.Labels))
+	apiLabels := make([]*apitype.Label, len(issue.Labels))
 	for i := range issue.Labels {
-		apiLabels[i] = issue.Labels[i].APIFormat()
+		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
 
-func AddIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
+func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -47,9 +51,9 @@ func AddIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	apiLabels := make([]*api.Label, len(labels))
+	apiLabels := make([]*apitype.Label, len(labels))
 	for i := range labels {
-		apiLabels[i] = issue.Labels[i].APIFormat()
+		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -79,7 +83,7 @@ func DeleteIssueLabel(c *context.APIContext) {
 	c.NoContent()
 }
 
-func ReplaceIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
+func ReplaceIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -103,9 +107,9 @@ func ReplaceIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	apiLabels := make([]*api.Label, len(labels))
+	apiLabels := make([]*apitype.Label, len(labels))
 	for i := range labels {
-		apiLabels[i] = issue.Labels[i].APIFormat()
+		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
