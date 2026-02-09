@@ -6,10 +6,10 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/urlutil"
 )
 
@@ -153,10 +153,10 @@ func DeleteBranchPost(c *context.Context) {
 		return
 	}
 
-	if err := database.PrepareWebhooks(c.Repo.Repository, database.HookEventTypeDelete, &api.DeletePayload{
+	if err := database.PrepareWebhooks(c.Repo.Repository, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        branchName,
 		RefType:    "branch",
-		PusherType: api.PUSHER_TYPE_USER,
+		PusherType: apiv1types.WebhookPusherTypeUser,
 		Repo:       c.Repo.Repository.APIFormatLegacy(nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {

@@ -7,11 +7,10 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 type DiscordEmbedFooterObject struct {
@@ -67,7 +66,7 @@ func DiscordSHALinkFormatter(url, text string) string {
 }
 
 // getDiscordCreatePayload composes Discord payload for create new branch or tag.
-func getDiscordCreatePayload(p *api.CreatePayload) *DiscordPayload {
+func getDiscordCreatePayload(p *apiv1types.WebhookCreatePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
@@ -78,14 +77,14 @@ func getDiscordCreatePayload(p *api.CreatePayload) *DiscordPayload {
 			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 		}},
 	}
 }
 
 // getDiscordDeletePayload composes Discord payload for delete a branch or tag.
-func getDiscordDeletePayload(p *api.DeletePayload) *DiscordPayload {
+func getDiscordDeletePayload(p *apiv1types.WebhookDeletePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	content := fmt.Sprintf("Deleted %s: %s/%s", p.RefType, repoLink, refName)
@@ -95,14 +94,14 @@ func getDiscordDeletePayload(p *api.DeletePayload) *DiscordPayload {
 			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 		}},
 	}
 }
 
 // getDiscordForkPayload composes Discord payload for forked by a repository.
-func getDiscordForkPayload(p *api.ForkPayload) *DiscordPayload {
+func getDiscordForkPayload(p *apiv1types.WebhookForkPayload) *DiscordPayload {
 	baseLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	forkLink := DiscordLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
 	content := fmt.Sprintf("%s is forked to %s", baseLink, forkLink)
@@ -112,13 +111,13 @@ func getDiscordForkPayload(p *api.ForkPayload) *DiscordPayload {
 			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 		}},
 	}
 }
 
-func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordPushPayload(p *apiv1types.WebhookPushPayload, slack *SlackMeta) *DiscordPayload {
 	// n new commits
 	var (
 		branchName   = git.RefShortName(p.Ref)
@@ -162,37 +161,37 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) *DiscordPayload
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 		}},
 	}
 }
 
-func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordIssuesPayload(p *apiv1types.WebhookIssuesPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	url := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
 	content := ""
 	fields := make([]*DiscordEmbedFieldObject, 0, 1)
 	switch p.Action {
-	case api.HOOK_ISSUE_OPENED:
+	case apiv1types.WebhookIssueOpened:
 		title = "New issue: " + title
 		content = p.Issue.Body
-	case api.HOOK_ISSUE_CLOSED:
+	case apiv1types.WebhookIssueClosed:
 		title = "Issue closed: " + title
-	case api.HOOK_ISSUE_REOPENED:
+	case apiv1types.WebhookIssueReopened:
 		title = "Issue re-opened: " + title
-	case api.HOOK_ISSUE_EDITED:
+	case apiv1types.WebhookIssueEdited:
 		title = "Issue edited: " + title
 		content = p.Issue.Body
-	case api.HOOK_ISSUE_ASSIGNED:
+	case apiv1types.WebhookIssueAssigned:
 		title = "Issue assigned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Assignee",
 			Value: p.Issue.Assignee.UserName,
 		}}
-	case api.HOOK_ISSUE_UNASSIGNED:
+	case apiv1types.WebhookIssueUnassigned:
 		title = "Issue unassigned: " + title
-	case api.HOOK_ISSUE_LABEL_UPDATED:
+	case apiv1types.WebhookIssueLabelUpdated:
 		title = "Issue labels updated: " + title
 		labels := make([]string, len(p.Issue.Labels))
 		for i := range p.Issue.Labels {
@@ -205,17 +204,17 @@ func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) *DiscordPay
 			Name:  "Labels",
 			Value: strings.Join(labels, ", "),
 		}}
-	case api.HOOK_ISSUE_LABEL_CLEARED:
+	case apiv1types.WebhookIssueLabelCleared:
 		title = "Issue labels cleared: " + title
-	case api.HOOK_ISSUE_SYNCHRONIZED:
+	case apiv1types.WebhookIssueSynchronized:
 		title = "Issue synchronized: " + title
-	case api.HOOK_ISSUE_MILESTONED:
+	case apiv1types.WebhookIssueMilestoned:
 		title = "Issue milestoned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Milestone",
 			Value: p.Issue.Milestone.Title,
 		}}
-	case api.HOOK_ISSUE_DEMILESTONED:
+	case apiv1types.WebhookIssueDemilestoned:
 		title = "Issue demilestoned: " + title
 	}
 
@@ -233,26 +232,26 @@ func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) *DiscordPay
 			},
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 			Fields: fields,
 		}},
 	}
 }
 
-func getDiscordIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordIssueCommentPayload(p *apiv1types.WebhookIssueCommentPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 	url := fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID))
 	content := ""
 	fields := make([]*DiscordEmbedFieldObject, 0, 1)
 	switch p.Action {
-	case api.HOOK_ISSUE_COMMENT_CREATED:
+	case apiv1types.WebhookIssueCommentCreated:
 		title = "New comment: " + title
 		content = p.Comment.Body
-	case api.HOOK_ISSUE_COMMENT_EDITED:
+	case apiv1types.WebhookIssueCommentEdited:
 		title = "Comment edited: " + title
 		content = p.Comment.Body
-	case api.HOOK_ISSUE_COMMENT_DELETED:
+	case apiv1types.WebhookIssueCommentDeleted:
 		title = "Comment deleted: " + title
 		url = fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
 		content = p.Comment.Body
@@ -272,42 +271,42 @@ func getDiscordIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta)
 			},
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 			Fields: fields,
 		}},
 	}
 }
 
-func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordPullRequestPayload(p *apiv1types.WebhookPullRequestPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	url := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
 	content := ""
 	fields := make([]*DiscordEmbedFieldObject, 0, 1)
 	switch p.Action {
-	case api.HOOK_ISSUE_OPENED:
+	case apiv1types.WebhookIssueOpened:
 		title = "New pull request: " + title
 		content = p.PullRequest.Body
-	case api.HOOK_ISSUE_CLOSED:
+	case apiv1types.WebhookIssueClosed:
 		if p.PullRequest.HasMerged {
 			title = "Pull request merged: " + title
 		} else {
 			title = "Pull request closed: " + title
 		}
-	case api.HOOK_ISSUE_REOPENED:
+	case apiv1types.WebhookIssueReopened:
 		title = "Pull request re-opened: " + title
-	case api.HOOK_ISSUE_EDITED:
+	case apiv1types.WebhookIssueEdited:
 		title = "Pull request edited: " + title
 		content = p.PullRequest.Body
-	case api.HOOK_ISSUE_ASSIGNED:
+	case apiv1types.WebhookIssueAssigned:
 		title = "Pull request assigned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Assignee",
 			Value: p.PullRequest.Assignee.UserName,
 		}}
-	case api.HOOK_ISSUE_UNASSIGNED:
+	case apiv1types.WebhookIssueUnassigned:
 		title = "Pull request unassigned: " + title
-	case api.HOOK_ISSUE_LABEL_UPDATED:
+	case apiv1types.WebhookIssueLabelUpdated:
 		title = "Pull request labels updated: " + title
 		labels := make([]string, len(p.PullRequest.Labels))
 		for i := range p.PullRequest.Labels {
@@ -317,17 +316,17 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) *
 			Name:  "Labels",
 			Value: strings.Join(labels, ", "),
 		}}
-	case api.HOOK_ISSUE_LABEL_CLEARED:
+	case apiv1types.WebhookIssueLabelCleared:
 		title = "Pull request labels cleared: " + title
-	case api.HOOK_ISSUE_SYNCHRONIZED:
+	case apiv1types.WebhookIssueSynchronized:
 		title = "Pull request synchronized: " + title
-	case api.HOOK_ISSUE_MILESTONED:
+	case apiv1types.WebhookIssueMilestoned:
 		title = "Pull request milestoned: " + title
 		fields = []*DiscordEmbedFieldObject{{
 			Name:  "New Milestone",
 			Value: p.PullRequest.Milestone.Title,
 		}}
-	case api.HOOK_ISSUE_DEMILESTONED:
+	case apiv1types.WebhookIssueDemilestoned:
 		title = "Pull request demilestoned: " + title
 	}
 
@@ -345,14 +344,14 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) *
 			},
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 			Fields: fields,
 		}},
 	}
 }
 
-func getDiscordReleasePayload(p *api.ReleasePayload) *DiscordPayload {
+func getDiscordReleasePayload(p *apiv1types.WebhookReleasePayload) *DiscordPayload {
 	repoLink := DiscordLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
 	refLink := DiscordLinkFormatter(p.Repository.HTMLURL+"/src/"+p.Release.TagName, p.Release.TagName)
 	content := fmt.Sprintf("Published new release %s of %s", refLink, repoLink)
@@ -362,13 +361,13 @@ func getDiscordReleasePayload(p *api.ReleasePayload) *DiscordPayload {
 			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
-				IconURL: p.Sender.AvatarUrl,
+				IconURL: p.Sender.AvatarURL,
 			},
 		}},
 	}
 }
 
-func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
+func GetDiscordPayload(p apiv1types.WebhookPayloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), slack); err != nil {
 		return nil, errors.Newf("unmarshal: %v", err)
@@ -376,21 +375,21 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 
 	switch event {
 	case HookEventTypeCreate:
-		payload = getDiscordCreatePayload(p.(*api.CreatePayload))
+		payload = getDiscordCreatePayload(p.(*apiv1types.WebhookCreatePayload))
 	case HookEventTypeDelete:
-		payload = getDiscordDeletePayload(p.(*api.DeletePayload))
+		payload = getDiscordDeletePayload(p.(*apiv1types.WebhookDeletePayload))
 	case HookEventTypeFork:
-		payload = getDiscordForkPayload(p.(*api.ForkPayload))
+		payload = getDiscordForkPayload(p.(*apiv1types.WebhookForkPayload))
 	case HookEventTypePush:
-		payload = getDiscordPushPayload(p.(*api.PushPayload), slack)
+		payload = getDiscordPushPayload(p.(*apiv1types.WebhookPushPayload), slack)
 	case HookEventTypeIssues:
-		payload = getDiscordIssuesPayload(p.(*api.IssuesPayload), slack)
+		payload = getDiscordIssuesPayload(p.(*apiv1types.WebhookIssuesPayload), slack)
 	case HookEventTypeIssueComment:
-		payload = getDiscordIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
+		payload = getDiscordIssueCommentPayload(p.(*apiv1types.WebhookIssueCommentPayload), slack)
 	case HookEventTypePullRequest:
-		payload = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
+		payload = getDiscordPullRequestPayload(p.(*apiv1types.WebhookPullRequestPayload), slack)
 	case HookEventTypeRelease:
-		payload = getDiscordReleasePayload(p.(*api.ReleasePayload))
+		payload = getDiscordReleasePayload(p.(*apiv1types.WebhookReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)
 	}

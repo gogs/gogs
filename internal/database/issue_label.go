@@ -9,10 +9,10 @@ import (
 	"xorm.io/xorm"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/lazyregexp"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -62,8 +62,8 @@ type Label struct {
 	IsChecked       bool `xorm:"-" json:"-" gorm:"-"`
 }
 
-func (l *Label) APIFormat() *api.Label {
-	return &api.Label{
+func (l *Label) APIFormat() *apiv1types.Label {
+	return &apiv1types.Label{
 		ID:    l.ID,
 		Name:  l.Name,
 		Color: strings.TrimLeft(l.Color, "#"),

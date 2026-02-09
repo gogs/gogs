@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/repoutil"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // BeforeCreate implements the GORM create hook.
@@ -36,19 +36,19 @@ func (r *Repository) AfterFind(_ *gorm.DB) error {
 }
 
 type RepositoryAPIFormatOptions struct {
-	Permission *api.Permission
-	Parent     *api.Repository
+	Permission *apiv1types.RepositoryPermission
+	Parent     *apiv1types.Repository
 }
 
 // APIFormat returns the API format of a repository.
-func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) *api.Repository {
+func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) *apiv1types.Repository {
 	var opt RepositoryAPIFormatOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
 	cloneLink := repoutil.NewCloneLink(owner.Name, r.Name, false)
-	return &api.Repository{
+	return &apiv1types.Repository{
 		ID:            r.ID,
 		Owner:         owner.APIFormat(),
 		Name:          r.Name,

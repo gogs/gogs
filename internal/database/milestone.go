@@ -8,10 +8,10 @@ import (
 	"xorm.io/xorm"
 
 	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Milestone represents a milestone of repository.
@@ -72,19 +72,19 @@ func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 }
 
 // State returns string representation of milestone status.
-func (m *Milestone) State() api.StateType {
+func (m *Milestone) State() apiv1types.StateType {
 	if m.IsClosed {
-		return api.STATE_CLOSED
+		return apiv1types.StateClosed
 	}
-	return api.STATE_OPEN
+	return apiv1types.StateOpen
 }
 
 func (m *Milestone) ChangeStatus(isClosed bool) error {
 	return ChangeMilestoneStatus(m, isClosed)
 }
 
-func (m *Milestone) APIFormat() *api.Milestone {
-	apiMilestone := &api.Milestone{
+func (m *Milestone) APIFormat() *apiv1types.Milestone {
+	apiMilestone := &apiv1types.Milestone{
 		ID:           m.ID,
 		State:        m.State(),
 		Title:        m.Name,
@@ -343,11 +343,11 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 		return errors.Newf("commit: %v", err)
 	}
 
-	var hookAction api.HookIssueAction
+	var hookAction apiv1types.WebhookIssueAction
 	if issue.MilestoneID > 0 {
-		hookAction = api.HOOK_ISSUE_MILESTONED
+		hookAction = apiv1types.WebhookIssueMilestoned
 	} else {
-		hookAction = api.HOOK_ISSUE_DEMILESTONED
+		hookAction = apiv1types.WebhookIssueDemilestoned
 	}
 
 	if issue.IsPull {
@@ -356,7 +356,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 			log.Error("LoadIssue: %v", err)
 			return err
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &api.PullRequestPayload{
+		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
@@ -364,7 +364,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &api.IssuesPayload{
+		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),

@@ -11,10 +11,10 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/process"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Release represents a release of repository.
@@ -90,8 +90,8 @@ func (r *Release) LoadAttributes() error {
 
 // This method assumes some fields assigned with values:
 // Required - Publisher
-func (r *Release) APIFormat() *api.Release {
-	return &api.Release{
+func (r *Release) APIFormat() *apiv1types.RepositoryRelease {
+	return &apiv1types.RepositoryRelease{
 		ID:              r.ID,
 		TagName:         r.TagName,
 		TargetCommitish: r.Target,
@@ -147,8 +147,8 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 }
 
 func (r *Release) preparePublishWebhooks() {
-	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &api.ReleasePayload{
-		Action:     api.HOOK_RELEASE_PUBLISHED,
+	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
+		Action:     apiv1types.WebhookReleasePublished,
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormatLegacy(nil),
 		Sender:     r.Publisher.APIFormat(),

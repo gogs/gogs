@@ -17,12 +17,11 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/netutil"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
 	"gogs.io/gogs/internal/testutil"
 )
@@ -430,21 +429,21 @@ type HookResponse struct {
 
 // HookTask represents a hook task.
 type HookTask struct {
-	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
-	HookID          int64
-	UUID            string
-	Type            HookTaskType
-	URL             string `xorm:"TEXT"`
-	Signature       string `xorm:"TEXT"`
-	api.Payloader   `xorm:"-" json:"-" gorm:"-"`
-	PayloadContent  string `xorm:"TEXT"`
-	ContentType     HookContentType
-	EventType       HookEventType
-	IsSSL           bool
-	IsDelivered     bool
-	Delivered       int64
-	DeliveredString string `xorm:"-" json:"-" gorm:"-"`
+	ID                          int64
+	RepoID                      int64 `xorm:"INDEX"`
+	HookID                      int64
+	UUID                        string
+	Type                        HookTaskType
+	URL                         string `xorm:"TEXT"`
+	Signature                   string `xorm:"TEXT"`
+	apiv1types.WebhookPayloader `xorm:"-" json:"-" gorm:"-"`
+	PayloadContent              string `xorm:"TEXT"`
+	ContentType                 HookContentType
+	EventType                   HookEventType
+	IsSSL                       bool
+	IsDelivered                 bool
+	Delivered                   int64
+	DeliveredString             string `xorm:"-" json:"-" gorm:"-"`
 
 	// History info.
 	IsSucceed       bool
@@ -559,12 +558,12 @@ func UpdateHookTask(t *HookTask) error {
 }
 
 // prepareHookTasks adds list of webhooks to task queue.
-func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Payloader, webhooks []*Webhook) (err error) {
+func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
 	if len(webhooks) == 0 {
 		return nil
 	}
 
-	var payloader api.Payloader
+	var payloader apiv1types.WebhookPayloader
 	for _, w := range webhooks {
 		switch event {
 		case HookEventTypeCreate:
@@ -634,15 +633,15 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 		}
 
 		if err = createHookTask(e, &HookTask{
-			RepoID:      repo.ID,
-			HookID:      w.ID,
-			Type:        w.HookTaskType,
-			URL:         w.URL,
-			Signature:   signature,
-			Payloader:   payloader,
-			ContentType: w.ContentType,
-			EventType:   event,
-			IsSSL:       w.IsSSL,
+			RepoID:           repo.ID,
+			HookID:           w.ID,
+			Type:             w.HookTaskType,
+			URL:              w.URL,
+			Signature:        signature,
+			WebhookPayloader: payloader,
+			ContentType:      w.ContentType,
+			EventType:        event,
+			IsSSL:            w.IsSSL,
 		}); err != nil {
 			return errors.Newf("createHookTask: %v", err)
 		}
@@ -655,7 +654,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 	return nil
 }
 
-func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payloader) error {
+func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	webhooks, err := getActiveWebhooksByRepoID(e, repo.ID)
 	if err != nil {
 		return errors.Newf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
@@ -674,7 +673,7 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 }
 
 // PrepareWebhooks adds all active webhooks to task queue.
-func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+func PrepareWebhooks(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
 	// choose to ignore this function in tests.
 	if x == nil && testutil.InTest {
@@ -684,7 +683,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 }
 
 // TestWebhook adds the test webhook matches the ID to task queue.
-func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhookID int64) error {
+func TestWebhook(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhookID int64) error {
 	webhook, err := GetWebhookOfRepoByID(repo.ID, webhookID)
 	if err != nil {
 		return errors.Newf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)

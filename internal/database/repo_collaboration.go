@@ -1,10 +1,10 @@
 package database
 
 import (
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
-	"github.com/cockroachdb/errors"
-	api "github.com/gogs/go-gogs-client"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Collaboration represent the relation between an individual and a repository.
@@ -87,10 +87,10 @@ type Collaborator struct {
 	Collaboration *Collaboration
 }
 
-func (c *Collaborator) APIFormat() *api.Collaborator {
-	return &api.Collaborator{
+func (c *Collaborator) APIFormat() *apiv1types.Collaborator {
+	return &apiv1types.Collaborator{
 		User: c.User.APIFormat(),
-		Permissions: api.Permission{
+		Permissions: apiv1types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= AccessModeAdmin,
 			Push:  c.Collaboration.Mode >= AccessModeWrite,
 			Pull:  c.Collaboration.Mode >= AccessModeRead,

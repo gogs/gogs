@@ -26,7 +26,6 @@ import (
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/avatar"
@@ -37,6 +36,7 @@ import (
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/repoutil"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/semverutil"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/sync"
@@ -377,9 +377,9 @@ func (r *Repository) DeleteAvatar() error {
 // Arguments that are allowed to be nil: permission
 //
 // Deprecated: Use APIFormat instead.
-func (r *Repository) APIFormatLegacy(permission *api.Permission, user ...*User) *api.Repository {
+func (r *Repository) APIFormatLegacy(permission *apiv1types.RepositoryPermission, user ...*User) *apiv1types.Repository {
 	cloneLink := r.CloneLink()
-	apiRepo := &api.Repository{
+	apiRepo := &apiv1types.Repository{
 		ID:            r.ID,
 		Owner:         r.Owner.APIFormat(),
 		Name:          r.Name,
@@ -406,7 +406,7 @@ func (r *Repository) APIFormatLegacy(permission *api.Permission, user ...*User) 
 		//		AvatarUrl:     r.AvatarLink(),
 	}
 	if r.IsFork {
-		p := &api.Permission{Pull: true}
+		p := &apiv1types.RepositoryPermission{Pull: true}
 		if len(user) != 0 {
 			accessMode := Handle.Permissions().AccessMode(
 				context.TODO(),
@@ -2609,7 +2609,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	if err = repo.UpdateSize(); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 	}
-	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &api.ForkPayload{
+	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{
 		Forkee: repo.APIFormatLegacy(nil),
 		Repo:   baseRepo.APIFormatLegacy(nil),
 		Sender: doer.APIFormat(),
