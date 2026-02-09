@@ -90,7 +90,7 @@ jobs:
             BINARY_NAME="gogs.exe"
           fi
           cp "$BINARY_NAME" dist/gogs/
-          cp LICENSE README.md README_ZH.md dist/gogs/
+          cp LICENSE README.md dist/gogs/
           cp -r scripts dist/gogs/
       - name: Create archives
         working-directory: dist
