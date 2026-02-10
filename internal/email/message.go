@@ -22,8 +22,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 )
 
-type Message struct {
-	Info        string
+type message struct {
+	info        string
 	header      map[string][]string
 	contentType string
 	body        string
@@ -36,7 +36,7 @@ type altPart struct {
 	body        string
 }
 
-func (m *Message) GetHeader(field string) []string {
+func (m *message) getHeader(field string) []string {
 	return m.header[field]
 }
 
@@ -55,7 +55,7 @@ func (cw *countingWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (m *Message) WriteTo(w io.Writer) (int64, error) {
+func (m *message) WriteTo(w io.Writer) (int64, error) {
 	cw := &countingWriter{w: w}
 
 	for _, field := range []string{"From", "To", "Subject", "Date"} {
@@ -136,14 +136,12 @@ func qpWrite(w io.Writer, s string) error {
 	return qw.Close()
 }
 
-// FormatAddress formats an email address with a display name per RFC 5322.
-func FormatAddress(address, name string) string {
+func formatAddress(address, name string) string {
 	addr := mail.Address{Name: name, Address: address}
 	return addr.String()
 }
 
-// NewMessageFrom creates new mail message object with custom From header.
-func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
+func newMessageFrom(to []string, from, subject, htmlBody string) *message {
 	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
 
 	header := make(map[string][]string)
@@ -166,7 +164,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 		}
 	}
 
-	msg := &Message{
+	msg := &message{
 		header:      header,
 		contentType: contentType,
 		body:        body,
@@ -182,17 +180,15 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	return msg
 }
 
-// NewMessage creates new mail message object with default From header.
-func NewMessage(to []string, subject, body string) *Message {
-	return NewMessageFrom(to, conf.Email.From, subject, body)
+func newMessage(to []string, subject, body string) *message {
+	return newMessageFrom(to, conf.Email.From, subject, body)
 }
 
 type loginAuth struct {
 	username, password string
 }
 
-// LoginAuth returns an smtp.Auth implementing the LOGIN authentication mechanism.
-func LoginAuth(username, password string) smtp.Auth {
+func newLoginAuth(username, password string) smtp.Auth {
 	return &loginAuth{username, password}
 }
 
@@ -214,9 +210,9 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
-type Sender struct{}
+type smtpSender struct{}
 
-func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
+func (*smtpSender) Send(from string, to []string, msg io.WriterTo) error {
 	opts := conf.Email
 
 	host, port, err := net.SplitHostPort(opts.Host)
@@ -286,7 +282,7 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 		} else if strings.Contains(options, "PLAIN") {
 			auth = smtp.PlainAuth("", opts.User, opts.Password, host)
 		} else if strings.Contains(options, "LOGIN") {
-			auth = LoginAuth(opts.User, opts.Password)
+			auth = newLoginAuth(opts.User, opts.Password)
 		}
 
 		if auth != nil {
@@ -318,7 +314,7 @@ func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 	return client.Quit()
 }
 
-func sendMessage(sender *Sender, msg *Message) error {
+func sendMessage(sender *smtpSender, msg *message) error {
 	from := msg.header["From"]
 	if len(from) == 0 {
 		return errors.New("missing From header")
@@ -347,19 +343,19 @@ func sendMessage(sender *Sender, msg *Message) error {
 }
 
 func processMailQueue() {
-	sender := &Sender{}
+	sender := &smtpSender{}
 	for msg := range mailQueue {
-		log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
+		log.Trace("New e-mail sending request %s: %s", msg.getHeader("To"), msg.info)
 		if err := sendMessage(sender, msg); err != nil {
-			log.Error("Failed to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+			log.Error("Failed to send emails %s: %s - %v", msg.getHeader("To"), msg.info, err)
 		} else {
-			log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
+			log.Trace("E-mails sent %s: %s", msg.getHeader("To"), msg.info)
 		}
 		msg.confirmChan <- struct{}{}
 	}
 }
 
-var mailQueue chan *Message
+var mailQueue chan *message
 
 // NewContext initializes settings for mailer.
 func NewContext() {
@@ -370,14 +366,14 @@ func NewContext() {
 		return
 	}
 
-	mailQueue = make(chan *Message, 1000)
+	mailQueue = make(chan *message, 1000)
 	go processMailQueue()
 }
 
 // Send puts new message object into mail queue.
 // It returns without confirmation (mail processed asynchronously) in normal cases,
 // but waits/blocks under hook mode to make sure mail has been sent.
-func Send(msg *Message) {
+func Send(msg *message) {
 	if !conf.Email.Enabled {
 		return
 	}

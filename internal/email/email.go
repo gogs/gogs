@@ -71,8 +71,8 @@ func render(tpl string, data map[string]any) (string, error) {
 }
 
 func SendTestMail(email string) error {
-	msg := NewMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
-	return sendMessage(&Sender{}, msg)
+	msg := newMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
+	return sendMessage(&smtpSender{}, msg)
 }
 
 /*
@@ -111,8 +111,8 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 		return
 	}
 
-	msg := NewMessage([]string{u.Email()}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
+	msg := newMessage([]string{u.Email()}, subject, body)
+	msg.info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
 	Send(msg)
 }
@@ -139,8 +139,8 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 		return
 	}
 
-	msg := NewMessage([]string{email}, c.Tr("mail.activate_email"), body)
-	msg.Info = fmt.Sprintf("UID: %d, activate email", u.ID())
+	msg := newMessage([]string{email}, c.Tr("mail.activate_email"), body)
+	msg.info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
 	Send(msg)
 }
@@ -156,8 +156,8 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) {
 		return
 	}
 
-	msg := NewMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
-	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.ID())
+	msg := newMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
+	msg.info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
 	Send(msg)
 }
@@ -177,8 +177,8 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 		return
 	}
 
-	msg := NewMessage([]string{u.Email()}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
+	msg := newMessage([]string{u.Email()}, subject, body)
+	msg.info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
 	Send(msg)
 }
@@ -191,7 +191,7 @@ func composeTplData(subject, body, link string) map[string]any {
 	return data
 }
 
-func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) *Message {
+func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) *message {
 	subject := issue.MailSubject()
 	body := string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
@@ -200,9 +200,9 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := FormatAddress(conf.Email.FromEmail, doer.DisplayName())
-	msg := NewMessageFrom(tos, from, subject, content)
-	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
+	from := formatAddress(conf.Email.FromEmail, doer.DisplayName())
+	msg := newMessageFrom(tos, from, subject, content)
+	msg.info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg
 }
 
