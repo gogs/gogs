@@ -14,8 +14,6 @@ import (
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
-
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
@@ -24,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/repoutil"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"

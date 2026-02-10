@@ -1,25 +1,5 @@
 package types
 
-import "time"
-
-type WebhookPayloadUser struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-}
-
-type WebhookPayloadCommit struct {
-	ID        string              `json:"id"`
-	Message   string              `json:"message"`
-	URL       string              `json:"url"`
-	Author    *WebhookPayloadUser `json:"author"`
-	Committer *WebhookPayloadUser `json:"committer"`
-	Added     []string            `json:"added"`
-	Removed   []string            `json:"removed"`
-	Modified  []string            `json:"modified"`
-	Timestamp time.Time           `json:"timestamp"`
-}
-
 type CommitMeta struct {
 	URL string `json:"url"`
 	SHA string `json:"sha"`

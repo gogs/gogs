@@ -1,6 +1,9 @@
 package types
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 // WebhookPayloader is implemented by webhook payload types.
 type WebhookPayloader interface {
@@ -9,6 +12,24 @@ type WebhookPayloader interface {
 
 func jsonPayload(p any) ([]byte, error) {
 	return json.MarshalIndent(p, "", "  ")
+}
+
+type WebhookPayloadUser struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	UserName string `json:"username"`
+}
+
+type WebhookPayloadCommit struct {
+	ID        string              `json:"id"`
+	Message   string              `json:"message"`
+	URL       string              `json:"url"`
+	Author    *WebhookPayloadUser `json:"author"`
+	Committer *WebhookPayloadUser `json:"committer"`
+	Added     []string            `json:"added"`
+	Removed   []string            `json:"removed"`
+	Modified  []string            `json:"modified"`
+	Timestamp time.Time           `json:"timestamp"`
 }
 
 type WebhookPusherType string
