@@ -86,8 +86,6 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
-	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.11 // indirect
