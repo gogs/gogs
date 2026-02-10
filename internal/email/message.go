@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/inbucket/html2text"
 	gomail "github.com/wneessen/go-mail"
 	log "unknwon.dev/clog/v2"
@@ -19,15 +20,15 @@ type message struct {
 	confirmChan chan struct{}
 }
 
-func newMessageFrom(to []string, from, subject, htmlBody string) *message {
+func newMessageFrom(to []string, from, subject, htmlBody string) (*message, error) {
 	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
 
 	m := gomail.NewMsg()
 	if err := m.From(from); err != nil {
-		log.Error("Failed to set From address %q: %v", from, err)
+		return nil, errors.Wrapf(err, "set From address %q", from)
 	}
 	if err := m.To(to...); err != nil {
-		log.Error("Failed to set To addresses: %v", err)
+		return nil, errors.Wrap(err, "set To addresses")
 	}
 	m.Subject(conf.Email.SubjectPrefix + subject)
 	m.SetDate()
@@ -35,9 +36,9 @@ func newMessageFrom(to []string, from, subject, htmlBody string) *message {
 	if conf.Email.UsePlainText || conf.Email.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
-			log.Error("html2text.FromString: %v", err)
-			m.SetBodyString(gomail.TypeTextHTML, htmlBody)
-		} else if conf.Email.UsePlainText {
+			return nil, errors.Wrap(err, "convert HTML to plain text")
+		}
+		if conf.Email.UsePlainText {
 			m.SetBodyString(gomail.TypeTextPlain, plainBody)
 		} else {
 			m.SetBodyString(gomail.TypeTextPlain, plainBody)
@@ -50,10 +51,10 @@ func newMessageFrom(to []string, from, subject, htmlBody string) *message {
 	return &message{
 		msg:         m,
 		confirmChan: make(chan struct{}),
-	}
+	}, nil
 }
 
-func newMessage(to []string, subject, body string) *message {
+func newMessage(to []string, subject, body string) (*message, error) {
 	return newMessageFrom(to, conf.Email.From, subject, body)
 }
 
