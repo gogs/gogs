@@ -2416,7 +2416,7 @@ func GetWatchers(repoID int64) ([]*Watch, error) {
 func (r *Repository) GetWatchers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
 	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("watch.repo_id=?", r.ID)
-	if conf.UsePostgreSQL || conf.UseMSSQL {
+	if conf.UsePostgreSQL {
 		sess = sess.Join("LEFT", "watch", `"user".id=watch.user_id`)
 	} else {
 		sess = sess.Join("LEFT", "watch", "user.id=watch.user_id")
@@ -2516,7 +2516,7 @@ func IsStaring(userID, repoID int64) bool {
 func (r *Repository) GetStargazers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
 	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("star.repo_id=?", r.ID)
-	if conf.UsePostgreSQL || conf.UseMSSQL {
+	if conf.UsePostgreSQL {
 		sess = sess.Join("LEFT", "star", `"user".id=star.uid`)
 	} else {
 		sess = sess.Join("LEFT", "star", "user.id=star.uid")

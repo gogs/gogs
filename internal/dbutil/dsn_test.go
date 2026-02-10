@@ -32,25 +32,6 @@ func TestParsePostgreSQLHostPort(t *testing.T) {
 	}
 }
 
-func TestParseMSSQLHostPort(t *testing.T) {
-	tests := []struct {
-		info    string
-		expHost string
-		expPort string
-	}{
-		{info: "127.0.0.1:1234", expHost: "127.0.0.1", expPort: "1234"},
-		{info: "127.0.0.1,1234", expHost: "127.0.0.1", expPort: "1234"},
-		{info: "127.0.0.1", expHost: "127.0.0.1", expPort: "1433"},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			host, port := ParseMSSQLHostPort(test.info)
-			assert.Equal(t, test.expHost, host)
-			assert.Equal(t, test.expPort, port)
-		})
-	}
-}
-
 func TestNewDSN(t *testing.T) {
 	t.Run("bad dialect", func(t *testing.T) {
 		_, err := NewDSN(conf.DatabaseOpts{
@@ -112,18 +93,6 @@ func TestNewDSN(t *testing.T) {
 				SSLMode:  "disable",
 			},
 			wantDSN: "user='gogs@local' password='pa$$word' host='127.0.0.1' port='5432' dbname='gogs' sslmode='disable' search_path='test' application_name='gogs'",
-		},
-
-		{
-			name: "mssql",
-			opts: conf.DatabaseOpts{
-				Type:     "mssql",
-				Host:     "127.0.0.1",
-				Name:     "gogs",
-				User:     "gogs@local",
-				Password: "pa$$word",
-			},
-			wantDSN: "server=127.0.0.1; port=1433; database=gogs; user id=gogs@local; password=pa$$word;",
 		},
 
 		{

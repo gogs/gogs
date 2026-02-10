@@ -8,7 +8,6 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
@@ -23,22 +22,6 @@ func ParsePostgreSQLHostPort(info string) (host, port string) {
 		idx := strings.LastIndex(info, ":")
 		host = info[:idx]
 		port = info[idx+1:]
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
-}
-
-// ParseMSSQLHostPort parses given input in various forms for MSSQL and returns
-// proper host and port number.
-func ParseMSSQLHostPort(info string) (host, port string) {
-	host, port = "127.0.0.1", "1433"
-	if strings.Contains(info, ":") {
-		host = strings.Split(info, ":")[0]
-		port = strings.Split(info, ":")[1]
-	} else if strings.Contains(info, ",") {
-		host = strings.Split(info, ",")[0]
-		port = strings.TrimSpace(strings.Split(info, ",")[1])
 	} else if len(info) > 0 {
 		host = info
 	}
@@ -68,11 +51,6 @@ func NewDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 		dsn = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s' application_name='gogs'",
 			opts.User, opts.Password, host, port, opts.Name, opts.SSLMode, opts.Schema)
 
-	case "mssql":
-		host, port := ParseMSSQLHostPort(opts.Host)
-		dsn = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
-			host, port, opts.Name, opts.User, opts.Password)
-
 	case "sqlite3":
 		dsn = "file:" + opts.Path + "?cache=shared&mode=rwc"
 
@@ -97,8 +75,6 @@ func OpenDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
 		dialector = mysql.Open(dsn)
 	case "postgres":
 		dialector = postgres.Open(dsn)
-	case "mssql":
-		dialector = sqlserver.Open(dsn)
 	case "sqlite3":
 		dialector = sqlite.Open(dsn)
 	default:

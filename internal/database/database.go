@@ -91,8 +91,6 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
 	case "sqlite3":
 		conf.UseSQLite3 = true
-	case "mssql":
-		conf.UseMSSQL = true
 	default:
 		panic("unreachable")
 	}

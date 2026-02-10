@@ -510,7 +510,6 @@ var (
 	UseSQLite3    bool
 	UseMySQL      bool
 	UsePostgreSQL bool
-	UseMSSQL      bool
 )
 
 // UsersAvatarPathPrefix is the path prefix to user avatars.
