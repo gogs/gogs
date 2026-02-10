@@ -12,7 +12,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
+func queryIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	issues, err := database.Issues(opts)
 	if err != nil {
 		c.Error(err, "list issues")
@@ -39,27 +39,27 @@ func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	c.JSONSuccess(&apiIssues)
 }
 
-func ListUserIssues(c *context.APIContext) {
+func listUserIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
 		IsClosed:   types.IssueStateType(c.Query("state")) == types.IssueStateClosed,
 	}
 
-	listIssues(c, &opts)
+	queryIssues(c, &opts)
 }
 
-func ListIssues(c *context.APIContext) {
+func listIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
 		Page:     c.QueryInt("page"),
 		IsClosed: types.IssueStateType(c.Query("state")) == types.IssueStateClosed,
 	}
 
-	listIssues(c, &opts)
+	queryIssues(c, &opts)
 }
 
-func GetIssue(c *context.APIContext) {
+func getIssue(c *context.APIContext) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -68,7 +68,7 @@ func GetIssue(c *context.APIContext) {
 	c.JSONSuccess(toIssue(issue))
 }
 
-type CreateIssueRequest struct {
+type createIssueRequest struct {
 	Title     string  `json:"title" binding:"Required"`
 	Body      string  `json:"body"`
 	Assignee  string  `json:"assignee"`
@@ -77,7 +77,7 @@ type CreateIssueRequest struct {
 	Closed    bool    `json:"closed"`
 }
 
-func CreateIssue(c *context.APIContext, form CreateIssueRequest) {
+func createIssue(c *context.APIContext, form createIssueRequest) {
 	issue := &database.Issue{
 		RepoID:   c.Repo.Repository.ID,
 		Title:    form.Title,
@@ -126,7 +126,7 @@ func CreateIssue(c *context.APIContext, form CreateIssueRequest) {
 	c.JSON(http.StatusCreated, toIssue(issue))
 }
 
-type EditIssueRequest struct {
+type editIssueRequest struct {
 	Title     string  `json:"title"`
 	Body      *string `json:"body"`
 	Assignee  *string `json:"assignee"`
@@ -134,7 +134,7 @@ type EditIssueRequest struct {
 	State     *string `json:"state"`
 }
 
-func EditIssue(c *context.APIContext, form EditIssueRequest) {
+func editIssue(c *context.APIContext, form editIssueRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")

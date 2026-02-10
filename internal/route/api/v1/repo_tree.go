@@ -9,7 +9,7 @@ import (
 	"gogs.io/gogs/internal/gitutil"
 )
 
-func GetRepoGitTree(c *context.APIContext) {
+func getRepoGitTree(c *context.APIContext) {
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
 		c.Error(err, "open repository")

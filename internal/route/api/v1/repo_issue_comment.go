@@ -9,7 +9,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ListIssueComments(c *context.APIContext) {
+func listIssueComments(c *context.APIContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
 		var err error
@@ -40,7 +40,7 @@ func ListIssueComments(c *context.APIContext) {
 	c.JSONSuccess(&apiComments)
 }
 
-func ListRepoIssueComments(c *context.APIContext) {
+func listRepoIssueComments(c *context.APIContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
 		var err error
@@ -64,11 +64,11 @@ func ListRepoIssueComments(c *context.APIContext) {
 	c.JSONSuccess(&apiComments)
 }
 
-type CreateIssueCommentRequest struct {
+type createIssueCommentRequest struct {
 	Body string `json:"body" binding:"Required"`
 }
 
-func CreateIssueComment(c *context.APIContext, form CreateIssueCommentRequest) {
+func createIssueComment(c *context.APIContext, form createIssueCommentRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.Error(err, "get issue by index")
@@ -84,11 +84,11 @@ func CreateIssueComment(c *context.APIContext, form CreateIssueCommentRequest) {
 	c.JSON(http.StatusCreated, toIssueComment(comment))
 }
 
-type EditIssueCommentRequest struct {
+type editIssueCommentRequest struct {
 	Body string `json:"body" binding:"Required"`
 }
 
-func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
+func editIssueComment(c *context.APIContext, form editIssueCommentRequest) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
@@ -123,7 +123,7 @@ func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
 	c.JSONSuccess(toIssueComment(comment))
 }
 
-func DeleteIssueComment(c *context.APIContext) {
+func deleteIssueComment(c *context.APIContext) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")

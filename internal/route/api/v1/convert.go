@@ -13,22 +13,18 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
+// toUser converts a database user to an API user with the full name sanitized
+// for safe HTML rendering.
+
 func toUser(u *database.User) *types.User {
 	return &types.User{
 		ID:        u.ID,
 		UserName:  u.Name,
 		Login:     u.Name,
-		FullName:  u.FullName,
+		FullName:  markup.Sanitize(u.FullName),
 		Email:     u.Email,
 		AvatarURL: u.AvatarURL(),
 	}
-}
-
-// toUserSanitized returns a user with the full name sanitized for safe HTML rendering.
-func toUserSanitized(u *database.User) *types.User {
-	r := toUser(u)
-	r.FullName = markup.Sanitize(u.FullName)
-	return r
 }
 
 func toUserEmail(email *database.EmailAddress) *types.UserEmail {

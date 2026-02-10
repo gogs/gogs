@@ -8,13 +8,13 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type AdminCreateTeamRequest struct {
+type adminCreateTeamRequest struct {
 	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	Description string `json:"description" binding:"MaxSize(255)"`
 	Permission  string `json:"permission"`
 }
 
-func AdminCreateTeam(c *context.APIContext, form AdminCreateTeamRequest) {
+func adminCreateTeam(c *context.APIContext, form adminCreateTeamRequest) {
 	team := &database.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        form.Name,
@@ -33,8 +33,8 @@ func AdminCreateTeam(c *context.APIContext, form AdminCreateTeamRequest) {
 	c.JSON(http.StatusCreated, toOrganizationTeam(team))
 }
 
-func AdminAddTeamMember(c *context.APIContext) {
-	u := GetUserByParams(c)
+func adminAddTeamMember(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -46,8 +46,8 @@ func AdminAddTeamMember(c *context.APIContext) {
 	c.NoContent()
 }
 
-func AdminRemoveTeamMember(c *context.APIContext) {
-	u := GetUserByParams(c)
+func adminRemoveTeamMember(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -60,7 +60,7 @@ func AdminRemoveTeamMember(c *context.APIContext) {
 	c.NoContent()
 }
 
-func AdminListTeamMembers(c *context.APIContext) {
+func adminListTeamMembers(c *context.APIContext) {
 	team := c.Org.Team
 	if err := team.GetMembers(); err != nil {
 		c.Error(err, "get team members")

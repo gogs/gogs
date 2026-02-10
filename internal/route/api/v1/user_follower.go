@@ -23,12 +23,12 @@ func listUserFollowers(c *context.APIContext, u *database.User) {
 	responseAPIUsers(c, users)
 }
 
-func ListMyFollowers(c *context.APIContext) {
+func listMyFollowers(c *context.APIContext) {
 	listUserFollowers(c, c.User)
 }
 
-func ListFollowers(c *context.APIContext) {
-	u := GetUserByParams(c)
+func listFollowers(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -44,12 +44,12 @@ func listUserFollowing(c *context.APIContext, u *database.User) {
 	responseAPIUsers(c, users)
 }
 
-func ListMyFollowing(c *context.APIContext) {
+func listMyFollowing(c *context.APIContext) {
 	listUserFollowing(c, c.User)
 }
 
-func ListFollowing(c *context.APIContext) {
-	u := GetUserByParams(c)
+func listFollowing(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -64,28 +64,28 @@ func checkUserFollowing(c *context.APIContext, u *database.User, followID int64)
 	}
 }
 
-func CheckMyFollowing(c *context.APIContext) {
-	target := GetUserByParams(c)
+func checkMyFollowing(c *context.APIContext) {
+	target := getUserByParams(c)
 	if c.Written() {
 		return
 	}
 	checkUserFollowing(c, c.User, target.ID)
 }
 
-func CheckFollowing(c *context.APIContext) {
-	u := GetUserByParams(c)
+func checkFollowing(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	target := GetUserByParamsName(c, ":target")
+	target := getUserByParamsName(c, ":target")
 	if c.Written() {
 		return
 	}
 	checkUserFollowing(c, u, target.ID)
 }
 
-func Follow(c *context.APIContext) {
-	target := GetUserByParams(c)
+func follow(c *context.APIContext) {
+	target := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -96,8 +96,8 @@ func Follow(c *context.APIContext) {
 	c.NoContent()
 }
 
-func Unfollow(c *context.APIContext) {
-	target := GetUserByParams(c)
+func unfollow(c *context.APIContext) {
+	target := getUserByParams(c)
 	if c.Written() {
 		return
 	}

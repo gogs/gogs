@@ -5,7 +5,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ListTeams(c *context.APIContext) {
+func listTeams(c *context.APIContext) {
 	org := c.Org.Organization
 	if err := org.GetTeams(); err != nil {
 		c.Error(err, "get teams")

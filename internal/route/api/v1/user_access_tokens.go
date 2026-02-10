@@ -11,20 +11,20 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-// AccessTokensHandler is the handler for users access tokens API endpoints.
-type AccessTokensHandler struct {
+// accessTokensHandler is the handler for users access tokens API endpoints.
+type accessTokensHandler struct {
 	store AccessTokensStore
 }
 
-// NewAccessTokensHandler returns a new AccessTokensHandler for users access
+// newAccessTokensHandler returns a new accessTokensHandler for users access
 // tokens API endpoints.
-func NewAccessTokensHandler(s AccessTokensStore) *AccessTokensHandler {
-	return &AccessTokensHandler{
+func newAccessTokensHandler(s AccessTokensStore) *accessTokensHandler {
+	return &accessTokensHandler{
 		store: s,
 	}
 }
 
-func (h *AccessTokensHandler) List() macaron.Handler {
+func (h *accessTokensHandler) List() macaron.Handler {
 	return func(c *context.APIContext) {
 		tokens, err := h.store.ListAccessTokens(c.Req.Context(), c.User.ID)
 		if err != nil {
@@ -43,12 +43,12 @@ func (h *AccessTokensHandler) List() macaron.Handler {
 	}
 }
 
-type CreateAccessTokenRequest struct {
+type createAccessTokenRequest struct {
 	Name string `json:"name" binding:"Required"`
 }
 
-func (h *AccessTokensHandler) Create() macaron.Handler {
-	return func(c *context.APIContext, form CreateAccessTokenRequest) {
+func (h *accessTokensHandler) Create() macaron.Handler {
+	return func(c *context.APIContext, form createAccessTokenRequest) {
 		t, err := h.store.CreateAccessToken(c.Req.Context(), c.User.ID, form.Name)
 		if err != nil {
 			if database.IsErrAccessTokenAlreadyExist(err) {
@@ -79,9 +79,9 @@ type AccessTokensStore interface {
 
 type accessTokensStore struct{}
 
-// NewAccessTokensStore returns a new AccessTokensStore using the global
+// newAccessTokensStore returns a new AccessTokensStore using the global
 // database handle.
-func NewAccessTokensStore() AccessTokensStore {
+func newAccessTokensStore() AccessTokensStore {
 	return &accessTokensStore{}
 }
 

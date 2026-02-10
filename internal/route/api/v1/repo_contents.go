@@ -98,7 +98,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 	return content, nil
 }
 
-func GetContents(c *context.APIContext) {
+func getContents(c *context.APIContext) {
 	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
@@ -168,15 +168,15 @@ func GetContents(c *context.APIContext) {
 	c.JSONSuccess(contents)
 }
 
-// PutContentsRequest is the API message for creating or updating a file.
-type PutContentsRequest struct {
+// putContentsRequest is the API message for creating or updating a file.
+type putContentsRequest struct {
 	Message string `json:"message" binding:"Required"`
 	Content string `json:"content" binding:"Required"`
 	Branch  string `json:"branch"`
 }
 
 // PUT /repos/:username/:reponame/contents/*
-func PutContents(c *context.APIContext, r PutContentsRequest) {
+func putContents(c *context.APIContext, r putContentsRequest) {
 	content, err := base64.StdEncoding.DecodeString(r.Content)
 	if err != nil {
 		c.Error(err, "decoding base64")

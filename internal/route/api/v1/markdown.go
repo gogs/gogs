@@ -5,13 +5,13 @@ import (
 	"gogs.io/gogs/internal/markup"
 )
 
-// MarkdownRequest represents the request body for rendering markdown.
-type MarkdownRequest struct {
+// markdownRequest represents the request body for rendering markdown.
+type markdownRequest struct {
 	Text    string
 	Context string
 }
 
-func Markdown(c *context.APIContext, form MarkdownRequest) {
+func markdown(c *context.APIContext, form markdownRequest) {
 	if form.Text == "" {
 		_, _ = c.Write([]byte(""))
 		return
@@ -20,7 +20,7 @@ func Markdown(c *context.APIContext, form MarkdownRequest) {
 	_, _ = c.Write(markup.Markdown([]byte(form.Text), form.Context, nil))
 }
 
-func MarkdownRaw(c *context.APIContext) {
+func markdownRaw(c *context.APIContext) {
 	body, err := c.Req.Body().Bytes()
 	if err != nil {
 		c.Error(err, "read body")

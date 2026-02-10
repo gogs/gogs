@@ -14,11 +14,11 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func SearchRepos(c *context.APIContext) {
+func searchRepos(c *context.APIContext) {
 	opts := &database.SearchRepoOptions{
 		Keyword:  path.Base(c.Query("q")),
 		OwnerID:  c.QueryInt64("uid"),
-		PageSize: toCorrectPageSize(c.QueryInt("limit")),
+		PageSize: toAllowedPageSize(c.QueryInt("limit")),
 		Page:     c.QueryInt("page"),
 	}
 
@@ -71,7 +71,7 @@ func SearchRepos(c *context.APIContext) {
 	})
 }
 
-func listUserRepositories(c *context.APIContext, username string) {
+func listReposOfUser(c *context.APIContext, username string) {
 	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), username)
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
@@ -145,19 +145,19 @@ func listUserRepositories(c *context.APIContext, username string) {
 	c.JSONSuccess(&repos)
 }
 
-func ListMyRepos(c *context.APIContext) {
-	listUserRepositories(c, c.User.Name)
+func listMyRepos(c *context.APIContext) {
+	listReposOfUser(c, c.User.Name)
 }
 
-func ListUserRepositories(c *context.APIContext) {
-	listUserRepositories(c, c.Params(":username"))
+func listUserRepositories(c *context.APIContext) {
+	listReposOfUser(c, c.Params(":username"))
 }
 
-func ListOrgRepositories(c *context.APIContext) {
-	listUserRepositories(c, c.Params(":org"))
+func listOrgRepositories(c *context.APIContext) {
+	listReposOfUser(c, c.Params(":org"))
 }
 
-type CreateRepoRequest struct {
+type createRepoRequest struct {
 	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Description string `json:"description" binding:"MaxSize(255)"`
 	Private     bool   `json:"private"`
@@ -167,7 +167,7 @@ type CreateRepoRequest struct {
 	Readme      string `json:"readme"`
 }
 
-func CreateUserRepo(c *context.APIContext, owner *database.User, opt CreateRepoRequest) {
+func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoRequest) {
 	repo, err := database.CreateRepository(c.User, owner, database.CreateRepoOptionsLegacy{
 		Name:        opt.Name,
 		Description: opt.Description,
@@ -195,16 +195,16 @@ func CreateUserRepo(c *context.APIContext, owner *database.User, opt CreateRepoR
 	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
-func Create(c *context.APIContext, opt CreateRepoRequest) {
+func createRepo(c *context.APIContext, opt createRepoRequest) {
 	// Shouldn't reach this condition, but just in case.
 	if c.User.IsOrganization() {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Not allowed to create repository for organization."))
 		return
 	}
-	CreateUserRepo(c, c.User, opt)
+	createUserRepo(c, c.User, opt)
 }
 
-func CreateOrgRepo(c *context.APIContext, opt CreateRepoRequest) {
+func createOrgRepo(c *context.APIContext, opt createRepoRequest) {
 	org, err := database.GetOrgByName(c.Params(":org"))
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
@@ -215,10 +215,10 @@ func CreateOrgRepo(c *context.APIContext, opt CreateRepoRequest) {
 		c.ErrorStatus(http.StatusForbidden, errors.New("Given user is not owner of organization."))
 		return
 	}
-	CreateUserRepo(c, org, opt)
+	createUserRepo(c, org, opt)
 }
 
-func Migrate(c *context.APIContext, f form.MigrateRepo) {
+func migrate(c *context.APIContext, f form.MigrateRepo) {
 	ctxUser := c.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
@@ -320,7 +320,7 @@ func parseOwnerAndRepo(c *context.APIContext) (*database.User, *database.Reposit
 	return owner, repo
 }
 
-func GetRepo(c *context.APIContext) {
+func getRepo(c *context.APIContext) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -333,7 +333,7 @@ func GetRepo(c *context.APIContext) {
 	}))
 }
 
-func Delete(c *context.APIContext) {
+func deleteRepo(c *context.APIContext) {
 	owner, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -353,7 +353,7 @@ func Delete(c *context.APIContext) {
 	c.NoContent()
 }
 
-func ListForks(c *context.APIContext) {
+func listForks(c *context.APIContext) {
 	forks, err := c.Repo.Repository.GetForks()
 	if err != nil {
 		c.Error(err, "get forks")
@@ -389,7 +389,7 @@ func ListForks(c *context.APIContext) {
 	c.JSONSuccess(&apiForks)
 }
 
-type EditIssueTrackerRequest struct {
+type editIssueTrackerRequest struct {
 	EnableIssues          *bool   `json:"enable_issues"`
 	EnableExternalTracker *bool   `json:"enable_external_tracker"`
 	ExternalTrackerURL    *string `json:"external_tracker_url"`
@@ -397,7 +397,7 @@ type EditIssueTrackerRequest struct {
 	TrackerIssueStyle     *string `json:"tracker_issue_style"`
 }
 
-func IssueTracker(c *context.APIContext, form EditIssueTrackerRequest) {
+func issueTracker(c *context.APIContext, form editIssueTrackerRequest) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -427,14 +427,14 @@ func IssueTracker(c *context.APIContext, form EditIssueTrackerRequest) {
 	c.NoContent()
 }
 
-type EditWikiRequest struct {
+type editWikiRequest struct {
 	EnableWiki         *bool   `json:"enable_wiki"`
 	AllowPublicWiki    *bool   `json:"allow_public_wiki"`
 	EnableExternalWiki *bool   `json:"enable_external_wiki"`
 	ExternalWikiURL    *string `json:"external_wiki_url"`
 }
 
-func Wiki(c *context.APIContext, form EditWikiRequest) {
+func wiki(c *context.APIContext, form editWikiRequest) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -460,7 +460,7 @@ func Wiki(c *context.APIContext, form EditWikiRequest) {
 	c.NoContent()
 }
 
-func MirrorSync(c *context.APIContext) {
+func mirrorSync(c *context.APIContext) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -473,7 +473,7 @@ func MirrorSync(c *context.APIContext) {
 	c.Status(http.StatusAccepted)
 }
 
-func Releases(c *context.APIContext) {
+func releases(c *context.APIContext) {
 	_, repo := parseOwnerAndRepo(c)
 	releases, err := database.GetReleasesByRepoID(repo.ID)
 	if err != nil {

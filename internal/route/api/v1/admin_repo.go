@@ -4,11 +4,11 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-func AdminCreateRepo(c *context.APIContext, form CreateRepoRequest) {
-	owner := GetUserByParams(c)
+func adminCreateRepo(c *context.APIContext, form createRepoRequest) {
+	owner := getUserByParams(c)
 	if c.Written() {
 		return
 	}
 
-	CreateUserRepo(c, owner, form)
+	createUserRepo(c, owner, form)
 }

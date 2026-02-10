@@ -16,8 +16,8 @@ import (
 
 const mediaApplicationSHA = "application/vnd.gogs.sha"
 
-// GetAllCommits returns a slice of commits starting from HEAD.
-func GetAllCommits(c *context.APIContext) {
+// getAllCommits returns a slice of commits starting from HEAD.
+func getAllCommits(c *context.APIContext) {
 	// Get pagesize, set default if it is not specified.
 	pageSize := c.QueryInt("pageSize")
 	if pageSize == 0 {
@@ -49,11 +49,11 @@ func GetAllCommits(c *context.APIContext) {
 	c.JSONSuccess(result)
 }
 
-// GetSingleCommit will return a single Commit object based on the specified SHA.
-func GetSingleCommit(c *context.APIContext) {
+// getSingleCommit will return a single Commit object based on the specified SHA.
+func getSingleCommit(c *context.APIContext) {
 	if strings.Contains(c.Req.Header.Get("Accept"), mediaApplicationSHA) {
 		c.SetParams("*", c.Params(":sha"))
-		GetReferenceSHA(c)
+		getReferenceSHA(c)
 		return
 	}
 
@@ -75,7 +75,7 @@ func GetSingleCommit(c *context.APIContext) {
 	c.JSONSuccess(apiCommit)
 }
 
-func GetReferenceSHA(c *context.APIContext) {
+func getReferenceSHA(c *context.APIContext) {
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
 		c.Error(err, "open repository")

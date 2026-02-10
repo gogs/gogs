@@ -9,7 +9,7 @@ import (
 	routerepo "gogs.io/gogs/internal/route/repo"
 )
 
-func GetRawFile(c *context.APIContext) {
+func getRawFile(c *context.APIContext) {
 	if !c.Repo.HasAccess() {
 		c.NotFound()
 		return
@@ -30,7 +30,7 @@ func GetRawFile(c *context.APIContext) {
 	}
 }
 
-func GetArchive(c *context.APIContext) {
+func getArchive(c *context.APIContext) {
 	repoPath := database.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
@@ -42,7 +42,7 @@ func GetArchive(c *context.APIContext) {
 	routerepo.Download(c.Context)
 }
 
-func GetEditorconfig(c *context.APIContext) {
+func getEditorconfig(c *context.APIContext) {
 	ec, err := c.Repo.Editorconfig()
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get .editorconfig")

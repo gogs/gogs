@@ -8,7 +8,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateOrgRequest struct {
+type createOrgRequest struct {
 	UserName    string `json:"username" binding:"Required"`
 	FullName    string `json:"full_name"`
 	Description string `json:"description"`
@@ -16,7 +16,7 @@ type CreateOrgRequest struct {
 	Location    string `json:"location"`
 }
 
-func CreateOrgForUser(c *context.APIContext, apiForm CreateOrgRequest, user *database.User) {
+func createOrgForUser(c *context.APIContext, apiForm createOrgRequest, user *database.User) {
 	if c.Written() {
 		return
 	}
@@ -43,7 +43,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm CreateOrgRequest, user *dat
 	c.JSON(201, toOrganization(org))
 }
 
-func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
+func listOrgsOfUser(c *context.APIContext, u *database.User, all bool) {
 	orgs, err := database.Handle.Organizations().List(
 		c.Req.Context(),
 		database.ListOrgsOptions{
@@ -63,34 +63,34 @@ func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
 	c.JSONSuccess(&apiOrgs)
 }
 
-func ListMyOrgs(c *context.APIContext) {
-	listUserOrgs(c, c.User, true)
+func listMyOrgs(c *context.APIContext) {
+	listOrgsOfUser(c, c.User, true)
 }
 
-func CreateMyOrg(c *context.APIContext, apiForm CreateOrgRequest) {
-	CreateOrgForUser(c, apiForm, c.User)
+func createMyOrg(c *context.APIContext, apiForm createOrgRequest) {
+	createOrgForUser(c, apiForm, c.User)
 }
 
-func ListUserOrgs(c *context.APIContext) {
-	u := GetUserByParams(c)
+func listUserOrgs(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	listUserOrgs(c, u, false)
+	listOrgsOfUser(c, u, false)
 }
 
-func GetOrg(c *context.APIContext) {
+func getOrg(c *context.APIContext) {
 	c.JSONSuccess(toOrganization(c.Org.Organization))
 }
 
-type EditOrgRequest struct {
+type editOrgRequest struct {
 	FullName    string `json:"full_name"`
 	Description string `json:"description"`
 	Website     string `json:"website"`
 	Location    string `json:"location"`
 }
 
-func EditOrg(c *context.APIContext, form EditOrgRequest) {
+func editOrg(c *context.APIContext, form editOrgRequest) {
 	org := c.Org.Organization
 	if !org.IsOwnedBy(c.User.ID) {
 		c.Status(http.StatusForbidden)

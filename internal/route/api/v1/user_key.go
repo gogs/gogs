@@ -11,7 +11,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func GetUserByParamsName(c *context.APIContext, name string) *database.User {
+func getUserByParamsName(c *context.APIContext, name string) *database.User {
 	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(name))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
@@ -20,15 +20,15 @@ func GetUserByParamsName(c *context.APIContext, name string) *database.User {
 	return user
 }
 
-func GetUserByParams(c *context.APIContext) *database.User {
-	return GetUserByParamsName(c, ":username")
+func getUserByParams(c *context.APIContext) *database.User {
+	return getUserByParamsName(c, ":username")
 }
 
 func composePublicKeysAPILink() string {
 	return conf.Server.ExternalURL + "api/v1/user/keys/"
 }
 
-func listPublicKeys(c *context.APIContext, uid int64) {
+func listPublicKeysOfUser(c *context.APIContext, uid int64) {
 	keys, err := database.ListPublicKeys(uid)
 	if err != nil {
 		c.Error(err, "list public keys")
@@ -44,19 +44,19 @@ func listPublicKeys(c *context.APIContext, uid int64) {
 	c.JSONSuccess(&apiKeys)
 }
 
-func ListMyPublicKeys(c *context.APIContext) {
-	listPublicKeys(c, c.User.ID)
+func listMyPublicKeys(c *context.APIContext) {
+	listPublicKeysOfUser(c, c.User.ID)
 }
 
-func ListPublicKeys(c *context.APIContext) {
-	user := GetUserByParams(c)
+func listPublicKeys(c *context.APIContext) {
+	user := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	listPublicKeys(c, user.ID)
+	listPublicKeysOfUser(c, user.ID)
 }
 
-func GetPublicKey(c *context.APIContext) {
+func getPublicKey(c *context.APIContext) {
 	key, err := database.GetPublicKeyByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get public key by ID")
@@ -67,32 +67,32 @@ func GetPublicKey(c *context.APIContext) {
 	c.JSONSuccess(toUserPublicKey(apiLink, key))
 }
 
-type CreatePublicKeyRequest struct {
+type createPublicKeyRequest struct {
 	Title string `json:"title" binding:"Required"`
 	Key   string `json:"key" binding:"Required"`
 }
 
-func CreateUserPublicKey(c *context.APIContext, form CreatePublicKeyRequest, uid int64) {
+func createUserPublicKey(c *context.APIContext, form createPublicKeyRequest, uid int64) {
 	content, err := database.CheckPublicKeyString(form.Key)
 	if err != nil {
-		HandleCheckKeyStringError(c, err)
+		handleCheckKeyStringError(c, err)
 		return
 	}
 
 	key, err := database.AddPublicKey(uid, form.Title, content)
 	if err != nil {
-		HandleAddKeyError(c, err)
+		handleAddKeyError(c, err)
 		return
 	}
 	apiLink := composePublicKeysAPILink()
 	c.JSON(http.StatusCreated, toUserPublicKey(apiLink, key))
 }
 
-func CreatePublicKey(c *context.APIContext, form CreatePublicKeyRequest) {
-	CreateUserPublicKey(c, form, c.User.ID)
+func createPublicKey(c *context.APIContext, form createPublicKeyRequest) {
+	createUserPublicKey(c, form, c.User.ID)
 }
 
-func DeletePublicKey(c *context.APIContext) {
+func deletePublicKey(c *context.APIContext) {
 	if err := database.DeletePublicKey(c.User, c.ParamsInt64(":id")); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key."))

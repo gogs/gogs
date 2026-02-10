@@ -27,7 +27,7 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 	}
 }
 
-type AdminCreateUserRequest struct {
+type adminCreateUserRequest struct {
 	SourceID   int64  `json:"source_id"`
 	LoginName  string `json:"login_name"`
 	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
@@ -37,7 +37,7 @@ type AdminCreateUserRequest struct {
 	SendNotify bool   `json:"send_notify"`
 }
 
-func AdminCreateUser(c *context.APIContext, form AdminCreateUserRequest) {
+func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
@@ -75,7 +75,7 @@ func AdminCreateUser(c *context.APIContext, form AdminCreateUserRequest) {
 	c.JSON(http.StatusCreated, toUser(u))
 }
 
-type AdminEditUserRequest struct {
+type adminEditUserRequest struct {
 	SourceID         int64  `json:"source_id"`
 	LoginName        string `json:"login_name"`
 	FullName         string `json:"full_name" binding:"MaxSize(100)"`
@@ -90,8 +90,8 @@ type AdminEditUserRequest struct {
 	MaxRepoCreation  *int   `json:"max_repo_creation"`
 }
 
-func AdminEditUser(c *context.APIContext, form AdminEditUserRequest) {
-	u := GetUserByParams(c)
+func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -142,8 +142,8 @@ func AdminEditUser(c *context.APIContext, form AdminEditUserRequest) {
 	c.JSONSuccess(toUser(u))
 }
 
-func AdminDeleteUser(c *context.APIContext) {
-	u := GetUserByParams(c)
+func adminDeleteUser(c *context.APIContext) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -162,10 +162,10 @@ func AdminDeleteUser(c *context.APIContext) {
 	c.NoContent()
 }
 
-func AdminCreatePublicKey(c *context.APIContext, form CreatePublicKeyRequest) {
-	u := GetUserByParams(c)
+func adminCreatePublicKey(c *context.APIContext, form createPublicKeyRequest) {
+	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	CreateUserPublicKey(c, form, u.ID)
+	createUserPublicKey(c, form, u.ID)
 }

@@ -8,7 +8,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func SearchUsers(c *context.APIContext) {
+func searchUsers(c *context.APIContext) {
 	pageSize := c.QueryInt("limit")
 	if pageSize <= 0 {
 		pageSize = 10
@@ -24,7 +24,7 @@ func SearchUsers(c *context.APIContext) {
 
 	results := make([]*types.User, len(users))
 	for i := range users {
-		results[i] = toUserSanitized(users[i])
+		results[i] = toUser(users[i])
 		if !c.IsLogged {
 			results[i].Email = ""
 		}
@@ -36,7 +36,7 @@ func SearchUsers(c *context.APIContext) {
 	})
 }
 
-func GetInfo(c *context.APIContext) {
+func getInfo(c *context.APIContext) {
 	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
@@ -50,6 +50,6 @@ func GetInfo(c *context.APIContext) {
 	c.JSONSuccess(toUser(u))
 }
 
-func GetAuthenticatedUser(c *context.APIContext) {
+func getAuthenticatedUser(c *context.APIContext) {
 	c.JSONSuccess(toUser(c.User))
 }

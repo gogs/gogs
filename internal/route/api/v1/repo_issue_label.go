@@ -8,7 +8,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ListIssueLabels(c *context.APIContext) {
+func listIssueLabels(c *context.APIContext) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -22,11 +22,11 @@ func ListIssueLabels(c *context.APIContext) {
 	c.JSONSuccess(&apiLabels)
 }
 
-type IssueLabelsRequest struct {
+type issueLabelsRequest struct {
 	Labels []int64 `json:"labels"`
 }
 
-func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
+func addIssueLabels(c *context.APIContext, form issueLabelsRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -57,7 +57,7 @@ func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func DeleteIssueLabel(c *context.APIContext) {
+func deleteIssueLabel(c *context.APIContext) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -82,7 +82,7 @@ func DeleteIssueLabel(c *context.APIContext) {
 	c.NoContent()
 }
 
-func ReplaceIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
+func replaceIssueLabels(c *context.APIContext, form issueLabelsRequest) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -113,7 +113,7 @@ func ReplaceIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func ClearIssueLabels(c *context.APIContext) {
+func clearIssueLabels(c *context.APIContext) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")

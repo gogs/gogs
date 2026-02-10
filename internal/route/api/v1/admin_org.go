@@ -4,6 +4,6 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-func AdminCreateOrg(c *context.APIContext, form CreateOrgRequest) {
-	CreateOrgForUser(c, form, GetUserByParams(c))
+func adminCreateOrg(c *context.APIContext, form createOrgRequest) {
+	createOrgForUser(c, form, getUserByParams(c))
 }

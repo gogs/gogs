@@ -13,7 +13,7 @@ import (
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
-func ListHooks(c *context.APIContext) {
+func listHooks(c *context.APIContext) {
 	hooks, err := database.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Errorf(err, "get webhooks by repository ID")
@@ -28,14 +28,14 @@ func ListHooks(c *context.APIContext) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
-type CreateHookRequest struct {
+type createHookRequest struct {
 	Type   string            `json:"type" binding:"Required"`
 	Config map[string]string `json:"config" binding:"Required"`
 	Events []string          `json:"events"`
 	Active bool              `json:"active"`
 }
 
-func CreateHook(c *context.APIContext, form CreateHookRequest) {
+func createHook(c *context.APIContext, form createHookRequest) {
 	if !database.IsValidHookTaskType(form.Type) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid hook type."))
 		return
@@ -106,13 +106,13 @@ func CreateHook(c *context.APIContext, form CreateHookRequest) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
-type EditHookRequest struct {
+type editHookRequest struct {
 	Config map[string]string `json:"config"`
 	Events []string          `json:"events"`
 	Active *bool             `json:"active"`
 }
 
-func EditHook(c *context.APIContext, form EditHookRequest) {
+func editHook(c *context.APIContext, form editHookRequest) {
 	w, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook of repository by ID")
@@ -180,7 +180,7 @@ func EditHook(c *context.APIContext, form EditHookRequest) {
 	c.JSONSuccess(toRepositoryHook(c.Repo.RepoLink, w))
 }
 
-func DeleteHook(c *context.APIContext) {
+func deleteHook(c *context.APIContext) {
 	if err := database.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
 		c.Errorf(err, "delete webhook of repository by ID")
 		return

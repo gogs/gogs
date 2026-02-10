@@ -8,7 +8,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ListCollaborators(c *context.APIContext) {
+func listCollaborators(c *context.APIContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
 		c.Error(err, "get collaborators")
@@ -22,11 +22,11 @@ func ListCollaborators(c *context.APIContext) {
 	c.JSONSuccess(&apiCollaborators)
 }
 
-type AddCollaboratorRequest struct {
+type addCollaboratorRequest struct {
 	Permission *string `json:"permission"`
 }
 
-func AddCollaborator(c *context.APIContext, form AddCollaboratorRequest) {
+func addCollaborator(c *context.APIContext, form addCollaboratorRequest) {
 	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
@@ -52,7 +52,7 @@ func AddCollaborator(c *context.APIContext, form AddCollaboratorRequest) {
 	c.NoContent()
 }
 
-func IsCollaborator(c *context.APIContext) {
+func isCollaborator(c *context.APIContext) {
 	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
@@ -70,7 +70,7 @@ func IsCollaborator(c *context.APIContext) {
 	}
 }
 
-func DeleteCollaborator(c *context.APIContext) {
+func deleteCollaborator(c *context.APIContext) {
 	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {

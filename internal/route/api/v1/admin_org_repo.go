@@ -5,7 +5,7 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func GetRepositoryByParams(c *context.APIContext) *database.Repository {
+func getRepositoryByParams(c *context.APIContext) *database.Repository {
 	repo, err := database.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
 	if err != nil {
 		c.NotFoundOrError(err, "get repository by name")
@@ -14,8 +14,8 @@ func GetRepositoryByParams(c *context.APIContext) *database.Repository {
 	return repo
 }
 
-func AdminAddTeamRepository(c *context.APIContext) {
-	repo := GetRepositoryByParams(c)
+func adminAddTeamRepository(c *context.APIContext) {
+	repo := getRepositoryByParams(c)
 	if c.Written() {
 		return
 	}
@@ -27,8 +27,8 @@ func AdminAddTeamRepository(c *context.APIContext) {
 	c.NoContent()
 }
 
-func AdminRemoveTeamRepository(c *context.APIContext) {
-	repo := GetRepositoryByParams(c)
+func adminRemoveTeamRepository(c *context.APIContext) {
+	repo := getRepositoryByParams(c)
 	if c.Written() {
 		return
 	}

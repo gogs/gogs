@@ -4,7 +4,7 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-func ListTags(c *context.APIContext) {
+func listTags(c *context.APIContext) {
 	tags, err := c.Repo.Repository.GetTags()
 	if err != nil {
 		c.Error(err, "get tags")

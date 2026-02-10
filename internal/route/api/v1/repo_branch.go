@@ -6,7 +6,7 @@ import (
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#get-branch
-func GetBranch(c *context.APIContext) {
+func getBranch(c *context.APIContext) {
 	branch, err := c.Repo.Repository.GetBranch(c.Params("*"))
 	if err != nil {
 		c.NotFoundOrError(err, "get branch")
@@ -23,7 +23,7 @@ func GetBranch(c *context.APIContext) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-branches
-func ListBranches(c *context.APIContext) {
+func listBranches(c *context.APIContext) {
 	branches, err := c.Repo.Repository.GetBranches()
 	if err != nil {
 		c.Error(err, "get branches")

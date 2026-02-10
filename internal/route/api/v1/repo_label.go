@@ -9,7 +9,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ListLabels(c *context.APIContext) {
+func listLabels(c *context.APIContext) {
 	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get labels by repository ID")
@@ -23,7 +23,7 @@ func ListLabels(c *context.APIContext) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func GetLabel(c *context.APIContext) {
+func getLabel(c *context.APIContext) {
 	var label *database.Label
 	var err error
 	idStr := c.Params(":id")
@@ -40,12 +40,12 @@ func GetLabel(c *context.APIContext) {
 	c.JSONSuccess(toIssueLabel(label))
 }
 
-type CreateLabelRequest struct {
+type createLabelRequest struct {
 	Name  string `json:"name" binding:"Required"`
 	Color string `json:"color" binding:"Required;Size(7)"`
 }
 
-func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
+func createLabel(c *context.APIContext, form createLabelRequest) {
 	label := &database.Label{
 		Name:   form.Name,
 		Color:  form.Color,
@@ -58,12 +58,12 @@ func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
 	c.JSON(http.StatusCreated, toIssueLabel(label))
 }
 
-type EditLabelRequest struct {
+type editLabelRequest struct {
 	Name  *string `json:"name"`
 	Color *string `json:"color"`
 }
 
-func EditLabel(c *context.APIContext, form EditLabelRequest) {
+func editLabel(c *context.APIContext, form editLabelRequest) {
 	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get label of repository by ID")
@@ -83,7 +83,7 @@ func EditLabel(c *context.APIContext, form EditLabelRequest) {
 	c.JSONSuccess(toIssueLabel(label))
 }
 
-func DeleteLabel(c *context.APIContext) {
+func deleteLabel(c *context.APIContext) {
 	if err := database.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
 		c.Error(err, "delete label")
 		return

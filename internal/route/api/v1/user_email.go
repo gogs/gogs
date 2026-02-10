@@ -11,7 +11,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ListEmails(c *context.APIContext) {
+func listEmails(c *context.APIContext) {
 	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "get email addresses")
@@ -24,11 +24,11 @@ func ListEmails(c *context.APIContext) {
 	c.JSONSuccess(&apiEmails)
 }
 
-type CreateEmailRequest struct {
+type createEmailRequest struct {
 	Emails []string `json:"emails"`
 }
 
-func AddEmail(c *context.APIContext, form CreateEmailRequest) {
+func addEmail(c *context.APIContext, form createEmailRequest) {
 	if len(form.Emails) == 0 {
 		c.Status(http.StatusUnprocessableEntity)
 		return
@@ -54,7 +54,7 @@ func AddEmail(c *context.APIContext, form CreateEmailRequest) {
 	c.JSON(http.StatusCreated, &apiEmails)
 }
 
-func DeleteEmail(c *context.APIContext, form CreateEmailRequest) {
+func deleteEmail(c *context.APIContext, form createEmailRequest) {
 	for _, email := range form.Emails {
 		if email == c.User.Email {
 			c.ErrorStatus(http.StatusBadRequest, errors.Errorf("cannot delete primary email %q", email))
