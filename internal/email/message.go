@@ -2,13 +2,10 @@ package email
 
 import (
 	"crypto/tls"
-	"io"
 	"net"
-	"net/smtp"
-	"os"
+	"strconv"
 	"strings"
 
-	"github.com/cockroachdb/errors"
 	"github.com/inbucket/html2text"
 	gomail "github.com/wneessen/go-mail"
 	log "unknwon.dev/clog/v2"
@@ -60,156 +57,69 @@ func newMessage(to []string, subject, body string) *message {
 	return newMessageFrom(to, conf.Email.From, subject, body)
 }
 
-type loginAuth struct {
-	username, password string
-}
-
-func newLoginAuth(username, password string) smtp.Auth {
-	return &loginAuth{username, password}
-}
-
-func (*loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
-	return "LOGIN", []byte{}, nil
-}
-
-func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
-	if more {
-		switch string(fromServer) {
-		case "Username:":
-			return []byte(a.username), nil
-		case "Password:":
-			return []byte(a.password), nil
-		default:
-			return nil, errors.Newf("unknwon fromServer: %s", string(fromServer))
-		}
-	}
-	return nil, nil
-}
-
-type smtpSender struct{}
-
-func (*smtpSender) Send(from string, to []string, msg io.WriterTo) error {
+func newSMTPClient() (*gomail.Client, error) {
 	opts := conf.Email
 
-	host, port, err := net.SplitHostPort(opts.Host)
+	host, portStr, err := net.SplitHostPort(opts.Host)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return nil, err
+	}
+
+	clientOpts := []gomail.Option{
+		gomail.WithPort(port),
+	}
+
+	if strings.HasSuffix(portStr, "465") {
+		clientOpts = append(clientOpts, gomail.WithSSL())
+	} else {
+		clientOpts = append(clientOpts, gomail.WithTLSPolicy(gomail.TLSOpportunistic))
+	}
+
+	if opts.HELOHostname != "" {
+		clientOpts = append(clientOpts, gomail.WithHELO(opts.HELOHostname))
 	}
 
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: opts.SkipVerify,
 		ServerName:         host,
 	}
-
 	if opts.UseCertificate {
 		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
+	clientOpts = append(clientOpts, gomail.WithTLSConfig(tlsconfig))
 
-	conn, err := net.Dial("tcp", net.JoinHostPort(host, port))
+	if len(opts.User) > 0 {
+		clientOpts = append(clientOpts,
+			gomail.WithSMTPAuth(gomail.SMTPAuthAutoDiscover),
+			gomail.WithUsername(opts.User),
+			gomail.WithPassword(opts.Password),
+		)
+	}
+
+	return gomail.NewClient(host, clientOpts...)
+}
+
+func sendMessage(msg *message) error {
+	client, err := newSMTPClient()
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-
-	isSecureConn := false
-	// Start TLS directly if the port ends with 465 (SMTPS protocol)
-	if strings.HasSuffix(port, "465") {
-		conn = tls.Client(conn, tlsconfig)
-		isSecureConn = true
-	}
-
-	client, err := smtp.NewClient(conn, host)
-	if err != nil {
-		return errors.Newf("NewClient: %v", err)
-	}
-
-	if !opts.DisableHELO {
-		hostname := opts.HELOHostname
-		if hostname == "" {
-			hostname, err = os.Hostname()
-			if err != nil {
-				return err
-			}
-		}
-
-		if err = client.Hello(hostname); err != nil {
-			return errors.Newf("hello: %v", err)
-		}
-	}
-
-	// If not using SMTPS, always use STARTTLS if available
-	hasStartTLS, _ := client.Extension("STARTTLS")
-	if !isSecureConn && hasStartTLS {
-		if err = client.StartTLS(tlsconfig); err != nil {
-			return errors.Newf("StartTLS: %v", err)
-		}
-	}
-
-	canAuth, options := client.Extension("AUTH")
-	if canAuth && len(opts.User) > 0 {
-		var auth smtp.Auth
-
-		if strings.Contains(options, "CRAM-MD5") {
-			auth = smtp.CRAMMD5Auth(opts.User, opts.Password)
-		} else if strings.Contains(options, "PLAIN") {
-			auth = smtp.PlainAuth("", opts.User, opts.Password, host)
-		} else if strings.Contains(options, "LOGIN") {
-			auth = newLoginAuth(opts.User, opts.Password)
-		}
-
-		if auth != nil {
-			if err = client.Auth(auth); err != nil {
-				return errors.Newf("auth: %v", err)
-			}
-		}
-	}
-
-	if err = client.Mail(from); err != nil {
-		return errors.Newf("mail: %v", err)
-	}
-
-	for _, rec := range to {
-		if err = client.Rcpt(rec); err != nil {
-			return errors.Newf("rcpt: %v", err)
-		}
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return errors.Newf("data: %v", err)
-	} else if _, err = msg.WriteTo(w); err != nil {
-		return errors.Newf("write to: %v", err)
-	} else if err = w.Close(); err != nil {
-		return errors.Newf("close: %v", err)
-	}
-
-	return client.Quit()
-}
-
-func sendMessage(sender *smtpSender, msg *message) error {
-	from, err := msg.msg.GetSender(false)
-	if err != nil {
-		return errors.Wrap(err, "get sender")
-	}
-
-	recipients, err := msg.msg.GetRecipients()
-	if err != nil {
-		return errors.Wrap(err, "get recipients")
-	}
-
-	return sender.Send(from, recipients, msg.msg)
+	return client.DialAndSend(msg.msg)
 }
 
 func processMailQueue() {
-	sender := &smtpSender{}
 	for msg := range mailQueue {
 		to := strings.Join(msg.msg.GetToString(), ", ")
 		log.Trace("New e-mail sending request %s: %s", to, msg.info)
-		if err := sendMessage(sender, msg); err != nil {
+		if err := sendMessage(msg); err != nil {
 			log.Error("Failed to send emails %s: %s - %v", to, msg.info, err)
 		} else {
 			log.Trace("E-mails sent %s: %s", to, msg.info)

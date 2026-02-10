@@ -56,7 +56,6 @@ var (
 		User          string
 		Password      string
 
-		DisableHELO  bool   `ini:"DISABLE_HELO"`
 		HELOHostname string `ini:"HELO_HOSTNAME"`
 
 		SkipVerify     bool

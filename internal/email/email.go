@@ -73,7 +73,7 @@ func render(tpl string, data map[string]any) (string, error) {
 
 func SendTestMail(email string) error {
 	msg := newMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
-	return sendMessage(&smtpSender{}, msg)
+	return sendMessage(msg)
 }
 
 /*
