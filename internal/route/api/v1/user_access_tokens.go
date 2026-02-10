@@ -11,10 +11,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateAccessTokenRequest struct {
-	Name string `json:"name" binding:"Required"`
-}
-
 // AccessTokensHandler is the handler for users access tokens API endpoints.
 type AccessTokensHandler struct {
 	store AccessTokensStore
@@ -45,6 +41,10 @@ func (h *AccessTokensHandler) List() macaron.Handler {
 		}
 		c.JSONSuccess(&apiTokens)
 	}
+}
+
+type CreateAccessTokenRequest struct {
+	Name string `json:"name" binding:"Required"`
 }
 
 func (h *AccessTokensHandler) Create() macaron.Handler {

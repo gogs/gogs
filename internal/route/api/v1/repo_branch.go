@@ -19,7 +19,7 @@ func GetBranch(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(ToBranch(branch, commit))
+	c.JSONSuccess(toBranch(branch, commit))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-branches
@@ -37,7 +37,7 @@ func ListBranches(c *context.APIContext) {
 			c.Error(err, "get commit")
 			return
 		}
-		apiBranches[i] = ToBranch(branches[i], commit)
+		apiBranches[i] = toBranch(branches[i], commit)
 	}
 
 	c.JSONSuccess(&apiBranches)

@@ -13,7 +13,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func ToUser(u *database.User) *types.User {
+func toUser(u *database.User) *types.User {
 	return &types.User{
 		ID:        u.ID,
 		UserName:  u.Name,
@@ -24,14 +24,14 @@ func ToUser(u *database.User) *types.User {
 	}
 }
 
-// ToUserSanitized returns a user with the full name sanitized for safe HTML rendering.
-func ToUserSanitized(u *database.User) *types.User {
-	r := ToUser(u)
+// toUserSanitized returns a user with the full name sanitized for safe HTML rendering.
+func toUserSanitized(u *database.User) *types.User {
+	r := toUser(u)
 	r.FullName = markup.Sanitize(u.FullName)
 	return r
 }
 
-func ToUserEmail(email *database.EmailAddress) *types.UserEmail {
+func toUserEmail(email *database.EmailAddress) *types.UserEmail {
 	return &types.UserEmail{
 		Email:    email.Email,
 		Verified: email.IsActivated,
@@ -39,26 +39,26 @@ func ToUserEmail(email *database.EmailAddress) *types.UserEmail {
 	}
 }
 
-func ToBranch(b *database.Branch, c *git.Commit) *types.RepositoryBranch {
+func toBranch(b *database.Branch, c *git.Commit) *types.RepositoryBranch {
 	return &types.RepositoryBranch{
 		Name:   b.Name,
-		Commit: ToPayloadCommit(c),
+		Commit: toPayloadCommit(c),
 	}
 }
 
-type Tag struct {
+type tag struct {
 	Name   string                      `json:"name"`
 	Commit *types.WebhookPayloadCommit `json:"commit"`
 }
 
-func ToTag(b *database.Tag, c *git.Commit) *Tag {
-	return &Tag{
+func toTag(b *database.Tag, c *git.Commit) *tag {
+	return &tag{
 		Name:   b.Name,
-		Commit: ToPayloadCommit(c),
+		Commit: toPayloadCommit(c),
 	}
 }
 
-func ToPayloadCommit(c *git.Commit) *types.WebhookPayloadCommit {
+func toPayloadCommit(c *git.Commit) *types.WebhookPayloadCommit {
 	authorUsername := ""
 	author, err := database.Handle.Users().GetByEmail(context.TODO(), c.Author.Email)
 	if err == nil {
@@ -87,7 +87,7 @@ func ToPayloadCommit(c *git.Commit) *types.WebhookPayloadCommit {
 	}
 }
 
-func ToUserPublicKey(apiLink string, key *database.PublicKey) *types.UserPublicKey {
+func toUserPublicKey(apiLink string, key *database.PublicKey) *types.UserPublicKey {
 	return &types.UserPublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
@@ -97,7 +97,7 @@ func ToUserPublicKey(apiLink string, key *database.PublicKey) *types.UserPublicK
 	}
 }
 
-func ToRepositoryHook(repoLink string, w *database.Webhook) *types.RepositoryHook {
+func toRepositoryHook(repoLink string, w *database.Webhook) *types.RepositoryHook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
@@ -122,7 +122,7 @@ func ToRepositoryHook(repoLink string, w *database.Webhook) *types.RepositoryHoo
 	}
 }
 
-func ToDeployKey(apiLink string, key *database.DeployKey) *types.RepositoryDeployKey {
+func toDeployKey(apiLink string, key *database.DeployKey) *types.RepositoryDeployKey {
 	return &types.RepositoryDeployKey{
 		ID:       key.ID,
 		Key:      key.Content,
@@ -133,7 +133,7 @@ func ToDeployKey(apiLink string, key *database.DeployKey) *types.RepositoryDeplo
 	}
 }
 
-func ToOrganization(org *database.User) *types.Organization {
+func toOrganization(org *database.User) *types.Organization {
 	return &types.Organization{
 		ID:          org.ID,
 		AvatarURL:   org.AvatarURL(),
@@ -145,7 +145,7 @@ func ToOrganization(org *database.User) *types.Organization {
 	}
 }
 
-func ToOrganizationTeam(team *database.Team) *types.OrganizationTeam {
+func toOrganizationTeam(team *database.Team) *types.OrganizationTeam {
 	return &types.OrganizationTeam{
 		ID:          team.ID,
 		Name:        team.Name,
@@ -154,7 +154,7 @@ func ToOrganizationTeam(team *database.Team) *types.OrganizationTeam {
 	}
 }
 
-func ToIssueLabel(l *database.Label) *types.IssueLabel {
+func toIssueLabel(l *database.Label) *types.IssueLabel {
 	return &types.IssueLabel{
 		ID:    l.ID,
 		Name:  l.Name,
@@ -169,20 +169,20 @@ func issueState(isClosed bool) types.IssueStateType {
 	return types.IssueStateOpen
 }
 
-// ToIssue converts a database issue to an API issue.
+// toIssue converts a database issue to an API issue.
 // It assumes the following fields have been assigned with valid values:
 // Required - Poster, Labels
 // Optional - Milestone, Assignee, PullRequest
-func ToIssue(issue *database.Issue) *types.Issue {
+func toIssue(issue *database.Issue) *types.Issue {
 	labels := make([]*types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
-		labels[i] = ToIssueLabel(issue.Labels[i])
+		labels[i] = toIssueLabel(issue.Labels[i])
 	}
 
 	apiIssue := &types.Issue{
 		ID:       issue.ID,
 		Index:    issue.Index,
-		Poster:   ToUser(issue.Poster),
+		Poster:   toUser(issue.Poster),
 		Title:    issue.Title,
 		Body:     issue.Content,
 		Labels:   labels,
@@ -193,10 +193,10 @@ func ToIssue(issue *database.Issue) *types.Issue {
 	}
 
 	if issue.Milestone != nil {
-		apiIssue.Milestone = ToIssueMilestone(issue.Milestone)
+		apiIssue.Milestone = toIssueMilestone(issue.Milestone)
 	}
 	if issue.Assignee != nil {
-		apiIssue.Assignee = ToUser(issue.Assignee)
+		apiIssue.Assignee = toUser(issue.Assignee)
 	}
 	if issue.IsPull {
 		apiIssue.PullRequest = &types.PullRequestMeta{
@@ -210,18 +210,18 @@ func ToIssue(issue *database.Issue) *types.Issue {
 	return apiIssue
 }
 
-func ToIssueComment(c *database.Comment) *types.IssueComment {
+func toIssueComment(c *database.Comment) *types.IssueComment {
 	return &types.IssueComment{
 		ID:      c.ID,
 		HTMLURL: c.HTMLURL(),
-		Poster:  ToUser(c.Poster),
+		Poster:  toUser(c.Poster),
 		Body:    c.Content,
 		Created: c.Created,
 		Updated: c.Updated,
 	}
 }
 
-func ToIssueMilestone(m *database.Milestone) *types.IssueMilestone {
+func toIssueMilestone(m *database.Milestone) *types.IssueMilestone {
 	ms := &types.IssueMilestone{
 		ID:           m.ID,
 		State:        issueState(m.IsClosed),
@@ -239,9 +239,9 @@ func ToIssueMilestone(m *database.Milestone) *types.IssueMilestone {
 	return ms
 }
 
-// ToRelease converts a database release to an API release.
+// toRelease converts a database release to an API release.
 // It assumes the Publisher field has been assigned.
-func ToRelease(r *database.Release) *types.RepositoryRelease {
+func toRelease(r *database.Release) *types.RepositoryRelease {
 	return &types.RepositoryRelease{
 		ID:              r.ID,
 		TagName:         r.TagName,
@@ -250,14 +250,14 @@ func ToRelease(r *database.Release) *types.RepositoryRelease {
 		Body:            r.Note,
 		Draft:           r.IsDraft,
 		Prerelease:      r.IsPrerelease,
-		Author:          ToUser(r.Publisher),
+		Author:          toUser(r.Publisher),
 		Created:         r.Created,
 	}
 }
 
-func ToRepositoryCollaborator(c *database.Collaborator) *types.RepositoryCollaborator {
+func toRepositoryCollaborator(c *database.Collaborator) *types.RepositoryCollaborator {
 	return &types.RepositoryCollaborator{
-		User: ToUser(c.User),
+		User: toUser(c.User),
 		Permissions: types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= database.AccessModeAdmin,
 			Push:  c.Collaboration.Mode >= database.AccessModeWrite,
@@ -266,13 +266,13 @@ func ToRepositoryCollaborator(c *database.Collaborator) *types.RepositoryCollabo
 	}
 }
 
-// ToRepository converts a database repository to an API repository.
+// toRepository converts a database repository to an API repository.
 // It assumes the Owner field has been loaded on the repo.
-func ToRepository(repo *database.Repository, perm *types.RepositoryPermission, user ...*database.User) *types.Repository {
+func toRepository(repo *database.Repository, perm *types.RepositoryPermission) *types.Repository {
 	cloneLink := repo.CloneLink()
 	apiRepo := &types.Repository{
 		ID:            repo.ID,
-		Owner:         ToUser(repo.Owner),
+		Owner:         toUser(repo.Owner),
 		Name:          repo.Name,
 		FullName:      repo.FullName(),
 		Description:   repo.Description,
@@ -296,67 +296,7 @@ func ToRepository(repo *database.Repository, perm *types.RepositoryPermission, u
 	}
 	if repo.IsFork {
 		p := &types.RepositoryPermission{Pull: true}
-		if len(user) != 0 {
-			accessMode := database.Handle.Permissions().AccessMode(
-				context.TODO(),
-				user[0].ID,
-				repo.ID,
-				database.AccessModeOptions{
-					OwnerID: repo.OwnerID,
-					Private: repo.IsPrivate,
-				},
-			)
-			p.Admin = accessMode >= database.AccessModeAdmin
-			p.Push = accessMode >= database.AccessModeWrite
-		}
-		apiRepo.Parent = ToRepository(repo.BaseRepo, p)
+		apiRepo.Parent = toRepository(repo.BaseRepo, p)
 	}
 	return apiRepo
-}
-
-// ToPullRequest converts a database pull request to an API pull request.
-// It assumes the following fields have been assigned with valid values:
-// Required - Issue, BaseRepo
-// Optional - HeadRepo, Merger
-func ToPullRequest(pr *database.PullRequest) *types.PullRequest {
-	var apiHeadRepo *types.Repository
-	if pr.HeadRepo == nil {
-		apiHeadRepo = &types.Repository{
-			Name: "deleted",
-		}
-	} else {
-		apiHeadRepo = ToRepository(pr.HeadRepo, nil)
-	}
-
-	apiIssue := ToIssue(pr.Issue)
-	apiPullRequest := &types.PullRequest{
-		ID:         pr.ID,
-		Index:      pr.Index,
-		Poster:     apiIssue.Poster,
-		Title:      apiIssue.Title,
-		Body:       apiIssue.Body,
-		Labels:     apiIssue.Labels,
-		Milestone:  apiIssue.Milestone,
-		Assignee:   apiIssue.Assignee,
-		State:      apiIssue.State,
-		Comments:   apiIssue.Comments,
-		HeadBranch: pr.HeadBranch,
-		HeadRepo:   apiHeadRepo,
-		BaseBranch: pr.BaseBranch,
-		BaseRepo:   ToRepository(pr.BaseRepo, nil),
-		HTMLURL:    pr.Issue.HTMLURL(),
-		HasMerged:  pr.HasMerged,
-	}
-
-	if pr.Status != database.PullRequestStatusChecking {
-		mergeable := pr.Status != database.PullRequestStatusConflict
-		apiPullRequest.Mergeable = &mergeable
-	}
-	if pr.HasMerged {
-		apiPullRequest.Merged = &pr.Merged
-		apiPullRequest.MergedCommitID = &pr.MergedCommitID
-		apiPullRequest.MergedBy = ToUser(pr.Merger)
-	}
-
-	return apiPullRequest
 }

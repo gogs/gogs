@@ -12,23 +12,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateIssueRequest struct {
-	Title     string  `json:"title" binding:"Required"`
-	Body      string  `json:"body"`
-	Assignee  string  `json:"assignee"`
-	Milestone int64   `json:"milestone"`
-	Labels    []int64 `json:"labels"`
-	Closed    bool    `json:"closed"`
-}
-
-type EditIssueRequest struct {
-	Title     string  `json:"title"`
-	Body      *string `json:"body"`
-	Assignee  *string `json:"assignee"`
-	Milestone *int64  `json:"milestone"`
-	State     *string `json:"state"`
-}
-
 func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	issues, err := database.Issues(opts)
 	if err != nil {
@@ -49,7 +32,7 @@ func listIssues(c *context.APIContext, opts *database.IssuesOptions) {
 			c.Error(err, "load attributes")
 			return
 		}
-		apiIssues[i] = ToIssue(issues[i])
+		apiIssues[i] = toIssue(issues[i])
 	}
 
 	c.SetLinkHeader(int(count), conf.UI.IssuePagingNum)
@@ -82,7 +65,16 @@ func GetIssue(c *context.APIContext) {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
-	c.JSONSuccess(ToIssue(issue))
+	c.JSONSuccess(toIssue(issue))
+}
+
+type CreateIssueRequest struct {
+	Title     string  `json:"title" binding:"Required"`
+	Body      string  `json:"body"`
+	Assignee  string  `json:"assignee"`
+	Milestone int64   `json:"milestone"`
+	Labels    []int64 `json:"labels"`
+	Closed    bool    `json:"closed"`
 }
 
 func CreateIssue(c *context.APIContext, form CreateIssueRequest) {
@@ -131,7 +123,15 @@ func CreateIssue(c *context.APIContext, form CreateIssueRequest) {
 		c.Error(err, "get issue by ID")
 		return
 	}
-	c.JSON(http.StatusCreated, ToIssue(issue))
+	c.JSON(http.StatusCreated, toIssue(issue))
+}
+
+type EditIssueRequest struct {
+	Title     string  `json:"title"`
+	Body      *string `json:"body"`
+	Assignee  *string `json:"assignee"`
+	Milestone *int64  `json:"milestone"`
+	State     *string `json:"state"`
 }
 
 func EditIssue(c *context.APIContext, form EditIssueRequest) {
@@ -202,5 +202,5 @@ func EditIssue(c *context.APIContext, form EditIssueRequest) {
 		c.Error(err, "get issue by ID")
 		return
 	}
-	c.JSON(http.StatusCreated, ToIssue(issue))
+	c.JSON(http.StatusCreated, toIssue(issue))
 }

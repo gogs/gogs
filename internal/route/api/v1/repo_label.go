@@ -9,16 +9,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateLabelRequest struct {
-	Name  string `json:"name" binding:"Required"`
-	Color string `json:"color" binding:"Required;Size(7)"`
-}
-
-type EditLabelRequest struct {
-	Name  *string `json:"name"`
-	Color *string `json:"color"`
-}
-
 func ListLabels(c *context.APIContext) {
 	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
@@ -28,7 +18,7 @@ func ListLabels(c *context.APIContext) {
 
 	apiLabels := make([]*types.IssueLabel, len(labels))
 	for i := range labels {
-		apiLabels[i] = ToIssueLabel(labels[i])
+		apiLabels[i] = toIssueLabel(labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -47,7 +37,12 @@ func GetLabel(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(ToIssueLabel(label))
+	c.JSONSuccess(toIssueLabel(label))
+}
+
+type CreateLabelRequest struct {
+	Name  string `json:"name" binding:"Required"`
+	Color string `json:"color" binding:"Required;Size(7)"`
 }
 
 func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
@@ -60,7 +55,12 @@ func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
 		c.Error(err, "new labels")
 		return
 	}
-	c.JSON(http.StatusCreated, ToIssueLabel(label))
+	c.JSON(http.StatusCreated, toIssueLabel(label))
+}
+
+type EditLabelRequest struct {
+	Name  *string `json:"name"`
+	Color *string `json:"color"`
 }
 
 func EditLabel(c *context.APIContext, form EditLabelRequest) {
@@ -80,7 +80,7 @@ func EditLabel(c *context.APIContext, form EditLabelRequest) {
 		c.Error(err, "update label")
 		return
 	}
-	c.JSONSuccess(ToIssueLabel(label))
+	c.JSONSuccess(toIssueLabel(label))
 }
 
 func DeleteLabel(c *context.APIContext) {

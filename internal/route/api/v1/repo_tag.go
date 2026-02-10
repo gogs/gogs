@@ -11,14 +11,14 @@ func ListTags(c *context.APIContext) {
 		return
 	}
 
-	apiTags := make([]*Tag, len(tags))
+	apiTags := make([]*tag, len(tags))
 	for i := range tags {
 		commit, err := tags[i].GetCommit()
 		if err != nil {
 			c.Error(err, "get commit")
 			return
 		}
-		apiTags[i] = ToTag(tags[i], commit)
+		apiTags[i] = toTag(tags[i], commit)
 	}
 
 	c.JSONSuccess(&apiTags)

@@ -24,7 +24,7 @@ func SearchUsers(c *context.APIContext) {
 
 	results := make([]*types.User, len(users))
 	for i := range users {
-		results[i] = ToUserSanitized(users[i])
+		results[i] = toUserSanitized(users[i])
 		if !c.IsLogged {
 			results[i].Email = ""
 		}
@@ -47,9 +47,9 @@ func GetInfo(c *context.APIContext) {
 	if !c.IsLogged {
 		u.Email = ""
 	}
-	c.JSONSuccess(ToUser(u))
+	c.JSONSuccess(toUser(u))
 }
 
 func GetAuthenticatedUser(c *context.APIContext) {
-	c.JSONSuccess(ToUser(c.User))
+	c.JSONSuccess(toUser(c.User))
 }

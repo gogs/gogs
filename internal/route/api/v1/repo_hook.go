@@ -12,19 +12,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateHookRequest struct {
-	Type   string            `json:"type" binding:"Required"`
-	Config map[string]string `json:"config" binding:"Required"`
-	Events []string          `json:"events"`
-	Active bool              `json:"active"`
-}
-
-type EditHookRequest struct {
-	Config map[string]string `json:"config"`
-	Events []string          `json:"events"`
-	Active *bool             `json:"active"`
-}
-
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
 func ListHooks(c *context.APIContext) {
 	hooks, err := database.GetWebhooksByRepoID(c.Repo.Repository.ID)
@@ -35,12 +22,19 @@ func ListHooks(c *context.APIContext) {
 
 	apiHooks := make([]*types.RepositoryHook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = ToRepositoryHook(c.Repo.RepoLink, hooks[i])
+		apiHooks[i] = toRepositoryHook(c.Repo.RepoLink, hooks[i])
 	}
 	c.JSONSuccess(&apiHooks)
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
+type CreateHookRequest struct {
+	Type   string            `json:"type" binding:"Required"`
+	Config map[string]string `json:"config" binding:"Required"`
+	Events []string          `json:"events"`
+	Active bool              `json:"active"`
+}
+
 func CreateHook(c *context.APIContext, form CreateHookRequest) {
 	if !database.IsValidHookTaskType(form.Type) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid hook type."))
@@ -108,10 +102,16 @@ func CreateHook(c *context.APIContext, form CreateHookRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToRepositoryHook(c.Repo.RepoLink, w))
+	c.JSON(http.StatusCreated, toRepositoryHook(c.Repo.RepoLink, w))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
+type EditHookRequest struct {
+	Config map[string]string `json:"config"`
+	Events []string          `json:"events"`
+	Active *bool             `json:"active"`
+}
+
 func EditHook(c *context.APIContext, form EditHookRequest) {
 	w, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
@@ -177,7 +177,7 @@ func EditHook(c *context.APIContext, form EditHookRequest) {
 		return
 	}
 
-	c.JSONSuccess(ToRepositoryHook(c.Repo.RepoLink, w))
+	c.JSONSuccess(toRepositoryHook(c.Repo.RepoLink, w))
 }
 
 func DeleteHook(c *context.APIContext) {

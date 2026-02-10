@@ -8,10 +8,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type IssueLabelsRequest struct {
-	Labels []int64 `json:"labels"`
-}
-
 func ListIssueLabels(c *context.APIContext) {
 	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
@@ -21,9 +17,13 @@ func ListIssueLabels(c *context.APIContext) {
 
 	apiLabels := make([]*types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
-		apiLabels[i] = ToIssueLabel(issue.Labels[i])
+		apiLabels[i] = toIssueLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
+}
+
+type IssueLabelsRequest struct {
+	Labels []int64 `json:"labels"`
 }
 
 func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
@@ -52,7 +52,7 @@ func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 
 	apiLabels := make([]*types.IssueLabel, len(labels))
 	for i := range labels {
-		apiLabels[i] = ToIssueLabel(issue.Labels[i])
+		apiLabels[i] = toIssueLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -108,7 +108,7 @@ func ReplaceIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 
 	apiLabels := make([]*types.IssueLabel, len(labels))
 	for i := range labels {
-		apiLabels[i] = ToIssueLabel(issue.Labels[i])
+		apiLabels[i] = toIssueLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }

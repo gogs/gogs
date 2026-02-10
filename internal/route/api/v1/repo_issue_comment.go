@@ -9,14 +9,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateIssueCommentRequest struct {
-	Body string `json:"body" binding:"Required"`
-}
-
-type EditIssueCommentRequest struct {
-	Body string `json:"body" binding:"Required"`
-}
-
 func ListIssueComments(c *context.APIContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
@@ -43,7 +35,7 @@ func ListIssueComments(c *context.APIContext) {
 
 	apiComments := make([]*types.IssueComment, len(comments))
 	for i := range comments {
-		apiComments[i] = ToIssueComment(comments[i])
+		apiComments[i] = toIssueComment(comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
@@ -67,9 +59,13 @@ func ListRepoIssueComments(c *context.APIContext) {
 
 	apiComments := make([]*types.IssueComment, len(comments))
 	for i := range comments {
-		apiComments[i] = ToIssueComment(comments[i])
+		apiComments[i] = toIssueComment(comments[i])
 	}
 	c.JSONSuccess(&apiComments)
+}
+
+type CreateIssueCommentRequest struct {
+	Body string `json:"body" binding:"Required"`
 }
 
 func CreateIssueComment(c *context.APIContext, form CreateIssueCommentRequest) {
@@ -85,7 +81,11 @@ func CreateIssueComment(c *context.APIContext, form CreateIssueCommentRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToIssueComment(comment))
+	c.JSON(http.StatusCreated, toIssueComment(comment))
+}
+
+type EditIssueCommentRequest struct {
+	Body string `json:"body" binding:"Required"`
 }
 
 func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
@@ -120,7 +120,7 @@ func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
 		c.Error(err, "update comment")
 		return
 	}
-	c.JSONSuccess(ToIssueComment(comment))
+	c.JSONSuccess(toIssueComment(comment))
 }
 
 func DeleteIssueComment(c *context.APIContext) {

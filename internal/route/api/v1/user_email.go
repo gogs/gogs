@@ -11,10 +11,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateEmailRequest struct {
-	Emails []string `json:"emails"`
-}
-
 func ListEmails(c *context.APIContext) {
 	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
@@ -23,9 +19,13 @@ func ListEmails(c *context.APIContext) {
 	}
 	apiEmails := make([]*types.UserEmail, len(emails))
 	for i := range emails {
-		apiEmails[i] = ToUserEmail(emails[i])
+		apiEmails[i] = toUserEmail(emails[i])
 	}
 	c.JSONSuccess(&apiEmails)
+}
+
+type CreateEmailRequest struct {
+	Emails []string `json:"emails"`
 }
 
 func AddEmail(c *context.APIContext, form CreateEmailRequest) {

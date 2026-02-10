@@ -14,7 +14,7 @@ func GetRepositoryByParams(c *context.APIContext) *database.Repository {
 	return repo
 }
 
-func AddTeamRepository(c *context.APIContext) {
+func AdminAddTeamRepository(c *context.APIContext) {
 	repo := GetRepositoryByParams(c)
 	if c.Written() {
 		return
@@ -27,7 +27,7 @@ func AddTeamRepository(c *context.APIContext) {
 	c.NoContent()
 }
 
-func RemoveTeamRepository(c *context.APIContext) {
+func AdminRemoveTeamRepository(c *context.APIContext) {
 	repo := GetRepositoryByParams(c)
 	if c.Written() {
 		return

@@ -14,7 +14,7 @@ type CreateTeamRequest struct {
 	Permission  string `json:"permission"`
 }
 
-func CreateTeam(c *context.APIContext, form CreateTeamRequest) {
+func AdminCreateTeam(c *context.APIContext, form CreateTeamRequest) {
 	team := &database.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        form.Name,
@@ -30,10 +30,10 @@ func CreateTeam(c *context.APIContext, form CreateTeamRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToOrganizationTeam(team))
+	c.JSON(http.StatusCreated, toOrganizationTeam(team))
 }
 
-func AddTeamMember(c *context.APIContext) {
+func AdminAddTeamMember(c *context.APIContext) {
 	u := GetUserByParams(c)
 	if c.Written() {
 		return
@@ -46,7 +46,7 @@ func AddTeamMember(c *context.APIContext) {
 	c.NoContent()
 }
 
-func RemoveTeamMember(c *context.APIContext) {
+func AdminRemoveTeamMember(c *context.APIContext) {
 	u := GetUserByParams(c)
 	if c.Written() {
 		return
@@ -60,7 +60,7 @@ func RemoveTeamMember(c *context.APIContext) {
 	c.NoContent()
 }
 
-func ListTeamMembers(c *context.APIContext) {
+func AdminListTeamMembers(c *context.APIContext) {
 	team := c.Org.Team
 	if err := team.GetMembers(); err != nil {
 		c.Error(err, "get team members")
@@ -69,7 +69,7 @@ func ListTeamMembers(c *context.APIContext) {
 
 	apiMembers := make([]*types.User, len(team.Members))
 	for i := range team.Members {
-		apiMembers[i] = ToUser(team.Members[i])
+		apiMembers[i] = toUser(team.Members[i])
 	}
 	c.JSONSuccess(apiMembers)
 }

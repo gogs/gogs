@@ -11,11 +11,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreatePublicKeyRequest struct {
-	Title string `json:"title" binding:"Required"`
-	Key   string `json:"key" binding:"Required"`
-}
-
 func GetUserByParamsName(c *context.APIContext, name string) *database.User {
 	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(name))
 	if err != nil {
@@ -43,7 +38,7 @@ func listPublicKeys(c *context.APIContext, uid int64) {
 	apiLink := composePublicKeysAPILink()
 	apiKeys := make([]*types.UserPublicKey, len(keys))
 	for i := range keys {
-		apiKeys[i] = ToUserPublicKey(apiLink, keys[i])
+		apiKeys[i] = toUserPublicKey(apiLink, keys[i])
 	}
 
 	c.JSONSuccess(&apiKeys)
@@ -69,7 +64,12 @@ func GetPublicKey(c *context.APIContext) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	c.JSONSuccess(ToUserPublicKey(apiLink, key))
+	c.JSONSuccess(toUserPublicKey(apiLink, key))
+}
+
+type CreatePublicKeyRequest struct {
+	Title string `json:"title" binding:"Required"`
+	Key   string `json:"key" binding:"Required"`
 }
 
 func CreateUserPublicKey(c *context.APIContext, form CreatePublicKeyRequest, uid int64) {
@@ -85,7 +85,7 @@ func CreateUserPublicKey(c *context.APIContext, form CreatePublicKeyRequest, uid
 		return
 	}
 	apiLink := composePublicKeysAPILink()
-	c.JSON(http.StatusCreated, ToUserPublicKey(apiLink, key))
+	c.JSON(http.StatusCreated, toUserPublicKey(apiLink, key))
 }
 
 func CreatePublicKey(c *context.APIContext, form CreatePublicKeyRequest) {

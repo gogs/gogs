@@ -14,36 +14,11 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateRepoRequest struct {
-	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Description string `json:"description" binding:"MaxSize(255)"`
-	Private     bool   `json:"private"`
-	AutoInit    bool   `json:"auto_init"`
-	Gitignores  string `json:"gitignores"`
-	License     string `json:"license"`
-	Readme      string `json:"readme"`
-}
-
-type EditIssueTrackerRequest struct {
-	EnableIssues          *bool   `json:"enable_issues"`
-	EnableExternalTracker *bool   `json:"enable_external_tracker"`
-	ExternalTrackerURL    *string `json:"external_tracker_url"`
-	TrackerURLFormat      *string `json:"tracker_url_format"`
-	TrackerIssueStyle     *string `json:"tracker_issue_style"`
-}
-
-type EditWikiRequest struct {
-	EnableWiki         *bool   `json:"enable_wiki"`
-	AllowPublicWiki    *bool   `json:"allow_public_wiki"`
-	EnableExternalWiki *bool   `json:"enable_external_wiki"`
-	ExternalWikiURL    *string `json:"external_wiki_url"`
-}
-
 func SearchRepos(c *context.APIContext) {
 	opts := &database.SearchRepoOptions{
 		Keyword:  path.Base(c.Query("q")),
 		OwnerID:  c.QueryInt64("uid"),
-		PageSize: ToCorrectPageSize(c.QueryInt("limit")),
+		PageSize: toCorrectPageSize(c.QueryInt("limit")),
 		Page:     c.QueryInt("page"),
 	}
 
@@ -86,7 +61,7 @@ func SearchRepos(c *context.APIContext) {
 
 	results := make([]*types.Repository, len(repos))
 	for i := range repos {
-		results[i] = ToRepository(repos[i], nil)
+		results[i] = toRepository(repos[i], nil)
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
@@ -130,7 +105,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 	if c.User.ID != user.ID {
 		repos := make([]*types.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = ToRepository(ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
+			repos[i] = toRepository(ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -154,12 +129,12 @@ func listUserRepositories(c *context.APIContext, username string) {
 	numOwnRepos := len(ownRepos)
 	repos := make([]*types.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
-		repos = append(repos, ToRepository(r, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+		repos = append(repos, toRepository(r, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 	}
 
 	for repo, access := range accessibleReposWithAccessMode {
 		repos = append(repos,
-			ToRepository(repo, &types.RepositoryPermission{
+			toRepository(repo, &types.RepositoryPermission{
 				Admin: access >= database.AccessModeAdmin,
 				Push:  access >= database.AccessModeWrite,
 				Pull:  true,
@@ -180,6 +155,16 @@ func ListUserRepositories(c *context.APIContext) {
 
 func ListOrgRepositories(c *context.APIContext) {
 	listUserRepositories(c, c.Params(":org"))
+}
+
+type CreateRepoRequest struct {
+	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Description string `json:"description" binding:"MaxSize(255)"`
+	Private     bool   `json:"private"`
+	AutoInit    bool   `json:"auto_init"`
+	Gitignores  string `json:"gitignores"`
+	License     string `json:"license"`
+	Readme      string `json:"readme"`
 }
 
 func CreateUserRepo(c *context.APIContext, owner *database.User, opt CreateRepoRequest) {
@@ -207,7 +192,7 @@ func CreateUserRepo(c *context.APIContext, owner *database.User, opt CreateRepoR
 		return
 	}
 
-	c.JSON(201, ToRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 func Create(c *context.APIContext, opt CreateRepoRequest) {
@@ -311,7 +296,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, ToRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
@@ -341,7 +326,7 @@ func GetRepo(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(ToRepository(repo, &types.RepositoryPermission{
+	c.JSONSuccess(toRepository(repo, &types.RepositoryPermission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
@@ -392,7 +377,7 @@ func ListForks(c *context.APIContext) {
 			},
 		)
 
-		apiForks[i] = ToRepository(forks[i],
+		apiForks[i] = toRepository(forks[i],
 			&types.RepositoryPermission{
 				Admin: accessMode >= database.AccessModeAdmin,
 				Push:  accessMode >= database.AccessModeWrite,
@@ -402,6 +387,14 @@ func ListForks(c *context.APIContext) {
 	}
 
 	c.JSONSuccess(&apiForks)
+}
+
+type EditIssueTrackerRequest struct {
+	EnableIssues          *bool   `json:"enable_issues"`
+	EnableExternalTracker *bool   `json:"enable_external_tracker"`
+	ExternalTrackerURL    *string `json:"external_tracker_url"`
+	TrackerURLFormat      *string `json:"tracker_url_format"`
+	TrackerIssueStyle     *string `json:"tracker_issue_style"`
 }
 
 func IssueTracker(c *context.APIContext, form EditIssueTrackerRequest) {
@@ -432,6 +425,13 @@ func IssueTracker(c *context.APIContext, form EditIssueTrackerRequest) {
 	}
 
 	c.NoContent()
+}
+
+type EditWikiRequest struct {
+	EnableWiki         *bool   `json:"enable_wiki"`
+	AllowPublicWiki    *bool   `json:"allow_public_wiki"`
+	EnableExternalWiki *bool   `json:"enable_external_wiki"`
+	ExternalWikiURL    *string `json:"external_wiki_url"`
 }
 
 func Wiki(c *context.APIContext, form EditWikiRequest) {
@@ -490,7 +490,7 @@ func Releases(c *context.APIContext) {
 		r.Publisher = publisher
 	}
 	for _, r := range releases {
-		apiReleases = append(apiReleases, ToRelease(r))
+		apiReleases = append(apiReleases, toRelease(r))
 	}
 
 	c.JSONSuccess(&apiReleases)

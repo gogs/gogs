@@ -16,13 +16,6 @@ type CreateOrgRequest struct {
 	Location    string `json:"location"`
 }
 
-type EditOrgRequest struct {
-	FullName    string `json:"full_name"`
-	Description string `json:"description"`
-	Website     string `json:"website"`
-	Location    string `json:"location"`
-}
-
 func CreateOrgForUser(c *context.APIContext, apiForm CreateOrgRequest, user *database.User) {
 	if c.Written() {
 		return
@@ -47,7 +40,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm CreateOrgRequest, user *dat
 		return
 	}
 
-	c.JSON(201, ToOrganization(org))
+	c.JSON(201, toOrganization(org))
 }
 
 func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
@@ -65,7 +58,7 @@ func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
 
 	apiOrgs := make([]*types.Organization, len(orgs))
 	for i := range orgs {
-		apiOrgs[i] = ToOrganization(orgs[i])
+		apiOrgs[i] = toOrganization(orgs[i])
 	}
 	c.JSONSuccess(&apiOrgs)
 }
@@ -87,7 +80,14 @@ func ListUserOrgs(c *context.APIContext) {
 }
 
 func GetOrg(c *context.APIContext) {
-	c.JSONSuccess(ToOrganization(c.Org.Organization))
+	c.JSONSuccess(toOrganization(c.Org.Organization))
+}
+
+type EditOrgRequest struct {
+	FullName    string `json:"full_name"`
+	Description string `json:"description"`
+	Website     string `json:"website"`
+	Location    string `json:"location"`
 }
 
 func EditOrg(c *context.APIContext, form EditOrgRequest) {
@@ -117,5 +117,5 @@ func EditOrg(c *context.APIContext, form EditOrgRequest) {
 		c.Error(err, "get organization")
 		return
 	}
-	c.JSONSuccess(ToOrganization(org))
+	c.JSONSuccess(toOrganization(org))
 }

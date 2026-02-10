@@ -8,10 +8,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type AddCollaboratorRequest struct {
-	Permission *string `json:"permission"`
-}
-
 func ListCollaborators(c *context.APIContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
@@ -21,9 +17,13 @@ func ListCollaborators(c *context.APIContext) {
 
 	apiCollaborators := make([]*types.RepositoryCollaborator, len(collaborators))
 	for i := range collaborators {
-		apiCollaborators[i] = ToRepositoryCollaborator(collaborators[i])
+		apiCollaborators[i] = toRepositoryCollaborator(collaborators[i])
 	}
 	c.JSONSuccess(&apiCollaborators)
+}
+
+type AddCollaboratorRequest struct {
+	Permission *string `json:"permission"`
 }
 
 func AddCollaborator(c *context.APIContext, form AddCollaboratorRequest) {

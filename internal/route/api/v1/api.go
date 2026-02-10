@@ -386,33 +386,33 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
-				m.Post("", bind(CreateUserRequest{}), CreateUser)
+				m.Post("", bind(CreateUserRequest{}), AdminCreateUser)
 
 				m.Group("/:username", func() {
 					m.Combo("").
-						Patch(bind(EditUserRequest{}), EditUser).
-						Delete(DeleteUser)
+						Patch(bind(EditUserRequest{}), AdminEditUser).
+						Delete(AdminDeleteUser)
 					m.Post("/keys", bind(CreatePublicKeyRequest{}), AdminCreatePublicKey)
-					m.Post("/orgs", bind(CreateOrgRequest{}), CreateOrg)
-					m.Post("/repos", bind(CreateRepoRequest{}), CreateRepo)
+					m.Post("/orgs", bind(CreateOrgRequest{}), AdminCreateOrg)
+					m.Post("/repos", bind(CreateRepoRequest{}), AdminCreateRepo)
 				})
 			})
 
 			m.Group("/orgs/:orgname", func() {
 				m.Group("/teams", func() {
-					m.Post("", orgAssignment(true), bind(CreateTeamRequest{}), CreateTeam)
+					m.Post("", orgAssignment(true), bind(CreateTeamRequest{}), AdminCreateTeam)
 				})
 			})
 
 			m.Group("/teams", func() {
 				m.Group("/:teamid", func() {
-					m.Get("/members", ListTeamMembers)
+					m.Get("/members", AdminListTeamMembers)
 					m.Combo("/members/:username").
-						Put(AddTeamMember).
-						Delete(RemoveTeamMember)
+						Put(AdminAddTeamMember).
+						Delete(AdminRemoveTeamMember)
 					m.Combo("/repos/:reponame").
-						Put(AddTeamRepository).
-						Delete(RemoveTeamRepository)
+						Put(AdminAddTeamRepository).
+						Delete(AdminRemoveTeamRepository)
 				}, orgAssignment(false, true))
 			})
 		}, reqAdmin())

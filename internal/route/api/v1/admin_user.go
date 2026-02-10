@@ -11,31 +11,6 @@ import (
 	"gogs.io/gogs/internal/email"
 )
 
-type CreateUserRequest struct {
-	SourceID   int64  `json:"source_id"`
-	LoginName  string `json:"login_name"`
-	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
-	FullName   string `json:"full_name" binding:"MaxSize(100)"`
-	Email      string `json:"email" binding:"Required;Email;MaxSize(254)"`
-	Password   string `json:"password" binding:"MaxSize(255)"`
-	SendNotify bool   `json:"send_notify"`
-}
-
-type EditUserRequest struct {
-	SourceID         int64  `json:"source_id"`
-	LoginName        string `json:"login_name"`
-	FullName         string `json:"full_name" binding:"MaxSize(100)"`
-	Email            string `json:"email" binding:"Required;Email;MaxSize(254)"`
-	Password         string `json:"password" binding:"MaxSize(255)"`
-	Website          string `json:"website" binding:"MaxSize(50)"`
-	Location         string `json:"location" binding:"MaxSize(50)"`
-	Active           *bool  `json:"active"`
-	Admin            *bool  `json:"admin"`
-	AllowGitHook     *bool  `json:"allow_git_hook"`
-	AllowImportLocal *bool  `json:"allow_import_local"`
-	MaxRepoCreation  *int   `json:"max_repo_creation"`
-}
-
 func parseLoginSource(c *context.APIContext, sourceID int64) {
 	if sourceID == 0 {
 		return
@@ -52,7 +27,17 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 	}
 }
 
-func CreateUser(c *context.APIContext, form CreateUserRequest) {
+type CreateUserRequest struct {
+	SourceID   int64  `json:"source_id"`
+	LoginName  string `json:"login_name"`
+	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
+	FullName   string `json:"full_name" binding:"MaxSize(100)"`
+	Email      string `json:"email" binding:"Required;Email;MaxSize(254)"`
+	Password   string `json:"password" binding:"MaxSize(255)"`
+	SendNotify bool   `json:"send_notify"`
+}
+
+func AdminCreateUser(c *context.APIContext, form CreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
@@ -87,10 +72,25 @@ func CreateUser(c *context.APIContext, form CreateUserRequest) {
 		email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u))
 	}
 
-	c.JSON(http.StatusCreated, ToUser(u))
+	c.JSON(http.StatusCreated, toUser(u))
 }
 
-func EditUser(c *context.APIContext, form EditUserRequest) {
+type EditUserRequest struct {
+	SourceID         int64  `json:"source_id"`
+	LoginName        string `json:"login_name"`
+	FullName         string `json:"full_name" binding:"MaxSize(100)"`
+	Email            string `json:"email" binding:"Required;Email;MaxSize(254)"`
+	Password         string `json:"password" binding:"MaxSize(255)"`
+	Website          string `json:"website" binding:"MaxSize(50)"`
+	Location         string `json:"location" binding:"MaxSize(50)"`
+	Active           *bool  `json:"active"`
+	Admin            *bool  `json:"admin"`
+	AllowGitHook     *bool  `json:"allow_git_hook"`
+	AllowImportLocal *bool  `json:"allow_import_local"`
+	MaxRepoCreation  *int   `json:"max_repo_creation"`
+}
+
+func AdminEditUser(c *context.APIContext, form EditUserRequest) {
 	u := GetUserByParams(c)
 	if c.Written() {
 		return
@@ -139,10 +139,10 @@ func EditUser(c *context.APIContext, form EditUserRequest) {
 		c.Error(err, "get user")
 		return
 	}
-	c.JSONSuccess(ToUser(u))
+	c.JSONSuccess(toUser(u))
 }
 
-func DeleteUser(c *context.APIContext) {
+func AdminDeleteUser(c *context.APIContext) {
 	u := GetUserByParams(c)
 	if c.Written() {
 		return

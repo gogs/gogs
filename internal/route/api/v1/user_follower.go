@@ -9,7 +9,7 @@ import (
 func responseAPIUsers(c *context.APIContext, users []*database.User) {
 	apiUsers := make([]*types.User, len(users))
 	for i := range users {
-		apiUsers[i] = ToUser(users[i])
+		apiUsers[i] = toUser(users[i])
 	}
 	c.JSONSuccess(&apiUsers)
 }

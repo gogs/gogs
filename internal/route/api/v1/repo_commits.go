@@ -123,7 +123,7 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*types.Com
 	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
 	} else if err == nil {
-		apiAuthor = ToUser(author)
+		apiAuthor = toUser(author)
 	}
 
 	// Save one query if the author is also the committer
@@ -134,7 +134,7 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*types.Com
 		if err != nil && !database.IsErrUserNotExist(err) {
 			return nil, err
 		} else if err == nil {
-			apiCommitter = ToUser(committer)
+			apiCommitter = toUser(committer)
 		}
 	}
 

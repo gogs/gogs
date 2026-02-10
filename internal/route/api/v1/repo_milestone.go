@@ -9,19 +9,6 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateMilestoneRequest struct {
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Deadline    *time.Time `json:"due_on"`
-}
-
-type EditMilestoneRequest struct {
-	Title       string     `json:"title"`
-	Description *string    `json:"description"`
-	State       *string    `json:"state"`
-	Deadline    *time.Time `json:"due_on"`
-}
-
 func ListMilestones(c *context.APIContext) {
 	milestones, err := database.GetMilestonesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
@@ -31,7 +18,7 @@ func ListMilestones(c *context.APIContext) {
 
 	apiMilestones := make([]*types.IssueMilestone, len(milestones))
 	for i := range milestones {
-		apiMilestones[i] = ToIssueMilestone(milestones[i])
+		apiMilestones[i] = toIssueMilestone(milestones[i])
 	}
 	c.JSONSuccess(&apiMilestones)
 }
@@ -42,7 +29,13 @@ func GetMilestone(c *context.APIContext) {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
-	c.JSONSuccess(ToIssueMilestone(milestone))
+	c.JSONSuccess(toIssueMilestone(milestone))
+}
+
+type CreateMilestoneRequest struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Deadline    *time.Time `json:"due_on"`
 }
 
 func CreateMilestone(c *context.APIContext, form CreateMilestoneRequest) {
@@ -62,7 +55,14 @@ func CreateMilestone(c *context.APIContext, form CreateMilestoneRequest) {
 		c.Error(err, "new milestone")
 		return
 	}
-	c.JSON(http.StatusCreated, ToIssueMilestone(milestone))
+	c.JSON(http.StatusCreated, toIssueMilestone(milestone))
+}
+
+type EditMilestoneRequest struct {
+	Title       string     `json:"title"`
+	Description *string    `json:"description"`
+	State       *string    `json:"state"`
+	Deadline    *time.Time `json:"due_on"`
 }
 
 func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
@@ -92,7 +92,7 @@ func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
 		return
 	}
 
-	c.JSONSuccess(ToIssueMilestone(milestone))
+	c.JSONSuccess(toIssueMilestone(milestone))
 }
 
 func DeleteMilestone(c *context.APIContext) {
