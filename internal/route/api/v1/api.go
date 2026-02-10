@@ -386,11 +386,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
-				m.Post("", bind(CreateUserRequest{}), AdminCreateUser)
+				m.Post("", bind(AdminCreateUserRequest{}), AdminCreateUser)
 
 				m.Group("/:username", func() {
 					m.Combo("").
-						Patch(bind(EditUserRequest{}), AdminEditUser).
+						Patch(bind(AdminEditUserRequest{}), AdminEditUser).
 						Delete(AdminDeleteUser)
 					m.Post("/keys", bind(CreatePublicKeyRequest{}), AdminCreatePublicKey)
 					m.Post("/orgs", bind(CreateOrgRequest{}), AdminCreateOrg)
@@ -400,7 +400,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 			m.Group("/orgs/:orgname", func() {
 				m.Group("/teams", func() {
-					m.Post("", orgAssignment(true), bind(CreateTeamRequest{}), AdminCreateTeam)
+					m.Post("", orgAssignment(true), bind(AdminCreateTeamRequest{}), AdminCreateTeam)
 				})
 			})
 

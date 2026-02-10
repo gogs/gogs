@@ -8,13 +8,13 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-type CreateTeamRequest struct {
+type AdminCreateTeamRequest struct {
 	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	Description string `json:"description" binding:"MaxSize(255)"`
 	Permission  string `json:"permission"`
 }
 
-func AdminCreateTeam(c *context.APIContext, form CreateTeamRequest) {
+func AdminCreateTeam(c *context.APIContext, form AdminCreateTeamRequest) {
 	team := &database.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        form.Name,

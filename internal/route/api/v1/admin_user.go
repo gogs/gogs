@@ -27,7 +27,7 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 	}
 }
 
-type CreateUserRequest struct {
+type AdminCreateUserRequest struct {
 	SourceID   int64  `json:"source_id"`
 	LoginName  string `json:"login_name"`
 	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
@@ -37,7 +37,7 @@ type CreateUserRequest struct {
 	SendNotify bool   `json:"send_notify"`
 }
 
-func AdminCreateUser(c *context.APIContext, form CreateUserRequest) {
+func AdminCreateUser(c *context.APIContext, form AdminCreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
@@ -75,7 +75,7 @@ func AdminCreateUser(c *context.APIContext, form CreateUserRequest) {
 	c.JSON(http.StatusCreated, toUser(u))
 }
 
-type EditUserRequest struct {
+type AdminEditUserRequest struct {
 	SourceID         int64  `json:"source_id"`
 	LoginName        string `json:"login_name"`
 	FullName         string `json:"full_name" binding:"MaxSize(100)"`
@@ -90,7 +90,7 @@ type EditUserRequest struct {
 	MaxRepoCreation  *int   `json:"max_repo_creation"`
 }
 
-func AdminEditUser(c *context.APIContext, form EditUserRequest) {
+func AdminEditUser(c *context.APIContext, form AdminEditUserRequest) {
 	u := GetUserByParams(c)
 	if c.Written() {
 		return
