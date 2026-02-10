@@ -74,7 +74,7 @@ func newSMTPClient() (*gomail.Client, error) {
 		gomail.WithPort(port),
 	}
 
-	if strings.HasSuffix(portStr, "465") {
+	if port == 465 {
 		clientOpts = append(clientOpts, gomail.WithSSL())
 	} else {
 		clientOpts = append(clientOpts, gomail.WithTLSPolicy(gomail.TLSOpportunistic))

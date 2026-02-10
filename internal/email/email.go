@@ -74,7 +74,7 @@ func render(tpl string, data map[string]any) (string, error) {
 func SendTestMail(email string) error {
 	msg, err := newMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "new message")
 	}
 	return sendMessage(msg)
 }
@@ -116,7 +116,7 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) e
 
 	msg, err := newMessage([]string{u.Email()}, subject, body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
@@ -146,7 +146,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 
 	msg, err := newMessage([]string{email}, c.Tr("mail.activate_email"), body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
@@ -165,7 +165,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) error {
 
 	msg, err := newMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
@@ -188,7 +188,7 @@ func SendCollaboratorMail(u, doer User, repo Repository) error {
 
 	msg, err := newMessage([]string{u.Email()}, subject, body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
@@ -216,7 +216,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	from := (&mail.Address{Name: doer.DisplayName(), Address: conf.Email.FromEmail}).String()
 	msg, err := newMessageFrom(tos, from, subject, content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg, nil
@@ -230,7 +230,7 @@ func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string)
 
 	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueComment, tos, "issue comment")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "compose issue message")
 	}
 	send(msg)
 	return nil
@@ -243,7 +243,7 @@ func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string)
 	}
 	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueMention, tos, "issue mention")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "compose issue message")
 	}
 	send(msg)
 	return nil
