@@ -3,6 +3,7 @@ package email
 import (
 	"fmt"
 	"html/template"
+	"net/mail"
 	"path/filepath"
 	"sync"
 	"time"
@@ -200,7 +201,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := formatAddress(conf.Email.FromEmail, doer.DisplayName())
+	from := (&mail.Address{Name: doer.DisplayName(), Address: conf.Email.FromEmail}).String()
 	msg := newMessageFrom(tos, from, subject, content)
 	msg.info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg

@@ -35,6 +35,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 - Fetch unresolved comments and address them.
 - Commit and push after the work is done, and resolve addressed comments.
+- Update pull request title and description as needed.
 - Re-request a GitHub Copilot code review:
   ```bash
   gh api repos/OWNER/REPO/pulls/NUMBER/requested_reviewers \
