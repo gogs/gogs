@@ -36,7 +36,7 @@ func searchUsers(c *context.APIContext) {
 	})
 }
 
-func getInfo(c *context.APIContext) {
+func getUserProfile(c *context.APIContext) {
 	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")

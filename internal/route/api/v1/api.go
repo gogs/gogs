@@ -182,7 +182,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 			m.Get("/search", searchUsers)
 
 			m.Group("/:username", func() {
-				m.Get("", getInfo)
+				m.Get("", getUserProfile)
 
 				m.Group("/tokens", func() {
 					accessTokensHandler := newAccessTokensHandler(newAccessTokensStore())
