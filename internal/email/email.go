@@ -120,7 +120,7 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) e
 	}
 	msg.info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
-	Send(msg)
+	send(msg)
 	return nil
 }
 
@@ -150,7 +150,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 	}
 	msg.info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
-	Send(msg)
+	send(msg)
 	return nil
 }
 
@@ -169,7 +169,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) error {
 	}
 	msg.info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
-	Send(msg)
+	send(msg)
 	return nil
 }
 
@@ -192,7 +192,7 @@ func SendCollaboratorMail(u, doer User, repo Repository) error {
 	}
 	msg.info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
-	Send(msg)
+	send(msg)
 	return nil
 }
 
@@ -232,7 +232,7 @@ func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string)
 	if err != nil {
 		return err
 	}
-	Send(msg)
+	send(msg)
 	return nil
 }
 
@@ -245,6 +245,6 @@ func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string)
 	if err != nil {
 		return err
 	}
-	Send(msg)
+	send(msg)
 	return nil
 }

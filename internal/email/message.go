@@ -144,10 +144,10 @@ func NewContext() {
 	go processMailQueue()
 }
 
-// Send puts new message object into mail queue.
+// send puts new message object into mail queue.
 // It returns without confirmation (mail processed asynchronously) in normal cases,
 // but waits/blocks under hook mode to make sure mail has been sent.
-func Send(msg *message) {
+func send(msg *message) {
 	if !conf.Email.Enabled {
 		return
 	}
