@@ -73,15 +73,6 @@ type WebhookChangesPayload struct {
 	Body  *WebhookChangesFromPayload `json:"body,omitempty"`
 }
 
-func (p *WebhookCreatePayload) JSONPayload() ([]byte, error)       { return jsonPayload(p) }
-func (p *WebhookDeletePayload) JSONPayload() ([]byte, error)       { return jsonPayload(p) }
-func (p *WebhookForkPayload) JSONPayload() ([]byte, error)         { return jsonPayload(p) }
-func (p *WebhookPushPayload) JSONPayload() ([]byte, error)         { return jsonPayload(p) }
-func (p *WebhookIssuesPayload) JSONPayload() ([]byte, error)       { return jsonPayload(p) }
-func (p *WebhookIssueCommentPayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
-func (p *WebhookPullRequestPayload) JSONPayload() ([]byte, error)  { return jsonPayload(p) }
-func (p *WebhookReleasePayload) JSONPayload() ([]byte, error)      { return jsonPayload(p) }
-
 type WebhookCreatePayload struct {
 	Ref           string      `json:"ref"`
 	RefType       string      `json:"ref_type"`
@@ -91,6 +82,8 @@ type WebhookCreatePayload struct {
 	Sender        *User       `json:"sender"`
 }
 
+func (p *WebhookCreatePayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
+
 type WebhookDeletePayload struct {
 	Ref        string            `json:"ref"`
 	RefType    string            `json:"ref_type"`
@@ -99,11 +92,15 @@ type WebhookDeletePayload struct {
 	Sender     *User             `json:"sender"`
 }
 
+func (p *WebhookDeletePayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
+
 type WebhookForkPayload struct {
 	Forkee *Repository `json:"forkee"`
 	Repo   *Repository `json:"repository"`
 	Sender *User       `json:"sender"`
 }
+
+func (p *WebhookForkPayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
 
 type WebhookPushPayload struct {
 	Ref        string                  `json:"ref"`
@@ -116,6 +113,8 @@ type WebhookPushPayload struct {
 	Sender     *User                   `json:"sender"`
 }
 
+func (p *WebhookPushPayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
+
 type WebhookIssuesPayload struct {
 	Action     WebhookIssueAction     `json:"action"`
 	Index      int64                  `json:"number"`
@@ -124,6 +123,8 @@ type WebhookIssuesPayload struct {
 	Repository *Repository            `json:"repository"`
 	Sender     *User                  `json:"sender"`
 }
+
+func (p *WebhookIssuesPayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
 
 type WebhookIssueCommentPayload struct {
 	Action     WebhookIssueCommentAction `json:"action"`
@@ -134,6 +135,8 @@ type WebhookIssueCommentPayload struct {
 	Sender     *User                     `json:"sender"`
 }
 
+func (p *WebhookIssueCommentPayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
+
 type WebhookPullRequestPayload struct {
 	Action      WebhookIssueAction     `json:"action"`
 	Index       int64                  `json:"number"`
@@ -143,9 +146,13 @@ type WebhookPullRequestPayload struct {
 	Sender      *User                  `json:"sender"`
 }
 
+func (p *WebhookPullRequestPayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
+
 type WebhookReleasePayload struct {
 	Action     WebhookReleaseAction `json:"action"`
 	Release    *RepositoryRelease   `json:"release"`
 	Repository *Repository          `json:"repository"`
 	Sender     *User                `json:"sender"`
 }
+
+func (p *WebhookReleasePayload) JSONPayload() ([]byte, error) { return jsonPayload(p) }
