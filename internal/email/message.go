@@ -44,6 +44,33 @@ func sanitizeHeaderValue(v string) string {
 	return strings.NewReplacer("\r", "", "\n", "").Replace(v)
 }
 
+// foldHeaderValue inserts RFC 5322 folding whitespace (CRLF + space) into a
+// header value so that no line exceeds 78 characters. It folds at comma
+// boundaries, which is appropriate for address lists.
+func foldHeaderValue(prefixLen int, value string) string {
+	const maxLine = 78
+	if prefixLen+len(value) <= maxLine {
+		return value
+	}
+
+	var buf strings.Builder
+	lineLen := prefixLen
+	for i, part := range strings.Split(value, ",") {
+		segment := part
+		if i > 0 {
+			segment = "," + segment
+		}
+		if lineLen+len(segment) > maxLine && lineLen > prefixLen {
+			buf.WriteString("\r\n ")
+			lineLen = 1
+			segment = strings.TrimLeft(segment, " ")
+		}
+		buf.WriteString(segment)
+		lineLen += len(segment)
+	}
+	return buf.String()
+}
+
 type countingWriter struct {
 	w io.Writer
 	n int64
@@ -70,7 +97,7 @@ func (m *message) WriteTo(w io.Writer) (int64, error) {
 		} else {
 			encoded = sanitizeHeaderValue(strings.Join(vals, ", "))
 		}
-		if _, err := fmt.Fprintf(cw, "%s: %s\r\n", field, encoded); err != nil {
+		if _, err := fmt.Fprintf(cw, "%s: %s\r\n", field, foldHeaderValue(len(field)+2, encoded)); err != nil {
 			return cw.n, errors.Wrap(err, "write header")
 		}
 	}
@@ -345,11 +372,12 @@ func sendMessage(sender *smtpSender, msg *message) error {
 func processMailQueue() {
 	sender := &smtpSender{}
 	for msg := range mailQueue {
-		log.Trace("New e-mail sending request %s: %s", msg.getHeader("To"), msg.info)
+		to := strings.Join(msg.getHeader("To"), ", ")
+		log.Trace("New e-mail sending request %s: %s", to, msg.info)
 		if err := sendMessage(sender, msg); err != nil {
-			log.Error("Failed to send emails %s: %s - %v", msg.getHeader("To"), msg.info, err)
+			log.Error("Failed to send emails %s: %s - %v", to, msg.info, err)
 		} else {
-			log.Trace("E-mails sent %s: %s", msg.getHeader("To"), msg.info)
+			log.Trace("E-mails sent %s: %s", to, msg.info)
 		}
 		msg.confirmChan <- struct{}{}
 	}
