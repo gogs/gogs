@@ -401,7 +401,9 @@ func SettingsCollaborationPost(c *context.Context) {
 	}
 
 	if conf.User.EnableEmailNotification {
-		email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository))
+		if err := email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository)); err != nil {
+			log.Error("Failed to send collaborator mail: %v", err)
+		}
 	}
 
 	c.Flash.Success(c.Tr("repo.settings.add_collaborator_success"))

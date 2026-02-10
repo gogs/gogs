@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
@@ -102,7 +102,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
+func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) error {
 	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
@@ -111,30 +111,28 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 	}
 	body, err := render(tpl, data)
 	if err != nil {
-		log.Error("render: %v", err)
-		return
+		return errors.Wrap(err, "render")
 	}
 
 	msg, err := newMessage([]string{u.Email()}, subject, body)
 	if err != nil {
-		log.Error("newMessage: %v", err)
-		return
+		return err
 	}
 	msg.info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
 	Send(msg)
+	return nil
 }
 
-func SendActivateAccountMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
+func SendActivateAccountMail(c *macaron.Context, u User) error {
+	return SendUserMail(c, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
+func SendResetPasswordMail(c *macaron.Context, u User) error {
+	return SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
 }
 
-// SendActivateAccountMail sends confirmation email.
-func SendActivateEmailMail(c *macaron.Context, u User, email string) {
+func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
@@ -143,43 +141,39 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 	}
 	body, err := render(tmplAuthActivateEmail, data)
 	if err != nil {
-		log.Error("HTMLString: %v", err)
-		return
+		return errors.Wrap(err, "render")
 	}
 
 	msg, err := newMessage([]string{email}, c.Tr("mail.activate_email"), body)
 	if err != nil {
-		log.Error("newMessage: %v", err)
-		return
+		return err
 	}
 	msg.info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
 	Send(msg)
+	return nil
 }
 
-// SendRegisterNotifyMail triggers a notify e-mail by admin created a account.
-func SendRegisterNotifyMail(c *macaron.Context, u User) {
+func SendRegisterNotifyMail(c *macaron.Context, u User) error {
 	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
 	body, err := render(tmplAuthRegisterNotify, data)
 	if err != nil {
-		log.Error("HTMLString: %v", err)
-		return
+		return errors.Wrap(err, "render")
 	}
 
 	msg, err := newMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
 	if err != nil {
-		log.Error("newMessage: %v", err)
-		return
+		return err
 	}
 	msg.info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
 	Send(msg)
+	return nil
 }
 
-// SendCollaboratorMail sends mail notification to new collaborator.
-func SendCollaboratorMail(u, doer User, repo Repository) {
+func SendCollaboratorMail(u, doer User, repo Repository) error {
 	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
 
 	data := map[string]any{
@@ -189,18 +183,17 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 	}
 	body, err := render(tmplNotifyCollaborator, data)
 	if err != nil {
-		log.Error("HTMLString: %v", err)
-		return
+		return errors.Wrap(err, "render")
 	}
 
 	msg, err := newMessage([]string{u.Email()}, subject, body)
 	if err != nil {
-		log.Error("newMessage: %v", err)
-		return
+		return err
 	}
 	msg.info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
 	Send(msg)
+	return nil
 }
 
 func composeTplData(subject, body, link string) map[string]any {
@@ -218,7 +211,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	data["Doer"] = doer
 	content, err := render(tplName, data)
 	if err != nil {
-		log.Error("HTMLString (%s): %v", tplName, err)
+		return nil, errors.Wrapf(err, "render %q", tplName)
 	}
 	from := (&mail.Address{Name: doer.DisplayName(), Address: conf.Email.FromEmail}).String()
 	msg, err := newMessageFrom(tos, from, subject, content)
@@ -230,28 +223,28 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 }
 
 // SendIssueCommentMail composes and sends issue comment emails to target receivers.
-func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string) {
+func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string) error {
 	if len(tos) == 0 {
-		return
+		return nil
 	}
 
 	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueComment, tos, "issue comment")
 	if err != nil {
-		log.Error("composeIssueMessage: %v", err)
-		return
+		return err
 	}
 	Send(msg)
+	return nil
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
-func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string) {
+func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string) error {
 	if len(tos) == 0 {
-		return
+		return nil
 	}
 	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueMention, tos, "issue mention")
 	if err != nil {
-		log.Error("composeIssueMessage: %v", err)
-		return
+		return err
 	}
 	Send(msg)
+	return nil
 }

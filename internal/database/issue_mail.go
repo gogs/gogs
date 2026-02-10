@@ -151,7 +151,9 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 			names = append(names, issue.Assignee.Name)
 		}
 	}
-	email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
+	if err = email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+		return errors.Wrap(err, "send issue comment mail")
+	}
 
 	// Mail mentioned people and exclude watchers.
 	names = append(names, doer.Name)
@@ -168,7 +170,9 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	if err != nil {
 		return errors.Wrap(err, "get mailable emails by usernames")
 	}
-	email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
+	if err = email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+		return errors.Wrap(err, "send issue mention mail")
+	}
 	return nil
 }
 

@@ -280,7 +280,9 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Send confirmation email
 	if conf.Auth.RequireEmailConfirmation {
-		email.SendActivateEmailMail(c.Context, database.NewMailerUser(c.User), f.Email)
+		if err := email.SendActivateEmailMail(c.Context, database.NewMailerUser(c.User), f.Email); err != nil {
+			log.Error("Failed to send activate email mail: %v", err)
+		}
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
 			log.Error("Set cache 'MailResendLimit' failed: %v", err)

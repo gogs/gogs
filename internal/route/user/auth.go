@@ -385,7 +385,9 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 	// Send confirmation email.
 	if conf.Auth.RequireEmailConfirmation && user.ID > 1 {
-		email.SendActivateAccountMail(c.Context, database.NewMailerUser(user))
+		if err := email.SendActivateAccountMail(c.Context, database.NewMailerUser(user)); err != nil {
+			log.Error("Failed to send activate account mail: %v", err)
+		}
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = user.Email
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
@@ -469,7 +471,9 @@ func Activate(c *context.Context) {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-				email.SendActivateAccountMail(c.Context, database.NewMailerUser(c.User))
+				if err := email.SendActivateAccountMail(c.Context, database.NewMailerUser(c.User)); err != nil {
+					log.Error("Failed to send activate account mail: %v", err)
+				}
 
 				if err := c.Cache.Put(userutil.MailResendCacheKey(c.User.ID), 1, 180); err != nil {
 					log.Error("Failed to put cache key 'mail resend': %v", err)
@@ -579,7 +583,9 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	email.SendResetPasswordMail(c.Context, database.NewMailerUser(u))
+	if err = email.SendResetPasswordMail(c.Context, database.NewMailerUser(u)); err != nil {
+		log.Error("Failed to send reset password mail: %v", err)
+	}
 	if err = c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}

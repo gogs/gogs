@@ -69,7 +69,9 @@ func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u))
+		if err := email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u)); err != nil {
+			log.Error("Failed to send register notify mail: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusCreated, toUser(u))
