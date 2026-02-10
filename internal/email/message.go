@@ -1,12 +1,12 @@
 package email
 
 import (
-	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
+	"mime/quotedprintable"
 	"net"
 	"net/mail"
 	"net/smtp"
@@ -40,33 +40,60 @@ func (m *Message) GetHeader(field string) []string {
 	return m.header[field]
 }
 
+func sanitizeHeaderValue(v string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(v)
+}
+
+type countingWriter struct {
+	w io.Writer
+	n int64
+}
+
+func (cw *countingWriter) Write(p []byte) (int, error) {
+	n, err := cw.w.Write(p)
+	cw.n += int64(n)
+	return n, err
+}
+
 func (m *Message) WriteTo(w io.Writer) (int64, error) {
-	var buf bytes.Buffer
+	cw := &countingWriter{w: w}
 
 	for _, field := range []string{"From", "To", "Subject", "Date"} {
 		vals := m.header[field]
-		for _, v := range vals {
-			encoded := v
-			if field == "Subject" {
-				encoded = mime.QEncoding.Encode("utf-8", v)
-			}
-			fmt.Fprintf(&buf, "%s: %s\r\n", field, encoded)
+		if len(vals) == 0 {
+			continue
+		}
+
+		var encoded string
+		if field == "Subject" {
+			encoded = mime.QEncoding.Encode("utf-8", vals[0])
+		} else {
+			encoded = sanitizeHeaderValue(strings.Join(vals, ", "))
+		}
+		if _, err := fmt.Fprintf(cw, "%s: %s\r\n", field, encoded); err != nil {
+			return cw.n, errors.Wrap(err, "write header")
 		}
 	}
 
 	if len(m.altParts) > 0 {
-		mw := multipart.NewWriter(&buf)
-		fmt.Fprintf(&buf, "MIME-Version: 1.0\r\n")
-		fmt.Fprintf(&buf, "Content-Type: multipart/alternative; boundary=%s\r\n\r\n", mw.Boundary())
+		mw := multipart.NewWriter(cw)
+		if _, err := fmt.Fprintf(cw, "MIME-Version: 1.0\r\n"); err != nil {
+			return cw.n, errors.Wrap(err, "write MIME version")
+		}
+		if _, err := fmt.Fprintf(cw, "Content-Type: multipart/alternative; boundary=%s\r\n\r\n", mw.Boundary()); err != nil {
+			return cw.n, errors.Wrap(err, "write content type")
+		}
 
 		mainHeader := textproto.MIMEHeader{}
 		mainHeader.Set("Content-Type", m.contentType+"; charset=UTF-8")
 		mainHeader.Set("Content-Transfer-Encoding", "quoted-printable")
 		part, err := mw.CreatePart(mainHeader)
 		if err != nil {
-			return 0, errors.Wrap(err, "create main part")
+			return cw.n, errors.Wrap(err, "create main part")
 		}
-		qpWrite(part, m.body)
+		if err := qpWrite(part, m.body); err != nil {
+			return cw.n, errors.Wrap(err, "write main body")
+		}
 
 		for _, alt := range m.altParts {
 			altHeader := textproto.MIMEHeader{}
@@ -74,34 +101,39 @@ func (m *Message) WriteTo(w io.Writer) (int64, error) {
 			altHeader.Set("Content-Transfer-Encoding", "quoted-printable")
 			part, err := mw.CreatePart(altHeader)
 			if err != nil {
-				return 0, errors.Wrap(err, "create alternative part")
+				return cw.n, errors.Wrap(err, "create alternative part")
 			}
-			qpWrite(part, alt.body)
+			if err := qpWrite(part, alt.body); err != nil {
+				return cw.n, errors.Wrap(err, "write alternative body")
+			}
 		}
-		mw.Close()
+		if err := mw.Close(); err != nil {
+			return cw.n, errors.Wrap(err, "close multipart writer")
+		}
 	} else {
-		fmt.Fprintf(&buf, "MIME-Version: 1.0\r\n")
-		fmt.Fprintf(&buf, "Content-Type: %s; charset=UTF-8\r\n", m.contentType)
-		fmt.Fprintf(&buf, "Content-Transfer-Encoding: quoted-printable\r\n\r\n")
-		qpWrite(&buf, m.body)
+		if _, err := fmt.Fprintf(cw, "MIME-Version: 1.0\r\n"); err != nil {
+			return cw.n, errors.Wrap(err, "write MIME version")
+		}
+		if _, err := fmt.Fprintf(cw, "Content-Type: %s; charset=UTF-8\r\n", m.contentType); err != nil {
+			return cw.n, errors.Wrap(err, "write content type")
+		}
+		if _, err := fmt.Fprintf(cw, "Content-Transfer-Encoding: quoted-printable\r\n\r\n"); err != nil {
+			return cw.n, errors.Wrap(err, "write transfer encoding")
+		}
+		if err := qpWrite(cw, m.body); err != nil {
+			return cw.n, errors.Wrap(err, "write body")
+		}
 	}
 
-	n, err := w.Write(buf.Bytes())
-	return int64(n), err
+	return cw.n, nil
 }
 
-func qpWrite(w io.Writer, s string) {
-	for i := 0; i < len(s); i++ {
-		b := s[i]
-		switch {
-		case b == '\r' || b == '\n':
-			fmt.Fprintf(w, "%c", b)
-		case b == '=' || b > 126 || (b < 32 && b != '\t'):
-			fmt.Fprintf(w, "=%02X", b)
-		default:
-			fmt.Fprintf(w, "%c", b)
-		}
+func qpWrite(w io.Writer, s string) error {
+	qw := quotedprintable.NewWriter(w)
+	if _, err := qw.Write([]byte(s)); err != nil {
+		return err
 	}
+	return qw.Close()
 }
 
 // FormatAddress formats an email address with a display name per RFC 5322.
@@ -296,14 +328,19 @@ func sendMessage(sender *Sender, msg *Message) error {
 		return errors.Wrap(err, "parse From address")
 	}
 
-	var to []string
-	for _, toAddr := range msg.header["To"] {
-		parsed, err := mail.ParseAddress(toAddr)
-		if err != nil {
-			to = append(to, toAddr)
-		} else {
-			to = append(to, parsed.Address)
-		}
+	toHeaders := msg.header["To"]
+	if len(toHeaders) == 0 {
+		return errors.New("missing To header")
+	}
+
+	parsedAddrs, err := mail.ParseAddressList(strings.Join(toHeaders, ","))
+	if err != nil {
+		return errors.Wrap(err, "parse To addresses")
+	}
+
+	to := make([]string, 0, len(parsedAddrs))
+	for _, a := range parsedAddrs {
+		to = append(to, a.Address)
 	}
 
 	return sender.Send(addr.Address, to, msg)
