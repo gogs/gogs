@@ -19,9 +19,9 @@ func ListIssueLabels(c *context.APIContext) {
 		return
 	}
 
-	apiLabels := make([]*types.Label, len(issue.Labels))
+	apiLabels := make([]*types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
-		apiLabels[i] = ToLabel(issue.Labels[i])
+		apiLabels[i] = ToIssueLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -50,9 +50,9 @@ func AddIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 		return
 	}
 
-	apiLabels := make([]*types.Label, len(labels))
+	apiLabels := make([]*types.IssueLabel, len(labels))
 	for i := range labels {
-		apiLabels[i] = ToLabel(issue.Labels[i])
+		apiLabels[i] = ToIssueLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -106,9 +106,9 @@ func ReplaceIssueLabels(c *context.APIContext, form IssueLabelsRequest) {
 		return
 	}
 
-	apiLabels := make([]*types.Label, len(labels))
+	apiLabels := make([]*types.IssueLabel, len(labels))
 	for i := range labels {
-		apiLabels[i] = ToLabel(issue.Labels[i])
+		apiLabels[i] = ToIssueLabel(issue.Labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }

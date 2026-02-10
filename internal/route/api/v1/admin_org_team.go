@@ -30,7 +30,7 @@ func CreateTeam(c *context.APIContext, form CreateTeamRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToTeam(team))
+	c.JSON(http.StatusCreated, ToOrganizationTeam(team))
 }
 
 func AddTeamMember(c *context.APIContext) {

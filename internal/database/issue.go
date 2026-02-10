@@ -171,18 +171,18 @@ func (issue *Issue) HTMLURL() string {
 }
 
 // State returns string representation of issue status.
-func (issue *Issue) State() apiv1types.StateType {
+func (issue *Issue) State() apiv1types.IssueStateType {
 	if issue.IsClosed {
-		return apiv1types.StateClosed
+		return apiv1types.IssueStateClosed
 	}
-	return apiv1types.StateOpen
+	return apiv1types.IssueStateOpen
 }
 
 // This method assumes some fields assigned with values:
 // Required - Poster, Labels,
 // Optional - Milestone, Assignee, PullRequest
 func (issue *Issue) APIFormat() *apiv1types.Issue {
-	apiLabels := make([]*apiv1types.Label, len(issue.Labels))
+	apiLabels := make([]*apiv1types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
 		apiLabels[i] = issue.Labels[i].APIFormat()
 	}

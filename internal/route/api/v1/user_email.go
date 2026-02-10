@@ -21,9 +21,9 @@ func ListEmails(c *context.APIContext) {
 		c.Error(err, "get email addresses")
 		return
 	}
-	apiEmails := make([]*types.Email, len(emails))
+	apiEmails := make([]*types.UserEmail, len(emails))
 	for i := range emails {
-		apiEmails[i] = ToEmail(emails[i])
+		apiEmails[i] = ToUserEmail(emails[i])
 	}
 	c.JSONSuccess(&apiEmails)
 }
@@ -34,7 +34,7 @@ func AddEmail(c *context.APIContext, form CreateEmailRequest) {
 		return
 	}
 
-	apiEmails := make([]*types.Email, 0, len(form.Emails))
+	apiEmails := make([]*types.UserEmail, 0, len(form.Emails))
 	for _, email := range form.Emails {
 		err := database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
 		if err != nil {
@@ -46,7 +46,7 @@ func AddEmail(c *context.APIContext, form CreateEmailRequest) {
 			return
 		}
 
-		apiEmails = append(apiEmails, &types.Email{
+		apiEmails = append(apiEmails, &types.UserEmail{
 			Email:    email,
 			Verified: !conf.Auth.RequireEmailConfirmation,
 		})

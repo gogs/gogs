@@ -72,19 +72,19 @@ func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 }
 
 // State returns string representation of milestone status.
-func (m *Milestone) State() apiv1types.StateType {
+func (m *Milestone) State() apiv1types.IssueStateType {
 	if m.IsClosed {
-		return apiv1types.StateClosed
+		return apiv1types.IssueStateClosed
 	}
-	return apiv1types.StateOpen
+	return apiv1types.IssueStateOpen
 }
 
 func (m *Milestone) ChangeStatus(isClosed bool) error {
 	return ChangeMilestoneStatus(m, isClosed)
 }
 
-func (m *Milestone) APIFormat() *apiv1types.Milestone {
-	apiMilestone := &apiv1types.Milestone{
+func (m *Milestone) APIFormat() *apiv1types.IssueMilestone {
+	apiMilestone := &apiv1types.IssueMilestone{
 		ID:           m.ID,
 		State:        m.State(),
 		Title:        m.Name,

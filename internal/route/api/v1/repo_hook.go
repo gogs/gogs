@@ -33,9 +33,9 @@ func ListHooks(c *context.APIContext) {
 		return
 	}
 
-	apiHooks := make([]*types.Hook, len(hooks))
+	apiHooks := make([]*types.RepositoryHook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = ToHook(c.Repo.RepoLink, hooks[i])
+		apiHooks[i] = ToRepositoryHook(c.Repo.RepoLink, hooks[i])
 	}
 	c.JSONSuccess(&apiHooks)
 }
@@ -108,7 +108,7 @@ func CreateHook(c *context.APIContext, form CreateHookRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToHook(c.Repo.RepoLink, w))
+	c.JSON(http.StatusCreated, ToRepositoryHook(c.Repo.RepoLink, w))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
@@ -177,7 +177,7 @@ func EditHook(c *context.APIContext, form EditHookRequest) {
 		return
 	}
 
-	c.JSONSuccess(ToHook(c.Repo.RepoLink, w))
+	c.JSONSuccess(ToRepositoryHook(c.Repo.RepoLink, w))
 }
 
 func DeleteHook(c *context.APIContext) {

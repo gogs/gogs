@@ -41,9 +41,9 @@ func ListIssueComments(c *context.APIContext) {
 		return
 	}
 
-	apiComments := make([]*types.Comment, len(comments))
+	apiComments := make([]*types.IssueComment, len(comments))
 	for i := range comments {
-		apiComments[i] = ToComment(comments[i])
+		apiComments[i] = ToIssueComment(comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
@@ -65,9 +65,9 @@ func ListRepoIssueComments(c *context.APIContext) {
 		return
 	}
 
-	apiComments := make([]*types.Comment, len(comments))
+	apiComments := make([]*types.IssueComment, len(comments))
 	for i := range comments {
-		apiComments[i] = ToComment(comments[i])
+		apiComments[i] = ToIssueComment(comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
@@ -85,7 +85,7 @@ func CreateIssueComment(c *context.APIContext, form CreateIssueCommentRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToComment(comment))
+	c.JSON(http.StatusCreated, ToIssueComment(comment))
 }
 
 func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
@@ -120,7 +120,7 @@ func EditIssueComment(c *context.APIContext, form EditIssueCommentRequest) {
 		c.Error(err, "update comment")
 		return
 	}
-	c.JSONSuccess(ToComment(comment))
+	c.JSONSuccess(ToIssueComment(comment))
 }
 
 func DeleteIssueComment(c *context.APIContext) {

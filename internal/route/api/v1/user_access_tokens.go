@@ -36,9 +36,9 @@ func (h *AccessTokensHandler) List() macaron.Handler {
 			return
 		}
 
-		apiTokens := make([]*types.AccessToken, len(tokens))
+		apiTokens := make([]*types.UserAccessToken, len(tokens))
 		for i := range tokens {
-			apiTokens[i] = &types.AccessToken{
+			apiTokens[i] = &types.UserAccessToken{
 				Name: tokens[i].Name,
 				Sha1: tokens[i].Sha1,
 			}
@@ -58,7 +58,7 @@ func (h *AccessTokensHandler) Create() macaron.Handler {
 			}
 			return
 		}
-		c.JSON(http.StatusCreated, &types.AccessToken{
+		c.JSON(http.StatusCreated, &types.UserAccessToken{
 			Name: t.Name,
 			Sha1: t.Sha1,
 		})

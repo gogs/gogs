@@ -29,9 +29,9 @@ func ListMilestones(c *context.APIContext) {
 		return
 	}
 
-	apiMilestones := make([]*types.Milestone, len(milestones))
+	apiMilestones := make([]*types.IssueMilestone, len(milestones))
 	for i := range milestones {
-		apiMilestones[i] = ToMilestone(milestones[i])
+		apiMilestones[i] = ToIssueMilestone(milestones[i])
 	}
 	c.JSONSuccess(&apiMilestones)
 }
@@ -42,7 +42,7 @@ func GetMilestone(c *context.APIContext) {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
-	c.JSONSuccess(ToMilestone(milestone))
+	c.JSONSuccess(ToIssueMilestone(milestone))
 }
 
 func CreateMilestone(c *context.APIContext, form CreateMilestoneRequest) {
@@ -62,7 +62,7 @@ func CreateMilestone(c *context.APIContext, form CreateMilestoneRequest) {
 		c.Error(err, "new milestone")
 		return
 	}
-	c.JSON(http.StatusCreated, ToMilestone(milestone))
+	c.JSON(http.StatusCreated, ToIssueMilestone(milestone))
 }
 
 func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
@@ -83,7 +83,7 @@ func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
 	}
 
 	if form.State != nil {
-		if err = milestone.ChangeStatus(types.StateClosed == types.StateType(*form.State)); err != nil {
+		if err = milestone.ChangeStatus(types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}
@@ -92,7 +92,7 @@ func EditMilestone(c *context.APIContext, form EditMilestoneRequest) {
 		return
 	}
 
-	c.JSONSuccess(ToMilestone(milestone))
+	c.JSONSuccess(ToIssueMilestone(milestone))
 }
 
 func DeleteMilestone(c *context.APIContext) {

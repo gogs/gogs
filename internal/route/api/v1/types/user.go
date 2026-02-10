@@ -11,18 +11,18 @@ type User struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
-type Email struct {
+type UserEmail struct {
 	Email    string `json:"email"`
 	Verified bool   `json:"verified"`
 	Primary  bool   `json:"primary"`
 }
 
-type AccessToken struct {
+type UserAccessToken struct {
 	Name string `json:"name"`
 	Sha1 string `json:"sha1"`
 }
 
-type PublicKey struct {
+type UserPublicKey struct {
 	ID      int64     `json:"id"`
 	Key     string    `json:"key"`
 	URL     string    `json:"url,omitempty"`
@@ -30,7 +30,7 @@ type PublicKey struct {
 	Created time.Time `json:"created_at,omitempty"`
 }
 
-type Collaborator struct {
+type RepositoryCollaborator struct {
 	*User
 	Permissions RepositoryPermission `json:"permissions"`
 }

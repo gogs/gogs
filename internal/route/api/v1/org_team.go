@@ -12,9 +12,9 @@ func ListTeams(c *context.APIContext) {
 		return
 	}
 
-	apiTeams := make([]*types.Team, len(org.Teams))
+	apiTeams := make([]*types.OrganizationTeam, len(org.Teams))
 	for i := range org.Teams {
-		apiTeams[i] = ToTeam(org.Teams[i])
+		apiTeams[i] = ToOrganizationTeam(org.Teams[i])
 	}
 	c.JSONSuccess(apiTeams)
 }

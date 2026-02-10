@@ -19,9 +19,9 @@ func ListCollaborators(c *context.APIContext) {
 		return
 	}
 
-	apiCollaborators := make([]*types.Collaborator, len(collaborators))
+	apiCollaborators := make([]*types.RepositoryCollaborator, len(collaborators))
 	for i := range collaborators {
-		apiCollaborators[i] = ToCollaborator(collaborators[i])
+		apiCollaborators[i] = ToRepositoryCollaborator(collaborators[i])
 	}
 	c.JSONSuccess(&apiCollaborators)
 }

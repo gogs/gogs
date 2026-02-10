@@ -135,8 +135,8 @@ func (c *Comment) HTMLURL() string {
 
 // This method assumes following fields have been assigned with valid values:
 // Required - Poster, Issue
-func (c *Comment) APIFormat() *apiv1types.Comment {
-	return &apiv1types.Comment{
+func (c *Comment) APIFormat() *apiv1types.IssueComment {
+	return &apiv1types.IssueComment{
 		ID:      c.ID,
 		HTMLURL: c.HTMLURL(),
 		Poster:  c.Poster.APIFormat(),

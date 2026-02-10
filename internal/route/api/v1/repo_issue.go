@@ -60,7 +60,7 @@ func ListUserIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
-		IsClosed:   types.StateType(c.Query("state")) == types.StateClosed,
+		IsClosed:   types.IssueStateType(c.Query("state")) == types.IssueStateClosed,
 	}
 
 	listIssues(c, &opts)
@@ -70,7 +70,7 @@ func ListIssues(c *context.APIContext) {
 	opts := database.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
 		Page:     c.QueryInt("page"),
-		IsClosed: types.StateType(c.Query("state")) == types.StateClosed,
+		IsClosed: types.IssueStateType(c.Query("state")) == types.IssueStateClosed,
 	}
 
 	listIssues(c, &opts)
@@ -190,7 +190,7 @@ func EditIssue(c *context.APIContext, form EditIssueRequest) {
 		return
 	}
 	if form.State != nil {
-		if err = issue.ChangeStatus(c.User, c.Repo.Repository, types.StateClosed == types.StateType(*form.State)); err != nil {
+		if err = issue.ChangeStatus(c.User, c.Repo.Repository, types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}

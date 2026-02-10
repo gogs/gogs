@@ -62,8 +62,8 @@ type Label struct {
 	IsChecked       bool `xorm:"-" json:"-" gorm:"-"`
 }
 
-func (l *Label) APIFormat() *apiv1types.Label {
-	return &apiv1types.Label{
+func (l *Label) APIFormat() *apiv1types.IssueLabel {
+	return &apiv1types.IssueLabel{
 		ID:    l.ID,
 		Name:  l.Name,
 		Color: strings.TrimLeft(l.Color, "#"),

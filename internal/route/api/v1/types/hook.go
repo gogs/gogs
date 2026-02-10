@@ -2,7 +2,7 @@ package types
 
 import "time"
 
-type Hook struct {
+type RepositoryHook struct {
 	ID      int64             `json:"id"`
 	Type    string            `json:"type"`
 	URL     string            `json:"-"`

@@ -10,7 +10,7 @@ type Organization struct {
 	Location    string `json:"location"`
 }
 
-type Team struct {
+type OrganizationTeam struct {
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

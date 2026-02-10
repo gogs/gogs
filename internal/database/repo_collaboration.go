@@ -87,8 +87,8 @@ type Collaborator struct {
 	Collaboration *Collaboration
 }
 
-func (c *Collaborator) APIFormat() *apiv1types.Collaborator {
-	return &apiv1types.Collaborator{
+func (c *Collaborator) APIFormat() *apiv1types.RepositoryCollaborator {
+	return &apiv1types.RepositoryCollaborator{
 		User: c.User.APIFormat(),
 		Permissions: apiv1types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= AccessModeAdmin,

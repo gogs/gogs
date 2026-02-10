@@ -107,7 +107,7 @@ type WebhookIssuesPayload struct {
 type WebhookIssueCommentPayload struct {
 	Action     WebhookIssueCommentAction `json:"action"`
 	Issue      *Issue                    `json:"issue"`
-	Comment    *Comment                  `json:"comment"`
+	Comment    *IssueComment             `json:"comment"`
 	Changes    *WebhookChangesPayload    `json:"changes,omitempty"`
 	Repository *Repository               `json:"repository"`
 	Sender     *User                     `json:"sender"`

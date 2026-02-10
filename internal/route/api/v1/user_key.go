@@ -41,9 +41,9 @@ func listPublicKeys(c *context.APIContext, uid int64) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	apiKeys := make([]*types.PublicKey, len(keys))
+	apiKeys := make([]*types.UserPublicKey, len(keys))
 	for i := range keys {
-		apiKeys[i] = ToPublicKey(apiLink, keys[i])
+		apiKeys[i] = ToUserPublicKey(apiLink, keys[i])
 	}
 
 	c.JSONSuccess(&apiKeys)
@@ -69,7 +69,7 @@ func GetPublicKey(c *context.APIContext) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	c.JSONSuccess(ToPublicKey(apiLink, key))
+	c.JSONSuccess(ToUserPublicKey(apiLink, key))
 }
 
 func CreateUserPublicKey(c *context.APIContext, form CreatePublicKeyRequest, uid int64) {
@@ -85,7 +85,7 @@ func CreateUserPublicKey(c *context.APIContext, form CreatePublicKeyRequest, uid
 		return
 	}
 	apiLink := composePublicKeysAPILink()
-	c.JSON(http.StatusCreated, ToPublicKey(apiLink, key))
+	c.JSON(http.StatusCreated, ToUserPublicKey(apiLink, key))
 }
 
 func CreatePublicKey(c *context.APIContext, form CreatePublicKeyRequest) {

@@ -26,9 +26,9 @@ func ListLabels(c *context.APIContext) {
 		return
 	}
 
-	apiLabels := make([]*types.Label, len(labels))
+	apiLabels := make([]*types.IssueLabel, len(labels))
 	for i := range labels {
-		apiLabels[i] = ToLabel(labels[i])
+		apiLabels[i] = ToIssueLabel(labels[i])
 	}
 	c.JSONSuccess(&apiLabels)
 }
@@ -47,7 +47,7 @@ func GetLabel(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(ToLabel(label))
+	c.JSONSuccess(ToIssueLabel(label))
 }
 
 func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
@@ -60,7 +60,7 @@ func CreateLabel(c *context.APIContext, form CreateLabelRequest) {
 		c.Error(err, "new labels")
 		return
 	}
-	c.JSON(http.StatusCreated, ToLabel(label))
+	c.JSON(http.StatusCreated, ToIssueLabel(label))
 }
 
 func EditLabel(c *context.APIContext, form EditLabelRequest) {
@@ -80,7 +80,7 @@ func EditLabel(c *context.APIContext, form EditLabelRequest) {
 		c.Error(err, "update label")
 		return
 	}
-	c.JSONSuccess(ToLabel(label))
+	c.JSONSuccess(ToIssueLabel(label))
 }
 
 func DeleteLabel(c *context.APIContext) {

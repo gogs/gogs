@@ -31,8 +31,8 @@ func ToUserSanitized(u *database.User) *types.User {
 	return r
 }
 
-func ToEmail(email *database.EmailAddress) *types.Email {
-	return &types.Email{
+func ToUserEmail(email *database.EmailAddress) *types.UserEmail {
+	return &types.UserEmail{
 		Email:    email.Email,
 		Verified: email.IsActivated,
 		Primary:  email.IsPrimary,
@@ -87,8 +87,8 @@ func ToPayloadCommit(c *git.Commit) *types.WebhookPayloadCommit {
 	}
 }
 
-func ToPublicKey(apiLink string, key *database.PublicKey) *types.PublicKey {
-	return &types.PublicKey{
+func ToUserPublicKey(apiLink string, key *database.PublicKey) *types.UserPublicKey {
+	return &types.UserPublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
 		URL:     apiLink + strconv.FormatInt(key.ID, 10),
@@ -97,7 +97,7 @@ func ToPublicKey(apiLink string, key *database.PublicKey) *types.PublicKey {
 	}
 }
 
-func ToHook(repoLink string, w *database.Webhook) *types.Hook {
+func ToRepositoryHook(repoLink string, w *database.Webhook) *types.RepositoryHook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
@@ -110,7 +110,7 @@ func ToHook(repoLink string, w *database.Webhook) *types.Hook {
 		config["color"] = s.Color
 	}
 
-	return &types.Hook{
+	return &types.RepositoryHook{
 		ID:      w.ID,
 		Type:    w.HookTaskType.Name(),
 		URL:     fmt.Sprintf("%s/settings/hooks/%d", repoLink, w.ID),
@@ -145,8 +145,8 @@ func ToOrganization(org *database.User) *types.Organization {
 	}
 }
 
-func ToTeam(team *database.Team) *types.Team {
-	return &types.Team{
+func ToOrganizationTeam(team *database.Team) *types.OrganizationTeam {
+	return &types.OrganizationTeam{
 		ID:          team.ID,
 		Name:        team.Name,
 		Description: team.Description,
@@ -154,19 +154,19 @@ func ToTeam(team *database.Team) *types.Team {
 	}
 }
 
-func ToLabel(l *database.Label) *types.Label {
-	return &types.Label{
+func ToIssueLabel(l *database.Label) *types.IssueLabel {
+	return &types.IssueLabel{
 		ID:    l.ID,
 		Name:  l.Name,
 		Color: strings.TrimLeft(l.Color, "#"),
 	}
 }
 
-func issueState(isClosed bool) types.StateType {
+func issueState(isClosed bool) types.IssueStateType {
 	if isClosed {
-		return types.StateClosed
+		return types.IssueStateClosed
 	}
-	return types.StateOpen
+	return types.IssueStateOpen
 }
 
 // ToIssue converts a database issue to an API issue.
@@ -174,9 +174,9 @@ func issueState(isClosed bool) types.StateType {
 // Required - Poster, Labels
 // Optional - Milestone, Assignee, PullRequest
 func ToIssue(issue *database.Issue) *types.Issue {
-	labels := make([]*types.Label, len(issue.Labels))
+	labels := make([]*types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
-		labels[i] = ToLabel(issue.Labels[i])
+		labels[i] = ToIssueLabel(issue.Labels[i])
 	}
 
 	apiIssue := &types.Issue{
@@ -193,7 +193,7 @@ func ToIssue(issue *database.Issue) *types.Issue {
 	}
 
 	if issue.Milestone != nil {
-		apiIssue.Milestone = ToMilestone(issue.Milestone)
+		apiIssue.Milestone = ToIssueMilestone(issue.Milestone)
 	}
 	if issue.Assignee != nil {
 		apiIssue.Assignee = ToUser(issue.Assignee)
@@ -210,8 +210,8 @@ func ToIssue(issue *database.Issue) *types.Issue {
 	return apiIssue
 }
 
-func ToComment(c *database.Comment) *types.Comment {
-	return &types.Comment{
+func ToIssueComment(c *database.Comment) *types.IssueComment {
+	return &types.IssueComment{
 		ID:      c.ID,
 		HTMLURL: c.HTMLURL(),
 		Poster:  ToUser(c.Poster),
@@ -221,8 +221,8 @@ func ToComment(c *database.Comment) *types.Comment {
 	}
 }
 
-func ToMilestone(m *database.Milestone) *types.Milestone {
-	ms := &types.Milestone{
+func ToIssueMilestone(m *database.Milestone) *types.IssueMilestone {
+	ms := &types.IssueMilestone{
 		ID:           m.ID,
 		State:        issueState(m.IsClosed),
 		Title:        m.Name,
@@ -255,8 +255,8 @@ func ToRelease(r *database.Release) *types.RepositoryRelease {
 	}
 }
 
-func ToCollaborator(c *database.Collaborator) *types.Collaborator {
-	return &types.Collaborator{
+func ToRepositoryCollaborator(c *database.Collaborator) *types.RepositoryCollaborator {
+	return &types.RepositoryCollaborator{
 		User: ToUser(c.User),
 		Permissions: types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= database.AccessModeAdmin,
