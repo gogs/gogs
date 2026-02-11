@@ -1,6 +1,8 @@
 package markup
 
 import (
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -32,12 +34,26 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("type").Matching(lazyregexp.New(`^checkbox$`).Regexp()).OnElements("input")
 		sanitizer.policy.AllowAttrs("checked", "disabled").OnElements("input")
 
-		// Data URLs
-		sanitizer.policy.AllowURLSchemes("data")
+		// Only allow data URIs with safe image MIME types to prevent XSS via
+		// "data:text/html" payloads.
+		sanitizer.policy.AllowURLSchemeWithCustomPolicy("data", isSafeDataURI)
 
 		// Custom URL-Schemes
 		sanitizer.policy.AllowURLSchemes(conf.Markdown.CustomURLSchemes...)
 	})
+}
+
+// isSafeDataURI returns whether the given data URI uses a safe image MIME type.
+func isSafeDataURI(u *url.URL) bool {
+	// The opaque data of a data URI has the form "mediatype;base64,data" or
+	// "mediatype,data". We only allow common image MIME types.
+	mediatype, _, _ := strings.Cut(u.Opaque, ";")
+	mediatype, _, _ = strings.Cut(mediatype, ",")
+	switch strings.TrimSpace(strings.ToLower(mediatype)) {
+	case "image/png", "image/jpeg", "image/gif", "image/webp", "image/x-icon":
+		return true
+	}
+	return false
 }
 
 // Sanitize takes a string that contains a HTML fragment or document and applies policy whitelist.
