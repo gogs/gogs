@@ -7,5 +7,7 @@ Steps:
 4. Propose a fix with a clear explanation of the root cause and how the fix addresses it. Check for prior art in the codebase to stay consistent with existing patterns.
 5. Implement the fix. Only add tests when there is something meaningful to test at our layer.
 6. Run all the usual build and test commands.
-7. Create a branch named after the GHSA ID, commit, and push.
-8. Create a pull request with a proper title and description, do not reveal too much detail and link the GHSA.
+7. If a changelog entry is warranted (user will specify), add it to CHANGELOG.md with a placeholder for the PR link.
+8. Create a branch named after the GHSA ID, commit, and push.
+9. Create a pull request with a proper title and description, do not reveal too much detail and link the GHSA.
+10. If a changelog entry was added, update it with the PR link, then commit and push again.

@@ -146,18 +146,12 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 
 	// Check access token.
 	if isAPIPath(c.Req.URL.Path) {
-		tokenSHA := c.Query("token")
-		if len(tokenSHA) <= 0 {
-			tokenSHA = c.Query("access_token")
-		}
-		if tokenSHA == "" {
-			// Well, check with header again.
-			auHead := c.Req.Header.Get("Authorization")
-			if len(auHead) > 0 {
-				auths := strings.Fields(auHead)
-				if len(auths) == 2 && auths[0] == "token" {
-					tokenSHA = auths[1]
-				}
+		var tokenSHA string
+		auHead := c.Req.Header.Get("Authorization")
+		if auHead != "" {
+			auths := strings.Fields(auHead)
+			if len(auths) == 2 && auths[0] == "token" {
+				tokenSHA = auths[1]
 			}
 		}
 

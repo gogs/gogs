@@ -10,6 +10,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
+- Support for passing API access tokens via URL query parameters (`token`, `access_token`). Use the `Authorization` header instead. [#8177](https://github.com/gogs/gogs/pull/8177) - [GHSA-x9p5-w45c-7ffc](https://github.com/gogs/gogs/security/advisories/GHSA-x9p5-w45c-7ffc)
+
 - Git clone via the built-in SSH server hangs. [#8132](https://github.com/gogs/gogs/issues/8132)
 
 ## 0.14.0
