@@ -10,7 +10,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
-- Support for passing API access tokens via URL query parameters (`token`, `access_token`). Use the `Authorization` header instead. [GHSA-x9p5-w45c-7ffc](https://github.com/gogs/gogs/security/advisories/GHSA-x9p5-w45c-7ffc)
+- Support for passing API access tokens via URL query parameters (`token`, `access_token`). Use the `Authorization` header instead. [#8177](https://github.com/gogs/gogs/pull/8177) - [GHSA-x9p5-w45c-7ffc](https://github.com/gogs/gogs/security/advisories/GHSA-x9p5-w45c-7ffc)
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
 - The `[email] DISABLE_HELO` configuration option. HELO/EHLO is now always sent during SMTP handshake. [#8164](https://github.com/gogs/gogs/pull/8164)
 - Support for MSSQL as a database backend. Stay on 0.14 for continued usage. [#8173](https://github.com/gogs/gogs/pull/8173)
