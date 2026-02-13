@@ -13,7 +13,6 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/process"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -359,11 +358,15 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return errors.Newf("GetRepositoryByID: %v", err)
 	}
 
-	_, stderr, err := process.ExecDir(-1, repo.RepoPath(),
-		fmt.Sprintf("DeleteReleaseByID (git tag -d): %d", rel.ID),
-		"git", "tag", "-d", rel.TagName)
-	if err != nil && !strings.Contains(stderr, "not found") {
-		return errors.Newf("git tag -d: %v - %s", err, stderr)
+	// 🚨 SECURITY: Use git-module's DeleteTag which uses --end-of-options to
+	// prevent argument injection via tag names starting with "-".
+	gitRepo, err := git.Open(repo.RepoPath())
+	if err != nil {
+		return errors.Newf("open repository: %v", err)
+	}
+	err = gitRepo.DeleteTag(rel.TagName)
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return errors.Newf("delete tag: %v", err)
 	}
 
 	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
