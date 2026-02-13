@@ -58,7 +58,7 @@
 			{{end}}
 			<div class="ui sub header">
 				{{$timeSince := TimeSince .Author.When $.Lang}}
-				{{.i18n.Tr "repo.wiki.last_commit_info" .Author.Name $timeSince | Safe}}
+				{{.i18n.Tr "repo.wiki.last_commit_info" (Sanitize .Author.Name) $timeSince | Safe}}
 			</div>
 		</div>
 		<div class="markdown has-emoji">
