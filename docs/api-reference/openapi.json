@@ -5449,12 +5449,6 @@
         "in": "header",
         "name": "Authorization",
         "description": "Personal access token. Use format: token {YOUR_ACCESS_TOKEN}"
-      },
-      "TokenQuery": {
-        "type": "apiKey",
-        "in": "query",
-        "name": "token",
-        "description": "Access token as query parameter"
       }
     },
     "schemas": {

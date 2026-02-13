@@ -148,7 +148,7 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 	if isAPIPath(c.Req.URL.Path) {
 		var tokenSHA string
 		auHead := c.Req.Header.Get("Authorization")
-		if len(auHead) > 0 {
+		if auHead != "" {
 			auths := strings.Fields(auHead)
 			if len(auths) == 2 && auths[0] == "token" {
 				tokenSHA = auths[1]

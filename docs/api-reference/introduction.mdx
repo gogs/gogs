@@ -55,23 +55,11 @@ There are two ways to authenticate through the Gogs API. Requests that require a
     </Warning>
   </Tab>
   <Tab title="Access token">
-    Personal access tokens are the recommended way to authenticate. They can be sent via a request **header** or a **URL query parameter**.
-
-    **Using a header:**
+    Personal access tokens must be sent via the `Authorization` request header.
 
     ```bash
     curl -H "Authorization: token {YOUR_ACCESS_TOKEN}" https://gogs.example.com/api/v1/user/repos
     ```
-
-    **Using a query parameter:**
-
-    ```bash
-    curl https://gogs.example.com/api/v1/user/repos?token={YOUR_ACCESS_TOKEN}
-    ```
-
-    <Tip>
-      Using the `Authorization` header is preferred over the query parameter, as URLs may be logged by proxies and servers.
-    </Tip>
   </Tab>
 </Tabs>
 
