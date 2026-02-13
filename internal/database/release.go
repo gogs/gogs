@@ -358,8 +358,6 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return errors.Newf("GetRepositoryByID: %v", err)
 	}
 
-	// 🚨 SECURITY: Use git-module's DeleteTag which uses --end-of-options to
-	// prevent argument injection via tag names starting with "-".
 	gitRepo, err := git.Open(repo.RepoPath())
 	if err != nil {
 		return errors.Newf("open repository: %v", err)
