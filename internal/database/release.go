@@ -14,7 +14,6 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/process"
 )
 
 // Release represents a release of repository.
@@ -359,11 +358,13 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return errors.Newf("GetRepositoryByID: %v", err)
 	}
 
-	_, stderr, err := process.ExecDir(-1, repo.RepoPath(),
-		fmt.Sprintf("DeleteReleaseByID (git tag -d): %d", rel.ID),
-		"git", "tag", "-d", rel.TagName)
-	if err != nil && !strings.Contains(stderr, "not found") {
-		return errors.Newf("git tag -d: %v - %s", err, stderr)
+	gitRepo, err := git.Open(repo.RepoPath())
+	if err != nil {
+		return errors.Newf("open repository: %v", err)
+	}
+	err = gitRepo.DeleteTag(rel.TagName)
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return errors.Newf("delete tag: %v", err)
 	}
 
 	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
