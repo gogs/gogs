@@ -73,7 +73,6 @@ func FuncMap() []template.FuncMap {
 			"AvatarLink":       tool.AvatarLink,
 			"AppendAvatarSize": tool.AppendAvatarSize,
 			"Safe":             Safe,
-			"HTMLEscape":       template.HTMLEscapeString,
 			"Sanitize":         bluemonday.UGCPolicy().Sanitize,
 			"Str2HTML":         Str2HTML,
 			"NewLine2br":       NewLine2br,
