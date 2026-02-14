@@ -1,4 +1,4 @@
-FROM golang:alpine3.23 AS binarybuilder
+FROM golang:1.26-alpine3.23 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
