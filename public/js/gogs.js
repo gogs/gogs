@@ -251,7 +251,7 @@ function initCommentForm() {
           $assigneeAnchor.append(
             $('<img class="ui avatar image">').attr("src", $(this).data("avatar"))
           );
-          $assigneeAnchor.append(document.createTextNode($(this).text()));
+          $assigneeAnchor.append($("<span></span>").text($(this).text()));
           $list.find(".selected").empty().append($assigneeAnchor);
       }
       $(".ui" + select_id + ".list .no-select").addClass("hide");
