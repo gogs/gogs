@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	database "gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/lfsx"
+	lfsx "gogs.io/gogs/internal/lfsx"
 )
 
 // MockStore is a mock implementation of the Store interface (from the

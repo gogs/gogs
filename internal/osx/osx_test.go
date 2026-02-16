@@ -14,10 +14,10 @@ func TestIsFile(t *testing.T) {
 		want bool
 	}{
 		{
-			path: "osutil.go",
+			path: "osx.go",
 			want: true,
 		}, {
-			path: "../osutil",
+			path: "../osx",
 			want: false,
 		}, {
 			path: "not_found",
@@ -37,10 +37,10 @@ func TestIsDir(t *testing.T) {
 		want bool
 	}{
 		{
-			path: "osutil.go",
+			path: "osx.go",
 			want: false,
 		}, {
-			path: "../osutil",
+			path: "../osx",
 			want: true,
 		}, {
 			path: "not_found",
@@ -60,10 +60,10 @@ func TestExist(t *testing.T) {
 		expVal bool
 	}{
 		{
-			path:   "osutil.go",
+			path:   "osx.go",
 			expVal: true,
 		}, {
-			path:   "../osutil",
+			path:   "../osx",
 			expVal: true,
 		}, {
 			path:   "not_found",
