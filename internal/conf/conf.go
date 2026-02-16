@@ -18,8 +18,8 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/conf"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/semverx"
 )
 
 func init() {
@@ -66,7 +66,7 @@ func Init(customConf string) error {
 	}
 	CustomConf = customConf
 
-	if osutil.IsFile(customConf) {
+	if osx.IsFile(customConf) {
 		if err = File.Append(customConf); err != nil {
 			return errors.Wrapf(err, "append %q", customConf)
 		}
@@ -141,7 +141,7 @@ func Init(customConf string) error {
 				return errors.Wrap(err, "get OpenSSH version")
 			}
 
-			if IsWindowsRuntime() || semverutil.Compare(sshVersion, "<", "5.1") {
+			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
 				if !HookMode {
 					log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
@@ -383,7 +383,7 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [other] section")
 	}
 
-	HasRobotsTxt = osutil.IsFile(filepath.Join(CustomDir(), "robots.txt"))
+	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
 	return nil
 }
 

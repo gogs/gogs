@@ -9,7 +9,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -47,7 +47,7 @@ func ServeBlob(c *context.Context, blob *git.Blob) error {
 func SingleDownload(c *context.Context) {
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get blob")
+		c.NotFoundOrError(gitx.NewError(err), "get blob")
 		return
 	}
 

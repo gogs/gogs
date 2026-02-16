@@ -11,9 +11,9 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/pathutil"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/pathx"
+	"gogs.io/gogs/internal/repox"
 )
 
 type links struct {
@@ -42,8 +42,8 @@ type repoContent struct {
 func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commit, entry *git.TreeEntry) (*repoContent, error) {
 	repoURL := fmt.Sprintf("%s/repos/%s/%s", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
 	selfURL := fmt.Sprintf("%s/contents/%s", repoURL, subpath)
-	htmlURL := fmt.Sprintf("%s/src/%s/%s", repoutil.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
-	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repoutil.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
+	htmlURL := fmt.Sprintf("%s/src/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
+	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
 
 	content := &repoContent{
 		Size:        entry.Size(),
@@ -99,7 +99,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 }
 
 func getContents(c *context.APIContext) {
-	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
@@ -113,15 +113,15 @@ func getContents(c *context.APIContext) {
 
 	commit, err := gitRepo.CatFileCommit(ref)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get commit")
+		c.NotFoundOrError(gitx.NewError(err), "get commit")
 		return
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathutil.Clean(c.Params("*"))
+	treePath := pathx.Clean(c.Params("*"))
 	entry, err := commit.TreeEntry(treePath)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
+		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
 		return
 	}
 
@@ -139,13 +139,13 @@ func getContents(c *context.APIContext) {
 	// The entry is a directory
 	dir, err := gitRepo.LsTree(entry.ID().String(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get tree")
+		c.NotFoundOrError(gitx.NewError(err), "get tree")
 		return
 	}
 
 	entries, err := dir.Entries(git.LsTreeOptions{Verbatim: true})
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "list entries")
+		c.NotFoundOrError(gitx.NewError(err), "list entries")
 		return
 	}
 
@@ -188,7 +188,7 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathutil.Clean(c.Params("*"))
+	treePath := pathx.Clean(c.Params("*"))
 
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
@@ -206,7 +206,7 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 		return
 	}
 
-	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")

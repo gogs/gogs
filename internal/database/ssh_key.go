@@ -20,8 +20,8 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -542,7 +542,7 @@ func RewriteAuthorizedKeys() error {
 		return err
 	}
 
-	if osutil.Exist(fpath) {
+	if osx.Exist(fpath) {
 		if err = os.Remove(fpath); err != nil {
 			return err
 		}
@@ -685,7 +685,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 	return key, sess.Commit()
 }
 
-var _ errutil.NotFound = (*ErrDeployKeyNotExist)(nil)
+var _ errx.NotFound = (*ErrDeployKeyNotExist)(nil)
 
 type ErrDeployKeyNotExist struct {
 	args map[string]any

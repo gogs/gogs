@@ -16,7 +16,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/template"
@@ -182,7 +182,7 @@ func (c *Context) Errorf(err error, format string, args ...any) {
 
 // NotFoundOrError responses with 404 page for not found error and 500 page otherwise.
 func (c *Context) NotFoundOrError(err error, msg string) {
-	if errutil.IsNotFound(err) {
+	if errx.IsNotFound(err) {
 		c.NotFound()
 		return
 	}

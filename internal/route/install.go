@@ -22,9 +22,9 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/ssh"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/template/highlight"
 )
 
@@ -149,7 +149,7 @@ func Install(c *context.Context) {
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
 	if conf.IsWindowsRuntime() && conf.App.RunUser == "git" {
-		f.RunUser = osutil.CurrentUsername()
+		f.RunUser = osx.CurrentUsername()
 	} else {
 		f.RunUser = conf.App.RunUser
 	}
@@ -298,7 +298,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Save settings.
 	cfg := ini.Empty()
-	if osutil.IsFile(conf.CustomConf) {
+	if osx.IsFile(conf.CustomConf) {
 		// Keeps custom settings if there is already something.
 		if err := cfg.Append(conf.CustomConf); err != nil {
 			log.Error("Failed to load custom conf %q: %v", conf.CustomConf, err)
@@ -360,7 +360,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(f.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	secretKey, err := strutil.RandomChars(15)
+	secretKey, err := strx.RandomChars(15)
 	if err != nil {
 		c.RenderWithErr(c.Tr("install.secret_key_failed", err), http.StatusInternalServerError, INSTALL, &f)
 		return

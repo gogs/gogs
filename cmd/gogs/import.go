@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 var (
@@ -45,9 +45,9 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 	} else if !cmd.IsSet("target") {
 		return errors.New("target directory is not specified")
 	}
-	if !osutil.IsDir(cmd.String("source")) {
+	if !osx.IsDir(cmd.String("source")) {
 		return errors.Newf("source directory %q does not exist or is not a directory", cmd.String("source"))
-	} else if !osutil.IsDir(cmd.String("target")) {
+	} else if !osx.IsDir(cmd.String("target")) {
 		return errors.Newf("target directory %q does not exist or is not a directory", cmd.String("target"))
 	}
 
@@ -67,7 +67,7 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		source := filepath.Join(cmd.String("source"), name)
 		target := filepath.Join(cmd.String("target"), name)
-		if !osutil.IsFile(source) {
+		if !osx.IsFile(source) {
 			continue
 		}
 

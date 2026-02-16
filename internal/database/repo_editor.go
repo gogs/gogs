@@ -18,11 +18,11 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/ioutil"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/pathutil"
+	"gogs.io/gogs/internal/cryptox"
+	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/iox"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -68,7 +68,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 		EnvAuthUserName + "=" + opts.AuthUser.Name,
 		EnvAuthUserEmail + "=" + opts.AuthUser.Email,
 		EnvRepoOwnerName + "=" + opts.OwnerName,
-		EnvRepoOwnerSaltMd5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
+		EnvRepoOwnerSaltMd5 + "=" + cryptox.MD5(opts.OwnerSalt),
 		EnvRepoID + "=" + strconv.FormatInt(opts.RepoID, 10),
 		EnvRepoName + "=" + opts.RepoName,
 		EnvRepoCustomHooksPath + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
@@ -86,7 +86,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 // discardLocalRepoBranchChanges discards local commits/changes of
 // given branch to make sure it is even to remote branch.
 func discardLocalRepoBranchChanges(localPath, branch string) error {
-	if !osutil.Exist(localPath) {
+	if !osx.Exist(localPath) {
 		return nil
 	}
 
@@ -123,7 +123,7 @@ func hasSymlinkInPath(base, relPath string) bool {
 	parts := strings.Split(filepath.ToSlash(relPath), "/")
 	for i := range parts {
 		filePath := path.Join(append([]string{base}, parts[:i+1]...)...)
-		if osutil.IsSymlink(filePath) {
+		if osx.IsSymlink(filePath) {
 			return true
 		}
 	}
@@ -189,7 +189,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	newFilePath := path.Join(localPath, opts.NewTreeName)
 
 	// Prompt the user if the meant-to-be new file already exists.
-	if osutil.Exist(newFilePath) && opts.IsNewFile {
+	if osx.Exist(newFilePath) && opts.IsNewFile {
 		return ErrRepoFileAlreadyExist{newFilePath}
 	}
 
@@ -197,7 +197,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.Wrapf(err, "create parent directories of %q", newFilePath)
 	}
 
-	if osutil.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
+	if osx.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
 		if err := git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return errors.Wrapf(err, "git mv %q %q", opts.OldTreeName, opts.NewTreeName)
 		}
@@ -244,7 +244,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.Diff, error) {
+func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Diff, error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
@@ -291,7 +291,7 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", r.RepoPath()), cmd)
 	defer process.Remove(pid)
 
-	diff, err := gitutil.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	diff, err := gitx.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
 	if err != nil {
 		return nil, errors.Newf("parse diff: %v", err)
 	}
@@ -416,7 +416,7 @@ func (upload *Upload) LocalPath() string {
 // NewUpload creates a new upload object.
 func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
 	// 🚨 SECURITY: Prevent path traversal.
-	name = pathutil.Clean(name)
+	name = pathx.Clean(name)
 	if name == "" {
 		return nil, errors.New("empty file name")
 	}
@@ -492,7 +492,7 @@ func DeleteUploads(uploads ...*Upload) (err error) {
 
 	for _, upload := range uploads {
 		localPath := upload.LocalPath()
-		if !osutil.IsFile(localPath) {
+		if !osx.IsFile(localPath) {
 			continue
 		}
 
@@ -536,7 +536,7 @@ type UploadRepoFileOptions struct {
 // isRepositoryGitPath returns true if given path is or resides inside ".git"
 // path of the repository.
 //
-// TODO(unknwon): Move to repoutil during refactoring for this file.
+// TODO(unknwon): Move to repox during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
 	path = strings.ToLower(path)
 	return strings.HasSuffix(path, ".git") ||
@@ -587,12 +587,12 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 	// Copy uploaded files into repository
 	for _, upload := range uploads {
 		tmpPath := upload.LocalPath()
-		if !osutil.IsFile(tmpPath) {
+		if !osx.IsFile(tmpPath) {
 			continue
 		}
 
 		// 🚨 SECURITY: Prevent path traversal.
-		upload.Name = pathutil.Clean(upload.Name)
+		upload.Name = pathx.Clean(upload.Name)
 
 		// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 		if isRepositoryGitPath(upload.Name) {
@@ -603,11 +603,11 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 		// 🚨 SECURITY: Prevent updating files in surprising place, check if the target
 		// is a symlink.
-		if osutil.IsSymlink(targetPath) {
+		if osx.IsSymlink(targetPath) {
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
 
-		if err = ioutil.CopyFile(tmpPath, targetPath); err != nil {
+		if err = iox.CopyFile(tmpPath, targetPath); err != nil {
 			return errors.Newf("copy: %v", err)
 		}
 	}

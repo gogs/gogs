@@ -10,8 +10,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/lfsutil"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/lfsx"
+	"gogs.io/gogs/internal/strx"
 )
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
@@ -22,7 +22,7 @@ func serveBatch(store Store) macaron.Handler {
 		err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 		if err != nil {
 			responseJSON(c.Resp, http.StatusBadRequest, responseError{
-				Message: strutil.ToUpperFirst(err.Error()),
+				Message: strx.ToUpperFirst(err.Error()),
 			})
 			return
 		}
@@ -37,7 +37,7 @@ func serveBatch(store Store) macaron.Handler {
 		case basicOperationUpload:
 			for _, obj := range request.Objects {
 				var actions batchActions
-				if lfsutil.ValidOID(obj.Oid) {
+				if lfsx.ValidOID(obj.Oid) {
 					actions = batchActions{
 						Upload: &batchAction{
 							Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
@@ -68,7 +68,7 @@ func serveBatch(store Store) macaron.Handler {
 			}
 
 		case basicOperationDownload:
-			oids := make([]lfsutil.OID, 0, len(request.Objects))
+			oids := make([]lfsx.OID, 0, len(request.Objects))
 			for _, obj := range request.Objects {
 				oids = append(oids, obj.Oid)
 			}
@@ -78,7 +78,7 @@ func serveBatch(store Store) macaron.Handler {
 				log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
 				return
 			}
-			storedSet := make(map[lfsutil.OID]*database.LFSObject, len(stored))
+			storedSet := make(map[lfsx.OID]*database.LFSObject, len(stored))
 			for _, obj := range stored {
 				storedSet[obj.OID] = obj
 			}
@@ -128,8 +128,8 @@ func serveBatch(store Store) macaron.Handler {
 type batchRequest struct {
 	Operation string `json:"operation"`
 	Objects   []struct {
-		Oid  lfsutil.OID `json:"oid"`
-		Size int64       `json:"size"`
+		Oid  lfsx.OID `json:"oid"`
+		Size int64    `json:"size"`
 	} `json:"objects"`
 }
 
@@ -151,7 +151,7 @@ type batchActions struct {
 }
 
 type batchObject struct {
-	Oid     lfsutil.OID  `json:"oid"`
+	Oid     lfsx.OID     `json:"oid"`
 	Size    int64        `json:"size"`
 	Actions batchActions `json:"actions"`
 }

@@ -30,15 +30,15 @@ import (
 	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbutil"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/dbx"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
-	"gogs.io/gogs/internal/semverutil"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/semverx"
+	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -80,7 +80,7 @@ func LoadRepoConfig() {
 		}
 
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
-		if osutil.IsDir(customPath) {
+		if osx.IsDir(customPath) {
 			entries, err := os.ReadDir(customPath)
 			if err != nil {
 				log.Fatal("Failed to get custom %s files: %v", t, err)
@@ -88,7 +88,7 @@ func LoadRepoConfig() {
 
 			for _, entry := range entries {
 				f := entry.Name()
-				if !strutil.ContainsFold(files, f) {
+				if !strx.ContainsFold(files, f) {
 					files = append(files, f)
 				}
 			}
@@ -136,7 +136,7 @@ func NewRepoContext() {
 	}
 
 	log.Trace("Git version: %s", conf.Git.Version)
-	if semverutil.Compare(conf.Git.Version, "<", "1.8.3") {
+	if semverx.Compare(conf.Git.Version, "<", "1.8.3") {
 		log.Fatal("Gogs requires Git version greater or equal to 1.8.3")
 	}
 
@@ -307,7 +307,7 @@ func (r *Repository) FullName() string {
 	return r.MustOwner().Name + "/" + r.Name
 }
 
-// Deprecated: Use repoutil.HTMLURL instead.
+// Deprecated: Use repox.HTMLURL instead.
 func (r *Repository) HTMLURL() string {
 	return conf.Server.ExternalURL + r.FullName()
 }
@@ -322,7 +322,7 @@ func (r *Repository) CustomAvatarPath() string {
 // Since Gravatar support not needed here - just check for image path.
 func (r *Repository) RelAvatarLink() string {
 	defaultImgURL := ""
-	if !osutil.Exist(r.CustomAvatarPath()) {
+	if !osx.Exist(r.CustomAvatarPath()) {
 		return defaultImgURL
 	}
 	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, RepoAvatarURLPrefix, r.ID)
@@ -556,7 +556,7 @@ func (r *Repository) GetAssigneeByID(userID int64) (*User, error) {
 			Private: r.IsPrivate,
 		},
 	) {
-		return nil, ErrUserNotExist{args: errutil.Args{"userID": userID}}
+		return nil, ErrUserNotExist{args: errx.Args{"userID": userID}}
 	}
 	return Handle.Users().GetByID(ctx, userID)
 }
@@ -585,7 +585,7 @@ func (r *Repository) repoPath(e Engine) string {
 	return RepoPath(r.mustOwner(e).Name, r.Name)
 }
 
-// Deprecated: Use repoutil.RepositoryPath instead.
+// Deprecated: Use repox.RepositoryPath instead.
 func (r *Repository) RepoPath() string {
 	return r.repoPath(x)
 }
@@ -602,7 +602,7 @@ func (r *Repository) Link() string {
 	return conf.Server.Subpath + "/" + r.FullName()
 }
 
-// Deprecated: Use repoutil.ComparePath instead.
+// Deprecated: Use repox.ComparePath instead.
 func (r *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
 	return fmt.Sprintf("%s/%s/compare/%s...%s", r.MustOwner().Name, r.Name, oldCommitID, newCommitID)
 }
@@ -661,7 +661,7 @@ func (r *Repository) LocalCopyPath() string {
 // assume subsequent operations are against target branch when caller has confidence
 // about no race condition.
 func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
-	if !osutil.Exist(localPath) {
+	if !osx.Exist(localPath) {
 		// Checkout to a specific branch fails when wiki is an empty repository.
 		if isWiki {
 			branch = ""
@@ -736,7 +736,7 @@ func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 		OwnerID:   u.ID,
 		LowerName: strings.ToLower(repoName),
 	})
-	return has && osutil.IsDir(RepoPath(u.Name, repoName)), err
+	return has && osx.IsDir(RepoPath(u.Name, repoName)), err
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -744,28 +744,28 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 	return isRepositoryExist(x, u, repoName)
 }
 
-// Deprecated: Use repoutil.NewCloneLink instead.
-func (r *Repository) cloneLink(isWiki bool) *repoutil.CloneLink {
+// Deprecated: Use repox.NewCloneLink instead.
+func (r *Repository) cloneLink(isWiki bool) *repox.CloneLink {
 	repoName := r.Name
 	if isWiki {
 		repoName += ".wiki"
 	}
 
 	r.Owner = r.MustOwner()
-	cl := new(repoutil.CloneLink)
+	cl := new(repox.CloneLink)
 	if conf.SSH.Port != 22 {
 		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", conf.App.RunUser, conf.SSH.Domain, conf.SSH.Port, r.Owner.Name, repoName)
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.App.RunUser, conf.SSH.Domain, r.Owner.Name, repoName)
 	}
-	cl.HTTPS = repoutil.HTTPSCloneURL(r.Owner.Name, repoName)
+	cl.HTTPS = repox.HTTPSCloneURL(r.Owner.Name, repoName)
 	return cl
 }
 
 // CloneLink returns clone URLs of repository.
 //
-// Deprecated: Use repoutil.NewCloneLink instead.
-func (r *Repository) CloneLink() (cl *repoutil.CloneLink) {
+// Deprecated: Use repox.NewCloneLink instead.
+func (r *Repository) CloneLink() (cl *repox.CloneLink) {
 	return r.cloneLink(false)
 }
 
@@ -990,7 +990,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 
 	// Use custom file when available.
 	customPath := filepath.Join(conf.CustomDir(), "conf", relPath)
-	if osutil.IsFile(customPath) {
+	if osx.IsFile(customPath) {
 		return os.ReadFile(customPath)
 	}
 	return embedConf.Files.ReadFile(relPath)
@@ -1148,14 +1148,14 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 	if err != nil {
 		return errors.Newf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
+		return ErrRepoAlreadyExist{args: errx.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
 	if _, err = e.Insert(repo); err != nil {
 		return err
 	}
 
-	_, err = e.Exec(dbutil.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID)
+	_, err = e.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID)
 	if err != nil {
 		return errors.Wrap(err, "increase owned repository count")
 	}
@@ -1222,7 +1222,7 @@ func (err ErrReachLimitOfRepo) Error() string {
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	repoPath := RepoPath(owner.Name, opts.Name)
-	if osutil.Exist(repoPath) {
+	if osx.Exist(repoPath) {
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
 	}
 	if !owner.canCreateRepo() {
@@ -1361,9 +1361,9 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 
 // RepoPath returns repository path by given user and repository name.
 //
-// Deprecated: Use repoutil.RepositoryPath instead.
+// Deprecated: Use repox.RepositoryPath instead.
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".git")
+	return filepath.Join(repox.UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
@@ -1378,7 +1378,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	if err != nil {
 		return errors.Newf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
+		return ErrRepoAlreadyExist{args: errx.Args{"ownerName": newOwnerName, "name": repo.Name}}
 	}
 
 	sess := x.NewSession()
@@ -1490,7 +1490,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	}
 
 	// Rename remote repository to new path and delete local copy.
-	if err = os.MkdirAll(repoutil.UserPath(newOwner.Name), os.ModePerm); err != nil {
+	if err = os.MkdirAll(repox.UserPath(newOwner.Name), os.ModePerm); err != nil {
 		return err
 	}
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
@@ -1501,7 +1501,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Rename remote wiki repository to new path and delete local copy.
 	wikiPath := WikiPath(owner.Name, repo.Name)
-	if osutil.Exist(wikiPath) {
+	if osx.Exist(wikiPath) {
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
@@ -1514,7 +1514,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 func deleteRepoLocalCopy(repoID int64) {
 	repoWorkingPool.CheckIn(strconv.FormatInt(repoID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(repoID, 10))
-	RemoveAllWithNotice(fmt.Sprintf("Delete repository %d local copy", repoID), repoutil.RepositoryLocalPath(repoID))
+	RemoveAllWithNotice(fmt.Sprintf("Delete repository %d local copy", repoID), repox.RepositoryLocalPath(repoID))
 }
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
@@ -1529,7 +1529,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	if err != nil {
 		return errors.Newf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
+		return ErrRepoAlreadyExist{args: errx.Args{"ownerID": u.ID, "name": newRepoName}}
 	}
 
 	repo, err := GetRepositoryByName(u.ID, oldRepoName)
@@ -1543,7 +1543,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	}
 
 	wikiPath := repo.WikiPath()
-	if osutil.Exist(wikiPath) {
+	if osx.Exist(wikiPath) {
 		if err = os.Rename(wikiPath, WikiPath(u.Name, newRepoName)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
 		}
@@ -1601,11 +1601,11 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 
 		// Create/Remove git-daemon-export-ok for git-daemon
 		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
-		if repo.IsPrivate && osutil.Exist(daemonExportFile) {
+		if repo.IsPrivate && osx.Exist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
 				log.Error("Failed to remove %s: %v", daemonExportFile, err)
 			}
-		} else if !repo.IsPrivate && !osutil.Exist(daemonExportFile) {
+		} else if !repo.IsPrivate && !osx.Exist(daemonExportFile) {
 			if f, err := os.Create(daemonExportFile); err != nil {
 				log.Error("Failed to create %s: %v", daemonExportFile, err)
 			} else {
@@ -1937,7 +1937,7 @@ func DeleteOldRepositoryArchives() {
 			basePath := filepath.Join(repo.RepoPath(), "archives")
 			for _, format := range formats {
 				dirPath := filepath.Join(basePath, format)
-				if !osutil.IsDir(dirPath) {
+				if !osx.IsDir(dirPath) {
 					continue
 				}
 
@@ -2000,7 +2000,7 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
-			if !osutil.IsDir(repo.RepoPath()) {
+			if !osx.IsDir(repo.RepoPath()) {
 				repos = append(repos, repo)
 			}
 			return nil

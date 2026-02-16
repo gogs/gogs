@@ -10,8 +10,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/strutil"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/strx"
+	"gogs.io/gogs/internal/userx"
 )
 
 func (issue *Issue) MailSubject() string {
@@ -36,7 +36,7 @@ func (mu mailerUser) Email() string {
 }
 
 func (mu mailerUser) GenerateEmailActivateCode(email string) string {
-	return userutil.GenerateActivateCode(
+	return userx.GenerateActivateCode(
 		mu.user.ID,
 		email,
 		mu.user.Name,
@@ -138,7 +138,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	for i := range participants {
 		if participants[i].ID == doer.ID {
 			continue
-		} else if strutil.ContainsFold(names, participants[i].Name) {
+		} else if strx.ContainsFold(names, participants[i].Name) {
 			continue
 		}
 
@@ -146,7 +146,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		names = append(names, participants[i].Name)
 	}
 	if issue.Assignee != nil && issue.Assignee.ID != doer.ID {
-		if !strutil.ContainsFold(names, issue.Assignee.Name) {
+		if !strx.ContainsFold(names, issue.Assignee.Name) {
 			tos = append(tos, issue.Assignee.Email)
 			names = append(names, issue.Assignee.Name)
 		}
@@ -159,7 +159,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	names = append(names, doer.Name)
 	toUsernames := make([]string, 0, len(mentions)) // list of user names.
 	for i := range mentions {
-		if strutil.ContainsFold(names, mentions[i]) {
+		if strx.ContainsFold(names, mentions[i]) {
 			continue
 		}
 

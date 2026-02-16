@@ -16,8 +16,8 @@ import (
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/osx"
 )
 
 // loginSourceFilesStore is the in-memory interface for login source files stored on file system.
@@ -41,10 +41,10 @@ type loginSourceFiles struct {
 	clock   func() time.Time
 }
 
-var _ errutil.NotFound = (*ErrLoginSourceNotExist)(nil)
+var _ errx.NotFound = (*ErrLoginSourceNotExist)(nil)
 
 type ErrLoginSourceNotExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrLoginSourceNotExist(err error) bool {
@@ -69,7 +69,7 @@ func (s *loginSourceFiles) GetByID(id int64) (*LoginSource, error) {
 		}
 	}
 
-	return nil, ErrLoginSourceNotExist{args: errutil.Args{"id": id}}
+	return nil, ErrLoginSourceNotExist{args: errx.Args{"id": id}}
 }
 
 func (s *loginSourceFiles) Len() int {
@@ -109,7 +109,7 @@ func (s *loginSourceFiles) Update(source *LoginSource) {
 
 // loadLoginSourceFiles loads login sources from file system.
 func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSourceFilesStore, error) {
-	if !osutil.IsDir(authdPath) {
+	if !osx.IsDir(authdPath) {
 		return &loginSourceFiles{clock: clock}, nil
 	}
 

@@ -10,8 +10,8 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/lfsutil"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/lfsx"
+	"gogs.io/gogs/internal/strx"
 )
 
 const transferBasic = "basic"
@@ -23,23 +23,23 @@ const (
 type basicHandler struct {
 	store Store
 	// The default storage backend for uploading new objects.
-	defaultStorage lfsutil.Storage
+	defaultStorage lfsx.Storage
 	// The list of available storage backends to access objects.
-	storagers map[lfsutil.Storage]lfsutil.Storager
+	storagers map[lfsx.Storage]lfsx.Storager
 }
 
 // DefaultStorager returns the default storage backend.
-func (h *basicHandler) DefaultStorager() lfsutil.Storager {
+func (h *basicHandler) DefaultStorager() lfsx.Storager {
 	return h.storagers[h.defaultStorage]
 }
 
 // Storager returns the given storage backend.
-func (h *basicHandler) Storager(storage lfsutil.Storage) lfsutil.Storager {
+func (h *basicHandler) Storager(storage lfsx.Storage) lfsx.Storager {
 	return h.storagers[storage]
 }
 
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Repository, oid lfsutil.OID) {
+func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Repository, oid lfsx.OID) {
 	object, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, oid)
 	if err != nil {
 		if database.IsErrLFSObjectNotExist(err) {
@@ -72,7 +72,7 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 }
 
 // PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository, oid lfsutil.OID) {
+func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository, oid lfsx.OID) {
 	// NOTE: LFS client will retry upload the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
 	_, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, oid)
@@ -91,7 +91,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 	s := h.DefaultStorager()
 	written, err := s.Upload(oid, c.Req.Request.Body)
 	if err != nil {
-		if err == lfsutil.ErrInvalidOID || err == lfsutil.ErrOIDMismatch {
+		if err == lfsx.ErrInvalidOID || err == lfsx.ErrOIDMismatch {
 			responseJSON(c.Resp, http.StatusBadRequest, responseError{
 				Message: err.Error(),
 			})
@@ -124,12 +124,12 @@ func (h *basicHandler) serveVerify(c *macaron.Context, repo *database.Repository
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 	if err != nil {
 		responseJSON(c.Resp, http.StatusBadRequest, responseError{
-			Message: strutil.ToUpperFirst(err.Error()),
+			Message: strx.ToUpperFirst(err.Error()),
 		})
 		return
 	}
 
-	if !lfsutil.ValidOID(request.Oid) {
+	if !lfsx.ValidOID(request.Oid) {
 		responseJSON(c.Resp, http.StatusBadRequest, responseError{
 			Message: "Invalid oid",
 		})
@@ -159,6 +159,6 @@ func (h *basicHandler) serveVerify(c *macaron.Context, repo *database.Repository
 }
 
 type basicVerifyRequest struct {
-	Oid  lfsutil.OID `json:"oid"`
-	Size int64       `json:"size"`
+	Oid  lfsx.OID `json:"oid"`
+	Size int64    `json:"size"`
 }

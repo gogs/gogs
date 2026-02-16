@@ -12,7 +12,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -202,7 +202,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	return nil
 }
 
-var _ errutil.NotFound = (*ErrReleaseNotExist)(nil)
+var _ errx.NotFound = (*ErrReleaseNotExist)(nil)
 
 type ErrReleaseNotExist struct {
 	args map[string]any

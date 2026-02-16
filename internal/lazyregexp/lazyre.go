@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"sync"
 
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/testx"
 )
 
 // Regexp is a wrapper around regexp.Regexp, where the underlying regexp will be
@@ -104,7 +104,7 @@ func (r *Regexp) ReplaceAll(src, repl []byte) []byte {
 // happen immediately.
 func New(str string) *Regexp {
 	lr := &Regexp{str: str}
-	if testutil.InTest {
+	if testx.InTest {
 		// In tests, always compile the regexps early.
 		lr.Regexp()
 	}

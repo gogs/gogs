@@ -20,7 +20,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
-	"gogs.io/gogs/internal/dbutil"
+	"gogs.io/gogs/internal/dbx"
 )
 
 // Engine represents a XORM engine or session.
@@ -89,7 +89,7 @@ func getEngine() (*xorm.Engine, error) {
 
 	case "postgres":
 		conf.UsePostgreSQL = true
-		host, port := dbutil.ParsePostgreSQLHostPort(conf.Database.Host)
+		host, port := dbx.ParsePostgreSQLHostPort(conf.Database.Host)
 		connStr = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
 			conf.Database.User, conf.Database.Password, host, port, conf.Database.Name, conf.Database.SSLMode, conf.Database.Schema)
 		driver = "pgx"
@@ -166,7 +166,7 @@ func SetEngine() (*gorm.DB, error) {
 
 	var gormLogger logger.Writer
 	if conf.HookMode {
-		gormLogger = &dbutil.Logger{Writer: fileWriter}
+		gormLogger = &dbx.Logger{Writer: fileWriter}
 	} else {
 		gormLogger, err = newLogWriter()
 		if err != nil {

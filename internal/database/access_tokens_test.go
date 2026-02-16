@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 func TestAccessToken_BeforeCreate(t *testing.T) {
@@ -138,7 +138,7 @@ func accessTokensCreate(t *testing.T, ctx context.Context, s *AccessTokensStore)
 	// Try create second access token with same name should fail
 	_, err = s.Create(ctx, token.UserID, token.Name)
 	wantErr := ErrAccessTokenAlreadyExist{
-		args: errutil.Args{
+		args: errx.Args{
 			"userID": token.UserID,
 			"name":   token.Name,
 		},
@@ -166,7 +166,7 @@ func accessTokensDeleteByID(t *testing.T, ctx context.Context, s *AccessTokensSt
 	// We should get token not found error
 	_, err = s.GetBySHA1(ctx, token.Sha1)
 	wantErr := ErrAccessTokenNotExist{
-		args: errutil.Args{
+		args: errx.Args{
 			"sha": token.Sha1,
 		},
 	}
@@ -185,7 +185,7 @@ func accessTokensGetBySHA(t *testing.T, ctx context.Context, s *AccessTokensStor
 	// Try to get a non-existent token
 	_, err = s.GetBySHA1(ctx, "bad_sha")
 	wantErr := ErrAccessTokenNotExist{
-		args: errutil.Args{
+		args: errx.Args{
 			"sha": "bad_sha",
 		},
 	}

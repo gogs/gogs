@@ -9,9 +9,9 @@ import (
 	"xorm.io/builder"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/repoutil"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/repox"
+	"gogs.io/gogs/internal/userx"
 )
 
 var ErrOrgNotExist = errors.New("Organization does not exist")
@@ -103,17 +103,17 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	if Handle.Users().IsUsernameUsed(context.TODO(), org.Name, 0) {
 		return ErrUserAlreadyExist{
-			args: errutil.Args{
+			args: errx.Args{
 				"name": org.Name,
 			},
 		}
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
-	if org.Rands, err = userutil.RandomSalt(); err != nil {
+	if org.Rands, err = userx.RandomSalt(); err != nil {
 		return err
 	}
-	if org.Salt, err = userutil.RandomSalt(); err != nil {
+	if org.Salt, err = userx.RandomSalt(); err != nil {
 		return err
 	}
 	org.UseCustomAvatar = true
@@ -130,7 +130,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	if _, err = sess.Insert(org); err != nil {
 		return errors.Newf("insert organization: %v", err)
 	}
-	_ = userutil.GenerateRandomAvatar(org.ID, org.Name, org.Email)
+	_ = userx.GenerateRandomAvatar(org.ID, org.Name, org.Email)
 
 	// Add initial creator to organization and owner team.
 	if _, err = sess.Insert(&OrgUser{
@@ -162,7 +162,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		return errors.Newf("insert team-user relation: %v", err)
 	}
 
-	if err = os.MkdirAll(repoutil.UserPath(org.Name), os.ModePerm); err != nil {
+	if err = os.MkdirAll(repox.UserPath(org.Name), os.ModePerm); err != nil {
 		return errors.Newf("create directory: %v", err)
 	}
 

@@ -9,7 +9,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/repo"
-	"gogs.io/gogs/internal/urlutil"
+	"gogs.io/gogs/internal/urlx"
 )
 
 const (
@@ -122,7 +122,7 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	}
 
 	redirectTo := c.Query("redirect_to")
-	if !urlutil.IsSameSite(redirectTo) {
+	if !urlx.IsSameSite(redirectTo) {
 		redirectTo = puser.HomeURLPath()
 	}
 	c.Redirect(redirectTo)

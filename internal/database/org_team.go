@@ -8,7 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 const ownerTeamName = "Owners"
@@ -297,7 +297,7 @@ func NewTeam(t *Team) error {
 	return sess.Commit()
 }
 
-var _ errutil.NotFound = (*ErrTeamNotExist)(nil)
+var _ errx.NotFound = (*ErrTeamNotExist)(nil)
 
 type ErrTeamNotExist struct {
 	args map[string]any

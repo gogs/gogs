@@ -17,7 +17,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 var backupCommand = cli.Command{
@@ -59,7 +59,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	tmpDir := cmd.String("tempdir")
-	if !osutil.Exist(tmpDir) {
+	if !osx.Exist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
 	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
@@ -108,7 +108,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 		// Data files
 		for _, dir := range []string{"ssh", "attachments", "avatars", "repo-avatars"} {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if !osutil.IsDir(dirPath) {
+			if !osx.IsDir(dirPath) {
 				continue
 			}
 

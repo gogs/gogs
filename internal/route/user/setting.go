@@ -19,12 +19,12 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/userx"
 )
 
 // SettingsHandler is the handler for users settings endpoints.
@@ -120,7 +120,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 // FIXME: limit upload size
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.User) error {
 	if f.Source == form.AvatarLookup && f.Gravatar != "" {
-		avatar := cryptoutil.MD5(f.Gravatar)
+		avatar := cryptox.MD5(f.Gravatar)
 		err := database.Handle.Users().Update(
 			c.Req.Context(),
 			ctxUser.ID,
@@ -204,7 +204,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 		return
 	}
 
-	if !userutil.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
+	if !userx.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
 		c.Flash.Error(c.Tr("settings.password_incorrect"))
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))

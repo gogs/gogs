@@ -10,7 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -128,7 +128,7 @@ func NewMilestone(m *Milestone) (err error) {
 	return sess.Commit()
 }
 
-var _ errutil.NotFound = (*ErrMilestoneNotExist)(nil)
+var _ errx.NotFound = (*ErrMilestoneNotExist)(nil)
 
 type ErrMilestoneNotExist struct {
 	args map[string]any

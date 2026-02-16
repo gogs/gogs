@@ -9,8 +9,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/netutil"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/netx"
+	"gogs.io/gogs/internal/osx"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -68,7 +68,7 @@ func (f MigrateRepo) ParseRemoteAddr(user *database.User) (string, error) {
 			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
 
-		if netutil.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		if netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
 			return "", database.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
 		}
 
@@ -82,7 +82,7 @@ func (f MigrateRepo) ParseRemoteAddr(user *database.User) (string, error) {
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
 		return "", database.ErrInvalidCloneAddr{IsPermissionDenied: true}
-	} else if !osutil.IsDir(remoteAddr) {
+	} else if !osx.IsDir(remoteAddr) {
 		return "", database.ErrInvalidCloneAddr{IsInvalidPath: true}
 	}
 

@@ -7,12 +7,12 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/repox"
 )
 
 func repoGitBlob(c *context.APIContext) {
-	gitRepo, err := git.Open(repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame")))
+	gitRepo, err := git.Open(repox.RepositoryPath(c.Params(":username"), c.Params(":reponame")))
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -21,7 +21,7 @@ func repoGitBlob(c *context.APIContext) {
 	sha := c.Params(":sha")
 	blob, err := gitRepo.CatFileBlob(sha)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get blob")
+		c.NotFoundOrError(gitx.NewError(err), "get blob")
 		return
 	}
 
@@ -35,7 +35,7 @@ func repoGitBlob(c *context.APIContext) {
 
 	content, err := blob.Blob().Bytes()
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get blob content")
+		c.NotFoundOrError(gitx.NewError(err), "get blob content")
 		return
 	}
 

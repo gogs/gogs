@@ -13,7 +13,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 // Attachment represent a attachment of issue/comment/release.
@@ -81,7 +81,7 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 	return attach, nil
 }
 
-var _ errutil.NotFound = (*ErrAttachmentNotExist)(nil)
+var _ errx.NotFound = (*ErrAttachmentNotExist)(nil)
 
 type ErrAttachmentNotExist struct {
 	args map[string]any

@@ -11,7 +11,7 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -388,7 +388,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 	return err
 }
 
-var _ errutil.NotFound = (*ErrCommentNotExist)(nil)
+var _ errx.NotFound = (*ErrCommentNotExist)(nil)
 
 type ErrCommentNotExist struct {
 	args map[string]any

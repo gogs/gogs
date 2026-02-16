@@ -18,12 +18,12 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/httplib"
-	"gogs.io/gogs/internal/netutil"
+	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/testx"
 )
 
 var HookQueue = sync.NewUniqueQueue(1000)
@@ -234,7 +234,7 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
-var _ errutil.NotFound = (*ErrWebhookNotExist)(nil)
+var _ errx.NotFound = (*ErrWebhookNotExist)(nil)
 
 type ErrWebhookNotExist struct {
 	args map[string]any
@@ -517,7 +517,7 @@ func createHookTask(e Engine, t *HookTask) error {
 	return err
 }
 
-var _ errutil.NotFound = (*ErrHookTaskNotExist)(nil)
+var _ errx.NotFound = (*ErrHookTaskNotExist)(nil)
 
 type ErrHookTaskNotExist struct {
 	args map[string]any
@@ -676,7 +676,7 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p apiv1typ
 func PrepareWebhooks(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
 	// choose to ignore this function in tests.
-	if x == nil && testutil.InTest {
+	if x == nil && testx.InTest {
 		return nil
 	}
 	return prepareWebhooks(x, repo, event, p)
@@ -697,7 +697,7 @@ func (t *HookTask) deliver() {
 		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
 		return
 	}
-	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
 		t.ResponseContent = `{"body": "Payload URL resolved to a local network address that is implicitly blocked."}`
 		return
 	}

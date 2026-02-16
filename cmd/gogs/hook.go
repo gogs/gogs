@@ -22,7 +22,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/httplib"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 var (
@@ -133,7 +133,7 @@ func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "pre-receive")
-	if !osutil.IsFile(customHooksPath) {
+	if !osx.IsFile(customHooksPath) {
 		return nil
 	}
 
@@ -167,7 +167,7 @@ func runHookUpdate(_ context.Context, cmd *cli.Command) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "update")
-	if !osutil.IsFile(customHooksPath) {
+	if !osx.IsFile(customHooksPath) {
 		return nil
 	}
 
@@ -252,7 +252,7 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "post-receive")
-	if !osutil.IsFile(customHooksPath) {
+	if !osx.IsFile(customHooksPath) {
 		return nil
 	}
 

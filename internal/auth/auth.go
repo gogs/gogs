@@ -5,7 +5,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 type Type int
@@ -34,10 +34,10 @@ func Name(typ Type) string {
 	}[typ]
 }
 
-var _ errutil.NotFound = (*ErrBadCredentials)(nil)
+var _ errx.NotFound = (*ErrBadCredentials)(nil)
 
 type ErrBadCredentials struct {
-	Args errutil.Args
+	Args errx.Args
 }
 
 // IsErrBadCredentials returns true if the underlying error has the type

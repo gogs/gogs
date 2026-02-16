@@ -9,7 +9,7 @@ import (
 	"github.com/pquerna/otp/totp"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 )
 
 // TwoFactor is a 2FA token of a user.
@@ -28,7 +28,7 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 	if err != nil {
 		return false, errors.Newf("DecodeString: %v", err)
 	}
-	decryptSecret, err := cryptoutil.AESGCMDecrypt(cryptoutil.MD5Bytes(conf.Security.SecretKey), secret)
+	decryptSecret, err := cryptox.AESGCMDecrypt(cryptox.MD5Bytes(conf.Security.SecretKey), secret)
 	if err != nil {
 		return false, errors.Newf("AESGCMDecrypt: %v", err)
 	}

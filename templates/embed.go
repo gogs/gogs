@@ -12,7 +12,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 //go:embed *.tmpl **/*
@@ -68,7 +68,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		// Check if corresponding custom file exists
 		var data []byte
 		fpath := path.Join(customDir, name)
-		if osutil.IsFile(fpath) {
+		if osx.IsFile(fpath) {
 			data, err = os.ReadFile(fpath)
 		} else {
 			data, err = files.ReadFile(name)

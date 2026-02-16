@@ -10,7 +10,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/lazyregexp"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
@@ -101,7 +101,7 @@ func NewLabels(labels ...*Label) error {
 	return err
 }
 
-var _ errutil.NotFound = (*ErrLabelNotExist)(nil)
+var _ errx.NotFound = (*ErrLabelNotExist)(nil)
 
 type ErrLabelNotExist struct {
 	args map[string]any

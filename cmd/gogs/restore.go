@@ -14,8 +14,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/semverx"
 )
 
 var restoreCommand = cli.Command{
@@ -46,7 +46,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	zip.Verbose = cmd.Bool("verbose")
 
 	tmpDir := cmd.String("tempdir")
-	if !osutil.IsDir(tmpDir) {
+	if !osx.IsDir(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
 	archivePath := path.Join(tmpDir, archiveRootDir)
@@ -66,7 +66,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
-	if !osutil.IsFile(metaFile) {
+	if !osx.IsFile(metaFile) {
 		log.Fatal("File 'metadata.ini' is missing")
 	}
 	metadata, err := ini.Load(metaFile)
@@ -74,7 +74,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		log.Fatal("Failed to load metadata '%s': %v", metaFile, err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
-	if semverutil.Compare(conf.App.Version, "<", backupVersion) {
+	if semverx.Compare(conf.App.Version, "<", backupVersion) {
 		log.Fatal("Current Gogs version is lower than backup version: %s < %s", conf.App.Version, backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
@@ -92,7 +92,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	var customConf string
 	if lineageConf := configFromLineage(cmd); lineageConf != "" {
 		customConf = lineageConf
-	} else if !osutil.IsFile(configFile) {
+	} else if !osx.IsFile(configFile) {
 		log.Fatal("'--config' is not specified and custom config file is not found in backup")
 	} else {
 		customConf = configFile
@@ -117,7 +117,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	if !cmd.Bool("database-only") {
 		// Custom files
-		if osutil.IsDir(conf.CustomDir()) {
+		if osx.IsDir(conf.CustomDir()) {
 			if err = os.Rename(conf.CustomDir(), conf.CustomDir()+".bak"); err != nil {
 				log.Fatal("Failed to backup current 'custom': %v", err)
 			}
@@ -131,12 +131,12 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			// Skip if backup archive does not have corresponding data
 			srcPath := filepath.Join(archivePath, "data", dir)
-			if !osutil.IsDir(srcPath) {
+			if !osx.IsDir(srcPath) {
 				continue
 			}
 
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if osutil.IsDir(dirPath) {
+			if osx.IsDir(dirPath) {
 				if err = os.Rename(dirPath, dirPath+".bak"); err != nil {
 					log.Fatal("Failed to backup current 'data': %v", err)
 				}
@@ -149,7 +149,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
-	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osutil.IsFile(reposPath) {
+	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osx.IsFile(reposPath) {
 		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
 			log.Fatal("Failed to extract 'repositories.zip': %v", err)
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 func TestTwoFactor_BeforeCreate(t *testing.T) {
@@ -117,7 +117,7 @@ func twoFactorsGetByUserID(t *testing.T, ctx context.Context, s *TwoFactorsStore
 
 	// Try to get a non-existent 2FA token
 	_, err = s.GetByUserID(ctx, 2)
-	wantErr := ErrTwoFactorNotFound{args: errutil.Args{"userID": int64(2)}}
+	wantErr := ErrTwoFactorNotFound{args: errx.Args{"userID": int64(2)}}
 	assert.Equal(t, wantErr, err)
 }
 

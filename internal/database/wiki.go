@@ -14,9 +14,9 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/pathutil"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/pathx"
+	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -40,20 +40,20 @@ func ToWikiPageURL(name string) string {
 // single-level hierarchy by replacing all "/" with spaces.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(urlString)
-	name = pathutil.Clean(name)
+	name = pathx.Clean(name)
 	return strings.ReplaceAll(name, "/", " ")
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
 //
-// Deprecated: Use repoutil.NewCloneLink instead.
-func (r *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
+// Deprecated: Use repox.NewCloneLink instead.
+func (r *Repository) WikiCloneLink() (cl *repox.CloneLink) {
 	return r.cloneLink(true)
 }
 
 // WikiPath returns wiki data path by given user and repository name.
 func WikiPath(userName, repoName string) string {
-	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
+	return filepath.Join(repox.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
 }
 
 func (r *Repository) WikiPath() string {
@@ -62,7 +62,7 @@ func (r *Repository) WikiPath() string {
 
 // HasWiki returns true if repository has wiki.
 func (r *Repository) HasWiki() bool {
-	return osutil.IsDir(r.WikiPath())
+	return osx.IsDir(r.WikiPath())
 }
 
 // InitWiki initializes a wiki for repository,
@@ -115,7 +115,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 
 	// If not a new file, show perform update not create.
 	if isNew {
-		if osutil.Exist(filename) {
+		if osx.Exist(filename) {
 			return ErrWikiAlreadyExist{filename}
 		}
 	} else {

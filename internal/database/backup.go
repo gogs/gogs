@@ -21,7 +21,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 // getTableType returns the type name of a table definition without package name,
@@ -156,7 +156,7 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
-			if !osutil.IsFile(tableFile) {
+			if !osx.IsFile(tableFile) {
 				log.Info("Skipped table %q", tableName)
 				return nil
 			}
@@ -247,7 +247,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
 		tableFile := filepath.Join(dirPath, tableName+".json")
-		if !osutil.IsFile(tableFile) {
+		if !osx.IsFile(tableFile) {
 			continue
 		}
 

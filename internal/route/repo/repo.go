@@ -15,9 +15,9 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/urlutil"
+	"gogs.io/gogs/internal/urlx"
 )
 
 const (
@@ -261,7 +261,7 @@ func Action(c *context.Context) {
 	}
 
 	redirectTo := c.Query("redirect_to")
-	if !urlutil.IsSameSite(redirectTo) {
+	if !urlx.IsSameSite(redirectTo) {
 		redirectTo = c.Repo.RepoLink
 	}
 	c.Redirect(redirectTo)
@@ -292,7 +292,7 @@ func Download(c *context.Context) {
 	}
 	refName = strings.TrimSuffix(uri, ext)
 
-	if !osutil.IsDir(archivePath) {
+	if !osx.IsDir(archivePath) {
 		if err := os.MkdirAll(archivePath, os.ModePerm); err != nil {
 			c.Error(err, "create archive directory")
 			return
@@ -329,7 +329,7 @@ func Download(c *context.Context) {
 	}
 
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
-	if !osutil.IsFile(archivePath) {
+	if !osx.IsFile(archivePath) {
 		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
 			c.Error(err, "creates archive")
 			return

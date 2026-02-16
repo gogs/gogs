@@ -8,11 +8,11 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/authutil"
+	"gogs.io/gogs/internal/authx"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/lfsutil"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 // RegisterRoutes registers LFS routes using given router, and inherits all
@@ -28,9 +28,9 @@ func RegisterRoutes(r *macaron.Router) {
 		r.Group("/objects/basic", func() {
 			basic := &basicHandler{
 				store:          store,
-				defaultStorage: lfsutil.Storage(conf.LFS.Storage),
-				storagers: map[lfsutil.Storage]lfsutil.Storager{
-					lfsutil.StorageLocal: &lfsutil.LocalStorage{Root: conf.LFS.ObjectsPath, TempDir: conf.LFS.ObjectsTempPath},
+				defaultStorage: lfsx.Storage(conf.LFS.Storage),
+				storagers: map[lfsx.Storage]lfsx.Storager{
+					lfsx.StorageLocal: &lfsx.LocalStorage{Root: conf.LFS.ObjectsPath, TempDir: conf.LFS.ObjectsTempPath},
 				},
 			}
 			r.Combo("/:oid", verifyOID()).
@@ -52,7 +52,7 @@ func authenticate(store Store) macaron.Handler {
 	}
 
 	return func(c *macaron.Context) {
-		username, password := authutil.DecodeBasic(c.Req.Header)
+		username, password := authx.DecodeBasic(c.Req.Header)
 		if username == "" {
 			askCredentials(c.Resp)
 			return
@@ -163,8 +163,8 @@ func verifyHeader(key, value string, failCode int) macaron.Handler {
 // verifyOID checks if the ":oid" URL parameter is valid.
 func verifyOID() macaron.Handler {
 	return func(c *macaron.Context) {
-		oid := lfsutil.OID(c.Params(":oid"))
-		if !lfsutil.ValidOID(oid) {
+		oid := lfsx.OID(c.Params(":oid"))
+		if !lfsx.ValidOID(oid) {
 			responseJSON(c.Resp, http.StatusBadRequest, responseError{
 				Message: "Invalid oid",
 			})

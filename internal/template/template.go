@@ -20,11 +20,11 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -104,7 +104,7 @@ func FuncMap() []template.FuncMap {
 				return str[start:end]
 			},
 			"Join":                  strings.Join,
-			"EllipsisString":        strutil.Ellipsis,
+			"EllipsisString":        strx.Ellipsis,
 			"DiffFileTypeToStr":     DiffFileTypeToStr,
 			"DiffLineTypeToStr":     DiffLineTypeToStr,
 			"Sha1":                  Sha1,
@@ -128,7 +128,7 @@ func FuncMap() []template.FuncMap {
 				}
 				return "tab-size-8"
 			},
-			"InferSubmoduleURL": gitutil.InferSubmoduleURL,
+			"InferSubmoduleURL": gitx.InferSubmoduleURL,
 		}}
 	})
 	return funcMap
@@ -148,7 +148,7 @@ func NewLine2br(raw string) string {
 }
 
 func Sha1(str string) string {
-	return cryptoutil.SHA1(str)
+	return cryptox.SHA1(str)
 }
 
 func ToUTF8WithErr(content []byte) (string, error) {

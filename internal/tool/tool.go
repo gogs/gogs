@@ -18,7 +18,7 @@ import (
 	"github.com/gogs/chardet"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 )
 
 // ShortSHA1 truncates SHA1 string length to at most 10.
@@ -121,7 +121,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 // HashEmail hashes email address to MD5 string.
 // https://en.gravatar.com/site/implement/hash/
 func HashEmail(email string) string {
-	return cryptoutil.MD5(strings.ToLower(strings.TrimSpace(email)))
+	return cryptox.MD5(strings.ToLower(strings.TrimSpace(email)))
 }
 
 // AvatarLink returns relative avatar link to the site domain by given email,

@@ -9,7 +9,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -42,7 +42,7 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 	return branches, nil
 }
 
-var _ errutil.NotFound = (*ErrBranchNotExist)(nil)
+var _ errx.NotFound = (*ErrBranchNotExist)(nil)
 
 type ErrBranchNotExist struct {
 	args map[string]any

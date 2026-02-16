@@ -18,7 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 func cleanCommand(cmd string) string {
@@ -183,7 +183,7 @@ func setupHostKeys(appDataPath string, algorithms []string) ([]ssh.Signer, error
 	var hostKeys []ssh.Signer
 	for _, algo := range algorithms {
 		keyPath := filepath.Join(dir, "gogs."+algo)
-		if !osutil.Exist(keyPath) {
+		if !osx.Exist(keyPath) {
 			args := []string{
 				conf.SSH.KeygenPath,
 				"-t", algo,

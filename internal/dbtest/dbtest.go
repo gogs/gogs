@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbutil"
+	"gogs.io/gogs/internal/dbx"
 )
 
 // NewDB creates a new test database and initializes the given list of tables
@@ -35,7 +35,7 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 			Password: os.Getenv("MYSQL_PASSWORD"),
 		}
 
-		dsn, err := dbutil.NewDSN(dbOpts)
+		dsn, err := dbx.NewDSN(dbOpts)
 		require.NoError(t, err)
 
 		sqlDB, err := sql.Open("mysql", dsn)
@@ -71,7 +71,7 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 			SSLMode:  os.Getenv("PGSSLMODE"),
 		}
 
-		dsn, err := dbutil.NewDSN(dbOpts)
+		dsn, err := dbx.NewDSN(dbOpts)
 		require.NoError(t, err)
 
 		sqlDB, err := sql.Open("pgx", dsn)
@@ -112,7 +112,7 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
-	db, err := dbutil.OpenDB(
+	db, err := dbx.OpenDB(
 		dbOpts,
 		&gorm.Config{
 			SkipDefaultTransaction: true,

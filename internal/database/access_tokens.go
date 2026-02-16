@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/cryptox"
+	"gogs.io/gogs/internal/errx"
 )
 
 // AccessToken is a personal access token.
@@ -58,7 +58,7 @@ func newAccessTokensStore(db *gorm.DB) *AccessTokensStore {
 }
 
 type ErrAccessTokenAlreadyExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrAccessTokenAlreadyExist(err error) bool {
@@ -75,13 +75,13 @@ func (err ErrAccessTokenAlreadyExist) Error() string {
 func (s *AccessTokensStore) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
 	err := s.db.WithContext(ctx).Where("uid = ? AND name = ?", userID, name).First(new(AccessToken)).Error
 	if err == nil {
-		return nil, ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": userID, "name": name}}
+		return nil, ErrAccessTokenAlreadyExist{args: errx.Args{"userID": userID, "name": name}}
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
-	token := cryptoutil.SHA1(uuid.New().String())
-	sha256 := cryptoutil.SHA256(token)
+	token := cryptox.SHA1(uuid.New().String())
+	sha256 := cryptox.SHA256(token)
 
 	accessToken := &AccessToken{
 		UserID: userID,
@@ -106,10 +106,10 @@ func (s *AccessTokensStore) DeleteByID(ctx context.Context, userID, id int64) er
 	return s.db.WithContext(ctx).Where("id = ? AND uid = ?", id, userID).Delete(new(AccessToken)).Error
 }
 
-var _ errutil.NotFound = (*ErrAccessTokenNotExist)(nil)
+var _ errx.NotFound = (*ErrAccessTokenNotExist)(nil)
 
 type ErrAccessTokenNotExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 // IsErrAccessTokenNotExist returns true if the underlying error has the type
@@ -131,14 +131,14 @@ func (ErrAccessTokenNotExist) NotFound() bool {
 func (s *AccessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
 	// No need to waste a query for an empty SHA1.
 	if sha1 == "" {
-		return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
+		return nil, ErrAccessTokenNotExist{args: errx.Args{"sha": sha1}}
 	}
 
-	sha256 := cryptoutil.SHA256(sha1)
+	sha256 := cryptox.SHA256(sha1)
 	token := new(AccessToken)
 	err := s.db.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
+		return nil, ErrAccessTokenNotExist{args: errx.Args{"sha": sha1}}
 	} else if err != nil {
 		return nil, err
 	}

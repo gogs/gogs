@@ -15,10 +15,10 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/pam"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/dbtest"
-	"gogs.io/gogs/internal/lfsutil"
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/lfsx"
+	"gogs.io/gogs/internal/testx"
 )
 
 func TestDumpAndImport(t *testing.T) {
@@ -59,30 +59,30 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 		&AccessToken{
 			UserID:      1,
 			Name:        "test1",
-			Sha1:        cryptoutil.SHA1("2910d03d-c0b5-4f71-bad5-c4086e4efae3"),
-			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("2910d03d-c0b5-4f71-bad5-c4086e4efae3")),
+			Sha1:        cryptox.SHA1("2910d03d-c0b5-4f71-bad5-c4086e4efae3"),
+			SHA256:      cryptox.SHA256(cryptox.SHA1("2910d03d-c0b5-4f71-bad5-c4086e4efae3")),
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
 		},
 		&AccessToken{
 			UserID:      1,
 			Name:        "test2",
-			Sha1:        cryptoutil.SHA1("84117e17-7e67-4024-bd04-1c23e6e809d4"),
-			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("84117e17-7e67-4024-bd04-1c23e6e809d4")),
+			Sha1:        cryptox.SHA1("84117e17-7e67-4024-bd04-1c23e6e809d4"),
+			SHA256:      cryptox.SHA256(cryptox.SHA1("84117e17-7e67-4024-bd04-1c23e6e809d4")),
 			CreatedUnix: 1588568886,
 		},
 		&AccessToken{
 			UserID:      2,
 			Name:        "test1",
-			Sha1:        cryptoutil.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4"),
-			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4")),
+			Sha1:        cryptox.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4"),
+			SHA256:      cryptox.SHA256(cryptox.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4")),
 			CreatedUnix: 1588568886,
 		},
 		&AccessToken{
 			UserID:      2,
 			Name:        "test2",
-			Sha1:        cryptoutil.SHA256(cryptoutil.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb"))[:40],
-			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb")),
+			Sha1:        cryptox.SHA256(cryptox.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb"))[:40],
+			SHA256:      cryptox.SHA256(cryptox.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb")),
 			CreatedUnix: 1588568886,
 		},
 
@@ -156,14 +156,14 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			RepoID:    1,
 			OID:       "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
 			Size:      100,
-			Storage:   lfsutil.StorageLocal,
+			Storage:   lfsx.StorageLocal,
 			CreatedAt: time.Unix(1588568886, 0).UTC(),
 		},
 		&LFSObject{
 			RepoID:    2,
 			OID:       "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
 			Size:      100,
-			Storage:   lfsutil.StorageLocal,
+			Storage:   lfsx.StorageLocal,
 			CreatedAt: time.Unix(1588568886, 0).UTC(),
 		},
 
@@ -213,7 +213,7 @@ func dumpTables(t *testing.T, db *gorm.DB) {
 		}
 
 		golden := filepath.Join("testdata", "backup", tableName+".golden.json")
-		testutil.AssertGolden(t, golden, testutil.Update("TestDumpAndImport"), buf.String())
+		testx.AssertGolden(t, golden, testx.Update("TestDumpAndImport"), buf.String())
 	}
 }
 

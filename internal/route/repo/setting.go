@@ -17,9 +17,9 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/userx"
 )
 
 const (
@@ -263,7 +263,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-		c.Redirect(userutil.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
+		c.Redirect(userx.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
 
 	case "delete-wiki":
 		if !c.Repo.IsOwner() {
@@ -344,7 +344,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *database.Re
 		}
 	} else {
 		// No avatar is uploaded and reset setting back.
-		if !osutil.IsFile(ctxRepo.CustomAvatarPath()) {
+		if !osx.IsFile(ctxRepo.CustomAvatarPath()) {
 			ctxRepo.UseCustomAvatar = false
 		}
 	}
@@ -598,7 +598,7 @@ func SettingsGitHooksEdit(c *context.Context) {
 
 	hook, err := c.Repo.GitRepo.Hook("custom_hooks", name)
 	if err != nil {
-		c.NotFoundOrError(osutil.NewError(err), "get hook")
+		c.NotFoundOrError(osx.NewError(err), "get hook")
 		return
 	}
 	c.Data["Hook"] = hook
@@ -614,7 +614,7 @@ func SettingsGitHooksEditPost(c *context.Context) {
 
 	hook, err := c.Repo.GitRepo.Hook("custom_hooks", name)
 	if err != nil {
-		c.NotFoundOrError(osutil.NewError(err), "get hook")
+		c.NotFoundOrError(osx.NewError(err), "get hook")
 		return
 	}
 	if err = hook.Update(c.Query("content")); err != nil {

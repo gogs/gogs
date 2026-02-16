@@ -15,8 +15,8 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
@@ -409,7 +409,7 @@ func (pr *PullRequest) testPatch() (err error) {
 	}
 
 	// Fast fail if patch does not exist, this assumes data is corrupted.
-	if !osutil.IsFile(patchPath) {
+	if !osx.IsFile(patchPath) {
 		log.Trace("PullRequest[%d].testPatch: ignored corrupted data", pr.ID)
 		return nil
 	}
@@ -552,7 +552,7 @@ func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequ
 		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
 }
 
-var _ errutil.NotFound = (*ErrPullRequestNotExist)(nil)
+var _ errx.NotFound = (*ErrPullRequestNotExist)(nil)
 
 type ErrPullRequestNotExist struct {
 	args map[string]any
@@ -684,7 +684,7 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 
 	headRefspec := fmt.Sprintf("refs/pull/%d/head", pr.Index)
 	headFile := filepath.Join(pr.BaseRepo.RepoPath(), headRefspec)
-	if osutil.Exist(headFile) {
+	if osx.Exist(headFile) {
 		err = os.Remove(headFile)
 		if err != nil {
 			return errors.Newf("remove head file [repo_id: %d]: %v", pr.BaseRepoID, err)

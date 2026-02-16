@@ -11,9 +11,9 @@ import (
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/cryptox"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/strx"
 )
 
 // BeforeCreate implements the GORM create hook.
@@ -44,7 +44,7 @@ func newTwoFactorsStore(db *gorm.DB) *TwoFactorsStore {
 // configured in site-level and change of the "key" will break all existing 2FA
 // tokens.
 func (s *TwoFactorsStore) Create(ctx context.Context, userID int64, key, secret string) error {
-	encrypted, err := cryptoutil.AESGCMEncrypt(cryptoutil.MD5Bytes(key), []byte(secret))
+	encrypted, err := cryptox.AESGCMEncrypt(cryptox.MD5Bytes(key), []byte(secret))
 	if err != nil {
 		return errors.Wrap(err, "encrypt secret")
 	}
@@ -68,10 +68,10 @@ func (s *TwoFactorsStore) Create(ctx context.Context, userID int64, key, secret 
 	})
 }
 
-var _ errutil.NotFound = (*ErrTwoFactorNotFound)(nil)
+var _ errx.NotFound = (*ErrTwoFactorNotFound)(nil)
 
 type ErrTwoFactorNotFound struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrTwoFactorNotFound(err error) bool {
@@ -93,7 +93,7 @@ func (s *TwoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFa
 	err := s.db.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
+			return nil, ErrTwoFactorNotFound{args: errx.Args{"userID": userID}}
 		}
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *TwoFactorsStore) UseRecoveryCode(ctx context.Context, userID int64, cod
 func generateRecoveryCodes(userID int64, n int) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, n)
 	for i := range n {
-		code, err := strutil.RandomChars(10)
+		code, err := strx.RandomChars(10)
 		if err != nil {
 			return nil, errors.Wrap(err, "generate random characters")
 		}

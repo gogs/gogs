@@ -10,7 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 func TestRepository_ComposeMetas(t *testing.T) {
@@ -81,5 +81,5 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	_, err = CreateRepository(owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
-	assert.True(t, osutil.Exist(canary))
+	assert.True(t, osx.Exist(canary))
 }

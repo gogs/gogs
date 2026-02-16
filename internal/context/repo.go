@@ -14,7 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/repox"
 )
 
 type PullRequest struct {
@@ -40,7 +40,7 @@ type Repository struct {
 	TreePath     string
 	CommitID     string
 	RepoLink     string
-	CloneLink    repoutil.CloneLink
+	CloneLink    repox.CloneLink
 	CommitsCount int64
 	Mirror       *database.Mirror
 

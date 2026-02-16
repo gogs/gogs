@@ -11,7 +11,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 type APIContext struct {
@@ -62,7 +62,7 @@ func (c *APIContext) Errorf(err error, format string, args ...any) {
 // is about not found. It responses with 404 status code for not found error,
 // or error context description for logging purpose of 500 server error.
 func (c *APIContext) NotFoundOrError(err error, msg string) {
-	if errutil.IsNotFound(err) {
+	if errx.IsNotFound(err) {
 		c.NotFound()
 		return
 	}

@@ -4,7 +4,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 )
 
 func migrateAccessTokenToSHA256(db *gorm.DB) error {
@@ -33,7 +33,7 @@ func migrateAccessTokenToSHA256(db *gorm.DB) error {
 		}
 
 		for _, t := range accessTokens {
-			sha256 := cryptoutil.SHA256(t.Sha1)
+			sha256 := cryptox.SHA256(t.Sha1)
 			err = tx.Model(&accessToken{}).Where("id = ?", t.ID).Update("sha256", sha256).Error
 			if err != nil {
 				return errors.Wrap(err, "update")

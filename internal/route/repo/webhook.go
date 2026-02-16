@@ -16,7 +16,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/netutil"
+	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -124,7 +124,7 @@ func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, 
 		return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), http.StatusBadRequest
 	}
 
-	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
 		return "PayloadURL", l.Tr("repo.settings.webhook.url_resolved_to_blocked_local_address"), http.StatusForbidden
 	}
 	return "", "", http.StatusOK

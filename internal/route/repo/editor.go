@@ -14,8 +14,8 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/pathutil"
+	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
@@ -55,7 +55,7 @@ func editFile(c *context.Context, isNewFile bool) {
 	if !isNewFile {
 		entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 		if err != nil {
-			c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
+			c.NotFoundOrError(gitx.NewError(err), "get tree entry")
 			return
 		}
 
@@ -135,7 +135,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	f.TreePath = pathutil.Clean(f.TreePath)
+	f.TreePath = pathx.Clean(f.TreePath)
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 
 	c.Data["ParentTreePath"] = path.Dir(c.Repo.TreePath)
@@ -177,7 +177,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		newTreePath = path.Join(newTreePath, part)
 		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
 		if err != nil {
-			if gitutil.IsErrRevisionNotExist(err) {
+			if gitx.IsErrRevisionNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}
@@ -208,7 +208,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	if !isNewFile {
 		entry, err := c.Repo.Commit.TreeEntry(oldTreePath)
 		if err != nil {
-			if gitutil.IsErrRevisionNotExist(err) {
+			if gitx.IsErrRevisionNotExist(err) {
 				c.FormErr("TreePath")
 				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), http.StatusNotFound, tmplEditorEdit, &f)
 			} else {
@@ -242,7 +242,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		// We have a new filename (rename or completely new file) so we need to make sure it doesn't already exist, can't clobber.
 		entry, err := c.Repo.Commit.TreeEntry(f.TreePath)
 		if err != nil {
-			if !gitutil.IsErrRevisionNotExist(err) {
+			if !gitx.IsErrRevisionNotExist(err) {
 				c.Error(err, "get tree entry")
 				return
 			}
@@ -300,7 +300,7 @@ func NewFilePost(c *context.Context, f form.EditRepoFile) {
 
 func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathutil.Clean(c.Repo.TreePath)
+	treePath := pathx.Clean(c.Repo.TreePath)
 
 	entry, err := c.Repo.Commit.TreeEntry(treePath)
 	if err != nil {
@@ -342,7 +342,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.Data["BranchLink"] = c.Repo.RepoLink + "/src/" + c.Repo.BranchName
 
 	// 🚨 SECURITY: Prevent path traversal.
-	c.Repo.TreePath = pathutil.Clean(c.Repo.TreePath)
+	c.Repo.TreePath = pathx.Clean(c.Repo.TreePath)
 	c.Data["TreePath"] = c.Repo.TreePath
 
 	oldBranchName := c.Repo.BranchName
@@ -438,7 +438,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	f.TreePath = pathutil.Clean(f.TreePath)
+	f.TreePath = pathx.Clean(f.TreePath)
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 	if len(treeNames) == 0 {
 		// We must at least have one element for user to input.
@@ -472,7 +472,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		newTreePath = path.Join(newTreePath, part)
 		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
 		if err != nil {
-			if gitutil.IsErrRevisionNotExist(err) {
+			if gitx.IsErrRevisionNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}

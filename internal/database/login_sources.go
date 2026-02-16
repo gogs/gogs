@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 // LoginSource represents an external way for authorizing users.
@@ -189,7 +189,7 @@ type CreateLoginSourceOptions struct {
 }
 
 type ErrLoginSourceAlreadyExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrLoginSourceAlreadyExist(err error) bool {
@@ -205,7 +205,7 @@ func (err ErrLoginSourceAlreadyExist) Error() string {
 func (s *LoginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error) {
 	err := s.db.WithContext(ctx).Where("name = ?", opts.Name).First(new(LoginSource)).Error
 	if err == nil {
-		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
+		return nil, ErrLoginSourceAlreadyExist{args: errx.Args{"name": opts.Name}}
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (s *LoginSourcesStore) Count(ctx context.Context) int64 {
 }
 
 type ErrLoginSourceInUse struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrLoginSourceInUse(err error) bool {
@@ -251,7 +251,7 @@ func (s *LoginSourcesStore) DeleteByID(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	} else if count > 0 {
-		return ErrLoginSourceInUse{args: errutil.Args{"id": id}}
+		return ErrLoginSourceInUse{args: errx.Args{"id": id}}
 	}
 
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(new(LoginSource)).Error

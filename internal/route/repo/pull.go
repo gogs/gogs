@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 )
 
 const (
@@ -199,7 +199,7 @@ func PrepareMergedViewPullInfo(c *context.Context, issue *database.Issue) {
 	}
 }
 
-func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitutil.PullRequestMeta {
+func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRequestMeta {
 	repo := c.Repo.Repository
 	pull := issue.PullRequest
 
@@ -228,7 +228,7 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitutil.Pul
 	}
 
 	baseRepoPath := database.RepoPath(repo.Owner.Name, repo.Name)
-	prMeta, err := gitutil.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
+	prMeta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
 		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
 			c.Data["IsPullReuqestBroken"] = true
@@ -356,7 +356,7 @@ func ViewPullFiles(c *context.Context) {
 		gitRepo = headGitRepo
 	}
 
-	diff, err := gitutil.RepoDiff(diffGitRepo,
+	diff, err := gitx.RepoDiff(diffGitRepo,
 		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: startCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
@@ -430,7 +430,7 @@ func MergePullRequest(c *context.Context) {
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pr.Index, 10))
 }
 
-func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository, *git.Repository, *gitutil.PullRequestMeta, string, string) {
+func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository, *git.Repository, *gitx.PullRequestMeta, string, string) {
 	baseRepo := c.Repo.Repository
 
 	// Get compared refs information
@@ -542,9 +542,9 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	c.Data["HeadBranches"] = headBranches
 
 	baseRepoPath := database.RepoPath(baseRepo.Owner.Name, baseRepo.Name)
-	meta, err := gitutil.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headRef, baseRef)
+	meta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headRef, baseRef)
 	if err != nil {
-		if gitutil.IsErrNoMergeBase(err) {
+		if gitx.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
 			c.Success(tmplRepoPullsCompare)
 		} else {
@@ -562,7 +562,7 @@ func PrepareCompareDiff(
 	headUser *database.User,
 	headRepo *database.Repository,
 	headGitRepo *git.Repository,
-	meta *gitutil.PullRequestMeta,
+	meta *gitx.PullRequestMeta,
 	headRef string,
 ) bool {
 	var (
@@ -585,7 +585,7 @@ func PrepareCompareDiff(
 		return true
 	}
 
-	diff, err := gitutil.RepoDiff(headGitRepo,
+	diff, err := gitx.RepoDiff(headGitRepo,
 		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: meta.MergeBase, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)

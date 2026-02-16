@@ -18,8 +18,8 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/urlutil"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/urlx"
+	"gogs.io/gogs/internal/userx"
 )
 
 const (
@@ -93,7 +93,7 @@ func Login(c *context.Context) {
 	}
 
 	if isSucceed {
-		if urlutil.IsSameSite(redirectTo) {
+		if urlx.IsSameSite(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
 			c.RedirectSubpath("/")
@@ -139,7 +139,7 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-	if urlutil.IsSameSite(redirectTo) {
+	if urlx.IsSameSite(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
@@ -235,12 +235,12 @@ func LoginTwoFactorPost(c *context.Context) {
 	}
 
 	// Prevent same passcode from being reused
-	if c.Cache.IsExist(userutil.TwoFactorCacheKey(u.ID, passcode)) {
+	if c.Cache.IsExist(userx.TwoFactorCacheKey(u.ID, passcode)) {
 		c.Flash.Error(c.Tr("settings.two_factor_reused_passcode"))
 		c.RedirectSubpath("/user/login/two_factor")
 		return
 	}
-	if err = c.Cache.Put(userutil.TwoFactorCacheKey(u.ID, passcode), 1, 60); err != nil {
+	if err = c.Cache.Put(userx.TwoFactorCacheKey(u.ID, passcode), 1, 60); err != nil {
 		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
@@ -393,7 +393,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 		c.Success(TmplUserAuthActivate)
 
-		if err := c.Cache.Put(userutil.MailResendCacheKey(user.ID), 1, 180); err != nil {
+		if err := c.Cache.Put(userx.MailResendCacheKey(user.ID), 1, 180); err != nil {
 			log.Error("Failed to put cache key 'mail resend': %v", err)
 		}
 		return
@@ -467,7 +467,7 @@ func Activate(c *context.Context) {
 		}
 		// Resend confirmation email.
 		if conf.Auth.RequireEmailConfirmation {
-			if c.Cache.IsExist(userutil.MailResendCacheKey(c.User.ID)) {
+			if c.Cache.IsExist(userx.MailResendCacheKey(c.User.ID)) {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
@@ -475,7 +475,7 @@ func Activate(c *context.Context) {
 					log.Error("Failed to send activate account mail: %v", err)
 				}
 
-				if err := c.Cache.Put(userutil.MailResendCacheKey(c.User.ID), 1, 180); err != nil {
+				if err := c.Cache.Put(userx.MailResendCacheKey(c.User.ID), 1, 180); err != nil {
 					log.Error("Failed to put cache key 'mail resend': %v", err)
 				}
 			}
@@ -577,7 +577,7 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	if c.Cache.IsExist(userutil.MailResendCacheKey(u.ID)) {
+	if c.Cache.IsExist(userx.MailResendCacheKey(u.ID)) {
 		c.Data["ResendLimited"] = true
 		c.Success(tmplUserAuthForgotPassword)
 		return
@@ -586,7 +586,7 @@ func ForgotPasswdPost(c *context.Context) {
 	if err = email.SendResetPasswordMail(c.Context, database.NewMailerUser(u)); err != nil {
 		log.Error("Failed to send reset password mail: %v", err)
 	}
-	if err = c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
+	if err = c.Cache.Put(userx.MailResendCacheKey(u.ID), 1, 180); err != nil {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 

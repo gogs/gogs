@@ -12,7 +12,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
@@ -82,7 +82,7 @@ func getUserByID(e Engine, id int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
+		return nil, ErrUserNotExist{args: errx.Args{"userID": id}}
 	}
 
 	// TODO(unknwon): Rely on AfterFind hook to sanitize user full name.
@@ -801,7 +801,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 	return nil
 }
 
-var _ errutil.NotFound = (*ErrIssueNotExist)(nil)
+var _ errx.NotFound = (*ErrIssueNotExist)(nil)
 
 type ErrIssueNotExist struct {
 	args map[string]any

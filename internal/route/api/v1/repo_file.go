@@ -5,7 +5,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	routerepo "gogs.io/gogs/internal/route/repo"
 )
 
@@ -22,7 +22,7 @@ func getRawFile(c *context.APIContext) {
 
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get blob")
+		c.NotFoundOrError(gitx.NewError(err), "get blob")
 		return
 	}
 	if err = routerepo.ServeBlob(c.Context, blob); err != nil {
@@ -45,7 +45,7 @@ func getArchive(c *context.APIContext) {
 func getEditorconfig(c *context.APIContext) {
 	ec, err := c.Repo.Editorconfig()
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get .editorconfig")
+		c.NotFoundOrError(gitx.NewError(err), "get .editorconfig")
 		return
 	}
 

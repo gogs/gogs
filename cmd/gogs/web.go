@@ -31,7 +31,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
@@ -308,7 +308,7 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 				if err != nil {
 					c.NotFoundOrError(err, "get attachment by UUID")
 					return
-				} else if !osutil.IsFile(attach.LocalPath()) {
+				} else if !osx.IsFile(attach.LocalPath()) {
 					c.NotFound()
 					return
 				}
@@ -750,7 +750,7 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 		err = fcgi.Serve(nil, m)
 
 	case "unix":
-		if osutil.Exist(listenAddr) {
+		if osx.Exist(listenAddr) {
 			err = os.Remove(listenAddr)
 			if err != nil {
 				log.Fatal("Failed to remove existing Unix domain socket: %v", err)

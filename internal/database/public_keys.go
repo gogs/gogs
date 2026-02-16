@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 // PublicKeysStore is the storage layer for public keys.
@@ -73,7 +73,7 @@ func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
 	if err != nil {
 		return errors.Wrap(err, "close temporary file")
 	}
-	if osutil.Exist(fpath) {
+	if osx.Exist(fpath) {
 		err = os.Remove(fpath)
 		if err != nil {
 			return errors.Wrap(err, "remove")

@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/lfsutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 func TestLFS(t *testing.T) {
@@ -47,8 +47,8 @@ func TestLFS(t *testing.T) {
 func lfsCreateObject(t *testing.T, ctx context.Context, s *LFSStore) {
 	// Create first LFS object
 	repoID := int64(1)
-	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
-	err := s.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
+	oid := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
+	err := s.CreateObject(ctx, repoID, oid, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
 
 	// Get it back and check the CreatedAt field
@@ -57,15 +57,15 @@ func lfsCreateObject(t *testing.T, ctx context.Context, s *LFSStore) {
 	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), object.CreatedAt.UTC().Format(time.RFC3339))
 
 	// Try to create second LFS object with same oid should fail
-	err = s.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
+	err = s.CreateObject(ctx, repoID, oid, 12, lfsx.StorageLocal)
 	assert.Error(t, err)
 }
 
 func lfsGetObjectByOID(t *testing.T, ctx context.Context, s *LFSStore) {
 	// Create a LFS object
 	repoID := int64(1)
-	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
-	err := s.CreateObject(ctx, repoID, oid, 12, lfsutil.StorageLocal)
+	oid := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
+	err := s.CreateObject(ctx, repoID, oid, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
 
 	// We should be able to get it back
@@ -74,18 +74,18 @@ func lfsGetObjectByOID(t *testing.T, ctx context.Context, s *LFSStore) {
 
 	// Try to get a non-existent object
 	_, err = s.GetObjectByOID(ctx, repoID, "bad_oid")
-	expErr := ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": lfsutil.OID("bad_oid")}}
+	expErr := ErrLFSObjectNotExist{args: errx.Args{"repoID": repoID, "oid": lfsx.OID("bad_oid")}}
 	assert.Equal(t, expErr, err)
 }
 
 func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, s *LFSStore) {
 	// Create two LFS objects
 	repoID := int64(1)
-	oid1 := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
-	oid2 := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64g")
-	err := s.CreateObject(ctx, repoID, oid1, 12, lfsutil.StorageLocal)
+	oid1 := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
+	oid2 := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64g")
+	err := s.CreateObject(ctx, repoID, oid1, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
-	err = s.CreateObject(ctx, repoID, oid2, 12, lfsutil.StorageLocal)
+	err = s.CreateObject(ctx, repoID, oid2, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
 
 	// We should be able to get them back and ignore non-existent ones

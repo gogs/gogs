@@ -8,17 +8,17 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/lfsutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 // LFSObject is the relation between an LFS object and a repository.
 type LFSObject struct {
-	RepoID    int64           `gorm:"primaryKey;auto_increment:false"`
-	OID       lfsutil.OID     `gorm:"primaryKey;column:oid"`
-	Size      int64           `gorm:"not null"`
-	Storage   lfsutil.Storage `gorm:"not null"`
-	CreatedAt time.Time       `gorm:"not null"`
+	RepoID    int64        `gorm:"primaryKey;auto_increment:false"`
+	OID       lfsx.OID     `gorm:"primaryKey;column:oid"`
+	Size      int64        `gorm:"not null"`
+	Storage   lfsx.Storage `gorm:"not null"`
+	CreatedAt time.Time    `gorm:"not null"`
 }
 
 // LFSStore is the storage layer for LFS objects.
@@ -31,7 +31,7 @@ func newLFSStore(db *gorm.DB) *LFSStore {
 }
 
 // CreateObject creates an LFS object record in database.
-func (s *LFSStore) CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
+func (s *LFSStore) CreateObject(ctx context.Context, repoID int64, oid lfsx.OID, size int64, storage lfsx.Storage) error {
 	object := &LFSObject{
 		RepoID:  repoID,
 		OID:     oid,
@@ -42,7 +42,7 @@ func (s *LFSStore) CreateObject(ctx context.Context, repoID int64, oid lfsutil.O
 }
 
 type ErrLFSObjectNotExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrLFSObjectNotExist(err error) bool {
@@ -59,12 +59,12 @@ func (ErrLFSObjectNotExist) NotFound() bool {
 
 // GetObjectByOID returns the LFS object with given OID. It returns
 // ErrLFSObjectNotExist when not found.
-func (s *LFSStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error) {
+func (s *LFSStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsx.OID) (*LFSObject, error) {
 	object := new(LFSObject)
 	err := s.db.WithContext(ctx).Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": oid}}
+			return nil, ErrLFSObjectNotExist{args: errx.Args{"repoID": repoID, "oid": oid}}
 		}
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (s *LFSStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil
 
 // GetObjectsByOIDs returns LFS objects found within "oids". The returned list
 // could have fewer elements if some oids were not found.
-func (s *LFSStore) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
+func (s *LFSStore) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsx.OID) ([]*LFSObject, error) {
 	if len(oids) == 0 {
 		return []*LFSObject{}, nil
 	}

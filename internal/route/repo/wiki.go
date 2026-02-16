@@ -10,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -86,7 +86,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 
 	blob, err := commit.Blob(pageName + ".md")
 	if err != nil {
-		if gitutil.IsErrRevisionNotExist(err) {
+		if gitx.IsErrRevisionNotExist(err) {
 			c.Redirect(c.Repo.RepoLink + "/wiki/_pages")
 		} else {
 			c.Error(err, "get blob")

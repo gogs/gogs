@@ -13,26 +13,26 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/lfsutil"
+	"gogs.io/gogs/internal/lfsx"
 )
 
-var _ lfsutil.Storager = (*mockStorage)(nil)
+var _ lfsx.Storager = (*mockStorage)(nil)
 
 // mockStorage is an in-memory storage for LFS objects.
 type mockStorage struct {
 	buf *bytes.Buffer
 }
 
-func (*mockStorage) Storage() lfsutil.Storage {
+func (*mockStorage) Storage() lfsx.Storage {
 	return "memory"
 }
 
-func (s *mockStorage) Upload(_ lfsutil.OID, rc io.ReadCloser) (int64, error) {
+func (s *mockStorage) Upload(_ lfsx.OID, rc io.ReadCloser) (int64, error) {
 	defer func() { _ = rc.Close() }()
 	return io.Copy(s.buf, rc)
 }
 
-func (s *mockStorage) Download(_ lfsutil.OID, w io.Writer) error {
+func (s *mockStorage) Download(_ lfsx.OID, w io.Writer) error {
 	_, err := io.Copy(w, s.buf)
 	return err
 }
@@ -41,7 +41,7 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 	s := &mockStorage{}
 	basic := &basicHandler{
 		defaultStorage: s.Storage(),
-		storagers: map[lfsutil.Storage]lfsutil.Storager{
+		storagers: map[lfsx.Storage]lfsx.Storager{
 			s.Storage(): s,
 		},
 	}
@@ -50,7 +50,7 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})
-		c.Map(lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
+		c.Map(lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
 	m.Get("/", basic.serveDownload)
 
@@ -138,7 +138,7 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 	s := &mockStorage{buf: &bytes.Buffer{}}
 	basic := &basicHandler{
 		defaultStorage: s.Storage(),
-		storagers: map[lfsutil.Storage]lfsutil.Storager{
+		storagers: map[lfsx.Storage]lfsx.Storager{
 			s.Storage(): s,
 		},
 	}
@@ -147,7 +147,7 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})
-		c.Map(lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
+		c.Map(lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
 	m.Put("/", basic.serveUpload)
 

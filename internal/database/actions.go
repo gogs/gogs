@@ -17,10 +17,10 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
-	"gogs.io/gogs/internal/strutil"
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/strx"
+	"gogs.io/gogs/internal/testx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -218,14 +218,14 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
 		newUsersStore(s.db),
-		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
-		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+		repox.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
+		repox.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	opts.Commits.CompareURL = repoutil.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+	opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	apiPusher := opts.Owner.APIFormat()
 	err = PrepareWebhooks(
 		opts.Repo,
@@ -476,7 +476,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	// If not the first commit, set the compare URL.
 	if !isNewRef && !isDelRef {
-		opts.Commits.CompareURL = repoutil.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+		opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	}
 
 	refName := git.RefShortName(opts.RefFullName)
@@ -563,8 +563,8 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	commits, err := opts.Commits.APIFormat(ctx,
 		newUsersStore(s.db),
-		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
-		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+		repox.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
+		repox.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
@@ -751,7 +751,7 @@ func (a *Action) GetActUserName() string {
 }
 
 func (a *Action) ShortActUserName() string {
-	return strutil.Ellipsis(a.ActUserName, 20)
+	return strx.Ellipsis(a.ActUserName, 20)
 }
 
 func (a *Action) GetRepoUserName() string {
@@ -759,7 +759,7 @@ func (a *Action) GetRepoUserName() string {
 }
 
 func (a *Action) ShortRepoUserName() string {
-	return strutil.Ellipsis(a.RepoUserName, 20)
+	return strx.Ellipsis(a.RepoUserName, 20)
 }
 
 func (a *Action) GetRepoName() string {
@@ -767,7 +767,7 @@ func (a *Action) GetRepoName() string {
 }
 
 func (a *Action) ShortRepoName() string {
-	return strutil.Ellipsis(a.RepoName, 33)
+	return strx.Ellipsis(a.RepoName, 33)
 }
 
 func (a *Action) GetRepoPath() string {
@@ -883,7 +883,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 		}
 
 		nameStatus := &git.NameStatus{}
-		if !testutil.InTest {
+		if !testx.InTest {
 			nameStatus, err = git.ShowNameStatus(repoPath, commit.Sha1)
 			if err != nil {
 				return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)

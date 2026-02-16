@@ -10,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -121,16 +121,16 @@ func Diff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get commit by ID")
+		c.NotFoundOrError(gitx.NewError(err), "get commit by ID")
 		return
 	}
 
-	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
+	diff, err := gitx.RepoDiff(c.Repo.GitRepo,
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get diff")
+		c.NotFoundOrError(gitx.NewError(err), "get diff")
 		return
 	}
 
@@ -176,7 +176,7 @@ func RawDiff(c *context.Context) {
 		git.RawDiffFormat(c.Params(":ext")),
 		c.Resp,
 	); err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get raw diff")
+		c.NotFoundOrError(gitx.NewError(err), "get raw diff")
 		return
 	}
 }
@@ -217,22 +217,22 @@ func CompareDiff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get head commit")
+		c.NotFoundOrError(gitx.NewError(err), "get head commit")
 		return
 	}
 
-	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
+	diff, err := gitx.RepoDiff(c.Repo.GitRepo,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: beforeCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get diff")
+		c.NotFoundOrError(gitx.NewError(err), "get diff")
 		return
 	}
 
 	commits, err := commit.CommitsAfter(beforeCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get commits after")
+		c.NotFoundOrError(gitx.NewError(err), "get commits after")
 		return
 	}
 

@@ -13,7 +13,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbutil"
+	"gogs.io/gogs/internal/dbx"
 )
 
 func newLogWriter() (logger.Writer, error) {
@@ -30,7 +30,7 @@ func newLogWriter() (logger.Writer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, `create "gorm.log"`)
 	}
-	return &dbutil.Logger{Writer: w}, nil
+	return &dbx.Logger{Writer: w}, nil
 }
 
 // Tables is the list of struct-to-table mappings.
@@ -59,7 +59,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 		LogLevel:      level,
 	})
 
-	db, err := dbutil.OpenDB(
+	db, err := dbx.OpenDB(
 		conf.Database,
 		&gorm.Config{
 			SkipDefaultTransaction: true,
