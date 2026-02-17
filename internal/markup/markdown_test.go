@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 	. "gogs.io/gogs/internal/markup"
@@ -47,39 +46,38 @@ func Test_RawMarkdown_AutoLink(t *testing.T) {
 		{
 			name:  "issue URL from same instance",
 			input: "http://localhost:3000/user/repo/issues/3333",
-			want:  `<a href="http://localhost:3000/user/repo/issues/3333">#3333</a>`,
+			want:  "<p><a href=\"http://localhost:3000/user/repo/issues/3333\">#3333</a></p>\n",
 		},
 		{
 			name:  "non-matching issue-like URL",
 			input: "http://1111/2222/ssss-issues/3333?param=blah&blahh=333",
-			want:  `<a href="http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333">http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333</a>`,
+			want:  "<p><a href=\"http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333\">http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333</a></p>\n",
 		},
 		{
 			name:  "external issue URL",
 			input: "http://test.com/issues/33333",
-			want:  `http://test.com/issues/33333`,
+			want:  "<p><a href=\"http://test.com/issues/33333\">http://test.com/issues/33333</a></p>\n",
 		},
 		{
 			name:  "commit URL from same instance",
 			input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae",
-			want:  `<code><a href="http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae">d8a994ef24</a></code>`,
+			want:  "<p> <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a></code></p>\n",
 		},
 		{
 			name:  "commit URL with fragment from same instance",
 			input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2",
-			want:  `<code><a href="http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2">d8a994ef24</a></code>`,
+			want:  "<p> <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24</a></code></p>\n",
 		},
 		{
 			name:  "external commit URL",
 			input: "https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2",
-			want:  `https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2`,
+			want:  "<p><a href=\"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2</a></p>\n",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := string(RawMarkdown([]byte(test.input), ""))
-			require.NotEmpty(t, result)
-			assert.Contains(t, result, test.want)
+			got := string(RawMarkdown([]byte(test.input), ""))
+			assert.Equal(t, test.want, got)
 		})
 	}
 }

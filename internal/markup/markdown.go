@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"html"
-	"log"
+	"net/url"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -18,6 +17,7 @@ import (
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
@@ -37,7 +37,7 @@ func IsMarkdownFile(name string) bool {
 
 var (
 	validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
-	linkifyURLRegexp  = regexp.MustCompile(`^(?:http|https|ftp)://[-a-zA-Z0-9@:%._+~#=]{1,256}(?:\.[a-z]+)?(?::\d+)?(?:[/#?][-a-zA-Z0-9@:%_+.~#$!?&/=();,'\^{}\[\]` + "`" + `]*)?`)
+	linkifyURLRegexp  = lazyregexp.New(`^(?:http|https|ftp)://[-a-zA-Z0-9@:%._+~#=]{1,256}(?:\.[a-z]+)?(?::\d+)?(?:[/#?][-a-zA-Z0-9@:%_+.~#$!?&/=();,'\^{}\[\]` + "`" + `]*)?`)
 )
 
 func isLink(link []byte) bool {
@@ -56,11 +56,23 @@ func (t *linkTransformer) Transform(node *ast.Document, reader text.Reader, _ pa
 		if link, ok := n.(*ast.Link); ok {
 			dest := link.Destination
 			if len(dest) > 0 && !isLink(dest) && dest[0] != '#' {
-				link.Destination = []byte(path.Join(t.urlPrefix, string(dest)))
+				link.Destination = []byte(joinURLPath(t.urlPrefix, string(dest)))
 			}
 		}
 		return ast.WalkContinue, nil
 	})
+}
+
+// joinURLPath joins a base URL prefix with a relative path. It uses net/url for
+// absolute URL prefixes to preserve the scheme and host, and path.Join for
+// path-only prefixes.
+func joinURLPath(prefix, relPath string) string {
+	u, err := url.Parse(prefix)
+	if err != nil || u.Scheme == "" {
+		return path.Join(prefix, relPath)
+	}
+	u.Path = path.Join(u.Path, relPath)
+	return u.String()
 }
 
 type gogsRenderer struct {
@@ -135,7 +147,7 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 		extension.Table,
 		extension.Strikethrough,
 		extension.TaskList,
-		extension.NewLinkify(extension.WithLinkifyURLRegexp(linkifyURLRegexp)),
+		extension.NewLinkify(extension.WithLinkifyURLRegexp(linkifyURLRegexp.Regexp())),
 	}
 
 	if conf.Smartypants.Enabled {
@@ -143,7 +155,6 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 	}
 
 	rendererOpts := []renderer.Option{
-		goldmarkhtml.WithUnsafe(),
 		renderer.WithNodeRenderers(
 			util.Prioritized(&gogsRenderer{urlPrefix: urlPrefix}, 0),
 		),
@@ -165,8 +176,8 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 
 	var buf bytes.Buffer
 	if err := md.Convert(body, &buf); err != nil {
-		log.Printf("markup: failed to convert Markdown: %v", err)
-		return nil
+		log.Error("Failed to convert Markdown: %v", err)
+		return []byte(html.EscapeString(string(body)))
 	}
 	return buf.Bytes()
 }
