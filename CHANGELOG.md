@@ -9,6 +9,10 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Cross-repository LFS object overwrite via missing content hash verification. [#8166](https://github.com/gogs/gogs/pull/8166) - [GHSA-gmf8-978x-2fg2](https://github.com/gogs/gogs/security/advisories/GHSA-gmf8-978x-2fg2)
 - _Security:_ DOM-based XSS via issue meta selection on the issue page. [#8178](https://github.com/gogs/gogs/pull/8178) - [GHSA-vgjm-2cpf-4g7c](https://github.com/gogs/gogs/security/advisories/GHSA-vgjm-2cpf-4g7c)
 
+### Changed
+
+- Replaced `WriteString(fmt.Sprintf(...))` with `fmt.Fprintf(...)` in webhook and view code per staticcheck QF1012.
+
 ### Removed
 
 - Support for passing API access tokens via URL query parameters (`token`, `access_token`). Use the `Authorization` header instead. [#8177](https://github.com/gogs/gogs/pull/8177) - [GHSA-x9p5-w45c-7ffc](https://github.com/gogs/gogs/security/advisories/GHSA-x9p5-w45c-7ffc)
