@@ -140,11 +140,11 @@ func getDiscordPushPayload(p *apiv1types.WebhookPushPayload, slack *SlackMeta) *
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	branchLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+branchName, branchName)
 	var content strings.Builder
-	content.WriteString(fmt.Sprintf("Pushed %s to %s/%s\n", commitString, repoLink, branchLink))
+	fmt.Fprintf(&content, "Pushed %s to %s/%s\n", commitString, repoLink, branchLink)
 
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
-		content.WriteString(fmt.Sprintf("%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), DiscordTextFormatter(commit.Message), commit.Author.Name))
+		fmt.Fprintf(&content, "%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), DiscordTextFormatter(commit.Message), commit.Author.Name)
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
 			content.WriteString("\n")

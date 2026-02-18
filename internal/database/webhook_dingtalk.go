@@ -133,7 +133,7 @@ func getDingtalkPushPayload(p *apiv1types.WebhookPushPayload) *DingtalkPayload {
 	for i, commit := range p.Commits {
 		msg := strings.Split(commit.Message, "\n")[0]
 		commitLink := MarkdownLinkFormatter(commit.URL, commit.ID[:7])
-		detail.WriteString(fmt.Sprintf("> %d. %s %s - %s\n", i, commitLink, commit.Author.Name, msg))
+		fmt.Fprintf(&detail, "> %d. %s %s - %s\n", i, commitLink, commit.Author.Name, msg)
 	}
 
 	actionCard := NewDingtalkActionCard("View Changes", p.CompareURL)
