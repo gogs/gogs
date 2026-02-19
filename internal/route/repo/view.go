@@ -181,7 +181,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 			output.Reset()
 			for i := 0; i < len(lines); i++ {
-				output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+				fmt.Fprintf(&output, `<span id="L%d">%d</span>`, i+1, i+1)
 			}
 			c.Data["LineNums"] = gotemplate.HTML(output.String())
 		}
