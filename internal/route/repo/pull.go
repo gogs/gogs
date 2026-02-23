@@ -230,7 +230,7 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 	baseRepoPath := database.RepoPath(repo.Owner.Name, repo.Name)
 	prMeta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
-		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
+		if strings.Contains(strings.ToLower(err.Error()), "fatal: not a valid object name") {
 			c.Data["IsPullReuqestBroken"] = true
 			c.Data["BaseTarget"] = "deleted"
 			c.Data["NumCommits"] = 0
