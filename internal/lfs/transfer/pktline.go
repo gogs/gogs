@@ -183,10 +183,12 @@ type pktlineDataReader struct {
 	done    bool
 }
 
+// newPktlineDataReader returns a streaming reader over pkt-line data packets.
 func newPktlineDataReader(s *PktlineScanner) *pktlineDataReader {
 	return &pktlineDataReader{scanner: s}
 }
 
+// Read implements io.Reader by concatenating pkt-line data packets until flush.
 func (r *pktlineDataReader) Read(p []byte) (int, error) {
 	if r.done {
 		return 0, io.EOF
@@ -223,6 +225,7 @@ func (r *pktlineDataReader) Read(p []byte) (int, error) {
 	return n, nil
 }
 
+// hexToUint16 decodes a 4-byte ASCII hexadecimal length into uint16.
 func hexToUint16(b []byte) (uint16, error) {
 	var decoded [2]byte
 	_, err := hex.Decode(decoded[:], b)
@@ -232,6 +235,7 @@ func hexToUint16(b []byte) (uint16, error) {
 	return binary.BigEndian.Uint16(decoded[:]), nil
 }
 
+// uint16ToHex encodes a uint16 length as a 4-byte ASCII hexadecimal value.
 func uint16ToHex(v uint16, b []byte) {
 	var raw [2]byte
 	binary.BigEndian.PutUint16(raw[:], v)

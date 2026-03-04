@@ -20,6 +20,7 @@ type Store interface {
 	GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsx.OID) ([]*database.LFSObject, error)
 }
 
+// dbStore implements Store using the global database handle.
 type dbStore struct{}
 
 // NewStore returns a new Store backed by the global database handle.
@@ -27,14 +28,17 @@ func NewStore() Store {
 	return &dbStore{}
 }
 
+// CreateLFSObject inserts object metadata into the LFS table.
 func (*dbStore) CreateLFSObject(ctx context.Context, repoID int64, oid lfsx.OID, size int64, storage lfsx.Storage) error {
 	return database.Handle.LFS().CreateObject(ctx, repoID, oid, size, storage)
 }
 
+// GetLFSObjectByOID loads one LFS object by repository and object ID.
 func (*dbStore) GetLFSObjectByOID(ctx context.Context, repoID int64, oid lfsx.OID) (*database.LFSObject, error) {
 	return database.Handle.LFS().GetObjectByOID(ctx, repoID, oid)
 }
 
+// GetLFSObjectsByOIDs loads all matching LFS objects by repository and object IDs.
 func (*dbStore) GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsx.OID) ([]*database.LFSObject, error) {
 	return database.Handle.LFS().GetObjectsByOIDs(ctx, repoID, oids...)
 }
@@ -78,6 +82,7 @@ func Serve(
 	return h.serve(ctx)
 }
 
+// serve performs version negotiation and handles commands until the session ends.
 func (h *handler) serve(ctx context.Context) error {
 	if err := h.advertiseVersion(); err != nil {
 		return err
@@ -100,6 +105,7 @@ func (h *handler) serve(ctx context.Context) error {
 	return h.commandLoop(ctx)
 }
 
+// advertiseVersion sends the server capability advertisement to the client.
 func (h *handler) advertiseVersion() error {
 	if err := h.writer.WritePacketText("version=1"); err != nil {
 		return errors.Wrap(err, "advertise version")
@@ -110,6 +116,7 @@ func (h *handler) advertiseVersion() error {
 	return nil
 }
 
+// readClientVersion reads the version line and consumes optional capability lines.
 func (h *handler) readClientVersion() (string, error) {
 	if !h.scanner.Scan() {
 		if err := h.scanner.Err(); err != nil {
@@ -127,6 +134,7 @@ func (h *handler) readClientVersion() (string, error) {
 	return clientVersion, nil
 }
 
+// commandLoop reads and dispatches commands until clean EOF or a quit command.
 func (h *handler) commandLoop(ctx context.Context) error {
 	for {
 		line, ok, err := h.nextCommand()
@@ -147,6 +155,7 @@ func (h *handler) commandLoop(ctx context.Context) error {
 	}
 }
 
+// nextCommand reads the next non-flush command packet.
 func (h *handler) nextCommand() (line string, ok bool, _ error) {
 	for {
 		if !h.scanner.Scan() {
@@ -162,6 +171,7 @@ func (h *handler) nextCommand() (line string, ok bool, _ error) {
 	}
 }
 
+// handleCommand dispatches a single command line and reports whether to quit.
 func (h *handler) handleCommand(ctx context.Context, line string) (bool, error) {
 	switch {
 	case line == "quit":
@@ -184,11 +194,13 @@ func (h *handler) handleCommand(ctx context.Context, line string) (bool, error) 
 	}
 }
 
+// batchItem is one object entry from a batch request payload.
 type batchItem struct {
 	oid  lfsx.OID
 	size int64
 }
 
+// handleBatch handles the LFS "batch" command for upload and download operations.
 func (h *handler) handleBatch(ctx context.Context) error {
 	items, requestedHashAlgorithm, err := h.readBatchRequest()
 	if err != nil {
@@ -203,6 +215,7 @@ func (h *handler) handleBatch(ctx context.Context) error {
 	return h.writeBatchResponse(items, existingSet, requestedHashAlgorithm)
 }
 
+// readBatchRequest parses batch arguments and object entries until flush.
 func (h *handler) readBatchRequest() ([]batchItem, string, error) {
 	var items []batchItem
 	inObjectList := false
@@ -239,6 +252,7 @@ func (h *handler) readBatchRequest() ([]batchItem, string, error) {
 	return items, requestedHashAlgorithm, nil
 }
 
+// readBatchArgument parses supported key-value arguments in a batch preamble.
 func (h *handler) readBatchArgument(line string, requestedHashAlgorithm *string) error {
 	key, value, ok := strings.Cut(line, "=")
 	if !ok || key != "hash-algo" {
@@ -251,6 +265,7 @@ func (h *handler) readBatchArgument(line string, requestedHashAlgorithm *string)
 	return nil
 }
 
+// lookupBatchObjects loads all existing objects referenced by the batch request.
 func (h *handler) lookupBatchObjects(ctx context.Context, items []batchItem) (map[lfsx.OID]*database.LFSObject, error) {
 	oids := make([]lfsx.OID, 0, len(items))
 	for _, item := range items {
@@ -269,6 +284,7 @@ func (h *handler) lookupBatchObjects(ctx context.Context, items []batchItem) (ma
 	return existingSet, nil
 }
 
+// writeBatchResponse writes a full batch response including per-object actions.
 func (h *handler) writeBatchResponse(items []batchItem, existingSet map[lfsx.OID]*database.LFSObject, requestedHashAlgorithm string) error {
 	if err := h.writer.WritePacketText("status 200"); err != nil {
 		return err
@@ -290,6 +306,7 @@ func (h *handler) writeBatchResponse(items []batchItem, existingSet map[lfsx.OID
 	return h.writer.WriteFlush()
 }
 
+// writeBatchItem determines and writes the action for a single batch object.
 func (h *handler) writeBatchItem(item batchItem, obj *database.LFSObject) error {
 	if h.operation == "upload" {
 		if obj != nil {
@@ -304,6 +321,7 @@ func (h *handler) writeBatchItem(item batchItem, obj *database.LFSObject) error 
 	return h.writer.WritePacketText(string(item.oid) + " " + strconv.FormatInt(item.size, 10) + " noop")
 }
 
+// parseBatchObjectLine parses either "<oid> <size>" or "oid=<oid> size=<size>".
 func parseBatchObjectLine(line string) (oid lfsx.OID, size int64, ok bool) {
 	parts := strings.Fields(line)
 	if len(parts) == 2 {
@@ -343,6 +361,7 @@ func parseBatchObjectLine(line string) (oid lfsx.OID, size int64, ok bool) {
 	return "", 0, false
 }
 
+// handlePutObject receives object data, stores it, and records metadata in the database.
 func (h *handler) handlePutObject(ctx context.Context, oid lfsx.OID) error {
 	if err := h.validatePutObjectRequest(oid); err != nil {
 		return err
@@ -370,6 +389,7 @@ func (h *handler) handlePutObject(ctx context.Context, oid lfsx.OID) error {
 	return h.writeStatus(200)
 }
 
+// validatePutObjectRequest checks command-level constraints before reading upload data.
 func (h *handler) validatePutObjectRequest(oid lfsx.OID) error {
 	if h.operation != "upload" {
 		h.consumeUntilFlush()
@@ -382,6 +402,7 @@ func (h *handler) validatePutObjectRequest(oid lfsx.OID) error {
 	return nil
 }
 
+// readPutObjectExpectedSize parses put-object arguments until the data delimiter.
 func (h *handler) readPutObjectExpectedSize() (int64, error) {
 	var expectedSize int64
 	for h.scanner.Scan() {
@@ -407,6 +428,7 @@ func (h *handler) readPutObjectExpectedSize() (int64, error) {
 	return expectedSize, nil
 }
 
+// uploadObjectData streams packet data into the configured storage backend.
 func (h *handler) uploadObjectData(oid lfsx.OID, dataReader io.Reader) (int64, error) {
 	s := h.storagers[h.defaultStorage]
 	if s == nil {
@@ -429,6 +451,7 @@ func (h *handler) uploadObjectData(oid lfsx.OID, dataReader io.Reader) (int64, e
 	return 0, h.writeStatusWithMessage(500, "upload failed")
 }
 
+// createUploadedObjectRecord persists uploaded object metadata with duplicate fallback.
 func (h *handler) createUploadedObjectRecord(ctx context.Context, oid lfsx.OID, size int64) error {
 	// If the record already exists (for example from a concurrent upload), verify
 	// with a follow-up query instead of failing the request.
@@ -446,6 +469,7 @@ func (h *handler) createUploadedObjectRecord(ctx context.Context, oid lfsx.OID, 
 	return nil
 }
 
+// handleGetObject resolves an object and streams its content back to the client.
 func (h *handler) handleGetObject(ctx context.Context, oid lfsx.OID) error {
 	// Read remaining arguments until flush.
 	h.consumeUntilFlush()
@@ -502,6 +526,7 @@ func (h *handler) handleGetObject(ctx context.Context, oid lfsx.OID) error {
 	return h.writer.WriteFlush()
 }
 
+// handleVerifyObject validates that the stored object exists and matches the requested size.
 func (h *handler) handleVerifyObject(ctx context.Context, oid lfsx.OID) error {
 	var expectedSize int64
 	var sizeErr bool
@@ -544,6 +569,7 @@ func (h *handler) handleVerifyObject(ctx context.Context, oid lfsx.OID) error {
 	return h.writeStatus(200)
 }
 
+// writeStatus writes a status packet followed by a flush packet.
 func (h *handler) writeStatus(code int) error {
 	if err := h.writer.WritePacketText("status " + strconv.Itoa(code)); err != nil {
 		return errors.Wrap(err, "write status")
@@ -551,6 +577,7 @@ func (h *handler) writeStatus(code int) error {
 	return h.writer.WriteFlush()
 }
 
+// writeStatusWithMessage writes a status packet, optional message, and a flush packet.
 func (h *handler) writeStatusWithMessage(code int, message string) error {
 	if err := h.writer.WritePacketText("status " + strconv.Itoa(code)); err != nil {
 		return errors.Wrap(err, "write status")
@@ -563,6 +590,7 @@ func (h *handler) writeStatusWithMessage(code int, message string) error {
 	return h.writer.WriteFlush()
 }
 
+// consumeUntilFlush discards packets until a flush packet is reached.
 func (h *handler) consumeUntilFlush() {
 	for h.scanner.Scan() {
 		if h.scanner.IsFlush() {
