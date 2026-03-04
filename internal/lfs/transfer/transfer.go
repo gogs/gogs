@@ -78,7 +78,7 @@ func Serve(
 
 func (h *handler) serve(ctx context.Context) error {
 	// Advertise capabilities.
-	if err := h.writer.WritePacketText("version 1"); err != nil {
+	if err := h.writer.WritePacketText("version=1"); err != nil {
 		return errors.Wrap(err, "advertise version")
 	}
 	if err := h.writer.WriteFlush(); err != nil {

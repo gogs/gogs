@@ -156,7 +156,7 @@ func TestServe_VersionNegotiation(t *testing.T) {
 
 	// Server capability advertisement.
 	require.True(t, s.Scan())
-	assert.Equal(t, "version 1", s.Text())
+	assert.Equal(t, "version=1", s.Text())
 	require.True(t, s.Scan())
 	assert.True(t, s.IsFlush())
 
