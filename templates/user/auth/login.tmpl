@@ -78,6 +78,8 @@
 	(function() {
 		const base64URLToBuffer = window.gogsWebAuthn && window.gogsWebAuthn.base64URLToBuffer;
 		const bufferToBase64URL = window.gogsWebAuthn && window.gogsWebAuthn.bufferToBase64URL;
+		const canUsePublicKeyCredential = typeof window.PublicKeyCredential !== "undefined";
+		const canUseCredentialGet = !!(navigator.credentials && typeof navigator.credentials.get === "function");
 
 		function assertionToJSON(assertion) {
 			return {
@@ -116,7 +118,11 @@
 		}
 
 		button.addEventListener("click", async function() {
-			if (!window.PublicKeyCredential) {
+			if (!window.isSecureContext) {
+				alert("{{.i18n.Tr "auth.passkey_secure_context_required"}}");
+				return;
+			}
+			if (!canUsePublicKeyCredential || !canUseCredentialGet) {
 				alert("{{.i18n.Tr "auth.passkey_not_supported"}}");
 				return;
 			}
