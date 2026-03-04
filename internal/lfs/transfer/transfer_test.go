@@ -372,6 +372,42 @@ func TestServe_BatchUploadWithKeyValueLines(t *testing.T) {
 	assert.True(t, s.IsFlush())
 }
 
+func TestServe_BatchUnsupportedHashAlgorithm(t *testing.T) {
+	cw := newClientWriter()
+	cw.text("version 1")
+	cw.flush()
+	cw.text("batch")
+	cw.text("transfer=ssh")
+	cw.text("hash-algo=sha1")
+	cw.delim()
+	cw.text(testOID + " 42")
+	cw.flush()
+	cw.text("quit")
+	cw.flush()
+
+	var out bytes.Buffer
+	err := Serve(
+		context.Background(),
+		cw.reader(),
+		&out,
+		"upload",
+		&database.Repository{ID: 1},
+		newMockStore(),
+		"memory",
+		nil,
+	)
+	require.NoError(t, err)
+
+	s := NewPktlineScanner(&out)
+	for i := 0; i < 4; i++ {
+		require.True(t, s.Scan())
+	}
+
+	code, msgs := readStatus(t, s)
+	assert.Equal(t, "status 400", code)
+	assert.Contains(t, msgs, "unsupported hash algorithm")
+}
+
 func TestServe_PutObject(t *testing.T) {
 	store := newMockStore()
 	storage := newMockStorage()

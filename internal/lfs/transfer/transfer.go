@@ -50,6 +50,8 @@ type handler struct {
 	storagers      map[lfsx.Storage]lfsx.Storager
 }
 
+const supportedHashAlgorithm = "sha256"
+
 // Serve runs the LFS SSH transfer protocol over the given reader and writer.
 // It performs capability advertisement, version negotiation, and enters the
 // command loop. It blocks until the client sends "quit" or the connection
@@ -165,6 +167,7 @@ func (h *handler) handleBatch(ctx context.Context) error {
 
 	var items []oidSize
 	inObjectList := false
+	requestedHashAlgorithm := ""
 	for h.scanner.Scan() {
 		if h.scanner.IsFlush() {
 			break
@@ -179,6 +182,13 @@ func (h *handler) handleBatch(ctx context.Context) error {
 		// Before delimiter, lines are command arguments.
 		// For legacy clients without delimiter, skip argument-like lines.
 		if !inObjectList && strings.Contains(line, "=") {
+			key, value, ok := strings.Cut(line, "=")
+			if ok && key == "hash-algo" {
+				if value != supportedHashAlgorithm {
+					return h.writeStatusWithMessage(400, "unsupported hash algorithm")
+				}
+				requestedHashAlgorithm = value
+			}
 			continue
 		}
 
@@ -210,8 +220,10 @@ func (h *handler) handleBatch(ctx context.Context) error {
 	if err := h.writer.WritePacketText("status 200"); err != nil {
 		return err
 	}
-	if err := h.writer.WritePacketText("hash-algo=sha256"); err != nil {
-		return err
+	if requestedHashAlgorithm != "" {
+		if err := h.writer.WritePacketText("hash-algo=" + requestedHashAlgorithm); err != nil {
+			return err
+		}
 	}
 	if err := h.writer.WriteDelim(); err != nil {
 		return err
