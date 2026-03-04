@@ -110,7 +110,7 @@ func TestPasskeys(t *testing.T) {
 }
 
 func passkeysCreateAndList(t *testing.T, ctx context.Context, s *PasskeysStore) {
-	passkey, err := s.Create(ctx, 1, "macbook", testCredential("credential-1", 1))
+	passkey, err := s.Create(ctx, 1, "macbook", testCredential(1))
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), passkey.UserID)
 	assert.Equal(t, "macbook", passkey.Name)
@@ -126,18 +126,18 @@ func passkeysCreateAndList(t *testing.T, ctx context.Context, s *PasskeysStore) 
 }
 
 func passkeysCreateDuplicate(t *testing.T, ctx context.Context, s *PasskeysStore) {
-	_, err := s.Create(ctx, 1, "macbook", testCredential("credential-1", 1))
+	_, err := s.Create(ctx, 1, "macbook", testCredential(1))
 	require.NoError(t, err)
 
-	_, err = s.Create(ctx, 2, "iphone", testCredential("credential-1", 1))
+	_, err = s.Create(ctx, 2, "iphone", testCredential(1))
 	assert.True(t, IsErrPasskeyAlreadyExist(err))
 }
 
 func passkeysUpdateCredential(t *testing.T, ctx context.Context, s *PasskeysStore) {
-	created, err := s.Create(ctx, 1, "macbook", testCredential("credential-1", 1))
+	created, err := s.Create(ctx, 1, "macbook", testCredential(1))
 	require.NoError(t, err)
 
-	updated := testCredential("credential-1", 5)
+	updated := testCredential(5)
 	err = s.UpdateCredential(ctx, 1, created.ID, updated)
 	require.NoError(t, err)
 
@@ -152,7 +152,7 @@ func passkeysUpdateCredential(t *testing.T, ctx context.Context, s *PasskeysStor
 }
 
 func passkeysDeleteByID(t *testing.T, ctx context.Context, s *PasskeysStore) {
-	created, err := s.Create(ctx, 1, "macbook", testCredential("credential-1", 1))
+	created, err := s.Create(ctx, 1, "macbook", testCredential(1))
 	require.NoError(t, err)
 
 	err = s.DeleteByID(ctx, 2, created.ID)
@@ -167,13 +167,13 @@ func passkeysDeleteByID(t *testing.T, ctx context.Context, s *PasskeysStore) {
 }
 
 func passkeysUpdateCredentialNotFound(t *testing.T, ctx context.Context, s *PasskeysStore) {
-	err := s.UpdateCredential(ctx, 1, 999, testCredential("credential-1", 2))
+	err := s.UpdateCredential(ctx, 1, 999, testCredential(2))
 	assert.True(t, IsErrPasskeyNotFound(err))
 }
 
-func testCredential(id string, signCount uint32) webauthn.Credential {
+func testCredential(signCount uint32) webauthn.Credential {
 	return webauthn.Credential{
-		ID:              []byte(id),
+		ID:              []byte("credential-1"),
 		PublicKey:       []byte("public-key"),
 		AttestationType: "none",
 		Authenticator: webauthn.Authenticator{

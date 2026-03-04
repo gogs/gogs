@@ -81,6 +81,7 @@ func (s *testSessionStore) Destory(_ *macaron.Context) error {
 	return s.Flush()
 }
 
+//lint:ignore ST1003 go-macaron/session interface defines this method as RegenerateId.
 func (s *testSessionStore) RegenerateId(_ *macaron.Context) (session.RawStore, error) {
 	return s, nil
 }
@@ -125,7 +126,6 @@ func newTestRouteContext(t *testing.T, method, target string, body url.Values) (
 
 func performRouteRequest(
 	t *testing.T,
-	method string,
 	route string,
 	form url.Values,
 	setup func(c *context.Context, sess *testSessionStore),
@@ -160,23 +160,16 @@ func performRouteRequest(
 		mc.Map(capturedContext)
 	})
 
-	switch method {
-	case http.MethodGet:
-		m.Get(route, handler)
-	case http.MethodPost:
-		m.Post(route, handler)
-	default:
-		t.Fatalf("unsupported method: %s", method)
-	}
+	m.Post(route, handler)
 
 	var req *http.Request
 	var err error
 	if form != nil {
-		req, err = http.NewRequest(method, route, strings.NewReader(form.Encode()))
+		req, err = http.NewRequest(http.MethodPost, route, strings.NewReader(form.Encode()))
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	} else {
-		req, err = http.NewRequest(method, route, http.NoBody)
+		req, err = http.NewRequest(http.MethodPost, route, http.NoBody)
 		require.NoError(t, err)
 	}
 
@@ -360,7 +353,7 @@ func TestLoginPasskeyOptions(t *testing.T) {
 	})
 	conf.SetMockApp(t, conf.AppOpts{BrandName: "Gogs Test"})
 
-	recorder, _, sessionStore := performRouteRequest(t, http.MethodPost, "/user/login/passkey/options", nil, nil, LoginPasskeyOptions)
+	recorder, _, sessionStore := performRouteRequest(t, "/user/login/passkey/options", nil, nil, LoginPasskeyOptions)
 	assert.Equal(t, http.StatusOK, recorder.Code)
 	assert.Contains(t, recorder.Body.String(), `"publicKey"`)
 	assert.NotNil(t, sessionStore.Get(passkeyLoginSessionDataKey))
@@ -395,7 +388,7 @@ func TestSettingsPasskeyRegister(t *testing.T) {
 	})
 	conf.SetMockApp(t, conf.AppOpts{BrandName: "Gogs Test"})
 
-	recorder, _, sessionStore := performRouteRequest(t, http.MethodPost, "/user/settings/security/passkeys/register", nil, func(c *context.Context, _ *testSessionStore) {
+	recorder, _, sessionStore := performRouteRequest(t, "/user/settings/security/passkeys/register", nil, func(c *context.Context, _ *testSessionStore) {
 		c.IsLogged = true
 		c.User = &database.User{
 			ID:       1,
@@ -428,7 +421,7 @@ func TestSettingsPasskeyCreate_InvalidCredential_ClearsSession(t *testing.T) {
 	form := url.Values{
 		"credential": []string{"not-json"},
 	}
-	recorder, c, sessionStore := performRouteRequest(t, http.MethodPost, "/user/settings/security/passkeys", form, func(c *context.Context, sess *testSessionStore) {
+	recorder, c, sessionStore := performRouteRequest(t, "/user/settings/security/passkeys", form, func(c *context.Context, sess *testSessionStore) {
 		c.IsLogged = true
 		c.User = &database.User{
 			ID:       1,
@@ -468,7 +461,7 @@ func TestSettingsPasskeyDelete(t *testing.T) {
 	form := url.Values{
 		"id": []string{strconv.FormatInt(passkeys[0].ID, 10)},
 	}
-	recorder, c, _ := performRouteRequest(t, http.MethodPost, "/user/settings/security/passkeys/delete", form, func(c *context.Context, _ *testSessionStore) {
+	recorder, c, _ := performRouteRequest(t, "/user/settings/security/passkeys/delete", form, func(c *context.Context, _ *testSessionStore) {
 		c.IsLogged = true
 		c.User = &database.User{ID: 1, Name: "alice"}
 	}, SettingsPasskeyDelete)
@@ -489,7 +482,7 @@ func TestSettingsPasskeyDelete_NotFound(t *testing.T) {
 	form := url.Values{
 		"id": []string{"999"},
 	}
-	recorder, c, _ := performRouteRequest(t, http.MethodPost, "/user/settings/security/passkeys/delete", form, func(c *context.Context, _ *testSessionStore) {
+	recorder, c, _ := performRouteRequest(t, "/user/settings/security/passkeys/delete", form, func(c *context.Context, _ *testSessionStore) {
 		c.IsLogged = true
 		c.User = &database.User{ID: 1, Name: "alice"}
 	}, SettingsPasskeyDelete)
