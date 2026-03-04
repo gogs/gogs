@@ -129,3 +129,22 @@ Primary keys: id
 Primary keys: id
 ```
 
+# Table "passkey"
+
+```
+    Field     |     Column     |          PostgreSQL          |            MySQL             |           SQLite3            
+--------------+----------------+------------------------------+------------------------------+------------------------------
+ ID           | id             | BIGSERIAL                    | BIGINT AUTO_INCREMENT        | INTEGER AUTOINCREMENT        
+ UserID       | user_id        | BIGINT NOT NULL              | BIGINT NOT NULL              | INTEGER NOT NULL             
+ Name         | name           | TEXT                         | LONGTEXT                     | TEXT                         
+ CredentialID | credential_id  | VARCHAR(512) NOT NULL UNIQUE | VARCHAR(512) NOT NULL UNIQUE | VARCHAR(512) NOT NULL UNIQUE 
+ Credential   | credential     | TEXT NOT NULL                | TEXT NOT NULL                | TEXT NOT NULL                
+ CreatedUnix  | created_unix   | BIGINT                       | BIGINT                       | INTEGER                      
+ UpdatedUnix  | updated_unix   | BIGINT                       | BIGINT                       | INTEGER                      
+ LastUsedUnix | last_used_unix | BIGINT                       | BIGINT                       | INTEGER                      
+
+Primary keys: id
+Indexes: 
+	"idx_passkey_user_id" (user_id)
+```
+

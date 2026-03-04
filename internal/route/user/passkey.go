@@ -21,12 +21,16 @@ const (
 	passkeyRegistrationSessionDataKey = "passkeyRegistrationSessionData"
 )
 
+// webAuthnUser adapts a database user and passkey set to the WebAuthn user
+// interface expected by the go-webauthn library.
 type webAuthnUser struct {
 	user                    *database.User
 	credentials             []webauthn.Credential
 	passkeyIDByCredentialID map[string]int64
 }
 
+// newWebAuthnUser builds a WebAuthn-compatible user and precomputes a
+// credential ID to passkey ID lookup for assertion updates.
 func newWebAuthnUser(user *database.User, passkeys []*database.Passkey) (*webAuthnUser, error) {
 	credentials := make([]webauthn.Credential, 0, len(passkeys))
 	passkeyIDByCredentialID := make(map[string]int64, len(passkeys))
@@ -45,14 +49,17 @@ func newWebAuthnUser(user *database.User, passkeys []*database.Passkey) (*webAut
 	}, nil
 }
 
+// WebAuthnID returns the stable user handle used by authenticators.
 func (u *webAuthnUser) WebAuthnID() []byte {
 	return []byte(strconv.FormatInt(u.user.ID, 10))
 }
 
+// WebAuthnName returns the account name for discoverable credentials.
 func (u *webAuthnUser) WebAuthnName() string {
 	return u.user.Name
 }
 
+// WebAuthnDisplayName returns a user-friendly name shown by authenticators.
 func (u *webAuthnUser) WebAuthnDisplayName() string {
 	if u.user.FullName != "" {
 		return u.user.FullName
@@ -60,15 +67,20 @@ func (u *webAuthnUser) WebAuthnDisplayName() string {
 	return u.user.Name
 }
 
+// WebAuthnCredentials returns all registered passkey credentials for the user.
 func (u *webAuthnUser) WebAuthnCredentials() []webauthn.Credential {
 	return u.credentials
 }
 
+// passkeyIDByCredential resolves a credential ID back to the persisted passkey
+// record identifier.
 func (u *webAuthnUser) passkeyIDByCredential(rawCredentialID []byte) (int64, bool) {
 	passkeyID, ok := u.passkeyIDByCredentialID[base64.RawURLEncoding.EncodeToString(rawCredentialID)]
 	return passkeyID, ok
 }
 
+// newWebAuthn creates a WebAuthn instance using server URL/domain settings as
+// RP ID and origin constraints.
 func newWebAuthn() (*webauthn.WebAuthn, error) {
 	var rpID string
 	if conf.Server.URL != nil {
@@ -97,6 +109,7 @@ func newWebAuthn() (*webauthn.WebAuthn, error) {
 	})
 }
 
+// saveWebAuthnSession stores WebAuthn session data as JSON in the user session.
 func saveWebAuthnSession(c *context.Context, key string, sessionData *webauthn.SessionData) error {
 	raw, err := json.Marshal(sessionData)
 	if err != nil {
@@ -105,6 +118,8 @@ func saveWebAuthnSession(c *context.Context, key string, sessionData *webauthn.S
 	return c.Session.Set(key, string(raw))
 }
 
+// loadWebAuthnSession loads and decodes WebAuthn session data from the user
+// session. The boolean return indicates whether the key existed.
 func loadWebAuthnSession(c *context.Context, key string) (*webauthn.SessionData, bool, error) {
 	raw, ok := c.Session.Get(key).(string)
 	if !ok || raw == "" {
@@ -119,6 +134,8 @@ func loadWebAuthnSession(c *context.Context, key string) (*webauthn.SessionData,
 	return &sessionData, true, nil
 }
 
+// passkeyRegistrationFailedMessage builds a localized flash message for
+// registration failures and appends the underlying reason when available.
 func passkeyRegistrationFailedMessage(c *context.Context, err error) string {
 	if err == nil {
 		return c.Tr("settings.passkey_register_failed")

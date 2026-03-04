@@ -46,7 +46,7 @@ func newTestSessionStore() *testSessionStore {
 	}
 }
 
-func (s *testSessionStore) Set(key interface{}, val interface{}) error {
+func (s *testSessionStore) Set(key, val interface{}) error {
 	s.values[key] = val
 	return nil
 }
@@ -176,7 +176,7 @@ func performRouteRequest(
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	} else {
-		req, err = http.NewRequest(method, route, nil)
+		req, err = http.NewRequest(method, route, http.NoBody)
 		require.NoError(t, err)
 	}
 

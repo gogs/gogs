@@ -67,6 +67,7 @@ type PasskeysStore struct {
 	db *gorm.DB
 }
 
+// newPasskeysStore creates a passkey store backed by the given GORM handle.
 func newPasskeysStore(db *gorm.DB) *PasskeysStore {
 	return &PasskeysStore{db: db}
 }
@@ -83,6 +84,7 @@ func IsErrPasskeyAlreadyExist(err error) bool {
 	return errors.As(err, &ErrPasskeyAlreadyExist{})
 }
 
+// Error implements the error interface.
 func (err ErrPasskeyAlreadyExist) Error() string {
 	return fmt.Sprintf("passkey already exists: %v", err.args)
 }
@@ -100,10 +102,12 @@ func IsErrPasskeyNotFound(err error) bool {
 	return errors.As(err, &ErrPasskeyNotFound{})
 }
 
+// Error implements the error interface.
 func (err ErrPasskeyNotFound) Error() string {
 	return fmt.Sprintf("passkey does not exist: %v", err.args)
 }
 
+// NotFound marks this error as a not-found error for shared helpers.
 func (ErrPasskeyNotFound) NotFound() bool {
 	return true
 }
