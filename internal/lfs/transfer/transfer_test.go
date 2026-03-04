@@ -43,7 +43,7 @@ func (s *mockStore) CreateLFSObject(_ context.Context, repoID int64, oid lfsx.OI
 	return nil
 }
 
-func (s *mockStore) GetLFSObjectByOID(_ context.Context, repoID int64, oid lfsx.OID) (*database.LFSObject, error) {
+func (s *mockStore) GetLFSObjectByOID(_ context.Context, _ int64, oid lfsx.OID) (*database.LFSObject, error) {
 	obj, ok := s.objects[oid]
 	if !ok {
 		return nil, database.ErrLFSObjectNotExist{}
@@ -51,7 +51,7 @@ func (s *mockStore) GetLFSObjectByOID(_ context.Context, repoID int64, oid lfsx.
 	return obj, nil
 }
 
-func (s *mockStore) GetLFSObjectsByOIDs(_ context.Context, repoID int64, oids ...lfsx.OID) ([]*database.LFSObject, error) {
+func (s *mockStore) GetLFSObjectsByOIDs(_ context.Context, _ int64, oids ...lfsx.OID) ([]*database.LFSObject, error) {
 	var result []*database.LFSObject
 	for _, oid := range oids {
 		if obj, ok := s.objects[oid]; ok {

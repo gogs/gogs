@@ -79,93 +79,132 @@ func Serve(
 }
 
 func (h *handler) serve(ctx context.Context) error {
-	// Advertise capabilities.
-	if err := h.writer.WritePacketText("version=1"); err != nil {
-		return errors.Wrap(err, "advertise version")
-	}
-	if err := h.writer.WriteFlush(); err != nil {
-		return errors.Wrap(err, "flush after version advertisement")
+	if err := h.advertiseVersion(); err != nil {
+		return err
 	}
 
-	// Read client version.
-	if !h.scanner.Scan() {
-		if err := h.scanner.Err(); err != nil {
-			return errors.Wrap(err, "read client version")
-		}
-		return errors.New("unexpected EOF reading client version")
+	clientVersion, err := h.readClientVersion()
+	if err != nil {
+		return err
 	}
-	clientVersion := h.scanner.Text()
-	// Consume remaining lines until flush.
-	for h.scanner.Scan() && !h.scanner.IsFlush() {
-	}
-	if err := h.scanner.Err(); err != nil {
-		return errors.Wrap(err, "read client version capabilities")
-	}
-
 	if clientVersion != "version 1" {
 		if err := h.writeStatus(400); err != nil {
 			return err
 		}
 		return errors.Errorf("unsupported client version: %q", clientVersion)
 	}
-
-	// Acknowledge version.
 	if err := h.writeStatus(200); err != nil {
 		return err
 	}
 
-	// Command loop.
+	return h.commandLoop(ctx)
+}
+
+func (h *handler) advertiseVersion() error {
+	if err := h.writer.WritePacketText("version=1"); err != nil {
+		return errors.Wrap(err, "advertise version")
+	}
+	if err := h.writer.WriteFlush(); err != nil {
+		return errors.Wrap(err, "flush after version advertisement")
+	}
+	return nil
+}
+
+func (h *handler) readClientVersion() (string, error) {
+	if !h.scanner.Scan() {
+		if err := h.scanner.Err(); err != nil {
+			return "", errors.Wrap(err, "read client version")
+		}
+		return "", errors.New("unexpected EOF reading client version")
+	}
+	clientVersion := h.scanner.Text()
+
+	for h.scanner.Scan() && !h.scanner.IsFlush() {
+	}
+	if err := h.scanner.Err(); err != nil {
+		return "", errors.Wrap(err, "read client version capabilities")
+	}
+	return clientVersion, nil
+}
+
+func (h *handler) commandLoop(ctx context.Context) error {
 	for {
-		if !h.scanner.Scan() {
-			if err := h.scanner.Err(); err != nil {
-				return errors.Wrap(err, "read command")
-			}
-			return nil // Clean EOF.
-		}
-
-		if h.scanner.IsFlush() {
-			continue
-		}
-
-		line := h.scanner.Text()
-		var err error
-		switch {
-		case line == "quit":
-			h.consumeUntilFlush()
-			return h.writeStatus(200)
-
-		case line == "batch":
-			err = h.handleBatch(ctx)
-
-		case strings.HasPrefix(line, "put-object "):
-			oid := lfsx.OID(strings.TrimPrefix(line, "put-object "))
-			err = h.handlePutObject(ctx, oid)
-
-		case strings.HasPrefix(line, "get-object "):
-			oid := lfsx.OID(strings.TrimPrefix(line, "get-object "))
-			err = h.handleGetObject(ctx, oid)
-
-		case strings.HasPrefix(line, "verify-object "):
-			oid := lfsx.OID(strings.TrimPrefix(line, "verify-object "))
-			err = h.handleVerifyObject(ctx, oid)
-
-		default:
-			h.consumeUntilFlush()
-			err = h.writeStatusWithMessage(400, "unknown command")
-		}
+		line, ok, err := h.nextCommand()
 		if err != nil {
 			return err
+		}
+		if !ok {
+			return nil
+		}
+
+		quit, err := h.handleCommand(ctx, line)
+		if err != nil {
+			return err
+		}
+		if quit {
+			return nil
 		}
 	}
 }
 
+func (h *handler) nextCommand() (line string, ok bool, _ error) {
+	for {
+		if !h.scanner.Scan() {
+			if err := h.scanner.Err(); err != nil {
+				return "", false, errors.Wrap(err, "read command")
+			}
+			return "", false, nil
+		}
+		if h.scanner.IsFlush() {
+			continue
+		}
+		return h.scanner.Text(), true, nil
+	}
+}
+
+func (h *handler) handleCommand(ctx context.Context, line string) (bool, error) {
+	switch {
+	case line == "quit":
+		h.consumeUntilFlush()
+		return true, h.writeStatus(200)
+	case line == "batch":
+		return false, h.handleBatch(ctx)
+	case strings.HasPrefix(line, "put-object "):
+		oid := lfsx.OID(strings.TrimPrefix(line, "put-object "))
+		return false, h.handlePutObject(ctx, oid)
+	case strings.HasPrefix(line, "get-object "):
+		oid := lfsx.OID(strings.TrimPrefix(line, "get-object "))
+		return false, h.handleGetObject(ctx, oid)
+	case strings.HasPrefix(line, "verify-object "):
+		oid := lfsx.OID(strings.TrimPrefix(line, "verify-object "))
+		return false, h.handleVerifyObject(ctx, oid)
+	default:
+		h.consumeUntilFlush()
+		return false, h.writeStatusWithMessage(400, "unknown command")
+	}
+}
+
+type batchItem struct {
+	oid  lfsx.OID
+	size int64
+}
+
 func (h *handler) handleBatch(ctx context.Context) error {
-	type oidSize struct {
-		oid  lfsx.OID
-		size int64
+	items, requestedHashAlgorithm, err := h.readBatchRequest()
+	if err != nil {
+		return err
 	}
 
-	var items []oidSize
+	existingSet, err := h.lookupBatchObjects(ctx, items)
+	if err != nil {
+		return err
+	}
+
+	return h.writeBatchResponse(items, existingSet, requestedHashAlgorithm)
+}
+
+func (h *handler) readBatchRequest() ([]batchItem, string, error) {
+	var items []batchItem
 	inObjectList := false
 	requestedHashAlgorithm := ""
 	for h.scanner.Scan() {
@@ -182,12 +221,8 @@ func (h *handler) handleBatch(ctx context.Context) error {
 		// Before delimiter, lines are command arguments.
 		// For legacy clients without delimiter, skip argument-like lines.
 		if !inObjectList && strings.Contains(line, "=") {
-			key, value, ok := strings.Cut(line, "=")
-			if ok && key == "hash-algo" {
-				if value != supportedHashAlgorithm {
-					return h.writeStatusWithMessage(400, "unsupported hash algorithm")
-				}
-				requestedHashAlgorithm = value
+			if err := h.readBatchArgument(line, &requestedHashAlgorithm); err != nil {
+				return nil, "", err
 			}
 			continue
 		}
@@ -196,27 +231,45 @@ func (h *handler) handleBatch(ctx context.Context) error {
 		if !ok {
 			continue
 		}
-		items = append(items, oidSize{oid: oid, size: size})
+		items = append(items, batchItem{oid: oid, size: size})
 	}
 	if err := h.scanner.Err(); err != nil {
-		return h.writeStatusWithMessage(400, "invalid batch payload")
+		return nil, "", h.writeStatusWithMessage(400, "invalid batch payload")
 	}
+	return items, requestedHashAlgorithm, nil
+}
 
-	// Look up existing objects.
+func (h *handler) readBatchArgument(line string, requestedHashAlgorithm *string) error {
+	key, value, ok := strings.Cut(line, "=")
+	if !ok || key != "hash-algo" {
+		return nil
+	}
+	if value != supportedHashAlgorithm {
+		return h.writeStatusWithMessage(400, "unsupported hash algorithm")
+	}
+	*requestedHashAlgorithm = value
+	return nil
+}
+
+func (h *handler) lookupBatchObjects(ctx context.Context, items []batchItem) (map[lfsx.OID]*database.LFSObject, error) {
 	oids := make([]lfsx.OID, 0, len(items))
 	for _, item := range items {
 		oids = append(oids, item.oid)
 	}
+
 	existing, err := h.store.GetLFSObjectsByOIDs(ctx, h.repo.ID, oids...)
 	if err != nil {
-		return h.writeStatusWithMessage(500, "internal error")
+		return nil, h.writeStatusWithMessage(500, "internal error")
 	}
+
 	existingSet := make(map[lfsx.OID]*database.LFSObject, len(existing))
 	for _, obj := range existing {
 		existingSet[obj.OID] = obj
 	}
+	return existingSet, nil
+}
 
-	// Write response.
+func (h *handler) writeBatchResponse(items []batchItem, existingSet map[lfsx.OID]*database.LFSObject, requestedHashAlgorithm string) error {
 	if err := h.writer.WritePacketText("status 200"); err != nil {
 		return err
 	}
@@ -228,34 +281,27 @@ func (h *handler) handleBatch(ctx context.Context) error {
 	if err := h.writer.WriteDelim(); err != nil {
 		return err
 	}
-	for _, item := range items {
-		obj, exists := existingSet[item.oid]
-		sizeStr := strconv.FormatInt(item.size, 10)
 
-		if h.operation == "upload" {
-			if exists {
-				if err := h.writer.WritePacketText(string(item.oid) + " " + sizeStr + " noop"); err != nil {
-					return err
-				}
-			} else {
-				if err := h.writer.WritePacketText(string(item.oid) + " " + sizeStr + " upload"); err != nil {
-					return err
-				}
-			}
-		} else {
-			if exists {
-				actualSize := strconv.FormatInt(obj.Size, 10)
-				if err := h.writer.WritePacketText(string(item.oid) + " " + actualSize + " download"); err != nil {
-					return err
-				}
-			} else {
-				if err := h.writer.WritePacketText(string(item.oid) + " " + sizeStr + " noop"); err != nil {
-					return err
-				}
-			}
+	for _, item := range items {
+		if err := h.writeBatchItem(item, existingSet[item.oid]); err != nil {
+			return err
 		}
 	}
 	return h.writer.WriteFlush()
+}
+
+func (h *handler) writeBatchItem(item batchItem, obj *database.LFSObject) error {
+	if h.operation == "upload" {
+		if obj != nil {
+			return h.writer.WritePacketText(string(item.oid) + " " + strconv.FormatInt(item.size, 10) + " noop")
+		}
+		return h.writer.WritePacketText(string(item.oid) + " " + strconv.FormatInt(item.size, 10) + " upload")
+	}
+
+	if obj != nil {
+		return h.writer.WritePacketText(string(item.oid) + " " + strconv.FormatInt(obj.Size, 10) + " download")
+	}
+	return h.writer.WritePacketText(string(item.oid) + " " + strconv.FormatInt(item.size, 10) + " noop")
 }
 
 func parseBatchObjectLine(line string) (oid lfsx.OID, size int64, ok bool) {
@@ -298,75 +344,106 @@ func parseBatchObjectLine(line string) (oid lfsx.OID, size int64, ok bool) {
 }
 
 func (h *handler) handlePutObject(ctx context.Context, oid lfsx.OID) error {
-	if h.operation != "upload" {
-		h.consumeUntilFlush()
-		return h.writeStatusWithMessage(403, "not allowed for download operation")
+	if err := h.validatePutObjectRequest(oid); err != nil {
+		return err
 	}
 
-	if !lfsx.ValidOID(oid) {
-		h.consumeUntilFlush()
-		return h.writeStatusWithMessage(400, "invalid oid")
-	}
-
-	// Read arguments until delim, then binary data until flush.
-	var expectedSize int64
-	for h.scanner.Scan() {
-		if h.scanner.IsDelim() {
-			break
-		}
-		if h.scanner.IsFlush() {
-			return h.writeStatusWithMessage(400, "expected delimiter before object data")
-		}
-		line := h.scanner.Text()
-		if strings.HasPrefix(line, "size=") {
-			v, err := strconv.ParseInt(strings.TrimPrefix(line, "size="), 10, 64)
-			if err != nil || v < 0 {
-				// Consume remaining input so the protocol stays in sync.
-				for h.scanner.Scan() && !h.scanner.IsFlush() {
-				}
-				return h.writeStatusWithMessage(400, "invalid size")
-			}
-			expectedSize = v
-		}
-	}
-
-	// Read binary data from pkt-line packets until flush.
-	dataReader := newPktlineDataReader(h.scanner)
-
-	s := h.storagers[h.defaultStorage]
-	if s == nil {
-		_, _ = io.Copy(io.Discard, dataReader)
-		return h.writeStatusWithMessage(500, "storage backend not configured")
-	}
-
-	written, err := s.Upload(oid, io.NopCloser(dataReader))
+	expectedSize, err := h.readPutObjectExpectedSize()
 	if err != nil {
-		// Drain any remaining data so the protocol stays in sync.
-		_, _ = io.Copy(io.Discard, dataReader)
-		if errors.Is(err, lfsx.ErrOIDMismatch) || errors.Is(err, lfsx.ErrInvalidOID) {
-			return h.writeStatusWithMessage(400, err.Error())
-		}
-		log.Error("Failed to upload LFS object via SSH [oid: %s]: %v", oid, err)
-		return h.writeStatusWithMessage(500, "upload failed")
+		return err
+	}
+
+	dataReader := newPktlineDataReader(h.scanner)
+	written, err := h.uploadObjectData(oid, dataReader)
+	if err != nil {
+		return err
 	}
 
 	if expectedSize > 0 && written != expectedSize {
 		return h.writeStatusWithMessage(400, "size mismatch")
 	}
 
-	// Create the database record. If the record already exists (e.g. from a
-	// concurrent upload), verify it with a follow-up query instead of failing.
-	err = h.store.CreateLFSObject(ctx, h.repo.ID, oid, written, h.defaultStorage)
-	if err != nil {
-		if _, lookupErr := h.store.GetLFSObjectByOID(ctx, h.repo.ID, oid); lookupErr != nil {
-			log.Error("Failed to create LFS object record [repo_id: %d, oid: %s]: %v", h.repo.ID, oid, err)
-			return h.writeStatusWithMessage(500, "failed to create object record")
-		}
-		log.Trace("[LFS SSH] Object already exists %q", oid)
-	} else {
-		log.Trace("[LFS SSH] Object created %q", oid)
+	if err := h.createUploadedObjectRecord(ctx, oid, written); err != nil {
+		return err
 	}
+
 	return h.writeStatus(200)
+}
+
+func (h *handler) validatePutObjectRequest(oid lfsx.OID) error {
+	if h.operation != "upload" {
+		h.consumeUntilFlush()
+		return h.writeStatusWithMessage(403, "not allowed for download operation")
+	}
+	if !lfsx.ValidOID(oid) {
+		h.consumeUntilFlush()
+		return h.writeStatusWithMessage(400, "invalid oid")
+	}
+	return nil
+}
+
+func (h *handler) readPutObjectExpectedSize() (int64, error) {
+	var expectedSize int64
+	for h.scanner.Scan() {
+		if h.scanner.IsDelim() {
+			return expectedSize, nil
+		}
+		if h.scanner.IsFlush() {
+			return 0, h.writeStatusWithMessage(400, "expected delimiter before object data")
+		}
+
+		line := h.scanner.Text()
+		if !strings.HasPrefix(line, "size=") {
+			continue
+		}
+
+		v, err := strconv.ParseInt(strings.TrimPrefix(line, "size="), 10, 64)
+		if err != nil || v < 0 {
+			h.consumeUntilFlush()
+			return 0, h.writeStatusWithMessage(400, "invalid size")
+		}
+		expectedSize = v
+	}
+	return expectedSize, nil
+}
+
+func (h *handler) uploadObjectData(oid lfsx.OID, dataReader io.Reader) (int64, error) {
+	s := h.storagers[h.defaultStorage]
+	if s == nil {
+		_, _ = io.Copy(io.Discard, dataReader)
+		return 0, h.writeStatusWithMessage(500, "storage backend not configured")
+	}
+
+	written, err := s.Upload(oid, io.NopCloser(dataReader))
+	if err == nil {
+		return written, nil
+	}
+
+	// Drain any remaining data so the protocol stays in sync.
+	_, _ = io.Copy(io.Discard, dataReader)
+	if errors.Is(err, lfsx.ErrOIDMismatch) || errors.Is(err, lfsx.ErrInvalidOID) {
+		return 0, h.writeStatusWithMessage(400, err.Error())
+	}
+
+	log.Error("Failed to upload LFS object via SSH [oid: %s]: %v", oid, err)
+	return 0, h.writeStatusWithMessage(500, "upload failed")
+}
+
+func (h *handler) createUploadedObjectRecord(ctx context.Context, oid lfsx.OID, size int64) error {
+	// If the record already exists (for example from a concurrent upload), verify
+	// with a follow-up query instead of failing the request.
+	err := h.store.CreateLFSObject(ctx, h.repo.ID, oid, size, h.defaultStorage)
+	if err == nil {
+		log.Trace("[LFS SSH] Object created %q", oid)
+		return nil
+	}
+
+	if _, lookupErr := h.store.GetLFSObjectByOID(ctx, h.repo.ID, oid); lookupErr != nil {
+		log.Error("Failed to create LFS object record [repo_id: %d, oid: %s]: %v", h.repo.ID, oid, err)
+		return h.writeStatusWithMessage(500, "failed to create object record")
+	}
+	log.Trace("[LFS SSH] Object already exists %q", oid)
+	return nil
 }
 
 func (h *handler) handleGetObject(ctx context.Context, oid lfsx.OID) error {
