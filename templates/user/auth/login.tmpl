@@ -78,8 +78,38 @@
 	(function() {
 		const base64URLToBuffer = window.gogsWebAuthn && window.gogsWebAuthn.base64URLToBuffer;
 		const bufferToBase64URL = window.gogsWebAuthn && window.gogsWebAuthn.bufferToBase64URL;
+		const errorDetail = window.gogsWebAuthn && window.gogsWebAuthn.errorDetail;
 		const canUsePublicKeyCredential = typeof window.PublicKeyCredential !== "undefined";
 		const canUseCredentialGet = !!(navigator.credentials && typeof navigator.credentials.get === "function");
+
+		function formatPasskeyError(error) {
+			if (error && error.name === "SecurityError") {
+				return "{{.i18n.Tr "auth.passkey_error_security"}}";
+			}
+			if (error && error.name === "NotAllowedError") {
+				return "{{.i18n.Tr "auth.passkey_error_not_allowed"}}";
+			}
+			if (error && error.name === "InvalidStateError") {
+				return "{{.i18n.Tr "auth.passkey_error_invalid_state"}}";
+			}
+			if (error && error.name === "AbortError") {
+				return "{{.i18n.Tr "auth.passkey_error_abort"}}";
+			}
+			if (
+				error &&
+				error.name === "TypeError" &&
+				typeof error.message === "string" &&
+				error.message.toLowerCase().indexOf("fetch") >= 0
+			) {
+				return "{{.i18n.Tr "auth.passkey_error_network"}}";
+			}
+
+			const detail = errorDetail ? errorDetail(error) : "";
+			if (!detail) {
+				return "";
+			}
+			return "{{.i18n.Tr "auth.passkey_error_detail_prefix"}}: " + detail;
+		}
 
 		function assertionToJSON(assertion) {
 			return {
@@ -143,21 +173,29 @@
 					}).toString()
 				});
 				if (!response.ok) {
-					throw new Error("failed to get passkey options");
+					throw new Error("HTTP " + response.status + " " + response.statusText);
 				}
 
 				const optionsResponse = await response.json();
+				if (!optionsResponse || !optionsResponse.publicKey) {
+					throw new Error("Missing publicKey in server response.");
+				}
 				const requestOptions = normalizeRequestOptions(optionsResponse.publicKey);
 				const assertion = await navigator.credentials.get({
 					publicKey: requestOptions
 				});
+				if (!assertion) {
+					throw new Error("No passkey assertion was returned.");
+				}
 				const rememberInput = document.getElementById("login-passkey-remember");
 				const rememberCheckbox = document.querySelector('input[name="remember"]');
 				rememberInput.value = rememberCheckbox && rememberCheckbox.checked ? "true" : "false";
 				document.getElementById("login-passkey-credential").value = JSON.stringify(assertionToJSON(assertion));
 				document.getElementById("login-passkey-form").submit();
 			} catch (error) {
-				alert("{{.i18n.Tr "auth.passkey_login_failed"}}");
+				const detail = formatPasskeyError(error);
+				alert(detail ? "{{.i18n.Tr "auth.passkey_login_failed"}}\n" + detail : "{{.i18n.Tr "auth.passkey_login_failed"}}");
+				console.error("Passkey sign-in failed.", error);
 			} finally {
 				button.classList.remove("loading", "disabled");
 			}

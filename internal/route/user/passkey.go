@@ -119,6 +119,13 @@ func loadWebAuthnSession(c *context.Context, key string) (*webauthn.SessionData,
 	return &sessionData, true, nil
 }
 
+func passkeyRegistrationFailedMessage(c *context.Context, err error) string {
+	if err == nil {
+		return c.Tr("settings.passkey_register_failed")
+	}
+	return c.Tr("settings.passkey_register_failed_reason", err)
+}
+
 // LoginPasskeyOptions starts the passkey authentication ceremony and returns
 // credential request options for browser-side WebAuthn APIs.
 func LoginPasskeyOptions(c *context.Context) {
@@ -289,7 +296,7 @@ func SettingsPasskeyCreate(c *context.Context) {
 
 	parsedResponse, err := protocol.ParseCredentialCreationResponseBytes([]byte(c.Query("credential")))
 	if err != nil {
-		c.Flash.Error(c.Tr("settings.passkey_register_failed"))
+		c.Flash.Error(passkeyRegistrationFailedMessage(c, err))
 		c.RedirectSubpath("/user/settings/security")
 		return
 	}
@@ -302,7 +309,7 @@ func SettingsPasskeyCreate(c *context.Context) {
 
 	credential, err := webAuthn.CreateCredential(webAuthnUser, *sessionData, parsedResponse)
 	if err != nil {
-		c.Flash.Error(c.Tr("settings.passkey_register_failed"))
+		c.Flash.Error(passkeyRegistrationFailedMessage(c, err))
 		c.RedirectSubpath("/user/settings/security")
 		return
 	}

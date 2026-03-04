@@ -443,7 +443,7 @@ func TestSettingsPasskeyCreate_InvalidCredential_ClearsSession(t *testing.T) {
 
 	assert.Equal(t, http.StatusFound, recorder.Code)
 	assert.Equal(t, "/user/settings/security", recorder.Header().Get("Location"))
-	assert.Equal(t, "settings.passkey_register_failed", c.Flash.ErrorMsg)
+	assert.Equal(t, "settings.passkey_register_failed_reason", c.Flash.ErrorMsg)
 	assert.Nil(t, sessionStore.Get(passkeyRegistrationSessionDataKey))
 }
 

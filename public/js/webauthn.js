@@ -21,3 +21,27 @@ window.gogsWebAuthn.bufferToBase64URL = function(buffer) {
   }
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
+
+window.gogsWebAuthn.errorDetail = function(error) {
+  if (!error) {
+    return "";
+  }
+
+  const name = typeof error.name === "string" ? error.name.trim() : "";
+  const message = typeof error.message === "string" ? error.message.trim() : "";
+  if (name && message) {
+    return name + ": " + message;
+  }
+  if (message) {
+    return message;
+  }
+  if (name) {
+    return name;
+  }
+
+  try {
+    return String(error);
+  } catch (_) {
+    return "";
+  }
+};
