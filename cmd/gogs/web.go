@@ -194,6 +194,8 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 			m.Group("/login", func() {
 				m.Combo("").Get(user.Login).
 					Post(bindIgnErr(form.SignIn{}), user.LoginPost)
+				m.Post("/passkey/options", user.LoginPasskeyOptions)
+				m.Post("/passkey", user.LoginPasskeyPost)
 				m.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
 				m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
 			})
@@ -224,6 +226,9 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 					Post(user.SettingsTwoFactorEnablePost)
 				m.Combo("/two_factor_recovery_codes").Get(user.SettingsTwoFactorRecoveryCodes).
 					Post(user.SettingsTwoFactorRecoveryCodesPost)
+				m.Post("/passkeys/register", user.SettingsPasskeyRegister)
+				m.Post("/passkeys", user.SettingsPasskeyCreate)
+				m.Post("/passkeys/delete", user.SettingsPasskeyDelete)
 				m.Post("/two_factor_disable", user.SettingsTwoFactorDisable)
 			})
 			m.Group("/repositories", func() {

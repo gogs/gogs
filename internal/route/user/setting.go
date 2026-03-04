@@ -400,6 +400,13 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
+	passkeys, err := database.Handle.Passkeys().ListByUserID(c.Req.Context(), c.UserID())
+	if err != nil {
+		c.Errorf(err, "list passkeys by user ID")
+		return
+	}
+	c.Data["Passkeys"] = passkeys
+
 	c.Success(tmplUserSettingsSecurity)
 }
 
