@@ -48,7 +48,7 @@ require (
 	golang.org/x/image v0.36.0
 	golang.org/x/net v0.48.0
 	golang.org/x/text v0.34.0
-	gopkg.in/ini.v1 v1.67.0
+	gopkg.in/ini.v1 v1.67.1
 	gopkg.in/macaron.v1 v1.5.1
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.6.0
