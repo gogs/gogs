@@ -162,6 +162,10 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 
 	verb, args := parseSSHCmd(sshCmd)
 
+	if verb == "git-lfs-authenticate" {
+		fail("This server uses git-lfs-transfer for LFS over SSH", "")
+	}
+
 	var repoFullName string
 	var lfsOperation string
 	isLFSTransfer := verb == "git-lfs-transfer"
