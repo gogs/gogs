@@ -205,10 +205,6 @@ func (h *handler) handleBatch(ctx context.Context) error {
 	if err := h.writer.WritePacketText("status 200"); err != nil {
 		return err
 	}
-	if err := h.writer.WriteFlush(); err != nil {
-		return err
-	}
-
 	for _, item := range items {
 		obj, exists := existingSet[item.oid]
 		sizeStr := strconv.FormatInt(item.size, 10)

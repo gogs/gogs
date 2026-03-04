@@ -229,11 +229,9 @@ func TestServe_BatchUpload(t *testing.T) {
 		require.True(t, s.Scan())
 	}
 
-	// Batch response: status 200 + flush.
+	// Batch response: status 200 followed by object lines and flush.
 	require.True(t, s.Scan())
 	assert.Equal(t, "status 200", s.Text())
-	require.True(t, s.Scan())
-	assert.True(t, s.IsFlush())
 
 	// Existing object → noop.
 	require.True(t, s.Scan())
@@ -285,11 +283,9 @@ func TestServe_BatchDownload(t *testing.T) {
 		require.True(t, s.Scan())
 	}
 
-	// Batch response.
+	// Batch response: status 200 followed by object lines and flush.
 	require.True(t, s.Scan())
 	assert.Equal(t, "status 200", s.Text())
-	require.True(t, s.Scan())
-	assert.True(t, s.IsFlush())
 
 	// Existing object → available for download (actual size from DB).
 	require.True(t, s.Scan())
