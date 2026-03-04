@@ -164,27 +164,32 @@ func (h *handler) handleBatch(ctx context.Context) error {
 	}
 
 	var items []oidSize
+	inObjectList := false
 	for h.scanner.Scan() {
 		if h.scanner.IsFlush() {
 			break
 		}
+		if h.scanner.IsDelim() {
+			inObjectList = true
+			continue
+		}
+
 		line := h.scanner.Text()
 
-		// Skip known arguments like hash-algo, refname, transfer.
-		if strings.Contains(line, "=") {
+		// Before delimiter, lines are command arguments.
+		// For legacy clients without delimiter, skip argument-like lines.
+		if !inObjectList && strings.Contains(line, "=") {
 			continue
 		}
 
-		// Parse "<oid> <size>".
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) != 2 {
+		oid, size, ok := parseBatchObjectLine(line)
+		if !ok {
 			continue
 		}
-		size, err := strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			continue
-		}
-		items = append(items, oidSize{oid: lfsx.OID(parts[0]), size: size})
+		items = append(items, oidSize{oid: oid, size: size})
+	}
+	if err := h.scanner.Err(); err != nil {
+		return h.writeStatusWithMessage(400, "invalid batch payload")
 	}
 
 	// Look up existing objects.
@@ -205,6 +210,12 @@ func (h *handler) handleBatch(ctx context.Context) error {
 	if err := h.writer.WritePacketText("status 200"); err != nil {
 		return err
 	}
+	if err := h.writer.WritePacketText("hash-algo=sha256"); err != nil {
+		return err
+	}
+	if err := h.writer.WriteDelim(); err != nil {
+		return err
+	}
 	for _, item := range items {
 		obj, exists := existingSet[item.oid]
 		sizeStr := strconv.FormatInt(item.size, 10)
@@ -215,14 +226,14 @@ func (h *handler) handleBatch(ctx context.Context) error {
 					return err
 				}
 			} else {
-				if err := h.writer.WritePacketText(string(item.oid) + " " + sizeStr); err != nil {
+				if err := h.writer.WritePacketText(string(item.oid) + " " + sizeStr + " upload"); err != nil {
 					return err
 				}
 			}
 		} else {
 			if exists {
 				actualSize := strconv.FormatInt(obj.Size, 10)
-				if err := h.writer.WritePacketText(string(item.oid) + " " + actualSize); err != nil {
+				if err := h.writer.WritePacketText(string(item.oid) + " " + actualSize + " download"); err != nil {
 					return err
 				}
 			} else {
@@ -233,6 +244,45 @@ func (h *handler) handleBatch(ctx context.Context) error {
 		}
 	}
 	return h.writer.WriteFlush()
+}
+
+func parseBatchObjectLine(line string) (oid lfsx.OID, size int64, ok bool) {
+	parts := strings.Fields(line)
+	if len(parts) == 2 {
+		size, err := strconv.ParseInt(parts[1], 10, 64)
+		if err == nil && size >= 0 {
+			return lfsx.OID(parts[0]), size, true
+		}
+	}
+
+	var oidValue string
+	var sizeValue int64
+	var hasOID bool
+	var hasSize bool
+	for _, part := range parts {
+		entry := strings.SplitN(part, "=", 2)
+		if len(entry) != 2 {
+			continue
+		}
+
+		switch entry[0] {
+		case "oid":
+			oidValue = entry[1]
+			hasOID = true
+		case "size":
+			parsed, err := strconv.ParseInt(entry[1], 10, 64)
+			if err != nil || parsed < 0 {
+				continue
+			}
+			sizeValue = parsed
+			hasSize = true
+		}
+	}
+
+	if hasOID && hasSize {
+		return lfsx.OID(oidValue), sizeValue, true
+	}
+	return "", 0, false
 }
 
 func (h *handler) handlePutObject(ctx context.Context, oid lfsx.OID) error {

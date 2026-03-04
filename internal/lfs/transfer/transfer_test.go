@@ -202,7 +202,9 @@ func TestServe_BatchUpload(t *testing.T) {
 	cw.flush()
 	// Batch command.
 	cw.text("batch")
+	cw.text("transfer=ssh")
 	cw.text("hash-algo=sha256")
+	cw.delim()
 	cw.text(testOID + " 42")
 	cw.text(string(newOID) + " 100")
 	cw.flush()
@@ -233,13 +235,19 @@ func TestServe_BatchUpload(t *testing.T) {
 	require.True(t, s.Scan())
 	assert.Equal(t, "status 200", s.Text())
 
+	require.True(t, s.Scan())
+	assert.Equal(t, "hash-algo=sha256", s.Text())
+
+	require.True(t, s.Scan())
+	assert.True(t, s.IsDelim())
+
 	// Existing object → noop.
 	require.True(t, s.Scan())
 	assert.Equal(t, testOID+" 42 noop", s.Text())
 
-	// New object → upload needed (no noop).
+	// New object → upload needed.
 	require.True(t, s.Scan())
-	assert.Equal(t, string(newOID)+" 100", s.Text())
+	assert.Equal(t, string(newOID)+" 100 upload", s.Text())
 
 	require.True(t, s.Scan())
 	assert.True(t, s.IsFlush())
@@ -257,6 +265,9 @@ func TestServe_BatchDownload(t *testing.T) {
 	cw.text("version 1")
 	cw.flush()
 	cw.text("batch")
+	cw.text("transfer=ssh")
+	cw.text("hash-algo=sha256")
+	cw.delim()
 	cw.text(testOID + " 42")
 	cw.text(string(missingOID) + " 100")
 	cw.flush()
@@ -287,14 +298,76 @@ func TestServe_BatchDownload(t *testing.T) {
 	require.True(t, s.Scan())
 	assert.Equal(t, "status 200", s.Text())
 
+	require.True(t, s.Scan())
+	assert.Equal(t, "hash-algo=sha256", s.Text())
+
+	require.True(t, s.Scan())
+	assert.True(t, s.IsDelim())
+
 	// Existing object → available for download (actual size from DB).
 	require.True(t, s.Scan())
-	assert.Equal(t, testOID+" 42", s.Text())
+	assert.Equal(t, testOID+" 42 download", s.Text())
 
 	// Missing object → noop.
 	require.True(t, s.Scan())
 	assert.Equal(t, string(missingOID)+" 100 noop", s.Text())
 
+	require.True(t, s.Scan())
+	assert.True(t, s.IsFlush())
+}
+
+func TestServe_BatchUploadWithKeyValueLines(t *testing.T) {
+	store := newMockStore()
+	existingOID := lfsx.OID(testOID)
+	store.objects[existingOID] = &database.LFSObject{
+		OID:  existingOID,
+		Size: 42,
+	}
+	newOID := lfsx.OID("aabbccdd18f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
+
+	cw := newClientWriter()
+	cw.text("version 1")
+	cw.flush()
+	cw.text("batch")
+	cw.text("transfer=ssh")
+	cw.text("hash-algo=sha256")
+	cw.delim()
+	cw.text("oid=" + string(existingOID) + " size=42")
+	cw.text("oid=" + string(newOID) + " size=100")
+	cw.flush()
+	cw.text("quit")
+	cw.flush()
+
+	var out bytes.Buffer
+	err := Serve(
+		context.Background(),
+		cw.reader(),
+		&out,
+		"upload",
+		&database.Repository{ID: 1},
+		store,
+		"memory",
+		nil,
+	)
+	require.NoError(t, err)
+
+	s := NewPktlineScanner(&out)
+
+	// Skip version advertisement + ack.
+	for i := 0; i < 4; i++ {
+		require.True(t, s.Scan())
+	}
+
+	require.True(t, s.Scan())
+	assert.Equal(t, "status 200", s.Text())
+	require.True(t, s.Scan())
+	assert.Equal(t, "hash-algo=sha256", s.Text())
+	require.True(t, s.Scan())
+	assert.True(t, s.IsDelim())
+	require.True(t, s.Scan())
+	assert.Equal(t, string(existingOID)+" 42 noop", s.Text())
+	require.True(t, s.Scan())
+	assert.Equal(t, string(newOID)+" 100 upload", s.Text())
 	require.True(t, s.Scan())
 	assert.True(t, s.IsFlush())
 }
