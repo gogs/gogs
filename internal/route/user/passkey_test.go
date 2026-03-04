@@ -81,7 +81,7 @@ func (s *testSessionStore) Destory(_ *macaron.Context) error {
 	return s.Flush()
 }
 
-//lint:ignore ST1003 go-macaron/session interface defines this method as RegenerateId.
+//nolint:staticcheck // go-macaron/session uses RegenerateId in its Store interface.
 func (s *testSessionStore) RegenerateId(_ *macaron.Context) (session.RawStore, error) {
 	return s, nil
 }
