@@ -46,7 +46,7 @@ require (
 	github.com/urfave/cli/v3 v3.6.2
 	github.com/wneessen/go-mail v0.7.2
 	golang.org/x/crypto v0.48.0
-	golang.org/x/image v0.35.0
+	golang.org/x/image v0.36.0
 	golang.org/x/net v0.49.0
 	golang.org/x/text v0.34.0
 	gopkg.in/ini.v1 v1.67.0
