@@ -1,0 +1,2373 @@
+/**
+ * Dark Theme for Gogs
+ * Uses scoped CSS with [data-theme="dark"] attribute selector
+ * Colors based on a dark gray palette with blue accents
+ */
+
+[data-theme="dark"] {
+  // ===== Core Colors =====
+  @dark-bg: #1b1c1d;
+  @dark-bg-secondary: #2a2a2a;
+  @dark-bg-tertiary: #3a3a3a;
+  @dark-text: #e8e8e8;
+  @dark-text-muted: #a0a0a0;
+  @dark-border: #3a3a3a;
+  @dark-link: #4dabf7;
+  @dark-link-hover: #339af0;
+  @dark-code-bg: #3a3a3a;
+
+  // ===== Body & Background =====
+  body {
+    background-color: @dark-bg !important;
+    color: @dark-text !important;
+  }
+
+  body:not(.full-width) {
+    background-color: @dark-bg !important;
+  }
+
+  a::selection,
+  b::selection,
+  strong::selection,
+  div::selection,
+  span::selection,
+  form::selection,
+  th::selection,
+  td::selection {
+    color: @dark-text !important;
+    background-color: rgba(77, 171, 247, 0.3) !important;
+  }
+
+  // ===== Headers & Text =====
+  h1, h2, h3, h4, h5, h6,
+  .ui.header,
+  .text,
+  p {
+    color: @dark-text !important;
+
+    &::selection {
+      color: @dark-text !important;
+      background-color: rgba(77, 171, 247, 0.3) !important;
+    }
+  }
+
+  ul, ol {
+    li::selection {
+      color: @dark-text !important;
+      background-color: rgba(77, 171, 247, 0.3) !important;
+    }
+  }
+
+  .text.grey {
+    color: @dark-text-muted !important;
+  }
+
+  .text.black {
+    color: @dark-text !important;
+  }
+
+  // ===== Links =====
+  a {
+    color: @dark-link !important;
+
+    &:hover {
+      color: @dark-link-hover !important;
+    }
+  }
+
+  // ===== Top Navigation Bar =====
+  .following.bar {
+    background-color: @dark-bg-secondary !important;
+    border-bottom: 1px solid @dark-border !important;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2) !important;
+
+    &.light {
+      background-color: @dark-bg !important;
+      border-bottom: 1px solid @dark-border !important;
+    }
+
+    .top.menu a.item {
+      color: @dark-text !important;
+
+      &:hover {
+        color: @dark-text !important;
+        background-color: @dark-bg-tertiary !important;
+      }
+
+      &.active {
+        color: @dark-text !important;
+      }
+    }
+
+    .top.menu .dropdown.item {
+      color: @dark-text !important;
+
+      &:hover,
+      &.active {
+        color: @dark-text !important;
+        background-color: @dark-bg-tertiary !important;
+      }
+    }
+  }
+
+  // ===== UI Containers =====
+  .ui.container,
+  .ui.grid {
+    color: @dark-text !important;
+  }
+
+  // ===== Cards & Panels =====
+  .ui.card,
+  .ui.cards > .card,
+  .ui.segment {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    color: @dark-text !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .ui.attached.segment {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+  }
+
+  // ===== Repositories =====
+  .repository {
+    .head {
+      .ui.huge.breadcrumb {
+        color: @dark-text !important;
+
+        .divider {
+          color: @dark-text-muted !important;
+        }
+
+        a {
+          color: @dark-link !important;
+        }
+      }
+
+      // Clone URL section
+      .clone-group {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        .ui.button {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-text !important;
+
+          &:hover {
+            background-color: @dark-bg-secondary !important;
+          }
+
+          &.blue {
+            background-color: #2185d0 !important;
+            color: #fff !important;
+          }
+        }
+
+        input {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-text !important;
+          border-color: @dark-border !important;
+        }
+      }
+    }
+
+    .navbar {
+      background-color: @dark-bg-secondary !important;
+      border: 1px solid @dark-border !important;
+      border-radius: 4px !important;
+
+      .ui.label {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+    }
+
+    .filter.menu {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .item {
+        color: @dark-text !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+
+        &.active {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-link !important;
+        }
+      }
+    }
+
+    // File list styling
+    .file-list {
+      background-color: @dark-bg-secondary !important;
+
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+
+    // README and other markdown
+    .markdown {
+      background-color: @dark-bg-secondary !important;
+    }
+
+    // Commit list
+    .commit-list {
+      background-color: @dark-bg-secondary !important;
+
+      .commit-item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+
+    &.list {
+      .item {
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // ===== Repository File List =====
+  .repository.file.list {
+    .repo-description {
+      color: @dark-text-muted !important;
+    }
+
+    // All table headers in repository file list
+    table th,
+    .ui.table th,
+    th {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text !important;
+      border-color: @dark-border !important;
+    }
+
+    #repo-files-table {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      thead {
+        background-color: @dark-bg-tertiary !important;
+
+        th {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-text !important;
+          border-bottom-color: @dark-border !important;
+        }
+      }
+
+      tbody {
+        background-color: @dark-bg-secondary !important;
+
+        tr {
+          background-color: @dark-bg-secondary !important;
+          border-bottom-color: @dark-border !important;
+
+          &:hover {
+            background-color: @dark-bg-tertiary !important;
+          }
+
+          td {
+            border-top-color: @dark-border !important;
+            color: @dark-text !important;
+
+            a {
+              color: @dark-link !important;
+            }
+          }
+        }
+      }
+    }
+
+    #file-content {
+      .code-view {
+        .lines-num {
+          background-color: @dark-bg-secondary !important;
+
+          .hljs, ol, pre {
+            background-color: @dark-bg-secondary !important;
+          }
+        }
+
+        .lines-code {
+          background-color: @dark-bg-tertiary !important;
+
+          .hljs, ol, pre {
+            background-color: @dark-bg-tertiary !important;
+          }
+        }
+      }
+    }
+
+    // File list table styling
+    .repo-file-list {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      thead th {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+
+      tbody td {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+
+        a {
+          color: @dark-link !important;
+        }
+      }
+    }
+  }
+
+  .repository.file.editor .commit-form-wrapper .commit-form {
+    border-color: @dark-border !important;
+  }
+
+  // ===== Code & Pre =====
+  pre,
+  code {
+    color: @dark-text !important;
+  }
+
+  pre.raw,
+  code.raw {
+    background-color: @dark-code-bg !important;
+    border-color: @dark-border !important;
+  }
+
+  .code-view {
+    background-color: @dark-bg-secondary !important;
+
+    pre {
+      background-color: @dark-bg-secondary !important;
+    }
+  }
+
+  // ===== Syntax Highlighting (basic overrides) =====
+  .highlight {
+    background-color: @dark-bg-secondary !important;
+
+    pre {
+      background-color: transparent !important;
+    }
+  }
+
+  // ===== Buttons =====
+  .ui.button {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+
+    &:hover {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text !important;
+    }
+
+    &.primary {
+      background-color: #2185d0 !important;
+      color: #fff !important;
+
+      &:hover {
+        background-color: #1a76c4 !important;
+      }
+    }
+
+    &.green {
+      background-color: #21ba45 !important;
+      color: #fff !important;
+
+      &:hover {
+        background-color: #16a438 !important;
+      }
+    }
+
+    &.red {
+      background-color: #db2828 !important;
+      color: #fff !important;
+
+      &:hover {
+        background-color: #d21b1b !important;
+      }
+    }
+
+    &.basic {
+      background-color: transparent !important;
+      color: @dark-text !important;
+      border: 1px solid @dark-border !important;
+
+      &:hover {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+
+      &.primary {
+        color: #4dabf7 !important;
+        border-color: #4dabf7 !important;
+
+        &:hover {
+          background-color: rgba(77, 171, 247, 0.1) !important;
+          color: #339af0 !important;
+          border-color: #339af0 !important;
+        }
+      }
+
+      &.green {
+        color: #21ba45 !important;
+        border-color: #21ba45 !important;
+
+        &:hover {
+          background-color: rgba(33, 186, 69, 0.1) !important;
+          color: #16a438 !important;
+          border-color: #16a438 !important;
+        }
+      }
+
+      &.red {
+        border-color: #db2828 !important;
+      }
+
+      &.blue {
+        color: #2185d0 !important;
+        border-color: #2185d0 !important;
+        background-color: rgba(33, 133, 208, 0.1) !important;
+
+        &:hover {
+          color: #1a76c4 !important;
+          border-color: #1a76c4 !important;
+          background-color: rgba(33, 133, 208, 0.1) !important;
+        }
+      }
+
+      &.black {
+        color: @dark-text !important;
+        border-color: @dark-text !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-text !important;
+        }
+      }
+
+      &.inverted {
+        background-color: transparent !important;
+        color: #fff !important;
+
+        &.red {
+          color: #ff695e !important;
+          border-color: transparent !important;
+
+          &:hover {
+            background-color: rgba(255, 105, 94, 0.1) !important;
+          }
+        }
+
+        &.green {
+          color: #5cd65c !important;
+          border-color: transparent !important;
+
+          &:hover {
+            background-color: rgba(92, 214, 92, 0.1) !important;
+          }
+        }
+      }
+    }
+
+    &.black {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+
+    &.blue {
+      background-color: #2185d0 !important;
+      color: #fff !important;
+
+      &:hover {
+        background-color: #1a76c4 !important;
+      }
+    }
+  }
+
+  // ===== Forms & Inputs =====
+  .ui.form input,
+  .ui.form textarea,
+  .ui.form select,
+  .ui.input input,
+  .ui.input textarea {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    color: @dark-text !important;
+
+    &:focus {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-link !important;
+      color: @dark-text !important;
+    }
+
+    &::placeholder {
+      color: @dark-text-muted !important;
+    }
+  }
+
+  // Select dropdowns
+  select {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+
+    option {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+
+    &:focus {
+      border-color: @dark-link !important;
+    }
+  }
+
+  .ui.form input:not([type]),
+  .ui.form input[type="text"],
+  .ui.form input[type="email"],
+  .ui.form input[type="password"],
+  .ui.input input {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+  }
+
+  // Icon inputs (inputs with icons inside)
+  .ui.icon.input > i.icon,
+  .ui.icon.input > i.icons {
+    color: @dark-text-muted !important;
+  }
+
+  .ui.icon.input > input:focus ~ i.icon,
+  .ui.icon.input > input:focus ~ i.icons {
+    color: @dark-link !important;
+  }
+
+  .ui.action.input {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+
+    > input {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+      color: @dark-text !important;
+    }
+
+    > .button {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text !important;
+      border-color: @dark-border !important;
+
+      &:hover {
+        background-color: @dark-bg-secondary !important;
+      }
+    }
+  }
+
+  .ui.fluid.input {
+    background-color: @dark-bg-secondary !important;
+  }
+
+  // ===== Tables =====
+  .ui.table {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+
+    thead {
+      background-color: @dark-bg-tertiary !important;
+      border-bottom-color: @dark-border !important;
+
+      th {
+        color: @dark-text !important;
+        border-bottom-color: @dark-border !important;
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom-color: @dark-border !important;
+
+        td {
+          border-top-color: @dark-border !important;
+          color: @dark-text !important;
+        }
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+
+    tfoot {
+      border-top-color: @dark-border !important;
+    }
+  }
+
+
+  // ===== Dropdown Menus =====
+  .ui.dropdown {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+
+    .menu {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+
+      .item {
+        color: @dark-text !important;
+        border-top-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-text !important;
+        }
+
+        &.active {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-text !important;
+        }
+
+        a {
+          color: @dark-text !important;
+        }
+      }
+    }
+
+    &.selection {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      > .text {
+        color: @dark-text !important;
+      }
+
+      &.active {
+        border-color: @dark-link !important;
+      }
+    }
+
+    &.floating {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+
+      &.upward {
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4) !important;
+      }
+    }
+
+    &.search {
+      background-color: @dark-bg-secondary !important;
+
+      input.search {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+
+        &::placeholder {
+          color: @dark-text-muted !important;
+        }
+      }
+    }
+
+    &.multiple {
+      background-color: @dark-bg-secondary !important;
+
+      > .label {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+    }
+  }
+
+  // ===== Tabs =====
+  .ui.tabular.menu {
+    background-color: @dark-bg-secondary !important;
+    border-bottom-color: @dark-border !important;
+
+    .item {
+      color: @dark-text !important;
+
+      &:hover {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+
+      &.active {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+        color: @dark-text !important;
+      }
+    }
+  }
+
+  // Secondary pointing menu (used in user profiles, repo tabs)
+  .ui.secondary.pointing.menu {
+    background-color: transparent !important;
+    border-bottom-color: @dark-border !important;
+
+    .item {
+      color: @dark-text-muted !important;
+
+      &:hover {
+        background-color: transparent !important;
+        color: @dark-text !important;
+      }
+
+      &.active {
+        background-color: transparent !important;
+        border-color: @dark-link !important;
+        color: @dark-link !important;
+      }
+    }
+
+    &.attached {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+  }
+
+  // Repository navbar tabs (Files, Issues, Pull Requests, etc.)
+  .repository .navbar {
+    .item {
+      &.active {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-link !important;
+      }
+    }
+  }
+
+  // General active menu item fix
+  .ui.menu .item.active,
+  .ui.menu a.item.active,
+  a.active.item {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text !important;
+  }
+
+  .ui.menu .ui.dropdown .menu > .item,
+  .ui.menu .ui.dropdown .menu > .active.item {
+    color: @dark-text !important;
+
+    &:hover {
+      color: @dark-text !important;
+    }
+  }
+
+  // ===== Labels & Badges =====
+  .ui.label {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+  }
+
+  .ui.labels .label {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text !important;
+  }
+
+  .issue-label {
+    color: #fff !important;
+  }
+
+  // SHA labels (commit SHAs)
+  .ui.sha.label {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-link !important;
+    border-color: @dark-border !important;
+    font-family: monospace;
+
+    &.green {
+      background-color: rgba(33, 186, 69, 0.2) !important;
+      color: #21ba45 !important;
+    }
+  }
+
+  // Other label color variants
+  .ui.label {
+    &.black {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text !important;
+    }
+
+    &.grey {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text-muted !important;
+    }
+  }
+
+  // ===== Lists =====
+  .ui.list {
+    color: @dark-text !important;
+
+    .list > .item,
+    > .item {
+      color: @dark-text !important;
+
+      a {
+        color: @dark-link !important;
+      }
+
+      .description {
+        color: @dark-text-muted !important;
+      }
+    }
+  }
+
+  // ===== Dividers =====
+  .ui.divider,
+  .divider {
+    border-top-color: @dark-border !important;
+    border-bottom-color: @dark-border !important;
+  }
+
+  hr {
+    border-top-color: @dark-border !important;
+  }
+
+  // ===== Issues & Pull Requests =====
+  .issue.list {
+    .item {
+      border-bottom-color: @dark-border !important;
+
+      .title {
+        color: @dark-link !important;
+      }
+
+      .meta {
+        color: @dark-text-muted !important;
+      }
+    }
+  }
+
+  // ===== Milestones =====
+  .milestone.list {
+    .item {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .meta {
+        color: @dark-text-muted !important;
+      }
+    }
+  }
+
+  // ===== Dashboard =====
+  .dashboard {
+    .navbar {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+
+    .filter.menu {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .item {
+        color: @dark-text !important;
+
+        &.active {
+          background-color: @dark-bg-tertiary !important;
+          color: @dark-link !important;
+        }
+      }
+    }
+
+    // Feeds list
+    .feeds {
+      .news {
+        .ui.list {
+          background-color: transparent !important;
+
+          > .item {
+            background-color: transparent !important;
+            border-color: @dark-border !important;
+          }
+        }
+      }
+    }
+
+    // Repositories list
+    .repos {
+      .list {
+        background-color: transparent !important;
+
+        .item {
+          background-color: transparent !important;
+          border-color: @dark-border !important;
+        }
+      }
+    }
+  }
+
+  // ===== User Profile =====
+  .user.profile {
+    .profile.header {
+      background-color: @dark-bg-secondary !important;
+      border-bottom-color: @dark-border !important;
+
+      .username {
+        color: @dark-text !important;
+      }
+
+      .description {
+        color: @dark-text-muted !important;
+      }
+    }
+
+    .ui.card .extra.content ul li:not(:last-child) {
+      border-bottom-color: @dark-border !important;
+    }
+  }
+
+  // ===== Settings =====
+  .settings {
+    .header {
+      background-color: @dark-bg-secondary !important;
+      border-bottom-color: @dark-border !important;
+    }
+
+    .key.list {
+      .item {
+        border-bottom-color: @dark-border !important;
+      }
+    }
+
+    // Settings content container
+    .content {
+      background-color: transparent !important;
+    }
+
+    // Settings sections
+    .ui.segment,
+    .segment {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+      color: @dark-text !important;
+    }
+
+    // Danger zone
+    .danger {
+      background-color: rgba(219, 40, 40, 0.1) !important;
+      border-color: rgba(219, 40, 40, 0.3) !important;
+
+      .segment {
+        background-color: transparent !important;
+        border-color: @dark-border !important;
+      }
+
+      .button {
+        background-color: #db2828 !important;
+        color: #fff !important;
+
+        &:hover {
+          background-color: #d21b1b !important;
+        }
+      }
+    }
+
+    // Danger zone specific styling
+    .ui.list .item {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .button {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+    }
+
+    // Form groups in settings
+    form {
+      .inline-grouped-fields,
+      .grouped-fields {
+        background-color: transparent !important;
+      }
+    }
+
+    // Repository settings specific
+    &.repository {
+      .ui.segment {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+
+      .danger {
+        .item {
+          background-color: rgba(219, 40, 40, 0.05) !important;
+          border-color: rgba(219, 40, 40, 0.2) !important;
+
+          &:hover {
+            background-color: rgba(219, 40, 40, 0.1) !important;
+          }
+        }
+      }
+    }
+  }
+
+  // ===== Admin =====
+  .admin {
+    .header {
+      background-color: @dark-bg-secondary !important;
+      border-bottom-color: @dark-border !important;
+    }
+
+    .table {
+      tbody {
+        tr {
+          border-bottom-color: @dark-border !important;
+        }
+      }
+    }
+  }
+
+  // ===== Explore =====
+  .explore {
+    .navbar {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+  }
+
+  // ===== Search =====
+  .search {
+    .header {
+      background-color: @dark-bg-secondary !important;
+      border-bottom-color: @dark-border !important;
+    }
+  }
+
+  // ===== Markdown Content =====
+  .markdown {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+
+    h1, h2, h3, h4, h5, h6 {
+      color: @dark-text !important;
+      border-bottom-color: @dark-border !important;
+    }
+
+    blockquote {
+      border-left-color: @dark-border !important;
+      color: @dark-text-muted !important;
+    }
+
+    code {
+      background-color: @dark-code-bg !important;
+      color: @dark-text !important;
+    }
+
+    pre {
+      background-color: @dark-code-bg !important;
+      border-color: @dark-border !important;
+
+      code {
+        background-color: transparent !important;
+      }
+    }
+
+    img {
+      background-color: transparent !important;
+    }
+
+    table {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      th,
+      td {
+        border-color: @dark-border !important;
+        color: @dark-text !important;
+      }
+
+      thead {
+        background-color: @dark-bg-tertiary !important;
+      }
+    }
+
+    a {
+      color: @dark-link !important;
+
+      &:hover {
+        color: @dark-link-hover !important;
+      }
+    }
+
+    hr {
+      border-top-color: @dark-border !important;
+      border-bottom-color: @dark-border !important;
+    }
+  }
+
+  // ===== Footer =====
+  footer,
+  .footer {
+    background-color: @dark-bg !important;
+    border-top-color: @dark-border !important;
+    color: @dark-text-muted !important;
+
+    .ui.menu {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .item {
+        color: @dark-text-muted !important;
+
+      }
+    }
+
+    // Page performance stats
+    .ui.text {
+      color: @dark-text-muted !important;
+
+      strong {
+        color: @dark-text !important;
+      }
+    }
+  }
+
+  // ===== Modal =====
+  .ui.modal {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+
+    > .header {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text !important;
+      border-bottom-color: @dark-border !important;
+    }
+
+    > .content {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+
+    > .actions {
+      background-color: @dark-bg-tertiary !important;
+      border-top-color: @dark-border !important;
+
+      .button {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+      }
+    }
+  }
+
+  // ===== Message =====
+  .ui.message {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+
+    &.info {
+      background-color: #2185d0 !important;
+      color: #fff !important;
+    }
+
+    &.success {
+      background-color: #21ba45 !important;
+      color: #fff !important;
+    }
+
+    &.warning {
+      background-color: #f2711c !important;
+      color: #fff !important;
+    }
+
+    &.error {
+      background-color: #db2828 !important;
+      color: #fff !important;
+    }
+  }
+
+  // ===== Breadcrumb =====
+  .ui.breadcrumb {
+    color: @dark-text !important;
+
+    .divider {
+      color: @dark-text-muted !important;
+    }
+
+    a {
+      color: @dark-link !important;
+    }
+  }
+
+  // ===== Pagination =====
+  .ui.pagination.menu {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+
+    .item {
+      color: @dark-text !important;
+      background-color: @dark-bg-secondary !important;
+
+      &:hover {
+        background-color: @dark-bg-tertiary !important;
+      }
+
+      &.active {
+        background-color: @dark-link !important;
+        color: #fff !important;
+      }
+
+      &.disabled {
+        color: @dark-text-muted !important;
+      }
+    }
+  }
+
+  // ===== Menu =====
+  .ui.menu {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+
+    .item {
+      color: @dark-text !important;
+
+      &.active {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-link !important;
+      }
+
+      &.disabled {
+        color: @dark-text-muted !important;
+      }
+    }
+
+    .header.item {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+  }
+
+  // ===== Checkbox =====
+
+  .ui.checkbox {
+    label {
+      color: @dark-text !important;
+
+      &:before {
+        border-color: @dark-bg-secondary !important;
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+
+      &:after {
+        color: @dark-text !important;
+      }
+    }
+
+    input:checked ~ label:before {
+      background-color: @dark-bg-tertiary !important;
+      border-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+  }
+
+  .ui.radio {
+    label {
+      &:after {
+        background-color: @dark-text !important;
+      }
+    }
+  }
+
+  // ===== Progress Bar =====
+  .ui.progress {
+    background-color: @dark-bg-tertiary !important;
+
+    .bar {
+      background-color: @dark-link !important;
+    }
+  }
+
+  // ===== Badge =====
+  .badge {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+  }
+
+  // ===== Alert =====
+  .alert {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    color: @dark-text !important;
+  }
+
+  // ===== Tooltip =====
+  .ui.popup {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    color: @dark-text !important;
+
+    &.inverted {
+      background-color: @dark-bg-tertiary !important;
+      color: @dark-text !important;
+      border-color: @dark-border !important;
+
+      &::before {
+        background-color: @dark-bg-tertiary !important;
+      }
+    }
+
+    // For popup variations (tiny, small, etc.)
+    &.tiny,
+    &.small {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+  }
+
+  // ===== Accordion =====
+  .ui.accordion {
+    .title {
+      color: @dark-text !important;
+    }
+
+    .content {
+      color: @dark-text-muted !important;
+    }
+  }
+
+  // ===== Steps =====
+  .ui.steps {
+    background-color: @dark-bg-secondary !important;
+
+    .step {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+      color: @dark-text !important;
+
+      &.active {
+        background-color: @dark-bg-tertiary !important;
+      }
+
+      &.disabled {
+        color: @dark-text-muted !important;
+      }
+    }
+  }
+
+  // ===== Statistic =====
+  .ui.statistic {
+    .value {
+      color: @dark-text !important;
+    }
+
+    .label {
+      color: @dark-text-muted !important;
+    }
+  }
+
+  // ===== Loader =====
+  .ui.loader {
+    &:before {
+      border-color: @dark-border !important;
+    }
+
+    &:after {
+      border-color: @dark-link !important;
+      border-top-color: transparent !important;
+    }
+  }
+
+  // ===== Dimmer =====
+  .ui.dimmer {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+  }
+
+  // ===== Embed =====
+  .ui.embed {
+    background-color: @dark-bg-secondary !important;
+  }
+
+  // ===== Pointing Dropdown Menu (User Menu) =====
+  .ui.pointing.dropdown > .menu,
+  .ui.top.right.pointing.dropdown > .menu {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+
+    &:after {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+      box-shadow: none !important;
+    }
+
+    .header {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text-muted !important;
+    }
+
+    .divider {
+      border-top-color: @dark-border !important;
+    }
+
+    .item {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+
+      &:hover {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+
+      &.active {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+    }
+  }
+
+  // ===== Dashboard List (My Repositories, Collaborative Repositories) =====
+  .dashboard .list,
+  .dashboard .ui.tab.list {
+    background-color: @dark-bg !important;
+
+    .header,
+    .ui.top.attached.header {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+      border-color: @dark-border !important;
+
+      .ui.label {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+    }
+
+    .ui.attached.segment,
+    .ui.attached.table.segment {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+
+    ul {
+      background-color: @dark-bg-secondary !important;
+
+      li {
+        background-color: @dark-bg-secondary !important;
+        border-bottom-color: @dark-border !important;
+
+        &.private {
+          background-color: @dark-bg-secondary !important;
+        }
+
+        a {
+          color: @dark-text !important;
+
+          &:hover {
+            background-color: @dark-bg-tertiary !important;
+          }
+
+          .octicon {
+            color: @dark-text-muted !important;
+          }
+        }
+      }
+    }
+  }
+
+  // Dashboard feeds list
+  &.feeds .list,
+  .feeds .list {
+    .header {
+      background-color: @dark-bg-secondary !important;
+    }
+
+    ul li {
+      border-bottom-color: @dark-border !important;
+
+      &.private {
+        background-color: rgba(252, 248, 233, 0.1) !important;
+      }
+    }
+  }
+
+  // ===== Attached Header & Segment (used in dashboard and forms) =====
+  .ui.attached.header,
+  .ui.top.attached.header {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+  }
+
+  .ui.attached.segment,
+  .ui.attached.table.segment,
+  .ui.bottom.attached.segment {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+  }
+
+  //===== Image =====
+  .ui.image {
+    background-color: transparent !important;
+  }
+
+  // Avatar images
+  .ui.avatar.image,
+  .ui.avatar.image img,
+  .ui.mini.image,
+  .ui.small.image,
+  .ui.rounded.image {
+    background-color: transparent !important;
+    border-color: @dark-border !important;
+  }
+
+  // Rounded borders for avatars
+  .ui.avatar.image {
+    border-radius: 50% !important;
+  }
+
+  .ui.rounded.image {
+    border-radius: 0.3125rem !important;
+  }
+
+  // ===== Flag =====
+  .ui.flag {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text !important;
+  }
+
+  // ===== Headers in specific contexts =====
+  .ui.attached.header,
+  h4.ui.top.attached.header,
+  .ui.top.attached.header {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+  }
+
+  .ui.top.attached.header {
+    border-bottom-color: @dark-border !important;
+  }
+
+  // Header wrapper used in repository pages
+  .header-wrapper {
+    background-color: @dark-bg !important;
+    border-color: @dark-border !important;
+  }
+
+  // ===== Icons =====
+  .icon {
+    color: @dark-text !important;
+  }
+
+  .octicon {
+    color: @dark-text !important;
+  }
+
+  // ===== Code Diff =====
+  .diff-file-box {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+
+    .diff-file-header {
+      background-color: @dark-bg-tertiary !important;
+      border-bottom-color: @dark-border !important;
+      color: @dark-text !important;
+    }
+
+    .file-body {
+      background-color: @dark-bg-secondary !important;
+
+      .file-code {
+        background-color: @dark-bg-secondary !important;
+      }
+    }
+  }
+
+  // ===== Commit List =====
+  .commit-list {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+
+    .commit-item {
+      border-bottom-color: @dark-border !important;
+    }
+  }
+
+  // ===== Activity =====
+  .activity {
+    .item {
+      border-bottom-color: @dark-border !important;
+    }
+  }
+
+  // ===== Organization =====
+  .org {
+    .header {
+      background-color: @dark-bg-secondary !important;
+      border-bottom-color: @dark-border !important;
+    }
+  }
+
+  // ===== Team =====
+  .team {
+    .detail {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+  }
+
+  // ===== Webhook =====
+  .webhook {
+    .events {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+  }
+
+  // ===== Additional Semantic UI Overrides =====
+  .ui.pointing.dropdown > .menu {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+  }
+
+  .ui.selection.dropdown {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+
+    > .text {
+      color: @dark-text !important;
+    }
+  }
+
+  .ui.compact.menu {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+  }
+
+  .ui.secondary.menu {
+    background-color: @dark-bg !important;
+
+    .item {
+      color: @dark-text !important;
+    }
+  }
+
+  .ui.text.menu {
+    background-color: transparent !important;
+
+    .item {
+      color: @dark-text !important;
+    }
+  }
+
+  // ===== Form States =====
+  .ui.form {
+    .field.error input,
+    .field.error textarea,
+    .field.error select {
+      background-color: @dark-bg-secondary !important;
+      border-color: #db2828 !important;
+      color: @dark-text !important;
+    }
+
+    .field.success input,
+    .field.success textarea,
+    .field.success select {
+      background-color: @dark-bg-secondary !important;
+      border-color: #21ba45 !important;
+      color: @dark-text !important;
+    }
+
+    label {
+      color: @dark-text !important;
+    }
+  }
+
+  // ===== Install Page =====
+  .install {
+    form label {
+      color: @dark-text !important;
+    }
+  }
+
+  // ===== Focus States =====
+  input:focus,
+  textarea:focus,
+  select:focus {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-link !important;
+    color: @dark-text !important;
+  }
+
+  // ===== Disabled States =====
+  .ui.disabled.button,
+  .ui.button:disabled {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text-muted !important;
+  }
+
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    background-color: @dark-bg-tertiary !important;
+    color: @dark-text-muted !important;
+  }
+
+  // ===== Additional Styles =====
+
+  // Code block styling
+  .code-block {
+    background-color: @dark-code-bg !important;
+    border-color: @dark-border !important;
+  }
+
+  // Git graph styling
+  .git-graph {
+    background-color: @dark-bg-secondary !important;
+    border-color: @dark-border !important;
+
+    .list {
+      background-color: @dark-bg-secondary !important;
+
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Commits page
+  .commits {
+    .table {
+      background-color: @dark-bg-secondary !important;
+
+      thead th {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+
+      tbody td {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Branches page
+  .branches {
+    .table {
+      background-color: @dark-bg-secondary !important;
+
+      thead th {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+
+      tbody td {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Tags page
+  .tags {
+    .table {
+      background-color: @dark-bg-secondary !important;
+
+      thead th {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+
+      tbody td {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Releases page
+  .release {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        .detail {
+          background-color: transparent !important;
+        }
+      }
+    }
+  }
+
+  // Issues page
+  .issues {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+
+    // Issue form
+    .form {
+      .context {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+      }
+    }
+  }
+
+  // Pull requests page
+  .pulls {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+  }
+
+  // Wiki page
+  .wiki {
+    .pages {
+      .list {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        .item {
+          background-color: @dark-bg-secondary !important;
+          border-color: @dark-border !important;
+
+          &:hover {
+            background-color: @dark-bg-tertiary !important;
+          }
+        }
+      }
+    }
+
+    .content {
+      background-color: @dark-bg-secondary !important;
+    }
+  }
+
+  // Activity page
+  .activity {
+    .list {
+      background-color: @dark-bg-secondary !important;
+
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Explore page
+  .explore {
+    .navbar {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+
+    .repos {
+      .list {
+        background-color: @dark-bg-secondary !important;
+
+        .item {
+          background-color: @dark-bg-secondary !important;
+          border-color: @dark-border !important;
+
+          &:hover {
+            background-color: @dark-bg-tertiary !important;
+          }
+        }
+      }
+    }
+  }
+
+  // User profile page
+  .user.profile {
+    .profile.avatar.wrapper {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+
+    .repos {
+      .list {
+        background-color: @dark-bg-secondary !important;
+
+        .item {
+          background-color: @dark-bg-secondary !important;
+          border-color: @dark-border !important;
+
+          &:hover {
+            background-color: @dark-bg-tertiary !important;
+          }
+        }
+      }
+    }
+
+    .feeds {
+      .list {
+        background-color: transparent !important;
+
+        .item {
+          background-color: transparent !important;
+          border-color: @dark-border !important;
+        }
+      }
+    }
+  }
+
+  // Organization page
+  .org {
+    .teams {
+      .list {
+        background-color: @dark-bg-secondary !important;
+
+        .item {
+          background-color: @dark-bg-secondary !important;
+          border-color: @dark-border !important;
+
+          &:hover {
+            background-color: @dark-bg-tertiary !important;
+          }
+        }
+      }
+    }
+
+    .members {
+      .list {
+        background-color: @dark-bg-secondary !important;
+
+        .item {
+          background-color: @dark-bg-secondary !important;
+          border-color: @dark-border !important;
+        }
+      }
+    }
+  }
+
+  // Admin page
+  .admin {
+    .table {
+      background-color: @dark-bg-secondary !important;
+
+      thead th {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+
+      tbody td {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text !important;
+        border-color: @dark-border !important;
+      }
+    }
+
+    .config {
+      .table {
+        tbody {
+          tr {
+            background-color: @dark-bg-secondary !important;
+
+            &:hover {
+              background-color: @dark-bg-tertiary !important;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // New repo/file page
+  .new {
+    form {
+      .ui.segment {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Milestones page
+  .milestone {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+  }
+
+  // Search results
+  .search {
+    .results {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .result {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+  }
+
+  // Issue tracker
+  .issue {
+    .header {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+
+      .index {
+        background-color: @dark-bg-tertiary !important;
+        color: @dark-text !important;
+      }
+    }
+
+    .content {
+      .markdown {
+        background-color: transparent !important;
+      }
+    }
+
+    .comments {
+      .comment {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+  }
+
+  // Notifications
+  .notification {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+
+        &.unread {
+          background-color: rgba(77, 171, 247, 0.1) !important;
+        }
+      }
+    }
+  }
+
+  // SSH keys page
+  .ssh {
+    .keys {
+      .list {
+        background-color: @dark-bg-secondary !important;
+
+        .item {
+          background-color: @dark-bg-secondary !important;
+          border-color: @dark-border !important;
+
+          .printable {
+            background-color: @dark-code-bg !important;
+            color: @dark-text !important;
+          }
+        }
+      }
+    }
+  }
+
+  // Applications page
+  .applications {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+  }
+
+  // Emails page
+  .email {
+    .list {
+      .item {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+
+        &:hover {
+          background-color: @dark-bg-tertiary !important;
+        }
+      }
+    }
+  }
+
+  // Two-factor authentication page
+  .two-factor {
+    .ui.segment {
+      background-color: @dark-bg-secondary !important;
+      border-color: @dark-border !important;
+    }
+  }
+
+  // Error pages
+  &.error,
+  &.notfound {
+    background-color: @dark-bg !important;
+
+    p {
+      color: @dark-text-muted !important;
+    }
+  }
+
+  // Empty states
+  .empty {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text-muted !important;
+  }
+
+  // CodeMirror / SimpleMDE Editor (Wiki, etc.)
+  .CodeMirror {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+
+    &.cm-s-paper {
+      background-color: @dark-bg-secondary !important;
+      color: @dark-text !important;
+    }
+
+    .CodeMirror-scroll {
+      background-color: @dark-bg-secondary !important;
+    }
+
+    .CodeMirror-gutters {
+      background-color: @dark-bg-tertiary !important;
+      border-right-color: @dark-border !important;
+    }
+
+    .CodeMirror-linenumber {
+      color: @dark-text-muted !important;
+    }
+
+    .CodeMirror-cursor {
+      border-left-color: @dark-text !important;
+    }
+
+    .CodeMirror-selected {
+      background-color: rgba(77, 171, 247, 0.3) !important;
+    }
+
+    .CodeMirror-focused .CodeMirror-selected {
+      background-color: rgba(77, 171, 247, 0.3) !important;
+    }
+
+    .CodeMirror-line::selection,
+    .CodeMirror-line > span::selection,
+    .CodeMirror-line > span > span::selection {
+      color: @dark-text !important;
+      background-color: rgba(77, 171, 247, 0.3) !important;
+    }
+
+    .CodeMirror-line::-moz-selection,
+    .CodeMirror-line > span::-moz-selection,
+    .CodeMirror-line > span > span::-moz-selection {
+      color: @dark-text !important;
+      background-color: rgba(77, 171, 247, 0.3) !important;
+    }
+
+    // Syntax highlighting
+    .cm-header {
+      color: #4dabf7 !important;
+    }
+
+    .cm-quote {
+      color: #69db7c !important;
+    }
+
+    .cm-link {
+      color: #4dabf7 !important;
+    }
+
+    .cm-url {
+      color: #74c0fc !important;
+    }
+
+    .cm-strong {
+      color: #ffa94d !important;
+    }
+
+    .cm-em {
+      color: #da77f2 !important;
+    }
+
+    .cm-keyword {
+      color: #da77f2 !important;
+    }
+
+    .cm-atom {
+      color: #da77f2 !important;
+    }
+
+    .cm-number {
+      color: #ffa94d !important;
+    }
+
+    .cm-def {
+      color: #4dabf7 !important;
+    }
+
+    .cm-variable {
+      color: @dark-text !important;
+    }
+
+    .cm-variable-2 {
+      color: #4dabf7 !important;
+    }
+
+    .cm-variable-3 {
+      color: #69db7c !important;
+    }
+
+    .cm-comment {
+      color: @dark-text-muted !important;
+    }
+
+    .cm-string {
+      color: #69db7c !important;
+    }
+
+    .cm-string-2 {
+      color: #ffa94d !important;
+    }
+
+    .cm-tag {
+      color: #ff6b6b !important;
+    }
+
+    .cm-attribute {
+      color: #ffa94d !important;
+    }
+
+    .cm-property {
+      color: #4dabf7 !important;
+    }
+
+    .cm-qualifier {
+      color: #69db7c !important;
+    }
+
+    .cm-builtin {
+      color: #4dabf7 !important;
+    }
+
+    .cm-bracket {
+      color: @dark-text !important;
+    }
+
+    .cm-error {
+      color: #ff6b6b !important;
+    }
+
+    // Placeholder text
+    .CodeMirror-placeholder {
+      color: @dark-text-muted !important;
+    }
+  }
+
+  // SimpleMDE toolbar
+  .editor-toolbar {
+    background-color: @dark-bg-tertiary !important;
+    border-color: @dark-border !important;
+
+    a {
+      color: @dark-text !important;
+
+      &:hover,
+      &.active {
+        background-color: @dark-bg-secondary !important;
+        border-color: @dark-border !important;
+      }
+    }
+
+    i.separator {
+      border-left-color: @dark-border !important;
+      border-right-color: @dark-border !important;
+    }
+  }
+
+  // SimpleMDE statusbar
+  .editor-statusbar {
+    color: @dark-text-muted !important;
+  }
+
+  // SimpleMDE preview
+  .editor-preview {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+
+    pre {
+      background-color: @dark-code-bg !important;
+    }
+
+    table {
+      th,
+      td {
+        border-color: @dark-border !important;
+      }
+
+      th {
+        background-color: @dark-bg-tertiary !important;
+      }
+    }
+  }
+
+  .editor-preview-side {
+    background-color: @dark-bg-secondary !important;
+    color: @dark-text !important;
+    border-color: @dark-border !important;
+  }
+
+}
