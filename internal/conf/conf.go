@@ -1,7 +1,6 @@
 package conf
 
 import (
-	"fmt"
 	"net/mail"
 	"net/url"
 	"os"
@@ -10,17 +9,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/conf"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/semverx"
 )
 
 func init() {
@@ -67,11 +66,11 @@ func Init(customConf string) error {
 	}
 	CustomConf = customConf
 
-	if osutil.IsFile(customConf) {
+	if osx.IsFile(customConf) {
 		if err = File.Append(customConf); err != nil {
 			return errors.Wrapf(err, "append %q", customConf)
 		}
-	} else {
+	} else if !HookMode {
 		log.Warn("Custom config %q not found. Ignore this warning if you're running for the first time", customConf)
 	}
 
@@ -142,10 +141,12 @@ func Init(customConf string) error {
 				return errors.Wrap(err, "get OpenSSH version")
 			}
 
-			if IsWindowsRuntime() || semverutil.Compare(sshVersion, "<", "5.1") {
-				log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
+				if !HookMode {
+					log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
 	2. OpenSSH version is lower than 5.1`)
+				}
 			} else {
 				SSH.MinimumKeySizes = map[string]int{}
 				for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
@@ -189,7 +190,7 @@ func Init(customConf string) error {
 	if Security.InstallLock {
 		currentUser, match := CheckRunUser(App.RunUser)
 		if !match {
-			return fmt.Errorf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
+			return errors.Newf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
 		}
 	}
 
@@ -345,8 +346,14 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [lfs] section")
 	}
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
+	LFS.ObjectsTempPath = ensureAbs(LFS.ObjectsTempPath)
 
 	handleDeprecated()
+	if !HookMode {
+		for _, warning := range checkInvalidOptions(File) {
+			log.Warn("%s", warning)
+		}
+	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")
@@ -376,7 +383,7 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [other] section")
 	}
 
-	HasRobotsTxt = osutil.IsFile(filepath.Join(CustomDir(), "robots.txt"))
+	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
 	return nil
 }
 

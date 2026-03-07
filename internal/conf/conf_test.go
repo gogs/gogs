@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/ini.v1"
 
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/testx"
 )
 
 func TestInit(t *testing.T) {
@@ -55,5 +55,5 @@ func TestInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.AssertGolden(t, filepath.Join("testdata", "TestInit.golden.ini"), testutil.Update("TestInit"), buf.String())
+	testx.AssertGolden(t, filepath.Join("testdata", "TestInit.golden.ini"), testx.Update("TestInit"), buf.String())
 }

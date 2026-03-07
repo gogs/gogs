@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path"
 	"strconv"
@@ -9,18 +10,17 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/repoutil"
-	"gogs.io/gogs/internal/strutil"
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/repox"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
+	"gogs.io/gogs/internal/strx"
+	"gogs.io/gogs/internal/testx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -218,19 +218,19 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
 		newUsersStore(s.db),
-		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
-		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+		repox.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
+		repox.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	opts.Commits.CompareURL = repoutil.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+	opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	apiPusher := opts.Owner.APIFormat()
 	err = PrepareWebhooks(
 		opts.Repo,
 		HookEventTypePush,
-		&api.PushPayload{
+		&apiv1types.WebhookPushPayload{
 			Ref:        opts.RefName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
@@ -245,7 +245,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 		return errors.Wrap(err, "prepare webhooks")
 	}
 
-	data, err := jsoniter.Marshal(opts.Commits)
+	data, err := json.Marshal(opts.Commits)
 	if err != nil {
 		return errors.Wrap(err, "marshal JSON")
 	}
@@ -476,7 +476,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	// If not the first commit, set the compare URL.
 	if !isNewRef && !isDelRef {
-		opts.Commits.CompareURL = repoutil.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+		opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	}
 
 	refName := git.RefShortName(opts.RefFullName)
@@ -496,10 +496,10 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeDelete,
-			&api.DeletePayload{
+			&apiv1types.WebhookDeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
-				PusherType: api.PUSHER_TYPE_USER,
+				PusherType: apiv1types.WebhookPusherTypeUser,
 				Repo:       apiRepo,
 				Sender:     apiPusher,
 			},
@@ -529,7 +529,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
-	data, err := jsoniter.Marshal(opts.Commits)
+	data, err := json.Marshal(opts.Commits)
 	if err != nil {
 		return errors.Wrap(err, "marshal JSON")
 	}
@@ -540,7 +540,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeCreate,
-			&api.CreatePayload{
+			&apiv1types.WebhookCreatePayload{
 				Ref:           refName,
 				RefType:       "branch",
 				DefaultBranch: opts.Repo.DefaultBranch,
@@ -563,8 +563,8 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	commits, err := opts.Commits.APIFormat(ctx,
 		newUsersStore(s.db),
-		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
-		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+		repox.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
+		repox.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
@@ -573,7 +573,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	err = PrepareWebhooks(
 		opts.Repo,
 		HookEventTypePush,
-		&api.PushPayload{
+		&apiv1types.WebhookPushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
@@ -635,10 +635,10 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeDelete,
-			&api.DeletePayload{
+			&apiv1types.WebhookDeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
-				PusherType: api.PUSHER_TYPE_USER,
+				PusherType: apiv1types.WebhookPusherTypeUser,
 				Repo:       apiRepo,
 				Sender:     apiPusher,
 			},
@@ -658,7 +658,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 	err = PrepareWebhooks(
 		opts.Repo,
 		HookEventTypeCreate,
-		&api.CreatePayload{
+		&apiv1types.WebhookCreatePayload{
 			Ref:           refName,
 			RefType:       "tag",
 			Sha:           opts.NewCommitID,
@@ -751,7 +751,7 @@ func (a *Action) GetActUserName() string {
 }
 
 func (a *Action) ShortActUserName() string {
-	return strutil.Ellipsis(a.ActUserName, 20)
+	return strx.Ellipsis(a.ActUserName, 20)
 }
 
 func (a *Action) GetRepoUserName() string {
@@ -759,7 +759,7 @@ func (a *Action) GetRepoUserName() string {
 }
 
 func (a *Action) ShortRepoUserName() string {
-	return strutil.Ellipsis(a.RepoUserName, 20)
+	return strx.Ellipsis(a.RepoUserName, 20)
 }
 
 func (a *Action) GetRepoName() string {
@@ -767,7 +767,7 @@ func (a *Action) GetRepoName() string {
 }
 
 func (a *Action) ShortRepoName() string {
-	return strutil.Ellipsis(a.RepoName, 33)
+	return strx.Ellipsis(a.RepoName, 33)
 }
 
 func (a *Action) GetRepoPath() string {
@@ -848,7 +848,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*apiv1types.WebhookPayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {
@@ -870,7 +870,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 		return user.Name, nil
 	}
 
-	commits := make([]*api.PayloadCommit, len(pcs.Commits))
+	commits := make([]*apiv1types.WebhookPayloadCommit, len(pcs.Commits))
 	for i, commit := range pcs.Commits {
 		authorUsername, err := getUsernameByEmail(commit.AuthorEmail)
 		if err != nil {
@@ -883,23 +883,23 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 		}
 
 		nameStatus := &git.NameStatus{}
-		if !testutil.InTest {
+		if !testx.InTest {
 			nameStatus, err = git.ShowNameStatus(repoPath, commit.Sha1)
 			if err != nil {
 				return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
 			}
 		}
 
-		commits[i] = &api.PayloadCommit{
+		commits[i] = &apiv1types.WebhookPayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
 			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
-			Author: &api.PayloadUser{
+			Author: &apiv1types.WebhookPayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
 				UserName: authorUsername,
 			},
-			Committer: &api.PayloadUser{
+			Committer: &apiv1types.WebhookPayloadUser{
 				Name:     commit.CommitterName,
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,

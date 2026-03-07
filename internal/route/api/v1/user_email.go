@@ -1,0 +1,71 @@
+package v1
+
+import (
+	"net/http"
+
+	"github.com/cockroachdb/errors"
+
+	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/api/v1/types"
+)
+
+func listEmails(c *context.APIContext) {
+	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
+	if err != nil {
+		c.Error(err, "get email addresses")
+		return
+	}
+	apiEmails := make([]*types.UserEmail, len(emails))
+	for i := range emails {
+		apiEmails[i] = toUserEmail(emails[i])
+	}
+	c.JSONSuccess(&apiEmails)
+}
+
+type createEmailRequest struct {
+	Emails []string `json:"emails"`
+}
+
+func addEmail(c *context.APIContext, form createEmailRequest) {
+	if len(form.Emails) == 0 {
+		c.Status(http.StatusUnprocessableEntity)
+		return
+	}
+
+	apiEmails := make([]*types.UserEmail, 0, len(form.Emails))
+	for _, email := range form.Emails {
+		err := database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
+		if err != nil {
+			if database.IsErrEmailAlreadyUsed(err) {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Errorf("email address has been used: %s", err.(database.ErrEmailAlreadyUsed).Email()))
+			} else {
+				c.Error(err, "add email addresses")
+			}
+			return
+		}
+
+		apiEmails = append(apiEmails, &types.UserEmail{
+			Email:    email,
+			Verified: !conf.Auth.RequireEmailConfirmation,
+		})
+	}
+	c.JSON(http.StatusCreated, &apiEmails)
+}
+
+func deleteEmail(c *context.APIContext, form createEmailRequest) {
+	for _, email := range form.Emails {
+		if email == c.User.Email {
+			c.ErrorStatus(http.StatusBadRequest, errors.Errorf("cannot delete primary email %q", email))
+			return
+		}
+
+		err := database.Handle.Users().DeleteEmail(c.Req.Context(), c.User.ID, email)
+		if err != nil {
+			c.Error(err, "delete email addresses")
+			return
+		}
+	}
+	c.NoContent()
+}

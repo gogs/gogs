@@ -1,6 +1,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"mime"
@@ -9,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -19,11 +20,11 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -103,7 +104,7 @@ func FuncMap() []template.FuncMap {
 				return str[start:end]
 			},
 			"Join":                  strings.Join,
-			"EllipsisString":        strutil.Ellipsis,
+			"EllipsisString":        strx.Ellipsis,
 			"DiffFileTypeToStr":     DiffFileTypeToStr,
 			"DiffLineTypeToStr":     DiffLineTypeToStr,
 			"Sha1":                  Sha1,
@@ -127,7 +128,7 @@ func FuncMap() []template.FuncMap {
 				}
 				return "tab-size-8"
 			},
-			"InferSubmoduleURL": gitutil.InferSubmoduleURL,
+			"InferSubmoduleURL": gitx.InferSubmoduleURL,
 		}}
 	})
 	return funcMap
@@ -147,7 +148,7 @@ func NewLine2br(raw string) string {
 }
 
 func Sha1(str string) string {
-	return cryptoutil.SHA1(str)
+	return cryptox.SHA1(str)
 }
 
 func ToUTF8WithErr(content []byte) (string, error) {
@@ -160,7 +161,7 @@ func ToUTF8WithErr(content []byte) (string, error) {
 
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
-		return string(content), fmt.Errorf("unknown encoding: %s", charsetLabel)
+		return string(content), errors.Newf("unknown encoding: %s", charsetLabel)
 	}
 
 	// If there is an error, we concatenate the nicely decoded part and the
@@ -248,7 +249,7 @@ func ActionIcon(opType int) string {
 
 func ActionContent2Commits(act Actioner) *database.PushCommits {
 	push := database.NewPushCommits()
-	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
+	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
 		log.Error("Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push

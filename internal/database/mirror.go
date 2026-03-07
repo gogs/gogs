@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
+	"github.com/cockroachdb/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
@@ -15,12 +16,26 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
 
 var MirrorQueue = sync.NewUniqueQueue(1000)
+
+// MirrorNotExist represents an error when mirror does not exist.
+type MirrorNotExist struct {
+	RepoID int64
+}
+
+// IsMirrorNotExist returns true if the error is MirrorNotExist.
+func IsMirrorNotExist(err error) bool {
+	_, ok := err.(MirrorNotExist)
+	return ok
+}
+
+func (err MirrorNotExist) Error() string {
+	return fmt.Sprintf("mirror does not exist [repo_id: %d]", err.RepoID)
+}
 
 // Mirror represents mirror information of a repository.
 type Mirror struct {
@@ -127,7 +142,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 
 	err := git.RemoteRemove(repoPath, "origin")
 	if err != nil {
-		return fmt.Errorf("remove remote 'origin': %v", err)
+		return errors.Newf("remove remote 'origin': %v", err)
 	}
 
 	addrURL, err := url.Parse(addr)
@@ -137,7 +152,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 
 	err = git.RemoteAdd(repoPath, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
 	if err != nil {
-		return fmt.Errorf("add remote 'origin': %v", err)
+		return errors.Newf("add remote 'origin': %v", err)
 	}
 
 	return nil
@@ -268,7 +283,7 @@ func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.MirrorNotExist{RepoID: repoID}
+		return nil, MirrorNotExist{RepoID: repoID}
 	}
 	return m, nil
 }
@@ -326,7 +341,8 @@ func SyncMirrors() {
 		log.Trace("SyncMirrors [repo_id: %s]", repoID)
 		MirrorQueue.Remove(repoID)
 
-		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
+		id, _ := strconv.ParseInt(repoID, 10, 64)
+		m, err := GetMirrorByRepoID(id)
 		if err != nil {
 			log.Error("GetMirrorByRepoID [%v]: %v", repoID, err)
 			continue

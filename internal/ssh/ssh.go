@@ -7,18 +7,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
-	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 func cleanCommand(cmd string) string {
@@ -87,6 +87,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					_ = req.Reply(true, nil)
 					go func() {
 						_, _ = io.Copy(input, ch)
+						input.Close()
 					}()
 					_, _ = io.Copy(ch, stdout)
 					_, _ = io.Copy(ch.Stderr(), stderr)
@@ -106,7 +107,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 }
 
 func listen(config *ssh.ServerConfig, host string, port int) {
-	listener, err := net.Listen("tcp", host+":"+com.ToStr(port))
+	listener, err := net.Listen("tcp", host+":"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal("Failed to start SSH server: %v", err)
 	}
@@ -157,7 +158,7 @@ func Listen(opts conf.SSHOpts, appDataPath string) {
 				}
 				return nil, err
 			}
-			return &ssh.Permissions{Extensions: map[string]string{"key-id": com.ToStr(pkey.ID)}}, nil
+			return &ssh.Permissions{Extensions: map[string]string{"key-id": strconv.FormatInt(pkey.ID, 10)}}, nil
 		},
 	}
 
@@ -182,12 +183,11 @@ func setupHostKeys(appDataPath string, algorithms []string) ([]ssh.Signer, error
 	var hostKeys []ssh.Signer
 	for _, algo := range algorithms {
 		keyPath := filepath.Join(dir, "gogs."+algo)
-		if !osutil.IsExist(keyPath) {
+		if !osx.Exist(keyPath) {
 			args := []string{
 				conf.SSH.KeygenPath,
 				"-t", algo,
 				"-f", keyPath,
-				"-m", "PEM",
 				"-N", run.Arg(""),
 			}
 			err = run.Cmd(context.Background(), args...).Run().Wait()

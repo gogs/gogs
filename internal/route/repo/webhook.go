@@ -1,23 +1,23 @@
 package repo
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
-	jsoniter "github.com/json-iterator/go"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/netutil"
+	"gogs.io/gogs/internal/netx"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 const (
@@ -79,7 +79,7 @@ func Webhooks(c *context.Context, orCtx *orgRepoContext) {
 	var err error
 	var ws []*database.Webhook
 	if orCtx.RepoID > 0 {
-		c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://gogs.io/docs/features/webhook.html")
+		c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://gogs.io/advancing/webhooks")
 		ws, err = database.GetWebhooksByRepoID(orCtx.RepoID)
 	} else {
 		c.Data["Description"] = c.Tr("org.settings.hooks_desc")
@@ -116,32 +116,32 @@ func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.Success(orCtx.TmplNew)
 }
 
-func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, ok bool) {
+func validateWebhook(l macaron.Locale, w *database.Webhook) (field, msg string, status int) {
 	// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 	// see https://github.com/gogs/gogs/issues/5366 for details.
 	payloadURL, err := url.Parse(w.URL)
 	if err != nil {
-		return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), false
+		return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), http.StatusBadRequest
 	}
 
-	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
-		return "PayloadURL", l.Tr("repo.settings.webhook.url_resolved_to_blocked_local_address"), false
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		return "PayloadURL", l.Tr("repo.settings.webhook.url_resolved_to_blocked_local_address"), http.StatusForbidden
 	}
-	return "", "", true
+	return "", "", http.StatusOK
 }
 
 func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *database.Webhook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.TmplNew)
+		c.HTML(http.StatusBadRequest, orCtx.TmplNew)
 		return
 	}
 
-	field, msg, ok := validateWebhook(c.Locale, w)
-	if !ok {
+	field, msg, status := validateWebhook(c.Locale, w)
+	if status != http.StatusOK {
 		c.FormErr(field)
-		c.RenderWithErr(msg, orCtx.TmplNew, nil)
+		c.RenderWithErr(msg, status, orCtx.TmplNew, nil)
 		return
 	}
 
@@ -213,7 +213,7 @@ func WebhooksSlackNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewS
 	}
 	c.Data["SlackMeta"] = meta
 
-	p, err := jsoniter.Marshal(meta)
+	p, err := json.Marshal(meta)
 	if err != nil {
 		c.Error(err, "marshal JSON")
 		return
@@ -245,7 +245,7 @@ func WebhooksDiscordNewPost(c *context.Context, orCtx *orgRepoContext, f form.Ne
 	}
 	c.Data["SlackMeta"] = meta
 
-	p, err := jsoniter.Marshal(meta)
+	p, err := json.Marshal(meta)
 	if err != nil {
 		c.Error(err, "marshal JSON")
 		return
@@ -338,14 +338,14 @@ func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *data
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.TmplNew)
+		c.HTML(http.StatusBadRequest, orCtx.TmplNew)
 		return
 	}
 
-	field, msg, ok := validateWebhook(c.Locale, w)
-	if !ok {
+	field, msg, status := validateWebhook(c.Locale, w)
+	if status != http.StatusOK {
 		c.FormErr(field)
-		c.RenderWithErr(msg, orCtx.TmplNew, nil)
+		c.RenderWithErr(msg, status, orCtx.TmplNew, nil)
 		return
 	}
 
@@ -394,7 +394,7 @@ func WebhooksSlackEditPost(c *context.Context, orCtx *orgRepoContext, f form.New
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&database.SlackMeta{
+	meta, err := json.Marshal(&database.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -422,7 +422,7 @@ func WebhooksDiscordEditPost(c *context.Context, orCtx *orgRepoContext, f form.N
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&database.SlackMeta{
+	meta, err := json.Marshal(&database.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
@@ -513,21 +513,21 @@ func TestWebhook(c *context.Context) {
 	}
 
 	apiUser := c.User.APIFormat()
-	p := &api.PushPayload{
+	p := &apiv1types.WebhookPushPayload{
 		Ref:    git.RefsHeads + c.Repo.Repository.DefaultBranch,
 		Before: commitID,
 		After:  commitID,
-		Commits: []*api.PayloadCommit{
+		Commits: []*apiv1types.WebhookPayloadCommit{
 			{
 				ID:      commitID,
 				Message: commitMessage,
 				URL:     c.Repo.Repository.HTMLURL() + "/commit/" + commitID,
-				Author: &api.PayloadUser{
+				Author: &apiv1types.WebhookPayloadUser{
 					Name:     author.Name,
 					Email:    author.Email,
 					UserName: authorUsername,
 				},
-				Committer: &api.PayloadUser{
+				Committer: &apiv1types.WebhookPayloadUser{
 					Name:     committer.Name,
 					Email:    committer.Email,
 					UserName: committerUsername,

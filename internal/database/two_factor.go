@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp/totp"
-	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/cryptox"
 )
 
 // TwoFactor is a 2FA token of a user.
@@ -26,11 +26,11 @@ type TwoFactor struct {
 func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 	secret, err := base64.StdEncoding.DecodeString(t.Secret)
 	if err != nil {
-		return false, fmt.Errorf("DecodeString: %v", err)
+		return false, errors.Newf("DecodeString: %v", err)
 	}
-	decryptSecret, err := com.AESGCMDecrypt(cryptoutil.MD5Bytes(conf.Security.SecretKey), secret)
+	decryptSecret, err := cryptox.AESGCMDecrypt(cryptox.MD5Bytes(conf.Security.SecretKey), secret)
 	if err != nil {
-		return false, fmt.Errorf("AESGCMDecrypt: %v", err)
+		return false, errors.Newf("AESGCMDecrypt: %v", err)
 	}
 	return totp.Validate(passcode, string(decryptSecret)), nil
 }
@@ -44,9 +44,9 @@ func DeleteTwoFactor(userID int64) (err error) {
 	}
 
 	if _, err = sess.Where("user_id = ?", userID).Delete(new(TwoFactor)); err != nil {
-		return fmt.Errorf("delete two-factor: %v", err)
+		return errors.Newf("delete two-factor: %v", err)
 	} else if err = deleteRecoveryCodesByUserID(sess, userID); err != nil {
-		return fmt.Errorf("deleteRecoveryCodesByUserID: %v", err)
+		return errors.Newf("deleteRecoveryCodesByUserID: %v", err)
 	}
 
 	return sess.Commit()
@@ -75,7 +75,7 @@ func deleteRecoveryCodesByUserID(e Engine, userID int64) error {
 func RegenerateRecoveryCodes(userID int64) error {
 	recoveryCodes, err := generateRecoveryCodes(userID, 10)
 	if err != nil {
-		return fmt.Errorf("generateRecoveryCodes: %v", err)
+		return errors.Newf("generateRecoveryCodes: %v", err)
 	}
 
 	sess := x.NewSession()
@@ -85,9 +85,9 @@ func RegenerateRecoveryCodes(userID int64) error {
 	}
 
 	if err = deleteRecoveryCodesByUserID(sess, userID); err != nil {
-		return fmt.Errorf("deleteRecoveryCodesByUserID: %v", err)
+		return errors.Newf("deleteRecoveryCodesByUserID: %v", err)
 	} else if _, err = sess.Insert(recoveryCodes); err != nil {
-		return fmt.Errorf("insert new recovery codes: %v", err)
+		return errors.Newf("insert new recovery codes: %v", err)
 	}
 
 	return sess.Commit()
@@ -104,22 +104,4 @@ func IsTwoFactorRecoveryCodeNotFound(err error) bool {
 
 func (err ErrTwoFactorRecoveryCodeNotFound) Error() string {
 	return fmt.Sprintf("two-factor recovery code does not found [code: %s]", err.Code)
-}
-
-// UseRecoveryCode validates recovery code of given user and marks it is used if valid.
-func UseRecoveryCode(_ int64, code string) error {
-	recoveryCode := new(TwoFactorRecoveryCode)
-	has, err := x.Where("code = ?", code).And("is_used = ?", false).Get(recoveryCode)
-	if err != nil {
-		return fmt.Errorf("get unused code: %v", err)
-	} else if !has {
-		return ErrTwoFactorRecoveryCodeNotFound{Code: code}
-	}
-
-	recoveryCode.IsUsed = true
-	if _, err = x.Id(recoveryCode.ID).Cols("is_used").Update(recoveryCode); err != nil {
-		return fmt.Errorf("mark code as used: %v", err)
-	}
-
-	return nil
 }

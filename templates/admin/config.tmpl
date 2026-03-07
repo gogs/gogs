@@ -237,8 +237,6 @@
 
 							<div class="ui divider"></div>
 
-							<dt>{{.i18n.Tr "admin.config.email.disable_helo"}}</dt>
-							<dd><i class="fa fa{{if .Email.DisableHELO}}-check{{end}}-square-o"></i></dd>
 							<dt>{{.i18n.Tr "admin.config.email.helo_hostname"}}</dt>
 							<dd>
 								{{if .Email.HELOHostname}}
@@ -308,6 +306,14 @@
 						<dd><i class="fa fa{{if .Auth.EnableReverseProxyAutoRegistration}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.auth.reverse_proxy_authentication_header"}}</dt>
 						<dd><code>{{.Auth.ReverseProxyAuthenticationHeader}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.auth_custom_logout_url"}}</dt>
+						<dd>
+							{{if .Auth.CustomLogoutURL}}
+								<code>{{.Auth.CustomLogoutURL}}</code>
+							{{else}}
+								<i>{{.i18n.Tr "admin.config.not_set"}}</i>
+							{{end}}
+						</dd>
 					</dl>
 				</div>
 

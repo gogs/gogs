@@ -3,9 +3,9 @@ package admin
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -151,7 +151,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = hasTLS
 
 	if c.HasError() {
-		c.Success(tmplAdminAuthNew)
+		c.HTML(http.StatusBadRequest, tmplAdminAuthNew)
 		return
 	}
 
@@ -167,7 +167,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	if err != nil {
 		if database.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), tmplAdminAuthNew, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), http.StatusUnprocessableEntity, tmplAdminAuthNew, f)
 		} else {
 			c.Error(err, "create login source")
 		}
@@ -223,7 +223,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
-		c.Success(tmplAdminAuthEdit)
+		c.HTML(http.StatusBadRequest, tmplAdminAuthEdit)
 		return
 	}
 
@@ -269,7 +269,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	log.Trace("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
-	c.Redirect(conf.Server.Subpath + "/admin/auths/" + com.ToStr(f.ID))
+	c.Redirect(conf.Server.Subpath + "/admin/auths/" + strconv.FormatInt(f.ID, 10))
 }
 
 func DeleteAuthSource(c *context.Context) {

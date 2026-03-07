@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/unknwon/com"
@@ -138,7 +140,7 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[stri
 // RenderSha1CurrentPattern renders SHA1 strings to corresponding links that assumes in the same repository.
 func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes), func(m string) string {
-		if com.StrTo(m).MustInt() > 0 {
+		if v, _ := strconv.Atoi(m); v > 0 {
 			return m
 		}
 
@@ -151,7 +153,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = m[bytes.Index(m, []byte("@")):]
-		rawBytes = bytes.ReplaceAll(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)))
+		rawBytes = bytes.ReplaceAll(rawBytes, m, fmt.Appendf(nil, `<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m))
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
@@ -264,7 +266,7 @@ outerLoop:
 					buf.WriteString(token.String())
 
 					// Stack number doesn't increase for tags without end tags.
-					if token.Type == html.StartTagToken && !com.IsSliceContainsStr(noEndTags, token.Data) {
+					if token.Type == html.StartTagToken && !slices.Contains(noEndTags, token.Data) {
 						stackNum++
 					}
 
@@ -279,7 +281,7 @@ outerLoop:
 				continue outerLoop
 			}
 
-			if !com.IsSliceContainsStr(noEndTags, tagName) {
+			if !slices.Contains(noEndTags, tagName) {
 				startTags = append(startTags, tagName)
 			}
 

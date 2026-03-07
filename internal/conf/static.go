@@ -1,11 +1,15 @@
 package conf
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"time"
 
 	"github.com/gogs/go-libravatar"
+	"gopkg.in/ini.v1"
+
+	"gogs.io/gogs/conf"
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
@@ -52,7 +56,6 @@ var (
 		User          string
 		Password      string
 
-		DisableHELO  bool   `ini:"DISABLE_HELO"`
 		HELOHostname string `ini:"HELO_HOSTNAME"`
 
 		SkipVerify     bool
@@ -227,7 +230,7 @@ var (
 )
 
 type AppOpts struct {
-	// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
+	// ⚠️ WARNING: Should only be set by the main package (i.e. "cmd/gogs/main.go").
 	Version string `ini:"-"`
 
 	BrandName string
@@ -249,6 +252,7 @@ type AuthOpts struct {
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
 	ReverseProxyAuthenticationHeader   string
+	CustomLogoutURL                    string `ini:"CUSTOM_LOGOUT_URL"`
 }
 
 // Authentication settings
@@ -356,8 +360,9 @@ type DatabaseOpts struct {
 var Database DatabaseOpts
 
 type LFSOpts struct {
-	Storage     string
-	ObjectsPath string
+	Storage         string
+	ObjectsPath     string
+	ObjectsTempPath string
 }
 
 // LFS settings
@@ -429,10 +434,75 @@ func handleDeprecated() {
 	// }
 }
 
+// checkInvalidOptions checks invalid (renamed/deleted) configuration sections
+// and options and returns a list of warnings.
+func checkInvalidOptions(config *ini.File) (warnings []string) {
+	renamedSections := map[string]string{
+		"mailer":  "email",
+		"service": "auth",
+	}
+	for oldSection, newSection := range renamedSections {
+		if len(config.Section(oldSection).KeyStrings()) > 0 {
+			warnings = append(warnings, fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection))
+		}
+	}
+
+	type optionPath struct {
+		section string
+		option  string
+	}
+	renamedOptionPaths := map[optionPath]optionPath{
+		// Example:
+		// {"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
+	}
+	for oldPath, newPath := range renamedOptionPaths {
+		if config.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is invalid, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
+		}
+	}
+
+	// Check options that don't exist anymore.
+	defaultConfigData, err := conf.Files.ReadFile("app.ini")
+	if err != nil {
+		// Warning is best-effort, OK to skip on error.
+		return warnings
+	}
+	defaultConfig, err := ini.LoadSources(
+		ini.LoadOptions{IgnoreInlineComment: true},
+		defaultConfigData,
+	)
+	if err != nil {
+		// Warning is best-effort, OK to skip on error.
+		return warnings
+	}
+	for _, section := range config.Sections() {
+		// Skip sections already warned about.
+		if _, ok := renamedSections[section.Name()]; ok {
+			continue
+		}
+		for _, option := range section.Keys() {
+			if _, ok := renamedOptionPaths[optionPath{section.Name(), option.Name()}]; ok {
+				continue
+			}
+			if !defaultConfig.Section(section.Name()).HasKey(option.Name()) {
+				warnings = append(warnings, fmt.Sprintf("option [%s] %s is invalid", section.Name(), option.Name()))
+			}
+		}
+	}
+
+	return warnings
+}
+
 // HookMode indicates whether program starts as Git server-side hook callback.
 // All operations should be done synchronously to prevent program exits before finishing.
 //
-// ⚠️ WARNING: Should only be set by "internal/cmd/serv.go".
+// ⚠️ WARNING: Should only be set by "cmd/gogs/serv.go".
 var HookMode bool
 
 // Indicates which database backend is currently being used.
@@ -440,7 +510,6 @@ var (
 	UseSQLite3    bool
 	UseMySQL      bool
 	UsePostgreSQL bool
-	UseMSSQL      bool
 )
 
 // UsersAvatarPathPrefix is the path prefix to user avatars.

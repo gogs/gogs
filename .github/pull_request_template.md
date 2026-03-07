@@ -8,7 +8,8 @@ Link to the issue: <!-- paste the issue link here, or put "n/a" if not applicabl
 
 - [ ] I agree to follow the [Code of Conduct](https://go.dev/conduct) by submitting this pull request.
 - [ ] I have read and acknowledge the [Contributing guide](https://github.com/gogs/gogs/blob/main/.github/CONTRIBUTING.md).
-- [ ] I have added test cases to cover the new code or have provided the test plan.
+- [ ] I have added test cases to cover the new code or have provided the test plan. (if applicable)
+- [ ] I have added an entry to [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md). (if applicable)
 
 ## Test plan
 

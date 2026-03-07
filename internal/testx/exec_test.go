@@ -1,0 +1,55 @@
+package testx
+
+import (
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestExecHelper(_ *testing.T) {
+	if !WantHelperProcess() {
+		return
+	}
+
+	if os.Getenv("PASS") != "1" {
+		fmt.Fprintln(os.Stdout, "tests failed")
+		os.Exit(1)
+	}
+
+	fmt.Fprintln(os.Stdout, "tests succeed")
+}
+
+func TestExec(t *testing.T) {
+	tests := []struct {
+		helper    string
+		env       string
+		expOut    string
+		expErrMsg string
+	}{
+		{
+			helper:    "NoTestsToRun",
+			expErrMsg: "no tests to run",
+		}, {
+			helper:    "TestExecHelper",
+			expErrMsg: "exit status 1 - tests failed\n",
+		}, {
+			helper: "TestExecHelper",
+			env:    "PASS=1",
+			expOut: "tests succeed",
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			out, err := Exec(test.helper, test.env)
+			if test.expErrMsg != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.expErrMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, test.expOut, out)
+		})
+	}
+}

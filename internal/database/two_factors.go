@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/cryptox"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/strx"
 )
 
 // BeforeCreate implements the GORM create hook.
@@ -44,7 +44,7 @@ func newTwoFactorsStore(db *gorm.DB) *TwoFactorsStore {
 // configured in site-level and change of the "key" will break all existing 2FA
 // tokens.
 func (s *TwoFactorsStore) Create(ctx context.Context, userID int64, key, secret string) error {
-	encrypted, err := cryptoutil.AESGCMEncrypt(cryptoutil.MD5Bytes(key), []byte(secret))
+	encrypted, err := cryptox.AESGCMEncrypt(cryptox.MD5Bytes(key), []byte(secret))
 	if err != nil {
 		return errors.Wrap(err, "encrypt secret")
 	}
@@ -68,10 +68,10 @@ func (s *TwoFactorsStore) Create(ctx context.Context, userID int64, key, secret 
 	})
 }
 
-var _ errutil.NotFound = (*ErrTwoFactorNotFound)(nil)
+var _ errx.NotFound = (*ErrTwoFactorNotFound)(nil)
 
 type ErrTwoFactorNotFound struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrTwoFactorNotFound(err error) bool {
@@ -93,7 +93,7 @@ func (s *TwoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFa
 	err := s.db.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
+			return nil, ErrTwoFactorNotFound{args: errx.Args{"userID": userID}}
 		}
 		return nil, err
 	}
@@ -110,11 +110,33 @@ func (s *TwoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
 	return count > 0
 }
 
+// UseRecoveryCode validates a recovery code of given user and marks it as used
+// if valid. It returns ErrTwoFactorRecoveryCodeNotFound if the code is invalid
+// or already used.
+func (s *TwoFactorsStore) UseRecoveryCode(ctx context.Context, userID int64, code string) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var recoveryCode TwoFactorRecoveryCode
+		err := tx.Where("user_id = ? AND code = ? AND is_used = ?", userID, code, false).First(&recoveryCode).Error
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrTwoFactorRecoveryCodeNotFound{Code: code}
+			}
+			return errors.Wrap(err, "get unused recovery code")
+		}
+
+		err = tx.Model(&recoveryCode).Update("is_used", true).Error
+		if err != nil {
+			return errors.Wrap(err, "mark recovery code as used")
+		}
+		return nil
+	})
+}
+
 // generateRecoveryCodes generates N number of recovery codes for 2FA.
 func generateRecoveryCodes(userID int64, n int) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, n)
-	for i := 0; i < n; i++ {
-		code, err := strutil.RandomChars(10)
+	for i := range n {
+		code, err := strx.RandomChars(10)
 		if err != nil {
 			return nil, errors.Wrap(err, "generate random characters")
 		}

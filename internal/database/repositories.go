@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/gogs/go-gogs-client"
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/repox"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // BeforeCreate implements the GORM create hook.
@@ -36,19 +36,19 @@ func (r *Repository) AfterFind(_ *gorm.DB) error {
 }
 
 type RepositoryAPIFormatOptions struct {
-	Permission *api.Permission
-	Parent     *api.Repository
+	Permission *apiv1types.RepositoryPermission
+	Parent     *apiv1types.Repository
 }
 
 // APIFormat returns the API format of a repository.
-func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) *api.Repository {
+func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) *apiv1types.Repository {
 	var opt RepositoryAPIFormatOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	cloneLink := repoutil.NewCloneLink(owner.Name, r.Name, false)
-	return &api.Repository{
+	cloneLink := repox.NewCloneLink(owner.Name, r.Name, false)
+	return &apiv1types.Repository{
 		ID:            r.ID,
 		Owner:         owner.APIFormat(),
 		Name:          r.Name,
@@ -60,7 +60,7 @@ func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) 
 		Empty:         r.IsBare,
 		Mirror:        r.IsMirror,
 		Size:          r.Size,
-		HTMLURL:       repoutil.HTMLURL(owner.Name, r.Name),
+		HTMLURL:       repox.HTMLURL(owner.Name, r.Name),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
 		Website:       r.Website,
@@ -85,7 +85,7 @@ func newReposStore(db *gorm.DB) *RepositoriesStore {
 }
 
 type ErrRepoAlreadyExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrRepoAlreadyExist(err error) bool {
@@ -123,7 +123,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, ownerID int64, opts Crea
 	_, err = s.GetByName(ctx, ownerID, opts.Name)
 	if err == nil {
 		return nil, ErrRepoAlreadyExist{
-			args: errutil.Args{
+			args: errx.Args{
 				"ownerID": ownerID,
 				"name":    opts.Name,
 			},
@@ -221,10 +221,10 @@ func (s *RepositoriesStore) GetByCollaboratorIDWithAccessMode(ctx context.Contex
 	return repos, nil
 }
 
-var _ errutil.NotFound = (*ErrRepoNotExist)(nil)
+var _ errx.NotFound = (*ErrRepoNotExist)(nil)
 
 type ErrRepoNotExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrRepoNotExist(err error) bool {
@@ -247,7 +247,7 @@ func (s *RepositoriesStore) GetByID(ctx context.Context, id int64) (*Repository,
 	err := s.db.WithContext(ctx).Where("id = ?", id).First(repo).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRepoNotExist{errutil.Args{"repoID": id}}
+			return nil, ErrRepoNotExist{errx.Args{"repoID": id}}
 		}
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func (s *RepositoriesStore) GetByName(ctx context.Context, ownerID int64, name s
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrRepoNotExist{
-				args: errutil.Args{
+				args: errx.Args{
 					"ownerID": ownerID,
 					"name":    name,
 				},

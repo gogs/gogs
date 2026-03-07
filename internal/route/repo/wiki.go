@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -39,12 +40,13 @@ type PageMeta struct {
 }
 
 func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, string) {
-	wikiRepo, err := git.Open(c.Repo.Repository.WikiPath())
+	wikiPath := c.Repo.Repository.WikiPath()
+	wikiRepo, err := git.Open(wikiPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return nil, ""
 	}
-	commit, err := wikiRepo.BranchCommit("master")
+	commit, err := wikiRepo.BranchCommit(database.WikiBranch(wikiPath))
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return nil, ""
@@ -52,7 +54,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 
 	// Get page list.
 	if isViewPage {
-		entries, err := commit.Entries()
+		entries, err := commit.Entries(git.LsTreeOptions{Verbatim: true})
 		if err != nil {
 			c.Error(err, "list entries")
 			return nil, ""
@@ -84,7 +86,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 
 	blob, err := commit.Blob(pageName + ".md")
 	if err != nil {
-		if gitutil.IsErrRevisionNotExist(err) {
+		if gitx.IsErrRevisionNotExist(err) {
 			c.Redirect(c.Repo.RepoLink + "/wiki/_pages")
 		} else {
 			c.Error(err, "get blob")
@@ -120,7 +122,8 @@ func Wiki(c *context.Context) {
 	}
 
 	// Get last change information.
-	commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: pageName + ".md"})
+	branch := database.WikiBranch(c.Repo.Repository.WikiPath())
+	commits, err := wikiRepo.Log(git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
 	if err != nil {
 		c.Error(err, "get commits by path")
 		return
@@ -139,18 +142,21 @@ func WikiPages(c *context.Context) {
 		return
 	}
 
-	wikiRepo, err := git.Open(c.Repo.Repository.WikiPath())
+	wikiPath := c.Repo.Repository.WikiPath()
+	wikiRepo, err := git.Open(wikiPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
 	}
-	commit, err := wikiRepo.BranchCommit("master")
+
+	branch := database.WikiBranch(wikiPath)
+	commit, err := wikiRepo.BranchCommit(branch)
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return
 	}
 
-	entries, err := commit.Entries()
+	entries, err := commit.Entries(git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.Error(err, "list entries")
 		return
@@ -158,7 +164,7 @@ func WikiPages(c *context.Context) {
 	pages := make([]PageMeta, 0, len(entries))
 	for i := range entries {
 		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
-			commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: entries[i].Name()})
+			commits, err := wikiRepo.Log(git.RefsHeads+branch, git.LogOptions{Path: entries[i].Name()})
 			if err != nil {
 				c.Error(err, "get commits by path")
 				return
@@ -194,14 +200,14 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(tmplRepoWikiNew)
+		c.HTML(http.StatusBadRequest, tmplRepoWikiNew)
 		return
 	}
 
 	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), tmplRepoWikiNew, &f)
+			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), http.StatusUnprocessableEntity, tmplRepoWikiNew, &f)
 		} else {
 			c.Error(err, "add wiki page")
 		}
@@ -235,7 +241,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.Success(tmplRepoWikiNew)
+		c.HTML(http.StatusBadRequest, tmplRepoWikiNew)
 		return
 	}
 

@@ -1,15 +1,16 @@
 package route
 
 import (
+	"net/http"
 	"net/mail"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/pkg/errors"
-	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -21,9 +22,9 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/ssh"
-	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/template/highlight"
 )
 
@@ -148,7 +149,7 @@ func Install(c *context.Context) {
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
 	if conf.IsWindowsRuntime() && conf.App.RunUser == "git" {
-		f.RunUser = osutil.CurrentUsername()
+		f.RunUser = osx.CurrentUsername()
 	} else {
 		f.RunUser = conf.App.RunUser
 	}
@@ -194,13 +195,12 @@ func InstallPost(c *context.Context, f form.Install) {
 			c.HasValue("Err_AdminEmail") {
 			c.FormErr("Admin")
 		}
-
-		c.Success(INSTALL)
+		c.HTML(http.StatusBadRequest, INSTALL)
 		return
 	}
 
 	if _, err := exec.LookPath("git"); err != nil {
-		c.RenderWithErr(c.Tr("install.test_git_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.test_git_failed", err), http.StatusInternalServerError, INSTALL, &f)
 		return
 	}
 
@@ -222,19 +222,14 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	if conf.Database.Type == "sqlite3" && conf.Database.Path == "" {
 		c.FormErr("DbPath")
-		c.RenderWithErr(c.Tr("install.err_empty_db_path"), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.err_empty_db_path"), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
 	// Set test engine.
 	if err := database.NewTestEngine(); err != nil {
-		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
-			c.FormErr("DbType")
-			c.RenderWithErr(c.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &f)
-		} else {
-			c.FormErr("DbSetting")
-			c.RenderWithErr(c.Tr("install.invalid_db_setting", err), INSTALL, &f)
-		}
+		c.FormErr("DbSetting")
+		c.RenderWithErr(c.Tr("install.invalid_db_setting", err), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
@@ -242,7 +237,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
 		c.FormErr("RepoRootPath")
-		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
@@ -250,21 +245,21 @@ func InstallPost(c *context.Context, f form.Install) {
 	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
 		c.FormErr("LogRootPath")
-		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
 	currentUser, match := conf.CheckRunUser(f.RunUser)
 	if !match {
 		c.FormErr("RunUser")
-		c.RenderWithErr(c.Tr("install.run_user_not_match", f.RunUser, currentUser), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.run_user_not_match", f.RunUser, currentUser), http.StatusForbidden, INSTALL, &f)
 		return
 	}
 
 	// Check host address and port
 	if len(f.SMTPHost) > 0 && !strings.Contains(f.SMTPHost, ":") {
 		c.FormErr("SMTP", "SMTPHost")
-		c.RenderWithErr(c.Tr("install.smtp_host_missing_port"), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.smtp_host_missing_port"), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
@@ -273,7 +268,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		_, err := mail.ParseAddress(f.SMTPFrom)
 		if err != nil {
 			c.FormErr("SMTP", "SMTPFrom")
-			c.RenderWithErr(c.Tr("install.invalid_smtp_from", err), INSTALL, &f)
+			c.RenderWithErr(c.Tr("install.invalid_smtp_from", err), http.StatusBadRequest, INSTALL, &f)
 			return
 		}
 	}
@@ -281,19 +276,19 @@ func InstallPost(c *context.Context, f form.Install) {
 	// Check logic loophole between disable self-registration and no admin account.
 	if f.DisableRegistration && f.AdminName == "" {
 		c.FormErr("Services", "Admin")
-		c.RenderWithErr(c.Tr("install.no_admin_and_disable_registration"), INSTALL, f)
+		c.RenderWithErr(c.Tr("install.no_admin_and_disable_registration"), http.StatusUnprocessableEntity, INSTALL, f)
 		return
 	}
 
 	// Check admin password.
 	if len(f.AdminName) > 0 && f.AdminPasswd == "" {
 		c.FormErr("Admin", "AdminPasswd")
-		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), INSTALL, f)
+		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), http.StatusBadRequest, INSTALL, f)
 		return
 	}
 	if f.AdminPasswd != f.AdminConfirmPasswd {
 		c.FormErr("Admin", "AdminPasswd")
-		c.RenderWithErr(c.Tr("form.password_not_match"), INSTALL, f)
+		c.RenderWithErr(c.Tr("form.password_not_match"), http.StatusBadRequest, INSTALL, f)
 		return
 	}
 
@@ -303,7 +298,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Save settings.
 	cfg := ini.Empty()
-	if osutil.IsFile(conf.CustomConf) {
+	if osx.IsFile(conf.CustomConf) {
 		// Keeps custom settings if there is already something.
 		if err := cfg.Append(conf.CustomConf); err != nil {
 			log.Error("Failed to load custom conf %q: %v", conf.CustomConf, err)
@@ -330,8 +325,8 @@ func InstallPost(c *context.Context, f form.Install) {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("true")
 	} else {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("false")
-		cfg.Section("server").Key("SSH_PORT").SetValue(com.ToStr(f.SSHPort))
-		cfg.Section("server").Key("START_SSH_SERVER").SetValue(com.ToStr(f.UseBuiltinSSHServer))
+		cfg.Section("server").Key("SSH_PORT").SetValue(strconv.Itoa(f.SSHPort))
+		cfg.Section("server").Key("START_SSH_SERVER").SetValue(strconv.FormatBool(f.UseBuiltinSSHServer))
 	}
 
 	if len(strings.TrimSpace(f.SMTPHost)) > 0 {
@@ -343,14 +338,14 @@ func InstallPost(c *context.Context, f form.Install) {
 	} else {
 		cfg.Section("email").Key("ENABLED").SetValue("false")
 	}
-	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(f.OfflineMode))
-	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(com.ToStr(f.RegisterConfirm))
-	cfg.Section("auth").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(f.DisableRegistration))
-	cfg.Section("auth").Key("ENABLE_REGISTRATION_CAPTCHA").SetValue(com.ToStr(f.EnableCaptcha))
-	cfg.Section("auth").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(f.RequireSignInView))
-	cfg.Section("user").Key("ENABLE_EMAIL_NOTIFICATION").SetValue(com.ToStr(f.MailNotify))
-	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(f.DisableGravatar))
-	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(f.EnableFederatedAvatar))
+	cfg.Section("server").Key("OFFLINE_MODE").SetValue(strconv.FormatBool(f.OfflineMode))
+	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(strconv.FormatBool(f.RegisterConfirm))
+	cfg.Section("auth").Key("DISABLE_REGISTRATION").SetValue(strconv.FormatBool(f.DisableRegistration))
+	cfg.Section("auth").Key("ENABLE_REGISTRATION_CAPTCHA").SetValue(strconv.FormatBool(f.EnableCaptcha))
+	cfg.Section("auth").Key("REQUIRE_SIGNIN_VIEW").SetValue(strconv.FormatBool(f.RequireSignInView))
+	cfg.Section("user").Key("ENABLE_EMAIL_NOTIFICATION").SetValue(strconv.FormatBool(f.MailNotify))
+	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(strconv.FormatBool(f.DisableGravatar))
+	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(strconv.FormatBool(f.EnableFederatedAvatar))
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
@@ -365,23 +360,23 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(f.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	secretKey, err := strutil.RandomChars(15)
+	secretKey, err := strx.RandomChars(15)
 	if err != nil {
-		c.RenderWithErr(c.Tr("install.secret_key_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.secret_key_failed", err), http.StatusInternalServerError, INSTALL, &f)
 		return
 	}
 	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
 	_ = os.MkdirAll(filepath.Dir(conf.CustomConf), os.ModePerm)
 	if err := cfg.SaveTo(conf.CustomConf); err != nil {
-		c.RenderWithErr(c.Tr("install.save_config_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.save_config_failed", err), http.StatusInternalServerError, INSTALL, &f)
 		return
 	}
 
 	// NOTE: We reuse the current value because this handler does not have access to CLI flags.
 	err = GlobalInit(conf.CustomConf)
 	if err != nil {
-		c.RenderWithErr(c.Tr("install.init_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.init_failed", err), http.StatusInternalServerError, INSTALL, &f)
 		return
 	}
 
@@ -401,7 +396,7 @@ func InstallPost(c *context.Context, f form.Install) {
 			if !database.IsErrUserAlreadyExist(err) {
 				conf.Security.InstallLock = false
 				c.FormErr("AdminName", "AdminEmail")
-				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
+				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), http.StatusBadRequest, INSTALL, &f)
 				return
 			}
 

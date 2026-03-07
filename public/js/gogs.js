@@ -240,29 +240,19 @@ function initCommentForm() {
       }
       switch (input_id) {
         case "#milestone_id":
-          $list
-            .find(".selected")
-            .html(
-              '<a class="item" href=' +
-                $(this).data("href") +
-                ">" +
-                $(this).text() +
-                "</a>"
-            );
+          var $milestoneAnchor = $('<a class="item"></a>');
+          $milestoneAnchor.attr("href", $(this).data("href"));
+          $milestoneAnchor.text($(this).text());
+          $list.find(".selected").empty().append($milestoneAnchor);
           break;
         case "#assignee_id":
-          $list
-            .find(".selected")
-            .html(
-              '<a class="item" href=' +
-                $(this).data("href") +
-                ">" +
-                '<img class="ui avatar image" src=' +
-                $(this).data("avatar") +
-                ">" +
-                $(this).text() +
-                "</a>"
-            );
+          var $assigneeAnchor = $('<a class="item"></a>');
+          $assigneeAnchor.attr("href", $(this).data("href"));
+          $assigneeAnchor.append(
+            $('<img class="ui avatar image">').attr("src", $(this).data("avatar"))
+          );
+          $assigneeAnchor.append($("<span></span>").text($(this).text()));
+          $list.find(".selected").empty().append($assigneeAnchor);
       }
       $(".ui" + select_id + ".list .no-select").addClass("hide");
       $(input_id).val($(this).data("id"));

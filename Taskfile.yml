@@ -11,7 +11,7 @@ tasks:
     desc: Build the binary and start the web server
     deps: [build]
     cmds:
-      - ./gogs web
+      - .bin/gogs web
 
   build:
     desc: Build the binary
@@ -22,7 +22,7 @@ tasks:
           -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"
         '
         -tags '{{.TAGS}}'
-        -trimpath -o gogs{{.BINARY_EXT}}
+        -trimpath -o .bin/gogs{{.BINARY_EXT}} ./cmd/gogs
     vars:
       PKG_PATH: gogs.io/gogs/internal/conf
       BUILD_TIME:
@@ -31,7 +31,7 @@ tasks:
         sh: git rev-parse HEAD
     sources:
       - go.mod
-      - gogs.go
+      - cmd/gogs/*.go
       - internal/**/*.go
       - conf/**/*
       - public/**/*
@@ -58,18 +58,6 @@ tasks:
     desc: Cleans up system meta files
     cmds:
       - find . -name "*.DS_Store" -type f -delete
-
-  release:
-    desc: Build the binary and pack resources to a ZIP file
-    deps: [build]
-    cmds:
-      - rm -rf {{.RELEASE_GOGS}}
-      - mkdir -p {{.RELEASE_GOGS}}
-      - cp -r gogs{{.BINARY_EXT}} LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
-      - cd {{.RELEASE_ROOT}} && zip -r gogs.zip "gogs"
-    vars:
-      RELEASE_ROOT: release
-      RELEASE_GOGS: release/gogs
 
   less:
     desc: Generate CSS from LESS files
@@ -99,3 +87,13 @@ tasks:
           dropdb "$dbname"
           echo "dropped $dbname"
         done
+
+  lint:
+    desc: Run all linters
+    cmds:
+      - golangci-lint run
+
+  docs:
+    desc: Start docs server
+    cmds:
+      - cd docs && mint dev --port 3333

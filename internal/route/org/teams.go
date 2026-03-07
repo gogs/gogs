@@ -3,8 +3,8 @@ package org
 import (
 	"net/http"
 	"path"
+	"strconv"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
@@ -36,7 +36,7 @@ func Teams(c *context.Context) {
 }
 
 func TeamsAction(c *context.Context) {
-	uid := com.StrTo(c.Query("uid")).MustInt64()
+	uid, _ := strconv.ParseInt(c.Query("uid"), 10, 64)
 	if uid == 0 {
 		c.Redirect(c.Org.OrgLink + "/teams")
 		return
@@ -127,7 +127,8 @@ func TeamsRepoAction(c *context.Context) {
 		}
 		err = c.Org.Team.AddRepository(repo)
 	case "remove":
-		err = c.Org.Team.RemoveRepository(com.StrTo(c.Query("repoid")).MustInt64())
+		repoID, _ := strconv.ParseInt(c.Query("repoid"), 10, 64)
+		err = c.Org.Team.RemoveRepository(repoID)
 	}
 
 	if err != nil {
@@ -159,7 +160,7 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.Success(tmplOrgTeamNew)
+		c.HTML(http.StatusBadRequest, tmplOrgTeamNew)
 		return
 	}
 
@@ -167,9 +168,9 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case database.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), tmplOrgTeamNew, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), http.StatusUnprocessableEntity, tmplOrgTeamNew, &f)
 		case database.IsErrNameNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplOrgTeamNew, &f)
+			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplOrgTeamNew, &f)
 		default:
 			c.Error(err, "new team")
 		}
@@ -214,7 +215,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.Success(tmplOrgTeamNew)
+		c.HTML(http.StatusBadRequest, tmplOrgTeamNew)
 		return
 	}
 
@@ -245,7 +246,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case database.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), tmplOrgTeamNew, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), http.StatusUnprocessableEntity, tmplOrgTeamNew, &f)
 		default:
 			c.Error(err, "update team")
 		}
