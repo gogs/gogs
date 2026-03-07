@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -44,6 +44,6 @@ func CheckRunUser(runUser string) (string, bool) {
 		return "", true
 	}
 
-	currentUser := osutil.CurrentUsername()
+	currentUser := osx.CurrentUsername()
 	return currentUser, runUser == currentUser
 }

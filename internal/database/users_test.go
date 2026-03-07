@@ -15,11 +15,11 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbutil"
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/repoutil"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/dbx"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/repox"
+	"gogs.io/gogs/internal/userx"
 	"gogs.io/gogs/public"
 )
 
@@ -240,7 +240,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	t.Run("name not allowed", func(t *testing.T) {
 		err := s.ChangeUsername(ctx, alice.ID, "-")
 		wantErr := ErrNameNotAllowed{
-			args: errutil.Args{
+			args: errx.Args{
 				"reason": "reserved",
 				"name":   "-",
 			},
@@ -261,7 +261,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 
 		err = s.ChangeUsername(ctx, alice.ID, bob.Name)
 		wantErr := ErrUserAlreadyExist{
-			args: errutil.Args{
+			args: errx.Args{
 				"name": bob.Name,
 			},
 		}
@@ -306,11 +306,11 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.db.Model(&User{}).Where("id = ?", alice.ID).Update("updated_unix", 0).Error
 	require.NoError(t, err)
 
-	err = os.MkdirAll(repoutil.UserPath(alice.Name), os.ModePerm)
+	err = os.MkdirAll(repox.UserPath(alice.Name), os.ModePerm)
 	require.NoError(t, err)
-	err = os.MkdirAll(repoutil.RepositoryLocalPath(repo.ID), os.ModePerm)
+	err = os.MkdirAll(repox.RepositoryLocalPath(repo.ID), os.ModePerm)
 	require.NoError(t, err)
-	err = os.MkdirAll(repoutil.RepositoryLocalWikiPath(repo.ID), os.ModePerm)
+	err = os.MkdirAll(repox.RepositoryLocalWikiPath(repo.ID), os.ModePerm)
 	require.NoError(t, err)
 
 	// Make sure mock data is set up correctly
@@ -325,9 +325,9 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), updatedUnix)
 
-	assert.True(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
-	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
-	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+	assert.True(t, osx.Exist(repox.UserPath(alice.Name)))
+	assert.True(t, osx.Exist(repox.RepositoryLocalPath(repo.ID)))
+	assert.True(t, osx.Exist(repox.RepositoryLocalWikiPath(repo.ID)))
 
 	const newUsername = "alice-new"
 	err = s.ChangeUsername(ctx, alice.ID, newUsername)
@@ -338,10 +338,10 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, headUserName, newUsername)
 
-	assert.True(t, osutil.IsExist(repoutil.UserPath(newUsername)))
-	assert.False(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
-	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
-	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+	assert.True(t, osx.Exist(repox.UserPath(newUsername)))
+	assert.False(t, osx.Exist(repox.UserPath(alice.Name)))
+	assert.False(t, osx.Exist(repox.RepositoryLocalPath(repo.ID)))
+	assert.False(t, osx.Exist(repox.RepositoryLocalWikiPath(repo.ID)))
 
 	alice, err = s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
@@ -371,7 +371,7 @@ func usersCount(t *testing.T, ctx context.Context, s *UsersStore) {
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
+		dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
@@ -393,7 +393,7 @@ func usersCreate(t *testing.T, ctx context.Context, s *UsersStore) {
 	t.Run("name not allowed", func(t *testing.T) {
 		_, err := s.Create(ctx, "-", "", CreateUserOptions{})
 		wantErr := ErrNameNotAllowed{
-			args: errutil.Args{
+			args: errx.Args{
 				"reason": "reserved",
 				"name":   "-",
 			},
@@ -404,7 +404,7 @@ func usersCreate(t *testing.T, ctx context.Context, s *UsersStore) {
 	t.Run("name already exists", func(t *testing.T) {
 		_, err := s.Create(ctx, alice.Name, "", CreateUserOptions{})
 		wantErr := ErrUserAlreadyExist{
-			args: errutil.Args{
+			args: errx.Args{
 				"name": alice.Name,
 			},
 		}
@@ -414,7 +414,7 @@ func usersCreate(t *testing.T, ctx context.Context, s *UsersStore) {
 	t.Run("email already exists", func(t *testing.T) {
 		_, err := s.Create(ctx, "bob", alice.Email, CreateUserOptions{})
 		wantErr := ErrEmailAlreadyUsed{
-			args: errutil.Args{
+			args: errx.Args{
 				"email": alice.Email,
 			},
 		}
@@ -434,7 +434,7 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	avatar, err := public.Files.ReadFile("img/avatar_default.png")
 	require.NoError(t, err)
 
-	avatarPath := userutil.CustomAvatarPath(alice.ID)
+	avatarPath := userx.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)
 	defer func() { _ = os.Remove(avatarPath) }()
 
@@ -442,7 +442,7 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	// Make sure avatar is saved and the user flag is updated.
-	got := osutil.IsFile(avatarPath)
+	got := osx.IsFile(avatarPath)
 	assert.True(t, got)
 
 	alice, err = s.GetByID(ctx, alice.ID)
@@ -453,7 +453,7 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.DeleteCustomAvatar(ctx, alice.ID)
 	require.NoError(t, err)
 
-	got = osutil.IsFile(avatarPath)
+	got = osx.IsFile(avatarPath)
 	assert.False(t, got)
 
 	alice, err = s.GetByID(ctx, alice.ID)
@@ -465,26 +465,26 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	reposStore := newReposStore(s.db)
 
 	t.Run("user still has repository ownership", func(t *testing.T) {
-		alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+		alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 		require.NoError(t, err)
 
 		err = s.DeleteByID(ctx, alice.ID, false)
-		wantErr := ErrUserOwnRepos{errutil.Args{"userID": alice.ID}}
+		wantErr := ErrUserOwnRepos{errx.Args{"userID": alice.ID}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("user still has organization membership", func(t *testing.T) {
-		bob, err := s.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+		bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 		org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 		err = s.db.Exec(
-			dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
+			dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
 			UserTypeOrganization, org1.ID,
 		).Error
 		require.NoError(t, err)
@@ -494,18 +494,18 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 
 		err = s.DeleteByID(ctx, bob.ID, false)
-		wantErr := ErrUserHasOrgs{errutil.Args{"userID": bob.ID}}
+		wantErr := ErrUserHasOrgs{errx.Args{"userID": bob.ID}}
 		assert.Equal(t, wantErr, err)
 	})
 
-	cindy, err := s.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{})
+	cindy, err := s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	frank, err := s.Create(ctx, "frank", "frank@exmaple.com", CreateUserOptions{})
+	frank, err := s.Create(ctx, "frank", "frank@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo2, err := reposStore.Create(ctx, cindy.ID, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
-	testUser, err := s.Create(ctx, "testUser", "testUser@exmaple.com", CreateUserOptions{})
+	testUser, err := s.Create(ctx, "testUser", "testUser@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	// Mock watches, stars and follows
@@ -561,7 +561,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	// Mock user directory
 	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersDeleteByID-tempRepositoryRoot")
 	conf.SetMockRepository(t, conf.RepositoryOpts{Root: tempRepositoryRoot})
-	tempUserPath := repoutil.UserPath(testUser.Name)
+	tempUserPath := repox.UserPath(testUser.Name)
 	err = os.MkdirAll(tempUserPath, os.ModePerm)
 	require.NoError(t, err)
 
@@ -570,7 +570,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 	err = os.MkdirAll(tempPictureAvatarUploadPath, os.ModePerm)
 	require.NoError(t, err)
-	tempCustomAvatarPath := userutil.CustomAvatarPath(testUser.ID)
+	tempCustomAvatarPath := userx.CustomAvatarPath(testUser.ID)
 	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
 
@@ -616,8 +616,8 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.NotZero(t, count, "table for %T", table)
 	}
 
-	assert.True(t, osutil.IsExist(tempUserPath))
-	assert.True(t, osutil.IsExist(tempCustomAvatarPath))
+	assert.True(t, osx.Exist(tempUserPath))
+	assert.True(t, osx.Exist(tempCustomAvatarPath))
 
 	// Pull the trigger
 	err = s.DeleteByID(ctx, testUser.ID, false)
@@ -663,30 +663,30 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, int64(0), count, "table for %T", table)
 	}
 
-	assert.False(t, osutil.IsExist(tempUserPath))
-	assert.False(t, osutil.IsExist(tempCustomAvatarPath))
+	assert.False(t, osx.Exist(tempUserPath))
+	assert.False(t, osx.Exist(tempCustomAvatarPath))
 
 	_, err = s.GetByID(ctx, testUser.ID)
-	wantErr := ErrUserNotExist{errutil.Args{"userID": testUser.ID}}
+	wantErr := ErrUserNotExist{errx.Args{"userID": testUser.ID}}
 	assert.Equal(t, wantErr, err)
 }
 
 func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	// User with repository ownership should be skipped
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	reposStore := newReposStore(s.db)
 	_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
 	// User with organization membership should be skipped
-	bob, err := s.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+	bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
+		dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
@@ -695,11 +695,11 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	// User activated state should be skipped
-	_, err = s.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
+	_, err = s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
 
 	// User meant to be deleted
-	david, err := s.Create(ctx, "david", "david@exmaple.com", CreateUserOptions{})
+	david, err := s.Create(ctx, "david", "david@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteInactivated-tempSSHRootPath")
@@ -709,7 +709,7 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	_, err = s.GetByID(ctx, david.ID)
-	wantErr := ErrUserNotExist{errutil.Args{"userID": david.ID}}
+	wantErr := ErrUserNotExist{errx.Args{"userID": david.ID}}
 	assert.Equal(t, wantErr, err)
 
 	users, err := s.List(ctx, 1, 10)
@@ -720,29 +720,29 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 	t.Run("empty email", func(t *testing.T) {
 		_, err := s.GetByEmail(ctx, "")
-		wantErr := ErrUserNotExist{args: errutil.Args{"email": ""}}
+		wantErr := ErrUserNotExist{args: errx.Args{"email": ""}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("ignore organization", func(t *testing.T) {
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org, err := s.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOptions{})
+		org, err := s.Create(ctx, "gogs", "gogs@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		err = s.db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserTypeOrganization).Error
 		require.NoError(t, err)
 
 		_, err = s.GetByEmail(ctx, org.Email)
-		wantErr := ErrUserNotExist{args: errutil.Args{"email": org.Email}}
+		wantErr := ErrUserNotExist{args: errx.Args{"email": org.Email}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("by primary email", func(t *testing.T) {
-		alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+		alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		_, err = s.GetByEmail(ctx, alice.Email)
-		wantErr := ErrUserNotExist{args: errutil.Args{"email": alice.Email}}
+		wantErr := ErrUserNotExist{args: errx.Args{"email": alice.Email}}
 		assert.Equal(t, wantErr, err)
 
 		// Mark user as activated
@@ -760,12 +760,12 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 
 		// TODO: Use UserEmails.Create to replace SQL hack when the method is available.
-		email2 := "bob2@exmaple.com"
+		email2 := "bob2@example.com"
 		err = s.db.Exec(`INSERT INTO email_address (uid, email) VALUES (?, ?)`, bob.ID, email2).Error
 		require.NoError(t, err)
 
 		_, err = s.GetByEmail(ctx, email2)
-		wantErr := ErrUserNotExist{args: errutil.Args{"email": email2}}
+		wantErr := ErrUserNotExist{args: errx.Args{"email": email2}}
 		assert.Equal(t, wantErr, err)
 
 		// TODO: Use UserEmails.Verify to replace SQL hack when the method is available.
@@ -779,7 +779,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersGetByID(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	user, err := s.GetByID(ctx, alice.ID)
@@ -787,12 +787,12 @@ func usersGetByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.Equal(t, alice.Name, user.Name)
 
 	_, err = s.GetByID(ctx, 404)
-	wantErr := ErrUserNotExist{args: errutil.Args{"userID": int64(404)}}
+	wantErr := ErrUserNotExist{args: errx.Args{"userID": int64(404)}}
 	assert.Equal(t, wantErr, err)
 }
 
 func usersGetByUsername(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	user, err := s.GetByUsername(ctx, alice.Name)
@@ -800,12 +800,12 @@ func usersGetByUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.Equal(t, alice.Name, user.Name)
 
 	_, err = s.GetByUsername(ctx, "bad_username")
-	wantErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}
+	wantErr := ErrUserNotExist{args: errx.Args{"name": "bad_username"}}
 	assert.Equal(t, wantErr, err)
 }
 
 func usersGetByKeyID(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	// TODO: Use PublicKeys.Create to replace SQL hack when the method is available.
@@ -825,16 +825,16 @@ func usersGetByKeyID(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.Equal(t, alice.Name, user.Name)
 
 	_, err = s.GetByKeyID(ctx, publicKey.ID+1)
-	wantErr := ErrUserNotExist{args: errutil.Args{"keyID": publicKey.ID + 1}}
+	wantErr := ErrUserNotExist{args: errx.Args{"keyID": publicKey.ID + 1}}
 	assert.Equal(t, wantErr, err)
 }
 
 func usersGetMailableEmailsByUsernames(t *testing.T, ctx context.Context, s *UsersStore) {
-	alice, err := s.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	bob, err := s.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{Activated: true})
+	bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
-	_, err = s.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
+	_, err = s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
 
 	got, err := s.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, "ignore-non-exist"})
@@ -904,7 +904,7 @@ func usersList(t *testing.T, ctx context.Context, s *UsersStore) {
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
+		dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
@@ -1046,7 +1046,7 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	t.Run("update password", func(t *testing.T) {
-		got := userutil.ValidatePassword(alice.Password, alice.Salt, oldPassword)
+		got := userx.ValidatePassword(alice.Password, alice.Salt, oldPassword)
 		require.True(t, got)
 
 		newPassword := "NewPassword"
@@ -1055,10 +1055,10 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 		alice, err = s.GetByID(ctx, alice.ID)
 		require.NoError(t, err)
 
-		got = userutil.ValidatePassword(alice.Password, alice.Salt, oldPassword)
+		got = userx.ValidatePassword(alice.Password, alice.Salt, oldPassword)
 		assert.False(t, got, "Old password should stop working")
 
-		got = userutil.ValidatePassword(alice.Password, alice.Salt, newPassword)
+		got = userx.ValidatePassword(alice.Password, alice.Salt, newPassword)
 		assert.True(t, got, "New password should work")
 	})
 
@@ -1074,7 +1074,7 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 
 		got := s.Update(ctx, alice.ID, UpdateUserOptions{Email: &bob.Email})
-		want := ErrEmailAlreadyUsed{args: errutil.Args{"email": bob.Email}}
+		want := ErrEmailAlreadyUsed{args: errx.Args{"email": bob.Email}}
 		assert.Equal(t, want, got)
 	})
 
@@ -1146,7 +1146,7 @@ func usersUseCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	avatar, err := public.Files.ReadFile("img/avatar_default.png")
 	require.NoError(t, err)
 
-	avatarPath := userutil.CustomAvatarPath(alice.ID)
+	avatarPath := userx.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)
 	defer func() { _ = os.Remove(avatarPath) }()
 
@@ -1154,7 +1154,7 @@ func usersUseCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	// Make sure avatar is saved and the user flag is updated.
-	got := osutil.IsFile(avatarPath)
+	got := osx.IsFile(avatarPath)
 	assert.True(t, got)
 
 	alice, err = s.GetByID(ctx, alice.ID)
@@ -1189,7 +1189,7 @@ func usersAddEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 		bob, err := s.Create(ctx, "bob", "verified@example.com", CreateUserOptions{Activated: true})
 		require.NoError(t, err)
 		got := s.AddEmail(ctx, bob.ID+1, "verified@example.com", true)
-		want := ErrEmailAlreadyUsed{args: errutil.Args{"email": "verified@example.com"}}
+		want := ErrEmailAlreadyUsed{args: errx.Args{"email": "verified@example.com"}}
 		require.Equal(t, want, got)
 	})
 }
@@ -1199,7 +1199,7 @@ func usersGetEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 	const testEmail = "alice@example.com"
 	_, err := s.GetEmail(ctx, testUserID, testEmail, false)
 	wantErr := ErrEmailNotExist{
-		args: errutil.Args{
+		args: errx.Args{
 			"email": testEmail,
 		},
 	}
@@ -1288,7 +1288,7 @@ func usersMarkEmailPrimary(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	// Should fail because email not verified
 	gotError := s.MarkEmailPrimary(ctx, alice.ID, "alice2@example.com")
-	wantError := ErrEmailNotVerified{args: errutil.Args{"email": "alice2@example.com"}}
+	wantError := ErrEmailNotVerified{args: errx.Args{"email": "alice2@example.com"}}
 	assert.Equal(t, wantError, gotError)
 
 	// Mark email as verified and should succeed
@@ -1318,7 +1318,7 @@ func usersDeleteEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.DeleteEmail(ctx, alice.ID, "alice2@example.com")
 	require.NoError(t, err)
 	_, got := s.GetEmail(ctx, alice.ID, "alice2@example.com", false)
-	want := ErrEmailNotExist{args: errutil.Args{"email": "alice2@example.com"}}
+	want := ErrEmailNotExist{args: errx.Args{"email": "alice2@example.com"}}
 	require.Equal(t, want, got)
 }
 

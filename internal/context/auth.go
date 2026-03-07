@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
-	"github.com/pkg/errors"
-	gouuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -146,18 +146,12 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 
 	// Check access token.
 	if isAPIPath(c.Req.URL.Path) {
-		tokenSHA := c.Query("token")
-		if len(tokenSHA) <= 0 {
-			tokenSHA = c.Query("access_token")
-		}
-		if tokenSHA == "" {
-			// Well, check with header again.
-			auHead := c.Req.Header.Get("Authorization")
-			if len(auHead) > 0 {
-				auths := strings.Fields(auHead)
-				if len(auths) == 2 && auths[0] == "token" {
-					tokenSHA = auths[1]
-				}
+		var tokenSHA string
+		auHead := c.Req.Header.Get("Authorization")
+		if auHead != "" {
+			auths := strings.Fields(auHead)
+			if len(auths) == 2 && auths[0] == "token" {
+				tokenSHA = auths[1]
 			}
 		}
 
@@ -219,7 +213,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 						user, err = store.CreateUser(
 							ctx.Req.Context(),
 							webAuthUser,
-							gouuid.NewV4().String()+"@localhost",
+							uuid.New().String()+"@localhost",
 							database.CreateUserOptions{
 								Activated: true,
 							},

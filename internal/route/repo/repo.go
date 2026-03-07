@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
@@ -16,7 +15,9 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/urlx"
 )
 
 const (
@@ -85,13 +86,13 @@ func Create(c *context.Context) {
 func handleCreateError(c *context.Context, err error, name, tpl string, form any) {
 	switch {
 	case database.IsErrReachLimitOfRepo(err):
-		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit), http.StatusForbidden, tpl, form)
 	case database.IsErrRepoAlreadyExist(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tpl, form)
+		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), http.StatusUnprocessableEntity, tpl, form)
 	case database.IsErrNameNotAllowed(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tpl, form)
 	default:
 		c.Error(err, name)
 	}
@@ -111,7 +112,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.Success(CREATE)
+		c.HTML(http.StatusBadRequest, CREATE)
 		return
 	}
 
@@ -165,7 +166,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.Success(MIGRATE)
+		c.HTML(http.StatusBadRequest, MIGRATE)
 		return
 	}
 
@@ -176,13 +177,13 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 			addrErr := err.(database.ErrInvalidCloneAddr)
 			switch {
 			case addrErr.IsURLError:
-				c.RenderWithErr(c.Tr("repo.migrate.clone_address")+c.Tr("form.url_error"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.clone_address")+c.Tr("form.url_error"), http.StatusBadRequest, MIGRATE, &f)
 			case addrErr.IsPermissionDenied:
-				c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), http.StatusForbidden, MIGRATE, &f)
 			case addrErr.IsInvalidPath:
-				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), http.StatusBadRequest, MIGRATE, &f)
 			case addrErr.IsBlockedLocalAddress:
-				c.RenderWithErr(c.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address"), http.StatusForbidden, MIGRATE, &f)
 			default:
 				c.Error(err, "unexpected error")
 			}
@@ -215,11 +216,11 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	if strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		c.Data["Err_Auth"] = true
-		c.RenderWithErr(c.Tr("form.auth_failed", database.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		c.RenderWithErr(c.Tr("form.auth_failed", database.HandleMirrorCredentials(err.Error(), true)), http.StatusUnauthorized, MIGRATE, &f)
 		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		c.Data["Err_CloneAddr"] = true
-		c.RenderWithErr(c.Tr("repo.migrate.failed", database.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		c.RenderWithErr(c.Tr("repo.migrate.failed", database.HandleMirrorCredentials(err.Error(), true)), http.StatusInternalServerError, MIGRATE, &f)
 		return
 	}
 
@@ -260,7 +261,7 @@ func Action(c *context.Context) {
 	}
 
 	redirectTo := c.Query("redirect_to")
-	if !tool.IsSameSiteURLPath(redirectTo) {
+	if !urlx.IsSameSite(redirectTo) {
 		redirectTo = c.Repo.RepoLink
 	}
 	c.Redirect(redirectTo)
@@ -291,7 +292,7 @@ func Download(c *context.Context) {
 	}
 	refName = strings.TrimSuffix(uri, ext)
 
-	if !com.IsDir(archivePath) {
+	if !osx.IsDir(archivePath) {
 		if err := os.MkdirAll(archivePath, os.ModePerm); err != nil {
 			c.Error(err, "create archive directory")
 			return
@@ -328,7 +329,7 @@ func Download(c *context.Context) {
 	}
 
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
-	if !com.IsFile(archivePath) {
+	if !osx.IsFile(archivePath) {
 		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
 			c.Error(err, "creates archive")
 			return

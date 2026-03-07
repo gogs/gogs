@@ -1,9 +1,10 @@
 package repo
 
 import (
-	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 
@@ -11,7 +12,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -27,11 +28,11 @@ func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *database.R
 		if repoCtx.GitRepo.HasBranch(release.Target) {
 			commit, err := repoCtx.GitRepo.BranchCommit(release.Target)
 			if err != nil {
-				return fmt.Errorf("get branch commit: %v", err)
+				return errors.Newf("get branch commit: %v", err)
 			}
 			countCache[release.Target], err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("count commits: %v", err)
+				return errors.Newf("count commits: %v", err)
 			}
 		} else {
 			// Use NumCommits of the newest release on that target
@@ -47,7 +48,7 @@ func Releases(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 	c.Data["PageIsReleaseList"] = true
 
-	tagsPage, err := gitutil.Module.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
+	tagsPage, err := gitx.Module.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
 	if err != nil {
 		c.Error(err, "get tags")
 		return
@@ -169,12 +170,12 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	if c.HasError() {
-		c.Success(tmplRepoReleaseNew)
+		c.HTML(http.StatusBadRequest, tmplRepoReleaseNew)
 		return
 	}
 
 	if !c.Repo.GitRepo.HasBranch(f.Target) {
-		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), tmplRepoReleaseNew, &f)
+		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), http.StatusUnprocessableEntity, tmplRepoReleaseNew, &f)
 		return
 	}
 
@@ -222,9 +223,9 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		c.Data["Err_TagName"] = true
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), tmplRepoReleaseNew, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), http.StatusUnprocessableEntity, tmplRepoReleaseNew, &f)
 		case database.IsErrInvalidTagName(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), tmplRepoReleaseNew, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), http.StatusBadRequest, tmplRepoReleaseNew, &f)
 		default:
 			c.Error(err, "new release")
 		}
@@ -280,7 +281,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["IsDraft"] = rel.IsDraft
 
 	if c.HasError() {
-		c.Success(tmplRepoReleaseNew)
+		c.HTML(http.StatusBadRequest, tmplRepoReleaseNew)
 		return
 	}
 

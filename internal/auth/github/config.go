@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/google/go-github/github"
-	"github.com/pkg/errors"
 )
 
 // Config contains configuration for GitHub authentication.

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,8 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
@@ -21,7 +21,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
 // getTableType returns the type name of a table definition without package name,
@@ -99,7 +99,7 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 			e.CreatedAt = e.CreatedAt.UTC()
 		}
 
-		err = jsoniter.NewEncoder(w).Encode(elem)
+		err = json.NewEncoder(w).Encode(elem)
 		if err != nil {
 			return errors.Wrap(err, "encode JSON")
 		}
@@ -125,14 +125,14 @@ func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 		tableFile := filepath.Join(dirPath, tableName+".json")
 		f, err := os.Create(tableFile)
 		if err != nil {
-			return fmt.Errorf("create JSON file: %v", err)
+			return errors.Newf("create JSON file: %v", err)
 		}
 
 		if err = x.Context(ctx).Asc("id").Iterate(table, func(idx int, bean any) (err error) {
-			return jsoniter.NewEncoder(f).Encode(bean)
+			return json.NewEncoder(f).Encode(bean)
 		}); err != nil {
 			_ = f.Close()
-			return fmt.Errorf("dump table '%s': %v", tableName, err)
+			return errors.Newf("dump table '%s': %v", tableName, err)
 		}
 		_ = f.Close()
 	}
@@ -156,7 +156,7 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
-			if !osutil.IsFile(tableFile) {
+			if !osx.IsFile(tableFile) {
 				log.Info("Skipped table %q", tableName)
 				return nil
 			}
@@ -207,7 +207,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
 
 		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
-		err = jsoniter.Unmarshal(cleaned, elem)
+		err = json.Unmarshal(cleaned, elem)
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
@@ -247,7 +247,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
 		tableFile := filepath.Join(dirPath, tableName+".json")
-		if !osutil.IsFile(tableFile) {
+		if !osx.IsFile(tableFile) {
 			continue
 		}
 
@@ -256,25 +256,25 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 		}
 
 		if err := x.DropTables(table); err != nil {
-			return fmt.Errorf("drop table %q: %v", tableName, err)
+			return errors.Newf("drop table %q: %v", tableName, err)
 		} else if err = x.Sync2(table); err != nil {
-			return fmt.Errorf("sync table %q: %v", tableName, err)
+			return errors.Newf("sync table %q: %v", tableName, err)
 		}
 
 		f, err := os.Open(tableFile)
 		if err != nil {
-			return fmt.Errorf("open JSON file: %v", err)
+			return errors.Newf("open JSON file: %v", err)
 		}
 		rawTableName := x.TableName(table)
 		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
-			if err = jsoniter.Unmarshal(scanner.Bytes(), table); err != nil {
-				return fmt.Errorf("unmarshal to struct: %v", err)
+			if err = json.Unmarshal(scanner.Bytes(), table); err != nil {
+				return errors.Newf("unmarshal to struct: %v", err)
 			}
 
 			if _, err = x.Insert(table); err != nil {
-				return fmt.Errorf("insert strcut: %v", err)
+				return errors.Newf("insert strcut: %v", err)
 			}
 
 			var meta struct {
@@ -283,7 +283,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 				DeadlineUnix   int64
 				ClosedDateUnix int64
 			}
-			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
+			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
 				log.Error("Failed to unmarshal to map: %v", err)
 			}
 
@@ -307,7 +307,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 			rawTableName := snakeMapper.Obj2Table(tableName)
 			seqName := rawTableName + "_id_seq"
 			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
-				return fmt.Errorf("reset table %q' sequence: %v", rawTableName, err)
+				return errors.Newf("reset table %q' sequence: %v", rawTableName, err)
 			}
 		}
 	}

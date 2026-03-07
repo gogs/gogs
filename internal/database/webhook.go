@@ -5,25 +5,25 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"strings"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
-	gouuid "github.com/satori/go.uuid"
+	"github.com/cockroachdb/errors"
+	"github.com/google/uuid"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	api "github.com/gogs/go-gogs-client"
-
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/httplib"
-	"gogs.io/gogs/internal/netutil"
+	"gogs.io/gogs/internal/netx"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/testx"
 )
 
 var HookQueue = sync.NewUniqueQueue(1000)
@@ -125,7 +125,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "events":
 		w.HookEvent = &HookEvent{}
-		if err = jsoniter.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 			log.Error("Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
@@ -137,7 +137,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 
 func (w *Webhook) SlackMeta() *SlackMeta {
 	s := &SlackMeta{}
-	if err := jsoniter.Unmarshal([]byte(w.Meta), s); err != nil {
+	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
 		log.Error("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
 	}
 	return s
@@ -150,7 +150,7 @@ func (w *Webhook) History(page int) ([]*HookTask, error) {
 
 // UpdateEvent handles conversion from HookEvent to Events.
 func (w *Webhook) UpdateEvent() error {
-	data, err := jsoniter.Marshal(w.HookEvent)
+	data, err := json.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
 }
@@ -234,7 +234,7 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
-var _ errutil.NotFound = (*ErrWebhookNotExist)(nil)
+var _ errx.NotFound = (*ErrWebhookNotExist)(nil)
 
 type ErrWebhookNotExist struct {
 	args map[string]any
@@ -429,21 +429,21 @@ type HookResponse struct {
 
 // HookTask represents a hook task.
 type HookTask struct {
-	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
-	HookID          int64
-	UUID            string
-	Type            HookTaskType
-	URL             string `xorm:"TEXT"`
-	Signature       string `xorm:"TEXT"`
-	api.Payloader   `xorm:"-" json:"-" gorm:"-"`
-	PayloadContent  string `xorm:"TEXT"`
-	ContentType     HookContentType
-	EventType       HookEventType
-	IsSSL           bool
-	IsDelivered     bool
-	Delivered       int64
-	DeliveredString string `xorm:"-" json:"-" gorm:"-"`
+	ID                          int64
+	RepoID                      int64 `xorm:"INDEX"`
+	HookID                      int64
+	UUID                        string
+	Type                        HookTaskType
+	URL                         string `xorm:"TEXT"`
+	Signature                   string `xorm:"TEXT"`
+	apiv1types.WebhookPayloader `xorm:"-" json:"-" gorm:"-"`
+	PayloadContent              string `xorm:"TEXT"`
+	ContentType                 HookContentType
+	EventType                   HookEventType
+	IsSSL                       bool
+	IsDelivered                 bool
+	Delivered                   int64
+	DeliveredString             string `xorm:"-" json:"-" gorm:"-"`
 
 	// History info.
 	IsSucceed       bool
@@ -474,7 +474,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.RequestInfo = &HookRequest{}
-		if err = jsoniter.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
+		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
 			log.Error("Unmarshal[%d]: %v", t.ID, err)
 		}
 
@@ -484,14 +484,14 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.ResponseInfo = &HookResponse{}
-		if err = jsoniter.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
 			log.Error("Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
 
 func (t *HookTask) ToJSON(v any) string {
-	p, err := jsoniter.Marshal(v)
+	p, err := json.Marshal(v)
 	if err != nil {
 		log.Error("Marshal [%d]: %v", t.ID, err)
 	}
@@ -511,13 +511,13 @@ func createHookTask(e Engine, t *HookTask) error {
 	if err != nil {
 		return err
 	}
-	t.UUID = gouuid.NewV4().String()
+	t.UUID = uuid.New().String()
 	t.PayloadContent = string(data)
 	_, err = e.Insert(t)
 	return err
 }
 
-var _ errutil.NotFound = (*ErrHookTaskNotExist)(nil)
+var _ errx.NotFound = (*ErrHookTaskNotExist)(nil)
 
 type ErrHookTaskNotExist struct {
 	args map[string]any
@@ -558,12 +558,12 @@ func UpdateHookTask(t *HookTask) error {
 }
 
 // prepareHookTasks adds list of webhooks to task queue.
-func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Payloader, webhooks []*Webhook) (err error) {
+func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
 	if len(webhooks) == 0 {
 		return nil
 	}
 
-	var payloader api.Payloader
+	var payloader apiv1types.WebhookPayloader
 	for _, w := range webhooks {
 		switch event {
 		case HookEventTypeCreate:
@@ -605,17 +605,17 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 		case SLACK:
 			payloader, err = GetSlackPayload(p, event, w.Meta)
 			if err != nil {
-				return fmt.Errorf("GetSlackPayload: %v", err)
+				return errors.Newf("GetSlackPayload: %v", err)
 			}
 		case DISCORD:
 			payloader, err = GetDiscordPayload(p, event, w.Meta)
 			if err != nil {
-				return fmt.Errorf("GetDiscordPayload: %v", err)
+				return errors.Newf("GetDiscordPayload: %v", err)
 			}
 		case DINGTALK:
 			payloader, err = GetDingtalkPayload(p, event)
 			if err != nil {
-				return fmt.Errorf("GetDingtalkPayload: %v", err)
+				return errors.Newf("GetDingtalkPayload: %v", err)
 			}
 		default:
 			payloader = p
@@ -633,17 +633,17 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 		}
 
 		if err = createHookTask(e, &HookTask{
-			RepoID:      repo.ID,
-			HookID:      w.ID,
-			Type:        w.HookTaskType,
-			URL:         w.URL,
-			Signature:   signature,
-			Payloader:   payloader,
-			ContentType: w.ContentType,
-			EventType:   event,
-			IsSSL:       w.IsSSL,
+			RepoID:           repo.ID,
+			HookID:           w.ID,
+			Type:             w.HookTaskType,
+			URL:              w.URL,
+			Signature:        signature,
+			WebhookPayloader: payloader,
+			ContentType:      w.ContentType,
+			EventType:        event,
+			IsSSL:            w.IsSSL,
 		}); err != nil {
-			return fmt.Errorf("createHookTask: %v", err)
+			return errors.Newf("createHookTask: %v", err)
 		}
 	}
 
@@ -654,10 +654,10 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 	return nil
 }
 
-func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payloader) error {
+func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	webhooks, err := getActiveWebhooksByRepoID(e, repo.ID)
 	if err != nil {
-		return fmt.Errorf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
+		return errors.Newf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
 	}
 
 	// check if repo belongs to org and append additional webhooks
@@ -665,7 +665,7 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 		// get hooks for org
 		orgws, err := getActiveWebhooksByOrgID(e, repo.OwnerID)
 		if err != nil {
-			return fmt.Errorf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
+			return errors.Newf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
 		}
 		webhooks = append(webhooks, orgws...)
 	}
@@ -673,20 +673,20 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 }
 
 // PrepareWebhooks adds all active webhooks to task queue.
-func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+func PrepareWebhooks(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
 	// choose to ignore this function in tests.
-	if x == nil && testutil.InTest {
+	if x == nil && testx.InTest {
 		return nil
 	}
 	return prepareWebhooks(x, repo, event, p)
 }
 
 // TestWebhook adds the test webhook matches the ID to task queue.
-func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhookID int64) error {
+func TestWebhook(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhookID int64) error {
 	webhook, err := GetWebhookOfRepoByID(repo.ID, webhookID)
 	if err != nil {
-		return fmt.Errorf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
+		return errors.Newf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
 	}
 	return prepareHookTasks(x, repo, event, p, []*Webhook{webhook})
 }
@@ -697,7 +697,7 @@ func (t *HookTask) deliver() {
 		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
 		return
 	}
-	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
 		t.ResponseContent = `{"body": "Payload URL resolved to a local network address that is implicitly blocked."}`
 		return
 	}

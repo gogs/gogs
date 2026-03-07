@@ -1,0 +1,356 @@
+---
+title: "Run as service"
+description: "Configure Gogs to start automatically as a system service on Linux, macOS, and Windows"
+icon: "server"
+---
+
+Running Gogs as a system service ensures it starts automatically on boot and restarts if it crashes. Choose the init system or service manager that matches your operating system.
+
+## Linux
+
+<Tabs>
+  <Tab title="Systemd">
+    Systemd is the default init system on most modern Linux distributions (Ubuntu 16.04+, Debian 8+, CentOS 7+, Fedora, Arch Linux, etc.).
+
+    Gogs ships with a [systemd service template](https://github.com/gogs/gogs/blob/main/scripts/systemd/gogs.service) at `scripts/systemd/gogs.service` in the installation directory.
+
+    ### 1. Customize the service file
+
+    Copy the template and edit it to match your installation:
+
+    ```bash
+    sudo cp /home/git/gogs/scripts/systemd/gogs.service /etc/systemd/system/gogs.service
+    sudo vim /etc/systemd/system/gogs.service
+    ```
+
+    Here is the default service file for reference:
+
+    ```ini
+    [Unit]
+    Description=Gogs
+    After=network.target
+    After=mariadb.service mysql.service mysqld.service postgresql.service memcached.service redis.service
+
+    [Service]
+    # Uncomment the following if you have repos with lots of files
+    # and get an HTTP 500 error because of that
+    #LimitMEMLOCK=infinity
+    #LimitNOFILE=65535
+    Type=simple
+    User=git
+    Group=git
+    WorkingDirectory=/home/git/gogs
+    ExecStart=/home/git/gogs/gogs web
+    Restart=always
+    RestartSec=2s
+    Environment=USER=git HOME=/home/git
+
+    # Hardening directives (comment out if not supported by your systemd version)
+    ProtectSystem=full
+    PrivateDevices=yes
+    PrivateTmp=yes
+    NoNewPrivileges=true
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+    Update the following values to match your environment:
+    - `User` and `Group` -- the system user running Gogs
+    - `WorkingDirectory` -- the Gogs installation directory
+    - `ExecStart` -- the full path to the Gogs binary
+    - `Environment` -- ensure `USER` and `HOME` match the Gogs user
+
+    <Tip>
+      If you use MySQL/MariaDB, PostgreSQL, Redis, or Memcached, the `After=` lines ensure Gogs starts after those services. Uncomment or add lines as needed for your database.
+    </Tip>
+
+    ### 2. Enable and start the service
+
+    ```bash
+    sudo systemctl enable gogs
+    sudo systemctl start gogs
+    ```
+
+    ### 3. Verify the service
+
+    ```bash
+    # Check status
+    sudo systemctl status gogs -l
+
+    # View logs
+    sudo journalctl -b -u gogs
+    ```
+
+    <Note>
+      If you have repositories with a large number of files and encounter HTTP 500 errors, uncomment the `LimitMEMLOCK=infinity` and `LimitNOFILE=65535` directives in the service file.
+    </Note>
+  </Tab>
+  <Tab title="init.d (Debian/Ubuntu)">
+    For Debian-based systems that do not use systemd, Gogs provides an init.d script at `scripts/init/debian/gogs`.
+
+    ### 1. Copy and customize the script
+
+    ```bash
+    sudo cp /home/git/gogs/scripts/init/debian/gogs /etc/init.d/gogs
+    sudo chmod +x /etc/init.d/gogs
+    sudo vim /etc/init.d/gogs
+    ```
+
+    Verify or update the following variables in the script:
+
+    ```bash
+    WORKINGDIR=/home/git/gogs
+    DAEMON=$WORKINGDIR/$NAME
+    DAEMON_ARGS="web"
+    USER=git
+    ```
+
+    If you run Gogs alongside Nginx and PostgreSQL, update the init dependencies at the top of the script:
+
+    ```bash
+    # Required-Start:    $syslog $network $local_fs nginx postgresql
+    # Required-Stop:     $syslog $local_fs
+    ```
+
+    ### 2. Register and start the service
+
+    ```bash
+    sudo update-rc.d gogs defaults 30 70
+    sudo service gogs start
+    ```
+
+    ### 3. Verify
+
+    Visit your Gogs URL in a browser to confirm it is running. You can also check:
+
+    ```bash
+    sudo service gogs status
+    ```
+  </Tab>
+  <Tab title="init.d (CentOS/RHEL)">
+    For CentOS/RHEL systems, Gogs provides an init.d script at `scripts/init/centos/gogs`.
+
+    ### 1. Copy and customize the script
+
+    ```bash
+    sudo cp /home/git/gogs/scripts/init/centos/gogs /etc/rc.d/init.d/gogs
+    sudo chmod +x /etc/rc.d/init.d/gogs
+    sudo vim /etc/rc.d/init.d/gogs
+    ```
+
+    Verify or update the following variables:
+
+    ```bash
+    NAME=gogs
+    GOGS_HOME=/home/git/gogs
+    GOGS_PATH=${GOGS_HOME}/$NAME
+    GOGS_USER=git
+    LOGPATH=${GOGS_HOME}/log
+    ```
+
+    <Note>
+      You can override these defaults by creating `/etc/sysconfig/gogs` with your custom values.
+    </Note>
+
+    ### 2. Register and start the service
+
+    ```bash
+    sudo chkconfig gogs on
+    sudo service gogs start
+    ```
+
+    ### 3. Verify
+
+    ```bash
+    sudo service gogs status
+    ```
+  </Tab>
+  <Tab title="OpenRC (Gentoo)">
+    For Gentoo and other distributions using OpenRC, create a service script at `/etc/init.d/gogs`:
+
+    ```bash
+    #!/sbin/openrc-run
+
+    description="Gogs - A painless self-hosted Git service"
+    command="/home/git/gogs/gogs"
+    command_args="web"
+    command_user="git"
+    command_background=true
+    pidfile="/var/run/gogs.pid"
+    directory="/home/git/gogs"
+
+    depend() {
+        need net
+        after mysql postgresql
+    }
+    ```
+
+    Make it executable and enable it:
+
+    ```bash
+    sudo chmod +x /etc/init.d/gogs
+    sudo rc-update add gogs default
+    sudo rc-service gogs start
+    ```
+  </Tab>
+</Tabs>
+
+## Windows
+
+On Windows, Gogs can run as a native Windows service using either the builtin `minwinsvc` support or the third-party NSSM tool.
+
+<Tabs>
+  <Tab title="Builtin (sc.exe)">
+    Gogs binaries built with the `minwinsvc` tag (release archive name that contains `mws`) support running as a native Windows service.
+
+    ### 1. Configure Gogs for Windows
+
+    Edit `C:\gogs\custom\conf\app.ini`:
+
+    ```ini
+    RUN_USER = COMPUTERNAME$
+    ```
+
+    Replace `COMPUTERNAME` with the output of `echo %COMPUTERNAME%` in a command prompt. For example, if the computer name is `USER-PC`, set `RUN_USER = USER-PC$`.
+
+    Configure the server section:
+
+    ```ini
+    [server]
+    DOMAIN           = gogs
+    PROTOCOL         = http
+    HTTP_ADDR        = 127.0.1.1
+    HTTP_PORT        = 80
+    OFFLINE_MODE     = true
+    EXTERNAL_URL     = http://gogs/
+    ```
+
+    <Tip>
+      Using an address in the `127.x.x.x` range (other than `127.0.0.1`) prevents port conflicts with other local services while keeping traffic local. Any address from `127.0.0.2` to `127.254.254.254` works.
+    </Tip>
+
+    ### 2. Add a hosts entry
+
+    Open Notepad as Administrator and edit `C:\Windows\System32\drivers\etc\hosts`:
+
+    ```text
+    # Gogs local HTTPd
+    127.0.1.1        gogs
+    ```
+
+    ### 3. Create and start the service
+
+    Open a command prompt as Administrator:
+
+    ```cmd
+    sc create gogs start= auto binPath= "\"C:\gogs\gogs.exe\" web --config \"C:\gogs\custom\conf\app.ini\""
+    ```
+
+    <Warning>
+      There must be a space after each `=` in the `sc create` command. This is a Windows `sc.exe` syntax requirement.
+    </Warning>
+
+    Start the service:
+
+    ```cmd
+    net start gogs
+    ```
+
+    You should see:
+
+    ```text
+    The gogs service is starting.
+    The gogs service was started successfully.
+    ```
+
+    <Warning>
+      Windows services run from `%WINDIR%\System32` by default. Always use **absolute paths** in `app.ini` for data directories and database files:
+
+      ```ini
+      [server]
+      APP_DATA_PATH = c:/gogs/data
+
+      [database]
+      PATH = c:/gogs/data/gogs.db
+      ```
+
+      Use forward slashes (`/`) in paths to avoid escape character issues.
+    </Warning>
+  </Tab>
+  <Tab title="NSSM">
+    [NSSM (Non-Sucking Service Manager)](https://nssm.cc/) provides more control over service configuration and automatic restart behavior.
+
+    ### 1. Install NSSM
+
+    Download [nssm.exe](https://nssm.cc/download) for your architecture (32-bit or 64-bit) and place it in a directory on your `PATH`.
+
+    ### 2. Install the Gogs service
+
+    Open a command prompt as Administrator:
+
+    ```cmd
+    nssm install gogs
+    ```
+
+    The NSSM service installer GUI will appear. Configure the following tabs:
+
+    **Application tab:**
+    - **Path:** `C:\gogs\gogs.exe`
+    - **Startup directory:** `C:\gogs`
+    - **Arguments:** `web`
+
+    **Details tab:**
+    - **Display name:** `Gogs`
+    - **Description:** `Gogs is a painless self-hosted Git service.`
+    - **Startup type:** `Automatic (Delayed Start)`
+
+    <Note>
+      Delayed start means the service will begin approximately two minutes after non-delayed services, reducing impact on boot time.
+    </Note>
+
+    **I/O tab:**
+    - **Output (stdout):** `C:\gogs\log\gogs-nssm.txt`
+    - **Error (stderr):** `C:\gogs\log\gogs-nssm.txt`
+
+    **File rotation tab:**
+    - Check **Rotate files**
+    - **Restrict rotation to files bigger than:** `1000000` bytes
+
+    **Environment tab:**
+    - **Environment variables:** `PATH=%PATH%;C:\gogs;C:\Program Files (x86)\Git\bin`
+
+    <Tip>
+      The environment variable ensures both `gogs.exe` and `git.exe` are available on the service's PATH at runtime.
+    </Tip>
+
+    Click **Install service** to complete the setup.
+
+    ### 3. Start and manage the service
+
+    ```cmd
+    nssm start gogs
+    ```
+
+    You should see:
+
+    ```text
+    gogs: START: The operation completed successfully.
+    ```
+
+    Verify by checking `C:\gogs\log\gogs-nssm.txt` for Gogs startup output, ending with lines like:
+
+    ```text
+    [I] Run Mode: Production
+    [I] Listen: http://127.0.1.1:80
+    ```
+
+    To restart after configuration changes:
+
+    ```cmd
+    nssm restart gogs
+    ```
+
+    NSSM will automatically attempt to restart Gogs if it crashes.
+  </Tab>
+</Tabs>

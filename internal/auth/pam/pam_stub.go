@@ -3,7 +3,7 @@
 package pam
 
 import (
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 )
 
 func (*Config) doAuth(_, _ string) error {

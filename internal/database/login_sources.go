@@ -2,12 +2,12 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 // LoginSource represents an external way for authorizing users.
@@ -41,7 +41,8 @@ func (s *LoginSource) BeforeSave(_ *gorm.DB) (err error) {
 	if s.Provider == nil {
 		return nil
 	}
-	s.Config, err = jsoniter.MarshalToString(s.Provider.Config())
+	data, err := json.Marshal(s.Provider.Config())
+	s.Config = string(data)
 	return err
 }
 
@@ -72,7 +73,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 	switch s.Type {
 	case auth.LDAP:
 		var cfg ldap.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.DLDAP:
 		var cfg ldap.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -88,7 +89,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.SMTP:
 		var cfg smtp.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -96,7 +97,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.PAM:
 		var cfg pam.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -104,7 +105,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.GitHub:
 		var cfg github.Config
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -112,7 +113,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 
 	case auth.Mock:
 		var cfg mockProviderConfig
-		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		err := json.Unmarshal([]byte(s.Config), &cfg)
 		if err != nil {
 			return err
 		}
@@ -121,7 +122,7 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 		s.Provider = mockProvider
 
 	default:
-		return fmt.Errorf("unrecognized login source type: %v", s.Type)
+		return errors.Newf("unrecognized login source type: %v", s.Type)
 	}
 	return nil
 }
@@ -188,7 +189,7 @@ type CreateLoginSourceOptions struct {
 }
 
 type ErrLoginSourceAlreadyExist struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrLoginSourceAlreadyExist(err error) bool {
@@ -204,7 +205,7 @@ func (err ErrLoginSourceAlreadyExist) Error() string {
 func (s *LoginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error) {
 	err := s.db.WithContext(ctx).Where("name = ?", opts.Name).First(new(LoginSource)).Error
 	if err == nil {
-		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
+		return nil, ErrLoginSourceAlreadyExist{args: errx.Args{"name": opts.Name}}
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -215,7 +216,8 @@ func (s *LoginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOp
 		IsActived: opts.Activated,
 		IsDefault: opts.Default,
 	}
-	source.Config, err = jsoniter.MarshalToString(opts.Config)
+	data, err := json.Marshal(opts.Config)
+	source.Config = string(data)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +232,7 @@ func (s *LoginSourcesStore) Count(ctx context.Context) int64 {
 }
 
 type ErrLoginSourceInUse struct {
-	args errutil.Args
+	args errx.Args
 }
 
 func IsErrLoginSourceInUse(err error) bool {
@@ -249,7 +251,7 @@ func (s *LoginSourcesStore) DeleteByID(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	} else if count > 0 {
-		return ErrLoginSourceInUse{args: errutil.Args{"id": id}}
+		return ErrLoginSourceInUse{args: errx.Args{"id": id}}
 	}
 
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(new(LoginSource)).Error

@@ -3,22 +3,23 @@ package repo
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/userx"
 )
 
 const (
@@ -49,7 +50,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	switch c.Query("action") {
 	case "update":
 		if c.HasError() {
-			c.Success(tmplRepoSettingsOptions)
+			c.HTML(http.StatusBadRequest, tmplRepoSettingsOptions)
 			return
 		}
 
@@ -63,9 +64,9 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				c.FormErr("RepoName")
 				switch {
 				case database.IsErrRepoAlreadyExist(err):
-					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tmplRepoSettingsOptions, &f)
+					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), http.StatusUnprocessableEntity, tmplRepoSettingsOptions, &f)
 				case database.IsErrNameNotAllowed(err):
-					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), tmplRepoSettingsOptions, &f)
+					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplRepoSettingsOptions, &f)
 				default:
 					c.Error(err, "change repository name")
 				}
@@ -175,7 +176,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -209,7 +210,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -222,13 +223,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		newOwner := c.Query("new_owner_name")
 		if !database.Handle.Users().IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), tmplRepoSettingsOptions, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), http.StatusBadRequest, tmplRepoSettingsOptions, nil)
 			return
 		}
 
 		if err := database.TransferOwnership(c.User, newOwner, repo); err != nil {
 			if database.IsErrRepoAlreadyExist(err) {
-				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), tmplRepoSettingsOptions, nil)
+				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), http.StatusUnprocessableEntity, tmplRepoSettingsOptions, nil)
 			} else {
 				c.Error(err, "transfer ownership")
 			}
@@ -244,7 +245,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -262,7 +263,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-		c.Redirect(userutil.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
+		c.Redirect(userx.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
 
 	case "delete-wiki":
 		if !c.Repo.IsOwner() {
@@ -270,7 +271,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), tmplRepoSettingsOptions, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), http.StatusBadRequest, tmplRepoSettingsOptions, nil)
 			return
 		}
 
@@ -327,29 +328,29 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *database.Re
 	if f.Avatar != nil {
 		r, err := f.Avatar.Open()
 		if err != nil {
-			return fmt.Errorf("open avatar reader: %v", err)
+			return errors.Newf("open avatar reader: %v", err)
 		}
 		defer r.Close()
 
 		data, err := io.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("read avatar content: %v", err)
+			return errors.Newf("read avatar content: %v", err)
 		}
 		if !tool.IsImageFile(data) {
 			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxRepo.UploadAvatar(data); err != nil {
-			return fmt.Errorf("upload avatar: %v", err)
+			return errors.Newf("upload avatar: %v", err)
 		}
 	} else {
 		// No avatar is uploaded and reset setting back.
-		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
+		if !osx.IsFile(ctxRepo.CustomAvatarPath()) {
 			ctxRepo.UseCustomAvatar = false
 		}
 	}
 
 	if err := database.UpdateRepository(ctxRepo, false); err != nil {
-		return fmt.Errorf("update repository: %v", err)
+		return errors.Newf("update repository: %v", err)
 	}
 
 	return nil
@@ -400,7 +401,9 @@ func SettingsCollaborationPost(c *context.Context) {
 	}
 
 	if conf.User.EnableEmailNotification {
-		email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository))
+		if err := email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository)); err != nil {
+			log.Error("Failed to send collaborator mail: %v", err)
+		}
 	}
 
 	c.Flash.Success(c.Tr("repo.settings.add_collaborator_success"))
@@ -436,7 +439,7 @@ func SettingsBranches(c *context.Context) {
 
 	if c.Repo.Repository.IsBare {
 		c.Flash.Info(c.Tr("repo.settings.branches_bare"), true)
-		c.Success(tmplRepoSettingsBranches)
+		c.HTML(http.StatusUnprocessableEntity, tmplRepoSettingsBranches)
 		return
 	}
 
@@ -578,15 +581,24 @@ func SettingsGitHooks(c *context.Context) {
 	c.Success(tmplRepoSettingsGithooks)
 }
 
+func isValidHookName(name git.HookName) bool {
+	return slices.Contains(git.ServerSideHooks, name)
+}
+
 func SettingsGitHooksEdit(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.githooks")
 	c.Data["PageIsSettingsGitHooks"] = true
 	c.Data["RequireSimpleMDE"] = true
 
-	name := c.Params(":name")
-	hook, err := c.Repo.GitRepo.Hook("custom_hooks", git.HookName(name))
+	name := git.HookName(c.Params(":name"))
+	if !isValidHookName(name) {
+		c.NotFound()
+		return
+	}
+
+	hook, err := c.Repo.GitRepo.Hook("custom_hooks", name)
 	if err != nil {
-		c.NotFoundOrError(osutil.NewError(err), "get hook")
+		c.NotFoundOrError(osx.NewError(err), "get hook")
 		return
 	}
 	c.Data["Hook"] = hook
@@ -594,10 +606,15 @@ func SettingsGitHooksEdit(c *context.Context) {
 }
 
 func SettingsGitHooksEditPost(c *context.Context) {
-	name := c.Params(":name")
-	hook, err := c.Repo.GitRepo.Hook("custom_hooks", git.HookName(name))
+	name := git.HookName(c.Params(":name"))
+	if !isValidHookName(name) {
+		c.NotFound()
+		return
+	}
+
+	hook, err := c.Repo.GitRepo.Hook("custom_hooks", name)
 	if err != nil {
-		c.NotFoundOrError(osutil.NewError(err), "get hook")
+		c.NotFoundOrError(osx.NewError(err), "get hook")
 		return
 	}
 	if err = hook.Update(c.Query("content")); err != nil {
@@ -633,7 +650,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Data["Deploykeys"] = keys
 
 	if c.HasError() {
-		c.Success(tmplRepoSettingsDeployKeys)
+		c.HTML(http.StatusBadRequest, tmplRepoSettingsDeployKeys)
 		return
 	}
 
@@ -656,10 +673,10 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
 			c.Data["Err_Content"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), tmplRepoSettingsDeployKeys, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), http.StatusUnprocessableEntity, tmplRepoSettingsDeployKeys, &f)
 		case database.IsErrKeyNameAlreadyUsed(err):
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), tmplRepoSettingsDeployKeys, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), http.StatusUnprocessableEntity, tmplRepoSettingsDeployKeys, &f)
 		default:
 			c.Error(err, "add deploy key")
 		}

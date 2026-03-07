@@ -3,17 +3,17 @@ package database
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	api "github.com/gogs/go-gogs-client"
-
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
@@ -97,7 +97,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 				c.PosterID = -1
 				c.Poster = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)
+				return errors.Newf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)
 			}
 		}
 	}
@@ -105,12 +105,12 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Issue == nil {
 		c.Issue, err = getRawIssueByID(e, c.IssueID)
 		if err != nil {
-			return fmt.Errorf("getIssueByID [%d]: %v", c.IssueID, err)
+			return errors.Newf("getIssueByID [%d]: %v", c.IssueID, err)
 		}
 		if c.Issue.Repo == nil {
 			c.Issue.Repo, err = getRepositoryByID(e, c.Issue.RepoID)
 			if err != nil {
-				return fmt.Errorf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
+				return errors.Newf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
 			}
 		}
 	}
@@ -118,7 +118,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Attachments == nil {
 		c.Attachments, err = getAttachmentsByCommentID(e, c.ID)
 		if err != nil {
-			return fmt.Errorf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
+			return errors.Newf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
 		}
 	}
 
@@ -135,8 +135,8 @@ func (c *Comment) HTMLURL() string {
 
 // This method assumes following fields have been assigned with valid values:
 // Required - Poster, Issue
-func (c *Comment) APIFormat() *api.Comment {
-	return &api.Comment{
+func (c *Comment) APIFormat() *apiv1types.IssueComment {
+	return &apiv1types.IssueComment{
 		ID:      c.ID,
 		HTMLURL: c.HTMLURL(),
 		Poster:  c.Poster.APIFormat(),
@@ -147,7 +147,7 @@ func (c *Comment) APIFormat() *api.Comment {
 }
 
 func CommentHashTag(id int64) string {
-	return "issuecomment-" + com.ToStr(id)
+	return "issuecomment-" + strconv.FormatInt(id, 10)
 }
 
 // HashTag returns unique hash tag for comment.
@@ -157,7 +157,7 @@ func (c *Comment) HashTag() string {
 
 // EventTag returns unique event hash tag for comment.
 func (c *Comment) EventTag() string {
-	return "event-" + com.ToStr(c.ID)
+	return "event-" + strconv.FormatInt(c.ID, 10)
 }
 
 // mailParticipants sends new comment emails to repository watchers
@@ -165,7 +165,7 @@ func (c *Comment) EventTag() string {
 func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
 	mentions := markup.FindAllMentions(c.Content)
 	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
+		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
 	switch opType {
@@ -227,7 +227,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 				if IsErrAttachmentNotExist(err) {
 					continue
 				}
-				return nil, fmt.Errorf("getAttachmentByUUID [%s]: %v", uuid, err)
+				return nil, errors.Newf("getAttachmentByUUID [%s]: %v", uuid, err)
 			}
 			attachments = append(attachments, attach)
 		}
@@ -237,7 +237,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			attachments[i].CommentID = comment.ID
 			// No assign value could be 0, so ignore AllCols().
 			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
-				return nil, fmt.Errorf("update attachment [%d]: %v", attachments[i].ID, err)
+				return nil, errors.Newf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
 		}
 
@@ -273,7 +273,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	}
 
 	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
-		return nil, fmt.Errorf("update issue 'updated_unix': %v", err)
+		return nil, errors.Newf("update issue 'updated_unix': %v", err)
 	}
 
 	// Notify watchers for whatever action comes in, ignore if no action type.
@@ -342,12 +342,12 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 		Attachments: attachments,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("CreateComment: %v", err)
+		return nil, errors.Newf("CreateComment: %v", err)
 	}
 
 	comment.Issue = issue
-	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
-		Action:     api.HOOK_ISSUE_COMMENT_CREATED,
+	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+		Action:     apiv1types.WebhookIssueCommentCreated,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
 		Repository: repo.APIFormatLegacy(nil),
@@ -362,7 +362,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 // CreateRefComment creates a commit reference comment to issue.
 func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
 	if commitSHA == "" {
-		return fmt.Errorf("cannot create reference with empty commit SHA")
+		return errors.Newf("cannot create reference with empty commit SHA")
 	}
 
 	// Check if same reference from same commit has already existed.
@@ -372,7 +372,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 		CommitSHA: commitSHA,
 	})
 	if err != nil {
-		return fmt.Errorf("check reference comment: %v", err)
+		return errors.Newf("check reference comment: %v", err)
 	} else if has {
 		return nil
 	}
@@ -388,7 +388,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 	return err
 }
 
-var _ errutil.NotFound = (*ErrCommentNotExist)(nil)
+var _ errx.NotFound = (*ErrCommentNotExist)(nil)
 
 type ErrCommentNotExist struct {
 	args map[string]any
@@ -423,7 +423,7 @@ func GetCommentByID(id int64) (*Comment, error) {
 func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
 	for i := range comments {
 		if err = comments[i].loadAttributes(e); err != nil {
-			return fmt.Errorf("loadAttributes [%d]: %v", comments[i].ID, err)
+			return errors.Newf("loadAttributes [%d]: %v", comments[i].ID, err)
 		}
 	}
 
@@ -482,12 +482,12 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 
 	if err = c.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
-	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
-		Action:  api.HOOK_ISSUE_COMMENT_EDITED,
+	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+		Action:  apiv1types.WebhookIssueCommentEdited,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
-		Changes: &api.ChangesPayload{
-			Body: &api.ChangesFromPayload{
+		Changes: &apiv1types.WebhookChangesPayload{
+			Body: &apiv1types.WebhookChangesFromPayload{
 				From: oldContent,
 			},
 		},
@@ -527,7 +527,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	_, err = DeleteAttachmentsByComment(comment.ID, true)
@@ -537,8 +537,8 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
 		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
-	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &api.IssueCommentPayload{
-		Action:     api.HOOK_ISSUE_COMMENT_DELETED,
+	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+		Action:     apiv1types.WebhookIssueCommentDeleted,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),
 		Repository: comment.Issue.Repo.APIFormatLegacy(nil),

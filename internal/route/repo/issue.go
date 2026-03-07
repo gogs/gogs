@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
@@ -33,8 +34,8 @@ const (
 )
 
 var (
-	ErrFileTypeForbidden = errors.New("File type is not allowed")
-	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
+	ErrFileTypeForbidden = errors.New("file type is not allowed")
+	ErrTooManyFiles      = errors.New("maximum number of files to upload exceeded")
 
 	IssueTemplateCandidates = []string{
 		"ISSUE_TEMPLATE.md",
@@ -102,7 +103,7 @@ func issues(c *context.Context, isPullList bool) {
 	viewType := c.Query("type")
 	sortType := c.Query("sort")
 	types := []string{"assigned", "created_by", "mentioned"}
-	if !com.IsSliceContainsStr(types, viewType) {
+	if !slices.Contains(types, viewType) {
 		viewType = "all"
 	}
 
@@ -148,10 +149,7 @@ func issues(c *context.Context, isPullList bool) {
 		IsPull:      isPullList,
 	})
 
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	var total int
 	if !isShowClosed {
@@ -223,7 +221,8 @@ func issues(c *context.Context, isPullList bool) {
 	}
 
 	c.Data["IssueStats"] = issueStats
-	c.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
+	selectLabelsInt, _ := strconv.ParseInt(selectLabels, 10, 64)
+	c.Data["SelectLabels"] = selectLabelsInt
 	c.Data["ViewType"] = viewType
 	c.Data["SortType"] = sortType
 	c.Data["MilestoneID"] = milestoneID
@@ -409,7 +408,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	if c.HasError() {
-		c.Success(tmplRepoIssueNew)
+		c.HTML(http.StatusBadRequest, tmplRepoIssueNew)
 		return
 	}
 
@@ -623,13 +622,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 			marked[comment.PosterID] = comment.ShowTag
 
-			isAdded := false
-			for j := range participants {
-				if comment.Poster == participants[j] {
-					isAdded = true
-					break
-				}
-			}
+			isAdded := slices.Contains(participants, comment.Poster)
 			if !isAdded && !issue.IsPoster(comment.Poster.ID) {
 				participants = append(participants, comment.Poster)
 			}
@@ -926,6 +919,17 @@ func UpdateCommentContent(c *context.Context) {
 		return
 	}
 
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
+		return
+	}
+
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.NotFound()
 		return
@@ -956,6 +960,17 @@ func DeleteComment(c *context.Context) {
 	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
+		return
+	}
+
+	issue, err := database.GetIssueByID(comment.IssueID)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by ID")
+		return
+	}
+
+	if issue.RepoID != c.Repo.Repository.ID {
+		c.NotFound()
 		return
 	}
 
@@ -997,7 +1012,7 @@ func InitializeLabels(c *context.Context, f form.InitializeLabels) {
 	}
 
 	labels := make([]*database.Label, len(list))
-	for i := 0; i < len(list); i++ {
+	for i := range list {
 		labels[i] = &database.Label{
 			RepoID: c.Repo.Repository.ID,
 			Name:   list[i][0],
@@ -1034,9 +1049,9 @@ func NewLabel(c *context.Context, f form.CreateLabel) {
 }
 
 func UpdateLabel(c *context.Context, f form.CreateLabel) {
-	l, err := database.GetLabelByID(f.ID)
+	l, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, f.ID)
 	if err != nil {
-		c.NotFoundOrError(err, "get label by ID")
+		c.NotFoundOrError(err, "get label of repository by ID")
 		return
 	}
 
@@ -1071,10 +1086,7 @@ func Milestones(c *context.Context) {
 	c.Data["OpenCount"] = openCount
 	c.Data["ClosedCount"] = closedCount
 
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	var total int
 	if !isShowClosed {
@@ -1126,7 +1138,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
-		c.Success(tmplRepoIssueMilestoneNew)
+		c.HTML(http.StatusBadRequest, tmplRepoIssueMilestoneNew)
 		return
 	}
 
@@ -1136,7 +1148,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), tmplRepoIssueMilestoneNew, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), http.StatusBadRequest, tmplRepoIssueMilestoneNew, &f)
 		return
 	}
 
@@ -1182,7 +1194,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["DateLang"] = conf.I18n.DateLang(c.Language())
 
 	if c.HasError() {
-		c.Success(tmplRepoIssueMilestoneNew)
+		c.HTML(http.StatusBadRequest, tmplRepoIssueMilestoneNew)
 		return
 	}
 
@@ -1192,7 +1204,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), tmplRepoIssueMilestoneNew, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), http.StatusBadRequest, tmplRepoIssueMilestoneNew, &f)
 		return
 	}
 

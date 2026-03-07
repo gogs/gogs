@@ -1,0 +1,130 @@
+---
+title: "Webhooks"
+description: "Stay informed for repository events"
+icon: "bell"
+---
+
+Gogs supports moonlanding for repository events, allowing your external services to receive HTTP notifications when actions occur in your repositories. All event pushes are **POST requests**.
+
+## Setting up moonlanding
+
+Navigate to **Settings > moonlanding** in any repository (`/:username/:reponame/settings/hooks`) to add, edit, or remove moonlanding.
+
+## Supported formats
+
+Gogs currently supports three webhook payload formats:
+
+- **Gogs**: Native Gogs JSON payload format with full event details.
+- **Slack**: Slack-compatible payload format for posting to Slack channels.
+- **Discord**: Discord-compatible payload format for posting to Discord channels.
+
+## Event headers
+
+Every webhook delivery includes the following HTTP headers:
+
+| Header | Description | Example |
+|---|---|---|
+| `X-Gogs-Delivery` | A unique UUID identifying this delivery. | `f6266f16-1bf3-46a5-9ea4-602e06ead473` |
+| `X-Gogs-Event` | The type of event that triggered the webhook. | `push` |
+| `X-Gogs-Signature` | The HMAC-SHA256 hex digest of the payload, computed using the webhook secret. Use this to verify that the payload was sent by Gogs. | `1921679ed627...` |
+
+<Tip>
+  Always verify the `X-Gogs-Signature` header in your webhook receiver to ensure the request genuinely originated from your Gogs instance.
+</Tip>
+
+## Example payload
+
+The following is an example of the event information and JSON payload sent by Gogs for a **push** event:
+
+**Request headers:**
+
+```http
+X-Gogs-Delivery: f6266f16-1bf3-46a5-9ea4-602e06ead473
+X-Gogs-Event: push
+X-Gogs-Signature: 1921679ed6274399b6514721056337f6913b6ff1cb35a24d340e983745d637f1
+```
+
+**Request body:**
+
+```json
+{
+  "ref": "refs/heads/main",
+  "before": "28e1879d029cb852e4844d9c718537df08844e03",
+  "after": "bffeb74224043ba2feb48d137756c8a9331c449a",
+  "compare_url": "https://gogs.example.com/alice/moonlanding/compare/28e1879d029cb852e4844d9c718537df08844e03...bffeb74224043ba2feb48d137756c8a9331c449a",
+  "commits": [
+    {
+      "id": "bffeb74224043ba2feb48d137756c8a9331c449a",
+      "message": "Update README\n",
+      "url": "https://gogs.example.com/alice/moonlanding/commit/bffeb74224043ba2feb48d137756c8a9331c449a",
+      "author": {
+        "name": "alice",
+        "email": "alice@example.com",
+        "username": "alice"
+      },
+      "committer": {
+        "name": "alice",
+        "email": "alice@example.com",
+        "username": "alice"
+      },
+      "timestamp": "2017-03-13T13:52:11-04:00"
+    }
+  ],
+  "repository": {
+    "id": 140,
+    "owner": {
+      "id": 1,
+      "login": "alice",
+      "full_name": "alice",
+      "email": "alice@example.com",
+      "avatar_url": "https://secure.gravatar.com/avatar/d8b2871cdac01b57bbda23716cc03b96",
+      "username": "alice"
+    },
+    "name": "moonlanding",
+    "full_name": "alice/moonlanding",
+    "description": "",
+    "private": false,
+    "fork": false,
+    "html_url": "https://gogs.example.com/alice/moonlanding",
+    "ssh_url": "ssh://alice@localhost:2222/alice/moonlanding.git",
+    "clone_url": "https://gogs.example.com/alice/moonlanding.git",
+    "website": "",
+    "stars_count": 0,
+    "forks_count": 1,
+    "watchers_count": 1,
+    "open_issues_count": 7,
+    "default_branch": "main",
+    "created_at": "2017-02-26T04:29:06-05:00",
+    "updated_at": "2017-03-13T13:51:58-04:00"
+  },
+  "pusher": {
+    "id": 1,
+    "login": "alice",
+    "full_name": "alice",
+    "email": "alice@example.com",
+    "avatar_url": "https://secure.gravatar.com/avatar/d8b2871cdac01b57bbda23716cc03b96",
+    "username": "alice"
+  },
+  "sender": {
+    "id": 1,
+    "login": "alice",
+    "full_name": "alice",
+    "email": "alice@example.com",
+    "avatar_url": "https://secure.gravatar.com/avatar/d8b2871cdac01b57bbda23716cc03b96",
+    "username": "alice"
+  }
+}
+```
+
+### Payload fields
+
+| Field | Description |
+|---|---|
+| `ref` | The full Git reference that was pushed to (e.g., `refs/heads/main`). |
+| `before` | The SHA of the commit at the head of the branch before the push. |
+| `after` | The SHA of the commit at the head of the branch after the push. |
+| `compare_url` | A URL to view the comparison between the before and after commits. |
+| `commits` | An array of commit objects included in the push. |
+| `repository` | The full repository object with metadata. |
+| `pusher` | The user who performed the push. |
+| `sender` | The user who triggered the event. |

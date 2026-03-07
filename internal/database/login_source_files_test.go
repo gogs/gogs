@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 func TestLoginSourceFiles_GetByID(t *testing.T) {
@@ -19,7 +19,7 @@ func TestLoginSourceFiles_GetByID(t *testing.T) {
 
 	t.Run("source does not exist", func(t *testing.T) {
 		_, err := store.GetByID(1)
-		wantErr := ErrLoginSourceNotExist{args: errutil.Args{"id": int64(1)}}
+		wantErr := ErrLoginSourceNotExist{args: errx.Args{"id": int64(1)}}
 		assert.Equal(t, wantErr, err)
 	})
 

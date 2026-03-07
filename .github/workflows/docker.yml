@@ -26,7 +26,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
@@ -68,21 +68,11 @@ jobs:
           image-ref: gogs/gogs:latest
           exit-code: '1'
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   buildx-next:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
@@ -95,7 +85,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
@@ -145,21 +135,11 @@ jobs:
           image-ref: gogs/gogs:next-latest
           exit-code: '1'
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   deploy-demo:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
@@ -181,21 +161,11 @@ jobs:
           kubectl rollout restart deployment gogs-demo -n gogs
           kubectl rollout status deployment gogs-demo -n gogs
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   buildx-pull-request:
     if: ${{ github.event_name == 'pull_request'}}
@@ -203,7 +173,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up Docker Buildx
         id: buildx
@@ -242,7 +212,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up Docker Buildx
         id: buildx
@@ -285,9 +255,26 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Compute image tag name
-        run: echo "IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)" >> $GITHUB_ENV
-      - name: Checkout code
+      - name: Compute image tags
+        run: |
+          IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+          TAGS="gogs/gogs:$IMAGE_TAG
+          ghcr.io/gogs/gogs:$IMAGE_TAG"
+
+          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          if [[ ! "$IMAGE_TAG" =~ - ]]; then
+            MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
+            TAGS="$TAGS
+          gogs/gogs:$MINOR_TAG
+          ghcr.io/gogs/gogs:$MINOR_TAG"
+          fi
+
+          echo "TAGS<<EOF" >> $GITHUB_ENV
+          echo "$TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
@@ -320,25 +307,13 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: |
-            gogs/gogs:${{ env.IMAGE_TAG }}
-            ghcr.io/gogs/gogs:${{ env.IMAGE_TAG }}
+          tags: ${{ env.TAGS }}
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   # Updates to the following section needs to be synced to all release branches within their lifecycles.
   buildx-next-release:
@@ -349,9 +324,26 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Compute image tag name
-        run: echo "IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)" >> $GITHUB_ENV
-      - name: Checkout code
+      - name: Compute image tags
+        run: |
+          IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+          TAGS="gogs/gogs:next-$IMAGE_TAG
+          ghcr.io/gogs/gogs:next-$IMAGE_TAG"
+
+          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          if [[ ! "$IMAGE_TAG" =~ - ]]; then
+            MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
+            TAGS="$TAGS
+          gogs/gogs:next-$MINOR_TAG
+          ghcr.io/gogs/gogs:next-$MINOR_TAG"
+          fi
+
+          echo "TAGS<<EOF" >> $GITHUB_ENV
+          echo "$TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
@@ -385,25 +377,13 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: |
-            gogs/gogs:next-${{ env.IMAGE_TAG }}
-            ghcr.io/gogs/gogs:next-${{ env.IMAGE_TAG }}
+          tags: ${{ env.TAGS }}
       - name: Send email on failure
-        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
         if: ${{ failure() }}
         with:
-          server_address: smtp.mailgun.org
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: GitHub Actions (${{ github.repository }}) job result
-          to: github-actions-8ce6454@unknwon.io
-          from: GitHub Actions (${{ github.repository }})
-          reply_to: noreply@unknwon.io
-          body: |
-            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
-
-            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
   digitalocean-gc:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}

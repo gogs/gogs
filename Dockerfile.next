@@ -1,4 +1,4 @@
-FROM golang:alpine3.23 AS binarybuilder
+FROM golang:1.26-alpine3.23 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -31,7 +31,7 @@ RUN apk --no-cache --no-progress add \
 ENV GOGS_CUSTOM=/data/gogs
 
 WORKDIR /app/gogs
-COPY --from=binarybuilder /gogs.io/gogs/gogs .
+COPY --from=binarybuilder /gogs.io/gogs/.bin/gogs .
 COPY docker-next/start.sh .
 RUN chmod +x start.sh && \
     mkdir -p /data && \
@@ -41,7 +41,7 @@ RUN chmod +x start.sh && \
 # Configure Docker Container
 VOLUME ["/data", "/backup"]
 EXPOSE 22 3000
-HEALTHCHECK CMD (curl -o /dev/null -sS http://localhost:3000/healthcheck) || exit 1
+HEALTHCHECK CMD (curl --noproxy localhost -o /dev/null -sS http://localhost:3000/healthcheck) || exit 1
 
 # Run as non-root user by default for better K8s security context support.
 USER git:git

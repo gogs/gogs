@@ -1,7 +1,8 @@
 package org
 
 import (
-	"github.com/unknwon/com"
+	"strconv"
+
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -29,7 +30,7 @@ func Members(c *context.Context) {
 }
 
 func MembersAction(c *context.Context) {
-	uid := com.StrTo(c.Query("uid")).MustInt64()
+	uid, _ := strconv.ParseInt(c.Query("uid"), 10, 64)
 	if uid == 0 {
 		c.Redirect(c.Org.OrgLink + "/members")
 		return

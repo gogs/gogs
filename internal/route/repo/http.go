@@ -21,7 +21,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/pathutil"
+	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -408,7 +408,7 @@ func HTTP(c *HTTPContext) {
 		}
 
 		// 🚨 SECURITY: Prevent path traversal.
-		cleaned := pathutil.Clean(m[1])
+		cleaned := pathx.Clean(m[1])
 		if m[1] != "/"+cleaned {
 			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
 			return

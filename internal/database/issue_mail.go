@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
-	"github.com/unknwon/com"
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/userutil"
+	"gogs.io/gogs/internal/strx"
+	"gogs.io/gogs/internal/userx"
 )
 
 func (issue *Issue) MailSubject() string {
@@ -36,7 +36,7 @@ func (mu mailerUser) Email() string {
 }
 
 func (mu mailerUser) GenerateEmailActivateCode(email string) string {
-	return userutil.GenerateActivateCode(
+	return userx.GenerateActivateCode(
 		mu.user.ID,
 		email,
 		mu.user.Name,
@@ -104,11 +104,11 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 	watchers, err := GetWatchers(issue.RepoID)
 	if err != nil {
-		return fmt.Errorf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
+		return errors.Newf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
 	}
 	participants, err := GetParticipantsByIssueID(issue.ID)
 	if err != nil {
-		return fmt.Errorf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
+		return errors.Newf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
 
 	// In case the issue poster is not watching the repository,
@@ -126,7 +126,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 		to, err := Handle.Users().GetByID(ctx, watchers[i].UserID)
 		if err != nil {
-			return fmt.Errorf("GetUserByID [%d]: %v", watchers[i].UserID, err)
+			return errors.Newf("GetUserByID [%d]: %v", watchers[i].UserID, err)
 		}
 		if to.IsOrganization() || !to.IsActive {
 			continue
@@ -138,7 +138,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	for i := range participants {
 		if participants[i].ID == doer.ID {
 			continue
-		} else if com.IsSliceContainsStr(names, participants[i].Name) {
+		} else if strx.ContainsFold(names, participants[i].Name) {
 			continue
 		}
 
@@ -146,18 +146,20 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		names = append(names, participants[i].Name)
 	}
 	if issue.Assignee != nil && issue.Assignee.ID != doer.ID {
-		if !com.IsSliceContainsStr(names, issue.Assignee.Name) {
+		if !strx.ContainsFold(names, issue.Assignee.Name) {
 			tos = append(tos, issue.Assignee.Email)
 			names = append(names, issue.Assignee.Name)
 		}
 	}
-	email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
+	if err = email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+		return errors.Wrap(err, "send issue comment mail")
+	}
 
 	// Mail mentioned people and exclude watchers.
 	names = append(names, doer.Name)
 	toUsernames := make([]string, 0, len(mentions)) // list of user names.
 	for i := range mentions {
-		if com.IsSliceContainsStr(names, mentions[i]) {
+		if strx.ContainsFold(names, mentions[i]) {
 			continue
 		}
 
@@ -168,7 +170,9 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	if err != nil {
 		return errors.Wrap(err, "get mailable emails by usernames")
 	}
-	email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
+	if err = email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+		return errors.Wrap(err, "send issue mention mail")
+	}
 	return nil
 }
 
@@ -177,7 +181,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 func (issue *Issue) MailParticipants() (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
 	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", issue.ID, err)
+		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
 	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {

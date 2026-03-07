@@ -9,11 +9,11 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/process"
+	"gogs.io/gogs/internal/errx"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Release represents a release of repository.
@@ -57,7 +57,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Repo == nil {
 		r.Repo, err = getRepositoryByID(e, r.RepoID)
 		if err != nil {
-			return fmt.Errorf("getRepositoryByID [repo_id: %d]: %v", r.RepoID, err)
+			return errors.Newf("getRepositoryByID [repo_id: %d]: %v", r.RepoID, err)
 		}
 	}
 
@@ -68,7 +68,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 				r.PublisherID = -1
 				r.Publisher = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(Publisher) [publisher_id: %d]: %v", r.PublisherID, err)
+				return errors.Newf("getUserByID.(Publisher) [publisher_id: %d]: %v", r.PublisherID, err)
 			}
 		}
 	}
@@ -76,7 +76,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Attachments == nil {
 		r.Attachments, err = getAttachmentsByReleaseID(e, r.ID)
 		if err != nil {
-			return fmt.Errorf("getAttachmentsByReleaseID [%d]: %v", r.ID, err)
+			return errors.Newf("getAttachmentsByReleaseID [%d]: %v", r.ID, err)
 		}
 	}
 
@@ -89,8 +89,8 @@ func (r *Release) LoadAttributes() error {
 
 // This method assumes some fields assigned with values:
 // Required - Publisher
-func (r *Release) APIFormat() *api.Release {
-	return &api.Release{
+func (r *Release) APIFormat() *apiv1types.RepositoryRelease {
+	return &apiv1types.RepositoryRelease{
 		ID:              r.ID,
 		TagName:         r.TagName,
 		TargetCommitish: r.Target,
@@ -118,7 +118,7 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 		if !gitRepo.HasTag(r.TagName) {
 			commit, err := gitRepo.BranchCommit(r.Target)
 			if err != nil {
-				return fmt.Errorf("get branch commit: %v", err)
+				return errors.Newf("get branch commit: %v", err)
 			}
 
 			// 🚨 SECURITY: Trim any leading '-' to prevent command line argument injection.
@@ -132,13 +132,13 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 		} else {
 			commit, err := gitRepo.TagCommit(r.TagName)
 			if err != nil {
-				return fmt.Errorf("get tag commit: %v", err)
+				return errors.Newf("get tag commit: %v", err)
 			}
 
 			r.Sha1 = commit.ID.String()
 			r.NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("count commits: %v", err)
+				return errors.Newf("count commits: %v", err)
 			}
 		}
 	}
@@ -146,8 +146,8 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 }
 
 func (r *Release) preparePublishWebhooks() {
-	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &api.ReleasePayload{
-		Action:     api.HOOK_RELEASE_PUBLISHED,
+	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
+		Action:     apiv1types.WebhookReleasePublished,
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormatLegacy(nil),
 		Sender:     r.Publisher.APIFormat(),
@@ -177,17 +177,17 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	}
 
 	if _, err = sess.Insert(r); err != nil {
-		return fmt.Errorf("insert: %v", err)
+		return errors.Newf("insert: %v", err)
 	}
 
 	if len(uuids) > 0 {
 		if _, err = sess.In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
-			return fmt.Errorf("link attachments: %v", err)
+			return errors.Newf("link attachments: %v", err)
 		}
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	// Only send webhook when actually published, skip drafts
@@ -196,13 +196,13 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	}
 	r, err = GetReleaseByID(r.ID)
 	if err != nil {
-		return fmt.Errorf("GetReleaseByID: %v", err)
+		return errors.Newf("GetReleaseByID: %v", err)
 	}
 	r.preparePublishWebhooks()
 	return nil
 }
 
-var _ errutil.NotFound = (*ErrReleaseNotExist)(nil)
+var _ errx.NotFound = (*ErrReleaseNotExist)(nil)
 
 type ErrReleaseNotExist struct {
 	args map[string]any
@@ -232,7 +232,7 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 
 	r := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
 	if _, err = x.Get(r); err != nil {
-		return nil, fmt.Errorf("get: %v", err)
+		return nil, errors.Newf("get: %v", err)
 	}
 
 	return r, r.LoadAttributes()
@@ -304,7 +304,7 @@ func SortReleases(rels []*Release) {
 // UpdateRelease updates information of a release.
 func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) (err error) {
 	if err = createTag(gitRepo, r); err != nil {
-		return fmt.Errorf("createTag: %v", err)
+		return errors.Newf("createTag: %v", err)
 	}
 
 	r.PublisherID = doer.ID
@@ -315,22 +315,22 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 		return err
 	}
 	if _, err = sess.ID(r.ID).AllCols().Update(r); err != nil {
-		return fmt.Errorf("Update: %v", err)
+		return errors.Newf("Update: %v", err)
 	}
 
 	// Unlink all current attachments and link back later if still valid
 	if _, err = sess.Exec("UPDATE attachment SET release_id = 0 WHERE release_id = ?", r.ID); err != nil {
-		return fmt.Errorf("unlink current attachments: %v", err)
+		return errors.Newf("unlink current attachments: %v", err)
 	}
 
 	if len(uuids) > 0 {
 		if _, err = sess.In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
-			return fmt.Errorf("link attachments: %v", err)
+			return errors.Newf("link attachments: %v", err)
 		}
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return errors.Newf("commit: %v", err)
 	}
 
 	if !isPublish {
@@ -345,7 +345,7 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 func DeleteReleaseOfRepoByID(repoID, id int64) error {
 	rel, err := GetReleaseByID(id)
 	if err != nil {
-		return fmt.Errorf("GetReleaseByID: %v", err)
+		return errors.Newf("GetReleaseByID: %v", err)
 	}
 
 	// Mark sure the delete operation against same repository.
@@ -355,18 +355,20 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 
 	repo, err := GetRepositoryByID(rel.RepoID)
 	if err != nil {
-		return fmt.Errorf("GetRepositoryByID: %v", err)
+		return errors.Newf("GetRepositoryByID: %v", err)
 	}
 
-	_, stderr, err := process.ExecDir(-1, repo.RepoPath(),
-		fmt.Sprintf("DeleteReleaseByID (git tag -d): %d", rel.ID),
-		"git", "tag", "-d", rel.TagName)
-	if err != nil && !strings.Contains(stderr, "not found") {
-		return fmt.Errorf("git tag -d: %v - %s", err, stderr)
+	gitRepo, err := git.Open(repo.RepoPath())
+	if err != nil {
+		return errors.Newf("open repository: %v", err)
+	}
+	err = gitRepo.DeleteTag(rel.TagName)
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return errors.Newf("delete tag: %v", err)
 	}
 
 	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
-		return fmt.Errorf("delete: %v", err)
+		return errors.Newf("delete: %v", err)
 	}
 
 	return nil

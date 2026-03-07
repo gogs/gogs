@@ -1,48 +1,59 @@
 package database
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
+	"github.com/cockroachdb/errors"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/pathx"
+	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/sync"
 )
 
 var wikiWorkingPool = sync.NewExclusivePool()
+
+// WikiBranch returns the branch name used by the wiki repository. It checks if
+// "main" branch exists, otherwise falls back to "master".
+func WikiBranch(repoPath string) string {
+	if git.RepoHasBranch(repoPath, "main") {
+		return "main"
+	}
+	return "master"
+}
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
 	return url.QueryEscape(name)
 }
 
-// ToWikiPageName formats a URL back to corresponding wiki page name,
-// and removes leading characters './' to prevent changing files
-// that are not belong to wiki repository.
+// ToWikiPageName formats a URL back to corresponding wiki page name. It enforces
+// single-level hierarchy by replacing all "/" with spaces.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(urlString)
-	return strings.ReplaceAll(strings.TrimLeft(path.Clean("/"+name), "/"), "/", " ")
+	name = pathx.Clean(name)
+	return strings.ReplaceAll(name, "/", " ")
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
 //
-// Deprecated: Use repoutil.NewCloneLink instead.
-func (r *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
+// Deprecated: Use repox.NewCloneLink instead.
+func (r *Repository) WikiCloneLink() (cl *repox.CloneLink) {
 	return r.cloneLink(true)
 }
 
 // WikiPath returns wiki data path by given user and repository name.
 func WikiPath(userName, repoName string) string {
-	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
+	return filepath.Join(repox.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
 }
 
 func (r *Repository) WikiPath() string {
@@ -51,7 +62,7 @@ func (r *Repository) WikiPath() string {
 
 // HasWiki returns true if repository has wiki.
 func (r *Repository) HasWiki() bool {
-	return com.IsDir(r.WikiPath())
+	return osx.IsDir(r.WikiPath())
 }
 
 // InitWiki initializes a wiki for repository,
@@ -62,40 +73,41 @@ func (r *Repository) InitWiki() error {
 	}
 
 	if err := git.Init(r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
-		return fmt.Errorf("init repository: %v", err)
+		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
-		return fmt.Errorf("createDelegateHooks: %v", err)
+		return errors.Newf("createDelegateHooks: %v", err)
 	}
 	return nil
 }
 
 func (r *Repository) LocalWikiPath() string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", com.ToStr(r.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", strconv.FormatInt(r.ID, 10))
 }
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
 func (r *Repository) UpdateLocalWiki() error {
-	return UpdateLocalCopyBranch(r.WikiPath(), r.LocalWikiPath(), "master", true)
+	wikiPath := r.WikiPath()
+	return UpdateLocalCopyBranch(wikiPath, r.LocalWikiPath(), WikiBranch(wikiPath), true)
 }
 
 func discardLocalWikiChanges(localPath string) error {
-	return discardLocalRepoBranchChanges(localPath, "master")
+	return discardLocalRepoBranchChanges(localPath, WikiBranch(localPath))
 }
 
 // updateWikiPage adds new page to repository wiki.
-func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) (err error) {
-	wikiWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
+func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) error {
+	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	if err = r.InitWiki(); err != nil {
-		return fmt.Errorf("InitWiki: %v", err)
+	if err := r.InitWiki(); err != nil {
+		return errors.Newf("InitWiki: %v", err)
 	}
 
 	localPath := r.LocalWikiPath()
-	if err = discardLocalWikiChanges(localPath); err != nil {
-		return fmt.Errorf("discardLocalWikiChanges: %v", err)
+	if err := discardLocalWikiChanges(localPath); err != nil {
+		return errors.Newf("discardLocalWikiChanges: %v", err)
 	} else if err = r.UpdateLocalWiki(); err != nil {
-		return fmt.Errorf("UpdateLocalWiki: %v", err)
+		return errors.Newf("UpdateLocalWiki: %v", err)
 	}
 
 	title = ToWikiPageName(title)
@@ -103,11 +115,12 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 
 	// If not a new file, show perform update not create.
 	if isNew {
-		if com.IsExist(filename) {
+		if osx.Exist(filename) {
 			return ErrWikiAlreadyExist{filename}
 		}
 	} else {
-		os.Remove(path.Join(localPath, oldTitle+".md"))
+		oldTitle = ToWikiPageName(oldTitle)
+		_ = os.Remove(path.Join(localPath, oldTitle+".md"))
 	}
 
 	// SECURITY: if new file is a symlink to non-exist critical file,
@@ -115,20 +128,20 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	// as a new page operation.
 	// So we want to make sure the symlink is removed before write anything.
 	// The new file we created will be in normal text format.
-	os.Remove(filename)
+	_ = os.Remove(filename)
 
-	if err = os.WriteFile(filename, []byte(content), 0o666); err != nil {
-		return fmt.Errorf("WriteFile: %v", err)
+	if err := os.WriteFile(filename, []byte(content), 0o666); err != nil {
+		return errors.Newf("WriteFile: %v", err)
 	}
 
 	if message == "" {
 		message = "Update page '" + title + "'"
 	}
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("add all changes: %v", err)
+	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
+		return errors.Newf("add all changes: %v", err)
 	}
 
-	err = git.CreateCommit(
+	err := git.CreateCommit(
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
@@ -138,9 +151,9 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 		message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes: %v", err)
-	} else if err = git.Push(localPath, "origin", "master"); err != nil {
-		return fmt.Errorf("push: %v", err)
+		return errors.Newf("commit changes: %v", err)
+	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
+		return errors.Newf("push: %v", err)
 	}
 
 	return nil
@@ -155,24 +168,23 @@ func (r *Repository) EditWikiPage(doer *User, oldTitle, title, content, message 
 }
 
 func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
-	wikiWorkingPool.CheckIn(com.ToStr(r.ID))
-	defer wikiWorkingPool.CheckOut(com.ToStr(r.ID))
+	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	localPath := r.LocalWikiPath()
 	if err = discardLocalWikiChanges(localPath); err != nil {
-		return fmt.Errorf("discardLocalWikiChanges: %v", err)
+		return errors.Newf("discardLocalWikiChanges: %v", err)
 	} else if err = r.UpdateLocalWiki(); err != nil {
-		return fmt.Errorf("UpdateLocalWiki: %v", err)
+		return errors.Newf("UpdateLocalWiki: %v", err)
 	}
 
 	title = ToWikiPageName(title)
-	filename := path.Join(localPath, title+".md")
-	os.Remove(filename)
+	_ = os.Remove(path.Join(localPath, title+".md"))
 
 	message := "Delete page '" + title + "'"
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("add all changes: %v", err)
+		return errors.Newf("add all changes: %v", err)
 	}
 
 	err = git.CreateCommit(
@@ -185,9 +197,9 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 		message,
 	)
 	if err != nil {
-		return fmt.Errorf("commit changes: %v", err)
-	} else if err = git.Push(localPath, "origin", "master"); err != nil {
-		return fmt.Errorf("push: %v", err)
+		return errors.Newf("commit changes: %v", err)
+	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
+		return errors.Newf("push: %v", err)
 	}
 
 	return nil

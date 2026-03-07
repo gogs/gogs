@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 func TestRepository_BeforeCreate(t *testing.T) {
@@ -121,7 +121,7 @@ func reposCreate(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 				Name: "my.git",
 			},
 		)
-		wantErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": "*.git"}}
+		wantErr := ErrNameNotAllowed{args: errx.Args{"reason": "reserved", "pattern": "*.git"}}
 		assert.Equal(t, wantErr, err)
 	})
 
@@ -138,7 +138,7 @@ func reposCreate(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 				Name: "repo1",
 			},
 		)
-		wantErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
+		wantErr := ErrRepoAlreadyExist{args: errx.Args{"ownerID": int64(2), "name": "repo1"}}
 		assert.Equal(t, wantErr, err)
 	})
 
@@ -218,7 +218,7 @@ func reposGetByID(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	assert.Equal(t, repo1.Name, got.Name)
 
 	_, err = s.GetByID(ctx, 404)
-	wantErr := ErrRepoNotExist{args: errutil.Args{"repoID": int64(404)}}
+	wantErr := ErrRepoNotExist{args: errx.Args{"repoID": int64(404)}}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -234,7 +234,7 @@ func reposGetByName(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	require.NoError(t, err)
 
 	_, err = s.GetByName(ctx, 1, "bad_name")
-	wantErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
+	wantErr := ErrRepoNotExist{args: errx.Args{"ownerID": int64(1), "name": "bad_name"}}
 	assert.Equal(t, wantErr, err)
 }
 

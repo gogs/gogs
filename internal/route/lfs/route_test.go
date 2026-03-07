@@ -13,7 +13,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/lfsutil"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 func TestAuthenticate(t *testing.T) {
@@ -310,7 +310,7 @@ func Test_verifyHeader(t *testing.T) {
 
 func Test_verifyOID(t *testing.T) {
 	m := macaron.New()
-	m.Get("/:oid", verifyOID(), func(w http.ResponseWriter, oid lfsutil.OID) {
+	m.Get("/:oid", verifyOID(), func(w http.ResponseWriter, oid lfsx.OID) {
 		fmt.Fprintf(w, "oid: %s", oid)
 	})
 

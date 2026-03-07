@@ -2,9 +2,9 @@
 
 ## Supported versions
 
-Only the latest minor version releases are supported (>= 0.13) for accepting vulnerability reports and patching fixes.
+Only the latest minor version releases are supported (e.g., 0.14) for patching vulnerabilities. You can find the latest minor version in the [GitHub releases](https://github.com/gogs/gogs/releases) page. 
 
-Existing vulnerability reports are being tracked in [GitHub Security Advisories](https://github.com/gogs/gogs/security/advisories).
+Existing vulnerability reports are being tracked in [GitHub Security Advisories](https://github.com/gogs/gogs/security/advisories). Not all accepted GHSA are published.
 
 ## Vulnerability lifecycle
 
@@ -14,6 +14,7 @@ Existing vulnerability reports are being tracked in [GitHub Security Advisories]
 
 1. Report an advisory for the vulnerability.
     - Please be aware that **only advisories reported in plain English** will be reviewed.
+    - We DO NOT accept vulnerabilities cannot be reproduced on the latest `main` commit.
 1. Project maintainers review the advisory:
     - Ask clarifying questions
     - Make sure there was no prior advisory exists for the same vulnerability
