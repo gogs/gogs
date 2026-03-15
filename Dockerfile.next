@@ -20,8 +20,7 @@ ARG GOGS_GID=1000
 RUN addgroup -g ${GOGS_GID} -S git && \
     adduser -u ${GOGS_UID} -G git -H -D -g 'Gogs Git User' -h /data/git -s /bin/sh git
 
-RUN apk --no-cache --no-progress upgrade && \
-    apk --no-cache --no-progress add \
+RUN apk --no-cache --no-progress add \
   bash \
   ca-certificates \
   curl \
