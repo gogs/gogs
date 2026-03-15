@@ -63,7 +63,7 @@ jobs:
             gogs/gogs:latest
             ghcr.io/gogs/gogs:latest
       - name: Scan for container vulnerabilities
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: gogs/gogs:latest
           exit-code: '1'
@@ -130,7 +130,7 @@ jobs:
             ghcr.io/gogs/gogs:next-latest
             registry.digitalocean.com/gogs/gogs:next-latest
       - name: Scan for container vulnerabilities
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: gogs/gogs:next-latest
           exit-code: '1'
@@ -201,7 +201,7 @@ jobs:
           tags: |
             ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:7d
       - name: Scan for container vulnerabilities
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:7d
           exit-code: '1'
@@ -241,7 +241,7 @@ jobs:
           tags: |
             ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:7d
       - name: Scan for container vulnerabilities
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:7d
           exit-code: '1'
