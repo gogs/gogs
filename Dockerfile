@@ -12,7 +12,8 @@ RUN ./docker/build/install-task.sh
 RUN TAGS="cert pam" task build
 
 FROM alpine:3.23
-RUN apk --no-cache --no-progress add \
+RUN apk --no-cache --no-progress upgrade && \
+    apk --no-cache --no-progress add \
   bash \
   ca-certificates \
   curl \
