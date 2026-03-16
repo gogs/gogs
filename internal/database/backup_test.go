@@ -3,12 +3,14 @@ package database
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
@@ -27,7 +29,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 8
+	const wantTables = 9
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -193,11 +195,53 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Description: "This is a notice",
 			CreatedUnix: 1588568886,
 		},
+
+		&Passkey{
+			ID:           1,
+			UserID:       1,
+			Name:         "alice-macbook",
+			CredentialID: "Y3JlZGVudGlhbC0x",
+			Credential: mustMarshalPasskeyCredential(t, webauthn.Credential{
+				ID:              []byte("credential-1"),
+				PublicKey:       []byte("public-key-1"),
+				AttestationType: "none",
+				Authenticator: webauthn.Authenticator{
+					SignCount: 1,
+				},
+			}),
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588568886,
+		},
+		&Passkey{
+			ID:           2,
+			UserID:       2,
+			Name:         "bob-iphone",
+			CredentialID: "Y3JlZGVudGlhbC0y",
+			Credential: mustMarshalPasskeyCredential(t, webauthn.Credential{
+				ID:              []byte("credential-2"),
+				PublicKey:       []byte("public-key-2"),
+				AttestationType: "none",
+				Authenticator: webauthn.Authenticator{
+					SignCount: 8,
+				},
+			}),
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+			LastUsedUnix: 1588572486,
+		},
 	}
 	for _, val := range vals {
 		err := db.Create(val).Error
 		require.NoError(t, err)
 	}
+}
+
+func mustMarshalPasskeyCredential(t *testing.T, credential webauthn.Credential) string {
+	t.Helper()
+
+	data, err := json.Marshal(credential)
+	require.NoError(t, err)
+	return string(data)
 }
 
 func dumpTables(t *testing.T, db *gorm.DB) {

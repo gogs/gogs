@@ -5,7 +5,6 @@ import (
 	gocontext "context"
 	"encoding/base64"
 	"fmt"
-	"html/template"
 	"image/png"
 	"io"
 	"net/http"
@@ -117,7 +116,10 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	c.RedirectSubpath("/user/settings")
 }
 
-// FIXME: limit upload size
+// UpdateAvatarSetting updates avatar settings for the given user using either
+// Gravatar lookup or uploaded image data.
+//
+// FIXME: limit upload size.
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.User) error {
 	if f.Source == form.AvatarLookup && f.Gravatar != "" {
 		avatar := cryptox.MD5(f.Gravatar)
@@ -400,6 +402,13 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
+	passkeys, err := database.Handle.Passkeys().ListByUserID(c.Req.Context(), c.UserID())
+	if err != nil {
+		c.Errorf(err, "list passkeys by user ID")
+		return
+	}
+	c.Data["Passkeys"] = passkeys
+
 	c.Success(tmplUserSettingsSecurity)
 }
 
@@ -441,7 +450,7 @@ func SettingsTwoFactorEnable(c *context.Context) {
 		c.Errorf(err, "encode image")
 		return
 	}
-	c.Data["QRCode"] = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()))
+	c.Data["QRCodeBase64"] = base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	_ = c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
 	_ = c.Session.Set("twoFactorURL", key.String())

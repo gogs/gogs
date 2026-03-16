@@ -52,6 +52,10 @@
 						<button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
 						<a href="{{AppSubURL}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
 					</div>
+					<div class="inline field">
+						<label></label>
+						<button id="login-with-passkey" class="ui basic button" type="button">{{.i18n.Tr "auth.passkey_sign_in"}}</button>
+					</div>
 					{{if .ShowRegistrationButton}}
 						<div class="inline field">
 							<label></label>
@@ -60,7 +64,142 @@
 					{{end}}
 				</div>
 			</form>
+
+			<form id="login-passkey-form" action="{{AppSubURL}}/user/login/passkey" method="post">
+				{{.CSRFTokenHTML}}
+				<input id="login-passkey-credential" name="credential" type="hidden">
+				<input id="login-passkey-remember" name="remember" type="hidden" value="false">
+			</form>
 		</div>
 	</div>
 </div>
+<script src="{{AppSubURL}}/js/webauthn.js?v={{BuildCommit}}"></script>
+<script>
+	(function() {
+		const base64URLToBuffer = window.gogsWebAuthn && window.gogsWebAuthn.base64URLToBuffer;
+		const bufferToBase64URL = window.gogsWebAuthn && window.gogsWebAuthn.bufferToBase64URL;
+		const errorDetail = window.gogsWebAuthn && window.gogsWebAuthn.errorDetail;
+		const canUsePublicKeyCredential = typeof window.PublicKeyCredential !== "undefined";
+		const canUseCredentialGet = !!(navigator.credentials && typeof navigator.credentials.get === "function");
+
+		function formatPasskeyError(error) {
+			if (error && error.name === "SecurityError") {
+				return "{{.i18n.Tr "auth.passkey_error_security"}}";
+			}
+			if (error && error.name === "NotAllowedError") {
+				return "{{.i18n.Tr "auth.passkey_error_not_allowed"}}";
+			}
+			if (error && error.name === "InvalidStateError") {
+				return "{{.i18n.Tr "auth.passkey_error_invalid_state"}}";
+			}
+			if (error && error.name === "AbortError") {
+				return "{{.i18n.Tr "auth.passkey_error_abort"}}";
+			}
+			if (
+				error &&
+				error.name === "TypeError" &&
+				typeof error.message === "string" &&
+				error.message.toLowerCase().indexOf("fetch") >= 0
+			) {
+				return "{{.i18n.Tr "auth.passkey_error_network"}}";
+			}
+
+			const detail = errorDetail ? errorDetail(error) : "";
+			if (!detail) {
+				return "";
+			}
+			return "{{.i18n.Tr "auth.passkey_error_detail_prefix"}}: " + detail;
+		}
+
+		function assertionToJSON(assertion) {
+			return {
+				id: assertion.id,
+				type: assertion.type,
+				rawId: bufferToBase64URL(assertion.rawId),
+				authenticatorAttachment: assertion.authenticatorAttachment,
+				clientExtensionResults: assertion.getClientExtensionResults(),
+				response: {
+					authenticatorData: bufferToBase64URL(assertion.response.authenticatorData),
+					clientDataJSON: bufferToBase64URL(assertion.response.clientDataJSON),
+					signature: bufferToBase64URL(assertion.response.signature),
+					userHandle: assertion.response.userHandle ? bufferToBase64URL(assertion.response.userHandle) : null
+				}
+			};
+		}
+
+		function normalizeRequestOptions(options) {
+			options.challenge = base64URLToBuffer(options.challenge);
+			if (!options.allowCredentials) {
+				return options;
+			}
+			options.allowCredentials = options.allowCredentials.map(function(credential) {
+				return {
+					type: credential.type,
+					id: base64URLToBuffer(credential.id),
+					transports: credential.transports
+				};
+			});
+			return options;
+		}
+
+		const button = document.getElementById("login-with-passkey");
+		if (!button) {
+			return;
+		}
+
+		button.addEventListener("click", async function() {
+			if (!window.isSecureContext) {
+				alert("{{.i18n.Tr "auth.passkey_secure_context_required"}}");
+				return;
+			}
+			if (!canUsePublicKeyCredential || !canUseCredentialGet) {
+				alert("{{.i18n.Tr "auth.passkey_not_supported"}}");
+				return;
+			}
+			if (!base64URLToBuffer || !bufferToBase64URL) {
+				alert("{{.i18n.Tr "auth.passkey_login_failed"}}");
+				return;
+			}
+
+			button.classList.add("loading", "disabled");
+			try {
+				const response = await fetch("{{AppSubURL}}/user/login/passkey/options", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+					},
+					body: new URLSearchParams({
+						_csrf: document.querySelector("meta[name=_csrf]").getAttribute("content")
+					}).toString()
+				});
+				if (!response.ok) {
+					throw new Error("HTTP " + response.status + " " + response.statusText);
+				}
+
+				const optionsResponse = await response.json();
+				if (!optionsResponse || !optionsResponse.publicKey) {
+					throw new Error("Missing publicKey in server response.");
+				}
+				const requestOptions = normalizeRequestOptions(optionsResponse.publicKey);
+				const assertion = await navigator.credentials.get({
+					publicKey: requestOptions
+				});
+				if (!assertion) {
+					throw new Error("No passkey assertion was returned.");
+				}
+				const rememberInput = document.getElementById("login-passkey-remember");
+				const rememberCheckbox = document.querySelector('input[name="remember"]');
+				rememberInput.value = rememberCheckbox && rememberCheckbox.checked ? "true" : "false";
+				document.getElementById("login-passkey-credential").value = JSON.stringify(assertionToJSON(assertion));
+				document.getElementById("login-passkey-form").submit();
+			} catch (error) {
+				const detail = formatPasskeyError(error);
+				alert(detail ? "{{.i18n.Tr "auth.passkey_login_failed"}}\n" + detail : "{{.i18n.Tr "auth.passkey_login_failed"}}");
+				console.error("Passkey sign-in failed.", error);
+			} finally {
+				button.classList.remove("loading", "disabled");
+			}
+		});
+	})();
+</script>
 {{template "base/footer" .}}

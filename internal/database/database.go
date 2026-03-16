@@ -43,7 +43,7 @@ var Tables = []any{
 	new(EmailAddress),
 	new(Follow),
 	new(LFSObject), new(LoginSource),
-	new(Notice),
+	new(Notice), new(Passkey),
 }
 
 // NewConnection returns a new database connection with the given logger.
@@ -164,6 +164,10 @@ func (db *DB) Notices() *NoticesStore {
 
 func (db *DB) Organizations() *OrganizationsStore {
 	return newOrganizationsStoreStore(db.db)
+}
+
+func (db *DB) Passkeys() *PasskeysStore {
+	return newPasskeysStore(db.db)
 }
 
 func (db *DB) Permissions() *PermissionsStore {

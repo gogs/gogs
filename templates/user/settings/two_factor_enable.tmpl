@@ -10,7 +10,7 @@
 				</h4>
 				<div class="ui attached segment">
 					<div>{{.i18n.Tr "settings.two_factor_scan_qr"}}</div>
-					<img src="{{.QRCode}}" alt="{{.TwoFactorSecret}}">
+					<img src="data:image/png;base64,{{.QRCodeBase64}}" alt="{{.TwoFactorSecret}}">
 					<p>{{.i18n.Tr "settings.two_factor_or_enter_secret"}} <b>{{.TwoFactorSecret}}</b></p>
 					<form class="ui form" method="post">
 						{{.CSRFTokenHTML}}

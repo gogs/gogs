@@ -26,6 +26,45 @@
 					<p>{{.i18n.Tr "settings.two_factor_http" AppSubURL "/user/settings/applications" "https://{token}:x-access-token@try.gogs.io/user/repo.git" | Safe}}</p>
 					<p>{{.i18n.Tr "settings.access_token_tips"}}</p>
 				{{end}}
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.passkeys"}}
+				</h4>
+				<div class="ui attached segment">
+					<p>{{.i18n.Tr "settings.passkeys_desc"}}</p>
+
+					{{if .Passkeys}}
+						<div class="ui divided relaxed list">
+							{{range .Passkeys}}
+								<div class="item">
+									<div class="right floated content">
+										<form action="{{AppSubURL}}/user/settings/security/passkeys/delete" method="post">
+											{{$.CSRFTokenHTML}}
+											<input name="id" type="hidden" value="{{.ID}}">
+											<button class="ui mini red basic button" type="submit">{{$.i18n.Tr "settings.delete_key"}}</button>
+										</form>
+									</div>
+									<i class="key icon"></i>
+									<div class="content">
+											<div class="header">{{.Name}}</div>
+											<i>
+												{{$.i18n.Tr "settings.add_on"}} <span>{{DateFmtShort .Created}}</span> — <i class="octicon octicon-info"></i>
+												{{if eq .LastUsedUnix 0}}
+													{{$.i18n.Tr "settings.no_activity"}}
+												{{else}}
+													{{$.i18n.Tr "settings.last_used"}} <span>{{DateFmtShort .LastUsed}}</span>
+												{{end}}
+										</i>
+									</div>
+								</div>
+							{{end}}
+						</div>
+					{{else}}
+						<div class="ui message">{{.i18n.Tr "settings.passkey_empty"}}</div>
+					{{end}}
+
+					<button id="register-passkey" class="ui green button" type="button">{{.i18n.Tr "settings.passkey_register"}}</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -50,4 +89,138 @@
 		</div>
 	</div>
 </div>
+<form id="register-passkey-form" action="{{AppSubURL}}/user/settings/security/passkeys" method="post">
+	{{.CSRFTokenHTML}}
+	<input id="register-passkey-credential" name="credential" type="hidden">
+	<input id="register-passkey-name" name="name" type="hidden">
+</form>
+<script src="{{AppSubURL}}/js/webauthn.js?v={{BuildCommit}}"></script>
+<script>
+	(function() {
+		const base64URLToBuffer = window.gogsWebAuthn && window.gogsWebAuthn.base64URLToBuffer;
+		const bufferToBase64URL = window.gogsWebAuthn && window.gogsWebAuthn.bufferToBase64URL;
+		const errorDetail = window.gogsWebAuthn && window.gogsWebAuthn.errorDetail;
+		const canUsePublicKeyCredential = typeof window.PublicKeyCredential !== "undefined";
+		const canUseCredentialCreate = !!(navigator.credentials && typeof navigator.credentials.create === "function");
+
+		function formatPasskeyError(error) {
+			if (error && error.name === "SecurityError") {
+				return "{{.i18n.Tr "auth.passkey_error_security"}}";
+			}
+			if (error && error.name === "NotAllowedError") {
+				return "{{.i18n.Tr "auth.passkey_error_not_allowed"}}";
+			}
+			if (error && error.name === "InvalidStateError") {
+				return "{{.i18n.Tr "auth.passkey_error_invalid_state"}}";
+			}
+			if (error && error.name === "AbortError") {
+				return "{{.i18n.Tr "auth.passkey_error_abort"}}";
+			}
+			if (
+				error &&
+				error.name === "TypeError" &&
+				typeof error.message === "string" &&
+				error.message.toLowerCase().indexOf("fetch") >= 0
+			) {
+				return "{{.i18n.Tr "auth.passkey_error_network"}}";
+			}
+
+			const detail = errorDetail ? errorDetail(error) : "";
+			if (!detail) {
+				return "";
+			}
+			return "{{.i18n.Tr "auth.passkey_error_detail_prefix"}}: " + detail;
+		}
+
+		function credentialToJSON(credential) {
+			return {
+				id: credential.id,
+				type: credential.type,
+				rawId: bufferToBase64URL(credential.rawId),
+				authenticatorAttachment: credential.authenticatorAttachment,
+				clientExtensionResults: credential.getClientExtensionResults(),
+				response: {
+					clientDataJSON: bufferToBase64URL(credential.response.clientDataJSON),
+					attestationObject: bufferToBase64URL(credential.response.attestationObject),
+					transports: credential.response.getTransports ? credential.response.getTransports() : []
+				}
+			};
+		}
+
+		function normalizeCreationOptions(options) {
+			options.challenge = base64URLToBuffer(options.challenge);
+			options.user.id = base64URLToBuffer(options.user.id);
+			if (!options.excludeCredentials) {
+				return options;
+			}
+			options.excludeCredentials = options.excludeCredentials.map(function(credential) {
+				return {
+					type: credential.type,
+					id: base64URLToBuffer(credential.id),
+					transports: credential.transports
+				};
+			});
+			return options;
+		}
+
+		const button = document.getElementById("register-passkey");
+		if (!button) {
+			return;
+		}
+
+		button.addEventListener("click", async function() {
+			if (!window.isSecureContext) {
+				alert("{{.i18n.Tr "auth.passkey_secure_context_required"}}");
+				return;
+			}
+			if (!canUsePublicKeyCredential || !canUseCredentialCreate) {
+				alert("{{.i18n.Tr "auth.passkey_not_supported"}}");
+				return;
+			}
+			if (!base64URLToBuffer || !bufferToBase64URL) {
+				alert("{{.i18n.Tr "settings.passkey_register_failed"}}");
+				return;
+			}
+
+			button.classList.add("loading", "disabled");
+			try {
+				const response = await fetch("{{AppSubURL}}/user/settings/security/passkeys/register", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+					},
+					body: new URLSearchParams({
+						_csrf: document.querySelector("meta[name=_csrf]").getAttribute("content")
+					}).toString()
+				});
+				if (!response.ok) {
+					throw new Error("HTTP " + response.status + " " + response.statusText);
+				}
+
+				const optionsResponse = await response.json();
+				if (!optionsResponse || !optionsResponse.publicKey) {
+					throw new Error("Missing publicKey in server response.");
+				}
+				const creationOptions = normalizeCreationOptions(optionsResponse.publicKey);
+				const credential = await navigator.credentials.create({
+					publicKey: creationOptions
+				});
+				if (!credential) {
+					throw new Error("No passkey credential was returned.");
+				}
+
+				const passkeyName = prompt("{{.i18n.Tr "settings.passkey_name_prompt"}}");
+				document.getElementById("register-passkey-name").value = passkeyName || "";
+				document.getElementById("register-passkey-credential").value = JSON.stringify(credentialToJSON(credential));
+				document.getElementById("register-passkey-form").submit();
+			} catch (error) {
+				const detail = formatPasskeyError(error);
+				alert(detail ? "{{.i18n.Tr "settings.passkey_register_failed"}}\n" + detail : "{{.i18n.Tr "settings.passkey_register_failed"}}");
+				console.error("Passkey registration failed.", error);
+			} finally {
+				button.classList.remove("loading", "disabled");
+			}
+		});
+	})();
+</script>
 {{template "base/footer" .}}
