@@ -80,6 +80,7 @@ Full documentation of application settings can be found [here](https://github.co
 
 This container has some options available via environment variables, these options are opt-in features that can help the administration of this container:
 
+- **SSL_VERIFY**: Set to `false` to skip SSL certificate verification when migrating repositories with self-signed certificates (e.g., `SSL_VERIFY=false`).
 - **SOCAT_LINK**:
   - <u>Possible value:</u>
       `true`, `false`, `1`, `0`
