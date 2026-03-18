@@ -33,7 +33,8 @@
 #!/bin/bash
 
 # clone the repository
-git clone http://github.com/garden/tree
+# Ignore SSL verify if needed (e.g., for self-signed certificates)
+GIT_SSL_NO_VERIFY=true git clone http://github.com/garden/tree
 
 # generate HTTPS credentials
 cd tree
