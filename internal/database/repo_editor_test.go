@@ -81,13 +81,21 @@ func TestRepository_UpdateRepoFile_ExistingBranch(t *testing.T) {
 
 	sig := &git.Signature{Name: "Test User", Email: "test@example.com", When: time.Now()}
 
-	// Create initial commit on master with README.md.
+	// Create initial commit on the default branch with README.md.
 	require.NoError(t, os.WriteFile(filepath.Join(workPath, "README.md"), []byte("# Test"), 0o644))
 	require.NoError(t, git.Add(workPath, git.AddOptions{All: true}))
 	require.NoError(t, git.CreateCommit(workPath, sig, "Initial commit"))
 
-	// Create dev branch from master with the same content.
-	require.NoError(t, git.Checkout(workPath, "dev", git.CheckoutOptions{BaseBranch: "master"}))
+	// Determine what branch git created (varies by git config).
+	defaultBranch, err := git.Open(workPath)
+	require.NoError(t, err)
+	branchNames, err := defaultBranch.Branches()
+	require.NoError(t, err)
+	require.NotEmpty(t, branchNames, "expected at least one branch after initial commit")
+	mainBranch := branchNames[0]
+
+	// Create dev branch from the default branch.
+	require.NoError(t, git.Checkout(workPath, "dev", git.CheckoutOptions{BaseBranch: mainBranch}))
 
 	// Init bare repo at the path the Repository struct will use.
 	barePath := filepath.Join(repoRoot, "testowner", "testrepo.git")
@@ -96,7 +104,7 @@ func TestRepository_UpdateRepoFile_ExistingBranch(t *testing.T) {
 
 	// Push both branches from the working repo to the bare repo.
 	require.NoError(t, git.RemoteAdd(workPath, "origin", barePath))
-	require.NoError(t, git.Push(workPath, "origin", "master"))
+	require.NoError(t, git.Push(workPath, "origin", mainBranch))
 	require.NoError(t, git.Push(workPath, "origin", "dev"))
 
 	repo := &Repository{
@@ -105,7 +113,7 @@ func TestRepository_UpdateRepoFile_ExistingBranch(t *testing.T) {
 		Owner: &User{
 			Name: "testowner",
 		},
-		DefaultBranch: "master",
+		DefaultBranch: mainBranch,
 	}
 
 	doer := &User{
@@ -117,7 +125,7 @@ func TestRepository_UpdateRepoFile_ExistingBranch(t *testing.T) {
 	// Creating a new file on the existing dev branch should succeed without
 	// the "branch already exists" error that was triggered by always setting
 	// OldBranch to the default branch when the target branch already exists.
-	err := repo.UpdateRepoFile(doer, UpdateRepoFileOptions{
+	err = repo.UpdateRepoFile(doer, UpdateRepoFileOptions{
 		OldBranch:   "dev",
 		NewBranch:   "dev",
 		OldTreeName: "CONTRIBUTING.md",
