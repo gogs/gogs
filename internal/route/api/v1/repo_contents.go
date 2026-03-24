@@ -190,10 +190,19 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Params("*"))
 
+	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+
+	// If the target branch already exists, use it as the source branch to
+	// commit on top of it; otherwise, create a new branch from the default branch.
+	oldBranch := c.Repo.Repository.DefaultBranch
+	if git.RepoHasBranch(repoPath, r.Branch) {
+		oldBranch = r.Branch
+	}
+
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
 		database.UpdateRepoFileOptions{
-			OldBranch:   c.Repo.Repository.DefaultBranch,
+			OldBranch:   oldBranch,
 			NewBranch:   r.Branch,
 			OldTreeName: treePath,
 			NewTreeName: treePath,
@@ -205,8 +214,6 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 		c.Error(err, "updating repository file")
 		return
 	}
-
-	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
