@@ -28,7 +28,7 @@ func initTestRepo(t *testing.T, root, owner, repo string) (repoPath, commitSHA s
 	t.Helper()
 
 	repoPath = filepath.Join(root, strings.ToLower(owner), strings.ToLower(repo)+".git")
-	err := os.MkdirAll(repoPath, os.ModePerm)
+	err := os.MkdirAll(repoPath, 0o750)
 	require.NoError(t, err)
 
 	cmds := [][]string{
