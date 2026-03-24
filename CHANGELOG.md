@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Fixed
+
+- Server error when updating file on non-default branch. [#8210](https://github.com/gogs/gogs/issues/8210)
+
 ### Removed
 
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
