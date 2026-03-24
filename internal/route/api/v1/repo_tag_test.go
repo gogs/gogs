@@ -51,7 +51,7 @@ func initTestRepo(t *testing.T, root, owner, repo string) (repoPath, commitSHA s
 
 // newTestMacaron creates a Macaron instance that injects a minimal APIContext
 // backed by the given repository root, owner, and repo name.
-func newTestMacaron(_, ownerName, repoName string) *macaron.Macaron {
+func newTestMacaron(ownerName, repoName string) *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
 	m.Use(func(ctx *macaron.Context) {
@@ -122,13 +122,13 @@ func TestCreateTag(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			m := newTestMacaron(root, ownerName, repoName)
-			m.Post("/", binding.Bind(createTagRequest{}), createTag)
+			m := newTestMacaron(ownerName, repoName)
+			m.Post("/:username/:reponame", binding.Bind(createTagRequest{}), createTag)
 
 			bodyBytes, err := json.Marshal(test.body)
 			require.NoError(t, err)
 
-			r, err := http.NewRequest(http.MethodPost, "/", bytes.NewReader(bodyBytes))
+			r, err := http.NewRequest(http.MethodPost, "/"+ownerName+"/"+repoName, bytes.NewReader(bodyBytes))
 			require.NoError(t, err)
 			r.Header.Set("Content-Type", "application/json")
 
