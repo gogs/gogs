@@ -5151,6 +5151,81 @@
             "description": "Repository not found."
           }
         }
+      },
+      "post": {
+        "operationId": "createTag",
+        "summary": "Create tag",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "commit"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the tag to create"
+                  },
+                  "commit": {
+                    "type": "string",
+                    "description": "Commit hash the tag should point to"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tag created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access token not provided."
+          },
+          "403": {
+            "description": "Not enough permissions."
+          },
+          "404": {
+            "description": "Repository not found."
+          },
+          "422": {
+            "description": "Tag name already exists, or commit hash does not exist."
+          }
+        }
       }
     },
     "/repos/{owner}/{repo}/commits": {

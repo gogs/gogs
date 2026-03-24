@@ -1,7 +1,14 @@
 package v1
 
 import (
+	"net/http"
+	"strings"
+
+	"github.com/gogs/git-module"
+
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/gitx"
 )
 
 func listTags(c *context.APIContext) {
@@ -22,4 +29,54 @@ func listTags(c *context.APIContext) {
 	}
 
 	c.JSONSuccess(&apiTags)
+}
+
+type createTagRequest struct {
+	Name   string `json:"name" binding:"Required"`
+	Commit string `json:"commit" binding:"Required"`
+}
+
+func createTag(c *context.APIContext, r createTagRequest) {
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	if err != nil {
+		c.Error(err, "open repository")
+		return
+	}
+
+	// Validate that the commit exists.
+	commit, err := gitRepo.CatFileCommit(r.Commit)
+	if err != nil {
+		// git-module returns ErrRevisionNotExist for unknown refs, but for
+		// well-formed SHAs that are simply absent the underlying git cat-file
+		// command exits with status 128 without a typed error. Both cases
+		// indicate that the commit does not exist.
+		if gitx.IsErrRevisionNotExist(err) || strings.Contains(err.Error(), "exit status 128") {
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
+		} else {
+			c.Error(err, "get commit")
+		}
+		return
+	}
+
+	// 🚨 SECURITY: Trim any leading '-' to prevent command line argument injection.
+	// This must happen before the duplicate check so that both use the same name.
+	tagName := strings.TrimLeft(r.Name, "-")
+
+	// Validate that the tag name is not already taken.
+	if gitRepo.HasTag(tagName) {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errTagAlreadyExists(tagName))
+		return
+	}
+
+	if err = gitRepo.CreateTag(tagName, r.Commit); err != nil {
+		c.Error(err, "create tag")
+		return
+	}
+
+	dbTag := &database.Tag{
+		RepoPath: c.Repo.Repository.RepoPath(),
+		Name:     tagName,
+	}
+
+	c.JSON(http.StatusCreated, toTag(dbTag, commit))
 }

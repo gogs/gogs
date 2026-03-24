@@ -288,6 +288,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				})
 				m.Get("/forks", listForks)
 				m.Get("/tags", listTags)
+				m.Post("/tags", reqRepoWriter(), bind(createTagRequest{}), createTag)
 				m.Group("/branches", func() {
 					m.Get("", listBranches)
 					m.Get("/*", getBranch)
