@@ -9,6 +9,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/repox"
 )
 
 func listTags(c *context.APIContext) {
@@ -37,7 +38,8 @@ type createTagRequest struct {
 }
 
 func createTag(c *context.APIContext, r createTagRequest) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -74,7 +76,7 @@ func createTag(c *context.APIContext, r createTagRequest) {
 	}
 
 	dbTag := &database.Tag{
-		RepoPath: c.Repo.Repository.RepoPath(),
+		RepoPath: repoPath,
 		Name:     tagName,
 	}
 

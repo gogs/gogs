@@ -28,7 +28,7 @@ func initTestRepo(t *testing.T, root, owner, repo string) (repoPath, commitSHA s
 	t.Helper()
 
 	repoPath = filepath.Join(root, strings.ToLower(owner), strings.ToLower(repo)+".git")
-	err := os.MkdirAll(repoPath, 0755)
+	err := os.MkdirAll(repoPath, os.ModePerm)
 	require.NoError(t, err)
 
 	cmds := [][]string{
@@ -51,7 +51,7 @@ func initTestRepo(t *testing.T, root, owner, repo string) (repoPath, commitSHA s
 
 // newTestMacaron creates a Macaron instance that injects a minimal APIContext
 // backed by the given repository root, owner, and repo name.
-func newTestMacaron(root, ownerName, repoName string) *macaron.Macaron {
+func newTestMacaron(_, ownerName, repoName string) *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
 	m.Use(func(ctx *macaron.Context) {
