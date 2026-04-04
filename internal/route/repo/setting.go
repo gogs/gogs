@@ -128,7 +128,6 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		})
 		if err != nil {
 			if database.IsErrInvalidCloneAddr(err) {
-				c.Data["Err_CloneAddr"] = true
 				addrErr := err.(database.ErrInvalidCloneAddr)
 				switch {
 				case addrErr.IsURLError:
