@@ -121,7 +121,34 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				return
 			}
 		}
-		if err := c.Repo.Mirror.SaveAddress(f.MirrorAddress); err != nil {
+
+		remoteAddr, err := form.ParseRemoteAddr(form.ParseRemoteAddrOptions{
+			CloneAddr: f.MirrorAddress,
+			User:      c.User,
+		})
+		if err != nil {
+			if database.IsErrInvalidCloneAddr(err) {
+				c.Data["Err_CloneAddr"] = true
+				addrErr := err.(database.ErrInvalidCloneAddr)
+				switch {
+				case addrErr.IsURLError:
+					c.RenderWithErr(c.Tr("repo.migrate.clone_address")+c.Tr("form.url_error"), http.StatusBadRequest, tmplRepoSettingsOptions, &f)
+				case addrErr.IsPermissionDenied:
+					c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), http.StatusForbidden, tmplRepoSettingsOptions, &f)
+				case addrErr.IsInvalidPath:
+					c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), http.StatusBadRequest, tmplRepoSettingsOptions, &f)
+				case addrErr.IsBlockedLocalAddress:
+					c.RenderWithErr(c.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address"), http.StatusForbidden, tmplRepoSettingsOptions, &f)
+				default:
+					c.Error(err, "unexpected error")
+				}
+			} else {
+				c.Error(err, "parse remote address")
+			}
+			return
+		}
+
+		if err := c.Repo.Mirror.SaveAddress(remoteAddr); err != nil {
 			c.Error(err, "save address")
 			return
 		}
