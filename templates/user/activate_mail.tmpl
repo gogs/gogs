@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Account Activation</title>
+</head>
+<body>
+    <h1>Welcome {{.User.Name}}!</h1>
+    <p>Thank you for registering. Please activate your account within the next {{.ActiveCodeLives}} minutes.</p>
+    <p>Click the link below to activate your account:</p>
+    <a href="http://example.com/activate?token=abc123">Activate Account</a>
+    <p>If you have any questions, please contact our support team.</p>
+</body>
+</html>
