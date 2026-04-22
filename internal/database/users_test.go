@@ -299,8 +299,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	)
 	require.NoError(t, err)
 
-	// TODO: Use PullRequests.Create to replace SQL hack when the method is available.
-	err = s.db.Exec(`INSERT INTO pull_request (head_user_name) VALUES (?)`, alice.Name).Error
+	err = s.db.Create(&PullRequest{HeadUserName: alice.Name}).Error
 	require.NoError(t, err)
 
 	err = s.db.Model(&User{}).Where("id = ?", alice.ID).Update("updated_unix", 0).Error
@@ -314,11 +313,10 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	// Make sure mock data is set up correctly
-	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
-	var headUserName string
-	err = s.db.Model(&PullRequest{}).Select("head_user_name").Row().Scan(&headUserName)
+	var got PullRequest
+	err = s.db.Model(&PullRequest{}).First(&got).Error
 	require.NoError(t, err)
-	assert.Equal(t, headUserName, alice.Name)
+	assert.Equal(t, alice.Name, got.HeadUserName)
 
 	var updatedUnix int64
 	err = s.db.Model(&User{}).Select("updated_unix").Where("id = ?", alice.ID).Row().Scan(&updatedUnix)
@@ -333,10 +331,9 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.ChangeUsername(ctx, alice.ID, newUsername)
 	require.NoError(t, err)
 
-	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
-	err = s.db.Model(&PullRequest{}).Select("head_user_name").Row().Scan(&headUserName)
+	err = s.db.Model(&PullRequest{}).First(&got).Error
 	require.NoError(t, err)
-	assert.Equal(t, headUserName, newUsername)
+	assert.Equal(t, newUsername, got.HeadUserName)
 
 	assert.True(t, osx.Exist(repox.UserPath(newUsername)))
 	assert.False(t, osx.Exist(repox.UserPath(alice.Name)))
