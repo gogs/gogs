@@ -10,7 +10,7 @@ require (
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
 	github.com/glebarez/go-sqlite v1.21.2
 	github.com/glebarez/sqlite v1.11.0
-	github.com/go-ldap/ldap/v3 v3.4.12
+	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-macaron/binding v1.2.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
 	github.com/go-macaron/captcha v0.2.0
