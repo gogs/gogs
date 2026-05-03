@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Added
+
+- Public API endpoint for creating tag on a repoistory. [#8209](https://github.com/gogs/gogs/issues/8209)
+
 ### Removed
 
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
