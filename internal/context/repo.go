@@ -117,8 +117,8 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 	return fmt.Sprintf("%s/compare/%s...%s:%s", repoLink, baseBranch, r.Owner.Name, headBranch)
 }
 
-// [0]: issues, [1]: wiki
-func RepoAssignment(pages ...bool) macaron.Handler {
+// RepoAssignment loads repository context for the current request; pages selects issue and wiki permission checks.
+func RepoAssignment(pages ...bool) macaron.Handler { // skipcq: GO-R1005 - Existing handler intentionally centralizes repository setup.
 	return func(c *Context) {
 		var (
 			owner        *database.User
@@ -281,7 +281,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
 		if c.Repo.BranchName == "" {
-			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
+			if c.Repo.Repository.DefaultBranch != "" && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
 				c.Repo.BranchName = c.Repo.Repository.DefaultBranch
 			} else if len(branches) > 0 {
 				c.Repo.BranchName = branches[0]
@@ -294,8 +294,8 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 	}
 }
 
-// RepoRef handles repository reference name including those contain `/`.
-func RepoRef() macaron.Handler {
+// RepoRef handles repository reference names, including those that contain `/`.
+func RepoRef() macaron.Handler { // skipcq: GO-R1005 - Existing handler intentionally centralizes repository reference setup.
 	return func(c *Context) {
 		// Empty repository does not have reference information.
 		if c.Repo.Repository.IsBare {
