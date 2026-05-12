@@ -337,20 +337,13 @@ func RepoRef() macaron.Handler {
 			c.Repo.IsViewBranch = true
 
 		} else {
-			hasMatched := false
 			parts := strings.Split(c.Params("*"), "/")
-			for i, part := range parts {
-				refName = strings.TrimPrefix(refName+"/"+part, "/")
-
-				if c.Repo.GitRepo.HasBranch(refName) ||
-					c.Repo.GitRepo.HasTag(refName) {
-					if i < len(parts)-1 {
-						c.Repo.TreePath = strings.Join(parts[i+1:], "/")
-					}
-					hasMatched = true
-					break
-				}
-			}
+			var hasMatched bool
+			refName, c.Repo.TreePath, hasMatched = matchRepoRef(
+				c.Params("*"),
+				func(name string) bool { return c.Repo.GitRepo.HasBranch(name) },
+				func(name string) bool { return c.Repo.GitRepo.HasTag(name) },
+			)
 			if !hasMatched && len(parts[0]) == 40 {
 				refName = parts[0]
 				c.Repo.TreePath = strings.Join(parts[1:], "/")
@@ -429,6 +422,21 @@ func RepoRef() macaron.Handler {
 		}
 		c.Data["PullRequestCtx"] = c.Repo.PullRequest
 	}
+}
+
+func matchRepoRef(rawPath string, hasBranch, hasTag func(string) bool) (refName, treePath string, ok bool) {
+	parts := strings.Split(rawPath, "/")
+	for i := len(parts); i > 0; i-- {
+		refName = strings.Join(parts[:i], "/")
+		if hasBranch(refName) || hasTag(refName) {
+			if i < len(parts) {
+				treePath = strings.Join(parts[i:], "/")
+			}
+			return refName, treePath, true
+		}
+	}
+
+	return "", "", false
 }
 
 func RequireRepoAdmin() macaron.Handler {
