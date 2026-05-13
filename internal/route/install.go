@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -41,6 +42,19 @@ func checkRunMode() {
 		git.SetOutput(os.Stdout)
 	}
 	log.Info("Run mode: %s", strings.Title(macaron.Env))
+}
+
+func normalizeInstallRootPathByOS(path string, isWindows bool) string {
+	// Keep native Windows paths (including UNC paths like `\\server\share`)
+	// unchanged, otherwise the replacement below may produce invalid paths.
+	if isWindows {
+		return path
+	}
+	return strings.ReplaceAll(path, "\\", "/")
+}
+
+func normalizeInstallRootPath(path string) string {
+	return normalizeInstallRootPathByOS(path, runtime.GOOS == "windows")
 }
 
 // GlobalInit is for global configuration reload-able.
@@ -234,7 +248,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test repository root path.
-	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
+	f.RepoRootPath = normalizeInstallRootPath(f.RepoRootPath)
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), http.StatusBadRequest, INSTALL, &f)
@@ -242,7 +256,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test log root path.
-	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
+	f.LogRootPath = normalizeInstallRootPath(f.LogRootPath)
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), http.StatusBadRequest, INSTALL, &f)
