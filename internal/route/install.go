@@ -199,6 +199,7 @@ func Install(c *context.Context) {
 	c.Success(INSTALL)
 }
 
+// InstallPost handles the submission of installation settings.
 // skipcq: GO-R1005
 func InstallPost(c *context.Context, f form.Install) {
 	c.Data["CurDbOption"] = f.DbType
@@ -252,7 +253,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Test repository root path.
 	f.RepoRootPath = normalizeInstallRootPath(f.RepoRootPath)
-	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(f.RepoRootPath, 0o750); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), http.StatusBadRequest, INSTALL, &f)
 		return
@@ -260,7 +261,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Test log root path.
 	f.LogRootPath = normalizeInstallRootPath(f.LogRootPath)
-	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(f.LogRootPath, 0o750); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), http.StatusBadRequest, INSTALL, &f)
 		return
@@ -298,7 +299,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Check admin password.
-	if len(f.AdminName) > 0 && f.AdminPasswd == "" {
+	if f.AdminName != "" && f.AdminPasswd == "" {
 		c.FormErr("Admin", "AdminPasswd")
 		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), http.StatusBadRequest, INSTALL, f)
 		return
