@@ -8,6 +8,7 @@ icon: "download"
 
 1. Gogs requires use of one of the following database backends:
     - MySQL, >= 5.7
+    - MariaDB, >= 10.3
     - PostgreSQL, >= 9.6
     - SQLite 3
 1. Git, >= 1.8.3, on both server and client side
@@ -25,7 +26,7 @@ icon: "download"
 
 ## Initialize database
 
-If you choose to use MySQL or PostgreSQL as your database backend, you need to first complete the initial database creation.
+If you choose to use MySQL, MariaDB or PostgreSQL as your database backend, you need to first complete the initial database creation.
 
 <Tabs>
   <Tab title="PostgreSQL">
@@ -36,12 +37,14 @@ If you choose to use MySQL or PostgreSQL as your database backend, you need to f
     psql -c "CREATE DATABASE gogs OWNER gogs ENCODING 'UTF8';"
     ```
   </Tab>
-  <Tab title="MySQL">
-    Use the [bundled script](https://github.com/gogs/gogs/blob/main/scripts/mysql.sql) to create the database with proper encoding:
+  <Tab title="MySQL / MariaDB">
+    Use the [bundled script](https://github.com/gogs/gogs/blob/main/scripts/mysql.sql) to create the database with proper encoding. The script detects MariaDB and applies the appropriate InnoDB settings for older releases automatically:
 
     ```zsh
     mysql -u root -p < scripts/mysql.sql
     ```
+
+    In `app.ini`, set `[database] TYPE = mysql` for both MySQL and MariaDB — Gogs talks to MariaDB through the MySQL wire protocol.
   </Tab>
 </Tabs>
 
