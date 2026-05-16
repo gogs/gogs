@@ -24,6 +24,11 @@
 				<span class="text grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
 				<div class="ui right">
 					<div class="ui horizontal list">
+						{{if .IsMergeCommit}}
+							<div class="item">
+								<span class="ui grey basic label">{{.i18n.Tr "repo.diff.merge_commit"}}</span>
+							</div>
+						{{end}}
 						{{if .Parents}}
 							<div class="item">
 								{{.i18n.Tr "repo.diff.parent"}}

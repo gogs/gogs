@@ -31,9 +31,15 @@ func RefCommits(c *context.Context) {
 	}
 }
 
-// TODO(unknwon)
+// RenderIssueLinks returns commits with issue links rendered in messages.
+//
+// TODO(unknwon): Implement issue link rendering.
 func RenderIssueLinks(oldCommits []*git.Commit, _ string) []*git.Commit {
 	return oldCommits
+}
+
+func hasMultipleParents(parents []string) bool {
+	return len(parents) > 1
 }
 
 func renderCommits(c *context.Context, filename string) {
@@ -160,6 +166,7 @@ func Diff(c *context.Context) {
 	c.Data["Author"] = tryGetUserByEmail(c.Req.Context(), commit.Author.Email)
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
+	c.Data["IsMergeCommit"] = hasMultipleParents(parents)
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", commitID)
 	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", commitID)
