@@ -272,6 +272,11 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 	if ip == nil {
 		return false
 	}
+	// Normalize IPv4-mapped IPv6 (e.g. "::ffff:127.0.0.1" on dual-stack listeners)
+	// to its IPv4 form so it matches IPv4 CIDRs like 127.0.0.0/8.
+	if v4 := ip.To4(); v4 != nil {
+		ip = v4
+	}
 	for _, cidr := range conf.Auth.TrustedProxyCIDRs {
 		if cidr.Contains(ip) {
 			return true
