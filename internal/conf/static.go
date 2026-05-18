@@ -258,7 +258,8 @@ type AuthOpts struct {
 	TrustedProxyIPs []string `ini:"TRUSTED_PROXY_IPS"`
 	CustomLogoutURL string   `ini:"CUSTOM_LOGOUT_URL"`
 
-	TrustedProxyCIDRs []*net.IPNet `ini:"-"`
+	// Derived from other static values
+	TrustedProxyCIDRs []*net.IPNet `ini:"-"` // Parsed CIDR form of TrustedProxyIPs.
 }
 
 // Authentication settings
