@@ -265,8 +265,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 func isRequestFromTrustedProxy(req *http.Request) bool {
 	host, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
-		// RemoteAddr may be a bare IP (e.g. when not from a TCP listener).
-		host = req.RemoteAddr
+		return false
 	}
 	ip := net.ParseIP(host)
 	if ip == nil {
