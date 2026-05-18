@@ -1,0 +1,34 @@
+{{/* Early theme detection script to prevent FOUC (Flash of Unstyled Content) */}}
+<script>
+(function() {
+    try {
+        // Get theme from localStorage or use system preference
+        const theme = localStorage.getItem('gogs-theme') ||
+                     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+        // Apply theme immediately to <html> element
+        if (theme !== 'system') {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        // Update theme-color meta tag for browser UI
+        const updateThemeColor = () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute('content', isDark ? '#1b1c1d' : '#ffffff');
+            }
+        };
+
+        updateThemeColor();
+
+        // Listen for system preference changes if in system mode
+        if (theme === 'system') {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeColor);
+        }
+    } catch (e) {
+        console.warn('Failed to apply theme early:', e);
+    }
+})();
+</script>
