@@ -268,7 +268,7 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 		// RemoteAddr may be a bare IP (e.g. when not from a TCP listener).
 		host = req.RemoteAddr
 	}
-	ip := net.ParseIP(strings.TrimSpace(host))
+	ip := net.ParseIP(host)
 	if ip == nil {
 		return false
 	}
@@ -277,7 +277,6 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 			return true
 		}
 	}
-	log.Warn("Ignoring %q header from untrusted remote %q", conf.Auth.ReverseProxyAuthenticationHeader, req.RemoteAddr)
 	return false
 }
 
