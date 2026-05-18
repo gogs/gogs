@@ -256,8 +256,8 @@ type AuthOpts struct {
 	// TrustedProxyIPs is the comma-separated list of IPs or CIDR ranges whose
 	// requests are allowed to set the reverse proxy authentication header.
 	// Defaults to loopback only.
-	TrustedProxyIPs string `ini:"TRUSTED_PROXY_IPS"`
-	CustomLogoutURL string `ini:"CUSTOM_LOGOUT_URL"`
+	TrustedProxyIPs []string `ini:"TRUSTED_PROXY_IPS"`
+	CustomLogoutURL string   `ini:"CUSTOM_LOGOUT_URL"`
 
 	// TrustedProxyCIDRs is the parsed form of TrustedProxyIPs. Populated by the
 	// configuration loader, not by ini mapping.
