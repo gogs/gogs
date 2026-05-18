@@ -713,7 +713,13 @@ func (t *HookTask) deliver() {
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify}).
-		SetCheckRedirect(func(req *http.Request, _ []*http.Request) error {
+		SetCheckRedirect(func(req *http.Request, via []*http.Request) error {
+			// Setting CheckRedirect replaces net/http's default policy, so
+			// reapply its 10-hop cap to keep a malicious endpoint from looping
+			// us indefinitely.
+			if len(via) >= 10 {
+				return errors.New("stopped after 10 redirects")
+			}
 			if netx.IsBlockedLocalHostname(req.URL.Hostname(), conf.Security.LocalNetworkAllowlist) {
 				return errors.Newf("redirect target %q resolves to a blocked local network address", req.URL.Redacted())
 			}
