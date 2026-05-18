@@ -204,10 +204,52 @@ func LoginTwoFactor(c *context.Context) {
 	c.Success(tmplUserAuthTwoFactor)
 }
 
+// twoFactorMaxFailedAttempts caps the number of failed two-factor verification
+// attempts allowed within twoFactorFailedAttemptsTTL before the user is
+// temporarily locked out. The counter is keyed by user ID and shared between
+// the TOTP and recovery code handlers so an attacker cannot bypass the limit
+// by alternating endpoints.
+const (
+	twoFactorMaxFailedAttempts = 5
+	twoFactorFailedAttemptsTTL = 10 * 60 // 10 minutes, in seconds.
+)
+
+// twoFactorLockedOut reports whether the user has exceeded the failed
+// two-factor attempt threshold. The caller is expected to flash an error and
+// redirect when this returns true.
+func twoFactorLockedOut(c *context.Context, userID int64) bool {
+	v, _ := c.Cache.Get(userx.TwoFactorFailedAttemptsCacheKey(userID)).(int)
+	return v >= twoFactorMaxFailedAttempts
+}
+
+// recordTwoFactorFailure increments the failed attempt counter for the user,
+// extending the TTL on each failure so the lockout window slides forward.
+func recordTwoFactorFailure(c *context.Context, userID int64) {
+	key := userx.TwoFactorFailedAttemptsCacheKey(userID)
+	current, _ := c.Cache.Get(key).(int)
+	if err := c.Cache.Put(key, current+1, twoFactorFailedAttemptsTTL); err != nil {
+		log.Error("Failed to put cache 'two factor failed attempts': %v", err)
+	}
+}
+
+// clearTwoFactorFailures removes the failed attempt counter after a successful
+// verification so legitimate users are not penalized for prior typos.
+func clearTwoFactorFailures(c *context.Context, userID int64) {
+	if err := c.Cache.Delete(userx.TwoFactorFailedAttemptsCacheKey(userID)); err != nil {
+		log.Error("Failed to delete cache 'two factor failed attempts': %v", err)
+	}
+}
+
 func LoginTwoFactorPost(c *context.Context) {
 	userID, ok := c.Session.Get("twoFactorUserID").(int64)
 	if !ok {
 		c.NotFound()
+		return
+	}
+
+	if twoFactorLockedOut(c, userID) {
+		c.Flash.Error(c.Tr("auth.login_two_factor_too_many_attempts"))
+		c.RedirectSubpath("/user/login/two_factor")
 		return
 	}
 
@@ -223,6 +265,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		c.Error(err, "validate TOTP")
 		return
 	} else if !valid {
+		recordTwoFactorFailure(c, userID)
 		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
 		c.RedirectSubpath("/user/login/two_factor")
 		return
@@ -244,6 +287,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
+	clearTwoFactorFailures(c, userID)
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
 }
 
@@ -264,8 +308,15 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
+	if twoFactorLockedOut(c, userID) {
+		c.Flash.Error(c.Tr("auth.login_two_factor_too_many_attempts"))
+		c.RedirectSubpath("/user/login/two_factor_recovery_code")
+		return
+	}
+
 	if err := database.Handle.TwoFactors().UseRecoveryCode(c.Req.Context(), userID, c.Query("recovery_code")); err != nil {
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
+			recordTwoFactorFailure(c, userID)
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.RedirectSubpath("/user/login/two_factor_recovery_code")
 		} else {
@@ -279,6 +330,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		c.Error(err, "get user by ID")
 		return
 	}
+	clearTwoFactorFailures(c, userID)
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
 }
 
