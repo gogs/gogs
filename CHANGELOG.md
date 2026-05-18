@@ -50,6 +50,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Protected branch bypass in web UI. [#8124](https://github.com/gogs/gogs/pull/8124) - [GHSA-2c6v-8r3v-gh6p](https://github.com/gogs/gogs/security/advisories/GHSA-2c6v-8r3v-gh6p)
 - _Security:_ Authorization bypass allows cross-repository label modification. [#8123](https://github.com/gogs/gogs/pull/8123) - [GHSA-cv22-72px-f4gh](https://github.com/gogs/gogs/security/advisories/GHSA-cv22-72px-f4gh)
 - _Security:_ Cross-repository comment deletion. [#8119](https://github.com/gogs/gogs/pull/8119) - [GHSA-jj5m-h57j-5gv7](https://github.com/gogs/gogs/security/advisories/GHSA-jj5m-h57j-5gv7)
+- _Security:_ Denial of service in repository and wiki file listing pages via crafted file names. [#8116](https://github.com/gogs/gogs/pull/8116) - [GHSA-3qq3-668m-v9mj](https://github.com/gogs/gogs/security/advisories/GHSA-3qq3-668m-v9mj)
 - 500 error on repository watchers and stargazers pages when using MSSQL. [#5482](https://github.com/gogs/gogs/issues/5482)
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
