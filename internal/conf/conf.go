@@ -226,7 +226,7 @@ func Init(customConf string) error {
 	if trustedProxies == "" {
 		trustedProxies = "127.0.0.0/8,::1/128"
 	}
-	Auth.TrustedProxyNets = nil
+	Auth.TrustedProxyCIDRs = nil
 	for _, raw := range strings.Split(trustedProxies, ",") {
 		raw = strings.TrimSpace(raw)
 		if raw == "" {
@@ -246,7 +246,7 @@ func Init(customConf string) error {
 		if err != nil {
 			return errors.Wrapf(err, "parse trusted proxy CIDR %q", raw)
 		}
-		Auth.TrustedProxyNets = append(Auth.TrustedProxyNets, cidr)
+		Auth.TrustedProxyCIDRs = append(Auth.TrustedProxyCIDRs, cidr)
 	}
 
 	// *************************

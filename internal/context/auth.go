@@ -272,7 +272,7 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 	if ip == nil {
 		return false
 	}
-	for _, cidr := range conf.Auth.TrustedProxyNets {
+	for _, cidr := range conf.Auth.TrustedProxyCIDRs {
 		if cidr.Contains(ip) {
 			return true
 		}

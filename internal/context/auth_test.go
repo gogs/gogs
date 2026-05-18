@@ -17,9 +17,9 @@ func TestIsRequestFromTrustedProxy(t *testing.T) {
 		return n
 	}
 
-	original := conf.Auth.TrustedProxyNets
-	t.Cleanup(func() { conf.Auth.TrustedProxyNets = original })
-	conf.Auth.TrustedProxyNets = []*net.IPNet{
+	original := conf.Auth.TrustedProxyCIDRs
+	t.Cleanup(func() { conf.Auth.TrustedProxyCIDRs = original })
+	conf.Auth.TrustedProxyCIDRs = []*net.IPNet{
 		mustCIDR("127.0.0.0/8"),
 		mustCIDR("::1/128"),
 		mustCIDR("10.1.0.0/16"),
