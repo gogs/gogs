@@ -253,10 +253,8 @@ type AuthOpts struct {
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
 	ReverseProxyAuthenticationHeader   string
-	// TrustedProxyIPs lists the IPs or CIDR ranges whose requests are allowed
-	// to set the reverse proxy authentication header.
-	TrustedProxyIPs []string `ini:"TRUSTED_PROXY_IPS"`
-	CustomLogoutURL string   `ini:"CUSTOM_LOGOUT_URL"`
+	TrustedProxyIPs                    []string `ini:"TRUSTED_PROXY_IPS"`
+	CustomLogoutURL                    string   `ini:"CUSTOM_LOGOUT_URL"`
 
 	// Derived from other static values
 	TrustedProxyCIDRs []*net.IPNet `ini:"-"` // Parsed CIDR form of TrustedProxyIPs.
