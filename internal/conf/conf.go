@@ -222,10 +222,6 @@ func Init(customConf string) error {
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
-	if len(Auth.TrustedProxyIPs) == 0 {
-		Auth.TrustedProxyIPs = []string{"127.0.0.0/8", "::1/128"}
-	}
-	Auth.TrustedProxyCIDRs = nil
 	for _, raw := range Auth.TrustedProxyIPs {
 		// Allow bare IPs as a convenience by promoting them to single-host CIDRs.
 		if !strings.Contains(raw, "/") {
