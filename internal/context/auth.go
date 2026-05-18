@@ -2,6 +2,7 @@ package context
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -198,7 +199,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
 
 	if uid <= 0 {
-		if conf.Auth.EnableReverseProxyAuthentication {
+		if conf.Auth.EnableReverseProxyAuthentication && isRequestFromTrustedProxy(ctx.Req.Request) {
 			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
 				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
@@ -255,6 +256,29 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
+}
+
+// isRequestFromTrustedProxy reports whether the request's immediate remote
+// address falls within one of the configured trusted proxy CIDR ranges. The
+// reverse proxy authentication header is only honored for such requests so an
+// attacker reaching Gogs directly cannot forge it.
+func isRequestFromTrustedProxy(req *http.Request) bool {
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		// RemoteAddr may be a bare IP (e.g. when not from a TCP listener).
+		host = req.RemoteAddr
+	}
+	ip := net.ParseIP(strings.TrimSpace(host))
+	if ip == nil {
+		return false
+	}
+	for _, cidr := range conf.Auth.TrustedProxyNets {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	log.Warn("Ignoring %q header from untrusted remote %q", conf.Auth.ReverseProxyAuthenticationHeader, req.RemoteAddr)
+	return false
 }
 
 // AuthenticateByToken attempts to authenticate a user by the given access

@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"net"
 	"net/mail"
 	"net/url"
 	"os"
@@ -220,6 +221,32 @@ func Init(customConf string) error {
 
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
+	}
+	trustedProxies := strings.TrimSpace(Auth.TrustedProxyIPs)
+	if trustedProxies == "" {
+		trustedProxies = "127.0.0.0/8,::1/128"
+	}
+	Auth.TrustedProxyNets = nil
+	for _, raw := range strings.Split(trustedProxies, ",") {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		// Allow bare IPs as a convenience by promoting them to single-host CIDRs.
+		if !strings.Contains(raw, "/") {
+			if ip := net.ParseIP(raw); ip != nil {
+				if ip.To4() != nil {
+					raw += "/32"
+				} else {
+					raw += "/128"
+				}
+			}
+		}
+		_, cidr, err := net.ParseCIDR(raw)
+		if err != nil {
+			return errors.Wrapf(err, "parse trusted proxy CIDR %q", raw)
+		}
+		Auth.TrustedProxyNets = append(Auth.TrustedProxyNets, cidr)
 	}
 
 	// *************************
