@@ -6,7 +6,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Security:_ Brute-force protection for two-factor authentication verification endpoints. [#PR_PLACEHOLDER](https://github.com/gogs/gogs/pull/PR_PLACEHOLDER) - [GHSA-5mgh-chvj-hqf5](https://github.com/gogs/gogs/security/advisories/GHSA-5mgh-chvj-hqf5)
+- _Security:_ Brute-force protection for two-factor authentication verification endpoints. [#8265](https://github.com/gogs/gogs/pull/8265) - [GHSA-5mgh-chvj-hqf5](https://github.com/gogs/gogs/security/advisories/GHSA-5mgh-chvj-hqf5)
 
 ### Removed
 
