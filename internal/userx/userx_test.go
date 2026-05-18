@@ -188,6 +188,11 @@ func TestTwoFactorCacheKey(t *testing.T) {
 	assert.Equal(t, "twoFactor::1::113654", got)
 }
 
+func TestTwoFactorFailedAttemptsCacheKey(t *testing.T) {
+	got := TwoFactorFailedAttemptsCacheKey(1)
+	assert.Equal(t, "twoFactorFailedAttempts::1", got)
+}
+
 func TestRandomSalt(t *testing.T) {
 	salt1, err := RandomSalt()
 	require.NoError(t, err)

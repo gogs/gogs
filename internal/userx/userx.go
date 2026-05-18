@@ -131,6 +131,12 @@ func TwoFactorCacheKey(userID int64, passcode string) string {
 	return fmt.Sprintf("twoFactor::%d::%s", userID, passcode)
 }
 
+// TwoFactorFailedAttemptsCacheKey returns the key used for tracking the number
+// of failed two-factor verification attempts for the user.
+func TwoFactorFailedAttemptsCacheKey(userID int64) string {
+	return fmt.Sprintf("twoFactorFailedAttempts::%d", userID)
+}
+
 // RandomSalt returns randomly generated 10-character string that can be used as
 // the user salt.
 func RandomSalt() (string, error) {
