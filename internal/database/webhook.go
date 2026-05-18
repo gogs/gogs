@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -711,7 +712,13 @@ func (t *HookTask) deliver() {
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
-		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify})
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify}).
+		SetCheckRedirect(func(req *http.Request, _ []*http.Request) error {
+			if netx.IsBlockedLocalHostname(req.URL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+				return errors.Newf("redirect target %q resolves to a blocked local network address", req.URL.Redacted())
+			}
+			return nil
+		})
 
 	switch t.ContentType {
 	case JSON:
