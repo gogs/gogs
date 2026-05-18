@@ -256,6 +256,12 @@ func Contexter(store Store) macaron.Handler {
 			c.Data["LoggedUserID"] = c.User.ID
 			c.Data["LoggedUserName"] = c.User.Name
 			c.Data["IsAdmin"] = c.User.IsAdmin
+
+			// Slide the session cookie's lifetime forward when "remember me"
+			// is enabled so it survives browser restarts.
+			if remember, ok := c.Session.Get(rememberMeSessionKey).(bool); ok && remember {
+				RefreshRememberMeCookie(c.Context)
+			}
 		} else {
 			c.Data["LoggedUserID"] = 0
 			c.Data["LoggedUserName"] = ""

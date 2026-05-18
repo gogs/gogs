@@ -33,13 +33,6 @@ func Home(c *context.Context) {
 		return
 	}
 
-	// Check auto-login.
-	uname := c.GetCookie(conf.Security.CookieUsername)
-	if uname != "" {
-		c.Redirect(conf.Server.Subpath + "/user/login")
-		return
-	}
-
 	c.Data["PageIsHome"] = true
 	c.Success(tmplHome)
 }

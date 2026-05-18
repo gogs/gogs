@@ -8,12 +8,14 @@ All notable changes to Gogs are documented in this file.
 
 - _Security:_ Denial of service in repository and wiki file listing pages via crafted file names. [#8116](https://github.com/gogs/gogs/pull/8116) - [GHSA-3qq3-668m-v9mj](https://github.com/gogs/gogs/security/advisories/GHSA-3qq3-668m-v9mj)
 - _Security:_ Reverse proxy authentication header was honored from any remote address, allowing user impersonation when Gogs was reachable directly. The header is now only trusted from addresses listed in `[auth] TRUSTED_PROXY_IPS`. [#8264](https://github.com/gogs/gogs/pull/8264) - [GHSA-w6j9-vw59-27wv](https://github.com/gogs/gogs/security/advisories/GHSA-w6j9-vw59-27wv)
+- _Security:_ Forgeable "remember me" cookie allowed full authentication bypass for any user whose database row was known to the attacker. The auto-login flow now relies on the server-side session record rather than a cookie derived from the user's password hash. - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 
 ### Removed
 
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
 - The `[email] DISABLE_HELO` configuration option. HELO/EHLO is now always sent during SMTP handshake. [#8164](https://github.com/gogs/gogs/pull/8164)
 - Support for MSSQL as a database backend. Stay on 0.14 for continued usage. [#8173](https://github.com/gogs/gogs/pull/8173)
+- The `[security] COOKIE_REMEMBER_NAME` and `[security] COOKIE_USERNAME` configuration options. Remember-me state is now stored server-side in the session. - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 
 ## 0.14.2
 

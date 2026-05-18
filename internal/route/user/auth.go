@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/captcha"
 	log "unknwon.dev/clog/v2"
 
@@ -32,74 +31,12 @@ const (
 	tmplUserAuthResetPassword         = "user/auth/reset_passwd"
 )
 
-// AutoLogin reads cookie and try to auto-login.
-func AutoLogin(c *context.Context) (bool, error) {
-	if !database.HasEngine {
-		return false, nil
-	}
-
-	uname := c.GetCookie(conf.Security.CookieUsername)
-	if uname == "" {
-		return false, nil
-	}
-
-	isSucceed := false
-	defer func() {
-		if !isSucceed {
-			log.Trace("auto-login cookie cleared: %s", uname)
-			c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
-			c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
-			c.SetCookie(conf.Security.LoginStatusCookieName, "", -1, conf.Server.Subpath)
-		}
-	}()
-
-	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), uname)
-	if err != nil {
-		if !database.IsErrUserNotExist(err) {
-			return false, errors.Newf("get user by name: %v", err)
-		}
-		return false, nil
-	}
-
-	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName); !ok || val != u.Name {
-		return false, nil
-	}
-
-	isSucceed = true
-	_ = c.Session.Set("uid", u.ID)
-	_ = c.Session.Set("uname", u.Name)
-	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
-	if conf.Security.EnableLoginStatusCookie {
-		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
-	}
-	return true, nil
-}
-
 func Login(c *context.Context) {
 	c.Title("sign_in")
-
-	// Check auto-login
-	isSucceed, err := AutoLogin(c)
-	if err != nil {
-		c.Error(err, "auto login")
-		return
-	}
 
 	redirectTo := c.Query("redirect_to")
 	if len(redirectTo) > 0 {
 		c.SetCookie("redirect_to", redirectTo, 0, conf.Server.Subpath)
-	} else {
-		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
-	}
-
-	if isSucceed {
-		if urlx.IsSameSite(redirectTo) {
-			c.Redirect(redirectTo)
-		} else {
-			c.RedirectSubpath("/")
-		}
-		c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-		return
 	}
 
 	// Display normal login page
@@ -120,16 +57,19 @@ func Login(c *context.Context) {
 }
 
 func afterLogin(c *context.Context, u *database.User, remember bool) {
-	if remember {
-		days := 86400 * conf.Security.LoginRememberDays
-		c.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-	}
-
 	_ = c.Session.Set("uid", u.ID)
 	_ = c.Session.Set("uname", u.Name)
 	_ = c.Session.Delete("twoFactorRemember")
 	_ = c.Session.Delete("twoFactorUserID")
+
+	if remember {
+		// Persist the remember-me state in the session so subsequent requests
+		// can extend the session cookie's lifetime. The session ID itself is a
+		// server-issued random value, so this is not forgeable from leaked
+		// database contents.
+		_ = c.Session.Set("rememberMe", true)
+		context.RefreshRememberMeCookie(c.Context)
+	}
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -285,8 +225,6 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 func SignOut(c *context.Context) {
 	_ = c.Session.Flush()
 	_ = c.Session.Destory(c.Context)
-	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
-	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Auth.CustomLogoutURL != "" {
 		c.Redirect(conf.Auth.CustomLogoutURL)
