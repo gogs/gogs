@@ -39,6 +39,9 @@ func (fs *fileSystem) Get(name string) (io.Reader, error) {
 func mustNames(fsys fs.FS) []string {
 	var names []string
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if !d.IsDir() {
 			names = append(names, path)
 		}
