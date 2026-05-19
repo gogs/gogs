@@ -1,15 +1,19 @@
 package email
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/mail"
+	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
@@ -37,46 +41,113 @@ const (
 )
 
 var (
-	tplRender     *macaron.TplRender
-	tplRenderOnce sync.Once
+	tplSet     *template.Template
+	tplSetOnce sync.Once
+	tplSetErr  error
 )
+
+func funcMap() template.FuncMap {
+	return template.FuncMap{
+		"AppName": func() string {
+			return conf.App.BrandName
+		},
+		"AppURL": func() string {
+			return conf.Server.ExternalURL
+		},
+		"Year": func() int {
+			return time.Now().Year()
+		},
+		"Str2HTML": func(raw string) template.HTML {
+			return template.HTML(markup.Sanitize(raw))
+		},
+	}
+}
+
+// Recognized mail-template file extensions. A template's name is its path
+// relative to the "mail" directory, without extension (e.g. "auth/activate").
+var mailTemplateExts = []string{".tmpl", ".html"}
+
+// loadMailTemplates parses every mail template under the embedded "mail" tree
+// (or "<work>/templates/mail" when LoadAssetsFromDisk is set), then overlays
+// files from "<custom>/templates/mail" so an admin can override any builtin.
+func loadMailTemplates() (*template.Template, error) {
+	root := template.New("").Funcs(funcMap())
+	parse := func(name string, data []byte) error {
+		_, err := root.New(name).Parse(string(data))
+		return errors.Wrapf(err, "parse %q", name)
+	}
+
+	if conf.Server.LoadAssetsFromDisk {
+		if err := overlayDiskMailTemplates(filepath.Join(conf.WorkDir(), "templates", "mail"), parse); err != nil {
+			return nil, err
+		}
+	} else {
+		for _, name := range templates.MailFileNames() {
+			ext := strings.ToLower(filepath.Ext(name))
+			if !slices.Contains(mailTemplateExts, ext) {
+				continue
+			}
+			data, err := templates.ReadMailFile(name)
+			if err != nil {
+				return nil, errors.Wrapf(err, "read embedded %q", name)
+			}
+			if err := parse(strings.TrimSuffix(filepath.ToSlash(name), ext), data); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if err := overlayDiskMailTemplates(filepath.Join(conf.CustomDir(), "templates", "mail"), parse); err != nil {
+		return nil, err
+	}
+	return root, nil
+}
+
+// overlayDiskMailTemplates walks root and parses every recognized template
+// file via parse. A missing root is not an error: custom overrides are optional.
+func overlayDiskMailTemplates(root string, parse func(name string, data []byte) error) error {
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fs.SkipAll
+			}
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(p))
+		if !slices.Contains(mailTemplateExts, ext) {
+			return nil
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return errors.Wrapf(err, "read %q", p)
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return err
+		}
+		return parse(strings.TrimSuffix(filepath.ToSlash(rel), ext), data)
+	})
+}
 
 // render renders a mail template with given data.
 func render(tpl string, data map[string]any) (string, error) {
-	tplRenderOnce.Do(func() {
-		customDir := filepath.Join(conf.CustomDir(), "templates")
-		opt := &macaron.RenderOptions{
-			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
-			AppendDirectories: []string{filepath.Join(customDir, "mail")},
-			Extensions:        []string{".tmpl", ".html"},
-			Funcs: []template.FuncMap{map[string]any{
-				"AppName": func() string {
-					return conf.App.BrandName
-				},
-				"AppURL": func() string {
-					return conf.Server.ExternalURL
-				},
-				"Year": func() int {
-					return time.Now().Year()
-				},
-				"Str2HTML": func(raw string) template.HTML {
-					return template.HTML(markup.Sanitize(raw))
-				},
-			}},
-		}
-		if !conf.Server.LoadAssetsFromDisk {
-			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", customDir)
-		}
-
-		ts := macaron.NewTemplateSet()
-		ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)
-		tplRender = &macaron.TplRender{
-			TemplateSet: ts,
-			Opt:         opt,
-		}
+	tplSetOnce.Do(func() {
+		tplSet, tplSetErr = loadMailTemplates()
 	})
-
-	return tplRender.HTMLString(tpl, data)
+	if tplSetErr != nil {
+		return "", errors.Wrap(tplSetErr, "load mail templates")
+	}
+	t := tplSet.Lookup(tpl)
+	if t == nil {
+		return "", errors.Newf("mail template %q not found", tpl)
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", errors.Wrapf(err, "execute %q", tpl)
+	}
+	return buf.String(), nil
 }
 
 func SendTestMail(email string) error {
