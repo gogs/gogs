@@ -15,10 +15,11 @@ import (
 // executes against the data shape its production caller supplies, so a syntax
 // regression or missing field is caught at build time, not on the first email.
 func TestRenderEmbeddedTemplates(t *testing.T) {
-	conf.App.BrandName = "Gogs"
-	conf.Server.ExternalURL = "https://example.test/"
-	conf.Server.LoadAssetsFromDisk = false
-
+	conf.SetMockApp(t, conf.AppOpts{BrandName: "Gogs"})
+	conf.SetMockServer(t, conf.ServerOpts{
+		ExternalURL:        "https://example.test/",
+		LoadAssetsFromDisk: false,
+	})
 	resetTemplateCache(t)
 
 	tests := []struct {
@@ -97,7 +98,7 @@ func TestRenderEmbeddedTemplates(t *testing.T) {
 // TestRenderUnknownTemplate asserts callers get a useful error rather than an
 // empty body when asking for a name that doesn't exist.
 func TestRenderUnknownTemplate(t *testing.T) {
-	conf.Server.LoadAssetsFromDisk = false
+	conf.SetMockServer(t, conf.ServerOpts{LoadAssetsFromDisk: false})
 	resetTemplateCache(t)
 
 	_, err := render("does/not/exist", nil)
