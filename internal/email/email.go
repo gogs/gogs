@@ -136,13 +136,11 @@ func overlayDiskMailTemplates(root string, parse func(name string, data []byte) 
 }
 
 func render(tpl string, data map[string]any) (string, error) {
-	tplSetOnce.Do(func() {
-		tplSet, tplSetErr = loadMailTemplates()
-	})
-	if tplSetErr != nil {
-		return "", errors.Wrap(tplSetErr, "load mail templates")
+	set, err := mailTemplateSet()
+	if err != nil {
+		return "", errors.Wrap(err, "load mail templates")
 	}
-	t := tplSet.Lookup(tpl)
+	t := set.Lookup(tpl)
 	if t == nil {
 		return "", errors.Newf("mail template %q not found", tpl)
 	}
@@ -151,6 +149,22 @@ func render(tpl string, data map[string]any) (string, error) {
 		return "", errors.Wrapf(err, "execute %q", tpl)
 	}
 	return buf.String(), nil
+}
+
+// mailTemplateSet returns the parsed template set. When assets are loaded from
+// disk, templates are reloaded on every call so admin edits under
+// <work>/templates/mail or <custom>/templates/mail take effect without a
+// restart — matching the hot-reload behavior of the previous macaron renderer
+// for non-production environments. When assets are embedded, the set is loaded
+// once and cached for the process lifetime.
+func mailTemplateSet() (*template.Template, error) {
+	if conf.Server.LoadAssetsFromDisk {
+		return loadMailTemplates()
+	}
+	tplSetOnce.Do(func() {
+		tplSet, tplSetErr = loadMailTemplates()
+	})
+	return tplSet, tplSetErr
 }
 
 func SendTestMail(email string) error {
