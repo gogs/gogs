@@ -9,7 +9,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Denial of service in repository and wiki file listing pages via crafted file names. [#8116](https://github.com/gogs/gogs/pull/8116) - [GHSA-3qq3-668m-v9mj](https://github.com/gogs/gogs/security/advisories/GHSA-3qq3-668m-v9mj)
 - _Security:_ Reverse proxy authentication header was honored from any remote address, allowing user impersonation when Gogs was reachable directly. The header is now only trusted from addresses listed in `[auth] TRUSTED_PROXY_IPS`. [#8264](https://github.com/gogs/gogs/pull/8264) - [GHSA-w6j9-vw59-27wv](https://github.com/gogs/gogs/security/advisories/GHSA-w6j9-vw59-27wv)
 - _Security:_ Server-side request forgery in webhook deliveries via HTTP redirects to local network addresses. [#8263](https://github.com/gogs/gogs/pull/8263) - [GHSA-c4v7-xg93-qf8g](https://github.com/gogs/gogs/security/advisories/GHSA-c4v7-xg93-qf8g)
-- _Security:_ Brute-force protection for two-factor authentication verification endpoints. [#8265](https://github.com/gogs/gogs/pull/8265) - [GHSA-5mgh-chvj-hqf5](https://github.com/gogs/gogs/security/advisories/GHSA-5mgh-chvj-hqf5)
+- _Security:_ Brute-force protection for two-factor authentication verification endpoints. [#8268](https://github.com/gogs/gogs/pull/8268) - [GHSA-5mgh-chvj-hqf5](https://github.com/gogs/gogs/security/advisories/GHSA-5mgh-chvj-hqf5)
 
 ### Removed
 
