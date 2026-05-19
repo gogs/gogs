@@ -147,7 +147,7 @@ func newMacaron() *macaron.Macaron {
 	m.Use(captcha.Captchaer(captcha.Options{
 		SubURL: conf.Server.Subpath,
 	}))
-	m.Route("/healthcheck", "HEAD,GET", healthCheck)
+	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
 	return m
 }
 
