@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/binding"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -57,6 +57,10 @@ func (err ErrLoginSourceMismatch) Error() string {
 // When the "loginSourceID" is negative, it aborts the process and returns
 // ErrUserNotExist if the user was not found in the database.
 //
+// disallowedUsernameChars matches any character not allowed in a username:
+// anything outside ASCII letters, digits, underscore, hyphen, or dot.
+var disallowedUsernameChars = regexp.MustCompile(`[^\d\w-_\.]`)
+
 // When the "loginSourceID" is non-negative, it returns ErrLoginSourceMismatch
 // if the user has different login source ID than the "loginSourceID".
 //
@@ -129,7 +133,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 	}
 
 	// Validate username make sure it satisfies requirement.
-	if binding.AlphaDashDotPattern.MatchString(extAccount.Name) {
+	if disallowedUsernameChars.MatchString(extAccount.Name) {
 		return nil, errors.Newf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
