@@ -18,7 +18,6 @@ require (
 	github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07
 	github.com/go-macaron/i18n v0.6.0
 	github.com/go-macaron/session v1.0.3
-	github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
 	github.com/gogs/git-module v1.8.7
