@@ -78,7 +78,11 @@ func loadMailTemplates() (*template.Template, error) {
 	}
 
 	if conf.Server.LoadAssetsFromDisk {
-		if err := overlayDiskMailTemplates(filepath.Join(conf.WorkDir(), "templates", "mail"), parse); err != nil {
+		baseRoot := filepath.Join(conf.WorkDir(), "templates", "mail")
+		if _, err := os.Stat(baseRoot); err != nil {
+			return nil, errors.Wrapf(err, "stat base mail templates %q", baseRoot)
+		}
+		if err := overlayDiskMailTemplates(baseRoot, parse); err != nil {
 			return nil, err
 		}
 	} else {
@@ -131,7 +135,6 @@ func overlayDiskMailTemplates(root string, parse func(name string, data []byte) 
 	})
 }
 
-// render renders a mail template with given data.
 func render(tpl string, data map[string]any) (string, error) {
 	tplSetOnce.Do(func() {
 		tplSet, tplSetErr = loadMailTemplates()
