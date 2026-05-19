@@ -16,6 +16,14 @@ import (
 	"gogs.io/gogs/templates"
 )
 
+// Translator is the minimal locale-translation contract used by mail
+// composition. It decouples this package from any specific web framework so
+// callers can pass either macaron.Context or, post-migration, Flamego's
+// i18n.Locale.
+type Translator interface {
+	Tr(format string, args ...any) string
+}
+
 const (
 	tmplAuthActivate       = "auth/activate"
 	tmplAuthActivateEmail  = "auth/activate_email"
@@ -102,7 +110,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) error {
+func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
 	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
@@ -124,15 +132,15 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) e
 	return nil
 }
 
-func SendActivateAccountMail(c *macaron.Context, u User) error {
-	return SendUserMail(c, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
+func SendActivateAccountMail(t Translator, u User) error {
+	return SendUserMail(t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(c *macaron.Context, u User) error {
-	return SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
+func SendResetPasswordMail(t Translator, u User) error {
+	return SendUserMail(t, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
 }
 
-func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
+func SendActivateEmailMail(t Translator, u User, email string) error {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
@@ -144,7 +152,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{email}, c.Tr("mail.activate_email"), body)
+	msg, err := newMessage([]string{email}, t.Tr("mail.activate_email"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -154,7 +162,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 	return nil
 }
 
-func SendRegisterNotifyMail(c *macaron.Context, u User) error {
+func SendRegisterNotifyMail(t Translator, u User) error {
 	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
@@ -163,7 +171,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
+	msg, err := newMessage([]string{u.Email()}, t.Tr("mail.register_notify"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
