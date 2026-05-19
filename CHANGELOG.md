@@ -16,6 +16,7 @@ All notable changes to Gogs are documented in this file.
 - The `[email] DISABLE_HELO` configuration option. HELO/EHLO is now always sent during SMTP handshake. [#8164](https://github.com/gogs/gogs/pull/8164)
 - Support for MSSQL as the database backend. Stay on 0.14 for continued usage. [#8173](https://github.com/gogs/gogs/pull/8173)
 - Support for `memcache` as the cache adapter. Stay on 0.14 for continued usage. [#8270](https://github.com/gogs/gogs/pull/8270)
+- The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. The `/healthcheck` endpoint is preserved.
 
 ## 0.14.2
 

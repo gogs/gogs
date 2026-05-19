@@ -19,7 +19,6 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/go-macaron/toolbox"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli/v3"
 	"gopkg.in/macaron.v1"
@@ -148,15 +147,26 @@ func newMacaron() *macaron.Macaron {
 	m.Use(captcha.Captchaer(captcha.Options{
 		SubURL: conf.Server.Subpath,
 	}))
-	m.Use(toolbox.Toolboxer(m, toolbox.Options{
-		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
-			{
-				Desc: "Database connection",
-				Func: database.Ping,
-			},
-		},
-	}))
+	m.Route("/healthcheck", "HEAD,GET", healthCheck)
 	return m
+}
+
+// healthCheck reports whether external dependencies are reachable. Returns
+// HTTP 200 with a body line per dependency on success, or HTTP 503 with the
+// first failing dependency's error on failure.
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	if err := database.Ping(); err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = fmt.Fprintf(w, "* Database connection: %s\n", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if r.Method == http.MethodHead {
+		return
+	}
+	_, _ = w.Write([]byte("* Database connection: OK\n"))
 }
 
 func runWeb(_ stdctx.Context, cmd *cli.Command) error {
