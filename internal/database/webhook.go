@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -712,7 +713,13 @@ func (t *HookTask) deliver() {
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
-		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify})
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify}).
+		SetCheckRedirect(func(req *http.Request, _ []*http.Request) error {
+			// The webhook target is explicitly configured by the user, so any
+			// redirect would silently retarget the signed payload. Refuse all
+			// redirects rather than chase them.
+			return errors.Newf("refusing to follow webhook redirect to %q", req.URL.Redacted())
+		})
 
 	switch t.ContentType {
 	case JSON:
