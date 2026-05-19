@@ -151,9 +151,6 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
-// healthCheck reports whether external dependencies are reachable. Returns
-// HTTP 200 with a body line per dependency on success, or HTTP 503 with the
-// first failing dependency's error on failure.
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	if err := database.Ping(); err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
