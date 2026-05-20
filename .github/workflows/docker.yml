@@ -220,7 +220,9 @@ jobs:
             STABLE_TAGS=$(git tag --list 'v*' | sed 's/^v//' | grep -v -- '-' || true)
             HIGHEST_STABLE=$(echo "$STABLE_TAGS" | sort -V | tail -n 1)
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
-            HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | grep "^${MINOR_TAG}\." | sort -V | tail -n 1)
+            # `|| true` keeps the step running when `grep` finds no matches,
+            # since bash runs with `-e -o pipefail` in GitHub Actions.
+            HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | { grep "^${MINOR_TAG}\." || true; } | sort -V | tail -n 1)
 
             if [[ "$IMAGE_TAG" == "$HIGHEST_IN_MINOR" ]]; then
               TAGS="$TAGS
@@ -314,7 +316,9 @@ jobs:
             STABLE_TAGS=$(git tag --list 'v*' | sed 's/^v//' | grep -v -- '-' || true)
             HIGHEST_STABLE=$(echo "$STABLE_TAGS" | sort -V | tail -n 1)
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
-            HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | grep "^${MINOR_TAG}\." | sort -V | tail -n 1)
+            # `|| true` keeps the step running when `grep` finds no matches,
+            # since bash runs with `-e -o pipefail` in GitHub Actions.
+            HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | { grep "^${MINOR_TAG}\." || true; } | sort -V | tail -n 1)
 
             if [[ "$IMAGE_TAG" == "$HIGHEST_IN_MINOR" ]]; then
               TAGS="$TAGS
