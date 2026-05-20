@@ -31,7 +31,7 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Use(flamego.Recovery())
 
 	if err := mountWebRoutes(f); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "mount web routes")
 	}
 	return f, nil
 }
