@@ -60,12 +60,12 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            gogs/gogs:latest
-            ghcr.io/gogs/gogs:latest
+            gogs/gogs:edge
+            ghcr.io/gogs/gogs:edge
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
-          image-ref: gogs/gogs:latest
+          image-ref: gogs/gogs:edge
           exit-code: '1'
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
@@ -126,13 +126,13 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            gogs/gogs:next-latest
-            ghcr.io/gogs/gogs:next-latest
-            registry.digitalocean.com/gogs/gogs:next-latest
+            gogs/gogs:next-edge
+            ghcr.io/gogs/gogs:next-edge
+            registry.digitalocean.com/gogs/gogs:next-edge
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
-          image-ref: gogs/gogs:next-latest
+          image-ref: gogs/gogs:next-edge
           exit-code: '1'
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
@@ -263,12 +263,14 @@ jobs:
           TAGS="gogs/gogs:$IMAGE_TAG
           ghcr.io/gogs/gogs:$IMAGE_TAG"
 
-          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          # Add minor version and `latest` tags for stable releases (no prerelease suffix per semver).
           if [[ ! "$IMAGE_TAG" =~ - ]]; then
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
             TAGS="$TAGS
           gogs/gogs:$MINOR_TAG
-          ghcr.io/gogs/gogs:$MINOR_TAG"
+          ghcr.io/gogs/gogs:$MINOR_TAG
+          gogs/gogs:latest
+          ghcr.io/gogs/gogs:latest"
           fi
 
           echo "TAGS<<EOF" >> $GITHUB_ENV
@@ -332,12 +334,14 @@ jobs:
           TAGS="gogs/gogs:next-$IMAGE_TAG
           ghcr.io/gogs/gogs:next-$IMAGE_TAG"
 
-          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          # Add minor version and `next-latest` tags for stable releases (no prerelease suffix per semver).
           if [[ ! "$IMAGE_TAG" =~ - ]]; then
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
             TAGS="$TAGS
           gogs/gogs:next-$MINOR_TAG
-          ghcr.io/gogs/gogs:next-$MINOR_TAG"
+          ghcr.io/gogs/gogs:next-$MINOR_TAG
+          gogs/gogs:next-latest
+          ghcr.io/gogs/gogs:next-latest"
           fi
 
           echo "TAGS<<EOF" >> $GITHUB_ENV
