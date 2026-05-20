@@ -37,7 +37,7 @@ var webCommand = cli.Command{
 func main() {
 	cmd := &cli.Command{
 		Name:    "Gogs",
-		Usage:   "A painless self-hosted Git service",
+		Usage:   "The painless way to host your own Git service",
 		Version: conf.App.Version,
 		Commands: []*cli.Command{
 			&webCommand,

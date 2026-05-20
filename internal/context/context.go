@@ -164,8 +164,6 @@ func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 type WebContext struct {
 	Lang   string
 	SubURL string
-	// Status overrides the response status (e.g. 404 for NotFound). 0 means
-	// the handler should use its default (200).
 	Status int
 }
 

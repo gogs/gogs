@@ -27,7 +27,6 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 - Prefer `moon run <project>:<task>` over vanilla `go` or `pnpm` commands when available (e.g. `moon run gogs:build`, `moon run web:dev`). Pass `--force` to bypass cache when necessary.
 - Run `moon run gogs:lint` after every time you finish changing Go code, and `moon run web:lint` after changing frontend code; fix all linter errors.
-- Run `go mod tidy` after every time you change `go.mod`, do not manually edit `go.sum` file.
 
 ## Tool-use guidance
 
