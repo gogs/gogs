@@ -7,7 +7,7 @@
 
 This applies to all texts, including but not limited to UI, documentation, code comments.
 
-- Use sentence case. Preserve original casing for brand names.
+- Use sentence case. Preserve original casing for brand names. Use title case in places that are expected to be "title".
 - End with a period for a full sentence.
 - Do not add comments that repeat what the code is doing, always prefer more descriptive names. Do add comments for intentions that aren't obvious via reading the code alone. This rule takes precedence over matching existing patterns.
 

@@ -1,7 +1,10 @@
 import { useTranslation } from "react-i18next";
 
+import { usePageTitle } from "@/lib/page-title";
+
 export function Landing() {
   const { t } = useTranslation();
+  usePageTitle();
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-2xl">
@@ -56,17 +59,7 @@ export function Landing() {
   );
 }
 
-function CmdLink({
-  href,
-  cmd,
-  desc,
-  external,
-}: {
-  href: string;
-  cmd: string;
-  desc: string;
-  external?: boolean;
-}) {
+function CmdLink({ href, cmd, desc, external }: { href: string; cmd: string; desc: string; external?: boolean }) {
   return (
     <a
       href={href}
@@ -76,9 +69,7 @@ function CmdLink({
       <span className="inline-block w-16 text-(--color-foreground) group-hover:text-(--color-accent-foreground) sm:w-20">
         {cmd}
       </span>
-      <span className="text-(--color-muted-foreground) group-hover:text-(--color-accent-foreground)/80">
-        — {desc}
-      </span>
+      <span className="text-(--color-muted-foreground) group-hover:text-(--color-accent-foreground)/80">— {desc}</span>
       <span className="text-(--color-muted-foreground) group-hover:text-(--color-accent-foreground)">→</span>
     </a>
   );

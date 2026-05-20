@@ -24,14 +24,10 @@ export function Navbar() {
           </NavLink>
         </div>
 
-        <div className="hidden shrink-0 items-center gap-4 sm:flex">
+        <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <SettingsMenu />
-          <a href="/user/sign_up" className="text-(--color-foreground) hover:text-(--color-foreground)/70">
-            {t("register")}
-          </a>
-          <a href="/user/login" className="text-(--color-foreground) hover:text-(--color-foreground)/70">
-            {t("sign_in")}
-          </a>
+          <NavLink href="/user/sign_up">{t("register")}</NavLink>
+          <NavLink href="/user/login">{t("sign_in")}</NavLink>
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:hidden">
@@ -39,7 +35,7 @@ export function Navbar() {
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger
               aria-label="Open menu"
-              className="inline-flex size-9 items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-muted)"
+              className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-muted)"
             >
               <Menu className="size-[18px]" />
             </PopoverTrigger>
@@ -75,7 +71,7 @@ function NavLink({ href, external, children }: { href: string; external?: boolea
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="inline-flex rounded-md px-3 py-1.5 text-(--color-muted-foreground) hover:bg-(--color-muted) hover:text-(--color-foreground)"
+      className="inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-muted)"
     >
       {children}
     </a>

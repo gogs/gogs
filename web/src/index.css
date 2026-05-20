@@ -34,52 +34,54 @@
   --radius: 0.5rem;
 }
 
+/* Theme palettes are derived from Happy Hues (https://www.happyhues.co):
+   light mode = palette 9, dark mode = palette 13. */
 :root {
   color-scheme: light dark;
 
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.745 0.158 49.2);
-  --color-primary-foreground: oklch(0.145 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
-  --color-destructive: oklch(0.582 0.198 4.5);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
+  --color-background: #fffffe;
+  --color-foreground: #094067;
+  --color-card: #fffffe;
+  --color-card-foreground: #094067;
+  --color-popover: #fffffe;
+  --color-popover-foreground: #094067;
+  --color-primary: #3da9fc;
+  --color-primary-foreground: #fffffe;
+  --color-secondary: #90b4ce;
+  --color-secondary-foreground: #094067;
+  --color-muted: #d8eefe;
+  --color-muted-foreground: #5f6c7b;
+  --color-accent: #d8eefe;
+  --color-accent-foreground: #094067;
+  --color-destructive: #ef4565;
+  --color-destructive-foreground: #fffffe;
+  --color-border: #90b4ce;
+  --color-input: #90b4ce;
+  --color-ring: #3da9fc;
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.145 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.145 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.732 0.184 50.6);
-  --color-primary-foreground: oklch(0.145 0 0);
-  --color-secondary: oklch(0.269 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.622 0.231 0.5);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.439 0 0);
+  --color-background: #16161a;
+  --color-foreground: #fffffe;
+  --color-card: #242629;
+  --color-card-foreground: #fffffe;
+  --color-popover: #242629;
+  --color-popover-foreground: #fffffe;
+  --color-primary: #7f5af0;
+  --color-primary-foreground: #fffffe;
+  --color-secondary: #72757e;
+  --color-secondary-foreground: #fffffe;
+  --color-muted: #242629;
+  --color-muted-foreground: #94a1b2;
+  --color-accent: #242629;
+  --color-accent-foreground: #fffffe;
+  --color-destructive: #ef4565;
+  --color-destructive-foreground: #fffffe;
+  --color-border: #72757e;
+  --color-input: #72757e;
+  --color-ring: #7f5af0;
 }
 
 @layer base {

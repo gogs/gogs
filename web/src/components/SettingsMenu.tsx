@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { type Theme, useTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 const LANGUAGES: { code: string; name: string }[] = [
   { code: "en-US", name: "English" },
@@ -56,7 +56,7 @@ export function SettingsMenu() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={t("settings")}
-        className="inline-flex size-9 items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-muted) hover:text-(--color-foreground)"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-muted) hover:text-(--color-foreground)"
       >
         <Settings className="size-4" />
       </PopoverTrigger>
@@ -104,7 +104,10 @@ export function SettingsMenu() {
                     params.set("lang", lang.code);
                     window.location.search = "?" + params.toString();
                   }}
-                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-accent) hover:text-(--color-accent-foreground)"
+                  className={cn(
+                    "flex w-full items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-accent) hover:text-(--color-accent-foreground)",
+                    isActive ? "cursor-default" : "cursor-pointer",
+                  )}
                 >
                   <Check className={cn("mr-2 size-4", isActive ? "opacity-100" : "opacity-0")} />
                   {lang.name}
@@ -138,7 +141,7 @@ function ThemeOption({
       onClick={() => onSelect(value)}
       aria-pressed={isActive}
       className={cn(
-        "flex flex-col items-center gap-1 rounded-md px-2 py-2 text-xs hover:bg-(--color-accent)",
+        "flex cursor-pointer flex-col items-center gap-1 rounded-md px-2 py-2 text-xs hover:bg-(--color-accent)",
         isActive
           ? "bg-(--color-accent) text-(--color-accent-foreground)"
           : "text-(--color-muted-foreground) hover:text-(--color-accent-foreground)",

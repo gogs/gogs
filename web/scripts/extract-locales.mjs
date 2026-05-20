@@ -1,8 +1,7 @@
 // Extracts the subset of keys the SPA needs from conf/locale/locale_*.ini and
 // writes them as JSON under web/src/locales/. Run with `node scripts/extract-locales.mjs`
 // after adding a new key or changing source translations.
-
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,30 +30,30 @@ const REUSED_KEYS = [
 // then optionally add per-language overrides in SPA_SUPPLEMENT_OVERRIDES below.
 // Locales without an override fall back to en-US via react-i18next.
 const SPA_SUPPLEMENTS = {
-  "theme": "Theme",
-  "theme_light": "Light",
-  "theme_dark": "Dark",
-  "theme_system": "System",
+  theme: "Theme",
+  theme_light: "Light",
+  theme_dark: "Dark",
+  theme_system: "System",
 };
 
 const SPA_SUPPLEMENT_OVERRIDES = {
   "zh-CN": {
-    "theme": "主题",
-    "theme_light": "浅色",
-    "theme_dark": "深色",
-    "theme_system": "跟随系统",
+    theme: "主题",
+    theme_light: "浅色",
+    theme_dark: "深色",
+    theme_system: "跟随系统",
   },
   "zh-HK": {
-    "theme": "主題",
-    "theme_light": "淺色",
-    "theme_dark": "深色",
-    "theme_system": "跟隨系統",
+    theme: "主題",
+    theme_light: "淺色",
+    theme_dark: "深色",
+    theme_system: "跟隨系統",
   },
   "zh-TW": {
-    "theme": "主題",
-    "theme_light": "淺色",
-    "theme_dark": "深色",
-    "theme_system": "跟隨系統",
+    theme: "主題",
+    theme_light: "淺色",
+    theme_dark: "深色",
+    theme_system: "跟隨系統",
   },
 };
 

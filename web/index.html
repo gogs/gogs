@@ -3,18 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" href="/img/favicon.png" />
     <title>Gogs</title>
     <style>
       /* Inlined so the page paints with the right theme background before the main stylesheet arrives. */
-      html { background-color: oklch(1 0 0); }
-      html.dark { background-color: oklch(0.145 0 0); }
+      html {
+        background-color: oklch(1 0 0);
+      }
+      html.dark {
+        background-color: oklch(0.145 0 0);
+      }
     </style>
     <script>
       // Inlined to run before paint and avoid theme flash.
       (function () {
         var saved = localStorage.getItem("gogs-theme");
         var dark =
-          saved === "dark" || ((saved === "system" || !saved) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          saved === "dark" ||
+          ((saved === "system" || !saved) && window.matchMedia("(prefers-color-scheme: dark)").matches);
         if (dark) document.documentElement.classList.add("dark");
       })();
     </script>
