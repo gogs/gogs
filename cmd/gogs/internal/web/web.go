@@ -739,8 +739,12 @@ func mountWebRoutes(f *flamego.Flame) error {
 		// the static handler looks them up in webFS at "<subpath>/assets/...",
 		// which has no <subpath> directory, so every asset would 404 and
 		// fall through to the wildcard handler as text/html.
+		//
+		// hideIndexFS keeps the static handler from serving the raw shell
+		// at "/" so the catch-all below always renders it through
+		// renderIndex with template substitutions applied.
 		f.Use(flamego.Static(flamego.StaticOptions{
-			FileSystem: http.FS(webFS),
+			FileSystem: http.FS(hideIndexFS{webFS}),
 			Prefix:     conf.Server.Subpath,
 		}))
 
@@ -899,6 +903,18 @@ func newMacaron() (*macaron.Macaron, error) {
 	}))
 	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
 	return m, nil
+}
+
+// hideIndexFS wraps an fs.FS to hide the top-level index.html, so the SPA
+// shell is always served through renderIndex (with template substitutions
+// applied) rather than directly by the static file handler.
+type hideIndexFS struct{ fs.FS }
+
+func (h hideIndexFS) Open(name string) (fs.File, error) {
+	if name == "index.html" {
+		return nil, fs.ErrNotExist
+	}
+	return h.FS.Open(name)
 }
 
 // renderIndex applies per-request substitutions to the index.html shell:

@@ -35,26 +35,20 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           fetch-depth: 0
-
       - name: Set up pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
-
       - name: Set up Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 24
           cache: pnpm
-
       - name: Set up moon
         uses: moonrepo/setup-toolchain@261c62cb5b0f580c7be7c8cd0f023a2e96756095 # v0.6.4
         with:
           auto-install: false
-
       - name: Lint
         run: moon run web:lint
-
       - name: Build
         run: moon run web:build
-
       - name: Check for uncommitted changes
         run: git diff --exit-code --stat

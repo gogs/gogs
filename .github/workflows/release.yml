@@ -46,6 +46,17 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: 1.26.x
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Build web assets
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter gogs-web run build
       - name: Determine version
         id: version
         run: |
@@ -70,9 +81,9 @@ jobs:
             BINARY_NAME="gogs.exe"
           fi
 
-          TAGS_FLAG=""
+          TAGS="prod"
           if [ -n "${{ matrix.tags }}" ]; then
-            TAGS_FLAG="-tags ${{ matrix.tags }}"
+            TAGS="$TAGS ${{ matrix.tags }}"
           fi
 
           go build -v \
@@ -80,7 +91,7 @@ jobs:
               -X \"gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')\"
               -X \"gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)\"
             " \
-            $TAGS_FLAG \
+            -tags "$TAGS" \
             -trimpath -o "$BINARY_NAME" ./cmd/gogs
       - name: Prepare archive contents
         run: |

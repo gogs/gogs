@@ -11,5 +11,10 @@ scripts/**
 .gitignore
 Dockerfile*
 gogs
+node_modules
+**/node_modules
+public/dist
+**/*.tsbuildinfo
+**/.vite
 
 !Taskfile.yml
