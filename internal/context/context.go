@@ -164,10 +164,13 @@ func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 type langContextKey struct{}
 
 // LangFromRequest returns the locale code resolved by the macaron i18n
-// middleware for the current request, or the empty string if unavailable.
+// middleware for the current request, or "en-US" when unavailable.
 func LangFromRequest(r *http.Request) string {
 	lang, _ := r.Context().Value(langContextKey{}).(string)
-	return lang
+	if lang != "" {
+		return lang
+	}
+	return "en-US"
 }
 
 // NotFound delegates to the configured notFoundHandler, falling back to the

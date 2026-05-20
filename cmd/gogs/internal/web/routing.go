@@ -18,14 +18,6 @@ import (
 	"gogs.io/gogs/public"
 )
 
-// newRoutingHandler returns an http.Handler that serves the React frontend
-// built from /web. In prod mode embedded assets from public.WebAssets are
-// served directly and unknown paths fall back to index.html so client-side
-// routing works. In dev mode requests are reverse-proxied to the Vite dev
-// server.
-//
-// It is mounted as macaron's NotFound handler so legacy routes keep working
-// and only unmatched paths reach the new frontend.
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
@@ -50,7 +42,7 @@ func mountWebRoutes(f *flamego.Flame) error {
 		}
 
 		f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
-			body := bytes.Replace(index, []byte("{{.Lang}}"), []byte(resolveLang(r)), 1)
+			body := bytes.Replace(index, []byte("{{.Lang}}"), []byte(context.LangFromRequest(r)), 1)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_, _ = w.Write(body)
 		})
@@ -71,7 +63,7 @@ func mountWebRoutes(f *flamego.Flame) error {
 			return errors.Wrap(err, "read vite response body")
 		}
 		_ = resp.Body.Close()
-		body := bytes.Replace(raw, []byte("{{.Lang}}"), []byte(resolveLang(resp.Request)), 1)
+		body := bytes.Replace(raw, []byte("{{.Lang}}"), []byte(context.LangFromRequest(resp.Request)), 1)
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
@@ -86,11 +78,4 @@ func mountWebRoutes(f *flamego.Flame) error {
 		proxy.ServeHTTP(w, r)
 	})
 	return nil
-}
-
-func resolveLang(r *http.Request) string {
-	if lang := context.LangFromRequest(r); lang != "" {
-		return lang
-	}
-	return "en-US"
 }
