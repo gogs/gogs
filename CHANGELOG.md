@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Changed
+
+- Docker builds from `main` are now published as `gogs/gogs:edge` and `gogs/gogs:next-edge`. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release. [#8278](https://github.com/gogs/gogs/pull/8278)
+
 ### Fixed
 
 - _Security:_ Denial of service in repository and wiki file listing pages via crafted file names. [#8116](https://github.com/gogs/gogs/pull/8116) - [GHSA-3qq3-668m-v9mj](https://github.com/gogs/gogs/security/advisories/GHSA-3qq3-668m-v9mj)
