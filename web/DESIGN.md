@@ -44,7 +44,7 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Peer-item rule**
 
-Don't use foreground vs muted-foreground to imply "primary action" vs "secondary action" between two peer items (e.g. Sign in vs Register). Peer items get the same color. Differentiation comes from positioning, weight, or affordance, not arbitrary contrast. Active vs inactive *states* of the same control (e.g. the selected theme tile in `SettingsMenu`) are a different case and may use the foreground/muted-foreground split to communicate selection.
+Don't use foreground vs muted-foreground to imply "primary action" vs "secondary action" between two peer items (e.g. Sign in vs Register). Peer items get the same color. Differentiation comes from positioning, weight, or affordance, not arbitrary contrast. Active vs inactive _states_ of the same control (e.g. the selected theme tile in `SettingsMenu`) are a different case and may use the foreground/muted-foreground split to communicate selection.
 
 **Ad-hoc colors**
 
