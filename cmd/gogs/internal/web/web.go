@@ -568,13 +568,7 @@ func Run(configPath string, portOverride int) error {
 			lfs.RegisterRoutes(m.Router)
 		})
 
-		// Git HTTP smart and dumb protocol endpoints so other /:user/:repo paths
-		// fall through to the web fallback.
 		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
-		// Answer CORS preflight for any path under the repo namespace, so
-		// browser-based git clients still get a 200 + headers on OPTIONS
-		// even when the path is not one of the explicit git endpoints.
-		m.Route("/*", "OPTIONS", repo.CORS())
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
@@ -725,7 +719,15 @@ func mountWebRoutes(f *flamego.Flame) error {
 		if err != nil {
 			return errors.Wrap(err, "load embedded web assets")
 		}
-		f.Use(flamego.Static(flamego.StaticOptions{FileSystem: http.FS(webFS)}))
+		// Prefix matches the path rewrites renderIndex applies to the index
+		// shell. Without it the browser fetches /<subpath>/assets/... and
+		// the static handler looks them up in webFS at "<subpath>/assets/...",
+		// which has no <subpath> directory, so every asset would 404 and
+		// fall through to the wildcard handler as text/html.
+		f.Use(flamego.Static(flamego.StaticOptions{
+			FileSystem: http.FS(webFS),
+			Prefix:     conf.Server.Subpath,
+		}))
 
 		index, err := public.WebAssets.ReadFile("dist/index.html")
 		if err != nil {
