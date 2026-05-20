@@ -1,18 +1,23 @@
-// Package web implements the "gogs web" subcommand.
 package web
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/http/fcgi"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
+	"github.com/flamego/flamego"
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"
@@ -44,19 +49,21 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-// Run starts the web server. configPath is the path to app.ini (empty for
-// default). portOverride, if non-zero, overrides the configured HTTP port.
+// Run starts the web server with the given configuration path and port override.
 func Run(configPath string, portOverride int) error {
 	err := route.GlobalInit(configPath)
 	if err != nil {
-		log.Fatal("Failed to initialize application: %v", err)
+		return errors.Wrap(err, "initialize application")
 	}
 
-	m := newMacaron()
+	m, err := newMacaron()
+	if err != nil {
+		return errors.Wrap(err, "initialize macaron")
+	}
 
 	webHandler, err := newRoutingHandler()
 	if err != nil {
-		log.Fatal("Failed to initialize web handler: %v", err)
+		return errors.Wrap(err, "initialize web handler")
 	}
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
@@ -662,36 +669,98 @@ func Run(configPath string, portOverride int) error {
 		if osx.Exist(listenAddr) {
 			err = os.Remove(listenAddr)
 			if err != nil {
-				log.Fatal("Failed to remove existing Unix domain socket: %v", err)
+				return errors.Wrap(err, "remove existing Unix domain socket")
 			}
 		}
 
 		var listener *net.UnixListener
 		listener, err = net.ListenUnix("unix", &net.UnixAddr{Name: listenAddr, Net: "unix"})
 		if err != nil {
-			log.Fatal("Failed to listen on Unix networks: %v", err)
+			return errors.Wrap(err, "listen on Unix network")
 		}
 
 		// FIXME: add proper implementation of signal capture on all protocols
 		// execute this on SIGTERM or SIGINT: listener.Close()
 		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
-			log.Fatal("Failed to change permission of Unix domain socket: %v", err)
+			return errors.Wrap(err, "change permission of Unix domain socket")
 		}
 		err = http.Serve(listener, m)
 
 	default:
-		log.Fatal("Unexpected server protocol: %s", conf.Server.Protocol)
+		return errors.Newf("unexpected server protocol: %s", conf.Server.Protocol)
 	}
 
 	if err != nil {
-		log.Fatal("Failed to start server: %v", err)
+		return errors.Wrap(err, "start server")
 	}
 
 	return nil
 }
 
+func newRoutingHandler() (http.Handler, error) {
+	f := flamego.New()
+	f.Use(flamego.Recovery())
+
+	if err := mountWebRoutes(f); err != nil {
+		return nil, errors.Wrap(err, "mount web routes")
+	}
+	return f, nil
+}
+
+func mountWebRoutes(f *flamego.Flame) error {
+	if conf.IsProdMode() {
+		webFS, err := fs.Sub(public.WebAssets, "dist")
+		if err != nil {
+			return errors.Wrap(err, "load embedded web assets")
+		}
+		f.Use(flamego.Static(flamego.StaticOptions{FileSystem: http.FS(webFS)}))
+
+		index, err := public.WebAssets.ReadFile("dist/index.html")
+		if err != nil {
+			return errors.Wrap(err, `read "dist/index.html"`)
+		}
+
+		f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
+			body := bytes.Replace(index, []byte("{{.Lang}}"), []byte(context.LangFromRequest(r)), 1)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(body)
+		})
+		return nil
+	}
+
+	viteURL, err := url.Parse("http://localhost:5173")
+	if err != nil {
+		return errors.Wrap(err, "parse vite URL")
+	}
+	proxy := httputil.NewSingleHostReverseProxy(viteURL)
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		if !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/html") {
+			return nil
+		}
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "read vite response body")
+		}
+		_ = resp.Body.Close()
+		body := bytes.Replace(raw, []byte("{{.Lang}}"), []byte(context.LangFromRequest(resp.Request)), 1)
+		resp.Body = io.NopCloser(bytes.NewReader(body))
+		resp.ContentLength = int64(len(body))
+		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
+		// The upstream validators describe the unmodified body. Drop them so
+		// the browser does not satisfy a conditional request from a cached
+		// copy that has a stale injected lang attribute.
+		resp.Header.Del("ETag")
+		resp.Header.Del("Last-Modified")
+		return nil
+	}
+	f.Any("/{**}", func(w http.ResponseWriter, r *http.Request) {
+		proxy.ServeHTTP(w, r)
+	})
+	return nil
+}
+
 // newMacaron initializes Macaron instance.
-func newMacaron() *macaron.Macaron {
+func newMacaron() (*macaron.Macaron, error) {
 	m := macaron.New()
 	if !conf.Server.DisableRouterLog {
 		m.Use(macaron.Logger())
@@ -755,13 +824,13 @@ func newMacaron() *macaron.Macaron {
 
 	localeNames, err := embedConf.FileNames("locale")
 	if err != nil {
-		log.Fatal("Failed to list locale files: %v", err)
+		return nil, errors.Wrap(err, "list locale files")
 	}
 	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
 		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
 		if err != nil {
-			log.Fatal("Failed to read locale file %q: %v", name, err)
+			return nil, errors.Wrapf(err, "read locale file %q", name)
 		}
 	}
 	m.Use(i18n.I18n(i18n.Options{
@@ -782,7 +851,7 @@ func newMacaron() *macaron.Macaron {
 		SubURL: conf.Server.Subpath,
 	}))
 	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
-	return m
+	return m, nil
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
