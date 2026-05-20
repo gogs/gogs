@@ -1,0 +1,11 @@
+{
+  "app_desc": "Ein einfacher, selbst gehosteter Git-Service",
+  "home": "Startseite",
+  "explore": "Erkunden",
+  "help": "Hilfe",
+  "register": "Registrieren",
+  "sign_in": "Anmelden",
+  "settings": "Einstellungen",
+  "language": "Sprache",
+  "page_not_found": "Seite nicht gefunden"
+}

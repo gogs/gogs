@@ -1,0 +1,11 @@
+{
+  "app_desc": "Een eenvoudige zelfgehoste Git service geschreven in Go",
+  "home": "Home",
+  "explore": "Verkennen",
+  "help": "Help",
+  "register": "Registreren",
+  "sign_in": "Inloggen",
+  "settings": "Instellingen",
+  "language": "Taal",
+  "page_not_found": "Pagina niet gevonden"
+}

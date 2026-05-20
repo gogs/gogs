@@ -1,0 +1,15 @@
+{
+  "app_desc": "基於 Go 語言的自助 Git 服務",
+  "home": "首頁",
+  "explore": "探索",
+  "help": "說明",
+  "register": "註冊",
+  "sign_in": "登入",
+  "settings": "設定",
+  "language": "語言",
+  "page_not_found": "Page Not Found",
+  "theme": "主題",
+  "theme_light": "淺色",
+  "theme_dark": "深色",
+  "theme_system": "跟隨系統"
+}
