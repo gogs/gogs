@@ -30,6 +30,15 @@ The 404 page wraps its content in a faux-terminal frame (rounded border, traffic
 
 Strings rendered inside a terminal frame stay in English across all locales, regardless of the active UI language. Real CLI output (`git`, `ls`, `cat`, etc.) doesn't localize; faux-CLI that does loses authenticity and reads as a translated error page in a costume. Translate the surrounding prose (headings, descriptions, CTAs) but leave command names, prompts, error tokens like `fatal:`, and command output strings untouched.
 
+## File naming
+
+Two conventions coexist in `web/src/`:
+
+- **shadcn primitives** in `components/ui/` use **lowercase** filenames (`popover.tsx`, `command.tsx`). This matches the `shadcn` CLI output and lets dropped-in components stay byte-identical to upstream.
+- **App components** anywhere else use **PascalCase** matching the exported component (`Footer.tsx`, `SettingsMenu.tsx`, `Landing.tsx`). This is the React community default.
+
+Library modules in `lib/` are plain `.ts` files in lowercase (`i18n.ts`, `theme.ts`, `utils.ts`).
+
 ## Accessibility
 
 WCAG 2.2 AA is the floor. Apply these patterns in components:
