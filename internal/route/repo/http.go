@@ -40,14 +40,32 @@ func askCredentials(c *macaron.Context, status int, text string) {
 	c.Error(status, text)
 }
 
+// gitHTTPAction returns the Git HTTP path suffix after /:username/:reponame/.
+func gitHTTPAction(c *macaron.Context) string {
+	return gitHTTPActionFromPath(
+		c.Req.URL.Path,
+		conf.Server.Subpath,
+		c.Params(":username"),
+		c.Params(":reponame"),
+	)
+}
+
+func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
+	if subpath != "" {
+		urlPath = strings.TrimPrefix(urlPath, subpath)
+	}
+	prefix := path.Join("/", owner, repo) + "/"
+	if after, ok := strings.CutPrefix(urlPath, prefix); ok {
+		return after
+	}
+	return ""
+}
+
 func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
-			// Set CORS headers for browser-based git clients
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
 			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
-
-			// Handle preflight OPTIONS request
 			if c.Req.Method == "OPTIONS" {
 				c.Status(http.StatusOK)
 				return
@@ -93,7 +111,7 @@ func HTTPContexter(store Store) macaron.Handler {
 		}
 
 		// In case user requested a wrong URL and not intended to access Git objects.
-		action := c.Params("*")
+		action := gitHTTPAction(c)
 		if !strings.Contains(action, "git-") &&
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
@@ -394,9 +412,6 @@ func HTTP(c *HTTPContext) {
 			continue
 		}
 
-		// We perform check here because route matched in cmd/web.go is wider than needed,
-		// but we only want to output this message only if user is really trying to access
-		// Git HTTP endpoints.
 		if conf.Repository.DisableHTTPGit {
 			c.Error(http.StatusForbidden, "Interacting with repositories by HTTP protocol is disabled")
 			return

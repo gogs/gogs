@@ -1,0 +1,15 @@
+{
+  "app_desc": "The painless way to host your own Git service",
+  "home": "Home",
+  "explore": "Explore",
+  "help": "Help",
+  "register": "Register",
+  "sign_in": "Sign in",
+  "settings": "Settings",
+  "language": "Language",
+  "page_not_found": "Page not found",
+  "theme": "Theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_system": "System"
+}

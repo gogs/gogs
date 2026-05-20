@@ -1,0 +1,11 @@
+{
+  "app_desc": "Go言語で実装したセルフホストGitサービス",
+  "home": "ホーム",
+  "explore": "エクスプローラ",
+  "help": "ヘルプ",
+  "register": "登録",
+  "sign_in": "サインイン",
+  "settings": "設定",
+  "language": "言語",
+  "page_not_found": "ページが見つかりません"
+}

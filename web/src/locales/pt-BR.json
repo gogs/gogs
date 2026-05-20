@@ -1,0 +1,11 @@
+{
+  "app_desc": "Um serviço de Git auto-hospedado e amigável escrito em Go",
+  "home": "Página inicial",
+  "explore": "Explorar",
+  "help": "Ajuda",
+  "register": "Registrar",
+  "sign_in": "Entrar",
+  "settings": "Configurações",
+  "language": "Idioma",
+  "page_not_found": "Página Não Encontrada"
+}

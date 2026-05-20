@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/fatih/color"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
@@ -23,6 +24,13 @@ import (
 )
 
 func init() {
+	// fatih/color disables ANSI codes when stdout is not a TTY, which is the
+	// case under process managers like moon. Honor TTY_FORCE so callers can
+	// opt back in without a real terminal.
+	if os.Getenv("TTY_FORCE") != "" {
+		color.NoColor = false
+	}
+
 	// Initialize the primary logger until logging service is up.
 	err := log.NewConsole()
 	if err != nil {

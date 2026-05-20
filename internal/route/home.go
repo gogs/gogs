@@ -2,12 +2,8 @@ package route
 
 import (
 	gocontext "context"
-	"fmt"
-	"net/http"
 
-	"github.com/go-macaron/i18n"
 	"github.com/unknwon/paginater"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -16,7 +12,6 @@ import (
 )
 
 const (
-	tmplHome                 = "home"
 	tmplExploreRepos         = "explore/repos"
 	tmplExploreUsers         = "explore/users"
 	tmplExploreOrganizations = "explore/organizations"
@@ -40,8 +35,7 @@ func Home(c *context.Context) {
 		return
 	}
 
-	c.Data["PageIsHome"] = true
-	c.Success(tmplHome)
+	c.ServeWeb()
 }
 
 func ExploreRepos(c *context.Context) {
@@ -156,9 +150,4 @@ func ExploreOrganizations(c *context.Context) {
 		OrderBy:  "updated_unix DESC",
 		TplName:  tmplExploreOrganizations,
 	})
-}
-
-func NotFound(c *macaron.Context, l i18n.Locale) {
-	c.Data["Title"] = l.Tr("status.page_not_found")
-	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
 }

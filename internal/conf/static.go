@@ -222,7 +222,6 @@ var (
 
 	// Other settings
 	Other struct {
-		ShowFooterBranding         bool
 		ShowFooterTemplateLoadTime bool
 	}
 
@@ -268,7 +267,7 @@ type ServerOpts struct {
 	Domain               string
 	Protocol             string
 	HTTPAddr             string `ini:"HTTP_ADDR"`
-	HTTPPort             string `ini:"HTTP_PORT"`
+	HTTPPort             int    `ini:"HTTP_PORT"`
 	CertFile             string
 	KeyFile              string
 	TLSMinVersion        string `ini:"TLS_MIN_VERSION"`

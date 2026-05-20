@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{.Lang}}" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="sub-url" content="{{.SubURL}}" />
+    <link rel="shortcut icon" href="{{.SubURL}}/img/favicon.png" />
+    <title>Gogs</title>
+    <style>
+      /* Inlined so the page paints with the right theme background before the main stylesheet arrives. */
+      html {
+        background-color: #fffffe;
+      }
+      html.dark {
+        background-color: #16161a;
+      }
+    </style>
+    <script>
+      // Inlined to run before paint and avoid theme flash. Treat any value
+      // other than "light" or "dark" (missing, corrupted, "system", etc.)
+      // as a follow-the-system signal so the OS preference still wins.
+      (function () {
+        var saved = localStorage.getItem("gogs-theme");
+        var explicit = saved === "light" || saved === "dark";
+        var dark = saved === "dark" || (!explicit && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
+  </head>
+  <body class="h-full">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

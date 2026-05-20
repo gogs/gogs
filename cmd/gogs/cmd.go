@@ -30,6 +30,19 @@ func configFromLineage(cmd *cli.Command) string {
 	return ""
 }
 
+func intFlag(name string, value int, usage string) *cli.IntFlag {
+	parts := strings.SplitN(name, ", ", 2)
+	f := &cli.IntFlag{
+		Name:  parts[0],
+		Value: value,
+		Usage: usage,
+	}
+	if len(parts) > 1 {
+		f.Aliases = []string{parts[1]}
+	}
+	return f
+}
+
 func boolFlag(name, usage string) *cli.BoolFlag {
 	parts := strings.SplitN(name, ", ", 2)
 	f := &cli.BoolFlag{

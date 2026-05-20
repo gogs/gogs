@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@theme inline {
+  --font-sans:
+    "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", "PingFang SC", "Microsoft YaHei", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: initial;
+  --color-foreground: initial;
+  --color-card: initial;
+  --color-card-foreground: initial;
+  --color-popover: initial;
+  --color-popover-foreground: initial;
+  --color-primary: initial;
+  --color-primary-foreground: initial;
+  --color-secondary: initial;
+  --color-secondary-foreground: initial;
+  --color-surface: initial;
+  --color-muted-foreground: initial;
+  --color-destructive: initial;
+  --color-destructive-foreground: initial;
+  --color-border: initial;
+  --color-input: initial;
+  --color-ring: initial;
+  --radius: 0.5rem;
+}
+
+/* Theme palettes are derived from Happy Hues (https://www.happyhues.co):
+   light mode = palette 6, dark mode = palette 13. */
+:root {
+  color-scheme: light dark;
+
+  --color-background: #fffffe;
+  --color-foreground: #2b2c34;
+  --color-card: #fffffe;
+  --color-card-foreground: #2b2c34;
+  --color-popover: #fffffe;
+  --color-popover-foreground: #2b2c34;
+  --color-primary: #6246ea;
+  --color-primary-foreground: #fffffe;
+  --color-secondary: #d1d1e9;
+  --color-secondary-foreground: #2b2c34;
+  --color-surface: #ececf6;
+  --color-muted-foreground: #5f6172;
+  --color-destructive: #c2392f;
+  --color-destructive-foreground: #fffffe;
+  --color-border: #2b2c34;
+  --color-input: #2b2c34;
+  --color-ring: #6246ea;
+}
+
+:root.dark {
+  color-scheme: dark;
+
+  --color-background: #16161a;
+  --color-foreground: #fffffe;
+  --color-card: #242629;
+  --color-card-foreground: #fffffe;
+  --color-popover: #242629;
+  --color-popover-foreground: #fffffe;
+  --color-primary: #7551e9;
+  --color-primary-foreground: #fffffe;
+  --color-secondary: #5c5f68;
+  --color-secondary-foreground: #fffffe;
+  --color-surface: #33363c;
+  --color-muted-foreground: #94a1b2;
+  --color-destructive: #d63653;
+  --color-destructive-foreground: #fffffe;
+  --color-border: #5c5f68;
+  --color-input: #5c5f68;
+  --color-ring: #7551e9;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+}

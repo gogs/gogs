@@ -157,7 +157,7 @@ func Install(c *context.Context) {
 	f.Domain = conf.Server.Domain
 	f.SSHPort = conf.SSH.Port
 	f.UseBuiltinSSHServer = conf.SSH.StartBuiltinServer
-	f.HTTPPort = conf.Server.HTTPPort
+	f.HTTPPort = strconv.Itoa(conf.Server.HTTPPort)
 	f.AppUrl = conf.Server.ExternalURL
 	f.LogRootPath = conf.Log.RootPath
 	f.DefaultBranch = conf.Repository.DefaultBranch
