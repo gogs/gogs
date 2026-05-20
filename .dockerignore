@@ -16,5 +16,3 @@ node_modules
 public/dist
 **/*.tsbuildinfo
 **/.vite
-
-!Taskfile.yml

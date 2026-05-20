@@ -24,9 +24,13 @@ fileGroups:
 
 tasks:
   install:
-    command: "go mod tidy"
+    script: |
+      go mod tidy
+      go generate ./...
     inputs:
+      - "@group(sources)"
       - "@group(configs)"
+      - "mockgen.go"
 
   format:
     command: "golangci-lint fmt"
@@ -56,7 +60,7 @@ tasks:
 
   build:
     script: |
-      go build -trimpath \
+      go build -v -trimpath \
         -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
         -o .bin/gogs ./cmd/gogs
     inputs:
@@ -70,7 +74,7 @@ tasks:
 
   build-prod:
     script: |
-      go build -trimpath -tags prod \
+      go build -v -trimpath -tags prod \
         -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
         -o .bin/gogs ./cmd/gogs
     inputs:
