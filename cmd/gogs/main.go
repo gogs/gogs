@@ -22,19 +22,17 @@ var webCommand = cli.Command{
 	Usage: "Start web server",
 	Description: `Gogs web server is the only thing you need to run,
 and it takes care of all the other things for you`,
-	Action: runWeb,
+	Action: func(_ context.Context, cmd *cli.Command) error {
+		var portOverride int
+		if cmd.IsSet("port") {
+			portOverride = cmd.Int("port")
+		}
+		return web.Run(configFromLineage(cmd), portOverride)
+	},
 	Flags: []cli.Flag{
 		intFlag("port, p", 3000, "Temporary port number to prevent conflict"),
 		stringFlag("config, c", filepath.Join(conf.CustomDir(), "conf", "app.ini"), "Custom configuration file path"),
 	},
-}
-
-func runWeb(_ context.Context, cmd *cli.Command) error {
-	var portOverride int
-	if cmd.IsSet("port") {
-		portOverride = cmd.Int("port")
-	}
-	return web.Run(configFromLineage(cmd), portOverride)
 }
 
 func main() {
