@@ -3,3 +3,7 @@ $schema: "https://moonrepo.dev/schemas/workspace.json"
 projects:
   gogs: "."
   web: "web"
+
+vcs:
+  manager: "git"
+  defaultBranch: "main"
