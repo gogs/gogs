@@ -68,6 +68,21 @@ tasks:
     deps:
       - "install"
 
+  build-prod:
+    script: |
+      go build -trimpath -tags prod \
+        -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
+        -o .bin/gogs ./cmd/gogs
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+      - "@group(assets)"
+    outputs:
+      - ".bin/gogs"
+    deps:
+      - "install"
+      - "web:build"
+
   dev:
     command: ".bin/gogs web"
     preset: "server"
@@ -76,3 +91,11 @@ tasks:
     deps:
       - "build"
       - "web:dev"
+
+  prod:
+    command: ".bin/gogs web"
+    preset: "server"
+    env:
+      TTY_FORCE: "1"
+    deps:
+      - "build-prod"

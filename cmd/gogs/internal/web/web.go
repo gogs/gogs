@@ -1,17 +1,13 @@
 package web
 
 import (
-	"bytes"
 	stdctx "context"
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/fs"
 	"net"
 	"net/http"
 	"net/http/fcgi"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -728,88 +724,6 @@ func newRoutingHandler() (http.Handler, error) {
 	return f, nil
 }
 
-func mountWebRoutes(f *flamego.Flame) error {
-	if conf.IsProdMode() {
-		webFS, err := fs.Sub(public.WebAssets, "dist")
-		if err != nil {
-			return errors.Wrap(err, "load embedded web assets")
-		}
-		// Prefix matches the path rewrites renderIndex applies to the index
-		// shell. Without it the browser fetches /<subpath>/assets/... and
-		// the static handler looks them up in webFS at "<subpath>/assets/...",
-		// which has no <subpath> directory, so every asset would 404 and
-		// fall through to the wildcard handler as text/html.
-		//
-		// hideIndexFS keeps the static handler from serving the raw shell
-		// at "/" so the catch-all below always renders it through
-		// renderIndex with template substitutions applied.
-		f.Use(flamego.Static(flamego.StaticOptions{
-			FileSystem: http.FS(hideIndexFS{webFS}),
-			Prefix:     conf.Server.Subpath,
-		}))
-
-		index, err := public.WebAssets.ReadFile("dist/index.html")
-		if err != nil {
-			return errors.Wrap(err, `read "dist/index.html"`)
-		}
-
-		f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
-			wc := context.WebContextFrom(r)
-			body := renderIndex(index, wc)
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			// The body is rewritten per request (lang injection, future
-			// runtime config), so caching it would serve stale content to
-			// any user whose request resolves to a different locale. Use
-			// no-store rather than no-cache so the browser cannot keep a
-			// copy at all, not even for revalidation. Static assets keep
-			// their normal caching via flamego.Static.
-			w.Header().Set("Cache-Control", "no-store")
-			status := wc.Status
-			if status <= 0 {
-				status = http.StatusOK
-			}
-			w.WriteHeader(status)
-			_, _ = w.Write(body)
-		})
-		return nil
-	}
-
-	viteURL, err := url.Parse("http://localhost:5173")
-	if err != nil {
-		return errors.Wrap(err, "parse Vite URL")
-	}
-	proxy := httputil.NewSingleHostReverseProxy(viteURL)
-	proxy.ModifyResponse = func(resp *http.Response) error {
-		if !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/html") {
-			return nil
-		}
-		raw, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "read Vite response body")
-		}
-		_ = resp.Body.Close()
-		wc := context.WebContextFrom(resp.Request)
-		body := renderIndex(raw, wc)
-		resp.Body = io.NopCloser(bytes.NewReader(body))
-		resp.ContentLength = int64(len(body))
-		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
-		if wc.Status != 0 {
-			resp.StatusCode = wc.Status
-			resp.Status = http.StatusText(wc.Status)
-		}
-		// The upstream validators describe the unmodified body. Drop them so
-		// the browser does not satisfy a conditional request from a cached
-		// copy that has a stale injected lang attribute.
-		resp.Header.Del("ETag")
-		resp.Header.Del("Last-Modified")
-		return nil
-	}
-	f.Any("/{**}", func(w http.ResponseWriter, r *http.Request) {
-		proxy.ServeHTTP(w, r)
-	})
-	return nil
-}
-
 // newMacaron initializes Macaron instance.
 func newMacaron() (*macaron.Macaron, error) {
 	m := macaron.New()
@@ -903,18 +817,6 @@ func newMacaron() (*macaron.Macaron, error) {
 	}))
 	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
 	return m, nil
-}
-
-// hideIndexFS wraps an fs.FS to hide the top-level index.html, so the SPA
-// shell is always served through renderIndex (with template substitutions
-// applied) rather than directly by the static file handler.
-type hideIndexFS struct{ fs.FS }
-
-func (h hideIndexFS) Open(name string) (fs.File, error) {
-	if name == "index.html" {
-		return nil, fs.ErrNotExist
-	}
-	return h.FS.Open(name)
 }
 
 // renderIndex applies per-request substitutions to the index.html shell:
