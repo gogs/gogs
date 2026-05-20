@@ -49,7 +49,7 @@ function currentLangCode(): string {
 export function SettingsMenu() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [currentLang] = useState(currentLangCode);
+  const [currentLang] = useState(() => currentLangCode());
   const { theme, setTheme } = useTheme();
 
   return (

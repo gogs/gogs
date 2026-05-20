@@ -5,7 +5,7 @@ import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
 
 export function App() {
-  const path = typeof window === "undefined" ? "" : window.location.pathname.replace(/\/+$/, "");
+  const path = typeof window === "undefined" ? "/" : window.location.pathname.replace(/\/+$/, "") || "/";
   const isLanding = path === subUrl("/");
   return (
     <div className="flex min-h-dvh flex-col">
