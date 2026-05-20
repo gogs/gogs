@@ -18,60 +18,46 @@ import (
 	"gogs.io/gogs/public"
 )
 
-const (
-	viteDevURL = "http://localhost:5173"
-	// defaultLangAttr is the literal `lang="..."` value committed in
-	// web/index.html. Per-request HTML responses replace it with the user's
-	// resolved locale before serving.
-	defaultLangAttr = `lang="en"`
-)
-
-// newRoutingHandler returns an http.Handler that serves the React SPA built
-// from /web. In prod mode embedded assets from public.WebAssets are served
-// directly and unknown paths fall back to index.html so client-side routing
-// works. In dev mode requests are reverse-proxied to the Vite dev server at
-// localhost:5173.
+// newRoutingHandler returns an http.Handler that serves the React frontend
+// built from /web. In prod mode embedded assets from public.WebAssets are
+// served directly and unknown paths fall back to index.html so client-side
+// routing works. In dev mode requests are reverse-proxied to the Vite dev
+// server.
 //
 // It is mounted as macaron's NotFound handler so legacy routes keep working
-// and only unmatched paths reach the SPA.
+// and only unmatched paths reach the new frontend.
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
 
-	if conf.IsProdMode() {
-		if err := mountEmbedded(f); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := mountViteProxy(f); err != nil {
-			return nil, err
-		}
+	if err := mountWebRoutes(f); err != nil {
+		return nil, err
 	}
 	return f, nil
 }
 
-func mountEmbedded(f *flamego.Flame) error {
-	webFS, err := fs.Sub(public.WebAssets, "dist")
-	if err != nil {
-		return errors.Wrap(err, "load embedded web assets")
+func mountWebRoutes(f *flamego.Flame) error {
+	if conf.IsProdMode() {
+		webFS, err := fs.Sub(public.WebAssets, "dist")
+		if err != nil {
+			return errors.Wrap(err, "load embedded web assets")
+		}
+		f.Use(flamego.Static(flamego.StaticOptions{FileSystem: http.FS(webFS)}))
+
+		index, err := public.WebAssets.ReadFile("dist/index.html")
+		if err != nil {
+			return errors.Wrap(err, `read "dist/index.html"`)
+		}
+
+		f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
+			body := bytes.Replace(index, []byte("{{.Lang}}"), []byte(resolveLang(r)), 1)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(body)
+		})
+		return nil
 	}
-	f.Use(flamego.Static(flamego.StaticOptions{FileSystem: http.FS(webFS)}))
 
-	index, err := public.WebAssets.ReadFile("dist/index.html")
-	if err != nil {
-		return errors.Wrap(err, `read "dist/index.html"`)
-	}
-
-	f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
-		body := injectLang(index, context.LangFromRequest(r))
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(body)
-	})
-	return nil
-}
-
-func mountViteProxy(f *flamego.Flame) error {
-	viteURL, err := url.Parse(viteDevURL)
+	viteURL, err := url.Parse("http://localhost:5173")
 	if err != nil {
 		return errors.Wrap(err, "parse vite URL")
 	}
@@ -85,7 +71,7 @@ func mountViteProxy(f *flamego.Flame) error {
 			return errors.Wrap(err, "read vite response body")
 		}
 		_ = resp.Body.Close()
-		body := injectLang(raw, context.LangFromRequest(resp.Request))
+		body := bytes.Replace(raw, []byte("{{.Lang}}"), []byte(resolveLang(resp.Request)), 1)
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
@@ -102,11 +88,9 @@ func mountViteProxy(f *flamego.Flame) error {
 	return nil
 }
 
-// injectLang replaces the placeholder lang attribute in index.html with the
-// resolved locale. Returns the input unchanged when lang is empty.
-func injectLang(html []byte, lang string) []byte {
-	if lang == "" {
-		return html
+func resolveLang(r *http.Request) string {
+	if lang := context.LangFromRequest(r); lang != "" {
+		return lang
 	}
-	return bytes.Replace(html, []byte(defaultLangAttr), []byte(`lang="`+lang+`"`), 1)
+	return "en-US"
 }
