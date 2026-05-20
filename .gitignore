@@ -2,7 +2,6 @@
 .bin/
 dist/
 .moon/cache/
-.task/
 node_modules/
 
 # Runtime data

@@ -42,5 +42,5 @@ On the `main` branch:
 - [ ] Send a tweet on the [official Twitter account](https://twitter.com/GogsHQ) for the minor release.
 - [ ] Close the milestone for the minor release.
 - [ ] [Bump the hard-coded version](https://github.com/gogs/gogs/commit/a98968436cd5841cf691bb0b80c54c81470d1676) to the new develop version, e.g. `0.14.0+dev` -> `0.15.0+dev`.
-- [ ] Run `task legacy` to identify deprecated code that is aimed to be removed in current develop version.
+- [ ] Run `grep -rnw "\(LEGACY\|Deprecated\)" internal` to identify deprecated code that is aimed to be removed in current develop version.
 - [ ] **After 14 days**, publish [GitHub security advisories](https://github.com/gogs/gogs/security) for security patches included in the release.
