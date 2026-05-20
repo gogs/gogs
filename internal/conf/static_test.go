@@ -48,7 +48,6 @@ func TestCheckInvalidOptions(t *testing.T) {
 	_, _ = cfg.Section("server").NewKey("LANDING_PAGE", "true")
 	_, _ = cfg.Section("database").NewKey("DB_TYPE", "true")
 	_, _ = cfg.Section("database").NewKey("PASSWD", "true")
-	_, _ = cfg.Section("other").NewKey("SHOW_FOOTER_BRANDING", "true")
 	_, _ = cfg.Section("other").NewKey("SHOW_FOOTER_TEMPLATE_LOAD_TIME", "true")
 	_, _ = cfg.Section("email").NewKey("ENABLED", "true")
 	_, _ = cfg.Section("server").NewKey("NONEXISTENT_OPTION", "true")

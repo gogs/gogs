@@ -1,7 +1,7 @@
-package main
+// Package web implements the "gogs web" subcommand.
+package web
 
 import (
-	stdctx "context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -10,6 +10,7 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-macaron/binding"
@@ -20,7 +21,6 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/urfave/cli/v3"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -44,135 +44,20 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-var webCommand = cli.Command{
-	Name:  "web",
-	Usage: "Start web server",
-	Description: `Gogs web server is the only thing you need to run,
-and it takes care of all the other things for you`,
-	Action: runWeb,
-	Flags: []cli.Flag{
-		stringFlag("port, p", "3000", "Temporary port number to prevent conflict"),
-		stringFlag("config, c", filepath.Join(conf.CustomDir(), "conf", "app.ini"), "Custom configuration file path"),
-	},
-}
-
-// newMacaron initializes Macaron instance.
-func newMacaron() *macaron.Macaron {
-	m := macaron.New()
-	if !conf.Server.DisableRouterLog {
-		m.Use(macaron.Logger())
-	}
-	m.Use(macaron.Recovery())
-	if conf.Server.EnableGzip {
-		m.Use(gzip.Gziper())
-	}
-	if conf.Server.Protocol == "fcgi" {
-		m.SetURLPrefix(conf.Server.Subpath)
-	}
-
-	// Register custom middleware first to make it possible to override files under "public".
-	m.Use(macaron.Static(
-		filepath.Join(conf.CustomDir(), "public"),
-		macaron.StaticOptions{
-			SkipLogging: conf.Server.DisableRouterLog,
-		},
-	))
-	var publicFs http.FileSystem
-	if !conf.Server.LoadAssetsFromDisk {
-		publicFs = http.FS(public.Files)
-	}
-	m.Use(macaron.Static(
-		filepath.Join(conf.WorkDir(), "public"),
-		macaron.StaticOptions{
-			ETag:        true,
-			SkipLogging: conf.Server.DisableRouterLog,
-			FileSystem:  publicFs,
-		},
-	))
-
-	m.Use(macaron.Static(
-		conf.Picture.AvatarUploadPath,
-		macaron.StaticOptions{
-			ETag:        true,
-			Prefix:      conf.UsersAvatarPathPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
-		},
-	))
-	m.Use(macaron.Static(
-		conf.Picture.RepositoryAvatarUploadPath,
-		macaron.StaticOptions{
-			ETag:        true,
-			Prefix:      database.RepoAvatarURLPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
-		},
-	))
-
-	customDir := filepath.Join(conf.CustomDir(), "templates")
-	renderOpt := macaron.RenderOptions{
-		Directory:         filepath.Join(conf.WorkDir(), "templates"),
-		AppendDirectories: []string{customDir},
-		Funcs:             template.FuncMap(),
-		IndentJSON:        macaron.Env != macaron.PROD,
-	}
-	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
-	}
-	m.Use(macaron.Renderer(renderOpt))
-
-	localeNames, err := embedConf.FileNames("locale")
-	if err != nil {
-		log.Fatal("Failed to list locale files: %v", err)
-	}
-	localeFiles := make(map[string][]byte)
-	for _, name := range localeNames {
-		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
-		if err != nil {
-			log.Fatal("Failed to read locale file %q: %v", name, err)
-		}
-	}
-	m.Use(i18n.I18n(i18n.Options{
-		SubURL:          conf.Server.Subpath,
-		Files:           localeFiles,
-		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
-		Langs:           conf.I18n.Langs,
-		Names:           conf.I18n.Names,
-		DefaultLang:     "en-US",
-		Redirect:        true,
-	}))
-	m.Use(cache.Cacher(cache.Options{
-		Adapter:       conf.Cache.Adapter,
-		AdapterConfig: conf.Cache.Host,
-		Interval:      conf.Cache.Interval,
-	}))
-	m.Use(captcha.Captchaer(captcha.Options{
-		SubURL: conf.Server.Subpath,
-	}))
-	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
-	return m
-}
-
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-	if err := database.Ping(); err != nil {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = fmt.Fprintf(w, "* Database connection: %s\n", err)
-		return
-	}
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	if r.Method == http.MethodHead {
-		return
-	}
-	_, _ = w.Write([]byte("* Database connection: OK\n"))
-}
-
-func runWeb(_ stdctx.Context, cmd *cli.Command) error {
-	err := route.GlobalInit(configFromLineage(cmd))
+// Run starts the web server. configPath is the path to app.ini (empty for
+// default). portOverride, if non-zero, overrides the configured HTTP port.
+func Run(configPath string, portOverride int) error {
+	err := route.GlobalInit(configPath)
 	if err != nil {
 		log.Fatal("Failed to initialize application: %v", err)
 	}
 
 	m := newMacaron()
+
+	webHandler, err := newRoutingHandler()
+	if err != nil {
+		log.Fatal("Failed to initialize web handler: %v", err)
+	}
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
@@ -661,7 +546,7 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 			SetCookie:      true,
 			Secure:         conf.Server.URL.Scheme == "https",
 		}),
-		context.Contexter(context.NewStore()),
+		context.Contexter(context.NewStore(), webHandler),
 	)
 
 	// ***************************
@@ -675,7 +560,21 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 			lfs.RegisterRoutes(m.Router)
 		})
 
-		m.Route("/*", "GET,POST,OPTIONS", context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP)
+		// Git HTTP smart and dumb protocol endpoints. Listed explicitly so
+		// non-Git paths under /:user/:repo fall through to the SPA fallback
+		// instead of being claimed by a catch-all.
+		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
+		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
+		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
+		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
+		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
+		m.Route("/objects/info/alternates", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/info/http-alternates", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/info/packs", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/info/*", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/:prefix([0-9a-f]{2})/:suffix([0-9a-f]{38})", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}).pack", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}).idx", "GET,OPTIONS", gitHTTP...)
 	})
 
 	// ***************************
@@ -702,20 +601,23 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 		}
 	})
 
-	m.NotFound(route.NotFound)
+	m.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		webHandler.ServeHTTP(w, r)
+	})
 
 	// Flag for port number in case first time run conflict.
-	if cmd.IsSet("port") {
-		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+cmd.String("port"), 1)
+	if portOverride != 0 {
+		port := strconv.Itoa(portOverride)
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
 		conf.Server.ExternalURL = conf.Server.URL.String()
-		conf.Server.HTTPPort = cmd.String("port")
+		conf.Server.HTTPPort = portOverride
 	}
 
 	var listenAddr string
 	if conf.Server.Protocol == "unix" {
 		listenAddr = conf.Server.HTTPAddr
 	} else {
-		listenAddr = fmt.Sprintf("%s:%s", conf.Server.HTTPAddr, conf.Server.HTTPPort)
+		listenAddr = fmt.Sprintf("%s:%d", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 	}
 	log.Info("Available on %s", conf.Server.ExternalURL)
 
@@ -786,4 +688,114 @@ func runWeb(_ stdctx.Context, cmd *cli.Command) error {
 	}
 
 	return nil
+}
+
+// newMacaron initializes Macaron instance.
+func newMacaron() *macaron.Macaron {
+	m := macaron.New()
+	if !conf.Server.DisableRouterLog {
+		m.Use(macaron.Logger())
+	}
+	m.Use(macaron.Recovery())
+	if conf.Server.EnableGzip {
+		m.Use(gzip.Gziper())
+	}
+	if conf.Server.Protocol == "fcgi" {
+		m.SetURLPrefix(conf.Server.Subpath)
+	}
+
+	// Register custom middleware first to make it possible to override files under "public".
+	m.Use(macaron.Static(
+		filepath.Join(conf.CustomDir(), "public"),
+		macaron.StaticOptions{
+			SkipLogging: conf.Server.DisableRouterLog,
+		},
+	))
+	var publicFs http.FileSystem
+	if !conf.Server.LoadAssetsFromDisk {
+		publicFs = http.FS(public.Files)
+	}
+	m.Use(macaron.Static(
+		filepath.Join(conf.WorkDir(), "public"),
+		macaron.StaticOptions{
+			ETag:        true,
+			SkipLogging: conf.Server.DisableRouterLog,
+			FileSystem:  publicFs,
+		},
+	))
+
+	m.Use(macaron.Static(
+		conf.Picture.AvatarUploadPath,
+		macaron.StaticOptions{
+			ETag:        true,
+			Prefix:      conf.UsersAvatarPathPrefix,
+			SkipLogging: conf.Server.DisableRouterLog,
+		},
+	))
+	m.Use(macaron.Static(
+		conf.Picture.RepositoryAvatarUploadPath,
+		macaron.StaticOptions{
+			ETag:        true,
+			Prefix:      database.RepoAvatarURLPrefix,
+			SkipLogging: conf.Server.DisableRouterLog,
+		},
+	))
+
+	customDir := filepath.Join(conf.CustomDir(), "templates")
+	renderOpt := macaron.RenderOptions{
+		Directory:         filepath.Join(conf.WorkDir(), "templates"),
+		AppendDirectories: []string{customDir},
+		Funcs:             template.FuncMap(),
+		IndentJSON:        macaron.Env != macaron.PROD,
+	}
+	if !conf.Server.LoadAssetsFromDisk {
+		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
+	}
+	m.Use(macaron.Renderer(renderOpt))
+
+	localeNames, err := embedConf.FileNames("locale")
+	if err != nil {
+		log.Fatal("Failed to list locale files: %v", err)
+	}
+	localeFiles := make(map[string][]byte)
+	for _, name := range localeNames {
+		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
+		if err != nil {
+			log.Fatal("Failed to read locale file %q: %v", name, err)
+		}
+	}
+	m.Use(i18n.I18n(i18n.Options{
+		SubURL:          conf.Server.Subpath,
+		Files:           localeFiles,
+		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		Langs:           conf.I18n.Langs,
+		Names:           conf.I18n.Names,
+		DefaultLang:     "en-US",
+		Redirect:        true,
+	}))
+	m.Use(cache.Cacher(cache.Options{
+		Adapter:       conf.Cache.Adapter,
+		AdapterConfig: conf.Cache.Host,
+		Interval:      conf.Cache.Interval,
+	}))
+	m.Use(captcha.Captchaer(captcha.Options{
+		SubURL: conf.Server.Subpath,
+	}))
+	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
+	return m
+}
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	if err := database.Ping(); err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = fmt.Fprintf(w, "* Database connection: %s\n", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if r.Method == http.MethodHead {
+		return
+	}
+	_, _ = w.Write([]byte("* Database connection: OK\n"))
 }

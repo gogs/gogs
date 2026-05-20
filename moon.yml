@@ -1,0 +1,76 @@
+$schema: "https://moonrepo.dev/schemas/project.json"
+
+language: "go"
+stack: "backend"
+id: "gogs"
+
+fileGroups:
+  sources:
+    - "cmd/**/*.go"
+    - "internal/**/*.go"
+    - "public/**/*.go"
+    - "templates/**/*.go"
+    - "conf/**/*.go"
+  tests:
+    - "**/*_test.go"
+  configs:
+    - "go.mod"
+    - "go.sum"
+    - ".golangci.yml"
+  assets:
+    - "conf/**/*"
+    - "public/**/*"
+    - "templates/**/*"
+
+tasks:
+  install:
+    command: "go mod tidy"
+    inputs:
+      - "@group(configs)"
+
+  format:
+    command: "golangci-lint fmt"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+    deps:
+      - "install"
+
+  lint:
+    command: "golangci-lint run"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+    deps:
+      - "install"
+      - "format"
+
+  test:
+    command: "go test -cover -race ./..."
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "@group(configs)"
+    deps:
+      - "install"
+
+  build:
+    script: |
+      go build -trimpath \
+        -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
+        -o .bin/gogs ./cmd/gogs
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+      - "@group(assets)"
+    outputs:
+      - ".bin/gogs"
+    deps:
+      - "install"
+
+  dev:
+    command: ".bin/gogs web"
+    preset: "server"
+    deps:
+      - "build"
+      - "web:dev"

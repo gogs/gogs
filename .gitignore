@@ -1,6 +1,9 @@
-# Build artifacts
+# Build artifacts and cache
 .bin/
 dist/
+.moon/cache/
+.task/
+node_modules/
 
 # Runtime data
 log/
@@ -9,7 +12,6 @@ data/
 
 # Configuration and application files
 .idea/
-.task/
 .envrc
 
 # System junk

@@ -16,10 +16,15 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Use `github.com/cockroachdb/errors` for error handling.
 - Use `github.com/stretchr/testify` for assertions in tests. Be mindful about the choice of `require` and `assert`, the former should be used when the test cannot proceed meaningfully after a failed assertion.
 
+## UI guidelines
+
+- Design mobile-first. Every UI must look and work well on narrow viewports before adding desktop refinements via responsive breakpoints. Test at ~375px width before considering a UI done.
+- Meet WCAG 2.2 AA at minimum. Specifically: every interactive control has a discernible accessible name (visible label or `aria-label`); color is never the sole carrier of information (pair with text, icon, or shape); text and meaningful icons meet 4.5:1 contrast against their background (3:1 for large text and UI components); focus is always visible and never trapped; touch targets are at least 24×24 CSS px (40×40 preferred). When unsure, lean toward more contrast, larger targets, and explicit labels.
+
 ## Build instructions
 
-- Prefer `task` command over vanilla `go` command when available. Use `--force` flag when necessary.
-- Run `task lint` after every time you finish changing code, and fix all linter errors.
+- Prefer `moon run <project>:<task>` over vanilla `go` or `pnpm` commands when available (e.g. `moon run gogs:build`, `moon run web:dev`). Pass `--force` to bypass cache when necessary.
+- Run `moon run gogs:lint` after every time you finish changing Go code, and `moon run web:lint` after changing frontend code; fix all linter errors.
 - Run `go mod tidy` after every time you change `go.mod`, do not manually edit `go.sum` file.
 
 ## Tool-use guidance

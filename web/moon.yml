@@ -1,0 +1,59 @@
+$schema: "https://moonrepo.dev/schemas/project.json"
+
+language: "typescript"
+stack: "frontend"
+id: "web"
+
+fileGroups:
+  sources:
+    - "src/**/*"
+    - "index.html"
+  configs:
+    - "package.json"
+    - "tsconfig*.json"
+    - "vite.config.*"
+
+tasks:
+  install:
+    command: "pnpm install"
+    inputs:
+      - "package.json"
+      - "/pnpm-lock.yaml"
+      - "/pnpm-workspace.yaml"
+    options:
+      runFromWorkspaceRoot: true
+
+  dev:
+    command: "pnpm run dev"
+    preset: "server"
+    deps:
+      - "install"
+
+  build:
+    command: "pnpm run build"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+    outputs:
+      - "/public/dist"
+    deps:
+      - "install"
+
+  lint:
+    command: "pnpm run lint"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+    deps:
+      - "install"
+      - "format"
+
+  format:
+    command: "pnpm run format"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+      - ".prettierrc.*"
+      - ".prettierignore"
+    deps:
+      - "install"

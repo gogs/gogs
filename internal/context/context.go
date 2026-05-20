@@ -1,6 +1,7 @@
 package context
 
 import (
+	stdctx "context"
 	"fmt"
 	"io"
 	"net/http"
@@ -38,6 +39,8 @@ type Context struct {
 
 	Repo *Repository
 	Org  *Organization
+
+	notFoundHandler http.Handler
 }
 
 // RawTitle sets the "Title" field in template data.
@@ -156,10 +159,38 @@ func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 	c.HTML(status, tpl)
 }
 
-// NotFound renders the 404 page.
+// langContextKey carries the resolved request locale into the SPA fallback
+// handler so it can inject <html lang="..."> before serving index.html.
+type langContextKey struct{}
+
+// LangFromRequest returns the locale code resolved by the macaron i18n
+// middleware for the current request, or the empty string if unavailable.
+func LangFromRequest(r *http.Request) string {
+	lang, _ := r.Context().Value(langContextKey{}).(string)
+	return lang
+}
+
+// NotFound delegates to the configured notFoundHandler, falling back to the
+// templated 404 page when none is set.
 func (c *Context) NotFound() {
+	if c.notFoundHandler != nil {
+		ctx := stdctx.WithValue(c.Req.Context(), langContextKey{}, c.Language())
+		c.notFoundHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
+		return
+	}
 	c.Title("status.page_not_found")
 	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
+}
+
+// ServeSPA delegates the current request to the SPA fallback handler. Unlike
+// NotFound it does not imply a 404 response — the SPA decides what to render
+// based on the request path.
+func (c *Context) ServeSPA() {
+	if c.notFoundHandler == nil {
+		return
+	}
+	ctx := stdctx.WithValue(c.Req.Context(), langContextKey{}, c.Language())
+	c.notFoundHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 }
 
 // Error renders the 500 page.
@@ -221,16 +252,18 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 // https://github.com/go-macaron/csrf/blob/5d38f39de352972063d1ef026fc477283841bb9b/csrf.go#L148.
 var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
 
-// Contexter initializes a classic context for a request.
-func Contexter(store Store) macaron.Handler {
+// Contexter initializes a classic context for a request. notFoundHandler, when
+// non-nil, intercepts 404 responses (e.g. to serve a SPA fallback).
+func Contexter(store Store, notFoundHandler http.Handler) macaron.Handler {
 	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
 		c := &Context{
-			Context: ctx,
-			Cache:   cache,
-			csrf:    x,
-			Flash:   f,
-			Session: sess,
-			Link:    conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Context:         ctx,
+			Cache:           cache,
+			csrf:            x,
+			Flash:           f,
+			Session:         sess,
+			Link:            conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			notFoundHandler: notFoundHandler,
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
@@ -279,7 +312,6 @@ func Contexter(store Store) macaron.Handler {
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
 		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
-		c.Data["ShowFooterBranding"] = conf.Other.ShowFooterBranding
 
 		c.renderNoticeBanner()
 

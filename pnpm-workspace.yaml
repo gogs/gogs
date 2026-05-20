@@ -1,0 +1,5 @@
+packages:
+  - "web"
+
+onlyBuiltDependencies:
+  - esbuild
