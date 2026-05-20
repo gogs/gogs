@@ -608,10 +608,25 @@ func Run(configPath string, portOverride int) error {
 
 	// True 404s never reach context.Contexter, so populate WebContext
 	// explicitly. Without this, subpath deployments would emit a shell with
-	// root-relative asset URLs that the browser cannot resolve.
+	// root-relative asset URLs that the browser cannot resolve. Read the
+	// language preference straight from the cookie that the i18n middleware
+	// previously wrote, but only accept values that match a configured
+	// locale. The cookie value lands in the HTML via raw string substitution
+	// in renderIndex, so an unvalidated value would let an attacker who can
+	// set this cookie inject markup into the 404 shell.
+	langAllowed := make(map[string]struct{}, len(conf.I18n.Langs))
+	for _, lang := range conf.I18n.Langs {
+		langAllowed[lang] = struct{}{}
+	}
 	m.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		lang := "en-US"
+		if c, err := r.Cookie("lang"); err == nil {
+			if _, ok := langAllowed[c.Value]; ok {
+				lang = c.Value
+			}
+		}
 		ctx := stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
-			Lang:   "en-US",
+			Lang:   lang,
 			SubURL: conf.Server.Subpath,
 			Status: http.StatusNotFound,
 		})
