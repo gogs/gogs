@@ -18,10 +18,9 @@ func init() {
 }
 
 var webCommand = cli.Command{
-	Name:  "web",
-	Usage: "Start web server",
-	Description: `Gogs web server is the only thing you need to run,
-and it takes care of all the other things for you`,
+	Name:        "web",
+	Usage:       "Start the web server",
+	Description: "Serves the web interface, API, and HTTP Git endpoints.",
 	Action: func(_ context.Context, cmd *cli.Command) error {
 		var portOverride int
 		if cmd.IsSet("port") {
@@ -30,7 +29,7 @@ and it takes care of all the other things for you`,
 		return web.Run(configFromLineage(cmd), portOverride)
 	},
 	Flags: []cli.Flag{
-		intFlag("port, p", 3000, "Temporary port number to prevent conflict"),
+		intFlag("port, p", 3000, "Alternative listening port to use"),
 		stringFlag("config, c", filepath.Join(conf.CustomDir(), "conf", "app.ini"), "Custom configuration file path"),
 	},
 }
