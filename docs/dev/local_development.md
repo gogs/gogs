@@ -150,7 +150,7 @@ The following command will start the web server and automatically recompile and 
 moon run gogs:dev
 ```
 
-**NOTE** If you changed any file under `conf/`, `template/` or `public/` directory, be sure to run `moon run gogs:install --force` afterwards!
+**NOTE** If you changed any file under `conf/`, `templates/` or `public/` directory, be sure to rerun `moon run gogs:dev` afterwards!
 
 ## Other nice things
 

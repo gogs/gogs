@@ -31,6 +31,7 @@ tasks:
       - "@group(sources)"
       - "@group(configs)"
       - "mockgen.go"
+      - "mockgen.yaml"
 
   format:
     command: "golangci-lint fmt"
