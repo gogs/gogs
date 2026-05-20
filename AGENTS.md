@@ -9,6 +9,8 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 - Use sentence case. Preserve original casing for brand names.
 - End with a period for a full sentence.
+- Never use em dashes (`—`) or en dashes (`–`). Rewrite the sentence with a comma, period, colon, or parentheses instead.
+- Do not overuse semicolons. Two short sentences are almost always clearer than one sentence joined by a semicolon. Reserve the semicolon for the rare case where the two clauses are so tightly coupled that splitting them loses meaning, never as a default em-dash replacement or a way to chain related thoughts.
 - Do not add comments that repeat what the code is doing, always prefer more descriptive names. Do add comments for intentions that aren't obvious via reading the code alone. This rule takes precedence over matching existing patterns.
 
 ## Coding guidelines

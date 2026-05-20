@@ -567,9 +567,8 @@ func Run(configPath string, portOverride int) error {
 			lfs.RegisterRoutes(m.Router)
 		})
 
-		// Git HTTP smart and dumb protocol endpoints. Listed explicitly so
-		// non-Git paths under /:user/:repo fall through to the SPA fallback
-		// instead of being claimed by a catch-all.
+		// Git HTTP smart and dumb protocol endpoints so other /:user/:repo paths
+		// fall through to the SPA fallback.
 		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
@@ -613,7 +612,7 @@ func Run(configPath string, portOverride int) error {
 	})
 
 	// Flag for port number in case first time run conflict.
-	if portOverride != 0 {
+	if portOverride > 0 {
 		port := strconv.Itoa(portOverride)
 		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
 		conf.Server.ExternalURL = conf.Server.URL.String()
@@ -730,7 +729,7 @@ func mountWebRoutes(f *flamego.Flame) error {
 
 	viteURL, err := url.Parse("http://localhost:5173")
 	if err != nil {
-		return errors.Wrap(err, "parse vite URL")
+		return errors.Wrap(err, "parse Vite URL")
 	}
 	proxy := httputil.NewSingleHostReverseProxy(viteURL)
 	proxy.ModifyResponse = func(resp *http.Response) error {
@@ -739,7 +738,7 @@ func mountWebRoutes(f *flamego.Flame) error {
 		}
 		raw, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return errors.Wrap(err, "read vite response body")
+			return errors.Wrap(err, "read Vite response body")
 		}
 		_ = resp.Body.Close()
 		body := bytes.Replace(raw, []byte("{{.Lang}}"), []byte(context.LangFromRequest(resp.Request)), 1)
