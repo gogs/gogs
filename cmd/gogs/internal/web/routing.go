@@ -89,6 +89,11 @@ func mountViteProxy(f *flamego.Flame) error {
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
+		// The upstream validators describe the unmodified body. Drop them so
+		// the browser does not satisfy a conditional request from a cached
+		// copy that has a stale injected lang attribute.
+		resp.Header.Del("ETag")
+		resp.Header.Del("Last-Modified")
 		return nil
 	}
 	f.Any("/{**}", func(w http.ResponseWriter, r *http.Request) {

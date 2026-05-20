@@ -71,6 +71,8 @@ tasks:
   dev:
     command: ".bin/gogs web"
     preset: "server"
+    env:
+      TTY_FORCE: "1"
     deps:
       - "build"
       - "web:dev"

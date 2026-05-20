@@ -8,7 +8,7 @@ export function Landing() {
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-2xl">
-        <div className="rounded-lg border border-(--color-border) bg-(--color-muted)/40 font-mono shadow-xs">
+        <div className="rounded-lg border border-(--color-border) bg-(--color-surface)/40 font-mono shadow-xs">
           <div className="flex items-center gap-1.5 border-b border-(--color-border) px-3 py-2 sm:px-4 sm:py-2.5">
             <span className="size-2.5 rounded-full bg-(--color-destructive)/70" />
             <span className="size-2.5 rounded-full bg-(--color-warning,oklch(0.795_0.184_86.047))/70" />
@@ -64,13 +64,11 @@ function CmdLink({ href, cmd, desc, external }: { href: string; cmd: string; des
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="group inline-flex items-baseline gap-2 rounded-sm hover:bg-(--color-accent) hover:text-(--color-accent-foreground)"
+      className="group inline-flex items-baseline gap-2 rounded-sm hover:bg-(--color-surface) hover:text-(--color-foreground)"
     >
-      <span className="inline-block w-16 text-(--color-foreground) group-hover:text-(--color-accent-foreground) sm:w-20">
-        {cmd}
-      </span>
-      <span className="text-(--color-muted-foreground) group-hover:text-(--color-accent-foreground)/80">— {desc}</span>
-      <span className="text-(--color-muted-foreground) group-hover:text-(--color-accent-foreground)">→</span>
+      <span className="inline-block w-16 text-(--color-foreground) sm:w-20">{cmd}</span>
+      <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)/80">— {desc}</span>
+      <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)">→</span>
     </a>
   );
 }

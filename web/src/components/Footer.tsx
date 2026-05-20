@@ -9,7 +9,7 @@ export function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-(--color-muted) hover:text-(--color-foreground)"
+            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-(--color-surface) hover:text-(--color-foreground)"
           >
             <GitHubIcon />
           </a>
@@ -18,7 +18,7 @@ export function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Twitter"
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-(--color-muted) hover:text-(--color-foreground)"
+            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-(--color-surface) hover:text-(--color-foreground)"
           >
             <TwitterIcon />
           </a>

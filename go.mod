@@ -8,6 +8,7 @@ require (
 	github.com/cockroachdb/errors v1.13.0
 	github.com/derision-test/go-mockgen/v2 v2.1.1
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
+	github.com/fatih/color v1.18.0
 	github.com/flamego/flamego v1.12.0
 	github.com/glebarez/go-sqlite v1.21.2
 	github.com/glebarez/sqlite v1.11.0
@@ -84,7 +85,6 @@ require (
 	github.com/djherbis/buffer v1.2.0 // indirect
 	github.com/djherbis/nio/v3 v3.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/getsentry/sentry-go v0.46.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect

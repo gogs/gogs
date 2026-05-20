@@ -22,10 +22,8 @@
   --color-primary-foreground: initial;
   --color-secondary: initial;
   --color-secondary-foreground: initial;
-  --color-muted: initial;
+  --color-surface: initial;
   --color-muted-foreground: initial;
-  --color-accent: initial;
-  --color-accent-foreground: initial;
   --color-destructive: initial;
   --color-destructive-foreground: initial;
   --color-border: initial;
@@ -35,29 +33,27 @@
 }
 
 /* Theme palettes are derived from Happy Hues (https://www.happyhues.co):
-   light mode = palette 9, dark mode = palette 13. */
+   light mode = palette 6, dark mode = palette 13. */
 :root {
   color-scheme: light dark;
 
   --color-background: #fffffe;
-  --color-foreground: #094067;
+  --color-foreground: #2b2c34;
   --color-card: #fffffe;
-  --color-card-foreground: #094067;
+  --color-card-foreground: #2b2c34;
   --color-popover: #fffffe;
-  --color-popover-foreground: #094067;
-  --color-primary: #3da9fc;
+  --color-popover-foreground: #2b2c34;
+  --color-primary: #6246ea;
   --color-primary-foreground: #fffffe;
-  --color-secondary: #90b4ce;
-  --color-secondary-foreground: #094067;
-  --color-muted: #d8eefe;
-  --color-muted-foreground: #5f6c7b;
-  --color-accent: #d8eefe;
-  --color-accent-foreground: #094067;
-  --color-destructive: #ef4565;
+  --color-secondary: #d1d1e9;
+  --color-secondary-foreground: #2b2c34;
+  --color-surface: #ececf6;
+  --color-muted-foreground: #2b2c34;
+  --color-destructive: #e45858;
   --color-destructive-foreground: #fffffe;
-  --color-border: #90b4ce;
-  --color-input: #90b4ce;
-  --color-ring: #3da9fc;
+  --color-border: #2b2c34;
+  --color-input: #2b2c34;
+  --color-ring: #6246ea;
 }
 
 :root.dark {
@@ -73,10 +69,8 @@
   --color-primary-foreground: #fffffe;
   --color-secondary: #72757e;
   --color-secondary-foreground: #fffffe;
-  --color-muted: #242629;
+  --color-surface: #242629;
   --color-muted-foreground: #94a1b2;
-  --color-accent: #242629;
-  --color-accent-foreground: #fffffe;
   --color-destructive: #ef4565;
   --color-destructive-foreground: #fffffe;
   --color-border: #72757e;

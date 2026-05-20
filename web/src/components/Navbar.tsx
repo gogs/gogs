@@ -35,7 +35,7 @@ export function Navbar() {
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger
               aria-label="Open menu"
-              className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-muted)"
+              className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface)"
             >
               <Menu className="size-[18px]" />
             </PopoverTrigger>
@@ -71,7 +71,7 @@ function NavLink({ href, external, children }: { href: string; external?: boolea
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-muted)"
+      className="inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)"
     >
       {children}
     </a>
@@ -95,7 +95,7 @@ function MobileLink({
         href={href}
         onClick={onClick}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        className="flex w-full rounded-sm px-2 py-1.5 text-(--color-foreground) hover:bg-(--color-accent) hover:text-(--color-accent-foreground)"
+        className="flex w-full rounded-sm px-2 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)"
       >
         {children}
       </a>

@@ -56,7 +56,7 @@ export function SettingsMenu() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={t("settings")}
-        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-muted) hover:text-(--color-foreground)"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
         <Settings className="size-4" />
       </PopoverTrigger>
@@ -105,7 +105,7 @@ export function SettingsMenu() {
                     window.location.search = "?" + params.toString();
                   }}
                   className={cn(
-                    "flex w-full items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-accent) hover:text-(--color-accent-foreground)",
+                    "flex w-full items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-surface) hover:text-(--color-foreground)",
                     isActive ? "cursor-default" : "cursor-pointer",
                   )}
                 >
@@ -141,10 +141,10 @@ function ThemeOption({
       onClick={() => onSelect(value)}
       aria-pressed={isActive}
       className={cn(
-        "flex cursor-pointer flex-col items-center gap-1 rounded-md px-2 py-2 text-xs hover:bg-(--color-accent)",
+        "flex cursor-pointer flex-col items-center gap-1 rounded-md px-2 py-2 text-xs hover:bg-(--color-surface)",
         isActive
-          ? "bg-(--color-accent) text-(--color-accent-foreground)"
-          : "text-(--color-muted-foreground) hover:text-(--color-accent-foreground)",
+          ? "bg-(--color-surface) text-(--color-foreground)"
+          : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
       )}
     >
       {icon}
