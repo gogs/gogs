@@ -38,7 +38,7 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git npm moonrepo/tap/moon
+    brew install go postgresql git npm moon
     npm install -g less
     npm install -g less-plugin-clean-css
     go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
