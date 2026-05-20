@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { subUrl } from "@/lib/url";
 
 export function Navbar() {
   const { t } = useTranslation();
@@ -12,8 +13,8 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)/95 backdrop-blur">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 text-sm sm:gap-4 sm:px-6">
-        <a href="/" className="flex shrink-0 items-center" aria-label="Gogs">
-          <img src="/img/favicon.png" alt="" width="28" height="28" className="size-7" />
+        <a href={subUrl("/")} className="flex shrink-0 items-center" aria-label="Gogs">
+          <img src={subUrl("/img/favicon.png")} alt="" width="28" height="28" className="size-7" />
         </a>
 
         <div className="hidden flex-1 items-center gap-1 sm:flex">
@@ -69,7 +70,7 @@ export function Navbar() {
 function NavLink({ href, external, children }: { href: string; external?: boolean; children: React.ReactNode }) {
   return (
     <a
-      href={href}
+      href={external ? href : subUrl(href)}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className="inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)"
     >
@@ -92,7 +93,7 @@ function MobileLink({
   return (
     <li>
       <a
-        href={href}
+        href={external ? href : subUrl(href)}
         onClick={onClick}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         className="flex w-full rounded-sm px-2 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)"

@@ -5,6 +5,7 @@
     "extract-locales": "node scripts/extract-locales.mjs",
     "predev": "node scripts/extract-locales.mjs",
     "prebuild": "node scripts/extract-locales.mjs",
+    "prelint": "node scripts/extract-locales.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",

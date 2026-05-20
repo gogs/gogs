@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { usePageTitle } from "@/lib/page-title";
+import { subUrl } from "@/lib/url";
 
 export function Landing() {
   const { t } = useTranslation();
@@ -20,14 +21,14 @@ export function Landing() {
             <span>cat /etc/motd</span>
             {"\n"}
             <img
-              src="/img/logo-light.svg"
+              src={subUrl("/img/logo-light.svg")}
               alt="Gogs"
               width="775"
               height="294"
               className="mx-auto block max-w-[280px] dark:hidden sm:max-w-sm"
             />
             <img
-              src="/img/logo-dark.svg"
+              src={subUrl("/img/logo-dark.svg")}
               alt="Gogs"
               width="775"
               height="294"
@@ -62,7 +63,7 @@ export function Landing() {
 function CmdLink({ href, cmd, desc, external }: { href: string; cmd: string; desc: string; external?: boolean }) {
   return (
     <a
-      href={href}
+      href={external ? href : subUrl(href)}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className="group inline-flex items-baseline gap-2 rounded-sm hover:bg-(--color-surface) hover:text-(--color-foreground)"
     >

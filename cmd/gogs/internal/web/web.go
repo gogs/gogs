@@ -568,7 +568,7 @@ func Run(configPath string, portOverride int) error {
 		})
 
 		// Git HTTP smart and dumb protocol endpoints so other /:user/:repo paths
-		// fall through to the SPA fallback.
+		// fall through to the web fallback.
 		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
@@ -720,8 +720,21 @@ func mountWebRoutes(f *flamego.Flame) error {
 		}
 
 		f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
-			body := bytes.Replace(index, []byte("{{.Lang}}"), []byte(context.LangFromRequest(r)), 1)
+			wc := context.WebContextFrom(r)
+			body := renderIndex(index, wc)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			// The body is rewritten per request (lang injection, future
+			// runtime config), so caching it would serve stale content to
+			// any user whose request resolves to a different locale. Use
+			// no-store rather than no-cache so the browser cannot keep a
+			// copy at all, not even for revalidation. Static assets keep
+			// their normal caching via flamego.Static.
+			w.Header().Set("Cache-Control", "no-store")
+			status := wc.Status
+			if status <= 0 {
+				status = http.StatusOK
+			}
+			w.WriteHeader(status)
 			_, _ = w.Write(body)
 		})
 		return nil
@@ -741,10 +754,15 @@ func mountWebRoutes(f *flamego.Flame) error {
 			return errors.Wrap(err, "read Vite response body")
 		}
 		_ = resp.Body.Close()
-		body := bytes.Replace(raw, []byte("{{.Lang}}"), []byte(context.LangFromRequest(resp.Request)), 1)
+		wc := context.WebContextFrom(resp.Request)
+		body := renderIndex(raw, wc)
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
+		if wc.Status != 0 {
+			resp.StatusCode = wc.Status
+			resp.Status = http.StatusText(wc.Status)
+		}
 		// The upstream validators describe the unmodified body. Drop them so
 		// the browser does not satisfy a conditional request from a cached
 		// copy that has a stale injected lang attribute.
@@ -851,6 +869,28 @@ func newMacaron() (*macaron.Macaron, error) {
 	}))
 	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
 	return m, nil
+}
+
+// renderIndex applies per-request substitutions to the index.html shell:
+// the {{.Lang}} and {{.SubURL}} placeholders, plus the deployment subpath
+// for asset URLs Vite bakes into the bundle. Returns a fresh byte slice.
+func renderIndex(index []byte, wc context.WebContext) []byte {
+	pairs := []string{
+		"{{.Lang}}", wc.Lang,
+		"{{.SubURL}}", wc.SubURL,
+	}
+	if wc.SubURL != "" {
+		// Vite bakes absolute root paths into the bundle output (e.g.
+		// src="/assets/index-xxx.js"). Prefix them with the subpath so the
+		// browser fetches /<subpath>/assets/... when Gogs is mounted on a
+		// non-root URL.
+		pairs = append(pairs,
+			`src="/assets/`, `src="`+wc.SubURL+`/assets/`,
+			`href="/assets/`, `href="`+wc.SubURL+`/assets/`,
+			`src="/src/`, `src="`+wc.SubURL+`/src/`,
+		)
+	}
+	return []byte(strings.NewReplacer(pairs...).Replace(string(index)))
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {

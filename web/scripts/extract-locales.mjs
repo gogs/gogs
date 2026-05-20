@@ -58,8 +58,11 @@ const SPA_SUPPLEMENT_OVERRIDES = {
 };
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores
-// comments, ignores sections (Gogs uses ini-sections for grouping but the
-// keys we want all live at the top level).
+// comments, and flattens sections into a single namespace. Gogs's locale
+// files group keys under sections like [status] (e.g. status.page_not_found
+// resolves to a key named "page_not_found" inside [status]), but downstream
+// callers reference keys by their bare name, so the section header is
+// dropped here. First occurrence wins on collisions.
 function parseIni(text) {
   const out = {};
   for (const rawLine of text.split(/\r?\n/)) {

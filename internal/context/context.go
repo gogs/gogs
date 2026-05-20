@@ -40,7 +40,7 @@ type Context struct {
 	Repo *Repository
 	Org  *Organization
 
-	notFoundHandler http.Handler
+	webHandler http.Handler
 }
 
 // RawTitle sets the "Title" field in template data.
@@ -159,41 +159,53 @@ func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 	c.HTML(status, tpl)
 }
 
-// langContextKey carries the resolved request locale into the SPA fallback
-// handler so it can inject <html lang="..."> before serving index.html.
-type langContextKey struct{}
-
-// LangFromRequest returns the locale code resolved by the macaron i18n
-// middleware for the current request, or "en-US" when unavailable.
-func LangFromRequest(r *http.Request) string {
-	lang, _ := r.Context().Value(langContextKey{}).(string)
-	if lang != "" {
-		return lang
-	}
-	return "en-US"
+// WebContext carries per-request inputs into the web handler so it can
+// render the React shell. Fields are read by helpers like WebContextFrom.
+type WebContext struct {
+	Lang   string
+	SubURL string
+	// Status overrides the response status (e.g. 404 for NotFound). 0 means
+	// the handler should use its default (200).
+	Status int
 }
 
-// NotFound delegates to the configured notFoundHandler, falling back to the
-// templated 404 page when none is set.
+type webContextKey struct{}
+
+// WebContextFrom returns the WebContext attached to r, or a zero value with
+// sensible defaults when nothing was attached.
+func WebContextFrom(r *http.Request) WebContext {
+	wr, ok := r.Context().Value(webContextKey{}).(WebContext)
+	if !ok {
+		return WebContext{Lang: "en-US"}
+	}
+	if wr.Lang == "" {
+		wr.Lang = "en-US"
+	}
+	return wr
+}
+
+// NotFound renders the React 404 page through the web handler with a 404
+// status.
 func (c *Context) NotFound() {
-	if c.notFoundHandler != nil {
-		ctx := stdctx.WithValue(c.Req.Context(), langContextKey{}, c.Language())
-		c.notFoundHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
-		return
-	}
-	c.Title("status.page_not_found")
-	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
+	c.serveWeb(WebContext{
+		Lang:   c.Language(),
+		SubURL: conf.Server.Subpath,
+		Status: http.StatusNotFound,
+	})
 }
 
-// ServeSPA delegates the current request to the SPA fallback handler. Unlike
-// NotFound it does not imply a 404 response — the SPA decides what to render
-// based on the request path.
-func (c *Context) ServeSPA() {
-	if c.notFoundHandler == nil {
-		return
-	}
-	ctx := stdctx.WithValue(c.Req.Context(), langContextKey{}, c.Language())
-	c.notFoundHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
+// ServeWeb delegates the current request to the web handler. The web frontend
+// decides what to render based on the request path.
+func (c *Context) ServeWeb() {
+	c.serveWeb(WebContext{
+		Lang:   c.Language(),
+		SubURL: conf.Server.Subpath,
+	})
+}
+
+func (c *Context) serveWeb(wr WebContext) {
+	ctx := stdctx.WithValue(c.Req.Context(), webContextKey{}, wr)
+	c.webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 }
 
 // Error renders the 500 page.
@@ -255,18 +267,18 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 // https://github.com/go-macaron/csrf/blob/5d38f39de352972063d1ef026fc477283841bb9b/csrf.go#L148.
 var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
 
-// Contexter initializes a classic context for a request. notFoundHandler, when
-// non-nil, intercepts 404 responses (e.g. to serve a SPA fallback).
-func Contexter(store Store, notFoundHandler http.Handler) macaron.Handler {
+// Contexter initializes a classic context for a request. webHandler
+// receives 404 responses so the React frontend can render its own 404 page.
+func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
 		c := &Context{
-			Context:         ctx,
-			Cache:           cache,
-			csrf:            x,
-			Flash:           f,
-			Session:         sess,
-			Link:            conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
-			notFoundHandler: notFoundHandler,
+			Context:    ctx,
+			Cache:      cache,
+			csrf:       x,
+			Flash:      f,
+			Session:    sess,
+			Link:       conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			webHandler: webHandler,
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},

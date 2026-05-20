@@ -35,7 +35,7 @@ func Home(c *context.Context) {
 		return
 	}
 
-	c.ServeSPA()
+	c.ServeWeb()
 }
 
 func ExploreRepos(c *context.Context) {

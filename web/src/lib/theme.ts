@@ -23,6 +23,7 @@ export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(readStoredTheme);
 
   useEffect(() => {
+    applyTheme(theme);
     if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => applyTheme("system");

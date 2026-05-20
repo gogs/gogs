@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="shortcut icon" href="/img/favicon.png" />
+    <meta name="sub-url" content="{{.SubURL}}" />
+    <link rel="shortcut icon" href="{{.SubURL}}/img/favicon.png" />
     <title>Gogs</title>
     <style>
       /* Inlined so the page paints with the right theme background before the main stylesheet arrives. */
@@ -15,12 +16,13 @@
       }
     </style>
     <script>
-      // Inlined to run before paint and avoid theme flash.
+      // Inlined to run before paint and avoid theme flash. Treat any value
+      // other than "light" or "dark" (missing, corrupted, "system", etc.)
+      // as a follow-the-system signal so the OS preference still wins.
       (function () {
         var saved = localStorage.getItem("gogs-theme");
-        var dark =
-          saved === "dark" ||
-          ((saved === "system" || !saved) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        var explicit = saved === "light" || saved === "dark";
+        var dark = saved === "dark" || (!explicit && window.matchMedia("(prefers-color-scheme: dark)").matches);
         if (dark) document.documentElement.classList.add("dark");
       })();
     </script>
