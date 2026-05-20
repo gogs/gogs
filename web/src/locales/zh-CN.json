@@ -7,9 +7,5 @@
   "sign_in": "登录",
   "settings": "帐户设置",
   "language": "语言选项",
-  "page_not_found": "页面未找到",
-  "theme": "主题",
-  "theme_light": "浅色",
-  "theme_dark": "深色",
-  "theme_system": "跟随系统"
+  "page_not_found": "页面未找到"
 }

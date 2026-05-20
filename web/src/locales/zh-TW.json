@@ -7,9 +7,5 @@
   "sign_in": "登入",
   "settings": "設定",
   "language": "語言",
-  "page_not_found": "找不到頁面",
-  "theme": "主題",
-  "theme_light": "淺色",
-  "theme_dark": "深色",
-  "theme_system": "跟隨系統"
+  "page_not_found": "找不到頁面"
 }

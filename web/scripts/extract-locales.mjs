@@ -11,9 +11,7 @@ const inDir = join(repoRoot, "conf/locale");
 const outDir = join(here, "..", "src/locales");
 
 // Keys pulled from Gogs's INI files. Add new entries here when the SPA needs
-// another existing translation. SPA-specific strings that don't exist in the
-// INI (e.g. 404 CLI lines, theme picker labels) live in the supplements below
-// and only ship in en-US; other locales fall back to en-US for those.
+// another translation. Locales missing a key fall back to en-US via react-i18next.
 const REUSED_KEYS = [
   "app_desc",
   "home",
@@ -24,38 +22,11 @@ const REUSED_KEYS = [
   "settings",
   "language",
   "page_not_found",
+  "theme",
+  "theme_light",
+  "theme_dark",
+  "theme_system",
 ];
-
-// SPA-specific strings that don't exist in Gogs's INI files. Add a key here,
-// then optionally add per-language overrides in SPA_SUPPLEMENT_OVERRIDES below.
-// Locales without an override fall back to en-US via react-i18next.
-const SPA_SUPPLEMENTS = {
-  theme: "Theme",
-  theme_light: "Light",
-  theme_dark: "Dark",
-  theme_system: "System",
-};
-
-const SPA_SUPPLEMENT_OVERRIDES = {
-  "zh-CN": {
-    theme: "主题",
-    theme_light: "浅色",
-    theme_dark: "深色",
-    theme_system: "跟随系统",
-  },
-  "zh-HK": {
-    theme: "主題",
-    theme_light: "淺色",
-    theme_dark: "深色",
-    theme_system: "跟隨系統",
-  },
-  "zh-TW": {
-    theme: "主題",
-    theme_light: "淺色",
-    theme_dark: "深色",
-    theme_system: "跟隨系統",
-  },
-};
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores
 // comments, and flattens sections into a single namespace. Gogs's locale
@@ -86,11 +57,6 @@ for (const file of files) {
   const out = {};
   for (const key of REUSED_KEYS) {
     if (parsed[key]) out[key] = parsed[key];
-  }
-  if (lang === "en-US") {
-    Object.assign(out, SPA_SUPPLEMENTS);
-  } else if (SPA_SUPPLEMENT_OVERRIDES[lang]) {
-    Object.assign(out, SPA_SUPPLEMENT_OVERRIDES[lang]);
   }
   writeFileSync(join(outDir, `${lang}.json`), JSON.stringify(out, null, 2) + "\n", "utf8");
   console.log(`wrote ${lang}.json (${Object.keys(out).length} keys)`);
