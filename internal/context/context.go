@@ -169,12 +169,15 @@ type WebContext struct {
 	Status int
 }
 
-type webContextKey struct{}
+// WebContextKey is the request context key for WebContext values. Exported
+// so callers outside this package (e.g. the web NotFound handler) can attach
+// a WebContext when the request bypasses Contexter.
+type WebContextKey struct{}
 
 // WebContextFrom returns the WebContext attached to r, or a zero value with
 // sensible defaults when nothing was attached.
 func WebContextFrom(r *http.Request) WebContext {
-	wr, ok := r.Context().Value(webContextKey{}).(WebContext)
+	wr, ok := r.Context().Value(WebContextKey{}).(WebContext)
 	if !ok {
 		return WebContext{Lang: "en-US"}
 	}
@@ -204,7 +207,7 @@ func (c *Context) ServeWeb() {
 }
 
 func (c *Context) serveWeb(wr WebContext) {
-	ctx := stdctx.WithValue(c.Req.Context(), webContextKey{}, wr)
+	ctx := stdctx.WithValue(c.Req.Context(), WebContextKey{}, wr)
 	c.webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 }
 

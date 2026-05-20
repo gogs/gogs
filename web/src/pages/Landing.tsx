@@ -21,14 +21,14 @@ export function Landing() {
             <span>cat /etc/motd</span>
             {"\n"}
             <img
-              src={subUrl("/img/logo-light.svg")}
+              src={subUrl("/img/banner-light.svg")}
               alt="Gogs"
               width="775"
               height="294"
               className="mx-auto block max-w-[280px] dark:hidden sm:max-w-sm"
             />
             <img
-              src={subUrl("/img/logo-dark.svg")}
+              src={subUrl("/img/banner-dark.svg")}
               alt="Gogs"
               width="775"
               height="294"

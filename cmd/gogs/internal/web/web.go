@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	stdctx "context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -570,6 +571,10 @@ func Run(configPath string, portOverride int) error {
 		// Git HTTP smart and dumb protocol endpoints so other /:user/:repo paths
 		// fall through to the web fallback.
 		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
+		// Answer CORS preflight for any path under the repo namespace, so
+		// browser-based git clients still get a 200 + headers on OPTIONS
+		// even when the path is not one of the explicit git endpoints.
+		m.Route("/*", "OPTIONS", repo.CORS())
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
@@ -607,8 +612,16 @@ func Run(configPath string, portOverride int) error {
 		}
 	})
 
+	// True 404s never reach context.Contexter, so populate WebContext
+	// explicitly. Without this, subpath deployments would emit a shell with
+	// root-relative asset URLs that the browser cannot resolve.
 	m.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		webHandler.ServeHTTP(w, r)
+		ctx := stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
+			Lang:   "en-US",
+			SubURL: conf.Server.Subpath,
+			Status: http.StatusNotFound,
+		})
+		webHandler.ServeHTTP(w, r.WithContext(ctx))
 	})
 
 	// Flag for port number in case first time run conflict.

@@ -61,20 +61,24 @@ func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
 	return ""
 }
 
+// CORS sets the configured Access-Control headers and short-circuits OPTIONS
+// preflight requests so they answer with 200 instead of falling through to
+// later handlers (e.g. the web fallback).
+func CORS() macaron.Handler {
+	return func(c *macaron.Context) {
+		if len(conf.HTTP.AccessControlAllowOrigin) == 0 {
+			return
+		}
+		c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
+		c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
+		if c.Req.Method == "OPTIONS" {
+			c.Status(http.StatusOK)
+		}
+	}
+}
+
 func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
-		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
-			// Set CORS headers for browser-based git clients
-			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
-
-			// Handle preflight OPTIONS request
-			if c.Req.Method == "OPTIONS" {
-				c.Status(http.StatusOK)
-				return
-			}
-		}
-
 		ownerName := c.Params(":username")
 		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
 		repoName = strings.TrimSuffix(repoName, ".wiki")
