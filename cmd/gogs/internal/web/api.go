@@ -12,13 +12,6 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-type userInfo struct {
-	Username              string `json:"username"`
-	AvatarURL             string `json:"avatarURL"`
-	IsAdmin               bool   `json:"isAdmin"`
-	CanCreateOrganization bool   `json:"canCreateOrganization"`
-}
-
 type webAPIBridgeKey struct{}
 
 func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context) {
@@ -49,6 +42,13 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Get("/user-info", userInfoHandler)
 	}, webAPIInjector)
+}
+
+type userInfo struct {
+	Username              string `json:"username"`
+	AvatarURL             string `json:"avatarURL"`
+	IsAdmin               bool   `json:"isAdmin"`
+	CanCreateOrganization bool   `json:"canCreateOrganization"`
 }
 
 func userInfoHandler(user *database.User) (statusCode int, resp *userInfo, err error) {
