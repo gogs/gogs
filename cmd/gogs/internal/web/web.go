@@ -89,8 +89,6 @@ func Run(configPath string, portOverride int) error {
 		// ***** START: User *****
 		m.Group("/user", func() {
 			m.Group("/login", func() {
-				m.Combo("").Get(user.Login).
-					Post(bindIgnErr(form.SignIn{}), user.LoginPost)
 				m.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
 				m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
 			})

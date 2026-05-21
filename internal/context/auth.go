@@ -72,7 +72,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				}
 
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-				c.RedirectSubpath("/user/login")
+				c.RedirectSubpath("/user/sign-in")
 				return
 			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 				c.Title("auth.active_your_account")
@@ -85,7 +85,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		if !options.SignOutRequired && !c.IsLogged && !isAPIPath(c.Req.URL.Path) &&
 			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
 			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-			c.RedirectSubpath("/user/login")
+			c.RedirectSubpath("/user/sign-in")
 			return
 		}
 

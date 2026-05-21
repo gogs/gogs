@@ -20,5 +20,12 @@
   "admin_panel": "Admin panelis",
   "settings": "Iestatījumi",
   "language": "Valoda",
-  "page_not_found": "Page Not Found"
+  "page_not_found": "Page Not Found",
+  "username": "Lietotājvārds",
+  "password": "Parole",
+  "auth_source": "Autentificēšanas avots",
+  "local": "Local",
+  "remember_me": "Atcerēties mani",
+  "forget_password": "Aizmirsi paroli?",
+  "sign_up_now": "Nepieciešams konts? Reģistrējies tagad."
 }

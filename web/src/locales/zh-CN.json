@@ -20,5 +20,12 @@
   "admin_panel": "管理面板",
   "settings": "帐户设置",
   "language": "语言选项",
-  "page_not_found": "页面未找到"
+  "page_not_found": "页面未找到",
+  "username": "用户名",
+  "password": "密码",
+  "auth_source": "认证源",
+  "local": "本地",
+  "remember_me": "记住登录",
+  "forget_password": "忘记密码？",
+  "sign_up_now": "还没帐户？马上注册。"
 }

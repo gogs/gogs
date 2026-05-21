@@ -43,7 +43,7 @@
   --color-card-foreground: #2b2c34;
   --color-popover: #fffffe;
   --color-popover-foreground: #2b2c34;
-  --color-primary: #6246ea;
+  --color-primary: #b3322f;
   --color-primary-foreground: #fffffe;
   --color-secondary: #d1d1e9;
   --color-secondary-foreground: #2b2c34;
@@ -53,7 +53,7 @@
   --color-destructive-foreground: #fffffe;
   --color-border: #2b2c34;
   --color-input: #2b2c34;
-  --color-ring: #6246ea;
+  --color-ring: #b3322f;
 }
 
 :root.dark {
@@ -65,7 +65,7 @@
   --color-card-foreground: #fffffe;
   --color-popover: #242629;
   --color-popover-foreground: #fffffe;
-  --color-primary: #7551e9;
+  --color-primary: #a82828;
   --color-primary-foreground: #fffffe;
   --color-secondary: #5c5f68;
   --color-secondary-foreground: #fffffe;
@@ -75,7 +75,7 @@
   --color-destructive-foreground: #fffffe;
   --color-border: #5c5f68;
   --color-input: #5c5f68;
-  --color-ring: #7551e9;
+  --color-ring: #e57676;
 }
 
 @layer base {

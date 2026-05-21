@@ -20,5 +20,12 @@
   "admin_panel": "Bảng quản trị",
   "settings": "Cài đặt",
   "language": "Ngôn ngữ",
-  "page_not_found": "Không tìm thấy trang này!"
+  "page_not_found": "Không tìm thấy trang này!",
+  "username": "Username",
+  "password": "Mật khẩu",
+  "auth_source": "Authentication Source",
+  "local": "Local",
+  "remember_me": "Ghi nhớ tôi",
+  "forget_password": "Quên mật khẩu?",
+  "sign_up_now": "Cần một tài khoản? Đăng ký bây giờ."
 }

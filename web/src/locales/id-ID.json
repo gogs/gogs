@@ -20,5 +20,12 @@
   "admin_panel": "Panel Admin",
   "settings": "Pengaturan",
   "language": "Bahasa",
-  "page_not_found": "Halaman tidak ditemukan"
+  "page_not_found": "Halaman tidak ditemukan",
+  "username": "Nama pengguna",
+  "password": "Sandi",
+  "auth_source": "Sumber Autentikasi",
+  "local": "Lokal",
+  "remember_me": "Ingat saya",
+  "forget_password": "Lupa sandi?",
+  "sign_up_now": "Membutuhkan akun? Daftar sekarang."
 }

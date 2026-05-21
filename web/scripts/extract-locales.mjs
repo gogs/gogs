@@ -39,6 +39,15 @@ const REUSED_KEYS = [
   "theme_light",
   "theme_dark",
   "theme_system",
+  "username",
+  "password",
+  "auth_source",
+  "local",
+  "remember_me",
+  "forget_password",
+  "sign_up_now",
+  "sign_in_submitting",
+  "sign_in_failed",
 ];
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores

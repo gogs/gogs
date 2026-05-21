@@ -31,7 +31,7 @@ func Home(c *context.Context) {
 	// Check auto-login.
 	uname := c.GetCookie(conf.Security.CookieUsername)
 	if uname != "" {
-		c.Redirect(conf.Server.Subpath + "/user/login")
+		c.Redirect(conf.Server.Subpath + "/user/sign-in")
 		return
 	}
 

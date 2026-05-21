@@ -20,5 +20,12 @@
   "admin_panel": "Админ удирдлага",
   "settings": "Тохиргоо",
   "language": "Хэл",
-  "page_not_found": "Хуудас олдсонгүй"
+  "page_not_found": "Хуудас олдсонгүй",
+  "username": "Нэвтрэх нэр",
+  "password": "Нууц үг",
+  "auth_source": "Баталгаажуулалтын эх сурвалж",
+  "local": "Локал",
+  "remember_me": "Сануулах",
+  "forget_password": "Нууц үг сэргээх?",
+  "sign_up_now": "Данс үүсгэх бол? Одоо бүртгүүлнэ үү."
 }

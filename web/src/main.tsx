@@ -12,7 +12,7 @@ const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(
     <UserInfoProvider value={userInfo}>
-      <App />
+      <App user={userInfo} />
     </UserInfoProvider>,
   );
 }

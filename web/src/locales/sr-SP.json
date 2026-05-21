@@ -20,5 +20,12 @@
   "admin_panel": "Админ панела",
   "settings": "Подешавања",
   "language": "Језик",
-  "page_not_found": "Page Not Found"
+  "page_not_found": "Page Not Found",
+  "username": "Корисничко име",
+  "password": "Лозинка",
+  "auth_source": "Извор аутентикације",
+  "local": "Локално",
+  "remember_me": "Запамти ме",
+  "forget_password": "Заборавили сте лозинку?",
+  "sign_up_now": "Немате налог? Пријавите се."
 }

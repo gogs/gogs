@@ -7,11 +7,9 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/captcha"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -23,7 +21,6 @@ import (
 )
 
 const (
-	tmplUserAuthLogin                 = "user/auth/login"
 	tmplUserAuthTwoFactor             = "user/auth/two_factor"
 	tmplUserAuthTwoFactorRecoveryCode = "user/auth/two_factor_recovery_code"
 	tmplUserAuthSignup                = "user/auth/signup"
@@ -31,93 +28,6 @@ const (
 	tmplUserAuthForgotPassword        = "user/auth/forgot_passwd"
 	tmplUserAuthResetPassword         = "user/auth/reset_passwd"
 )
-
-// AutoLogin reads cookie and try to auto-login.
-func AutoLogin(c *context.Context) (bool, error) {
-	if !database.HasEngine {
-		return false, nil
-	}
-
-	uname := c.GetCookie(conf.Security.CookieUsername)
-	if uname == "" {
-		return false, nil
-	}
-
-	isSucceed := false
-	defer func() {
-		if !isSucceed {
-			log.Trace("auto-login cookie cleared: %s", uname)
-			c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
-			c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
-			c.SetCookie(conf.Security.LoginStatusCookieName, "", -1, conf.Server.Subpath)
-		}
-	}()
-
-	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), uname)
-	if err != nil {
-		if !database.IsErrUserNotExist(err) {
-			return false, errors.Newf("get user by name: %v", err)
-		}
-		return false, nil
-	}
-
-	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName); !ok || val != u.Name {
-		return false, nil
-	}
-
-	isSucceed = true
-	_ = c.Session.Set("uid", u.ID)
-	_ = c.Session.Set("uname", u.Name)
-	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
-	if conf.Security.EnableLoginStatusCookie {
-		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
-	}
-	return true, nil
-}
-
-func Login(c *context.Context) {
-	c.Title("sign_in")
-
-	// Check auto-login
-	isSucceed, err := AutoLogin(c)
-	if err != nil {
-		c.Error(err, "auto login")
-		return
-	}
-
-	redirectTo := c.Query("redirect_to")
-	if len(redirectTo) > 0 {
-		c.SetCookie("redirect_to", redirectTo, 0, conf.Server.Subpath)
-	} else {
-		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
-	}
-
-	if isSucceed {
-		if urlx.IsSameSite(redirectTo) {
-			c.Redirect(redirectTo)
-		} else {
-			c.RedirectSubpath("/")
-		}
-		c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-		return
-	}
-
-	// Display normal login page
-	loginSources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
-	if err != nil {
-		c.Error(err, "list activated login sources")
-		return
-	}
-	c.Data["LoginSources"] = loginSources
-	for i := range loginSources {
-		if loginSources[i].IsDefault {
-			c.Data["DefaultLoginSource"] = loginSources[i]
-			c.Data["login_source"] = loginSources[i].ID
-			break
-		}
-	}
-	c.Success(tmplUserAuthLogin)
-}
 
 func afterLogin(c *context.Context, u *database.User, remember bool) {
 	if remember {
@@ -145,53 +55,6 @@ func afterLogin(c *context.Context, u *database.User, remember bool) {
 	}
 
 	c.RedirectSubpath("/")
-}
-
-func LoginPost(c *context.Context, f form.SignIn) {
-	c.Title("sign_in")
-
-	loginSources, err := database.Handle.LoginSources().List(c.Req.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
-	if err != nil {
-		c.Error(err, "list activated login sources")
-		return
-	}
-	c.Data["LoginSources"] = loginSources
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplUserAuthLogin)
-		return
-	}
-
-	u, err := database.Handle.Users().Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
-	if err != nil {
-		switch {
-		case auth.IsErrBadCredentials(err):
-			c.FormErr("UserName", "Password")
-			c.RenderWithErr(c.Tr("form.username_password_incorrect"), http.StatusUnauthorized, tmplUserAuthLogin, &f)
-		case database.IsErrLoginSourceMismatch(err):
-			c.FormErr("LoginSource")
-			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), http.StatusUnprocessableEntity, tmplUserAuthLogin, &f)
-
-		default:
-			c.Error(err, "authenticate user")
-		}
-		for i := range loginSources {
-			if loginSources[i].IsDefault {
-				c.Data["DefaultLoginSource"] = loginSources[i]
-				break
-			}
-		}
-		return
-	}
-
-	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), u.ID) {
-		afterLogin(c, u, f.Remember)
-		return
-	}
-
-	_ = c.Session.Set("twoFactorRemember", f.Remember)
-	_ = c.Session.Set("twoFactorUserID", u.ID)
-	c.RedirectSubpath("/user/login/two_factor")
 }
 
 func LoginTwoFactor(c *context.Context) {
@@ -399,7 +262,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	c.RedirectSubpath("/user/login")
+	c.RedirectSubpath("/user/sign-in")
 }
 
 // parseUserFromCode returns user by username encoded in code.
@@ -635,7 +498,7 @@ func ResetPasswdPost(c *context.Context) {
 		}
 
 		log.Trace("User password reset: %s", u.Name)
-		c.RedirectSubpath("/user/login")
+		c.RedirectSubpath("/user/sign-in")
 		return
 	}
 

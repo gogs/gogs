@@ -59,8 +59,8 @@ export function Navbar() {
             </>
           ) : (
             <>
+              <NavLink href="/user/sign-in">{t("sign_in")}</NavLink>
               <NavLink href="/user/sign_up">{t("register")}</NavLink>
-              <NavLink href="/user/login">{t("sign_in")}</NavLink>
             </>
           )}
         </div>
@@ -144,11 +144,11 @@ export function Navbar() {
                       {t("help")}
                     </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
+                    <MobileLink href="/user/sign-in" onClick={() => setOpen(false)}>
+                      {t("sign_in")}
+                    </MobileLink>
                     <MobileLink href="/user/sign_up" onClick={() => setOpen(false)}>
                       {t("register")}
-                    </MobileLink>
-                    <MobileLink href="/user/login" onClick={() => setOpen(false)}>
-                      {t("sign_in")}
                     </MobileLink>
                   </>
                 )}
