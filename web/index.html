@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="{{.Lang}}" class="h-full">
+<html class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="sub-url" content="{{.SubURL}}" />
-    <link rel="shortcut icon" href="{{.SubURL}}/img/favicon.png" />
+    {{.WebContext}}
+    <link rel="shortcut icon" href="/img/favicon.png" />
     <title>Gogs</title>
     <style>
       /* Inlined so the page paints with the right theme background before the main stylesheet arrives. */

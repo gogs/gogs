@@ -8,6 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -42,7 +43,12 @@ func mountWebRoutes(f *flamego.Flame) error {
 
 	f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
 		wc := context.WebContextFrom(r)
-		body := renderIndex(index, wc)
+		body, err := renderIndex(index, wc)
+		if err != nil {
+			log.Error("Failed to render index: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		// The body is rewritten per request (lang injection, future
 		// runtime config), so caching it would serve stale content to

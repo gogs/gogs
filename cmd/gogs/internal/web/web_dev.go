@@ -33,7 +33,10 @@ func mountWebRoutes(f *flamego.Flame) error {
 		}
 		_ = resp.Body.Close()
 		wc := context.WebContextFrom(resp.Request)
-		body := renderIndex(raw, wc)
+		body, err := renderIndex(raw, wc)
+		if err != nil {
+			return errors.Wrap(err, "render index")
+		}
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))

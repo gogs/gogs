@@ -3,6 +3,7 @@ package web
 import (
 	stdctx "context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -530,6 +531,8 @@ func Run(configPath string, portOverride int) error {
 		m.Group("/api", func() {
 			apiv1.RegisterRoutes(m)
 		}, ignSignIn)
+
+		m.Any("/api/web/*", bridgeToWebAPI(webHandler))
 	},
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,
@@ -718,6 +721,8 @@ func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
 
+	mountWebAPIRoutes(f)
+
 	if err := mountWebRoutes(f); err != nil {
 		return nil, errors.Wrap(err, "mount web routes")
 	}
@@ -819,26 +824,41 @@ func newMacaron() (*macaron.Macaron, error) {
 	return m, nil
 }
 
-// renderIndex applies per-request substitutions to the index.html shell:
-// the {{.Lang}} and {{.SubURL}} placeholders, plus the deployment subpath
-// for asset URLs Vite bakes into the bundle. Returns a fresh byte slice.
-func renderIndex(index []byte, wc context.WebContext) []byte {
+// renderIndex returns the index.html shell with per-request substitutions
+// applied for the given WebContext.
+func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
+	// json.Marshal escapes <, >, and & to their \uXXXX forms by default, so
+	// the payload cannot break out of the surrounding <script> with "</script>"
+	// even if a field carries attacker-influenced text.
+	payload, err := json.Marshal(struct {
+		Lang   string `json:"lang"`
+		SubURL string `json:"subURL"`
+	}{
+		Lang:   wc.Lang,
+		SubURL: wc.SubURL,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "marshal web context")
+	}
+	// Inline so it runs before paint: setting <html lang> early lets screen
+	// readers and CSS :lang() see the locale before React mounts.
+	script := `<script>window.__webContext=` + string(payload) +
+		`;document.documentElement.lang=window.__webContext.lang;</script>`
+
 	pairs := []string{
-		"{{.Lang}}", wc.Lang,
-		"{{.SubURL}}", wc.SubURL,
+		"{{.WebContext}}", script,
 	}
 	if wc.SubURL != "" {
-		// Vite bakes absolute root paths into the bundle output (e.g.
-		// src="/assets/index-xxx.js"). Prefix them with the subpath so the
-		// browser fetches /<subpath>/assets/... when Gogs is mounted on a
-		// non-root URL.
+		// Vite bakes absolute root paths into the bundle output. Prefix them
+		// with the subpath so they resolve correctly under non-root mounts.
 		pairs = append(pairs,
 			`src="/assets/`, `src="`+wc.SubURL+`/assets/`,
 			`href="/assets/`, `href="`+wc.SubURL+`/assets/`,
 			`src="/src/`, `src="`+wc.SubURL+`/src/`,
+			`href="/img/`, `href="`+wc.SubURL+`/img/`,
 		)
 	}
-	return []byte(strings.NewReplacer(pairs...).Replace(string(index)))
+	return []byte(strings.NewReplacer(pairs...).Replace(string(index))), nil
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import { webContext } from "@/lib/context";
 import bgBG from "@/locales/bg-BG.json";
 import csCZ from "@/locales/cs-CZ.json";
 import deDE from "@/locales/de-DE.json";
@@ -33,14 +34,6 @@ import viVN from "@/locales/vi-VN.json";
 import zhCN from "@/locales/zh-CN.json";
 import zhHK from "@/locales/zh-HK.json";
 import zhTW from "@/locales/zh-TW.json";
-
-// The server resolves the active locale (via cookie, Accept-Language, or
-// ?lang query) and writes it into <html lang="…"> before the SPA boots.
-// Trust that single source instead of re-deriving from cookies client-side.
-function detectLang(): string {
-  if (typeof document === "undefined") return "en-US";
-  return document.documentElement.lang || "en-US";
-}
 
 // eslint-disable-next-line import/no-named-as-default-member
 void i18n.use(initReactI18next).init({
@@ -78,7 +71,7 @@ void i18n.use(initReactI18next).init({
     "zh-HK": { translation: zhHK },
     "zh-TW": { translation: zhTW },
   },
-  lng: detectLang(),
+  lng: webContext.lang,
   fallbackLng: "en-US",
   interpolation: { escapeValue: false, prefix: "{", suffix: "}" },
   returnNull: false,
