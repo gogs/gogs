@@ -31,13 +31,11 @@ func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context) {
 }
 
 func webAPIInjector(c flamego.Context) {
-	user, _ := c.Request().Context().Value(webAPIUserKey{}).(*database.User)
+	ctx := c.Request().Context()
+	user, _ := ctx.Value(webAPIUserKey{}).(*database.User)
+	sess, _ := ctx.Value(webAPISessionKey{}).(session.Store)
+	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	c.Map(user)
-}
-
-func sessionInjector(c flamego.Context) {
-	sess, _ := c.Request().Context().Value(webAPISessionKey{}).(session.Store)
-	mc, _ := c.Request().Context().Value(webAPIMacaronKey{}).(*macaron.Context)
 	c.Map(sess)
 	c.Map(mc)
 }
@@ -63,10 +61,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
-			f.Get("/info", webAPIInjector, userInfoHandler)
-			f.Post("/sign-out", sessionInjector, userSignOutHandler)
+			f.Get("/info", userInfoHandler)
+			f.Post("/sign-out", userSignOutHandler)
 		})
-	})
+	}, webAPIInjector)
 }
 
 type userInfo struct {
