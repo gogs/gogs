@@ -57,7 +57,7 @@ func mountWebRoutes(f *flamego.Flame) error {
 		// copy at all, not even for revalidation. Static assets keep
 		// their normal caching via flamego.Static.
 		w.Header().Set("Cache-Control", "no-store")
-		status := wc.Status
+		status := wc.StatusCode
 		if status <= 0 {
 			status = http.StatusOK
 		}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 
 	"gogs.io/gogs/internal/context"
@@ -33,22 +34,33 @@ func webAPIInjector(c flamego.Context) {
 }
 
 func mountWebAPIRoutes(f *flamego.Flame) {
+	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
+		c.ResponseWriter().Header().Set("Content-Type", "application/json; charset=utf-8")
+		c.ResponseWriter().Header().Set("Cache-Control", "no-store")
+		c.ResponseWriter().WriteHeader(statusCode)
+		if err != nil {
+			resp = map[string]any{
+				"error": err.Error(),
+			}
+		}
+		_ = json.NewEncoder(c.ResponseWriter()).Encode(resp)
+	})
+
 	f.Group("/api/web", func() {
 		f.Get("/user-info", userInfoHandler)
 	}, webAPIInjector)
 }
 
-func userInfoHandler(w http.ResponseWriter, user *database.User) {
-	var resp *userInfo
-	if user != nil {
-		resp = &userInfo{
+func userInfoHandler(user *database.User) (statusCode int, resp *userInfo, err error) {
+	if user == nil {
+		return http.StatusUnauthorized, nil, errors.New("unauthorized")
+	}
+	return http.StatusOK,
+		&userInfo{
 			Username:              user.Name,
 			AvatarURL:             user.AvatarURL(),
 			IsAdmin:               user.IsAdmin,
 			CanCreateOrganization: user.CanCreateOrganization(),
-		}
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	_ = json.NewEncoder(w).Encode(resp)
+		},
+		nil
 }

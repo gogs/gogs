@@ -162,9 +162,9 @@ func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 // WebContext carries per-request inputs into the web handler so it can
 // render the React shell. Fields are read by helpers like WebContextFrom.
 type WebContext struct {
-	Lang   string
-	SubURL string
-	Status int
+	Lang       string
+	SubURL     string
+	StatusCode int
 }
 
 // WebContextKey is the request context key for WebContext values. Exported
@@ -189,9 +189,9 @@ func WebContextFrom(r *http.Request) WebContext {
 // status.
 func (c *Context) NotFound() {
 	c.serveWeb(WebContext{
-		Lang:   c.Language(),
-		SubURL: conf.Server.Subpath,
-		Status: http.StatusNotFound,
+		Lang:       c.Language(),
+		SubURL:     conf.Server.Subpath,
+		StatusCode: http.StatusNotFound,
 	})
 }
 

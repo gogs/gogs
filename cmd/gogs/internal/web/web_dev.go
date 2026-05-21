@@ -40,9 +40,9 @@ func mountWebRoutes(f *flamego.Flame) error {
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
-		if wc.Status != 0 {
-			resp.StatusCode = wc.Status
-			resp.Status = http.StatusText(wc.Status)
+		if wc.StatusCode != 0 {
+			resp.StatusCode = wc.StatusCode
+			resp.Status = http.StatusText(wc.StatusCode)
 		}
 		// The upstream validators describe the unmodified body. Drop them
 		// so the browser does not satisfy a conditional request from a

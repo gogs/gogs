@@ -625,9 +625,9 @@ func Run(configPath string, portOverride int) error {
 			}
 		}
 		ctx := stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
-			Lang:   lang,
-			SubURL: conf.Server.Subpath,
-			Status: http.StatusNotFound,
+			Lang:       lang,
+			SubURL:     conf.Server.Subpath,
+			StatusCode: http.StatusNotFound,
 		})
 		webHandler.ServeHTTP(w, r.WithContext(ctx))
 	})
