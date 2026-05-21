@@ -72,7 +72,7 @@ export function Navbar() {
               aria-label="Open menu"
               className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface)"
             >
-              <Menu className="size-[18px]" />
+              <Menu className="size-[18px]" aria-hidden />
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
               <ul className="flex flex-col text-sm">
