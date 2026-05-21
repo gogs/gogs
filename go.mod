@@ -148,6 +148,3 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.39.0 // indirect
 )
-
-// +heroku goVersion go1.26
-// +heroku install ./cmd/gogs
