@@ -19,10 +19,9 @@ targets:
     <<: *debian
   ubuntu-26.04:
     <<: *debian
-env:
-  - GOFLAGS=-tags=prod,pam
 before:
   - mv .packager/Procfile .
+  - install -m 0755 .packager/go-pre-compile bin/go-pre-compile
 after:
   - mv bin/gogs gogs
 after_install: ./.packager/hooks/postinst
