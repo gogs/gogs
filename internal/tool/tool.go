@@ -36,14 +36,18 @@ func DetectEncoding(content []byte) (string, error) {
 		return "UTF-8", nil
 	}
 
-	result, err := chardet.NewTextDetector().DetectBest(content)
-	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
+	if len(conf.Repository.ANSICharset) > 0 {
 		log.Trace("Using default ANSICharset: %s", conf.Repository.ANSICharset)
-		return conf.Repository.ANSICharset, err
+		return conf.Repository.ANSICharset, nil
+	}
+
+	result, err := chardet.NewTextDetector().DetectBest(content)
+	if err != nil {
+		return "", err
 	}
 
 	log.Trace("Detected encoding: %s", result.Charset)
-	return result.Charset, err
+	return result.Charset, nil
 }
 
 // BasicAuthDecode decodes username and password portions of HTTP Basic Authentication
