@@ -11,8 +11,6 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-// webAPIBridgeKey hands off the macaron-resolved user to flamego DI via
-// the request context, since macaron and flamego use separate injectors.
 type webAPIBridgeKey struct{}
 
 func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context) {
