@@ -41,7 +41,7 @@ func mountWebRoutes(f *flamego.Flame) error {
 			resp.StatusCode = http.StatusInternalServerError
 			resp.Status = http.StatusText(http.StatusInternalServerError)
 			resp.Header.Set("Content-Type", "text/plain; charset=utf-8")
-		} else if wc.StatusCode != 0 {
+		} else if wc.StatusCode > 0 {
 			resp.StatusCode = wc.StatusCode
 			resp.Status = http.StatusText(wc.StatusCode)
 		}
