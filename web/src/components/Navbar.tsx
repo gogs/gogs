@@ -305,10 +305,30 @@ function NavLink({ href, external, children }: { href: string; external?: boolea
 
 function SignOutForm({ children }: { children: React.ReactNode }) {
   return (
-    <form action={subUrl("/user/logout")} method="POST" className="inline">
+    <form
+      action={subUrl("/api/web/user/sign-out")}
+      method="POST"
+      className="inline"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void signOut();
+      }}
+    >
       {children}
     </form>
   );
+}
+
+async function signOut() {
+  try {
+    await fetch(subUrl("/api/web/user/sign-out"), {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch (err) {
+    console.error("signOut: request failed", err);
+  }
+  window.location.assign(subUrl("/"));
 }
 
 function MobileLink({
