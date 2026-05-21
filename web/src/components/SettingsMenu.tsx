@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { webContext } from "@/lib/context";
 import { type Theme, useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -41,15 +42,10 @@ const LANGUAGES: { code: string; name: string }[] = [
   { code: "ro-RO", name: "Română" },
 ];
 
-function currentLangCode(): string {
-  if (typeof document === "undefined") return "en-US";
-  return document.documentElement.lang || "en-US";
-}
-
 export function SettingsMenu() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [currentLang] = useState(() => currentLangCode());
+  const [currentLang] = useState(() => webContext.lang);
   const { theme, setTheme } = useTheme();
 
   return (
