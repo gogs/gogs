@@ -11,22 +11,16 @@ targets:
     <<: *debian
   debian-14:
     <<: *debian
-  ubuntu-18.04:
-    <<: *debian
   ubuntu-20.04:
     <<: *debian
   ubuntu-22.04:
     <<: *debian
   ubuntu-24.04:
     <<: *debian
-  centos-9:
-    build_dependencies:
-      - pam-devel
-      # required for Go buildpack
-      - perl-Digest-SHA
-    dependencies:
-      - pam
-      - git
+  ubuntu-26.04:
+    <<: *debian
+env:
+  - GOFLAGS=-tags=prod,pam
 before:
   - mv .packager/Procfile .
 after:
