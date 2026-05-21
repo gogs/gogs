@@ -13,6 +13,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 )
@@ -35,15 +36,18 @@ func mountWebRoutes(f *flamego.Flame) error {
 		wc := context.WebContextFrom(resp.Request)
 		body, err := renderIndex(raw, wc)
 		if err != nil {
-			return errors.Wrap(err, "render index")
+			log.Error("Failed to render index: %v", err)
+			body = []byte("Internal Server Error\n")
+			resp.StatusCode = http.StatusInternalServerError
+			resp.Status = http.StatusText(http.StatusInternalServerError)
+			resp.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		} else if wc.StatusCode != 0 {
+			resp.StatusCode = wc.StatusCode
+			resp.Status = http.StatusText(wc.StatusCode)
 		}
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		resp.ContentLength = int64(len(body))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
-		if wc.StatusCode != 0 {
-			resp.StatusCode = wc.StatusCode
-			resp.Status = http.StatusText(wc.StatusCode)
-		}
 		// The upstream validators describe the unmodified body. Drop them
 		// so the browser does not satisfy a conditional request from a
 		// cached copy that has a stale injected lang attribute.

@@ -840,8 +840,6 @@ func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")
 	}
-	// Inline so it runs before paint: setting <html lang> early lets screen
-	// readers and CSS :lang() see the locale before React mounts.
 	script := `<script>window.__webContext=` + string(payload) +
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
 

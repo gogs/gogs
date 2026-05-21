@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 )
 
+// webAPIBridgeKey hands off the macaron-resolved user to flamego DI via
+// the request context, since macaron and flamego use separate injectors.
 type webAPIBridgeKey struct{}
 
 func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context) {
@@ -28,15 +29,21 @@ func webAPIInjector(c flamego.Context) {
 
 func mountWebAPIRoutes(f *flamego.Flame) {
 	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
-		c.ResponseWriter().Header().Set("Content-Type", "application/json; charset=utf-8")
-		c.ResponseWriter().Header().Set("Cache-Control", "no-store")
-		c.ResponseWriter().WriteHeader(statusCode)
+		w := c.ResponseWriter()
+		w.Header().Set("Cache-Control", "no-store")
 		if err != nil {
-			resp = map[string]any{
-				"error": err.Error(),
-			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(statusCode)
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": err.Error()})
+			return
 		}
-		_ = json.NewEncoder(c.ResponseWriter()).Encode(resp)
+		if resp == nil {
+			w.WriteHeader(statusCode)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(statusCode)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 
 	f.Group("/api/web", func() {
@@ -53,7 +60,7 @@ type userInfo struct {
 
 func userInfoHandler(user *database.User) (statusCode int, resp *userInfo, err error) {
 	if user == nil {
-		return http.StatusUnauthorized, nil, errors.New("unauthorized")
+		return http.StatusNoContent, nil, nil
 	}
 	return http.StatusOK,
 		&userInfo{
