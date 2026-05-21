@@ -35,9 +35,7 @@ func webAPIInjector(c flamego.Context) {
 	user, _ := ctx.Value(webAPIUserKey{}).(*database.User)
 	sess, _ := ctx.Value(webAPISessionKey{}).(session.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
-	c.Map(user)
-	c.Map(sess)
-	c.Map(mc)
+	c.Map(user, sess, mc)
 }
 
 func mountWebAPIRoutes(f *flamego.Flame) {
