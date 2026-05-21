@@ -6,23 +6,40 @@ import (
 	"net/http"
 
 	"github.com/flamego/flamego"
+	"github.com/go-macaron/session"
+	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 )
 
-type webAPIBridgeKey struct{}
+type (
+	webAPIUserKey    struct{}
+	webAPISessionKey struct{}
+	webAPIMacaronKey struct{}
+)
 
 func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context) {
 	return func(c *context.Context) {
-		ctx := stdctx.WithValue(c.Req.Context(), webAPIBridgeKey{}, c.User)
+		ctx := c.Req.Context()
+		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
+		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
+		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 	}
 }
 
 func webAPIInjector(c flamego.Context) {
-	user, _ := c.Request().Context().Value(webAPIBridgeKey{}).(*database.User)
+	user, _ := c.Request().Context().Value(webAPIUserKey{}).(*database.User)
 	c.Map(user)
+}
+
+func sessionInjector(c flamego.Context) {
+	sess, _ := c.Request().Context().Value(webAPISessionKey{}).(session.Store)
+	mc, _ := c.Request().Context().Value(webAPIMacaronKey{}).(*macaron.Context)
+	c.Map(sess)
+	c.Map(mc)
 }
 
 func mountWebAPIRoutes(f *flamego.Flame) {
@@ -45,8 +62,11 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	})
 
 	f.Group("/api/web", func() {
-		f.Get("/user-info", userInfoHandler)
-	}, webAPIInjector)
+		f.Group("/user", func() {
+			f.Get("/info", webAPIInjector, userInfoHandler)
+			f.Post("/sign-out", sessionInjector, userSignOutHandler)
+		})
+	})
 }
 
 type userInfo struct {
@@ -68,4 +88,13 @@ func userInfoHandler(user *database.User) (statusCode int, resp *userInfo, err e
 			CanCreateOrganization: user.CanCreateOrganization(),
 		},
 		nil
+}
+
+func userSignOutHandler(sess session.Store, mc *macaron.Context) (statusCode int, resp any, err error) {
+	_ = sess.Flush()
+	_ = sess.Destory(mc)
+	mc.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
+	mc.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
+	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	return http.StatusNoContent, nil, nil
 }

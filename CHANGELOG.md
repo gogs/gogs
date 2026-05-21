@@ -4,9 +4,14 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Added
+
+- `POST /api/web/user/sign-out` endpoint that destroys the current session and clears the username, remember-me, and CSRF cookies.
+
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
+- Renamed `GET /api/web/user-info` to `GET /api/web/user/info`.
 
 ### Fixed
 
