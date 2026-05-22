@@ -1,4 +1,4 @@
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,6 +39,7 @@ const route = getRouteApi("/user/sign-in");
 export function SignIn() {
   const { t } = useTranslation();
   usePageTitle(t("sign_in"));
+  const navigate = useNavigate();
   const { loginSources } = route.useLoaderData();
   const defaultSource = loginSources.find((s) => s.isDefault);
 
@@ -83,12 +84,18 @@ export function SignIn() {
           return;
         }
         const data = (await res.json()) as SignInResponse;
-        const search = window.location.search;
         if (data.mfa) {
-          window.location.assign(subUrl("/user/mfa") + search);
+          // Preserve ?redirect_to= so the MFA step can finalize the same target.
+          const search = new URLSearchParams(window.location.search);
+          const redirectTo = search.get("redirect_to");
+          await navigate({
+            to: "/user/mfa",
+            search: redirectTo ? { redirect_to: redirectTo } : {},
+          });
           return;
         }
-        const to = new URLSearchParams(search).get("redirect_to") ?? "";
+        const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
+        // /redirect is a server endpoint (303), must be a full navigation.
         window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
       } catch {
         setFormError(t("sign_in_failed"));

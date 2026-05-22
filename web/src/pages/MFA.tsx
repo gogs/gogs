@@ -1,4 +1,4 @@
-import { getRouteApi } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +21,7 @@ const route = getRouteApi("/user/mfa");
 export function MFA() {
   const { t } = useTranslation();
   usePageTitle(t("mfa_title"));
+  const navigate = useNavigate();
   // When no challenge is pending the loader has already kicked off a full
   // navigation away; the early return keeps this page from flashing.
   const { pending } = route.useLoaderData();
@@ -68,7 +69,7 @@ export function MFA() {
           const errBody = (await res.json().catch(() => ({}))) as MFAErrorResponse;
           if (res.status === 401 && !errBody.fields) {
             // Session-expired or missing 2FA session: send the user back to start.
-            window.location.assign(subUrl("/user/sign-in"));
+            await navigate({ to: "/user/sign-in" });
             return;
           }
           if (errBody.error) setFormError(errBody.error);
@@ -181,8 +182,8 @@ export function MFA() {
                     {isPasscode ? t("mfa_use_recovery_code") : t("mfa_use_passcode")}
                   </Button>
                   <Button variant="link" size="inline" asChild className="self-center">
-                    <a
-                      href={subUrl("/user/sign-in")}
+                    <Link
+                      to="/user/sign-in"
                       tabIndex={submitting ? -1 : 4}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}
@@ -191,7 +192,7 @@ export function MFA() {
                       }}
                     >
                       {t("back_to_sign_in")}
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </div>

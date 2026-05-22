@@ -125,8 +125,6 @@ tasks:
         }
       ' .bin/custom/conf/app.ini > .bin/custom/conf/app.ini.tmp \
         && mv .bin/custom/conf/app.ini.tmp .bin/custom/conf/app.ini
-    options:
-      outputStyle: "stream"
 
   dev:
     command: ".bin/gogs web"
