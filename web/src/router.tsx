@@ -71,7 +71,7 @@ const signInRoute = createRoute({
 
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/user/reset_password",
+  path: "/user/reset-password",
   loader: async (): Promise<ResetPasswordPage> => {
     const code = new URLSearchParams(window.location.search).get("code") ?? "";
     if (!code) {

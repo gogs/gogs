@@ -20,7 +20,7 @@ interface ResetPasswordErrorResponse {
   fields?: Record<string, string | null>;
 }
 
-const route = getRouteApi("/user/reset_password");
+const route = getRouteApi("/user/reset-password");
 
 export function ResetPassword() {
   const { t } = useTranslation();
