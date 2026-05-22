@@ -46,6 +46,13 @@ const signInRoute = createRoute({
   path: "/user/sign-in",
   beforeLoad: ({ context }) => {
     if (context.user) {
+      // Full navigation to "/" so the server-rendered dashboard handler runs.
+      // A client-side TanStack redirect would render the SPA's "/" route
+      // (Landing, the anon page) and make an authed user look signed out.
+      window.location.assign(subUrl("/"));
+      // Throw to halt loader execution. TanStack treats the thrown redirect
+      // as a sentinel; we never reach a SPA navigation because the line
+      // above already started a document-level one.
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
       throw redirect({ to: "/", replace: true });
     }

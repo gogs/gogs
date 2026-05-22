@@ -603,31 +603,23 @@ func Run(configPath string, portOverride int) error {
 		}
 	})
 
-	// True 404s never reach context.Contexter, so populate WebContext
-	// explicitly. Without this, subpath deployments would emit a shell with
-	// root-relative asset URLs that the browser cannot resolve. Read the
-	// language preference straight from the cookie that the i18n middleware
-	// previously wrote, but only accept values that match a configured
-	// locale. The cookie value lands in the HTML via raw string substitution
-	// in renderIndex, so an unvalidated value would let an attacker who can
-	// set this cookie inject markup into the 404 shell.
-	langAllowed := make(map[string]struct{}, len(conf.I18n.Langs))
-	for _, lang := range conf.I18n.Langs {
-		langAllowed[lang] = struct{}{}
-	}
-	m.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		lang := "en-US"
-		if c, err := r.Cookie("lang"); err == nil {
-			if _, ok := langAllowed[c.Value]; ok {
-				lang = c.Value
-			}
-		}
-		ctx := stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
-			Lang:       lang,
-			SubURL:     conf.Server.Subpath,
-			StatusCode: http.StatusNotFound,
+	// SPA catch-all at top level — must stay OUTSIDE the macaron Group that
+	// wraps Sessioner/CSRF/Contexter. In dev the Flamego web routes proxy
+	// every asset path (e.g. /src/*.tsx, /@fs/*, /@vite/client) to Vite, and
+	// if those requests passed through macaron-session each one would race
+	// to rewrite the session file with stale data. The current
+	// macaron-session release encodes-and-writes unconditionally, so
+	// concurrent asset loads would clobber the uid set by
+	// /api/web/user/sign-in. Bypassing session middleware here keeps SPA
+	// traffic from touching the file at all. Globally-installed middleware
+	// (i18n, logger, recovery, static) still applies because it's bound via
+	// m.Use, so we get the resolved locale without re-parsing the cookie.
+	m.Any("/*", func(c *macaron.Context, l i18n.Locale) {
+		ctx := stdctx.WithValue(c.Req.Context(), context.WebContextKey{}, context.WebContext{
+			Lang:   l.Language(),
+			SubURL: conf.Server.Subpath,
 		})
-		webHandler.ServeHTTP(w, r.WithContext(ctx))
+		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 	})
 
 	// Flag for port number in case first time run conflict.
