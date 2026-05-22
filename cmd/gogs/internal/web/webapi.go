@@ -195,7 +195,7 @@ type userSignInRequest struct {
 }
 
 type userSignInResponse struct {
-	TwoFactor  bool   `json:"twoFactor,omitempty"`
+	MFA        bool   `json:"mfa,omitempty"`
 	RedirectTo string `json:"redirectTo,omitempty"`
 }
 
@@ -221,9 +221,9 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 	}
 
 	if database.Handle.TwoFactors().IsEnabled(r.Context(), u.ID) {
-		_ = sess.Set("twoFactorRemember", req.Remember)
-		_ = sess.Set("twoFactorUserID", u.ID)
-		return http.StatusOK, &userSignInResponse{TwoFactor: true}, nil
+		_ = sess.Set("mfaRemember", req.Remember)
+		_ = sess.Set("mfaUserID", u.ID)
+		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
 	return http.StatusOK, &userSignInResponse{RedirectTo: completeSignIn(sess, mc, u, req.Remember, req.RedirectTo)}, nil
@@ -241,8 +241,8 @@ func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, r
 
 	_ = sess.Set("uid", u.ID)
 	_ = sess.Set("uname", u.Name)
-	_ = sess.Delete("twoFactorRemember")
-	_ = sess.Delete("twoFactorUserID")
+	_ = sess.Delete("mfaRemember")
+	_ = sess.Delete("mfaUserID")
 
 	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
@@ -260,7 +260,7 @@ type userMfaPageResponse struct {
 }
 
 func getUserMfa(sess session.Store) (statusCode int, resp *userMfaPageResponse, err error) {
-	_, ok := sess.Get("twoFactorUserID").(int64)
+	_, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusNotFound, nil, nil
 	}
@@ -281,7 +281,7 @@ func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
 	}
 
-	userID, ok := sess.Get("twoFactorUserID").(int64)
+	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.login_two_factor_session_expired")}, nil
 	}
@@ -320,7 +320,7 @@ func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	remember, _ := sess.Get("twoFactorRemember").(bool)
+	remember, _ := sess.Get("mfaRemember").(bool)
 	return http.StatusOK, &userMfaResponse{RedirectTo: completeSignIn(sess, mc, u, remember, req.RedirectTo)}, nil
 }
 
@@ -334,7 +334,7 @@ func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
 	}
 
-	userID, ok := sess.Get("twoFactorUserID").(int64)
+	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.login_two_factor_session_expired")}, nil
 	}
@@ -356,7 +356,7 @@ func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	remember, _ := sess.Get("twoFactorRemember").(bool)
+	remember, _ := sess.Get("mfaRemember").(bool)
 	return http.StatusOK, &userMfaResponse{RedirectTo: completeSignIn(sess, mc, u, remember, req.RedirectTo)}, nil
 }
 

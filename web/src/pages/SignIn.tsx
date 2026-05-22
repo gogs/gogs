@@ -23,7 +23,7 @@ export interface SignInPage {
 }
 
 interface SignInResponse {
-  twoFactor?: boolean;
+  mfa?: boolean;
   redirectTo?: string;
 }
 
@@ -85,7 +85,7 @@ export function SignIn() {
           return;
         }
         const data = (await res.json()) as SignInResponse;
-        if (data.twoFactor) {
+        if (data.mfa) {
           const search = window.location.search;
           window.location.assign(subUrl("/user/mfa") + search);
           return;
