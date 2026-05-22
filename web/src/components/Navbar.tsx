@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   Building2,
   ChevronDown,
@@ -25,7 +26,7 @@ export function Navbar() {
   const user = useUserInfo();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)/95 backdrop-blur">
+    <header className="sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 text-sm sm:gap-4 sm:px-6">
         <a href={subUrl("/")} className="flex shrink-0 items-center" aria-label="Gogs">
           <img src={subUrl("/img/favicon.png")} alt="" width="28" height="28" className="size-7" />
@@ -41,7 +42,9 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <NavLink href="/">{t("home")}</NavLink>
+              <NavLink href="/" spa>
+                {t("home")}
+              </NavLink>
               <NavLink href="/explore/repos">{t("explore")}</NavLink>
               <NavLink href="https://gogs.io" external>
                 {t("help")}
@@ -59,8 +62,10 @@ export function Navbar() {
             </>
           ) : (
             <>
+              <NavLink href="/user/sign-in" spa>
+                {t("sign_in")}
+              </NavLink>
               <NavLink href="/user/sign_up">{t("register")}</NavLink>
-              <NavLink href="/user/login">{t("sign_in")}</NavLink>
             </>
           )}
         </div>
@@ -78,6 +83,21 @@ export function Navbar() {
               <ul className="flex flex-col text-sm">
                 {user ? (
                   <>
+                    <li className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
+                      {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
+                    </li>
+                    <MobileLink href={`/${user.username}`} onClick={() => setOpen(false)}>
+                      {t("your_profile")}
+                    </MobileLink>
+                    <MobileLink href="/user/settings" onClick={() => setOpen(false)}>
+                      {t("your_settings")}
+                    </MobileLink>
+                    {user.isAdmin && (
+                      <MobileLink href="/admin" onClick={() => setOpen(false)}>
+                        {t("admin_panel")}
+                      </MobileLink>
+                    )}
+                    <li className="my-1 h-px bg-(--color-border)" />
                     <MobileLink href="/" onClick={() => setOpen(false)}>
                       {t("dashboard")}
                     </MobileLink>
@@ -103,23 +123,9 @@ export function Navbar() {
                       </MobileLink>
                     )}
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <li className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
-                      {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
-                    </li>
-                    <MobileLink href={`/${user.username}`} onClick={() => setOpen(false)}>
-                      {t("your_profile")}
-                    </MobileLink>
-                    <MobileLink href="/user/settings" onClick={() => setOpen(false)}>
-                      {t("your_settings")}
-                    </MobileLink>
                     <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>
                       {t("help")}
                     </MobileLink>
-                    {user.isAdmin && (
-                      <MobileLink href="/admin" onClick={() => setOpen(false)}>
-                        {t("admin_panel")}
-                      </MobileLink>
-                    )}
                     <li>
                       <SignOutForm>
                         <button
@@ -134,7 +140,7 @@ export function Navbar() {
                   </>
                 ) : (
                   <>
-                    <MobileLink href="/" onClick={() => setOpen(false)}>
+                    <MobileLink href="/" spa onClick={() => setOpen(false)}>
                       {t("home")}
                     </MobileLink>
                     <MobileLink href="/explore/repos" onClick={() => setOpen(false)}>
@@ -144,11 +150,11 @@ export function Navbar() {
                       {t("help")}
                     </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
+                    <MobileLink href="/user/sign-in" spa onClick={() => setOpen(false)}>
+                      {t("sign_in")}
+                    </MobileLink>
                     <MobileLink href="/user/sign_up" onClick={() => setOpen(false)}>
                       {t("register")}
-                    </MobileLink>
-                    <MobileLink href="/user/login" onClick={() => setOpen(false)}>
-                      {t("sign_in")}
                     </MobileLink>
                   </>
                 )}
@@ -291,12 +297,30 @@ function MenuLink({
   );
 }
 
-function NavLink({ href, external, children }: { href: string; external?: boolean; children: React.ReactNode }) {
+function NavLink({
+  href,
+  external,
+  spa,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  spa?: boolean;
+  children: React.ReactNode;
+}) {
+  const className = "inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)";
+  if (spa) {
+    return (
+      <Link to={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
   return (
     <a
       href={external ? href : subUrl(href)}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)"
+      className={className}
     >
       {children}
     </a>
@@ -334,24 +358,33 @@ async function signOut() {
 function MobileLink({
   href,
   external,
+  spa,
   onClick,
   children,
 }: {
   href: string;
   external?: boolean;
+  spa?: boolean;
   onClick?: () => void;
   children: React.ReactNode;
 }) {
+  const className = "flex w-full rounded-sm px-2 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)";
   return (
     <li>
-      <a
-        href={external ? href : subUrl(href)}
-        onClick={onClick}
-        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        className="flex w-full rounded-sm px-2 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)"
-      >
-        {children}
-      </a>
+      {spa ? (
+        <Link to={href} onClick={onClick} className={className}>
+          {children}
+        </Link>
+      ) : (
+        <a
+          href={external ? href : subUrl(href)}
+          onClick={onClick}
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          className={className}
+        >
+          {children}
+        </a>
+      )}
     </li>
   );
 }

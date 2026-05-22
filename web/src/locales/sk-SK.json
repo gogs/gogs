@@ -20,5 +20,12 @@
   "admin_panel": "Admin Panel",
   "settings": "Nastavenia",
   "language": "Jazyk",
-  "page_not_found": "Page Not Found"
+  "page_not_found": "Page Not Found",
+  "username": "Používateľské meno",
+  "password": "Heslo",
+  "auth_source": "Zdroj overovania",
+  "local": "Lokálny",
+  "remember_me": "Zapamätať prihlásenie",
+  "forget_password": "Zabudli ste heslo?",
+  "sign_up_now": "Potrebujete účet? Zaregistrujte sa teraz."
 }

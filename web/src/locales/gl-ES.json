@@ -20,5 +20,12 @@
   "admin_panel": "Panel de administración",
   "settings": "Configuracións",
   "language": "Idioma",
-  "page_not_found": "Page Not Found"
+  "page_not_found": "Page Not Found",
+  "username": "Nome da persoa usuaria",
+  "password": "Contrasinal",
+  "auth_source": "Fonte de Autenticación",
+  "local": "Configuración rexional",
+  "remember_me": "Recórdame",
+  "forget_password": "Esqueciches o teu contrasinal?",
+  "sign_up_now": "Necesitas unha conta? Rexístrate agora."
 }

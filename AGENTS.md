@@ -23,6 +23,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Design mobile-friendly. Every UI must look and work well on narrow viewports before adding desktop refinements via responsive breakpoints. Test at ~375px width before considering a UI done.
 - Meet WCAG 2.2 AA at minimum. Specifically: every interactive control has a discernible accessible name (visible label or `aria-label`); color is never the sole carrier of information (pair with text, icon, or shape); text and meaningful icons meet 4.5:1 contrast against their background (3:1 for large text and UI components); focus is always visible and never trapped; touch targets are at least 24×24 CSS px (40×40 preferred). When unsure, lean toward more contrast, larger targets, and explicit labels.
 - For work under `web/`, follow the patterns in [`web/DESIGN.md`](web/DESIGN.md) (typography, color hierarchy, surface chrome, file naming, accessibility specifics). Update that doc when a pattern is used in two places.
+- When a page needs server data to render, fetch it in the TanStack Router route's `loader` so the page only mounts after the response arrives. Do not fire that fetch from a `useEffect` inside the page component, which causes a flash of empty UI before the data lands.
 
 ## Build instructions
 

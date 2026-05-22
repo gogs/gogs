@@ -20,5 +20,12 @@
   "admin_panel": "Yönetim Paneli",
   "settings": "Ayarlar",
   "language": "Dil",
-  "page_not_found": "Sayfa Bulunamadı"
+  "page_not_found": "Sayfa Bulunamadı",
+  "username": "Kullanıcı Adı",
+  "password": "Parola",
+  "auth_source": "Yetkilendirme Kaynağı",
+  "local": "Yerel",
+  "remember_me": "Beni Hatırla",
+  "forget_password": "Parolanızı mı unuttunuz?",
+  "sign_up_now": "Bir hesaba mı ihtiyacınız var? Şimdi kaydolun."
 }

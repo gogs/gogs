@@ -20,5 +20,12 @@
   "admin_panel": "관리자 패널",
   "settings": "설정",
   "language": "언어",
-  "page_not_found": "페이지를 찾을 수 없음"
+  "page_not_found": "페이지를 찾을 수 없음",
+  "username": "사용자명",
+  "password": "비밀번호",
+  "auth_source": "인증 소스 편집",
+  "local": "로컬",
+  "remember_me": "자동 로그인",
+  "forget_password": "비밀번호를 잊으셨습니까?",
+  "sign_up_now": "계정이 필요하신가요? 지금 가입하세요."
 }

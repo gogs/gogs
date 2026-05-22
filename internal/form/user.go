@@ -72,17 +72,6 @@ func (f *Register) Validate(ctx *macaron.Context, errs binding.Errors) binding.E
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type SignIn struct {
-	UserName    string `binding:"Required;MaxSize(254)"`
-	Password    string `binding:"Required;MaxSize(255)"`
-	LoginSource int64
-	Remember    bool
-}
-
-func (f *SignIn) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 //   __________________________________________.___ _______    ________  _________
 //  /   _____/\_   _____/\__    ___/\__    ___/|   |\      \  /  _____/ /   _____/
 //  \_____  \  |    __)_   |    |     |    |   |   |/   |   \/   \  ___ \_____  \

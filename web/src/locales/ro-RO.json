@@ -20,5 +20,12 @@
   "admin_panel": "Panou Administrator",
   "settings": "Setări",
   "language": "Limba",
-  "page_not_found": "Pagina nu a fost găsită"
+  "page_not_found": "Pagina nu a fost găsită",
+  "username": "Numele de utilizator",
+  "password": "Parolă",
+  "auth_source": "Sursa de autentificare",
+  "local": "Local",
+  "remember_me": "Ține-mă minte",
+  "forget_password": "Ați uitat parola?",
+  "sign_up_now": "Nevoie de un cont? Inscrie-te acum."
 }

@@ -415,5 +415,5 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	log.Info("First-time run install finished!")
 	c.Flash.Success(c.Tr("install.install_success"))
-	c.Redirect(f.AppUrl + "user/login")
+	c.Redirect(f.AppUrl + "user/sign-in")
 }

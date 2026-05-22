@@ -20,5 +20,12 @@
   "admin_panel": "Admin-panel",
   "settings": "inställningar",
   "language": "Språk",
-  "page_not_found": "Sidan hittades inte"
+  "page_not_found": "Sidan hittades inte",
+  "username": "Användarnamn",
+  "password": "Lösenord",
+  "auth_source": "Autentiseringskälla",
+  "local": "Lokal",
+  "remember_me": "Kom ihåg mig",
+  "forget_password": "Glömt lösenordet?",
+  "sign_up_now": "Behöver du ett konto? Registrera dig nu."
 }

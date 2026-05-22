@@ -6,7 +6,7 @@
   "pull_requests": "Pull requests",
   "explore": "Explore",
   "help": "Help",
-  "register": "Register",
+  "register": "Create account",
   "sign_in": "Sign in",
   "sign_out": "Sign out",
   "create_new": "Create...",
@@ -24,5 +24,18 @@
   "theme": "Theme",
   "theme_light": "Light",
   "theme_dark": "Dark",
-  "theme_system": "System"
+  "theme_system": "System",
+  "username": "Username",
+  "username_placeholder": "Enter your username or email",
+  "password": "Password",
+  "password_placeholder": "Enter your password",
+  "auth_source": "Authentication Source",
+  "local": "Local",
+  "remember_me": "Remember me",
+  "forget_password": "Forgot password?",
+  "sign_up_now": "Create a new account",
+  "sign_in_submitting": "Signing in...",
+  "sign_in_failed": "Sign-in failed. Please try again.",
+  "show_password": "Show password",
+  "hide_password": "Hide password"
 }

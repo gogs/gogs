@@ -20,5 +20,12 @@
   "admin_panel": "管理面板",
   "settings": "設定",
   "language": "語言",
-  "page_not_found": "找不到頁面"
+  "page_not_found": "找不到頁面",
+  "username": "用戶名稱",
+  "password": "密碼",
+  "auth_source": "認證來源",
+  "local": "本地",
+  "remember_me": "記住登錄",
+  "forget_password": "忘記密碼？",
+  "sign_up_now": "還沒帳戶？馬上註冊。"
 }

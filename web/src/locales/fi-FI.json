@@ -20,5 +20,12 @@
   "admin_panel": "Ylläpito paneeli",
   "settings": "Asetukset",
   "language": "Kieli",
-  "page_not_found": "Sivua ei löydy"
+  "page_not_found": "Sivua ei löydy",
+  "username": "Käyttäjätunnus",
+  "password": "Salasana",
+  "auth_source": "Todennuslähde",
+  "local": "Paikallinen",
+  "remember_me": "Muista minut",
+  "forget_password": "Unohtuiko salasana?",
+  "sign_up_now": "Tarvitsetko tilin? Rekisteröidy nyt."
 }

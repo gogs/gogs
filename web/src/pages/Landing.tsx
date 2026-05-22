@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { usePageTitle } from "@/lib/page-title";
@@ -42,7 +43,7 @@ export function Landing() {
             <span className="text-(--color-muted-foreground)">$ </span>
             <span>gogs help</span>
             {"\n"}
-            <CmdLink href="/user/login" cmd="sign-in" desc={t("sign_in")} />
+            <CmdLink href="/user/sign-in" cmd="sign-in" desc={t("sign_in")} spa />
             {"\n"}
             <CmdLink href="/user/sign_up" cmd="sign-up" desc={t("register")} />
             {"\n"}
@@ -60,16 +61,42 @@ export function Landing() {
   );
 }
 
-function CmdLink({ href, cmd, desc, external }: { href: string; cmd: string; desc: string; external?: boolean }) {
+function CmdLink({
+  href,
+  cmd,
+  desc,
+  external,
+  spa,
+}: {
+  href: string;
+  cmd: string;
+  desc: string;
+  external?: boolean;
+  spa?: boolean;
+}) {
+  const className =
+    "group inline-flex items-baseline gap-2 rounded-sm hover:bg-(--color-surface) hover:text-(--color-foreground)";
+  const inner = (
+    <>
+      <span className="inline-block w-16 text-(--color-foreground) sm:w-20">{cmd}</span>
+      <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)/80">— {desc}</span>
+      <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)">→</span>
+    </>
+  );
+  if (spa) {
+    return (
+      <Link to={href} className={className}>
+        {inner}
+      </Link>
+    );
+  }
   return (
     <a
       href={external ? href : subUrl(href)}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="group inline-flex items-baseline gap-2 rounded-sm hover:bg-(--color-surface) hover:text-(--color-foreground)"
+      className={className}
     >
-      <span className="inline-block w-16 text-(--color-foreground) sm:w-20">{cmd}</span>
-      <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)/80">— {desc}</span>
-      <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)">→</span>
+      {inner}
     </a>
   );
 }

@@ -20,5 +20,12 @@
   "admin_panel": "Admin Panel",
   "settings": "Settings",
   "language": "Language",
-  "page_not_found": "Page Not Found"
+  "page_not_found": "Page Not Found",
+  "username": "Username",
+  "password": "Password",
+  "auth_source": "Authentication Source",
+  "local": "Local",
+  "remember_me": "Remember Me",
+  "forget_password": "Forgot password?",
+  "sign_up_now": "Need an account? Sign up now."
 }

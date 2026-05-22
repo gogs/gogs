@@ -20,5 +20,12 @@
   "admin_panel": "Rendszergazdai felület",
   "settings": "Beállítások",
   "language": "Nyelv",
-  "page_not_found": "Az oldal nem található"
+  "page_not_found": "Az oldal nem található",
+  "username": "Felhasználónév",
+  "password": "Jelszó",
+  "auth_source": "Hitelesítési forrás",
+  "local": "Helyi",
+  "remember_me": "Emlékezz rám",
+  "forget_password": "Elfelejtette a jelszavát?",
+  "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most."
 }

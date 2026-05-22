@@ -20,5 +20,12 @@
   "admin_panel": "Adminpaneel",
   "settings": "Instellingen",
   "language": "Taal",
-  "page_not_found": "Pagina niet gevonden"
+  "page_not_found": "Pagina niet gevonden",
+  "username": "Gebruikersnaam",
+  "password": "Wachtwoord",
+  "auth_source": "Authenticatiebron",
+  "local": "Lokaal",
+  "remember_me": "Onthoud mij",
+  "forget_password": "Wachtwoord vergeten?",
+  "sign_up_now": "Een account nodig? Meld u nu aan."
 }

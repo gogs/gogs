@@ -2,8 +2,8 @@ import { subUrl } from "@/lib/url";
 
 export function Footer() {
   return (
-    <footer className="border-t border-(--color-border)">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-6 text-sm text-(--color-muted-foreground) sm:px-6">
+    <footer className="mt-8 border-t border-(--color-border)">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-5 gap-y-2 px-4 py-3 text-xs text-(--color-muted-foreground) sm:px-6">
         <span>© {new Date().getFullYear()} Gogs®</span>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
           <a

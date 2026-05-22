@@ -20,5 +20,12 @@
   "admin_panel": "Painel de Administração",
   "settings": "Definições",
   "language": "Língua",
-  "page_not_found": "Página Não Encontrada"
+  "page_not_found": "Página Não Encontrada",
+  "username": "Nome de utilizador",
+  "password": "Palavra-chave",
+  "auth_source": "Tipo de autenticação",
+  "local": "Local",
+  "remember_me": "Manter sessão iniciada",
+  "forget_password": "Esqueceu a sua senha?",
+  "sign_up_now": "Precisa de uma conta? Inscreva-se agora."
 }

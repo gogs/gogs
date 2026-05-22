@@ -20,5 +20,12 @@
   "admin_panel": "Pannello di amministrazione",
   "settings": "Impostazioni",
   "language": "Lingua",
-  "page_not_found": "Pagina Non Trovata"
+  "page_not_found": "Pagina Non Trovata",
+  "username": "Nome utente",
+  "password": "Password",
+  "auth_source": "Fonte di autenticazione",
+  "local": "Locale",
+  "remember_me": "Ricordami",
+  "forget_password": "Password dimenticata?",
+  "sign_up_now": "Bisogno di un account? Iscriviti ora."
 }

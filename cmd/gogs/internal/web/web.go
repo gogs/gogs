@@ -1,7 +1,6 @@
 package web
 
 import (
-	stdctx "context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -89,8 +88,6 @@ func Run(configPath string, portOverride int) error {
 		// ***** START: User *****
 		m.Group("/user", func() {
 			m.Group("/login", func() {
-				m.Combo("").Get(user.Login).
-					Post(bindIgnErr(form.SignIn{}), user.LoginPost)
 				m.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
 				m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
 			})
@@ -533,6 +530,7 @@ func Run(configPath string, portOverride int) error {
 		}, ignSignIn)
 
 		m.Any("/api/web/*", bridgeToWebAPI(webHandler))
+		m.Any("/*", func(c *context.Context) { c.ServeWeb() })
 	},
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,
@@ -603,33 +601,6 @@ func Run(configPath string, portOverride int) error {
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
-	})
-
-	// True 404s never reach context.Contexter, so populate WebContext
-	// explicitly. Without this, subpath deployments would emit a shell with
-	// root-relative asset URLs that the browser cannot resolve. Read the
-	// language preference straight from the cookie that the i18n middleware
-	// previously wrote, but only accept values that match a configured
-	// locale. The cookie value lands in the HTML via raw string substitution
-	// in renderIndex, so an unvalidated value would let an attacker who can
-	// set this cookie inject markup into the 404 shell.
-	langAllowed := make(map[string]struct{}, len(conf.I18n.Langs))
-	for _, lang := range conf.I18n.Langs {
-		langAllowed[lang] = struct{}{}
-	}
-	m.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		lang := "en-US"
-		if c, err := r.Cookie("lang"); err == nil {
-			if _, ok := langAllowed[c.Value]; ok {
-				lang = c.Value
-			}
-		}
-		ctx := stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
-			Lang:       lang,
-			SubURL:     conf.Server.Subpath,
-			StatusCode: http.StatusNotFound,
-		})
-		webHandler.ServeHTTP(w, r.WithContext(ctx))
 	})
 
 	// Flag for port number in case first time run conflict.
