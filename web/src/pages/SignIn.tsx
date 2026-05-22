@@ -1,7 +1,14 @@
 import { getRouteApi } from "@tanstack/react-router";
+import { Eye, EyeOff } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
 
@@ -40,6 +47,7 @@ export function SignIn() {
   const [password, setPassword] = useState("");
   const [loginSource, setLoginSource] = useState<number>(defaultSource?.id ?? 0);
   const [remember, setRemember] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
@@ -91,126 +99,118 @@ export function SignIn() {
 
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-md">
-        <h1 className="mb-6 text-center text-2xl font-semibold text-(--color-foreground)">{t("sign_in")}</h1>
-        <form
-          onSubmit={onSubmit}
-          className="rounded-lg border border-(--color-border) bg-(--color-card) p-5 shadow-xs sm:p-6"
-          noValidate
-        >
-          {formError && (
-            <div
-              role="alert"
-              className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
-            >
-              {formError}
-            </div>
-          )}
-
-          <div className="mb-4">
-            <label htmlFor="username" className="mb-1 block text-sm font-medium text-(--color-foreground)">
-              {t("username")}
-            </label>
-            <input
-              ref={usernameRef}
-              id="username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              required
-              autoFocus
-              placeholder={t("username_placeholder")}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              aria-invalid={"username" in fieldErrors ? true : undefined}
-              aria-describedby={fieldErrors.username ? "username-error" : undefined}
-              className={`block w-full rounded-md border bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none focus-visible:ring-2 focus-visible:ring-(--color-ring) ${
-                "username" in fieldErrors ? "border-(--color-destructive)" : "border-(--color-input)"
-              }`}
-            />
-            {fieldErrors.username && (
-              <p id="username-error" className="mt-1 text-sm text-(--color-destructive)">
-                {fieldErrors.username}
-              </p>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-(--color-foreground)">
-              {t("password")}
-            </label>
-            <input
-              ref={passwordRef}
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              placeholder={t("password_placeholder")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={"password" in fieldErrors ? true : undefined}
-              aria-describedby={fieldErrors.password ? "password-error" : undefined}
-              className={`block w-full rounded-md border bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none focus-visible:ring-2 focus-visible:ring-(--color-ring) ${
-                "password" in fieldErrors ? "border-(--color-destructive)" : "border-(--color-input)"
-              }`}
-            />
-            {fieldErrors.password && (
-              <p id="password-error" className="mt-1 text-sm text-(--color-destructive)">
-                {fieldErrors.password}
-              </p>
-            )}
-          </div>
-
-          {loginSources.length > 0 && (
-            <div className="mb-4">
-              <label htmlFor="login_source" className="mb-1 block text-sm font-medium text-(--color-foreground)">
-                {t("auth_source")}
-              </label>
-              <select
-                id="login_source"
-                name="login_source"
-                value={loginSource}
-                onChange={(e) => setLoginSource(Number(e.target.value))}
-                className="block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none focus-visible:ring-2 focus-visible:ring-(--color-ring)"
+      <Card className="w-full max-w-md">
+        <CardHeader className="items-center text-center">
+          <CardTitle>{t("sign_in")}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+            {formError && (
+              <div
+                role="alert"
+                className="rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
               >
-                <option value={0}>{t("local")}</option>
-                {loginSources.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                {formError}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="username">{t("username")}</Label>
+              <Input
+                ref={usernameRef}
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                required
+                autoFocus
+                placeholder={t("username_placeholder")}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                aria-invalid={"username" in fieldErrors ? true : undefined}
+                aria-describedby={fieldErrors.username ? "username-error" : undefined}
+              />
+              {fieldErrors.username && (
+                <p id="username-error" className="text-sm text-(--color-destructive)">
+                  {fieldErrors.username}
+                </p>
+              )}
             </div>
-          )}
 
-          <label className="mb-5 flex items-center gap-2 text-sm text-(--color-foreground)">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              className="size-4 rounded border-(--color-input) text-(--color-primary) focus-visible:ring-2 focus-visible:ring-(--color-ring)"
-            />
-            {t("remember_me")}
-          </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="password">{t("password")}</Label>
+              <div className="relative">
+                <Input
+                  ref={passwordRef}
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  placeholder={t("password_placeholder")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={"password" in fieldErrors ? true : undefined}
+                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? t("hide_password") : t("show_password")}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+                >
+                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <p id="password-error" className="text-sm text-(--color-destructive)">
+                  {fieldErrors.password}
+                </p>
+              )}
+            </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-3 text-sm text-(--color-foreground)">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex cursor-pointer items-center justify-center rounded-md bg-(--color-primary) px-4 py-2 text-sm font-medium text-(--color-primary-foreground) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? t("sign_in_submitting") : t("sign_in")}
-            </button>
-            <a href={subUrl("/user/forget_password")} className="rounded-sm hover:underline">
-              {t("forget_password")}
-            </a>
-            <a href={subUrl("/user/sign_up")} className="ml-auto rounded-sm hover:underline">
-              {t("sign_up_now")}
-            </a>
-          </div>
-        </form>
-      </div>
+            {loginSources.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="login_source">{t("auth_source")}</Label>
+                <Select value={String(loginSource)} onValueChange={(v) => setLoginSource(Number(v))}>
+                  <SelectTrigger id="login_source">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">{t("local")}</SelectItem>
+                    {loginSources.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+              <Label htmlFor="remember" className="cursor-pointer font-normal">
+                {t("remember_me")}
+              </Label>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? t("sign_in_submitting") : t("sign_in")}
+              </Button>
+              <Button variant="link" size="inline" asChild>
+                <a href={subUrl("/user/forget_password")}>{t("forget_password")}</a>
+              </Button>
+              <Button variant="link" size="inline" asChild className="ml-auto">
+                <a href={subUrl("/user/sign_up")}>{t("sign_up_now")}</a>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

@@ -35,5 +35,7 @@
   "forget_password": "Forgot password?",
   "sign_up_now": "Create a new account",
   "sign_in_submitting": "Signing in...",
-  "sign_in_failed": "Sign-in failed. Please try again."
+  "sign_in_failed": "Sign-in failed. Please try again.",
+  "show_password": "Show password",
+  "hide_password": "Hide password"
 }

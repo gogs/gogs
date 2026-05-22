@@ -39,8 +39,10 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Structure**
 
-- `--color-border`: borders on dividers, popovers, the terminal frame.
-- `--color-input`: input field borders. Not currently used; reserved for forms.
+- `--color-border`: soft container and divider lines. Used for the navbar bottom border, popover edges, card outlines, mobile-menu separators. Deliberately low-contrast (close to `--color-secondary`) so chrome reads as quiet boundary, not as a hard rule.
+- `--color-input`: input field borders. Similar weight to `--color-border` but kept as a separate token so form fields can drift independently if needed.
+
+**The terminal frame is the exception.** `NotFound.tsx` wraps its faux-CLI output in a heavy outline so it actually looks like a terminal window — that frame uses `border-(--color-foreground)/80` (light) and the regular `--color-border` token (dark) directly, instead of the shared chrome token. Don't reuse this heavy outline elsewhere. If you need to introduce another heavy outline, promote a `--color-frame` token rather than inlining `--color-foreground`.
 
 **Peer-item rule**
 

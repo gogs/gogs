@@ -50,6 +50,8 @@ const REUSED_KEYS = [
   "sign_up_now",
   "sign_in_submitting",
   "sign_in_failed",
+  "show_password",
+  "hide_password",
 ];
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores

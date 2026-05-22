@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { webContext } from "@/lib/context";
 import { type Theme, useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -58,28 +59,27 @@ export function SettingsMenu() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="px-2 pt-2 pb-1 text-xs font-medium text-(--color-muted-foreground)">{t("theme")}</div>
-        <div className="grid grid-cols-3 gap-1 p-1">
-          <ThemeOption
-            value="light"
-            current={theme}
-            onSelect={setTheme}
-            icon={<Sun className="size-4" />}
-            label={t("theme_light")}
-          />
-          <ThemeOption
-            value="dark"
-            current={theme}
-            onSelect={setTheme}
-            icon={<Moon className="size-4" />}
-            label={t("theme_dark")}
-          />
-          <ThemeOption
-            value="system"
-            current={theme}
-            onSelect={setTheme}
-            icon={<Monitor className="size-4" />}
-            label={t("theme_system")}
-          />
+        <div className="p-1">
+          <ToggleGroup
+            type="single"
+            value={theme}
+            onValueChange={(v) => v && setTheme(v as Theme)}
+            size="tile"
+            className="grid grid-cols-3 gap-1"
+          >
+            <ToggleGroupItem value="light" aria-label={t("theme_light")}>
+              <Sun className="size-4" aria-hidden />
+              {t("theme_light")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="dark" aria-label={t("theme_dark")}>
+              <Moon className="size-4" aria-hidden />
+              {t("theme_dark")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="system" aria-label={t("theme_system")}>
+              <Monitor className="size-4" aria-hidden />
+              {t("theme_system")}
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <div className="my-1 h-px bg-(--color-border)" />
@@ -114,37 +114,5 @@ export function SettingsMenu() {
         </ul>
       </PopoverContent>
     </Popover>
-  );
-}
-
-function ThemeOption({
-  value,
-  current,
-  onSelect,
-  icon,
-  label,
-}: {
-  value: Theme;
-  current: Theme;
-  onSelect: (t: Theme) => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  const isActive = current === value;
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(value)}
-      aria-pressed={isActive}
-      className={cn(
-        "flex cursor-pointer flex-col items-center gap-1 rounded-md px-2 py-2 text-xs hover:bg-(--color-surface)",
-        isActive
-          ? "bg-(--color-surface) text-(--color-foreground)"
-          : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-      )}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

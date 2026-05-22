@@ -148,8 +148,8 @@ github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191/go.mod h1:VFI2o2
 github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b h1:/aWj44HoEycE4MDi2HZf4t+XI7hKwZRltZf4ih5tB2c=
 github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b/go.mod h1:VFI2o2q9kYsC4o7VP1HrEVosiZZTd+MVT3YZx4gqvJw=
 github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659/go.mod h1:tLd0QEudXocQckwcpCq5pCuTCuYc24I0bRJDuRe9OuQ=
-github.com/go-macaron/session v1.0.3 h1:YnSfcm24a4HHRnZzBU30FGvoo4kR6vYbTeyTlA1dya4=
-github.com/go-macaron/session v1.0.3/go.mod h1:NKoSrKpBFGEgeDtdLr/mnGaxa2LZVOg8/LwZKwPgQr0=
+github.com/go-macaron/session v1.0.4 h1:fIvtOwdYBsqlb+icre1LvWB7YKnosfoSpaqT1nybh8E=
+github.com/go-macaron/session v1.0.4/go.mod h1:NKoSrKpBFGEgeDtdLr/mnGaxa2LZVOg8/LwZKwPgQr0=
 github.com/go-playground/assert/v2 v2.0.1 h1:MsBgLAaY856+nPRTKrp3/OZK38U/wa0CcBYNjji3q3A=
 github.com/go-playground/assert/v2 v2.0.1/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-redis/redis/v8 v8.11.5 h1:AcZZR7igkdvfVmQTPnu9WE37LRrO/YrBH5zWyjDC0oI=

@@ -26,7 +26,7 @@ export function Navbar() {
   const user = useUserInfo();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)/95 backdrop-blur">
+    <header className="sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 text-sm sm:gap-4 sm:px-6">
         <a href={subUrl("/")} className="flex shrink-0 items-center" aria-label="Gogs">
           <img src={subUrl("/img/favicon.png")} alt="" width="28" height="28" className="size-7" />
@@ -83,6 +83,21 @@ export function Navbar() {
               <ul className="flex flex-col text-sm">
                 {user ? (
                   <>
+                    <li className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
+                      {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
+                    </li>
+                    <MobileLink href={`/${user.username}`} onClick={() => setOpen(false)}>
+                      {t("your_profile")}
+                    </MobileLink>
+                    <MobileLink href="/user/settings" onClick={() => setOpen(false)}>
+                      {t("your_settings")}
+                    </MobileLink>
+                    {user.isAdmin && (
+                      <MobileLink href="/admin" onClick={() => setOpen(false)}>
+                        {t("admin_panel")}
+                      </MobileLink>
+                    )}
+                    <li className="my-1 h-px bg-(--color-border)" />
                     <MobileLink href="/" onClick={() => setOpen(false)}>
                       {t("dashboard")}
                     </MobileLink>
@@ -108,23 +123,9 @@ export function Navbar() {
                       </MobileLink>
                     )}
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <li className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
-                      {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
-                    </li>
-                    <MobileLink href={`/${user.username}`} onClick={() => setOpen(false)}>
-                      {t("your_profile")}
-                    </MobileLink>
-                    <MobileLink href="/user/settings" onClick={() => setOpen(false)}>
-                      {t("your_settings")}
-                    </MobileLink>
                     <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>
                       {t("help")}
                     </MobileLink>
-                    {user.isAdmin && (
-                      <MobileLink href="/admin" onClick={() => setOpen(false)}>
-                        {t("admin_panel")}
-                      </MobileLink>
-                    )}
                     <li>
                       <SignOutForm>
                         <button

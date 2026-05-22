@@ -1,7 +1,6 @@
 package web
 
 import (
-	stdctx "context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -531,6 +530,7 @@ func Run(configPath string, portOverride int) error {
 		}, ignSignIn)
 
 		m.Any("/api/web/*", bridgeToWebAPI(webHandler))
+		m.Any("/*", func(c *context.Context) { c.ServeWeb() })
 	},
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,
@@ -601,25 +601,6 @@ func Run(configPath string, portOverride int) error {
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
-	})
-
-	// SPA catch-all at top level — must stay OUTSIDE the macaron Group that
-	// wraps Sessioner/CSRF/Contexter. In dev the Flamego web routes proxy
-	// every asset path (e.g. /src/*.tsx, /@fs/*, /@vite/client) to Vite, and
-	// if those requests passed through macaron-session each one would race
-	// to rewrite the session file with stale data. The current
-	// macaron-session release encodes-and-writes unconditionally, so
-	// concurrent asset loads would clobber the uid set by
-	// /api/web/user/sign-in. Bypassing session middleware here keeps SPA
-	// traffic from touching the file at all. Globally-installed middleware
-	// (i18n, logger, recovery, static) still applies because it's bound via
-	// m.Use, so we get the resolved locale without re-parsing the cookie.
-	m.Any("/*", func(c *macaron.Context, l i18n.Locale) {
-		ctx := stdctx.WithValue(c.Req.Context(), context.WebContextKey{}, context.WebContext{
-			Lang:   l.Language(),
-			SubURL: conf.Server.Subpath,
-		})
-		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 	})
 
 	// Flag for port number in case first time run conflict.
