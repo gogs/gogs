@@ -71,16 +71,21 @@ export function SignIn() {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
           if (body.error) setFormError(body.error);
           else setFormError(null);
+          let focusField: (typeof FIELD_ORDER)[number] | undefined;
           if (body.fields) {
             setFieldErrors(body.fields);
-            const first = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
-            if (first === "username") usernameRef.current?.focus();
-            else if (first === "password") passwordRef.current?.focus();
+            focusField = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
           }
           if (!body.error && !body.fields) {
             setFormError(t("sign_in_failed"));
           }
           setSubmitting(false);
+          // Defer focus past the React commit so the fieldset is re-enabled
+          // (.focus() is a no-op while the field is inside a disabled fieldset).
+          requestAnimationFrame(() => {
+            if (focusField === "username") usernameRef.current?.focus();
+            else if (focusField === "password") passwordRef.current?.focus();
+          });
           return;
         }
         const data = (await res.json()) as SignInResponse;

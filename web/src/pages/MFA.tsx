@@ -78,15 +78,18 @@ export function MFA() {
             return;
           }
           if (errBody.error) setFormError(errBody.error);
-          if (errBody.fields) {
-            setFieldErrors(errBody.fields);
-            if (mode === "passcode") passcodeRef.current?.focus();
-            else recoveryRef.current?.focus();
-          }
+          if (errBody.fields) setFieldErrors(errBody.fields);
           if (!errBody.error && !errBody.fields) {
             setFormError(t("mfa_verify_failed"));
           }
           setSubmitting(false);
+          // Focus after React re-enables the fieldset; .focus() is a no-op
+          // while the input is still inside a disabled fieldset, so we defer
+          // past the commit with rAF.
+          requestAnimationFrame(() => {
+            if (mode === "passcode") passcodeRef.current?.focus();
+            else recoveryRef.current?.focus();
+          });
           return;
         }
         const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
