@@ -18,6 +18,10 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Use `github.com/cockroachdb/errors` for error handling.
 - Use `github.com/stretchr/testify` for assertions in tests. Be mindful about the choice of `require` and `assert`, the former should be used when the test cannot proceed meaningfully after a failed assertion.
 
+## Localization
+
+- Only edit `conf/locale/locale_en-US.ini`. The other `locale_*.ini` files are community-maintained translations. Do not add, remove, or rewrite keys in them, even when removing keys that are dead on the Go/template side. Cleanup of those files happens through translation-PR workflows, not refactors.
+
 ## UI guidelines
 
 - Design mobile-friendly. Every UI must look and work well on narrow viewports before adding desktop refinements via responsive breakpoints. Test at ~375px width before considering a UI done.
