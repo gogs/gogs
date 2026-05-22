@@ -22,7 +22,7 @@ interface SignInResponse {
 
 interface SignInErrorResponse {
   error?: string;
-  errors?: Record<string, string | null>;
+  fields?: Record<string, string | null>;
 }
 
 // Field display order; the first key with a server-side error gets focus.
@@ -64,13 +64,13 @@ export function SignIn() {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
           if (body.error) setFormError(body.error);
           else setFormError(null);
-          if (body.errors) {
-            setFieldErrors(body.errors);
-            const first = FIELD_ORDER.find((f) => f in (body.errors ?? {}));
+          if (body.fields) {
+            setFieldErrors(body.fields);
+            const first = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
             if (first === "username") usernameRef.current?.focus();
             else if (first === "password") passwordRef.current?.focus();
           }
-          if (!body.error && !body.errors) {
+          if (!body.error && !body.fields) {
             setFormError(t("sign_in_failed"));
           }
           return;
@@ -119,6 +119,7 @@ export function SignIn() {
               autoComplete="username"
               required
               autoFocus
+              placeholder={t("username_placeholder")}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               aria-invalid={"username" in fieldErrors ? true : undefined}
@@ -145,6 +146,7 @@ export function SignIn() {
               type="password"
               autoComplete="current-password"
               required
+              placeholder={t("password_placeholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               aria-invalid={"password" in fieldErrors ? true : undefined}

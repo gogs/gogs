@@ -77,24 +77,24 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
-			f.Get("/sign-in", getUserSignIn)
-			f.Post("/sign-in", binding.JSON(userSignInRequest{}), postUserSignIn)
+			f.Combo("/sign-in").
+				Get(getUserSignIn).
+				Post(binding.JSON(userSignInRequest{}), postUserSignIn)
 			f.Post("/sign-out", postUserSignOut)
 		})
 	}, webAPIBodyLimiter, webAPIInjector)
 }
 
-// bindingErrorResponse carries form-validation failures. Error is the
-// top-level message shown as a banner above the form (used when the failure
-// is not tied to a specific input, e.g. malformed body, bad credentials).
-// Errors maps JSON field names to per-field localized messages. A non-nil
-// value renders inline under the input; nil marks the input as invalid
-// (highlight + focus eligibility) without duplicating text. Pair Error with
-// nil entries in Errors to surface one banner message while highlighting
-// multiple inputs.
+// bindingErrorResponse carries form-validation failures. Error is the top-level
+// message shown as a banner above the form (used when the failure is not tied to
+// a specific input, e.g. malformed body, bad credentials). Fields maps JSON
+// field names to per-field localized messages. A non-nil value renders inline
+// under the input. nil marks the input as invalid (highlight + focus
+// eligibility) without duplicating text. Pair Error with nil entries in Fields
+// to surface one banner message while highlighting multiple inputs.
 type bindingErrorResponse struct {
 	Error  string             `json:"error,omitempty"`
-	Errors map[string]*string `json:"errors,omitempty"`
+	Fields map[string]*string `json:"fields,omitempty"`
 }
 
 // renderBindingErrors maps binding.Errors to the response shape, looking up
@@ -103,29 +103,28 @@ type bindingErrorResponse struct {
 func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorResponse {
 	for _, e := range errs {
 		if e.Category == binding.ErrorCategoryDeserialization {
-			return &bindingErrorResponse{Error: l.Tr("form.invalid_request")}
+			return &bindingErrorResponse{Error: l.Tr("form.invalid_request") + ": " + e.Err.Error()}
 		}
 	}
 
 	out := make(map[string]*string)
 	for _, e := range errs {
-		ves, ok := e.Err.(validator.ValidationErrors)
+		var ves validator.ValidationErrors
+		ok := errors.As(e.Err, &ves)
 		if !ok {
 			continue
 		}
 		for _, ve := range ves {
 			field := strings.ToLower(ve.StructField())
 			if _, exists := out[field]; exists {
-				// Keep the first rule that failed for a given field so the
-				// client renders one message per input. Subsequent rules
-				// surface only after the first is fixed.
+				// Keep the first rule that failed for a given field so the client renders one
+				// message per input. Subsequent rules surface only after the first is fixed.
 				continue
 			}
-			msg := l.Tr("form." + field + "_" + ve.Tag())
-			out[field] = &msg
+			out[field] = new(l.Tr("form." + field + "_" + ve.Tag()))
 		}
 	}
-	return &bindingErrorResponse{Errors: out}
+	return &bindingErrorResponse{Fields: out}
 }
 
 type loginSource struct {
@@ -144,11 +143,11 @@ func getUserSignIn(r *http.Request) (statusCode int, resp *userSignInPageRespons
 		log.Error("getUserSignIn: list activated login sources: %+v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list activated login sources")
 	}
-	out := make([]loginSource, 0, len(sources))
+	loginSources := make([]loginSource, 0, len(sources))
 	for _, s := range sources {
-		out = append(out, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
+		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &userSignInPageResponse{LoginSources: out}, nil
+	return http.StatusOK, &userSignInPageResponse{LoginSources: loginSources}, nil
 }
 
 type userSignInRequest struct {
@@ -175,7 +174,7 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 		case auth.IsErrBadCredentials(err):
 			return http.StatusUnauthorized, &bindingErrorResponse{
 				Error:  l.Tr("form.username_password_incorrect"),
-				Errors: map[string]*string{"username": nil, "password": nil},
+				Fields: map[string]*string{"username": nil, "password": nil},
 			}, nil
 		case database.IsErrLoginSourceMismatch(err):
 			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
