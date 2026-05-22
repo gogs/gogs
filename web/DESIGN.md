@@ -32,7 +32,7 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Accents and state**
 
-- `--color-primary` / `--color-primary-foreground`: brand blue (`#009fff` in both modes). Reserved for genuine brand emphasis. Don't use it to mean "primary action" between two peer links (see the peer-item rule below). Note: white-on-primary in light mode is below WCAG AA contrast (2.84:1), so avoid using primary as a fill for body-sized text. Use it for chrome accents, ring/focus, and large CTAs only.
+- `--color-primary` / `--color-primary-foreground`: brand blue (`#009fff` in both modes). Reserved for genuine brand emphasis. Don't use it to mean "primary action" between two peer links (see the peer-item rule below). Note: white-on-primary contrast is 2.84:1, which is below WCAG AA in both modes since the token is identical light and dark. Avoid using primary as a fill for body-sized text. Use it for chrome accents, ring/focus, and large CTAs only.
 - `--color-secondary` / `--color-secondary-foreground`: neutral support fill. Available for chips, tags, low-emphasis fills.
 - `--color-destructive` / `--color-destructive-foreground`: error and danger. The 404 page uses `text-(--color-destructive)` on the `fatal:` token, always paired with the word itself (color is never the sole signal).
 - `--color-ring`: keyboard focus ring color. Don't override per-component. If a default ring looks wrong, fix it at the token level.
