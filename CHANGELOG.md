@@ -7,7 +7,6 @@ All notable changes to Gogs are documented in this file.
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
-- Sign-in sessions now persist across browser restarts by default for the duration of `[security] LOGIN_REMEMBER_DAYS`. The "Remember me" checkbox on the sign-in page is removed. [#8289](https://github.com/gogs/gogs/pull/8289)
 
 ### Fixed
 
@@ -23,7 +22,6 @@ All notable changes to Gogs are documented in this file.
 - Support for MSSQL as the database backend. Stay on 0.14 for continued usage. [#8173](https://github.com/gogs/gogs/pull/8173)
 - Support for `memcache` as the cache adapter. Stay on 0.14 for continued usage. [#8270](https://github.com/gogs/gogs/pull/8270)
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
-- The `[security] COOKIE_REMEMBER_NAME` and `[security] COOKIE_USERNAME` configuration options. [#8289](https://github.com/gogs/gogs/pull/8289)
 
 ## 0.14.2
 
