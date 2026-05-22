@@ -1,7 +1,14 @@
-![Gogs](docs/images/logo-light.svg#gh-light-mode-only)
-![Gogs](docs/images/logo-dark.svg#gh-dark-mode-only)
+<p align="center">
+  <img src="docs/images/logo-light.svg#gh-light-mode-only" alt="Gogs">
+  <img src="docs/images/logo-dark.svg#gh-dark-mode-only" alt="Gogs">
+</p>
 
-[![GitHub Workflow Status](https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge)](https://github.com/gogs/gogs/actions?query=branch%3Amain) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
+ <p align="center">
+  <a href="https://github.com/gogs/gogs/actions?query=branch%3Amain"><img
+src="https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge" alt="GitHub Workflow Status"></a>
+  <a href="https://sourcegraph.com/github.com/gogs/gogs"><img
+src="https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph" alt="Sourcegraph"></a>
+</p>
 
 👉 Deploy on DigitalOcean and [get $200 in free credits](https://m.do.co/c/5aeb02268b55)!
 
