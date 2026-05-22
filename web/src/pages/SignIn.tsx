@@ -81,6 +81,7 @@ export function SignIn() {
           if (!body.error && !body.fields) {
             setFormError(t("sign_in_failed"));
           }
+          setSubmitting(false);
           return;
         }
         const data = (await res.json()) as SignInResponse;
@@ -91,7 +92,6 @@ export function SignIn() {
         window.location.assign(data.redirectTo || subUrl("/"));
       } catch {
         setFormError(t("sign_in_failed"));
-      } finally {
         setSubmitting(false);
       }
     })();
