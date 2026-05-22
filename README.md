@@ -1,16 +1,19 @@
-<p align="center">
-  <img src="docs/images/logo-light.svg#gh-light-mode-only" alt="Gogs">
-  <img src="docs/images/logo-dark.svg#gh-dark-mode-only" alt="Gogs">
-</p>
 
- <p align="center">
-  <a href="https://github.com/gogs/gogs/actions?query=branch%3Amain"><img
-src="https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge" alt="GitHub Workflow Status"></a>
-  <a href="https://sourcegraph.com/github.com/gogs/gogs"><img
+ <p>
+  <div align="center">
+    <img src="docs/images/logo-light.svg#gh-light-mode-only" alt="Gogs">
+    <img src="docs/images/logo-dark.svg#gh-dark-mode-only" alt="Gogs">
+  </div>
+  <div align="center">
+    <a href="https://github.com/gogs/gogs/actions?query=branch%3Amain"><img
+  src="https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge" alt="GitHub Workflow Status"></a>
+    <a href="https://sourcegraph.com/github.com/gogs/gogs"><img
 src="https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph" alt="Sourcegraph"></a>
+  </div>
+  <div align="center">
+    👉 Deploy on DigitalOcean and <a href="https://m.do.co/c/5aeb02268b55">get $200 in free credits</a>!
+  </div>
 </p>
-
-👉 Deploy on DigitalOcean and [get $200 in free credits](https://m.do.co/c/5aeb02268b55)!
 
 ## 🔮 Vision
 
