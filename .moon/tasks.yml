@@ -1,6 +1,4 @@
 $schema: "https://moonrepo.dev/schemas/tasks.json"
 
-# Stream task output as it runs, instead of buffering until completion.
-# Applies workspace-wide so every project's tasks behave consistently.
 taskOptions:
   outputStyle: "stream"
