@@ -40,8 +40,6 @@ var (
 		InstallLock             bool
 		SecretKey               string
 		LoginRememberDays       int
-		CookieRememberName      string
-		CookieUsername          string
 		CookieSecure            bool
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string

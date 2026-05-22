@@ -534,8 +534,9 @@ func Run(configPath string, portOverride int) error {
 			CookieName:     conf.Session.CookieName,
 			CookiePath:     conf.Server.Subpath,
 			Gclifetime:     conf.Session.GCInterval,
-			Maxlifetime:    conf.Session.MaxLifeTime,
+			Maxlifetime:    max(conf.Session.MaxLifeTime, int64(86400*conf.Security.LoginRememberDays)),
 			Secure:         conf.Session.CookieSecure,
+			CookieLifeTime: 86400 * conf.Security.LoginRememberDays,
 		}),
 		csrf.Csrfer(csrf.Options{
 			Secret:         conf.Security.SecretKey,

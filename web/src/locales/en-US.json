@@ -31,7 +31,6 @@
   "password_placeholder": "Enter your password",
   "auth_source": "Authentication source",
   "local": "Local",
-  "remember_me": "Remember me",
   "forget_password": "Forgot password?",
   "sign_up_now": "Create a new account",
   "sign_in_submitting": "Signing in...",

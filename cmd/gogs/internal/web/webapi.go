@@ -237,7 +237,6 @@ type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
-	Remember    bool   `json:"remember"`
 }
 
 type userSignInResponse struct {
@@ -265,29 +264,21 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 	}
 
 	if database.Handle.TwoFactors().IsEnabled(r.Context(), u.ID) {
-		_ = sess.Set("mfaRemember", req.Remember)
 		_ = sess.Set("mfaUserID", u.ID)
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	completeSignIn(sess, mc, u, req.Remember)
+	completeSignIn(sess, mc, u)
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
 // completeSignIn finalizes the sign-in session for u: writes the auth session,
-// clears any in-flight MFA session, and sets remember-me / login-status
-// cookies. The caller is responsible for navigating to a post-login
-// destination via /redirect?to=.
-func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, remember bool) {
-	if remember {
-		days := 86400 * conf.Security.LoginRememberDays
-		mc.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-		mc.SetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-	}
-
+// clears any in-flight MFA state, and sets the login-status cookie. The
+// caller is responsible for navigating to a post-login destination via
+// /redirect?to=.
+func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User) {
 	_ = sess.Set("uid", u.ID)
 	_ = sess.Set("uname", u.Name)
-	_ = sess.Delete("mfaRemember")
 	_ = sess.Delete("mfaUserID")
 
 	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -349,8 +340,7 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	remember, _ := sess.Get("mfaRemember").(bool)
-	completeSignIn(sess, mc, u, remember)
+	completeSignIn(sess, mc, u)
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -381,8 +371,7 @@ func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	remember, _ := sess.Get("mfaRemember").(bool)
-	completeSignIn(sess, mc, u, remember)
+	completeSignIn(sess, mc, u)
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -410,8 +399,6 @@ func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error
 func postUserSignOut(sess session.Store, mc *macaron.Context) (statusCode int, resp any, err error) {
 	_ = sess.Flush()
 	_ = sess.Destory(mc)
-	mc.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
-	mc.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	return http.StatusNoContent, nil, nil
 }

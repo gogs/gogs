@@ -86,18 +86,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			}
 		}
 
-		// Redirect to log in page if auto-signin info is provided and has not signed in.
-		if !options.SignOutRequired && !c.IsLogged && !isAPIPath(c.Req.URL.Path) &&
-			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
-			if isWebPath(c.Req.URL.Path) {
-				c.ServeWeb()
-				return
-			}
-			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-			c.RedirectSubpath("/user/sign-in")
-			return
-		}
-
 		if options.AdminRequired {
 			if !c.User.IsAdmin {
 				c.Status(http.StatusForbidden)
