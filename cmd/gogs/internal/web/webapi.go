@@ -288,7 +288,7 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
-		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.login_two_factor_session_expired")}, nil
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
 	}
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
@@ -304,14 +304,14 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 	}
 	if !valid {
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Error:  l.Tr("settings.two_factor_invalid_passcode"),
+			Error:  l.Tr("auth.mfa_invalid_passcode"),
 			Fields: map[string]*string{"passcode": nil},
 		}, nil
 	}
 
 	if ca.IsExist(userx.TwoFactorCacheKey(userID, req.Passcode)) {
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Error:  l.Tr("settings.two_factor_reused_passcode"),
+			Error:  l.Tr("auth.mfa_reused_passcode"),
 			Fields: map[string]*string{"passcode": nil},
 		}, nil
 	}
@@ -341,13 +341,13 @@ func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
-		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.login_two_factor_session_expired")}, nil
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
 	}
 
 	if err := database.Handle.TwoFactors().UseRecoveryCode(r.Context(), userID, req.RecoveryCode); err != nil {
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
 			return http.StatusUnauthorized, &bindingErrorResponse{
-				Error:  l.Tr("auth.login_two_factor_invalid_recovery_code"),
+				Error:  l.Tr("auth.mfa_invalid_recovery_code"),
 				Fields: map[string]*string{"recoveryCode": nil},
 			}, nil
 		}
