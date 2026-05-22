@@ -195,7 +195,13 @@ type userSignInRequest struct {
 }
 
 type userSignInResponse struct {
-	MFA        bool   `json:"mfa,omitempty"`
+	// MFA is true when the account has MFA enabled and the password step
+	// succeeded but a second factor is still required. The client should
+	// navigate to /user/mfa to complete the challenge. When true,
+	// RedirectTo is empty.
+	MFA bool `json:"mfa,omitempty"`
+	// RedirectTo is the post-login destination when sign-in completes in
+	// one step (no MFA required). Always same-site and subpath-prefixed.
 	RedirectTo string `json:"redirectTo,omitempty"`
 }
 
