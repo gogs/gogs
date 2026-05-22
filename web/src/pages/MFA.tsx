@@ -9,10 +9,6 @@ import { Label } from "@/components/ui/label";
 import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
 
-export interface MFAPage {
-  active: boolean;
-}
-
 interface MFAErrorResponse {
   error?: string;
   fields?: Record<string, string | null>;
@@ -25,9 +21,9 @@ const route = getRouteApi("/user/mfa");
 export function MFA() {
   const { t } = useTranslation();
   usePageTitle(t("mfa_title"));
-  // The loader returns null when no challenge is pending, in which case the
-  // route has already kicked off a full navigation away from this page.
-  const data = route.useLoaderData();
+  // When no challenge is pending the loader has already kicked off a full
+  // navigation away; the early return keeps this page from flashing.
+  const { pending } = route.useLoaderData();
 
   const [mode, setMode] = useState<Mode>("passcode");
   const [passcode, setPasscode] = useState("");
@@ -38,7 +34,7 @@ export function MFA() {
   const passcodeRef = useRef<HTMLInputElement>(null);
   const recoveryRef = useRef<HTMLInputElement>(null);
 
-  if (!data) {
+  if (!pending) {
     return null;
   }
 

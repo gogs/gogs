@@ -122,16 +122,19 @@ func getRedirect(c flamego.Context) {
 	c.Redirect(to, http.StatusSeeOther)
 }
 
+// fieldErrors maps JSON field names to per-field localized messages. A non-nil
+// value renders inline under the input. A nil value marks the input as
+// invalid (highlight + focus eligibility) without duplicating text. Used in
+// concert with bindingErrorResponse.Error to surface one banner message while
+// highlighting multiple inputs.
+type fieldErrors map[string]*string
+
 // bindingErrorResponse carries form-validation failures. Error is the top-level
-// message shown as a banner above the form (used when the failure is not tied to
-// a specific input, e.g. malformed body, bad credentials). Fields maps JSON
-// field names to per-field localized messages. A non-nil value renders inline
-// under the input. nil marks the input as invalid (highlight + focus
-// eligibility) without duplicating text. Pair Error with nil entries in Fields
-// to surface one banner message while highlighting multiple inputs.
+// message shown as a banner above the form (used when the failure is not tied
+// to a specific input, e.g. malformed body, bad credentials).
 type bindingErrorResponse struct {
-	Error  string             `json:"error,omitempty"`
-	Fields map[string]*string `json:"fields,omitempty"`
+	Error  string      `json:"error,omitempty"`
+	Fields fieldErrors `json:"fields,omitempty"`
 }
 
 // ruleSuffixKeys maps a validator tag to the shared "form.*_error" suffix key
@@ -158,7 +161,7 @@ func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorRespon
 		}
 	}
 
-	out := make(map[string]*string)
+	out := make(fieldErrors)
 	for _, e := range errs {
 		var ves validator.ValidationErrors
 		ok := errors.As(e.Err, &ves)
@@ -233,7 +236,7 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 		case auth.IsErrBadCredentials(err):
 			return http.StatusUnauthorized, &bindingErrorResponse{
 				Error:  l.Tr("form.username_password_incorrect"),
-				Fields: map[string]*string{"username": nil, "password": nil},
+				Fields: fieldErrors{"username": nil, "password": nil},
 			}, nil
 		case database.IsErrLoginSourceMismatch(err):
 			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
@@ -275,20 +278,15 @@ func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, r
 	}
 }
 
-type userMFAPageResponse struct {
-	Active bool `json:"active"`
-}
-
-func getUserMFA(sess session.Store) (statusCode int, resp *userMFAPageResponse, err error) {
-	_, ok := sess.Get("mfaUserID").(int64)
-	if !ok {
+func getUserMFA(sess session.Store) (statusCode int, resp any, err error) {
+	if _, ok := sess.Get("mfaUserID").(int64); !ok {
 		return http.StatusNotFound, nil, nil
 	}
-	return http.StatusOK, &userMFAPageResponse{Active: true}, nil
+	return http.StatusNoContent, nil, nil
 }
 
 type userMFARequest struct {
-	Passcode string `json:"passcode" validate:"required,max=16"`
+	Passcode string `json:"passcode" validate:"required,len=6"`
 }
 
 type userMFAResponse struct{}
@@ -313,14 +311,14 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 	if !valid {
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Error:  l.Tr("auth.mfa_invalid_passcode"),
-			Fields: map[string]*string{"passcode": nil},
+			Fields: fieldErrors{"passcode": nil},
 		}, nil
 	}
 
 	if ca.IsExist(userx.TwoFactorCacheKey(userID, req.Passcode)) {
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Error:  l.Tr("auth.mfa_reused_passcode"),
-			Fields: map[string]*string{"passcode": nil},
+			Fields: fieldErrors{"passcode": nil},
 		}, nil
 	}
 	if err = ca.Put(userx.TwoFactorCacheKey(userID, req.Passcode), 1, 60); err != nil {
@@ -339,7 +337,7 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 }
 
 type userMFARecoveryRequest struct {
-	RecoveryCode string `json:"recoveryCode" validate:"required,max=64"`
+	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
 func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
@@ -352,7 +350,7 @@ func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
 			return http.StatusUnauthorized, &bindingErrorResponse{
 				Error:  l.Tr("auth.mfa_invalid_recovery_code"),
-				Fields: map[string]*string{"recoveryCode": nil},
+				Fields: fieldErrors{"recoveryCode": nil},
 			}, nil
 		}
 		log.Error("postUserMFARecovery: use recovery code for user %d: %v", userID, err)
