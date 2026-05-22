@@ -149,6 +149,18 @@ var ruleSuffixKeys = map[string]string{
 	"url":      "form.url_error",
 }
 
+// jsonFieldName converts a Go struct field name (PascalCase) to its
+// camelCase JSON equivalent (e.g. RecoveryCode → recoveryCode), matching
+// the wire shape this codebase uses on all webapi structs. Acronyms like
+// "MFA" become "mFA", but those don't currently appear as request fields,
+// so the simple lowercase-first transform is sufficient.
+func jsonFieldName(structField string) string {
+	if structField == "" {
+		return ""
+	}
+	return strings.ToLower(structField[:1]) + structField[1:]
+}
+
 // renderBindingErrors maps binding.Errors to the response shape, looking up
 // localized messages via the request's locale. The per-field label comes from
 // "form.<StructField>" (e.g. "form.UserName"); the rule suffix comes from
@@ -169,7 +181,7 @@ func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorRespon
 			continue
 		}
 		for _, ve := range ves {
-			field := strings.ToLower(ve.StructField())
+			field := jsonFieldName(ve.StructField())
 			if _, exists := out[field]; exists {
 				// Keep the first rule that failed for a given field so the client renders one
 				// message per input. Subsequent rules surface only after the first is fixed.
