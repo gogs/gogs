@@ -327,16 +327,16 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
 	}
 	if !valid {
+		msg := l.Tr("auth.mfa_invalid_passcode")
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Error:  l.Tr("auth.mfa_invalid_passcode"),
-			Fields: fieldErrors{"passcode": nil},
+			Fields: fieldErrors{"passcode": &msg},
 		}, nil
 	}
 
 	if ca.IsExist(userx.TwoFactorCacheKey(userID, req.Passcode)) {
+		msg := l.Tr("auth.mfa_reused_passcode")
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Error:  l.Tr("auth.mfa_reused_passcode"),
-			Fields: fieldErrors{"passcode": nil},
+			Fields: fieldErrors{"passcode": &msg},
 		}, nil
 	}
 	if err = ca.Put(userx.TwoFactorCacheKey(userID, req.Passcode), 1, 60); err != nil {
@@ -366,9 +366,9 @@ func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 
 	if err := database.Handle.TwoFactors().UseRecoveryCode(r.Context(), userID, req.RecoveryCode); err != nil {
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
+			msg := l.Tr("auth.mfa_invalid_recovery_code")
 			return http.StatusUnauthorized, &bindingErrorResponse{
-				Error:  l.Tr("auth.mfa_invalid_recovery_code"),
-				Fields: fieldErrors{"recoveryCode": nil},
+				Fields: fieldErrors{"recoveryCode": &msg},
 			}, nil
 		}
 		log.Error("postUserMFARecovery: use recovery code for user %d: %v", userID, err)
