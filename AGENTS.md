@@ -20,7 +20,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 ## Localization
 
-- Only edit `conf/locale/locale_en-US.ini`. The other `locale_*.ini` files are community-maintained translations. Do not add, remove, or rewrite keys in them, even when removing keys that are dead on the Go/template side. Cleanup of those files happens through translation-PR workflows, not refactors.
+- Only edit `conf/locale/locale_en-US.ini`. The other `locale_*.ini` files are community-maintained translations. Do not add, remove, or rewrite keys in them, even when removing keys that are dead on the Go/template side.
 
 ## UI guidelines
 

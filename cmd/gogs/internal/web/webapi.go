@@ -59,6 +59,22 @@ func webAPIBodyLimiter(c flamego.Context) {
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, 4*1024) // 4 KiB
 }
 
+// bindJSON binds the request body to T. On binding or validation failure it
+// short-circuits with a 400 carrying the standard renderBindingErrors payload,
+// so downstream handlers can drop the `if len(bindErrs) > 0` boilerplate and
+// the binding.Errors parameter entirely.
+func bindJSON(model any) flamego.Handler {
+	return binding.JSON(model, binding.Options{
+		ErrorHandler: func(c flamego.Context, l i18n.Locale, errs binding.Errors) {
+			w := c.ResponseWriter()
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(renderBindingErrors(l, errs))
+		},
+	})
+}
+
 func mountWebAPIRoutes(f *flamego.Flame) {
 	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
 		w := c.ResponseWriter()
@@ -84,12 +100,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/info", getUserInfo)
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
-				Post(binding.JSON(userSignInRequest{}), postUserSignIn)
+				Post(bindJSON(userSignInRequest{}), postUserSignIn)
 			f.Group("/mfa", func() {
 				f.Combo("").
 					Get(getUserMFA).
-					Post(binding.JSON(userMFARequest{}), postUserMFA)
-				f.Post("/recovery", binding.JSON(userMFARecoveryRequest{}), postUserMFARecovery)
+					Post(bindJSON(userMFARequest{}), postUserMFA)
+				f.Post("/recovery", bindJSON(userMFARecoveryRequest{}), postUserMFARecovery)
 			})
 			f.Post("/sign-out", postUserSignOut)
 		})
@@ -210,11 +226,7 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
-	if len(bindErrs) > 0 {
-		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
-	}
-
+func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
 	u, err := database.Handle.Users().Authenticate(r.Context(), req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
@@ -281,11 +293,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
-	if len(bindErrs) > 0 {
-		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
-	}
-
+func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -334,11 +342,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,max=64"`
 }
 
-func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
-	if len(bindErrs) > 0 {
-		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
-	}
-
+func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
