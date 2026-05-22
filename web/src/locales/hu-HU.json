@@ -27,5 +27,8 @@
   "local": "Helyi",
   "remember_me": "Emlékezz rám",
   "forget_password": "Elfelejtette a jelszavát?",
-  "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most."
+  "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most.",
+  "reset_password": "Jelszó visszaállítása",
+  "invalid_code": "Elnézést, a megerősítő kód lejárt vagy hibás.",
+  "reset_password_helper": "A jelszó visszaállításához kattintson ide"
 }

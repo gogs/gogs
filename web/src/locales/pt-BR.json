@@ -27,5 +27,8 @@
   "local": "Local",
   "remember_me": "Lembrar de mim",
   "forget_password": "Esqueceu a senha?",
-  "sign_up_now": "Precisa de uma conta? Cadastre-se agora."
+  "sign_up_now": "Precisa de uma conta? Cadastre-se agora.",
+  "reset_password": "Redefinir sua senha",
+  "invalid_code": "Desculpe, seu código de confirmação expirou ou não é válido.",
+  "reset_password_helper": "Clique aqui para redefinir sua senha"
 }

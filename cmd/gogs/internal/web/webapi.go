@@ -21,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/internal/userx"
 )
@@ -116,6 +117,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
+			f.Combo("/reset-password").
+				Get(getUserResetPassword).
+				Post(bindJSON(userResetPasswordRequest{}), postUserResetPassword)
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
 				Post(bindJSON(userSignInRequest{}), postUserSignIn)
@@ -237,6 +241,38 @@ type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
+}
+
+type userResetPasswordPageResponse struct {
+	Valid bool `json:"valid"`
+}
+
+func getUserResetPassword(r *http.Request) (statusCode int, resp *userResetPasswordPageResponse, err error) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		return http.StatusNotFound, nil, nil
+	}
+	return http.StatusOK, &userResetPasswordPageResponse{Valid: user.VerifyUserActiveCode(code) != nil}, nil
+}
+
+type userResetPasswordRequest struct {
+	Code     string `json:"code" validate:"required"`
+	Password string `json:"password" validate:"required,min=6,max=255"`
+}
+
+func postUserResetPassword(r *http.Request, l i18n.Locale, req userResetPasswordRequest) (statusCode int, resp any, err error) {
+	u := user.VerifyUserActiveCode(req.Code)
+	if u == nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+	}
+
+	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {
+		log.Error("postUserResetPassword: update password for user %q: %v", u.Name, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+	}
+
+	log.Trace("User password reset: %s", u.Name)
+	return http.StatusNoContent, nil, nil
 }
 
 type userSignInResponse struct {

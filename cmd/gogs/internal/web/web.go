@@ -36,7 +36,6 @@ import (
 	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
-	"gogs.io/gogs/internal/route/dev"
 	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
@@ -228,10 +227,6 @@ func Run(configPath string, portOverride int) error {
 		m.Group("/:username", func() {
 			m.Post("/action/:action", user.Action)
 		}, reqSignIn, context.InjectParamsUser())
-
-		if macaron.Env == macaron.DEV {
-			m.Get("/template/*", dev.TemplatePreview)
-		}
 
 		reqRepoAdmin := context.RequireRepoAdmin()
 		reqRepoWriter := context.RequireRepoWriter()

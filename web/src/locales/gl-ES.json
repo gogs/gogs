@@ -27,5 +27,8 @@
   "local": "Configuración rexional",
   "remember_me": "Recórdame",
   "forget_password": "Esqueciches o teu contrasinal?",
-  "sign_up_now": "Necesitas unha conta? Rexístrate agora."
+  "sign_up_now": "Necesitas unha conta? Rexístrate agora.",
+  "reset_password": "Restablecer o teu contrasinal",
+  "invalid_code": "Sentímolo, o teu código de confirmación expirou ou non é válido.",
+  "reset_password_helper": "Prema aquí para restablecer o seu contrasinal"
 }

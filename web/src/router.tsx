@@ -15,6 +15,7 @@ import type { UserInfo } from "@/lib/user-info";
 import { Landing } from "@/pages/Landing";
 import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
+import { ResetPassword, type ResetPasswordPage } from "@/pages/ResetPassword";
 import { SignIn, type SignInPage } from "@/pages/SignIn";
 
 interface RouterContext {
@@ -68,6 +69,27 @@ const signInRoute = createRoute({
   component: SignIn,
 });
 
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/reset_password",
+  loader: async (): Promise<ResetPasswordPage> => {
+    const code = new URLSearchParams(window.location.search).get("code") ?? "";
+    if (!code) {
+      return { code, valid: false };
+    }
+
+    const res = await fetch(subUrl("/api/web/user/reset-password") + "?code=" + encodeURIComponent(code), {
+      credentials: "same-origin",
+    });
+    if (!res.ok) {
+      return { code, valid: false };
+    }
+    const data = (await res.json()) as { valid: boolean };
+    return { code, valid: data.valid };
+  },
+  component: ResetPassword,
+});
+
 const mfaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/mfa",
@@ -85,7 +107,7 @@ const mfaRoute = createRoute({
   component: MFA,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, signInRoute, mfaRoute]);
+const routeTree = rootRoute.addChildren([landingRoute, signInRoute, resetPasswordRoute, mfaRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

@@ -163,8 +163,8 @@ func parseUserFromCode(code string) (user *database.User) {
 	return nil
 }
 
-// verify active code when active account
-func verifyUserActiveCode(code string) (user *database.User) {
+// VerifyUserActiveCode verifies an account activation or password reset code.
+func VerifyUserActiveCode(code string) (user *database.User) {
 	minutes := conf.Auth.ActivateCodeLives
 
 	if user = parseUserFromCode(code); user != nil {
@@ -228,7 +228,7 @@ func Activate(c *context.Context) {
 	}
 
 	// Verify code.
-	if user := verifyUserActiveCode(code); user != nil {
+	if user := VerifyUserActiveCode(code); user != nil {
 		v := true
 		err := database.Handle.Users().Update(
 			c.Req.Context(),
@@ -337,16 +337,12 @@ func ForgotPasswdPost(c *context.Context) {
 }
 
 func ResetPasswd(c *context.Context) {
-	c.Title("auth.reset_password")
-
 	code := c.Query("code")
 	if code == "" {
 		c.NotFound()
 		return
 	}
-	c.Data["Code"] = code
-	c.Data["IsResetForm"] = true
-	c.Success(tmplUserAuthResetPassword)
+	c.ServeWeb()
 }
 
 func ResetPasswdPost(c *context.Context) {
@@ -359,7 +355,7 @@ func ResetPasswdPost(c *context.Context) {
 	}
 	c.Data["Code"] = code
 
-	if u := verifyUserActiveCode(code); u != nil {
+	if u := VerifyUserActiveCode(code); u != nil {
 		// Validate password length.
 		password := c.Query("password")
 		if len(password) < 6 {

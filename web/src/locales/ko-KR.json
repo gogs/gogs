@@ -27,5 +27,8 @@
   "local": "로컬",
   "remember_me": "자동 로그인",
   "forget_password": "비밀번호를 잊으셨습니까?",
-  "sign_up_now": "계정이 필요하신가요? 지금 가입하세요."
+  "sign_up_now": "계정이 필요하신가요? 지금 가입하세요.",
+  "reset_password": "비밀번호 초기화",
+  "invalid_code": "죄송합니다. 확인 코드가 만료되었거나 유효하지 않습니다.",
+  "reset_password_helper": "이곳을 눌러 비밀번호를 재설정"
 }

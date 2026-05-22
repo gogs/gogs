@@ -27,5 +27,8 @@
   "local": "Lokal",
   "remember_me": "Angemeldet bleiben",
   "forget_password": "Passwort vergessen?",
-  "sign_up_now": "Benötigen Sie ein Konto? Registrieren Sie sich jetzt."
+  "sign_up_now": "Benötigen Sie ein Konto? Registrieren Sie sich jetzt.",
+  "reset_password": "Passwort zurücksetzen",
+  "invalid_code": "Es tut uns leid, der Bestätigungscode ist abgelaufen oder ungültig.",
+  "reset_password_helper": "Hier klicken, um das Passwort zurückzusetzen"
 }

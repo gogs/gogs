@@ -27,5 +27,8 @@
   "local": "Lokalne",
   "remember_me": "Zapamiętaj mnie",
   "forget_password": "Zapomniałeś hasła?",
-  "sign_up_now": "Potrzebujesz konta? Zarejestruj się teraz."
+  "sign_up_now": "Potrzebujesz konta? Zarejestruj się teraz.",
+  "reset_password": "Resetowanie hasła",
+  "invalid_code": "Niestety, Twój kod potwierdzający wygasł lub jest nieprawidłowy.",
+  "reset_password_helper": "Kliknij tutaj, aby zresetować hasło"
 }

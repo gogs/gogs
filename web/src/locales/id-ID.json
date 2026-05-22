@@ -27,5 +27,8 @@
   "local": "Lokal",
   "remember_me": "Ingat saya",
   "forget_password": "Lupa sandi?",
-  "sign_up_now": "Membutuhkan akun? Daftar sekarang."
+  "sign_up_now": "Membutuhkan akun? Daftar sekarang.",
+  "reset_password": "Atur Ulang Sandi",
+  "invalid_code": "Maaf, kode konfirmasi Anda telah kadaluarsa atau tidak valid.",
+  "reset_password_helper": "Klik di sini untuk menyetel ulang sandi"
 }

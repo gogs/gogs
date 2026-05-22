@@ -27,5 +27,8 @@
   "local": "Lokal",
   "remember_me": "Kom ihåg mig",
   "forget_password": "Glömt lösenordet?",
-  "sign_up_now": "Behöver du ett konto? Registrera dig nu."
+  "sign_up_now": "Behöver du ett konto? Registrera dig nu.",
+  "reset_password": "Återställ ditt lösenord",
+  "invalid_code": "Tyvärr, din bekräftelsekod har antingen upphört att gälla eller är ogiltig.",
+  "reset_password_helper": "Klicka här för att återställa ditt lösenord"
 }

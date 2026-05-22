@@ -27,5 +27,8 @@
   "local": "Lokálny",
   "remember_me": "Zapamätať prihlásenie",
   "forget_password": "Zabudli ste heslo?",
-  "sign_up_now": "Potrebujete účet? Zaregistrujte sa teraz."
+  "sign_up_now": "Potrebujete účet? Zaregistrujte sa teraz.",
+  "reset_password": "Obnovenie hesla",
+  "invalid_code": "Ospravedlňujeme sa, váš potvrdzovací kód vypršal alebo nie je platný.",
+  "reset_password_helper": "Kliknite sem pre obnovenie hesla"
 }
