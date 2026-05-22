@@ -4,6 +4,7 @@ import (
 	stdctx "context"
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -59,12 +60,29 @@ func webAPIBodyLimiter(c flamego.Context) {
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, 4*1024) // 4 KiB
 }
 
+// webAPIValidator is the shared validator instance used by every webapi
+// binding. Registering the json-tag name function makes validation errors
+// carry the wire field name (e.g. "recoveryCode") via ve.Field(), so the
+// 400 payload keys match what the React client sends and reads.
+var webAPIValidator = func() *validator.Validate {
+	v := validator.New()
+	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+	return v
+}()
+
 // bindJSON binds the request body to T. On binding or validation failure it
 // short-circuits with a 400 carrying the standard renderBindingErrors payload,
 // so downstream handlers can drop the `if len(bindErrs) > 0` boilerplate and
 // the binding.Errors parameter entirely.
 func bindJSON(model any) flamego.Handler {
 	return binding.JSON(model, binding.Options{
+		Validator: webAPIValidator,
 		ErrorHandler: func(c flamego.Context, l i18n.Locale, errs binding.Errors) {
 			w := c.ResponseWriter()
 			w.Header().Set("Cache-Control", "no-store")
@@ -149,18 +167,6 @@ var ruleSuffixKeys = map[string]string{
 	"url":      "form.url_error",
 }
 
-// jsonFieldName converts a Go struct field name (PascalCase) to its
-// camelCase JSON equivalent (e.g. RecoveryCode → recoveryCode), matching
-// the wire shape this codebase uses on all webapi structs. Acronyms like
-// "MFA" become "mFA", but those don't currently appear as request fields,
-// so the simple lowercase-first transform is sufficient.
-func jsonFieldName(structField string) string {
-	if structField == "" {
-		return ""
-	}
-	return strings.ToLower(structField[:1]) + structField[1:]
-}
-
 // renderBindingErrors maps binding.Errors to the response shape, looking up
 // localized messages via the request's locale. The per-field label comes from
 // "form.<StructField>" (e.g. "form.UserName"); the rule suffix comes from
@@ -181,7 +187,7 @@ func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorRespon
 			continue
 		}
 		for _, ve := range ves {
-			field := jsonFieldName(ve.StructField())
+			field := ve.Field()
 			if _, exists := out[field]; exists {
 				// Keep the first rule that failed for a given field so the client renders one
 				// message per input. Subsequent rules surface only after the first is fixed.
