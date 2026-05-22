@@ -1,5 +1,5 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,16 @@ export function MFA() {
   const passcodeRef = useRef<HTMLInputElement>(null);
   const recoveryRef = useRef<HTMLInputElement>(null);
 
+  // Focus the active input on initial render and on every mode swap.
+  // `autoFocus` on the JSX doesn't reliably fire when the route mounts via
+  // a TanStack navigate or when the conditional swaps which input is in the
+  // tree, so we drive focus explicitly off the mode.
+  useEffect(() => {
+    if (!pending) return;
+    if (mode === "passcode") passcodeRef.current?.focus();
+    else recoveryRef.current?.focus();
+  }, [mode, pending]);
+
   if (!pending) {
     return null;
   }
@@ -43,11 +53,6 @@ export function MFA() {
     setMode(next);
     setFormError(null);
     setFieldErrors({});
-    // Defer focus so the input mounts before we focus it.
-    setTimeout(() => {
-      if (next === "passcode") passcodeRef.current?.focus();
-      else recoveryRef.current?.focus();
-    }, 0);
   }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
