@@ -4,7 +4,6 @@ import (
 	stdctx "context"
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strings"
 
@@ -134,30 +133,11 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 }
 
 func getRedirect(c flamego.Context) {
-	r := c.Request().Request
-	w := c.ResponseWriter()
-	to := r.URL.Query().Get("to")
-	// Fall back to the redirect_to cookie set by the auth middleware when
-	// it bounces an unauthenticated request to /user/sign-in. The cookie
-	// is the only way deep-link targets reach this handler after a full-
-	// page redirect to sign-in, so consume and clear it here.
-	if to == "" {
-		if cookie, err := r.Cookie("redirect_to"); err == nil {
-			if v, uerr := url.QueryUnescape(cookie.Value); uerr == nil {
-				to = v
-			}
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:   "redirect_to",
-			Value:  "",
-			Path:   conf.Server.Subpath,
-			MaxAge: -1,
-		})
-	}
+	to := c.Request().URL.Query().Get("to")
 	if !urlx.IsSameSite(to) {
 		to = conf.Server.Subpath + "/"
 	}
-	http.Redirect(w, r, to, http.StatusSeeOther)
+	c.Redirect(to, http.StatusSeeOther)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
