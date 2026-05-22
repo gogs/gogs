@@ -1,4 +1,4 @@
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,8 +23,7 @@ export interface SignInPage {
 }
 
 interface SignInResponse {
-  twoFactor?: boolean;
-  redirectTo?: string;
+  mfa?: boolean;
 }
 
 interface SignInErrorResponse {
@@ -40,6 +39,7 @@ const route = getRouteApi("/user/sign-in");
 export function SignIn() {
   const { t } = useTranslation();
   usePageTitle(t("sign_in"));
+  const navigate = useNavigate();
   const { loginSources } = route.useLoaderData();
   const defaultSource = loginSources.find((s) => s.isDefault);
 
@@ -61,35 +61,47 @@ export function SignIn() {
     setSubmitting(true);
     void (async () => {
       try {
-        const redirectTo = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
         const res = await fetch(subUrl("/api/web/user/sign-in"), {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, loginSource, remember, redirectTo }),
+          body: JSON.stringify({ username, password, loginSource, remember }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
           if (body.error) setFormError(body.error);
           else setFormError(null);
+          let focusField: (typeof FIELD_ORDER)[number] | undefined;
           if (body.fields) {
             setFieldErrors(body.fields);
-            const first = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
-            if (first === "username") usernameRef.current?.focus();
-            else if (first === "password") passwordRef.current?.focus();
+            focusField = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
           }
           if (!body.error && !body.fields) {
             setFormError(t("sign_in_failed"));
           }
           setSubmitting(false);
+          // Defer focus past the React commit so the fieldset is re-enabled
+          // (.focus() is a no-op while the field is inside a disabled fieldset).
+          requestAnimationFrame(() => {
+            if (focusField === "username") usernameRef.current?.focus();
+            else if (focusField === "password") passwordRef.current?.focus();
+          });
           return;
         }
         const data = (await res.json()) as SignInResponse;
-        if (data.twoFactor) {
-          window.location.assign(subUrl("/user/login/two_factor"));
+        if (data.mfa) {
+          // Preserve ?redirect_to= so the MFA step can finalize the same target.
+          const search = new URLSearchParams(window.location.search);
+          const redirectTo = search.get("redirect_to");
+          await navigate({
+            to: "/user/mfa",
+            search: redirectTo ? { redirect_to: redirectTo } : {},
+          });
           return;
         }
-        window.location.assign(data.redirectTo || subUrl("/"));
+        const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
+        // /redirect is a server endpoint (303), must be a full navigation.
+        window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
       } catch {
         setFormError(t("sign_in_failed"));
         setSubmitting(false);
@@ -104,124 +116,153 @@ export function SignIn() {
           <CardTitle>{t("sign_in")}</CardTitle>
         </CardHeader>
         <CardContent className="pt-2">
-          <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-            {formError && (
-              <div
-                role="alert"
-                className="rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
-              >
-                {formError}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="username">{t("username")}</Label>
-              <Input
-                ref={usernameRef}
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                autoFocus
-                tabIndex={1}
-                placeholder={t("username_placeholder")}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                aria-invalid={"username" in fieldErrors ? true : undefined}
-                aria-describedby={fieldErrors.username ? "username-error" : undefined}
-              />
-              {fieldErrors.username && (
-                <p id="username-error" className="text-sm text-(--color-destructive)">
-                  {fieldErrors.username}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="password">{t("password")}</Label>
-                <Button variant="link" size="inline" asChild>
-                  <a href={subUrl("/user/forget_password")} tabIndex={7}>
-                    {t("forget_password")}
-                  </a>
-                </Button>
-              </div>
-              <div className="relative">
-                <Input
-                  ref={passwordRef}
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  tabIndex={2}
-                  placeholder={t("password_placeholder")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={"password" in fieldErrors ? true : undefined}
-                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  tabIndex={3}
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? t("hide_password") : t("show_password")}
-                  aria-pressed={showPassword}
-                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+          <form onSubmit={onSubmit} noValidate>
+            <fieldset disabled={submitting} className="contents">
+              {formError && (
+                <div
+                  role="alert"
+                  className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
                 >
-                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                </button>
-              </div>
-              {fieldErrors.password && (
-                <p id="password-error" className="text-sm text-(--color-destructive)">
-                  {fieldErrors.password}
-                </p>
+                  {formError}
+                </div>
               )}
-            </div>
 
-            {loginSources.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="login_source">{t("auth_source")}</Label>
-                <Select value={String(loginSource)} onValueChange={(v) => setLoginSource(Number(v))}>
-                  <SelectTrigger id="login_source" tabIndex={4}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">{t("local")}</SelectItem>
-                    {loginSources.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="username">{t("username")}</Label>
+                  <Input
+                    ref={usernameRef}
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    autoFocus
+                    tabIndex={1}
+                    placeholder={t("username_placeholder")}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    aria-invalid={"username" in fieldErrors ? true : undefined}
+                    aria-describedby={fieldErrors.username ? "username-error" : undefined}
+                  />
+                  {fieldErrors.username && (
+                    <p id="username-error" className="text-sm text-(--color-destructive)">
+                      {fieldErrors.username}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password">{t("password")}</Label>
+                    <Button variant="link" size="inline" asChild>
+                      <a
+                        href={subUrl("/user/forget_password")}
+                        tabIndex={submitting ? -1 : 7}
+                        aria-disabled={submitting || undefined}
+                        className={submitting ? "pointer-events-none opacity-50" : undefined}
+                        onClick={(e) => {
+                          if (submitting) e.preventDefault();
+                        }}
+                      >
+                        {t("forget_password")}
+                      </a>
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      ref={passwordRef}
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                      tabIndex={2}
+                      placeholder={t("password_placeholder")}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      aria-invalid={"password" in fieldErrors ? true : undefined}
+                      aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={3}
+                      disabled={submitting}
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? t("hide_password") : t("show_password")}
+                      aria-pressed={showPassword}
+                      className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" aria-hidden />
+                      ) : (
+                        <Eye className="size-4" aria-hidden />
+                      )}
+                    </button>
+                  </div>
+                  {fieldErrors.password && (
+                    <p id="password-error" className="text-sm text-(--color-destructive)">
+                      {fieldErrors.password}
+                    </p>
+                  )}
+                </div>
+
+                {loginSources.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="login_source">{t("auth_source")}</Label>
+                    <Select
+                      value={String(loginSource)}
+                      onValueChange={(v) => setLoginSource(Number(v))}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger id="login_source" tabIndex={4}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">{t("local")}</SelectItem>
+                        {loginSources.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember"
+                    tabIndex={5}
+                    checked={remember}
+                    onCheckedChange={(v) => setRemember(v === true)}
+                  />
+                  <Label htmlFor="remember" className="cursor-pointer font-normal">
+                    {t("remember_me")}
+                  </Label>
+                </div>
+
+                <div className="mt-2 flex flex-col gap-3">
+                  <Button type="submit" disabled={submitting} tabIndex={6} className="w-full">
+                    {submitting ? t("sign_in_submitting") : t("sign_in")}
+                  </Button>
+                  <Button variant="link" size="inline" asChild className="self-center">
+                    <a
+                      href={subUrl("/user/sign_up")}
+                      tabIndex={submitting ? -1 : 8}
+                      aria-disabled={submitting || undefined}
+                      className={submitting ? "pointer-events-none opacity-50" : undefined}
+                      onClick={(e) => {
+                        if (submitting) e.preventDefault();
+                      }}
+                    >
+                      {t("sign_up_now")}
+                    </a>
+                  </Button>
+                </div>
               </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="remember"
-                tabIndex={5}
-                checked={remember}
-                onCheckedChange={(v) => setRemember(v === true)}
-              />
-              <Label htmlFor="remember" className="cursor-pointer font-normal">
-                {t("remember_me")}
-              </Label>
-            </div>
-
-            <div className="mt-2 flex flex-col gap-3">
-              <Button type="submit" disabled={submitting} tabIndex={6} className="w-full">
-                {submitting ? t("sign_in_submitting") : t("sign_in")}
-              </Button>
-              <Button variant="link" size="inline" asChild className="self-center">
-                <a href={subUrl("/user/sign_up")} tabIndex={8}>
-                  {t("sign_up_now")}
-                </a>
-              </Button>
-            </div>
+            </fieldset>
           </form>
         </CardContent>
       </Card>

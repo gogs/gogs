@@ -13,6 +13,7 @@ import { webContext } from "@/lib/context";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
 import { Landing } from "@/pages/Landing";
+import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
 import { SignIn, type SignInPage } from "@/pages/SignIn";
 
@@ -67,7 +68,24 @@ const signInRoute = createRoute({
   component: SignIn,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, signInRoute]);
+const mfaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/mfa",
+  loader: async (): Promise<{ pending: boolean }> => {
+    const res = await fetch(subUrl("/api/web/user/mfa"), { credentials: "same-origin" });
+    if (res.status === 404) {
+      // No pending MFA challenge — there is nothing to verify here, so fall
+      // through to the server-rendered home, which will redirect to sign-in
+      // for anonymous visitors and to the dashboard for signed-in ones.
+      window.location.assign(subUrl("/"));
+      return { pending: false };
+    }
+    return { pending: res.ok };
+  },
+  component: MFA,
+});
+
+const routeTree = rootRoute.addChildren([landingRoute, signInRoute, mfaRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

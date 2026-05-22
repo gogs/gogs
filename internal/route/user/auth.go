@@ -4,7 +4,6 @@ import (
 	gocontext "context"
 	"encoding/hex"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/go-macaron/captcha"
@@ -16,134 +15,15 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/internal/userx"
 )
 
 const (
-	tmplUserAuthTwoFactor             = "user/auth/two_factor"
-	tmplUserAuthTwoFactorRecoveryCode = "user/auth/two_factor_recovery_code"
-	tmplUserAuthSignup                = "user/auth/signup"
-	TmplUserAuthActivate              = "user/auth/activate"
-	tmplUserAuthForgotPassword        = "user/auth/forgot_passwd"
-	tmplUserAuthResetPassword         = "user/auth/reset_passwd"
+	tmplUserAuthSignup         = "user/auth/signup"
+	TmplUserAuthActivate       = "user/auth/activate"
+	tmplUserAuthForgotPassword = "user/auth/forgot_passwd"
+	tmplUserAuthResetPassword  = "user/auth/reset_passwd"
 )
-
-func afterLogin(c *context.Context, u *database.User, remember bool) {
-	if remember {
-		days := 86400 * conf.Security.LoginRememberDays
-		c.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-	}
-
-	_ = c.Session.Set("uid", u.ID)
-	_ = c.Session.Set("uname", u.Name)
-	_ = c.Session.Delete("twoFactorRemember")
-	_ = c.Session.Delete("twoFactorUserID")
-
-	// Clear whatever CSRF has right now, force to generate a new one
-	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
-	if conf.Security.EnableLoginStatusCookie {
-		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
-	}
-
-	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
-	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
-	if urlx.IsSameSite(redirectTo) {
-		c.Redirect(redirectTo)
-		return
-	}
-
-	c.RedirectSubpath("/")
-}
-
-func LoginTwoFactor(c *context.Context) {
-	_, ok := c.Session.Get("twoFactorUserID").(int64)
-	if !ok {
-		c.NotFound()
-		return
-	}
-
-	c.Success(tmplUserAuthTwoFactor)
-}
-
-func LoginTwoFactorPost(c *context.Context) {
-	userID, ok := c.Session.Get("twoFactorUserID").(int64)
-	if !ok {
-		c.NotFound()
-		return
-	}
-
-	t, err := database.Handle.TwoFactors().GetByUserID(c.Req.Context(), userID)
-	if err != nil {
-		c.Error(err, "get two factor by user ID")
-		return
-	}
-
-	passcode := c.Query("passcode")
-	valid, err := t.ValidateTOTP(passcode)
-	if err != nil {
-		c.Error(err, "validate TOTP")
-		return
-	} else if !valid {
-		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
-		c.RedirectSubpath("/user/login/two_factor")
-		return
-	}
-
-	u, err := database.Handle.Users().GetByID(c.Req.Context(), userID)
-	if err != nil {
-		c.Error(err, "get user by ID")
-		return
-	}
-
-	// Prevent same passcode from being reused
-	if c.Cache.IsExist(userx.TwoFactorCacheKey(u.ID, passcode)) {
-		c.Flash.Error(c.Tr("settings.two_factor_reused_passcode"))
-		c.RedirectSubpath("/user/login/two_factor")
-		return
-	}
-	if err = c.Cache.Put(userx.TwoFactorCacheKey(u.ID, passcode), 1, 60); err != nil {
-		log.Error("Failed to put cache 'two factor passcode': %v", err)
-	}
-
-	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
-}
-
-func LoginTwoFactorRecoveryCode(c *context.Context) {
-	_, ok := c.Session.Get("twoFactorUserID").(int64)
-	if !ok {
-		c.NotFound()
-		return
-	}
-
-	c.Success(tmplUserAuthTwoFactorRecoveryCode)
-}
-
-func LoginTwoFactorRecoveryCodePost(c *context.Context) {
-	userID, ok := c.Session.Get("twoFactorUserID").(int64)
-	if !ok {
-		c.NotFound()
-		return
-	}
-
-	if err := database.Handle.TwoFactors().UseRecoveryCode(c.Req.Context(), userID, c.Query("recovery_code")); err != nil {
-		if database.IsTwoFactorRecoveryCodeNotFound(err) {
-			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
-			c.RedirectSubpath("/user/login/two_factor_recovery_code")
-		} else {
-			c.Error(err, "use recovery code")
-		}
-		return
-	}
-
-	u, err := database.Handle.Users().GetByID(c.Req.Context(), userID)
-	if err != nil {
-		c.Error(err, "get user by ID")
-		return
-	}
-	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
-}
 
 func SignOut(c *context.Context) {
 	_ = c.Session.Flush()

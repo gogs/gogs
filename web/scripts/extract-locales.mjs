@@ -52,6 +52,18 @@ const REUSED_KEYS = [
   "sign_in_failed",
   "show_password",
   "hide_password",
+  "back_to_sign_in",
+  "mfa_title",
+  "mfa_passcode",
+  "mfa_passcode_placeholder",
+  "mfa_recovery_code",
+  "mfa_recovery_code_placeholder",
+  "mfa_use_recovery_code",
+  "mfa_use_passcode",
+  "mfa_verify",
+  "mfa_verifying",
+  "mfa_session_expired",
+  "mfa_verify_failed",
 ];
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores
