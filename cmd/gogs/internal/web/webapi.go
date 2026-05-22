@@ -86,8 +86,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				Get(getUserSignIn).
 				Post(binding.JSON(userSignInRequest{}), postUserSignIn)
 			f.Group("/mfa", func() {
-				f.Get("", getUserMfa)
-				f.Post("", binding.JSON(userMfaRequest{}), postUserMfa)
+				f.Combo("").
+					Get(getUserMfa).
+					Post(binding.JSON(userMfaRequest{}), postUserMfa)
 				f.Post("/recovery", binding.JSON(userMfaRecoveryRequest{}), postUserMfaRecovery)
 			})
 			f.Post("/sign-out", postUserSignOut)
