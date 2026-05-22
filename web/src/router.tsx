@@ -13,7 +13,7 @@ import { webContext } from "@/lib/context";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
 import { Landing } from "@/pages/Landing";
-import { Mfa, type MfaPage } from "@/pages/Mfa";
+import { MFA, type MFAPage } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
 import { SignIn, type SignInPage } from "@/pages/SignIn";
 
@@ -71,7 +71,7 @@ const signInRoute = createRoute({
 const mfaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/mfa",
-  loader: async (): Promise<MfaPage | null> => {
+  loader: async (): Promise<MFAPage | null> => {
     const res = await fetch(subUrl("/api/web/user/mfa"), { credentials: "same-origin" });
     if (res.status === 404) {
       // No pending MFA challenge — there is nothing to verify here, so fall
@@ -83,9 +83,9 @@ const mfaRoute = createRoute({
     if (!res.ok) {
       return { active: false };
     }
-    return (await res.json()) as MfaPage;
+    return (await res.json()) as MFAPage;
   },
-  component: Mfa,
+  component: MFA,
 });
 
 const routeTree = rootRoute.addChildren([landingRoute, signInRoute, mfaRoute]);

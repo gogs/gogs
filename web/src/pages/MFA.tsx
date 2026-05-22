@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label";
 import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
 
-export interface MfaPage {
+export interface MFAPage {
   active: boolean;
 }
 
-interface MfaErrorResponse {
+interface MFAErrorResponse {
   error?: string;
   fields?: Record<string, string | null>;
 }
@@ -22,7 +22,7 @@ type Mode = "passcode" | "recovery";
 
 const route = getRouteApi("/user/mfa");
 
-export function Mfa() {
+export function MFA() {
   const { t } = useTranslation();
   usePageTitle(t("mfa_title"));
   // The loader returns null when no challenge is pending, in which case the
@@ -69,7 +69,7 @@ export function Mfa() {
           body,
         });
         if (!res.ok) {
-          const errBody = (await res.json().catch(() => ({}))) as MfaErrorResponse;
+          const errBody = (await res.json().catch(() => ({}))) as MFAErrorResponse;
           if (res.status === 401 && !errBody.fields) {
             // Session-expired or missing 2FA session: send the user back to start.
             window.location.assign(subUrl("/user/sign-in"));

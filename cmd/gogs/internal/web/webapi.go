@@ -87,9 +87,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				Post(binding.JSON(userSignInRequest{}), postUserSignIn)
 			f.Group("/mfa", func() {
 				f.Combo("").
-					Get(getUserMfa).
-					Post(binding.JSON(userMfaRequest{}), postUserMfa)
-				f.Post("/recovery", binding.JSON(userMfaRecoveryRequest{}), postUserMfaRecovery)
+					Get(getUserMFA).
+					Post(binding.JSON(userMFARequest{}), postUserMFA)
+				f.Post("/recovery", binding.JSON(userMFARecoveryRequest{}), postUserMFARecovery)
 			})
 			f.Post("/sign-out", postUserSignOut)
 		})
@@ -98,11 +98,6 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Get("/redirect", getRedirect)
 }
 
-// getRedirect performs a server-validated same-site redirect. The target is
-// read from the ?to= query parameter; off-site or malformed targets fall
-// back to the subpath root. Clients use this to finalize navigation after a
-// JSON-only flow (e.g. sign-in) without having to validate the target
-// themselves.
 func getRedirect(c flamego.Context) {
 	to := c.Request().URL.Query().Get("to")
 	if !urlx.IsSameSite(to) {
@@ -268,25 +263,25 @@ func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, r
 	}
 }
 
-type userMfaPageResponse struct {
+type userMFAPageResponse struct {
 	Active bool `json:"active"`
 }
 
-func getUserMfa(sess session.Store) (statusCode int, resp *userMfaPageResponse, err error) {
+func getUserMFA(sess session.Store) (statusCode int, resp *userMFAPageResponse, err error) {
 	_, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusNotFound, nil, nil
 	}
-	return http.StatusOK, &userMfaPageResponse{Active: true}, nil
+	return http.StatusOK, &userMFAPageResponse{Active: true}, nil
 }
 
-type userMfaRequest struct {
+type userMFARequest struct {
 	Passcode string `json:"passcode" validate:"required,max=16"`
 }
 
-type userMfaResponse struct{}
+type userMFAResponse struct{}
 
-func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMfaRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
+func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
 	if len(bindErrs) > 0 {
 		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
 	}
@@ -298,13 +293,13 @@ func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMfa: get two factor by user ID %d: %+v", userID, err)
+		log.Error("postUserMFA: get two factor by user ID %d: %+v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get two factor by user ID")
 	}
 
 	valid, err := t.ValidateTOTP(req.Passcode)
 	if err != nil {
-		log.Error("postUserMfa: validate TOTP for user %d: %+v", userID, err)
+		log.Error("postUserMFA: validate TOTP for user %d: %+v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
 	}
 	if !valid {
@@ -321,25 +316,25 @@ func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		}, nil
 	}
 	if err = ca.Put(userx.TwoFactorCacheKey(userID, req.Passcode), 1, 60); err != nil {
-		log.Error("postUserMfa: cache two factor passcode for user %d: %v", userID, err)
+		log.Error("postUserMFA: cache two factor passcode for user %d: %v", userID, err)
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMfa: get user by ID %d: %+v", userID, err)
+		log.Error("postUserMFA: get user by ID %d: %+v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
 	remember, _ := sess.Get("mfaRemember").(bool)
 	completeSignIn(sess, mc, u, remember)
-	return http.StatusOK, &userMfaResponse{}, nil
+	return http.StatusOK, &userMFAResponse{}, nil
 }
 
-type userMfaRecoveryRequest struct {
+type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,max=64"`
 }
 
-func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMfaRecoveryRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
+func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
 	if len(bindErrs) > 0 {
 		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
 	}
@@ -356,19 +351,19 @@ func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 				Fields: map[string]*string{"recoveryCode": nil},
 			}, nil
 		}
-		log.Error("postUserMfaRecovery: use recovery code for user %d: %+v", userID, err)
+		log.Error("postUserMFARecovery: use recovery code for user %d: %+v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "use recovery code")
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMfaRecovery: get user by ID %d: %+v", userID, err)
+		log.Error("postUserMFARecovery: get user by ID %d: %+v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
 	remember, _ := sess.Get("mfaRemember").(bool)
 	completeSignIn(sess, mc, u, remember)
-	return http.StatusOK, &userMfaResponse{}, nil
+	return http.StatusOK, &userMFAResponse{}, nil
 }
 
 type userInfo struct {
