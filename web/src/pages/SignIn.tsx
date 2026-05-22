@@ -138,7 +138,12 @@ export function SignIn() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">{t("password")}</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">{t("password")}</Label>
+                <Button variant="link" size="inline" asChild>
+                  <a href={subUrl("/user/forget_password")}>{t("forget_password")}</a>
+                </Button>
+              </div>
               <div className="relative">
                 <Input
                   ref={passwordRef}
@@ -197,14 +202,11 @@ export function SignIn() {
               </Label>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-3">
-              <Button type="submit" disabled={submitting}>
+            <div className="mt-2 flex flex-col gap-3">
+              <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? t("sign_in_submitting") : t("sign_in")}
               </Button>
-              <Button variant="link" size="inline" asChild>
-                <a href={subUrl("/user/forget_password")}>{t("forget_password")}</a>
-              </Button>
-              <Button variant="link" size="inline" asChild className="ml-auto">
+              <Button variant="link" size="inline" asChild className="self-center">
                 <a href={subUrl("/user/sign_up")}>{t("sign_up_now")}</a>
               </Button>
             </div>
