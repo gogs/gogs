@@ -94,6 +94,21 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Post("/sign-out", postUserSignOut)
 		})
 	}, webAPIBodyLimiter, webAPIInjector)
+
+	f.Get("/redirect", getRedirect)
+}
+
+// getRedirect performs a server-validated same-site redirect. The target is
+// read from the ?to= query parameter; off-site or malformed targets fall
+// back to the subpath root. Clients use this to finalize navigation after a
+// JSON-only flow (e.g. sign-in) without having to validate the target
+// themselves.
+func getRedirect(c flamego.Context) {
+	to := c.Request().URL.Query().Get("to")
+	if !urlx.IsSameSite(to) {
+		to = conf.Server.Subpath + "/"
+	}
+	c.Redirect(to, http.StatusSeeOther)
 }
 
 // bindingErrorResponse carries form-validation failures. Error is the top-level
@@ -191,18 +206,13 @@ type userSignInRequest struct {
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
 	Remember    bool   `json:"remember"`
-	RedirectTo  string `json:"redirectTo"`
 }
 
 type userSignInResponse struct {
 	// MFA is true when the account has MFA enabled and the password step
 	// succeeded but a second factor is still required. The client should
-	// navigate to /user/mfa to complete the challenge. When true,
-	// RedirectTo is empty.
+	// navigate to /user/mfa to complete the challenge.
 	MFA bool `json:"mfa,omitempty"`
-	// RedirectTo is the post-login destination when sign-in completes in
-	// one step (no MFA required). Always same-site and subpath-prefixed.
-	RedirectTo string `json:"redirectTo,omitempty"`
 }
 
 func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
@@ -232,13 +242,15 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	return http.StatusOK, &userSignInResponse{RedirectTo: completeSignIn(sess, mc, u, req.Remember, req.RedirectTo)}, nil
+	completeSignIn(sess, mc, u, req.Remember)
+	return http.StatusOK, &userSignInResponse{}, nil
 }
 
 // completeSignIn finalizes the sign-in session for u: writes the auth session,
-// clears any in-flight MFA session, sets remember-me / login-status cookies,
-// and returns the safe post-login redirect target.
-func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, remember bool, redirectTo string) string {
+// clears any in-flight MFA session, and sets remember-me / login-status
+// cookies. The caller is responsible for navigating to a post-login
+// destination via /redirect?to=.
+func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, remember bool) {
 	if remember {
 		days := 86400 * conf.Security.LoginRememberDays
 		mc.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
@@ -254,11 +266,6 @@ func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, r
 	if conf.Security.EnableLoginStatusCookie {
 		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
-
-	if !urlx.IsSameSite(redirectTo) {
-		return conf.Server.Subpath + "/"
-	}
-	return redirectTo
 }
 
 type userMfaPageResponse struct {
@@ -274,13 +281,10 @@ func getUserMfa(sess session.Store) (statusCode int, resp *userMfaPageResponse, 
 }
 
 type userMfaRequest struct {
-	Passcode   string `json:"passcode" validate:"required,max=16"`
-	RedirectTo string `json:"redirectTo"`
+	Passcode string `json:"passcode" validate:"required,max=16"`
 }
 
-type userMfaResponse struct {
-	RedirectTo string `json:"redirectTo,omitempty"`
-}
+type userMfaResponse struct{}
 
 func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMfaRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
 	if len(bindErrs) > 0 {
@@ -327,12 +331,12 @@ func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 	}
 
 	remember, _ := sess.Get("mfaRemember").(bool)
-	return http.StatusOK, &userMfaResponse{RedirectTo: completeSignIn(sess, mc, u, remember, req.RedirectTo)}, nil
+	completeSignIn(sess, mc, u, remember)
+	return http.StatusOK, &userMfaResponse{}, nil
 }
 
 type userMfaRecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,max=64"`
-	RedirectTo   string `json:"redirectTo"`
 }
 
 func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMfaRecoveryRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
@@ -363,7 +367,8 @@ func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 	}
 
 	remember, _ := sess.Get("mfaRemember").(bool)
-	return http.StatusOK, &userMfaResponse{RedirectTo: completeSignIn(sess, mc, u, remember, req.RedirectTo)}, nil
+	completeSignIn(sess, mc, u, remember)
+	return http.StatusOK, &userMfaResponse{}, nil
 }
 
 type userInfo struct {

@@ -24,7 +24,6 @@ export interface SignInPage {
 
 interface SignInResponse {
   mfa?: boolean;
-  redirectTo?: string;
 }
 
 interface SignInErrorResponse {
@@ -61,12 +60,11 @@ export function SignIn() {
     setSubmitting(true);
     void (async () => {
       try {
-        const redirectTo = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
         const res = await fetch(subUrl("/api/web/user/sign-in"), {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, loginSource, remember, redirectTo }),
+          body: JSON.stringify({ username, password, loginSource, remember }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
@@ -85,12 +83,13 @@ export function SignIn() {
           return;
         }
         const data = (await res.json()) as SignInResponse;
+        const search = window.location.search;
         if (data.mfa) {
-          const search = window.location.search;
           window.location.assign(subUrl("/user/mfa") + search);
           return;
         }
-        window.location.assign(data.redirectTo || subUrl("/"));
+        const to = new URLSearchParams(search).get("redirect_to") ?? "";
+        window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
       } catch {
         setFormError(t("sign_in_failed"));
         setSubmitting(false);

@@ -13,10 +13,6 @@ export interface MfaPage {
   active: boolean;
 }
 
-interface MfaResponse {
-  redirectTo?: string;
-}
-
 interface MfaErrorResponse {
   error?: string;
   fields?: Record<string, string | null>;
@@ -64,10 +60,8 @@ export function Mfa() {
     setSubmitting(true);
     void (async () => {
       try {
-        const redirectTo = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
         const url = mode === "passcode" ? subUrl("/api/web/user/mfa") : subUrl("/api/web/user/mfa/recovery");
-        const body =
-          mode === "passcode" ? JSON.stringify({ passcode, redirectTo }) : JSON.stringify({ recoveryCode, redirectTo });
+        const body = mode === "passcode" ? JSON.stringify({ passcode }) : JSON.stringify({ recoveryCode });
         const res = await fetch(url, {
           method: "POST",
           credentials: "same-origin",
@@ -93,8 +87,8 @@ export function Mfa() {
           setSubmitting(false);
           return;
         }
-        const ok = (await res.json()) as MfaResponse;
-        window.location.assign(ok.redirectTo || subUrl("/"));
+        const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
+        window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
       } catch {
         setFormError(t("mfa_verify_failed"));
         setSubmitting(false);

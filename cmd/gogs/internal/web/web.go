@@ -525,6 +525,7 @@ func Run(configPath string, portOverride int) error {
 		}, ignSignIn)
 
 		m.Any("/api/web/*", bridgeToWebAPI(webHandler))
+		m.Get("/redirect", bridgeToWebAPI(webHandler))
 		m.Any("/*", func(c *context.Context) { c.ServeWeb() })
 	},
 		session.Sessioner(session.Options{
