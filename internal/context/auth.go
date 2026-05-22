@@ -71,6 +71,11 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 					return
 				}
 
+				if isWebPath(c.Req.URL.Path) {
+					c.ServeWeb()
+					return
+				}
+
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 				c.RedirectSubpath("/user/sign-in")
 				return
@@ -84,6 +89,10 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		// Redirect to log in page if auto-signin info is provided and has not signed in.
 		if !options.SignOutRequired && !c.IsLogged && !isAPIPath(c.Req.URL.Path) &&
 			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
+			if isWebPath(c.Req.URL.Path) {
+				c.ServeWeb()
+				return
+			}
 			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 			c.RedirectSubpath("/user/sign-in")
 			return
@@ -101,6 +110,20 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 func isAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
+}
+
+func isWebPath(p string) bool {
+	p = strings.TrimPrefix(p, conf.Server.Subpath)
+	switch {
+	case p == "/user/sign-in",
+		strings.HasPrefix(p, "/assets/"),
+		strings.HasPrefix(p, "/src/"),
+		strings.HasPrefix(p, "/node_modules/"),
+		strings.HasPrefix(p, "/@"),
+		strings.HasPrefix(p, "/img/"):
+		return true
+	}
+	return false
 }
 
 type AuthStore interface {
