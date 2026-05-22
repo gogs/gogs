@@ -186,7 +186,7 @@ type userSignInPageResponse struct {
 func getUserSignIn(r *http.Request) (statusCode int, resp *userSignInPageResponse, err error) {
 	sources, err := database.Handle.LoginSources().List(r.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
-		log.Error("getUserSignIn: list activated login sources: %+v", err)
+		log.Error("getUserSignIn: list activated login sources: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list activated login sources")
 	}
 	loginSources := make([]loginSource, 0, len(sources))
@@ -226,7 +226,7 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 		case database.IsErrLoginSourceMismatch(err):
 			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
 		default:
-			log.Error("postUserSignIn: authenticate user %q: %+v", req.Username, err)
+			log.Error("postUserSignIn: authenticate user %q: %v", req.Username, err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 		}
 	}
@@ -293,13 +293,13 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMFA: get two factor by user ID %d: %+v", userID, err)
+		log.Error("postUserMFA: get two factor by user ID %d: %v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get two factor by user ID")
 	}
 
 	valid, err := t.ValidateTOTP(req.Passcode)
 	if err != nil {
-		log.Error("postUserMFA: validate TOTP for user %d: %+v", userID, err)
+		log.Error("postUserMFA: validate TOTP for user %d: %v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
 	}
 	if !valid {
@@ -321,7 +321,7 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMFA: get user by ID %d: %+v", userID, err)
+		log.Error("postUserMFA: get user by ID %d: %v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
@@ -351,13 +351,13 @@ func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Contex
 				Fields: map[string]*string{"recoveryCode": nil},
 			}, nil
 		}
-		log.Error("postUserMFARecovery: use recovery code for user %d: %+v", userID, err)
+		log.Error("postUserMFARecovery: use recovery code for user %d: %v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "use recovery code")
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMFARecovery: get user by ID %d: %+v", userID, err)
+		log.Error("postUserMFARecovery: get user by ID %d: %v", userID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
