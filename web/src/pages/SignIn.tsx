@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,7 +45,6 @@ export function SignIn() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginSource, setLoginSource] = useState<number>(defaultSource?.id ?? 0);
-  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -65,7 +63,7 @@ export function SignIn() {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, loginSource, remember }),
+          body: JSON.stringify({ username, password, loginSource }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
@@ -158,7 +156,7 @@ export function SignIn() {
                     <Button variant="link" size="inline" asChild>
                       <a
                         href={subUrl("/user/forget_password")}
-                        tabIndex={submitting ? -1 : 7}
+                        tabIndex={submitting ? -1 : 6}
                         aria-disabled={submitting || undefined}
                         className={submitting ? "pointer-events-none opacity-50" : undefined}
                         onClick={(e) => {
@@ -231,26 +229,14 @@ export function SignIn() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="remember"
-                    tabIndex={5}
-                    checked={remember}
-                    onCheckedChange={(v) => setRemember(v === true)}
-                  />
-                  <Label htmlFor="remember" className="cursor-pointer font-normal">
-                    {t("remember_me")}
-                  </Label>
-                </div>
-
                 <div className="mt-2 flex flex-col gap-3">
-                  <Button type="submit" disabled={submitting} tabIndex={6} className="w-full">
+                  <Button type="submit" disabled={submitting} tabIndex={5} className="w-full">
                     {submitting ? t("sign_in_submitting") : t("sign_in")}
                   </Button>
                   <Button variant="link" size="inline" asChild className="self-center">
                     <a
                       href={subUrl("/user/sign_up")}
-                      tabIndex={submitting ? -1 : 8}
+                      tabIndex={submitting ? -1 : 7}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}
                       onClick={(e) => {

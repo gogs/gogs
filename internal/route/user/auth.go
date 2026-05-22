@@ -28,8 +28,6 @@ const (
 func SignOut(c *context.Context) {
 	_ = c.Session.Flush()
 	_ = c.Session.Destory(c.Context)
-	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
-	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Auth.CustomLogoutURL != "" {
 		c.Redirect(conf.Auth.CustomLogoutURL)
