@@ -32,50 +32,50 @@
   --radius: 0.5rem;
 }
 
-/* Theme palettes are derived from Happy Hues (https://www.happyhues.co):
-   light mode = palette 6, dark mode = palette 13. */
+/* Theme palettes are adapted from Pierre Theme's "Light" and "Dark"
+   (non-soft) variants (https://github.com/pierrecomputer/theme). */
 :root {
   color-scheme: light dark;
 
-  --color-background: #fffffe;
-  --color-foreground: #2b2c34;
-  --color-card: #fffffe;
-  --color-card-foreground: #2b2c34;
-  --color-popover: #fffffe;
-  --color-popover-foreground: #2b2c34;
-  --color-primary: #059669;
-  --color-primary-foreground: #fffffe;
-  --color-secondary: #d1d1e9;
-  --color-secondary-foreground: #2b2c34;
-  --color-surface: #ececf6;
-  --color-muted-foreground: #5f6172;
-  --color-destructive: #c2392f;
-  --color-destructive-foreground: #fffffe;
-  --color-border: #d1d1e9;
-  --color-input: #c8c8d8;
-  --color-ring: #059669;
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  --color-primary: #009fff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #0a0a0a;
+  --color-surface: #f5f5f5;
+  --color-muted-foreground: #737373;
+  --color-destructive: #d52c36;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e5e5e5;
+  --color-input: #d4d4d4;
+  --color-ring: #009fff;
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --color-background: #16161a;
-  --color-foreground: #fffffe;
-  --color-card: #242629;
-  --color-card-foreground: #fffffe;
-  --color-popover: #242629;
-  --color-popover-foreground: #fffffe;
-  --color-primary: #059669;
-  --color-primary-foreground: #fffffe;
-  --color-secondary: #5c5f68;
-  --color-secondary-foreground: #fffffe;
-  --color-surface: #33363c;
-  --color-muted-foreground: #94a1b2;
-  --color-destructive: #d63653;
-  --color-destructive-foreground: #fffffe;
-  --color-border: #5c5f68;
-  --color-input: #5c5f68;
-  --color-ring: #059669;
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  --color-card: #171717;
+  --color-card-foreground: #fafafa;
+  --color-popover: #171717;
+  --color-popover-foreground: #fafafa;
+  --color-primary: #009fff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1d1d1d;
+  --color-secondary-foreground: #fafafa;
+  --color-surface: #1d1d1d;
+  --color-muted-foreground: #8a8a8a;
+  --color-destructive: #ff6762;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #1d1d1d;
+  --color-input: #262626;
+  --color-ring: #009fff;
 }
 
 @layer base {

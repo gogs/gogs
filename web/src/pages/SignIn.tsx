@@ -81,6 +81,7 @@ export function SignIn() {
           if (!body.error && !body.fields) {
             setFormError(t("sign_in_failed"));
           }
+          setSubmitting(false);
           return;
         }
         const data = (await res.json()) as SignInResponse;
@@ -91,7 +92,6 @@ export function SignIn() {
         window.location.assign(data.redirectTo || subUrl("/"));
       } catch {
         setFormError(t("sign_in_failed"));
-      } finally {
         setSubmitting(false);
       }
     })();
@@ -124,6 +124,7 @@ export function SignIn() {
                 autoComplete="username"
                 required
                 autoFocus
+                tabIndex={1}
                 placeholder={t("username_placeholder")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -141,7 +142,9 @@ export function SignIn() {
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="password">{t("password")}</Label>
                 <Button variant="link" size="inline" asChild>
-                  <a href={subUrl("/user/forget_password")}>{t("forget_password")}</a>
+                  <a href={subUrl("/user/forget_password")} tabIndex={7}>
+                    {t("forget_password")}
+                  </a>
                 </Button>
               </div>
               <div className="relative">
@@ -152,6 +155,7 @@ export function SignIn() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
+                  tabIndex={2}
                   placeholder={t("password_placeholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -161,6 +165,7 @@ export function SignIn() {
                 />
                 <button
                   type="button"
+                  tabIndex={3}
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? t("hide_password") : t("show_password")}
                   aria-pressed={showPassword}
@@ -180,7 +185,7 @@ export function SignIn() {
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="login_source">{t("auth_source")}</Label>
                 <Select value={String(loginSource)} onValueChange={(v) => setLoginSource(Number(v))}>
-                  <SelectTrigger id="login_source">
+                  <SelectTrigger id="login_source" tabIndex={4}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -196,18 +201,25 @@ export function SignIn() {
             )}
 
             <div className="flex items-center gap-2">
-              <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+              <Checkbox
+                id="remember"
+                tabIndex={5}
+                checked={remember}
+                onCheckedChange={(v) => setRemember(v === true)}
+              />
               <Label htmlFor="remember" className="cursor-pointer font-normal">
                 {t("remember_me")}
               </Label>
             </div>
 
             <div className="mt-2 flex flex-col gap-3">
-              <Button type="submit" disabled={submitting} className="w-full">
+              <Button type="submit" disabled={submitting} tabIndex={6} className="w-full">
                 {submitting ? t("sign_in_submitting") : t("sign_in")}
               </Button>
               <Button variant="link" size="inline" asChild className="self-center">
-                <a href={subUrl("/user/sign_up")}>{t("sign_up_now")}</a>
+                <a href={subUrl("/user/sign_up")} tabIndex={8}>
+                  {t("sign_up_now")}
+                </a>
               </Button>
             </div>
           </form>
