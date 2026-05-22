@@ -116,6 +116,7 @@ func isWebPath(p string) bool {
 	p = strings.TrimPrefix(p, conf.Server.Subpath)
 	switch {
 	case p == "/user/sign-in",
+		p == "/user/mfa",
 		strings.HasPrefix(p, "/assets/"),
 		strings.HasPrefix(p, "/src/"),
 		strings.HasPrefix(p, "/node_modules/"),

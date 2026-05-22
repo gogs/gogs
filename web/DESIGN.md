@@ -67,6 +67,14 @@ Two conventions coexist in `web/src/`:
 
 Library modules in `lib/` are plain `.ts` files in lowercase (`i18n.ts`, `theme.ts`, `utils.ts`).
 
+## Forms
+
+Disable the entire form while a submit is in flight, not just the submit button. Wrap the body in `<fieldset disabled={submitting} className="contents">` — native `disabled` propagates to every nested input and button.
+
+Anchor links inside the form aren't covered by `disabled`. For each, set `tabIndex={submitting ? -1 : N}`, `aria-disabled={submitting || undefined}`, `className={submitting ? "pointer-events-none opacity-50" : undefined}`, and an `onClick` that calls `e.preventDefault()` when submitting.
+
+Swap the submit label to a present-continuous string ("Signing in…", "Verifying…") while submitting. Keep idle and active strings as separate locale keys.
+
 ## Accessibility
 
 WCAG 2.2 AA is the floor. Apply these patterns in components:

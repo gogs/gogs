@@ -38,12 +38,15 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git npm moon
+    brew install go postgresql git npm moon portless
+    portless trust
     npm install -g less
     npm install -g less-plugin-clean-css
     go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
+
+    `portless trust` adds the local CA to your system trust store so `https://gogs.localhost` works without browser warnings. The `moon run gogs:dev` task will start the proxy and register the route automatically.
 
 1. Configure PostgreSQL to start automatically:
 

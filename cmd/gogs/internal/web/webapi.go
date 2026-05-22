@@ -10,6 +10,7 @@ import (
 	"github.com/flamego/binding"
 	"github.com/flamego/flamego"
 	"github.com/flamego/validator"
+	"github.com/go-macaron/cache"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
@@ -20,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/urlx"
+	"gogs.io/gogs/internal/userx"
 )
 
 type (
@@ -27,15 +29,17 @@ type (
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
+	webAPICacheKey   struct{}
 )
 
-func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
-	return func(c *context.Context, l i18n.Locale) {
+func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale, ca cache.Cache) {
+	return func(c *context.Context, l i18n.Locale, ca cache.Cache) {
 		ctx := c.Req.Context()
 		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
+		ctx = stdctx.WithValue(ctx, webAPICacheKey{}, ca)
 		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 	}
 }
@@ -46,7 +50,8 @@ func webAPIInjector(c flamego.Context) {
 	sess, _ := ctx.Value(webAPISessionKey{}).(session.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(user, sess, mc, l)
+	ca, _ := ctx.Value(webAPICacheKey{}).(cache.Cache)
+	c.Map(user, sess, mc, l, ca)
 }
 
 func webAPIBodyLimiter(c flamego.Context) {
@@ -80,6 +85,11 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
 				Post(binding.JSON(userSignInRequest{}), postUserSignIn)
+			f.Group("/mfa", func() {
+				f.Get("", getUserMfa)
+				f.Post("", binding.JSON(userMfaRequest{}), postUserMfa)
+				f.Post("/recovery", binding.JSON(userMfaRecoveryRequest{}), postUserMfaRecovery)
+			})
 			f.Post("/sign-out", postUserSignOut)
 		})
 	}, webAPIBodyLimiter, webAPIInjector)
@@ -215,7 +225,14 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 		return http.StatusOK, &userSignInResponse{TwoFactor: true}, nil
 	}
 
-	if req.Remember {
+	return http.StatusOK, &userSignInResponse{RedirectTo: completeSignIn(sess, mc, u, req.Remember, req.RedirectTo)}, nil
+}
+
+// completeSignIn finalizes the sign-in session for u: writes the auth session,
+// clears any in-flight MFA session, sets remember-me / login-status cookies,
+// and returns the safe post-login redirect target.
+func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User, remember bool, redirectTo string) string {
+	if remember {
 		days := 86400 * conf.Security.LoginRememberDays
 		mc.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
 		mc.SetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
@@ -231,11 +248,115 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 
-	redirectTo := req.RedirectTo
 	if !urlx.IsSameSite(redirectTo) {
-		redirectTo = conf.Server.Subpath + "/"
+		return conf.Server.Subpath + "/"
 	}
-	return http.StatusOK, &userSignInResponse{RedirectTo: redirectTo}, nil
+	return redirectTo
+}
+
+type userMfaPageResponse struct {
+	Active bool `json:"active"`
+}
+
+func getUserMfa(sess session.Store) (statusCode int, resp *userMfaPageResponse, err error) {
+	_, ok := sess.Get("twoFactorUserID").(int64)
+	if !ok {
+		return http.StatusNotFound, nil, nil
+	}
+	return http.StatusOK, &userMfaPageResponse{Active: true}, nil
+}
+
+type userMfaRequest struct {
+	Passcode   string `json:"passcode" validate:"required,max=16"`
+	RedirectTo string `json:"redirectTo"`
+}
+
+type userMfaResponse struct {
+	RedirectTo string `json:"redirectTo,omitempty"`
+}
+
+func postUserMfa(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMfaRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
+	if len(bindErrs) > 0 {
+		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
+	}
+
+	userID, ok := sess.Get("twoFactorUserID").(int64)
+	if !ok {
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.login_two_factor_session_expired")}, nil
+	}
+
+	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
+	if err != nil {
+		log.Error("postUserMfa: get two factor by user ID %d: %+v", userID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get two factor by user ID")
+	}
+
+	valid, err := t.ValidateTOTP(req.Passcode)
+	if err != nil {
+		log.Error("postUserMfa: validate TOTP for user %d: %+v", userID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
+	}
+	if !valid {
+		return http.StatusUnauthorized, &bindingErrorResponse{
+			Error:  l.Tr("settings.two_factor_invalid_passcode"),
+			Fields: map[string]*string{"passcode": nil},
+		}, nil
+	}
+
+	if ca.IsExist(userx.TwoFactorCacheKey(userID, req.Passcode)) {
+		return http.StatusUnauthorized, &bindingErrorResponse{
+			Error:  l.Tr("settings.two_factor_reused_passcode"),
+			Fields: map[string]*string{"passcode": nil},
+		}, nil
+	}
+	if err = ca.Put(userx.TwoFactorCacheKey(userID, req.Passcode), 1, 60); err != nil {
+		log.Error("postUserMfa: cache two factor passcode for user %d: %v", userID, err)
+	}
+
+	u, err := database.Handle.Users().GetByID(r.Context(), userID)
+	if err != nil {
+		log.Error("postUserMfa: get user by ID %d: %+v", userID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
+	}
+
+	remember, _ := sess.Get("twoFactorRemember").(bool)
+	return http.StatusOK, &userMfaResponse{RedirectTo: completeSignIn(sess, mc, u, remember, req.RedirectTo)}, nil
+}
+
+type userMfaRecoveryRequest struct {
+	RecoveryCode string `json:"recoveryCode" validate:"required,max=64"`
+	RedirectTo   string `json:"redirectTo"`
+}
+
+func postUserMfaRecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMfaRecoveryRequest, bindErrs binding.Errors) (statusCode int, resp any, err error) {
+	if len(bindErrs) > 0 {
+		return http.StatusBadRequest, renderBindingErrors(l, bindErrs), nil
+	}
+
+	userID, ok := sess.Get("twoFactorUserID").(int64)
+	if !ok {
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.login_two_factor_session_expired")}, nil
+	}
+
+	if err := database.Handle.TwoFactors().UseRecoveryCode(r.Context(), userID, req.RecoveryCode); err != nil {
+		if database.IsTwoFactorRecoveryCodeNotFound(err) {
+			return http.StatusUnauthorized, &bindingErrorResponse{
+				Error:  l.Tr("auth.login_two_factor_invalid_recovery_code"),
+				Fields: map[string]*string{"recoveryCode": nil},
+			}, nil
+		}
+		log.Error("postUserMfaRecovery: use recovery code for user %d: %+v", userID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "use recovery code")
+	}
+
+	u, err := database.Handle.Users().GetByID(r.Context(), userID)
+	if err != nil {
+		log.Error("postUserMfaRecovery: get user by ID %d: %+v", userID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
+	}
+
+	remember, _ := sess.Get("twoFactorRemember").(bool)
+	return http.StatusOK, &userMfaResponse{RedirectTo: completeSignIn(sess, mc, u, remember, req.RedirectTo)}, nil
 }
 
 type userInfo struct {

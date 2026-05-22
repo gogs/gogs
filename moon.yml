@@ -88,6 +88,46 @@ tasks:
       - "install"
       - "web:build"
 
+  portless:
+    script: |
+      portless alias gogs 3000 --force >/dev/null
+      portless proxy start >/dev/null 2>&1 || true
+      mkdir -p .bin/custom/conf
+      touch .bin/custom/conf/app.ini
+      awk '
+        BEGIN { in_server=0; saw_server=0; set_domain=0; set_url=0 }
+        /^\[server\]/ { in_server=1; saw_server=1; print; next }
+        /^\[/ {
+          if (in_server) {
+            if (!set_domain) print "DOMAIN           = gogs.localhost"
+            if (!set_url)    print "EXTERNAL_URL     = https://gogs.localhost/"
+            in_server=0
+          }
+          print; next
+        }
+        in_server && /^[[:space:]]*DOMAIN[[:space:]]*=/ {
+          print "DOMAIN           = gogs.localhost"; set_domain=1; next
+        }
+        in_server && /^[[:space:]]*EXTERNAL_URL[[:space:]]*=/ {
+          print "EXTERNAL_URL     = https://gogs.localhost/"; set_url=1; next
+        }
+        { print }
+        END {
+          if (in_server) {
+            if (!set_domain) print "DOMAIN           = gogs.localhost"
+            if (!set_url)    print "EXTERNAL_URL     = https://gogs.localhost/"
+          } else if (!saw_server) {
+            print ""
+            print "[server]"
+            print "DOMAIN           = gogs.localhost"
+            print "EXTERNAL_URL     = https://gogs.localhost/"
+          }
+        }
+      ' .bin/custom/conf/app.ini > .bin/custom/conf/app.ini.tmp \
+        && mv .bin/custom/conf/app.ini.tmp .bin/custom/conf/app.ini
+    options:
+      outputStyle: "stream"
+
   dev:
     command: ".bin/gogs web"
     preset: "server"
@@ -96,6 +136,7 @@ tasks:
     deps:
       - "build"
       - "web:dev"
+      - "portless"
 
   prod:
     command: ".bin/gogs web"
@@ -104,3 +145,4 @@ tasks:
       TTY_FORCE: "1"
     deps:
       - "build-prod"
+      - "portless"
