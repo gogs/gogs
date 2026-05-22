@@ -7,9 +7,11 @@ All notable changes to Gogs are documented in this file.
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
+- The two-factor passcode and recovery-code steps now use a React page at `/user/mfa` backed by `/api/web/user/mfa`. The legacy `/user/login/two_factor*` routes are gone. [#8288](https://github.com/gogs/gogs/pull/8288)
 
 ### Fixed
 
+- SMTP authentication now applies a 10 second dial timeout, so an unreachable or misspelled SMTP host no longer hangs sign-in until the OS-level connect timeout. [#8288](https://github.com/gogs/gogs/pull/8288)
 - _Security:_ Denial of service in repository and wiki file listing pages via crafted file names. [#8116](https://github.com/gogs/gogs/pull/8116) - [GHSA-3qq3-668m-v9mj](https://github.com/gogs/gogs/security/advisories/GHSA-3qq3-668m-v9mj)
 - _Security:_ Reverse proxy authentication header was honored from any remote address, allowing user impersonation when Gogs was reachable directly. The header is now only trusted from addresses listed in `[auth] TRUSTED_PROXY_IPS`. [#8264](https://github.com/gogs/gogs/pull/8264) - [GHSA-w6j9-vw59-27wv](https://github.com/gogs/gogs/security/advisories/GHSA-w6j9-vw59-27wv)
 - _Security:_ Server-side request forgery in webhook deliveries via HTTP redirects to local network addresses. [#8263](https://github.com/gogs/gogs/pull/8263) - [GHSA-c4v7-xg93-qf8g](https://github.com/gogs/gogs/security/advisories/GHSA-c4v7-xg93-qf8g)
