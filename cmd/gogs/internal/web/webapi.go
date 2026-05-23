@@ -222,11 +222,11 @@ type loginSource struct {
 	IsDefault bool   `json:"isDefault"`
 }
 
-type userSignInPageResponse struct {
+type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
 }
 
-func getUserSignIn(r *http.Request) (statusCode int, resp *userSignInPageResponse, err error) {
+func getUserSignIn(r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
 	sources, err := database.Handle.LoginSources().List(r.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
 		log.Error("getUserSignIn: list activated login sources: %v", err)
@@ -236,7 +236,7 @@ func getUserSignIn(r *http.Request) (statusCode int, resp *userSignInPageRespons
 	for _, s := range sources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &userSignInPageResponse{LoginSources: loginSources}, nil
+	return http.StatusOK, &getUserSignInResponse{LoginSources: loginSources}, nil
 }
 
 type userSignInRequest struct {
@@ -245,14 +245,14 @@ type userSignInRequest struct {
 	LoginSource int64  `json:"loginSource"`
 }
 
-type userResetPasswordPageResponse struct {
+type getUserResetPasswordResponse struct {
 	EmailEnabled bool `json:"emailEnabled"`
 	Valid        bool `json:"valid"`
 }
 
-func getUserResetPassword(r *http.Request) (statusCode int, resp *userResetPasswordPageResponse, err error) {
+func getUserResetPassword(r *http.Request) (statusCode int, resp *getUserResetPasswordResponse, err error) {
 	code := r.URL.Query().Get("code")
-	return http.StatusOK, &userResetPasswordPageResponse{
+	return http.StatusOK, &getUserResetPasswordResponse{
 		EmailEnabled: conf.Email.Enabled,
 		Valid:        code != "" && user.VerifyUserActiveCode(code) != nil,
 	}, nil
