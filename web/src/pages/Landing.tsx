@@ -22,18 +22,18 @@ export function Landing() {
             <span>cat /etc/motd</span>
             {"\n"}
             <img
-              src={subUrl("/img/banner-light.svg")}
+              src={subUrl("/img/banner-light.png")}
               alt="Gogs"
-              width="775"
-              height="294"
-              className="mx-auto block max-w-[280px] dark:hidden sm:max-w-sm"
+              width="200"
+              height="76"
+              className="mx-auto block h-auto w-[280px] [image-rendering:pixelated] dark:hidden sm:w-96"
             />
             <img
-              src={subUrl("/img/banner-dark.svg")}
+              src={subUrl("/img/banner-dark.png")}
               alt="Gogs"
-              width="775"
-              height="294"
-              className="mx-auto hidden max-w-[280px] dark:block sm:max-w-sm"
+              width="200"
+              height="76"
+              className="mx-auto hidden h-auto w-[280px] [image-rendering:pixelated] dark:block sm:w-96"
             />
             {"\n"}
             <span className="block text-center text-base text-(--color-muted-foreground) sm:text-lg">

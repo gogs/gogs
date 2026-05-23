@@ -6,7 +6,7 @@
 @font-face {
   font-family: "Geist Pixel";
   font-style: normal;
-  font-weight: 500;
+  font-weight: 100 900;
   font-display: swap;
   src: url("./assets/fonts/GeistPixel-Square.woff2") format("woff2");
 }
