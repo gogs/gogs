@@ -34,5 +34,5 @@
   "sign_up_now": "Bir hesaba mı ihtiyacınız var? Şimdi kaydolun.",
   "reset_password": "Parolanızı Sıfırlayın",
   "invalid_code": "Üzgünüz, doğrulama kodunuz geçersiz veya süresi dolmuş.",
-  "reset_password_helper": "Parolanızı sıfırlamak için buraya tıklayın"
+  "new_password": "Yeni Parola"
 }

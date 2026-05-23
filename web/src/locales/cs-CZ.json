@@ -34,5 +34,5 @@
   "sign_up_now": "Potřebujete účet? Zaregistrujte se.",
   "reset_password": "Obnova vašeho hesla",
   "invalid_code": "Omlouváme se, ale kód z vašeho potvrzovacího e-mailu už vypršel nebo není správný.",
-  "reset_password_helper": "Klikněte zde pro obnovu vašeho hesla"
+  "new_password": "Nové heslo"
 }

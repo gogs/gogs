@@ -34,5 +34,5 @@
   "sign_up_now": "Een account nodig? Meld u nu aan.",
   "reset_password": "Reset uw wachtwoord",
   "invalid_code": "Sorry, uw bevestigingscode is verlopen of niet meer geldig.",
-  "reset_password_helper": "Klik hier om uw wachtwoord opnieuw in te stellen."
+  "new_password": "Nieuw wachtwoord"
 }

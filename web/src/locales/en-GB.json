@@ -34,5 +34,5 @@
   "sign_up_now": "Need an account? Sign up now.",
   "reset_password": "Reset Your Password",
   "invalid_code": "Sorry, your confirmation code has expired or not valid.",
-  "reset_password_helper": "Click here to reset your password"
+  "new_password": "New Password"
 }

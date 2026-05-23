@@ -34,5 +34,5 @@
   "sign_up_now": "Bisogno di un account? Iscriviti ora.",
   "reset_password": "Reimposta la tua Password",
   "invalid_code": "Siamo spiacenti, il codice di conferma è scaduto o non valido.",
-  "reset_password_helper": "Clicca qui per reimpostare la password"
+  "new_password": "Nuova Password"
 }

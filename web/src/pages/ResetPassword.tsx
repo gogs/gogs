@@ -37,18 +37,28 @@ export function ResetPassword() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState<ResetPasswordResponse | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isResetForm && !valid) return;
     if (!isResetForm && !emailEnabled) return;
+
+    if (isResetForm && password !== confirmPassword) {
+      setFormError(null);
+      setFieldErrors({ password: null, confirmPassword: t("reset_password_mismatch") });
+      requestAnimationFrame(() => confirmPasswordRef.current?.focus());
+      return;
+    }
 
     setFormError(null);
     setFieldErrors({});
@@ -158,7 +168,10 @@ export function ResetPassword() {
                 </p>
               )}
             </div>
-            <FormActions submitLabel={submitting ? t("reset_password_email_submitting") : t("send_reset_email")} />
+            <FormActions
+              submitLabel={submitting ? t("reset_password_email_submitting") : t("send_reset_email")}
+              submitTabIndex={3}
+            />
           </div>
         </fieldset>
       </form>
@@ -185,7 +198,7 @@ export function ResetPassword() {
           {renderFormError()}
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">{t("password")}</Label>
+              <Label htmlFor="password">{t("new_password")}</Label>
               <div className="relative">
                 <Input
                   ref={passwordRef}
@@ -196,7 +209,7 @@ export function ResetPassword() {
                   required
                   autoFocus
                   tabIndex={1}
-                  placeholder={t("password_placeholder")}
+                  placeholder={t("new_password_placeholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   aria-invalid={"password" in fieldErrors ? true : undefined}
@@ -221,7 +234,50 @@ export function ResetPassword() {
                 </p>
               )}
             </div>
-            <FormActions submitLabel={submitting ? t("reset_password_submitting") : t("reset_password_helper")} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="confirmPassword">{t("confirm_new_password")}</Label>
+              <div className="relative">
+                <Input
+                  ref={confirmPasswordRef}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  tabIndex={3}
+                  placeholder={t("confirm_new_password_placeholder")}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  aria-invalid={"confirmPassword" in fieldErrors ? true : undefined}
+                  aria-describedby={fieldErrors.confirmPassword ? "confirmPassword-error" : undefined}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={4}
+                  disabled={submitting}
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={showConfirmPassword ? t("hide_password") : t("show_password")}
+                  aria-pressed={showConfirmPassword}
+                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="size-4" aria-hidden />
+                  ) : (
+                    <Eye className="size-4" aria-hidden />
+                  )}
+                </button>
+              </div>
+              {fieldErrors.confirmPassword && (
+                <p id="confirmPassword-error" className="text-sm text-(--color-destructive)">
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
+            </div>
+            <FormActions
+              submitLabel={submitting ? t("reset_password_submitting") : t("reset_password_submit")}
+              submitTabIndex={5}
+            />
           </div>
         </fieldset>
       </form>
@@ -240,16 +296,16 @@ export function ResetPassword() {
     );
   }
 
-  function FormActions({ submitLabel }: { submitLabel: string }) {
+  function FormActions({ submitLabel, submitTabIndex }: { submitLabel: string; submitTabIndex: number }) {
     return (
       <div className="mt-2 flex flex-col gap-3">
-        <Button type="submit" disabled={submitting} tabIndex={3} className="w-full">
+        <Button type="submit" disabled={submitting} tabIndex={submitTabIndex} className="w-full">
           {submitLabel}
         </Button>
         <Button variant="link" size="inline" asChild className="self-center">
           <a
             href={subUrl("/user/sign-in")}
-            tabIndex={submitting ? -1 : 4}
+            tabIndex={submitting ? -1 : submitTabIndex + 1}
             aria-disabled={submitting || undefined}
             className={submitting ? "pointer-events-none opacity-50" : undefined}
             onClick={(e) => {

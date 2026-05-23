@@ -34,5 +34,5 @@
   "sign_up_now": "Pas de compte ? Inscrivez-vous maintenant.",
   "reset_password": "Réinitialiser le mot de passe",
   "invalid_code": "Désolé, votre code de confirmation est invalide ou a expiré.",
-  "reset_password_helper": "Cliquez ici pour réinitialiser votre mot de passe"
+  "new_password": "Nouveau mot de passe"
 }

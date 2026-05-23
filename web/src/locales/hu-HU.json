@@ -34,5 +34,5 @@
   "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most.",
   "reset_password": "Jelszó visszaállítása",
   "invalid_code": "Elnézést, a megerősítő kód lejárt vagy hibás.",
-  "reset_password_helper": "A jelszó visszaállításához kattintson ide"
+  "new_password": "Új jelszó"
 }

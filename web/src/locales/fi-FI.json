@@ -34,5 +34,5 @@
   "sign_up_now": "Tarvitsetko tilin? Rekisteröidy nyt.",
   "reset_password": "Nollaa salasanasi",
   "invalid_code": "Sori, varmistuskoodisi on vanhentunut tai väärä.",
-  "reset_password_helper": "Napsauta tästä nollataksesi salasanasi"
+  "new_password": "Uusi salasana"
 }

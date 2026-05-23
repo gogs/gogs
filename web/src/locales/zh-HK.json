@@ -34,5 +34,5 @@
   "sign_up_now": "還沒帳戶？馬上註冊。",
   "reset_password": "重置密碼",
   "invalid_code": "對不起，您的確認代碼已過期或已失效。",
-  "reset_password_helper": "單擊此處重置密碼"
+  "new_password": "新的密碼"
 }

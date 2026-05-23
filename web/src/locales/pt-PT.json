@@ -34,5 +34,5 @@
   "sign_up_now": "Precisa de uma conta? Inscreva-se agora.",
   "reset_password": "Restaurar a sua senha",
   "invalid_code": "Desculpe, o seu código de confirmação expirou ou é inválido.",
-  "reset_password_helper": "Clique aqui para restaurar a sua senha"
+  "new_password": "Nova senha"
 }

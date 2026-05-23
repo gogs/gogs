@@ -34,5 +34,5 @@
   "sign_up_now": "アカウントが必要ですか？今すぐ登録しましょう！",
   "reset_password": "パスワードリセット",
   "invalid_code": "申し訳ありませんが、確認用コードが期限切れまたは無効です。",
-  "reset_password_helper": "パスワードをリセットするにはここをクリック"
+  "new_password": "新しいパスワード"
 }

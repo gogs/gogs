@@ -34,5 +34,5 @@
   "sign_up_now": "Cần một tài khoản? Đăng ký bây giờ.",
   "reset_password": "Đặt lại mật khẩu của bạn",
   "invalid_code": "Xin lỗi, mã số xác nhận của bạn đã hết hạn hoặc không hợp lệ.",
-  "reset_password_helper": "Click vào đây để đặt lại mật khẩu của bạn"
+  "new_password": "Mật khẩu mới"
 }
