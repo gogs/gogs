@@ -21,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/internal/userx"
@@ -117,6 +118,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
+			f.Combo("/forgot-password").
+				Get(getUserForgotPassword).
+				Post(bindJSON(userForgotPasswordRequest{}), postUserForgotPassword)
 			f.Combo("/reset-password").
 				Get(getUserResetPassword).
 				Post(bindJSON(userResetPasswordRequest{}), postUserResetPassword)
@@ -241,6 +245,59 @@ type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
+}
+
+type userForgotPasswordPageResponse struct {
+	EmailEnabled bool `json:"emailEnabled"`
+}
+
+func getUserForgotPassword() (statusCode int, resp *userForgotPasswordPageResponse, err error) {
+	return http.StatusOK, &userForgotPasswordPageResponse{EmailEnabled: conf.Email.Enabled}, nil
+}
+
+type userForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email,max=254"`
+}
+
+type userForgotPasswordResponse struct {
+	Hours         int  `json:"hours"`
+	ResendLimited bool `json:"resendLimited,omitempty"`
+}
+
+func postUserForgotPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req userForgotPasswordRequest) (statusCode int, resp any, err error) {
+	if !conf.Email.Enabled {
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
+	}
+
+	u, err := database.Handle.Users().GetByEmail(r.Context(), req.Email)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			return http.StatusOK, &userForgotPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
+		}
+		log.Error("postUserForgotPassword: get user by email %q: %v", req.Email, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
+	}
+
+	if !u.IsLocal() {
+		msg := l.Tr("auth.non_local_account")
+		return http.StatusForbidden, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
+	}
+
+	if ca.IsExist(userx.MailResendCacheKey(u.ID)) {
+		return http.StatusOK, &userForgotPasswordResponse{
+			Hours:         conf.Auth.ActivateCodeLives / 60,
+			ResendLimited: true,
+		}, nil
+	}
+
+	if err = email.SendResetPasswordMail(l, database.NewMailerUser(u)); err != nil {
+		log.Error("postUserForgotPassword: send reset password mail to user %q: %v", u.Name, err)
+	}
+	if err = ca.Put(userx.MailResendCacheKey(u.ID), 1, 180); err != nil {
+		log.Error("postUserForgotPassword: put mail resend cache for user %q: %v", u.Name, err)
+	}
+
+	return http.StatusOK, &userForgotPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
 }
 
 type userResetPasswordPageResponse struct {

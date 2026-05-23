@@ -12,6 +12,7 @@ import { Navbar } from "@/components/Navbar";
 import { webContext } from "@/lib/context";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
+import { ForgotPassword, type ForgotPasswordPage } from "@/pages/ForgotPassword";
 import { Landing } from "@/pages/Landing";
 import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
@@ -69,6 +70,19 @@ const signInRoute = createRoute({
   component: SignIn,
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/forgot-password",
+  loader: async (): Promise<ForgotPasswordPage> => {
+    const res = await fetch(subUrl("/api/web/user/forgot-password"), { credentials: "same-origin" });
+    if (!res.ok) {
+      return { emailEnabled: false };
+    }
+    return (await res.json()) as ForgotPasswordPage;
+  },
+  component: ForgotPassword,
+});
+
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/reset-password",
@@ -107,7 +121,7 @@ const mfaRoute = createRoute({
   component: MFA,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, signInRoute, resetPasswordRoute, mfaRoute]);
+const routeTree = rootRoute.addChildren([landingRoute, signInRoute, forgotPasswordRoute, resetPasswordRoute, mfaRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

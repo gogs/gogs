@@ -155,7 +155,7 @@ export function SignIn() {
                     <Label htmlFor="password">{t("password")}</Label>
                     <Button variant="link" size="inline" asChild>
                       <a
-                        href={subUrl("/user/forget_password")}
+                        href={subUrl("/user/forgot-password")}
                         tabIndex={submitting ? -1 : 6}
                         aria-disabled={submitting || undefined}
                         className={submitting ? "pointer-events-none opacity-50" : undefined}

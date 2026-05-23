@@ -275,16 +275,7 @@ func ActivateEmail(c *context.Context) {
 }
 
 func ForgotPasswd(c *context.Context) {
-	c.Title("auth.forgot_password")
-
-	if !conf.Email.Enabled {
-		c.Data["IsResetDisable"] = true
-		c.Success(tmplUserAuthForgotPassword)
-		return
-	}
-
-	c.Data["IsResetRequest"] = true
-	c.Success(tmplUserAuthForgotPassword)
+	c.ServeWeb()
 }
 
 func ForgotPasswdPost(c *context.Context) {
