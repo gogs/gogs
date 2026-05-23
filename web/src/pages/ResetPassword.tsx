@@ -66,7 +66,7 @@ export function ResetPassword() {
           if (body.error) setFormError(body.error);
           if (body.fields) setFieldErrors(body.fields);
           if (!body.error && !body.fields) {
-            setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_mail_failed"));
+            setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_email_failed"));
           }
           setSubmitting(false);
           requestAnimationFrame(() => {
@@ -83,7 +83,7 @@ export function ResetPassword() {
         setSent((await res.json()) as ResetPasswordResponse);
         setSubmitting(false);
       } catch {
-        setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_mail_failed"));
+        setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_email_failed"));
         setSubmitting(false);
       }
     })();
@@ -116,7 +116,7 @@ export function ResetPassword() {
           <p role="status" className="text-sm text-(--color-foreground)">
             {sent.resendLimited
               ? t("resent_limit_prompt")
-              : t("reset_password_mail_sent_prompt", { email, hours: sent.hours })}
+              : t("reset_password_email_sent_prompt", { email, hours: sent.hours })}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
             <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
@@ -152,7 +152,7 @@ export function ResetPassword() {
                 </p>
               )}
             </div>
-            <FormActions submitLabel={submitting ? t("reset_password_mail_submitting") : t("send_reset_mail")} />
+            <FormActions submitLabel={submitting ? t("reset_password_email_submitting") : t("send_reset_mail")} />
           </div>
         </fieldset>
       </form>
