@@ -28,7 +28,6 @@
   "local": "Lokal",
   "remember_me": "Ingat saya",
   "forget_password": "Lupa sandi?",
-  "send_reset_mail": "Klik di sini untuk mengirimkan (ulang) email untuk mengatur ulang sandi",
   "disable_register_mail": "Maaf, konfirmasi pendaftaran melalui email telah dinonaktifkan.",
   "resent_limit_prompt": "Maaf, Anda telah meminta email aktivasi beberapa saat lalu. Silakan tunggu 3 menit kemudian untuk dapat mencoba lagi.",
   "non_local_account": "Akun non-lokal tidak dapat mengganti password lewat Gogs.",

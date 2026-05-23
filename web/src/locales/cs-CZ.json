@@ -28,7 +28,6 @@
   "local": "Lokální",
   "remember_me": "Zapamatovat si mne",
   "forget_password": "Zapomněli jste heslo?",
-  "send_reset_mail": "Klikněte zde pro (opakované) odeslání e-mailu pro obnovu vašeho hesla",
   "disable_register_mail": "Omlouváme se, ale e-mailové služby jsou vypnuté. Kontaktujte správce systému.",
   "resent_limit_prompt": "Omlouváme se, ale před chvílí jste požádal o zaslání aktivačního e-mailu. Počkejte prosím 3 minuty a pak to zkuste znovu.",
   "non_local_account": "Externí účty nemohou měnit hesla přes Gogs.",

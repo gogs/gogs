@@ -28,7 +28,6 @@
   "local": "Helyi",
   "remember_me": "Emlékezz rám",
   "forget_password": "Elfelejtette a jelszavát?",
-  "send_reset_mail": "Kattints ide hogy újraküldd a jelszó visszaállító emailt",
   "disable_register_mail": "Elnézést, az email regisztráció megerősítését kikapcsolták.",
   "resent_limit_prompt": "Elnézést, nemrég kértél aktiváló emailt. Kérlek várj 3 percet, aztán próbáld újra.",
   "non_local_account": "Nem helyi felhasználó nem cserélhet jelszót a Gogsban.",

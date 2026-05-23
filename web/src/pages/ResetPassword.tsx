@@ -1,7 +1,7 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,9 +114,15 @@ export function ResetPassword() {
       return (
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
-            {sent.resendLimited
-              ? t("resent_limit_prompt")
-              : t("reset_password_email_sent_prompt", { email, hours: sent.hours })}
+            {sent.resendLimited ? (
+              t("resent_limit_prompt")
+            ) : (
+              <Trans
+                i18nKey="reset_password_email_sent"
+                values={{ email, hours: sent.hours }}
+                components={{ email: <b />, hours: <b /> }}
+              />
+            )}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
             <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
@@ -152,7 +158,7 @@ export function ResetPassword() {
                 </p>
               )}
             </div>
-            <FormActions submitLabel={submitting ? t("reset_password_email_submitting") : t("send_reset_mail")} />
+            <FormActions submitLabel={submitting ? t("reset_password_email_submitting") : t("send_reset_email")} />
           </div>
         </fieldset>
       </form>

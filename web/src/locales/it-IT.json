@@ -28,7 +28,6 @@
   "local": "Locale",
   "remember_me": "Ricordami",
   "forget_password": "Password dimenticata?",
-  "send_reset_mail": "Clicca qui per (ri)inviare la tua e-mail di reimpostazione password",
   "disable_register_mail": "Siamo spiacenti, la conferma di registrazione via Mail è stata disattivata.",
   "resent_limit_prompt": "Siamo spiacenti, si stanno inviando e-mail di attivazione troppo spesso. Si prega di attendere 3 minuti.",
   "non_local_account": "Gli account non locali non possono modificare le password tramite Gogs.",

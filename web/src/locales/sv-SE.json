@@ -28,7 +28,6 @@
   "local": "Lokal",
   "remember_me": "Kom ihåg mig",
   "forget_password": "Glömt lösenordet?",
-  "send_reset_mail": "Klicka här för att skicka e-post med lösenordsåterställning (igen)",
   "disable_register_mail": "Tyvärr så är registreringsbekräftelemailutskick inaktiverat.",
   "resent_limit_prompt": "Tyvärr, du har nyligen begärt ett aktiveringsmail. Vänligen vänta 3 minuter och försök sedan igen.",
   "non_local_account": "Icke-lokala konton får inte ändra lösenord genom Gogs.",

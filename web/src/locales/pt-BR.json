@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "Lembrar de mim",
   "forget_password": "Esqueceu a senha?",
-  "send_reset_mail": "Clique aqui para (re)enviar seu e-mail de redefinição da senha",
   "disable_register_mail": "Desculpe, a confirmação de registro por e-mail foi desabilitada.",
   "resent_limit_prompt": "Desculpe, você está enviando um e-mail de ativação com muita frequência. Por favor, aguarde 3 minutos.",
   "non_local_account": "Não é possível mudar a senha de contas remotas pelo Gogs.",

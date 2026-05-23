@@ -28,7 +28,6 @@
   "local": "로컬",
   "remember_me": "자동 로그인",
   "forget_password": "비밀번호를 잊으셨습니까?",
-  "send_reset_mail": "여기를 눌러 비밀번호 초기화 메일을 (재)전송",
   "disable_register_mail": "죄송합니다. 메일 등록이 비활성화 되었습니다.",
   "resent_limit_prompt": "죄송합니다. 이미 최근에 활성화 메일을 요청하셨습니다. 다른 이메일 요청을 하시기 전 3분을 기다리셔야 합니다.",
   "non_local_account": "Gogs 계정이 아니면 암호를 변경할 수 없습니다.",
