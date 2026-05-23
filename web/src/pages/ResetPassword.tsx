@@ -12,7 +12,13 @@ import { subUrl } from "@/lib/url";
 
 export interface ResetPasswordPage {
   code: string;
+  emailEnabled: boolean;
   valid: boolean;
+}
+
+interface ResetPasswordResponse {
+  hours?: number;
+  resendLimited?: boolean;
 }
 
 interface ResetPasswordErrorResponse {
@@ -24,20 +30,25 @@ const route = getRouteApi("/user/reset-password");
 
 export function ResetPassword() {
   const { t } = useTranslation();
-  usePageTitle(t("reset_password"));
   const navigate = useNavigate();
-  const { code, valid } = route.useLoaderData();
+  const { code, emailEnabled, valid } = route.useLoaderData();
+  const isResetForm = code !== "";
+  usePageTitle(t(isResetForm ? "reset_password" : "forgot_password"));
 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sent, setSent] = useState<ResetPasswordResponse | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
+  const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!valid) return;
+    if (isResetForm && !valid) return;
+    if (!isResetForm && !emailEnabled) return;
 
     setFormError(null);
     setFieldErrors({});
@@ -48,122 +59,199 @@ export function ResetPassword() {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code, password }),
+          body: JSON.stringify(isResetForm ? { code, password } : { email }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as ResetPasswordErrorResponse;
           if (body.error) setFormError(body.error);
           if (body.fields) setFieldErrors(body.fields);
           if (!body.error && !body.fields) {
-            setFormError(t("reset_password_failed"));
+            setFormError(t(isResetForm ? "reset_password_failed" : "forgot_password_failed"));
           }
           setSubmitting(false);
-          requestAnimationFrame(() => passwordRef.current?.focus());
+          requestAnimationFrame(() => {
+            if (isResetForm) passwordRef.current?.focus();
+            else emailRef.current?.focus();
+          });
           return;
         }
-        await navigate({ to: "/user/sign-in" });
+
+        if (isResetForm) {
+          await navigate({ to: "/user/sign-in" });
+          return;
+        }
+        setSent((await res.json()) as ResetPasswordResponse);
+        setSubmitting(false);
       } catch {
-        setFormError(t("reset_password_failed"));
+        setFormError(t(isResetForm ? "reset_password_failed" : "forgot_password_failed"));
         setSubmitting(false);
       }
     })();
   }
 
+  const title = t(isResetForm ? "reset_password" : "forgot_password");
+
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
-          <CardTitle>{t("reset_password")}</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
-        <CardContent className="pt-2">
-          {!valid ? (
-            <div className="flex flex-col gap-4 text-center">
-              <p role="alert" className="text-sm text-(--color-destructive)">
-                {t("invalid_code")}
-              </p>
-              <Button variant="link" size="inline" asChild className="self-center">
-                <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={onSubmit} noValidate>
-              <fieldset disabled={submitting} className="contents">
-                {formError && (
-                  <div
-                    role="alert"
-                    className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
-                  >
-                    {formError}
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="password">{t("password")}</Label>
-                    <div className="relative">
-                      <Input
-                        ref={passwordRef}
-                        id="password"
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="new-password"
-                        required
-                        autoFocus
-                        tabIndex={1}
-                        placeholder={t("password_placeholder")}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        aria-invalid={"password" in fieldErrors ? true : undefined}
-                        aria-describedby={fieldErrors.password ? "password-error" : undefined}
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        tabIndex={2}
-                        disabled={submitting}
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? t("hide_password") : t("show_password")}
-                        aria-pressed={showPassword}
-                        className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="size-4" aria-hidden />
-                        ) : (
-                          <Eye className="size-4" aria-hidden />
-                        )}
-                      </button>
-                    </div>
-                    {fieldErrors.password && (
-                      <p id="password-error" className="text-sm text-(--color-destructive)">
-                        {fieldErrors.password}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-2 flex flex-col gap-3">
-                    <Button type="submit" disabled={submitting} tabIndex={3} className="w-full">
-                      {submitting ? t("reset_password_submitting") : t("reset_password_helper")}
-                    </Button>
-                    <Button variant="link" size="inline" asChild className="self-center">
-                      <a
-                        href={subUrl("/user/sign-in")}
-                        tabIndex={submitting ? -1 : 4}
-                        aria-disabled={submitting || undefined}
-                        className={submitting ? "pointer-events-none opacity-50" : undefined}
-                        onClick={(e) => {
-                          if (submitting) e.preventDefault();
-                        }}
-                      >
-                        {t("back_to_sign_in")}
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </fieldset>
-            </form>
-          )}
-        </CardContent>
+        <CardContent className="pt-2">{isResetForm ? renderResetContent() : renderRequestContent()}</CardContent>
       </Card>
     </main>
   );
+
+  function renderRequestContent() {
+    if (!emailEnabled) {
+      return (
+        <p role="alert" className="text-center text-sm text-(--color-destructive)">
+          {t("disable_register_mail")}
+        </p>
+      );
+    }
+    if (sent) {
+      return (
+        <div className="flex flex-col gap-4 text-center">
+          <p role="status" className="text-sm text-(--color-foreground)">
+            {sent.resendLimited ? t("resent_limit_prompt") : t("reset_mail_sent_prompt", { email, hours: sent.hours })}
+          </p>
+          <Button variant="link" size="inline" asChild className="self-center">
+            <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <form onSubmit={onSubmit} noValidate>
+        <fieldset disabled={submitting} className="contents">
+          {renderFormError()}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="email">{t("email")}</Label>
+              <Input
+                ref={emailRef}
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                autoFocus
+                tabIndex={1}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={"email" in fieldErrors ? true : undefined}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
+              />
+              {fieldErrors.email && (
+                <p id="email-error" className="text-sm text-(--color-destructive)">
+                  {fieldErrors.email}
+                </p>
+              )}
+            </div>
+            <FormActions submitLabel={submitting ? t("forgot_password_submitting") : t("send_reset_mail")} />
+          </div>
+        </fieldset>
+      </form>
+    );
+  }
+
+  function renderResetContent() {
+    if (!valid) {
+      return (
+        <div className="flex flex-col gap-4 text-center">
+          <p role="alert" className="text-sm text-(--color-destructive)">
+            {t("invalid_code")}
+          </p>
+          <Button variant="link" size="inline" asChild className="self-center">
+            <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <form onSubmit={onSubmit} noValidate>
+        <fieldset disabled={submitting} className="contents">
+          {renderFormError()}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="password">{t("password")}</Label>
+              <div className="relative">
+                <Input
+                  ref={passwordRef}
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  autoFocus
+                  tabIndex={1}
+                  placeholder={t("password_placeholder")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={"password" in fieldErrors ? true : undefined}
+                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={2}
+                  disabled={submitting}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? t("hide_password") : t("show_password")}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <p id="password-error" className="text-sm text-(--color-destructive)">
+                  {fieldErrors.password}
+                </p>
+              )}
+            </div>
+            <FormActions submitLabel={submitting ? t("reset_password_submitting") : t("reset_password_helper")} />
+          </div>
+        </fieldset>
+      </form>
+    );
+  }
+
+  function renderFormError() {
+    if (!formError) return null;
+    return (
+      <div
+        role="alert"
+        className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
+      >
+        {formError}
+      </div>
+    );
+  }
+
+  function FormActions({ submitLabel }: { submitLabel: string }) {
+    return (
+      <div className="mt-2 flex flex-col gap-3">
+        <Button type="submit" disabled={submitting} tabIndex={3} className="w-full">
+          {submitLabel}
+        </Button>
+        <Button variant="link" size="inline" asChild className="self-center">
+          <a
+            href={subUrl("/user/sign-in")}
+            tabIndex={submitting ? -1 : 4}
+            aria-disabled={submitting || undefined}
+            className={submitting ? "pointer-events-none opacity-50" : undefined}
+            onClick={(e) => {
+              if (submitting) e.preventDefault();
+            }}
+          >
+            {t("back_to_sign_in")}
+          </a>
+        </Button>
+      </div>
+    );
+  }
 }

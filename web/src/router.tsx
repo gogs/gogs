@@ -12,7 +12,6 @@ import { Navbar } from "@/components/Navbar";
 import { webContext } from "@/lib/context";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
-import { ForgotPassword, type ForgotPasswordPage } from "@/pages/ForgotPassword";
 import { Landing } from "@/pages/Landing";
 import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
@@ -70,36 +69,20 @@ const signInRoute = createRoute({
   component: SignIn,
 });
 
-const forgotPasswordRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/user/forgot-password",
-  loader: async (): Promise<ForgotPasswordPage> => {
-    const res = await fetch(subUrl("/api/web/user/forgot-password"), { credentials: "same-origin" });
-    if (!res.ok) {
-      return { emailEnabled: false };
-    }
-    return (await res.json()) as ForgotPasswordPage;
-  },
-  component: ForgotPassword,
-});
-
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/reset-password",
   loader: async (): Promise<ResetPasswordPage> => {
     const code = new URLSearchParams(window.location.search).get("code") ?? "";
-    if (!code) {
-      return { code, valid: false };
-    }
-
-    const res = await fetch(subUrl("/api/web/user/reset-password") + "?code=" + encodeURIComponent(code), {
-      credentials: "same-origin",
-    });
+    const url = code
+      ? subUrl("/api/web/user/reset-password") + "?code=" + encodeURIComponent(code)
+      : subUrl("/api/web/user/reset-password");
+    const res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) {
-      return { code, valid: false };
+      return { code, emailEnabled: false, valid: false };
     }
-    const data = (await res.json()) as { valid: boolean };
-    return { code, valid: data.valid };
+    const data = (await res.json()) as { emailEnabled: boolean; valid: boolean };
+    return { code, emailEnabled: data.emailEnabled, valid: data.valid };
   },
   component: ResetPassword,
 });
@@ -121,7 +104,7 @@ const mfaRoute = createRoute({
   component: MFA,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, signInRoute, forgotPasswordRoute, resetPasswordRoute, mfaRoute]);
+const routeTree = rootRoute.addChildren([landingRoute, signInRoute, resetPasswordRoute, mfaRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

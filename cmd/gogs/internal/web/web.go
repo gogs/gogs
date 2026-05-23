@@ -88,8 +88,6 @@ func Run(configPath string, portOverride int) error {
 		m.Group("/user", func() {
 			m.Get("/sign_up", user.SignUp)
 			m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
-			m.Get("/forgot-password", user.ForgotPasswd)
-			m.Post("/forgot-password", user.ForgotPasswdPost)
 			m.Get("/reset-password", user.ResetPasswd)
 			m.Post("/reset-password", user.ResetPasswdPost)
 		}, reqSignOut)
