@@ -10,6 +10,7 @@ require (
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
 	github.com/fatih/color v1.18.0
 	github.com/flamego/binding v1.3.0
+	github.com/flamego/cache v1.5.1
 	github.com/flamego/flamego v1.12.0
 	github.com/flamego/validator v1.0.0
 	github.com/glebarez/go-sqlite v1.21.2
@@ -37,6 +38,7 @@ require (
 	github.com/olekukonko/tablewriter v1.1.3
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/russross/blackfriday v1.6.0
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
@@ -66,6 +68,7 @@ require (
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
 	charm.land/lipgloss/v2 v2.0.1 // indirect
 	charm.land/log/v2 v2.0.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
@@ -94,14 +97,20 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
+	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.11 // indirect
 	github.com/itchyny/timefmt-go v0.1.5 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgconn v1.14.3 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.3.3 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgtype v1.14.0 // indirect
+	github.com/jackc/pgx/v4 v4.18.3 // indirect
 	github.com/jackc/pgx/v5 v5.9.2 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -110,7 +119,6 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/lib/pq v1.10.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

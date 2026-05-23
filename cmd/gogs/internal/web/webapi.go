@@ -4,14 +4,16 @@ import (
 	stdctx "context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
+	"github.com/flamego/cache"
 	"github.com/flamego/flamego"
 	"github.com/flamego/validator"
-	"github.com/go-macaron/cache"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
@@ -32,17 +34,15 @@ type (
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
-	webAPICacheKey   struct{}
 )
 
-func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale, ca cache.Cache) {
-	return func(c *context.Context, l i18n.Locale, ca cache.Cache) {
+func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
+	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
 		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
-		ctx = stdctx.WithValue(ctx, webAPICacheKey{}, ca)
 		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 	}
 }
@@ -53,8 +53,7 @@ func webAPIInjector(c flamego.Context) {
 	sess, _ := ctx.Value(webAPISessionKey{}).(session.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	ca, _ := ctx.Value(webAPICacheKey{}).(cache.Cache)
-	c.Map(user, sess, mc, l, ca)
+	c.Map(user, sess, mc, l)
 }
 
 func webAPIBodyLimiter(c flamego.Context) {
@@ -96,6 +95,12 @@ func bindJSON(model any) flamego.Handler {
 }
 
 func mountWebAPIRoutes(f *flamego.Flame) {
+	cacherOpts, err := webAPICacherOptions()
+	if err != nil {
+		log.Fatal("webapi cache: %v", err)
+	}
+	f.Use(cache.Cacher(cacherOpts))
+
 	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
 		w := c.ResponseWriter()
 		w.Header().Set("Cache-Control", "no-store")
@@ -284,7 +289,8 @@ func sendUserResetPasswordMail(r *http.Request, ca cache.Cache, l i18n.Locale, r
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 	}
 
-	u, err := database.Handle.Users().GetByEmail(r.Context(), req.Email)
+	ctx := r.Context()
+	u, err := database.Handle.Users().GetByEmail(ctx, req.Email)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
@@ -298,17 +304,19 @@ func sendUserResetPasswordMail(r *http.Request, ca cache.Cache, l i18n.Locale, r
 		return http.StatusForbidden, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 	}
 
-	if ca.IsExist(userx.MailResendCacheKey(u.ID)) {
+	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
 		return http.StatusOK, &userResetPasswordResponse{
 			Hours:         conf.Auth.ActivateCodeLives / 60,
 			ResendLimited: true,
 		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Error("sendUserResetPasswordMail: get mail resend cache for user %q: %v", u.Name, err)
 	}
 
 	if err = email.SendResetPasswordMail(l, database.NewMailerUser(u)); err != nil {
 		log.Error("sendUserResetPasswordMail: send reset password mail to user %q: %v", u.Name, err)
 	}
-	if err = ca.Put(userx.MailResendCacheKey(u.ID), 1, 180); err != nil {
+	if err = ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
 		log.Error("sendUserResetPasswordMail: put mail resend cache for user %q: %v", u.Name, err)
 	}
 
@@ -427,13 +435,16 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		}, nil
 	}
 
-	if ca.IsExist(userx.TwoFactorCacheKey(userID, req.Passcode)) {
+	cacheKey := userx.TwoFactorCacheKey(userID, req.Passcode)
+	if _, err := ca.Get(r.Context(), cacheKey); err == nil {
 		msg := l.Tr("auth.mfa_reused_passcode")
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Fields: fieldErrors{"passcode": &msg},
 		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Error("postUserMFA: get two factor passcode cache for user %d: %v", userID, err)
 	}
-	if err = ca.Put(userx.TwoFactorCacheKey(userID, req.Passcode), 1, 60); err != nil {
+	if err = ca.Set(r.Context(), cacheKey, 1, 60*time.Second); err != nil {
 		log.Error("postUserMFA: cache two factor passcode for user %d: %v", userID, err)
 	}
 
