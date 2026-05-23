@@ -4,7 +4,6 @@ import (
 	stdctx "context"
 	"encoding/json"
 	"net/http"
-	stdmail "net/mail"
 	"reflect"
 	"strings"
 
@@ -282,10 +281,6 @@ func sendUserResetPasswordMail(r *http.Request, ca cache.Cache, l i18n.Locale, r
 	}
 	if req.Email == "" {
 		msg := l.Tr("form.Email") + l.Tr("form.require_error")
-		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
-	}
-	if _, err := stdmail.ParseAddress(req.Email); err != nil {
-		msg := l.Tr("form.Email") + l.Tr("form.email_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 	}
 
