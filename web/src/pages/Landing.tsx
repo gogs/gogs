@@ -17,7 +17,7 @@ export function Landing() {
             <span className="size-2.5 rounded-full bg-(--color-foreground)/20" />
             <span className="ml-2 text-xs text-(--color-muted-foreground) sm:ml-3">gogs — zsh</span>
           </div>
-          <pre className="px-4 py-4 text-xs leading-relaxed break-all whitespace-pre-wrap text-(--color-foreground) sm:px-5 sm:py-5 sm:text-sm">
+          <pre className="px-4 py-4 font-pixel text-sm leading-relaxed break-all whitespace-pre-wrap text-(--color-foreground) sm:px-5 sm:py-5 sm:text-base">
             <span className="text-(--color-muted-foreground)">$ </span>
             <span>cat /etc/motd</span>
             {"\n"}
@@ -36,7 +36,7 @@ export function Landing() {
               className="mx-auto hidden max-w-[280px] dark:block sm:max-w-sm"
             />
             {"\n"}
-            <span className="block text-center font-sans text-base text-(--color-muted-foreground) sm:text-lg">
+            <span className="block text-center text-base text-(--color-muted-foreground) sm:text-lg">
               {t("app_desc")}
             </span>
             {"\n"}

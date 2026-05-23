@@ -14,9 +14,10 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/cache"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/binding"
-	"github.com/go-macaron/cache"
+	macaroncache "github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/gzip"
@@ -41,6 +42,7 @@ import (
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/public"
 	"gogs.io/gogs/templates"
 )
@@ -680,16 +682,28 @@ func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
 
-	err := mountWebAPIRoutes(f)
+	cacherOpts, err := parseCacheOptions(conf.Cache)
 	if err != nil {
-		return nil, errors.Wrap(err, "mount web API routes")
+		return nil, errors.Wrap(err, "parse cache options")
 	}
+	f.Use(cache.Cacher(cacherOpts))
 
+	f.Get("/redirect", getRedirect)
+
+	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
 	return f, nil
+}
+
+func getRedirect(c flamego.Context) {
+	to := c.Request().URL.Query().Get("to")
+	if !urlx.IsSameSite(to) {
+		to = conf.Server.Subpath + "/"
+	}
+	c.Redirect(to, http.StatusSeeOther)
 }
 
 // newMacaron initializes Macaron instance.
@@ -775,7 +789,7 @@ func newMacaron() (*macaron.Macaron, error) {
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
-	m.Use(cache.Cacher(cache.Options{
+	m.Use(macaroncache.Cacher(macaroncache.Options{
 		Adapter:       conf.Cache.Adapter,
 		AdapterConfig: conf.Cache.Host,
 		Interval:      conf.Cache.Interval,

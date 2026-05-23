@@ -3,10 +3,19 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+@font-face {
+  font-family: "Geist Pixel";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/GeistPixel-Square.woff2") format("woff2");
+}
+
 @theme inline {
   --font-sans:
     "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono Variable", "PingFang SC", "Microsoft YaHei", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono Variable", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));

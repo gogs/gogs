@@ -25,7 +25,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/route/user"
-	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -94,13 +93,7 @@ func bindJSON(model any) flamego.Handler {
 	})
 }
 
-func mountWebAPIRoutes(f *flamego.Flame) error {
-	cacherOpts, err := parseCacheOptions(conf.Cache)
-	if err != nil {
-		return errors.Wrap(err, "parse cache options")
-	}
-	f.Use(cache.Cacher(cacherOpts))
-
+func mountWebAPIRoutes(f *flamego.Flame) {
 	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
 		w := c.ResponseWriter()
 		w.Header().Set("Cache-Control", "no-store")
@@ -138,17 +131,6 @@ func mountWebAPIRoutes(f *flamego.Flame) error {
 			f.Post("/sign-out", postUserSignOut)
 		})
 	}, webAPIBodyLimiter, webAPIInjector)
-
-	f.Get("/redirect", getRedirect)
-	return nil
-}
-
-func getRedirect(c flamego.Context) {
-	to := c.Request().URL.Query().Get("to")
-	if !urlx.IsSameSite(to) {
-		to = conf.Server.Subpath + "/"
-	}
-	c.Redirect(to, http.StatusSeeOther)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
