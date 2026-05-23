@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "Ține-mă minte",
   "forget_password": "Ați uitat parola?",
-  "forgot_password": "Ați uitat parola",
   "send_reset_mail": "Faceți clic aici pentru a (re) trimite adresa de e-mail de resetare a parolei",
   "disable_register_mail": "Ne pare rău, serviciile de e-mail sunt dezactivate. Vă rugăm să contactați administratorul site-ului.",
   "resent_limit_prompt": "Ne pare rău, ați solicitat deja un e-mail de activare recent. Vă rugăm să așteptați 3 minute, apoi încercați din nou.",

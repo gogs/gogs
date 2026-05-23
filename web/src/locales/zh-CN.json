@@ -28,7 +28,6 @@
   "local": "本地",
   "remember_me": "记住登录",
   "forget_password": "忘记密码？",
-  "forgot_password": "忘记密码",
   "send_reset_mail": "单击此处（重新）发送您的密码重置邮件",
   "disable_register_mail": "对不起，注册邮箱确认功能已被关闭。",
   "resent_limit_prompt": "对不起，您请求发送激活邮件过于频繁，请等待 3 分钟后再试！",

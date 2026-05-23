@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "Manter sessão iniciada",
   "forget_password": "Esqueceu a sua senha?",
-  "forgot_password": "Esqueci-me da palavra-passe",
   "send_reset_mail": "Clique aqui para (re)enviar um e-mail de restauro de senha",
   "disable_register_mail": "Desculpe, os serviços de email estão desativados. Por favor contacte o administrador.",
   "resent_limit_prompt": "Pedimos desculpa mas um pedido de e-mail de ativação foi efetuado recentemente. Por favor espere 3 minutos e tente novamente.",

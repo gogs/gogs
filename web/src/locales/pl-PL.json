@@ -28,7 +28,6 @@
   "local": "Lokalne",
   "remember_me": "Zapamiętaj mnie",
   "forget_password": "Zapomniałeś hasła?",
-  "forgot_password": "Zapomniałem hasła",
   "send_reset_mail": "Kliknij tutaj, aby (ponownie) wysłać e-mail z instrukcjami resetowania hasła",
   "disable_register_mail": "Przepraszamy, potwierdzenia rejestracji zostały wyłączone przez administratora.",
   "resent_limit_prompt": "Niestety, zbyt często wysyłasz e-mail aktywacyjny. Proszę odczekać 3 minuty.",

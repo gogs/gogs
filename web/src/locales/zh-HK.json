@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "記住登錄",
   "forget_password": "忘記密碼？",
-  "forgot_password": "忘記密碼",
   "send_reset_mail": "單擊此處（重新）發送您的密碼重置郵件",
   "disable_register_mail": "對不起，註冊郵箱確認功能已被關閉。",
   "resent_limit_prompt": "對不起，您請求發送激活郵件過於頻繁，請等待 3 分鐘後再試！",

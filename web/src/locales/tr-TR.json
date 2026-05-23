@@ -28,7 +28,6 @@
   "local": "Yerel",
   "remember_me": "Beni Hatırla",
   "forget_password": "Parolanızı mı unuttunuz?",
-  "forgot_password": "Parolamı Unuttum",
   "send_reset_mail": "Parola sıfırlama e-postasını (yeniden) göndermek için buraya tıklayın",
   "disable_register_mail": "Üzgünüz, kayıt doğrulama e-postası devre dışı bırakıldı.",
   "resent_limit_prompt": "Üzgünüz, zaten bir doğrulama e-postası talep ettiniz. Lütfen 3 dakika bekleyip tekrar deneyin.",

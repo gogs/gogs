@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "Recuérdame",
   "forget_password": "¿Has olvidado tu contraseña?",
-  "forgot_password": "He olvidado mi contraseña",
   "send_reset_mail": "Haga clic aquí para (re)enviar el correo para el restablecimiento de la contraseña",
   "disable_register_mail": "Lo sentimos. Los correos de Confirmación de Registro están deshabilitados.",
   "resent_limit_prompt": "Lo sentimos, estás solicitando el reenvío del mail de activación con demasiada frecuencia. Por favor, espera 3 minutos.",

@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "Atcerēties mani",
   "forget_password": "Aizmirsi paroli?",
-  "forgot_password": "Aizmirsu paroli",
   "send_reset_mail": "Spiediet šeit, lai nosūtītu paroles maiņas vēstuli uz Jūsu e-pastu",
   "disable_register_mail": "Atvainojiet, reģistrācijas e-pasta apstiprināšana ir atspējota.",
   "resent_limit_prompt": "Atvainojiet, Jūs sūtījāt aktivizācijas e-pastu pārāk bieži. Lūdzu, gaidiet 3 minūtes.",

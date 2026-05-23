@@ -28,7 +28,6 @@
   "local": "Local",
   "remember_me": "Ghi nhớ tôi",
   "forget_password": "Quên mật khẩu?",
-  "forgot_password": "Quên mật khẩu",
   "send_reset_mail": "Click vào đây gửi (lại) email đặt lại mật khẩu của bạn",
   "disable_register_mail": "Xin lỗi, đăng ký đã bị vô hiệu. Xin vui lòng liên hệ với người quản trị trang web.",
   "resent_limit_prompt": "Xin lỗi, bạn đã yêu cầu một email kích hoạt mới. Xin vui lòng chờ 3 phút sau đó thử lại.",

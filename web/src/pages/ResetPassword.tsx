@@ -33,7 +33,7 @@ export function ResetPassword() {
   const navigate = useNavigate();
   const { code, emailEnabled, valid } = route.useLoaderData();
   const isResetForm = code !== "";
-  usePageTitle(t(isResetForm ? "reset_password" : "forgot_password"));
+  usePageTitle(t("reset_password"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,7 +66,7 @@ export function ResetPassword() {
           if (body.error) setFormError(body.error);
           if (body.fields) setFieldErrors(body.fields);
           if (!body.error && !body.fields) {
-            setFormError(t(isResetForm ? "reset_password_failed" : "forgot_password_failed"));
+            setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_mail_failed"));
           }
           setSubmitting(false);
           requestAnimationFrame(() => {
@@ -83,13 +83,13 @@ export function ResetPassword() {
         setSent((await res.json()) as ResetPasswordResponse);
         setSubmitting(false);
       } catch {
-        setFormError(t(isResetForm ? "reset_password_failed" : "forgot_password_failed"));
+        setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_mail_failed"));
         setSubmitting(false);
       }
     })();
   }
 
-  const title = t(isResetForm ? "reset_password" : "forgot_password");
+  const title = t("reset_password");
 
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -114,7 +114,9 @@ export function ResetPassword() {
       return (
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
-            {sent.resendLimited ? t("resent_limit_prompt") : t("reset_mail_sent_prompt", { email, hours: sent.hours })}
+            {sent.resendLimited
+              ? t("resent_limit_prompt")
+              : t("reset_password_mail_sent_prompt", { email, hours: sent.hours })}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
             <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
@@ -150,7 +152,7 @@ export function ResetPassword() {
                 </p>
               )}
             </div>
-            <FormActions submitLabel={submitting ? t("forgot_password_submitting") : t("send_reset_mail")} />
+            <FormActions submitLabel={submitting ? t("reset_password_mail_submitting") : t("send_reset_mail")} />
           </div>
         </fieldset>
       </form>

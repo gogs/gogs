@@ -28,7 +28,6 @@
   "local": "Lokaal",
   "remember_me": "Onthoud mij",
   "forget_password": "Wachtwoord vergeten?",
-  "forgot_password": "Wachtwoord vergeten",
   "send_reset_mail": "Klik hier om uw wachtwoord reset mail (nogmaals) te versturen",
   "disable_register_mail": "Sorry, bevestiging van registratie per e-mail is uitgeschakeld.",
   "resent_limit_prompt": "Sorry, u heeft te snel na elkaar een aanvraag gedaan voor een activatie mail. Wacht drie minuten voor uw volgende aanvraag.",
