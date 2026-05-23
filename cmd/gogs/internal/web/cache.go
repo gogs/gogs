@@ -8,7 +8,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
-	"github.com/flamego/cache/postgres"
 	"github.com/flamego/cache/redis"
 	"gopkg.in/ini.v1"
 
@@ -34,9 +33,6 @@ func parseCacheOptions(confOpts conf.CacheOptions) (cache.Options, error) {
 		}
 		opts.Initer = redis.Initer()
 		opts.Config = cfg
-	case "postgres":
-		opts.Initer = postgres.Initer()
-		opts.Config = postgres.Config{DSN: confOpts.Host, InitTable: true}
 	default:
 		return cache.Options{}, errors.Errorf("unsupported adapter %q", confOpts.Adapter)
 	}
