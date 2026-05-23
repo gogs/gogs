@@ -328,11 +328,6 @@ func ForgotPasswdPost(c *context.Context) {
 }
 
 func ResetPasswd(c *context.Context) {
-	code := c.Query("code")
-	if code == "" {
-		c.NotFound()
-		return
-	}
 	c.ServeWeb()
 }
 
