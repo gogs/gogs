@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/flamego"
 	"github.com/gogs/git-module"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
@@ -35,6 +36,7 @@ const (
 func checkRunMode() {
 	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
+		flamego.SetEnv(flamego.EnvTypeProd)
 		macaron.ColorLog = false
 		git.SetOutput(nil)
 	} else {
