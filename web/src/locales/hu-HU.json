@@ -29,7 +29,6 @@
   "remember_me": "Emlékezz rám",
   "forget_password": "Elfelejtette a jelszavát?",
   "disable_register_mail": "Elnézést, az email regisztráció megerősítését kikapcsolták.",
-  "resent_limit_prompt": "Elnézést, nemrég kértél aktiváló emailt. Kérlek várj 3 percet, aztán próbáld újra.",
   "non_local_account": "Nem helyi felhasználó nem cserélhet jelszót a Gogsban.",
   "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most.",
   "reset_password": "Jelszó visszaállítása",

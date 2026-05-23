@@ -29,7 +29,6 @@
   "remember_me": "자동 로그인",
   "forget_password": "비밀번호를 잊으셨습니까?",
   "disable_register_mail": "죄송합니다. 메일 등록이 비활성화 되었습니다.",
-  "resent_limit_prompt": "죄송합니다. 이미 최근에 활성화 메일을 요청하셨습니다. 다른 이메일 요청을 하시기 전 3분을 기다리셔야 합니다.",
   "non_local_account": "Gogs 계정이 아니면 암호를 변경할 수 없습니다.",
   "sign_up_now": "계정이 필요하신가요? 지금 가입하세요.",
   "reset_password": "비밀번호 초기화",

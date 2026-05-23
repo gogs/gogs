@@ -29,7 +29,6 @@
   "remember_me": "Recuérdame",
   "forget_password": "¿Has olvidado tu contraseña?",
   "disable_register_mail": "Lo sentimos. Los correos de Confirmación de Registro están deshabilitados.",
-  "resent_limit_prompt": "Lo sentimos, estás solicitando el reenvío del mail de activación con demasiada frecuencia. Por favor, espera 3 minutos.",
   "non_local_account": "Cuentas que no son locales no pueden cambiar las contraseñas a través de Gogs.",
   "sign_up_now": "¿Necesitas una cuenta? Regístrate ahora.",
   "reset_password": "Restablecer su contraseña",

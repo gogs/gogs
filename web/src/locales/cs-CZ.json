@@ -29,7 +29,6 @@
   "remember_me": "Zapamatovat si mne",
   "forget_password": "Zapomněli jste heslo?",
   "disable_register_mail": "Omlouváme se, ale e-mailové služby jsou vypnuté. Kontaktujte správce systému.",
-  "resent_limit_prompt": "Omlouváme se, ale před chvílí jste požádal o zaslání aktivačního e-mailu. Počkejte prosím 3 minuty a pak to zkuste znovu.",
   "non_local_account": "Externí účty nemohou měnit hesla přes Gogs.",
   "sign_up_now": "Potřebujete účet? Zaregistrujte se.",
   "reset_password": "Obnova vašeho hesla",

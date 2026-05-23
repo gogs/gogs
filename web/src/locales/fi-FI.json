@@ -29,7 +29,6 @@
   "remember_me": "Muista minut",
   "forget_password": "Unohtuiko salasana?",
   "disable_register_mail": "Valitettavasti sähköpostipalvelut ovat poissa käytöstä. Otathan yhteyttä sivuston ylläpitoon.",
-  "resent_limit_prompt": "Sori, olet jo tilannut aktivointi sähköpostin lähiaikoina. Ole hyvä ja odota 3 minuuttia ja yritä sitten uudelleen.",
   "non_local_account": "Vain paikallisten käyttäjätilien salasanan vaihto onnistuu Gogsin kautta.",
   "sign_up_now": "Tarvitsetko tilin? Rekisteröidy nyt.",
   "reset_password": "Nollaa salasanasi",

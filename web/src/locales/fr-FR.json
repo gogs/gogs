@@ -29,7 +29,6 @@
   "remember_me": "Se souvenir de moi",
   "forget_password": "Mot de passe oublié ?",
   "disable_register_mail": "Désolé, la confirmation par courriel des enregistrements a été désactivée.",
-  "resent_limit_prompt": "Désolé, vos tentatives d'activation sont trop fréquentes. Veuillez réessayer dans 3 minutes.",
   "non_local_account": "Les comptes non locaux ne peuvent pas changer leur mot de passe via Gogs.",
   "sign_up_now": "Pas de compte ? Inscrivez-vous maintenant.",
   "reset_password": "Réinitialiser le mot de passe",

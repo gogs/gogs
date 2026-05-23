@@ -29,7 +29,6 @@
   "remember_me": "Recórdame",
   "forget_password": "Esqueciches o teu contrasinal?",
   "disable_register_mail": "Sentímolo. Os correos de confirmación de rexistro están deshabilitados.",
-  "resent_limit_prompt": "Sentímolo, estás solicitando o reenvío do correo de activación con demasiada frecuencia. Por favor, agarda 3 minutos.",
   "non_local_account": "Contas que non son locais non poden cambiar os contrasinais a través de Gogs.",
   "sign_up_now": "Necesitas unha conta? Rexístrate agora.",
   "reset_password": "Restablecer o teu contrasinal",

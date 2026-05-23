@@ -29,7 +29,6 @@
   "remember_me": "記住登錄",
   "forget_password": "忘記密碼？",
   "disable_register_mail": "對不起，註冊郵箱確認功能已被關閉。",
-  "resent_limit_prompt": "對不起，您請求發送激活郵件過於頻繁，請等待 3 分鐘後再試！",
   "non_local_account": "非本地帳戶無法通過 Gogs 修改密碼。",
   "sign_up_now": "還沒帳戶？馬上註冊。",
   "reset_password": "重置密碼",

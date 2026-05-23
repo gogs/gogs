@@ -53,7 +53,7 @@ const REUSED_KEYS = [
   "reset_password_email_failed",
   "reset_password_email_sent",
   "disable_register_mail",
-  "resent_limit_prompt",
+  "reset_password_resend_limited",
   "non_local_account",
   "sign_up_now",
   "sign_in_submitting",

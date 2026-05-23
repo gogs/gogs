@@ -29,7 +29,6 @@
   "remember_me": "Zapamiętaj mnie",
   "forget_password": "Zapomniałeś hasła?",
   "disable_register_mail": "Przepraszamy, potwierdzenia rejestracji zostały wyłączone przez administratora.",
-  "resent_limit_prompt": "Niestety, zbyt często wysyłasz e-mail aktywacyjny. Proszę odczekać 3 minuty.",
   "non_local_account": "Nie lokalne konta nie mogą zmieniać haseł przez Gogs.",
   "sign_up_now": "Potrzebujesz konta? Zarejestruj się teraz.",
   "reset_password": "Resetowanie hasła",

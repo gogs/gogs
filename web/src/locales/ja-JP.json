@@ -29,7 +29,6 @@
   "remember_me": "ログインしたままにする",
   "forget_password": "パスワードを忘れましたか？",
   "disable_register_mail": "申し訳ありませんが、登録メールの確認機能が無効になっています。",
-  "resent_limit_prompt": "申し訳ありませんが、アクティベーションメールは頻繁に送信しています。3 分お待ちください。",
   "non_local_account": "非ローカルアカウントではGogs経由でのパスワード変更はできません。",
   "sign_up_now": "アカウントが必要ですか？今すぐ登録しましょう！",
   "reset_password": "パスワードリセット",

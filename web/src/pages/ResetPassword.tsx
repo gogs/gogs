@@ -125,7 +125,7 @@ export function ResetPassword() {
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
             {sent.resendLimited ? (
-              t("resent_limit_prompt")
+              t("reset_password_resend_limited")
             ) : (
               <Trans
                 i18nKey="reset_password_email_sent"

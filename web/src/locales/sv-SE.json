@@ -29,7 +29,6 @@
   "remember_me": "Kom ihåg mig",
   "forget_password": "Glömt lösenordet?",
   "disable_register_mail": "Tyvärr så är registreringsbekräftelemailutskick inaktiverat.",
-  "resent_limit_prompt": "Tyvärr, du har nyligen begärt ett aktiveringsmail. Vänligen vänta 3 minuter och försök sedan igen.",
   "non_local_account": "Icke-lokala konton får inte ändra lösenord genom Gogs.",
   "sign_up_now": "Behöver du ett konto? Registrera dig nu.",
   "reset_password": "Återställ ditt lösenord",

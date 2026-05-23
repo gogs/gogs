@@ -29,7 +29,6 @@
   "remember_me": "Atcerēties mani",
   "forget_password": "Aizmirsi paroli?",
   "disable_register_mail": "Atvainojiet, reģistrācijas e-pasta apstiprināšana ir atspējota.",
-  "resent_limit_prompt": "Atvainojiet, Jūs sūtījāt aktivizācijas e-pastu pārāk bieži. Lūdzu, gaidiet 3 minūtes.",
   "non_local_account": "Tikai lokālie konti var nomainīt savu paroli Gogs.",
   "sign_up_now": "Nepieciešams konts? Reģistrējies tagad.",
   "reset_password": "Atjaunot savu paroli",

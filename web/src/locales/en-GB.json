@@ -29,7 +29,6 @@
   "remember_me": "Remember Me",
   "forget_password": "Forgot password?",
   "disable_register_mail": "Sorry, Register Mail Confirmation has been disabled.",
-  "resent_limit_prompt": "Sorry, you already requested an activation email recently. Please wait 3 minutes then try again.",
   "non_local_account": "Non-local accounts cannot change passwords through Gogs.",
   "sign_up_now": "Need an account? Sign up now.",
   "reset_password": "Reset Your Password",

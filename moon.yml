@@ -127,7 +127,7 @@ tasks:
         && mv .bin/custom/conf/app.ini.tmp .bin/custom/conf/app.ini
 
   dev:
-    command: ".bin/gogs web"
+    script: "cd .bin && ./gogs web"
     preset: "server"
     env:
       TTY_FORCE: "1"
@@ -137,7 +137,7 @@ tasks:
       - "portless"
 
   prod:
-    command: ".bin/gogs web"
+    script: "cd .bin && ./gogs web"
     preset: "server"
     env:
       TTY_FORCE: "1"

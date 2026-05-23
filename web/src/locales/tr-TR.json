@@ -29,7 +29,6 @@
   "remember_me": "Beni Hatırla",
   "forget_password": "Parolanızı mı unuttunuz?",
   "disable_register_mail": "Üzgünüz, kayıt doğrulama e-postası devre dışı bırakıldı.",
-  "resent_limit_prompt": "Üzgünüz, zaten bir doğrulama e-postası talep ettiniz. Lütfen 3 dakika bekleyip tekrar deneyin.",
   "non_local_account": "Yerel olmayan hesapların şifrelerini Gogs aracılığıyla değiştiremezsiniz.",
   "sign_up_now": "Bir hesaba mı ihtiyacınız var? Şimdi kaydolun.",
   "reset_password": "Parolanızı Sıfırlayın",
