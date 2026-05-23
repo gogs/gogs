@@ -66,7 +66,6 @@ func Run(configPath string, portOverride int) error {
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
-	reqSignOut := context.Toggle(&context.ToggleOptions{SignOutRequired: true})
 
 	bindIgnErr := binding.BindIgnErr
 
@@ -87,11 +86,6 @@ func Run(configPath string, portOverride int) error {
 		m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 		// ***** START: User *****
-		m.Group("/user", func() {
-			m.Get("/sign_up", user.SignUp)
-			m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
-		}, reqSignOut)
-
 		m.Group("/user/settings", func() {
 			m.Get("", user.Settings)
 			m.Post("", bindIgnErr(form.UpdateProfile{}), user.SettingsPost)

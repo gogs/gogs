@@ -11,7 +11,9 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/flamego/binding v1.3.0
 	github.com/flamego/cache v1.5.1
+	github.com/flamego/captcha v1.3.0
 	github.com/flamego/flamego v1.12.0
+	github.com/flamego/session v1.3.0
 	github.com/flamego/validator v1.0.0
 	github.com/glebarez/go-sqlite v1.21.2
 	github.com/glebarez/sqlite v1.11.0
@@ -98,6 +100,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.11 // indirect

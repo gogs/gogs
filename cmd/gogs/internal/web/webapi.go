@@ -12,10 +12,12 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
 	"github.com/flamego/cache"
+	flamecaptcha "github.com/flamego/captcha"
 	"github.com/flamego/flamego"
+	flamesession "github.com/flamego/session"
 	"github.com/flamego/validator"
 	"github.com/go-macaron/i18n"
-	"github.com/go-macaron/session"
+	macaronsession "github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -49,10 +51,26 @@ func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 func webAPIInjector(c flamego.Context) {
 	ctx := c.Request().Context()
 	user, _ := ctx.Value(webAPIUserKey{}).(*database.User)
-	sess, _ := ctx.Value(webAPISessionKey{}).(session.Store)
+	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
 	c.Map(user, sess, mc, l)
+}
+
+type flamegoSessionAdapter struct {
+	sess macaronsession.Store
+}
+
+func (s flamegoSessionAdapter) ID() string                      { return s.sess.ID() }
+func (s flamegoSessionAdapter) Get(key interface{}) interface{} { return s.sess.Get(key) }
+func (s flamegoSessionAdapter) Set(key, val interface{})        { _ = s.sess.Set(key, val) }
+func (s flamegoSessionAdapter) SetFlash(val interface{})        { _ = s.sess.Set("_flash", val) }
+func (s flamegoSessionAdapter) Delete(key interface{})          { _ = s.sess.Delete(key) }
+func (s flamegoSessionAdapter) Flush()                          { _ = s.sess.Flush() }
+func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
+
+func webAPICaptchaSession(c flamego.Context, sess macaronsession.Store) {
+	c.MapTo(flamegoSessionAdapter{sess: sess}, (*flamesession.Session)(nil))
 }
 
 func webAPIBodyLimiter(c flamego.Context) {
@@ -116,6 +134,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
+			f.Combo("/sign-up").
+				Get(getUserSignUp).
+				Post(bindJSON(userSignUpRequest{}), postUserSignUp)
 			f.Group("/reset-password", func() {
 				f.Combo("").
 					Get(getUserResetPassword).
@@ -133,7 +154,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			})
 			f.Post("/sign-out", postUserSignOut)
 		})
-	}, webAPIBodyLimiter, webAPIInjector)
+	}, webAPIBodyLimiter, webAPIInjector, webAPICaptchaSession, flamecaptcha.Captchaer(flamecaptcha.Options{URLPrefix: "/api/web/.captcha/"}))
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
@@ -214,6 +235,111 @@ type loginSource struct {
 
 type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
+}
+
+type getUserSignUpResponse struct {
+	DisabledRegistration bool `json:"disabledRegistration"`
+	EnableCaptcha        bool `json:"enableCaptcha"`
+}
+
+func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
+	return http.StatusOK, &getUserSignUpResponse{
+		DisabledRegistration: conf.Auth.DisableRegistration,
+		EnableCaptcha:        conf.Auth.EnableRegistrationCaptcha,
+	}, nil
+}
+
+type userSignUpRequest struct {
+	UserName string `json:"userName" validate:"required,max=35"`
+	Email    string `json:"email" validate:"required,email,max=254"`
+	Password string `json:"password" validate:"required,max=255"`
+	Retype   string `json:"retype" validate:"required,max=255"`
+	Captcha  string `json:"captcha"`
+}
+
+type userSignUpResponse struct {
+	EmailConfirmationRequired bool   `json:"emailConfirmationRequired,omitempty"`
+	Email                     string `json:"email,omitempty"`
+	Hours                     int    `json:"hours,omitempty"`
+}
+
+func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n.Locale, cpt flamecaptcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
+	if conf.Auth.DisableRegistration {
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_prompt")}, nil
+	}
+	if conf.Auth.EnableRegistrationCaptcha && !cpt.ValidText(req.Captcha) {
+		msg := l.Tr("form.captcha_incorrect")
+		return http.StatusUnauthorized, &bindingErrorResponse{
+			Error:  msg,
+			Fields: fieldErrors{"captcha": &msg},
+		}, nil
+	}
+	if req.Password != req.Retype {
+		msg := l.Tr("form.password_not_match")
+		return http.StatusBadRequest, &bindingErrorResponse{
+			Error:  msg,
+			Fields: fieldErrors{"password": nil, "retype": nil},
+		}, nil
+	}
+
+	u, err := database.Handle.Users().Create(
+		r.Context(),
+		req.UserName,
+		req.Email,
+		database.CreateUserOptions{
+			Password:  req.Password,
+			Activated: !conf.Auth.RequireEmailConfirmation,
+		},
+	)
+	if err != nil {
+		switch {
+		case database.IsErrUserAlreadyExist(err):
+			msg := l.Tr("form.username_been_taken")
+			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
+		case database.IsErrEmailAlreadyUsed(err):
+			msg := l.Tr("form.email_been_used")
+			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
+		case database.IsErrNameNotAllowed(err):
+			msg := l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
+		default:
+			log.Error("postUserSignUp: create user %q: %v", req.UserName, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "create user")
+		}
+	}
+	log.Trace("Account created: %s", u.Name)
+
+	if database.Handle.Users().Count(r.Context()) == 1 {
+		v := true
+		err := database.Handle.Users().Update(
+			r.Context(),
+			u.ID,
+			database.UpdateUserOptions{
+				IsActivated: &v,
+				IsAdmin:     &v,
+			},
+		)
+		if err != nil {
+			log.Error("postUserSignUp: update first user %q: %v", u.Name, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+		}
+	}
+
+	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
+		if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
+			log.Error("postUserSignUp: send activation mail to user %q: %v", u.Name, err)
+		}
+		if err := ca.Set(r.Context(), userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
+			log.Error("postUserSignUp: put mail resend cache for user %q: %v", u.Name, err)
+		}
+		return http.StatusOK, &userSignUpResponse{
+			EmailConfirmationRequired: true,
+			Email:                     u.Email,
+			Hours:                     conf.Auth.ActivateCodeLives / 60,
+		}, nil
+	}
+
+	return http.StatusOK, &userSignUpResponse{}, nil
 }
 
 func getUserSignIn(r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
@@ -323,7 +449,7 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
 	u, err := database.Handle.Users().Authenticate(r.Context(), req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
@@ -353,7 +479,7 @@ func postUserSignIn(r *http.Request, sess session.Store, mc *macaron.Context, l 
 // clears any in-flight MFA state, and sets the login-status cookie. The
 // caller is responsible for navigating to a post-login destination via
 // /redirect?to=.
-func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User) {
+func completeSignIn(sess macaronsession.Store, mc *macaron.Context, u *database.User) {
 	_ = sess.Set("uid", u.ID)
 	_ = sess.Set("uname", u.Name)
 	_ = sess.Delete("mfaUserID")
@@ -364,7 +490,7 @@ func completeSignIn(sess session.Store, mc *macaron.Context, u *database.User) {
 	}
 }
 
-func getUserMFA(sess session.Store) (statusCode int, resp any, err error) {
+func getUserMFA(sess macaronsession.Store) (statusCode int, resp any, err error) {
 	if _, ok := sess.Get("mfaUserID").(int64); !ok {
 		return http.StatusNotFound, nil, nil
 	}
@@ -377,7 +503,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
+func postUserMFA(r *http.Request, sess macaronsession.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -428,7 +554,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
-func postUserMFARecovery(r *http.Request, sess session.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
+func postUserMFARecovery(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -476,7 +602,7 @@ func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error
 		nil
 }
 
-func postUserSignOut(sess session.Store, mc *macaron.Context) (statusCode int, resp any, err error) {
+func postUserSignOut(sess macaronsession.Store, mc *macaron.Context) (statusCode int, resp any, err error) {
 	_ = sess.Flush()
 	_ = sess.Destory(mc)
 	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)

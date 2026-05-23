@@ -17,6 +17,7 @@ import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
 import { ResetPassword, type ResetPasswordPage } from "@/pages/ResetPassword";
 import { SignIn, type SignInPage } from "@/pages/SignIn";
+import { SignUp, type SignUpPage } from "@/pages/SignUp";
 
 interface RouterContext {
   user: UserInfo | null;
@@ -68,6 +69,26 @@ const signInRoute = createRoute({
   component: SignIn,
 });
 
+const signUpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/sign-up",
+  beforeLoad: ({ context }) => {
+    if (context.user) {
+      window.location.assign(subUrl("/"));
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+      throw redirect({ to: "/", replace: true });
+    }
+  },
+  loader: async (): Promise<SignUpPage> => {
+    const res = await fetch(subUrl("/api/web/user/sign-up"), { credentials: "same-origin" });
+    if (!res.ok) {
+      return { disabledRegistration: true, enableCaptcha: false };
+    }
+    return (await res.json()) as SignUpPage;
+  },
+  component: SignUp,
+});
+
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/reset-password",
@@ -104,7 +125,7 @@ const mfaRoute = createRoute({
   component: MFA,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, signInRoute, resetPasswordRoute, mfaRoute]);
+const routeTree = rootRoute.addChildren([landingRoute, signInRoute, signUpRoute, resetPasswordRoute, mfaRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({
