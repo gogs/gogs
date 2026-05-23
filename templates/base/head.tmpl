@@ -110,60 +110,60 @@
 
 								{{if .IsLogged}}
 									<div class="right menu">
-										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
+										<div class="ui dropdown head link jump item poping up" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" aria-label="{{.i18n.Tr "create_new"}}" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
 											<span class="text">
 												<i class="octicon octicon-plus"><span class="sr-only">{{.i18n.Tr "create_new"}}</span></i>
 												<i class="octicon octicon-triangle-down"></i>
 											</span>
-											<div class="menu">
-												<a class="item" href="{{AppSubURL}}/repo/create">
+											<div class="menu" role="menu">
+												<a class="item" role="menuitem" href="{{AppSubURL}}/repo/create">
 													<i class="octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
 												</a>
-												<a class="item" href="{{AppSubURL}}/repo/migrate">
+												<a class="item" role="menuitem" href="{{AppSubURL}}/repo/migrate">
 													<i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
 												</a>
 												{{if .LoggedUser.CanCreateOrganization}}
-												<a class="item" href="{{AppSubURL}}/org/create">
+												<a class="item" role="menuitem" href="{{AppSubURL}}/org/create">
 													<i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
 												</a>
 												{{end}}
 											</div><!-- end content create new menu -->
 										</div><!-- end dropdown menu create new -->
 
-										<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
+										<div class="ui dropdown head link jump item poping up" tabindex="0" role="button" aria-haspopup="menu" aria-expanded="false" aria-label="{{.i18n.Tr "user_profile_and_more"}}" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
 											<span class="text avatar">
 												<img class="ui small rounded image" src="{{.LoggedUser.AvatarURLPath}}">
 												<span class="sr-only">{{.i18n.Tr "user_profile_and_more"}}</span>
 												<i class="octicon octicon-triangle-down" tabindex="-1"></i>
 											</span>
-											<div class="menu" tabindex="-1">
+											<div class="menu" role="menu">
 												<div class="ui header">
 													{{.i18n.Tr "signed_in_as"}} <strong>{{.LoggedUser.Name}}</strong>
 												</div>
 
 												<div class="divider"></div>
-												<a class="item" href="{{AppSubURL}}/{{.LoggedUser.Name}}">
+												<a class="item" role="menuitem" href="{{AppSubURL}}/{{.LoggedUser.Name}}">
 													<i class="octicon octicon-person"></i> {{.i18n.Tr "your_profile"}}
 												</a>
-												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubURL}}/user/settings">
+												<a class="{{if .PageIsUserSettings}}active{{end}} item" role="menuitem" href="{{AppSubURL}}/user/settings">
 													<i class="octicon octicon-settings"></i> {{.i18n.Tr "your_settings"}}
 												</a>
-												<a class="item" target="_blank" rel="noopener noreferrer" href="https://gogs.io" rel="noreferrer">
+												<a class="item" role="menuitem" target="_blank" rel="noopener noreferrer" href="https://gogs.io" rel="noreferrer">
 													<i class="octicon octicon-question"></i> {{.i18n.Tr "help"}}
 												</a>
 												{{if .IsAdmin}}
 													<div class="divider"></div>
 
-													<a class="{{if .PageIsAdmin}}active{{end}} item" href="{{AppSubURL}}/admin">
+													<a class="{{if .PageIsAdmin}}active{{end}} item" role="menuitem" href="{{AppSubURL}}/admin">
 														<i class="icon settings"></i> {{.i18n.Tr "admin_panel"}}
 													</a>
 												{{end}}
 
 												<div class="divider"></div>
 
-												<form id="logout-form" class="item" action="{{AppSubURL}}/user/logout" method="POST">
+												<form id="logout-form" class="item" role="none" action="{{AppSubURL}}/user/logout" method="POST">
 													{{.CSRFTokenHTML}}
-													<div class="submit-button" data-form="#logout-form">
+													<div class="submit-button" role="menuitem" tabindex="0" data-form="#logout-form">
 														<i class="octicon octicon-sign-out"></i> {{.i18n.Tr "sign_out"}}
 													</div>
 												</form>

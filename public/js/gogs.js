@@ -1420,13 +1420,29 @@ $(document).ready(function() {
   });
 
   // Semantic UI modules.
+  var setMenuDropdownExpanded = function(dropdown, isExpanded) {
+    var $dropdown = $(dropdown);
+    if ($dropdown.is("[aria-haspopup='menu']")) {
+      $dropdown.attr("aria-expanded", isExpanded ? "true" : "false");
+    }
+  };
   $(".ui.dropdown").dropdown({
-    forceSelection: false
+    forceSelection: false,
+    onShow: function() {
+      setMenuDropdownExpanded(this, true);
+    },
+    onHide: function() {
+      setMenuDropdownExpanded(this, false);
+    }
   });
   $(".jump.dropdown").dropdown({
     action: "select",
     onShow: function() {
       $(".poping.up").popup("hide");
+      setMenuDropdownExpanded(this, true);
+    },
+    onHide: function() {
+      setMenuDropdownExpanded(this, false);
     }
   });
   $(".slide.up.dropdown").dropdown({
@@ -1450,6 +1466,21 @@ $(document).ready(function() {
   });
   $(".tabular.menu .item").tab();
   $(".tabable.menu .item").tab();
+  $(".ui.dropdown[aria-haspopup='menu']").keydown(function(e) {
+    var key = e.key || e.which;
+    var isActivationKey = key === "Enter" || key === " " || key === 13 || key === 32;
+    if (isActivationKey && e.target === this) {
+      e.preventDefault();
+      $(this).dropdown("show");
+      setMenuDropdownExpanded(this, true);
+      $(this).find(".menu .item").first().focus();
+    } else if (key === "Escape" || key === 27) {
+      e.preventDefault();
+      $(this).dropdown("hide");
+      setMenuDropdownExpanded(this, false);
+      $(this).focus();
+    }
+  });
 
   $(".toggle.button").click(function() {
     $($(this).data("target")).slideToggle(100);
@@ -1603,7 +1634,14 @@ $(document).ready(function() {
     });
   });
   // To make arbitrary form element to behave like a submit button
-  $(".submit-button").click(function() {
+  $(".submit-button").on("click keydown", function(e) {
+    if (e.type === "keydown") {
+      var key = e.key || e.which;
+      if (key !== "Enter" && key !== " " && key !== 13 && key !== 32) {
+        return;
+      }
+      e.preventDefault();
+    }
     $($(this).data("form")).submit();
   });
 
