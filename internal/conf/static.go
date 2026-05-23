@@ -85,13 +85,6 @@ var (
 		CSRFCookieName string `ini:"CSRF_COOKIE_NAME"`
 	}
 
-	// Cache settings
-	Cache struct {
-		Adapter  string
-		Interval int
-		Host     string
-	}
-
 	// HTTP settings
 	HTTP struct {
 		AccessControlAllowOrigin string
@@ -226,6 +219,14 @@ var (
 	// Global setting
 	HasRobotsTxt bool
 )
+
+type CacheOptions struct {
+	Adapter  string
+	Interval int
+	Host     string
+}
+
+var Cache CacheOptions
 
 type AppOpts struct {
 	// ⚠️ WARNING: Should only be set by the main package (i.e. "cmd/gogs/main.go").

@@ -680,10 +680,14 @@ func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
 
-	mountWebAPIRoutes(f)
+	err := mountWebAPIRoutes(f)
+	if err != nil {
+		return nil, errors.Wrap(err, "mount web API routes")
+	}
 
-	if err := mountWebRoutes(f); err != nil {
-		return nil, errors.Wrap(err, "mount web routes")
+	err = mountWebAppRoutes(f)
+	if err != nil {
+		return nil, errors.Wrap(err, "mount web app routes")
 	}
 	return f, nil
 }

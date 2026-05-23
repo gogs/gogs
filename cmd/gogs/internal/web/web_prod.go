@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/public"
 )
 
-func mountWebRoutes(f *flamego.Flame) error {
+func mountWebAppRoutes(f *flamego.Flame) error {
 	webFS, err := fs.Sub(public.WebAssets, "dist")
 	if err != nil {
 		return errors.Wrap(err, "load embedded web assets")

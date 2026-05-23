@@ -94,10 +94,10 @@ func bindJSON(model any) flamego.Handler {
 	})
 }
 
-func mountWebAPIRoutes(f *flamego.Flame) {
-	cacherOpts, err := webAPICacherOptions()
+func mountWebAPIRoutes(f *flamego.Flame) error {
+	cacherOpts, err := parseCacheOptions(conf.Cache)
 	if err != nil {
-		log.Fatal("webapi cache: %v", err)
+		return errors.Wrap(err, "parse cache options")
 	}
 	f.Use(cache.Cacher(cacherOpts))
 
@@ -140,6 +140,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	}, webAPIBodyLimiter, webAPIInjector)
 
 	f.Get("/redirect", getRedirect)
+	return nil
 }
 
 func getRedirect(c flamego.Context) {

@@ -72,6 +72,16 @@ const signInRoute = createRoute({
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/reset-password",
+  beforeLoad: ({ context }) => {
+    if (context.user) {
+      // Matches the legacy reqSignOut gate: a signed-in user has no business
+      // on the reset form, so bounce to "/" via full navigation so the server
+      // renders the authed dashboard rather than the SPA's anon Landing.
+      window.location.assign(subUrl("/"));
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+      throw redirect({ to: "/", replace: true });
+    }
+  },
   loader: async (): Promise<ResetPasswordPage> => {
     const code = new URLSearchParams(window.location.search).get("code") ?? "";
     const url = code
