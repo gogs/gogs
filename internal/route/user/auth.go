@@ -17,17 +17,6 @@ import (
 
 const TmplUserAuthActivate = "user/auth/activate"
 
-func SignOut(c *context.Context) {
-	_ = c.Session.Flush()
-	_ = c.Session.Destory(c.Context)
-	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
-	if conf.Auth.CustomLogoutURL != "" {
-		c.Redirect(conf.Auth.CustomLogoutURL)
-		return
-	}
-	c.RedirectSubpath("/")
-}
-
 // parseUserFromCode returns user by username encoded in code.
 // It returns nil if code or username is invalid.
 func parseUserFromCode(code string) (user *database.User) {

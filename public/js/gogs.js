@@ -1607,6 +1607,23 @@ $(document).ready(function() {
     $($(this).data("form")).submit();
   });
 
+  // Intercept the legacy sign-out form so it talks to the JSON API and
+  // navigates to the URL the server hands back (honors CustomLogoutURL).
+  $("#logout-form").on("submit", function(event) {
+    event.preventDefault();
+    var $form = $(this);
+    var doneUrl = $form.data("done-url");
+    $.ajax({
+      url: $form.attr("action"),
+      method: "POST"
+    }).done(function(data) {
+      var target = (data && data.redirectTo) ? data.redirectTo : doneUrl;
+      window.location.assign(target);
+    }).fail(function() {
+      window.location.assign(doneUrl);
+    });
+  });
+
   // Check or select on option to enable/disable target region
   $(".enable-system").change(function() {
     if (this.checked) {

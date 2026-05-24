@@ -346,15 +346,24 @@ function SignOutForm({ children }: { children: React.ReactNode }) {
 }
 
 async function signOut() {
+  let redirectTo = subUrl("/");
   try {
-    await fetch(subUrl("/api/web/user/sign-out"), {
+    const res = await fetch(subUrl("/api/web/user/sign-out"), {
       method: "POST",
       credentials: "same-origin",
     });
+    if (res.ok && res.status !== 204) {
+      const body = (await res.json().catch(() => null)) as {
+        redirectTo?: string;
+      } | null;
+      if (body?.redirectTo) {
+        redirectTo = body.redirectTo;
+      }
+    }
   } catch (err) {
     console.error("signOut: request failed", err);
   }
-  window.location.assign(subUrl("/"));
+  window.location.assign(redirectTo);
 }
 
 function MobileLink({
