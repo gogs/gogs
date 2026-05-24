@@ -24,7 +24,6 @@
   "username": "用戶名稱",
   "email": "電子郵件",
   "password": "密碼",
-  "re_type": "確認密碼",
   "captcha": "驗證碼",
   "auth_source": "Authentication Source",
   "local": "Local",

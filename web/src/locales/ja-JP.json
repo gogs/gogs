@@ -24,7 +24,6 @@
   "username": "ユーザー名",
   "email": "メールアドレス",
   "password": "パスワード",
-  "re_type": "再入力",
   "captcha": "CAPTCHA",
   "auth_source": "認証ソース",
   "local": "ローカル",

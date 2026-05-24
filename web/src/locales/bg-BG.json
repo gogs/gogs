@@ -24,7 +24,6 @@
   "username": "Потребител",
   "email": "Ел. поща",
   "password": "Парола",
-  "re_type": "Въведете повторно",
   "captcha": "Captcha",
   "auth_source": "Източник за удостоверяване",
   "local": "Локален",

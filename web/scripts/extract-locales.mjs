@@ -46,7 +46,6 @@ const REUSED_KEYS = [
   "email_placeholder",
   "password",
   "password_placeholder",
-  "re_type",
   "captcha",
   "captcha_placeholder",
   "captcha_image_alt",

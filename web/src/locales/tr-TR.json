@@ -24,7 +24,6 @@
   "username": "Kullanıcı Adı",
   "email": "E-Posta",
   "password": "Parola",
-  "re_type": "Tekrar Girin",
   "captcha": "Captcha",
   "auth_source": "Yetkilendirme Kaynağı",
   "local": "Yerel",

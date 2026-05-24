@@ -24,7 +24,6 @@
   "username": "Username",
   "email": "Email",
   "password": "Password",
-  "re_type": "Re-Type",
   "captcha": "Captcha",
   "auth_source": "Authentication Source",
   "local": "Local",

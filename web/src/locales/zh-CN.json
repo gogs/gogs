@@ -24,7 +24,6 @@
   "username": "用户名",
   "email": "邮箱",
   "password": "密码",
-  "re_type": "确认密码",
   "captcha": "验证码",
   "auth_source": "认证源",
   "local": "本地",

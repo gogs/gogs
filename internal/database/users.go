@@ -51,10 +51,6 @@ func (err ErrLoginSourceMismatch) Error() string {
 	return fmt.Sprintf("login source mismatch: %v", err.args)
 }
 
-// disallowedUsernameChars matches any character not allowed in a username:
-// anything outside ASCII letters, digits, underscore, hyphen, or dot.
-var disallowedUsernameChars = regexp.MustCompile(`[^\d\w-_\.]`)
-
 // Authenticate validates username and password via given login source ID. It
 // returns ErrUserNotExist when the user was not found.
 //

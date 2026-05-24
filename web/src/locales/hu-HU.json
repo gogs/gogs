@@ -24,7 +24,6 @@
   "username": "Felhasználónév",
   "email": "E-mail",
   "password": "Jelszó",
-  "re_type": "Újra",
   "captcha": "Ellenőrző kód",
   "auth_source": "Hitelesítési forrás",
   "local": "Helyi",

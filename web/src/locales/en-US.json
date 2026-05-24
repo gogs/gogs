@@ -32,7 +32,6 @@
   "email_placeholder": "Enter your email",
   "password": "Password",
   "password_placeholder": "Enter your password",
-  "re_type": "Re-type",
   "captcha": "Captcha",
   "captcha_placeholder": "Enter the characters shown above",
   "captcha_image_alt": "Captcha image",

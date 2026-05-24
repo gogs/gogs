@@ -24,7 +24,6 @@
   "username": "Lietotājvārds",
   "email": "E-pasts",
   "password": "Parole",
-  "re_type": "Parole atkārtoti",
   "captcha": "Pārbaudes kods",
   "auth_source": "Autentificēšanas avots",
   "local": "Local",

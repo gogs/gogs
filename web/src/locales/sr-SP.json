@@ -24,7 +24,6 @@
   "username": "Корисничко име",
   "email": "E-пошта",
   "password": "Лозинка",
-  "re_type": "Унесите поново",
   "captcha": "Captcha",
   "auth_source": "Извор аутентикације",
   "local": "Локално",

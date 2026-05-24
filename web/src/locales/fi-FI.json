@@ -24,7 +24,6 @@
   "username": "Käyttäjätunnus",
   "email": "Sähköposti",
   "password": "Salasana",
-  "re_type": "Kirjoita uudelleen",
   "captcha": "Captcha",
   "auth_source": "Todennuslähde",
   "local": "Paikallinen",

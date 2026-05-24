@@ -24,7 +24,6 @@
   "username": "Användarnamn",
   "email": "E-post",
   "password": "Lösenord",
-  "re_type": "Ange igen",
   "captcha": "Captcha",
   "auth_source": "Autentiseringskälla",
   "local": "Lokal",

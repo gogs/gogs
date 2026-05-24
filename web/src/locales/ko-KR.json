@@ -24,7 +24,6 @@
   "username": "사용자명",
   "email": "이메일",
   "password": "비밀번호",
-  "re_type": "재입력",
   "captcha": "보안 문자",
   "auth_source": "인증 소스 편집",
   "local": "로컬",

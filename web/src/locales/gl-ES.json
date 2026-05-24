@@ -24,7 +24,6 @@
   "username": "Nome da persoa usuaria",
   "email": "Correo electrónico",
   "password": "Contrasinal",
-  "re_type": "Ingrese de novo",
   "captcha": "Captcha=Captcha",
   "auth_source": "Fonte de Autenticación",
   "local": "Configuración rexional",

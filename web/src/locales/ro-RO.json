@@ -24,7 +24,6 @@
   "username": "Numele de utilizator",
   "email": "E-mail",
   "password": "Parolă",
-  "re_type": "Introduceți din nou",
   "captcha": "Captcha",
   "auth_source": "Sursa de autentificare",
   "local": "Local",

@@ -11,8 +11,8 @@ import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
 
 export interface SignUpPage {
-  disabledRegistration: boolean;
-  enableCaptcha: boolean;
+  registrationDisabled: boolean;
+  captchaEnabled: boolean;
 }
 
 interface SignUpResponse {
@@ -34,7 +34,7 @@ export function SignUp() {
   const { t } = useTranslation();
   usePageTitle(t("register"));
   const navigate = useNavigate();
-  const { disabledRegistration, enableCaptcha } = route.useLoaderData();
+  const { registrationDisabled, captchaEnabled } = route.useLoaderData();
 
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -61,7 +61,7 @@ export function SignUp() {
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (disabledRegistration) return;
+    if (registrationDisabled) return;
 
     setFormError(null);
     if (password !== confirmPassword) {
@@ -91,7 +91,7 @@ export function SignUp() {
             setFormError(t("sign_up_failed"));
           }
           setSubmitting(false);
-          if (enableCaptcha) refreshCaptcha();
+          if (captchaEnabled) refreshCaptcha();
           requestAnimationFrame(() => {
             if (focusField === "userName") userNameRef.current?.focus();
             else if (focusField === "email") emailRef.current?.focus();
@@ -112,7 +112,7 @@ export function SignUp() {
       } catch {
         setFormError(t("sign_up_failed"));
         setSubmitting(false);
-        if (enableCaptcha) refreshCaptcha();
+        if (captchaEnabled) refreshCaptcha();
       }
     })();
   }
@@ -129,7 +129,7 @@ export function SignUp() {
   );
 
   function renderContent() {
-    if (disabledRegistration) {
+    if (registrationDisabled) {
       return (
         <p role="alert" className="text-center text-sm text-(--color-destructive)">
           {t("disable_register_prompt")}
@@ -256,7 +256,7 @@ export function SignUp() {
               )}
             </div>
 
-            {enableCaptcha && (
+            {captchaEnabled && (
               <div className="flex flex-col gap-2">
                 <Label htmlFor="captcha">{t("captcha")}</Label>
                 <div className="group relative">

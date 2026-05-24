@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -92,8 +93,13 @@ var webAPIValidator = func() *validator.Validate {
 		}
 		return name
 	})
+	_ = v.RegisterValidation("alphadashdot", func(fl validator.FieldLevel) bool {
+		return !alphaDashDotInvalid.MatchString(fl.Field().String())
+	})
 	return v
 }()
+
+var alphaDashDotInvalid = regexp.MustCompile(`[^\d\w\-_\.]`)
 
 // bindJSON binds the request body to T. On binding or validation failure it
 // short-circuits with a 400 carrying the standard renderBindingErrors payload,
@@ -177,12 +183,13 @@ type bindingErrorResponse struct {
 // (e.g. "max" -> "form.max_size_error"). Messages are composed as
 // <field label> + <suffix>, mirroring the legacy Macaron binding behavior.
 var ruleSuffixKeys = map[string]string{
-	"required": "form.require_error",
-	"max":      "form.max_size_error",
-	"min":      "form.min_size_error",
-	"len":      "form.size_error",
-	"email":    "form.email_error",
-	"url":      "form.url_error",
+	"required":     "form.require_error",
+	"max":          "form.max_size_error",
+	"min":          "form.min_size_error",
+	"len":          "form.size_error",
+	"email":        "form.email_error",
+	"url":          "form.url_error",
+	"alphadashdot": "form.alpha_dash_dot_error",
 }
 
 // renderBindingErrors maps binding.Errors to the response shape, looking up
@@ -239,19 +246,19 @@ type getUserSignInResponse struct {
 }
 
 type getUserSignUpResponse struct {
-	DisabledRegistration bool `json:"disabledRegistration"`
-	EnableCaptcha        bool `json:"enableCaptcha"`
+	RegistrationDisabled bool `json:"registrationDisabled"`
+	CaptchaEnabled       bool `json:"captchaEnabled"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
-		DisabledRegistration: conf.Auth.DisableRegistration,
-		EnableCaptcha:        conf.Auth.EnableRegistrationCaptcha,
+		RegistrationDisabled: conf.Auth.DisableRegistration,
+		CaptchaEnabled:       conf.Auth.EnableRegistrationCaptcha,
 	}, nil
 }
 
 type userSignUpRequest struct {
-	UserName string `json:"userName" validate:"required,max=35"`
+	UserName string `json:"userName" validate:"required,alphadashdot,max=35"`
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
 	Captcha  string `json:"captcha"`

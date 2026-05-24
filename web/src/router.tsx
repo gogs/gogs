@@ -82,7 +82,7 @@ const signUpRoute = createRoute({
   loader: async (): Promise<SignUpPage> => {
     const res = await fetch(subUrl("/api/web/user/sign-up"), { credentials: "same-origin" });
     if (!res.ok) {
-      return { disabledRegistration: true, enableCaptcha: false };
+      return { registrationDisabled: true, captchaEnabled: false };
     }
     return (await res.json()) as SignUpPage;
   },

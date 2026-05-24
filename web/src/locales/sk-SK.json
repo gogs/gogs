@@ -24,7 +24,6 @@
   "username": "Používateľské meno",
   "email": "E-mail",
   "password": "Heslo",
-  "re_type": "Zadajte znova",
   "captcha": "Kontrolný kód",
   "auth_source": "Zdroj overovania",
   "local": "Lokálny",

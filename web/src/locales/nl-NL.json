@@ -24,7 +24,6 @@
   "username": "Gebruikersnaam",
   "email": "E-mail",
   "password": "Wachtwoord",
-  "re_type": "Verificatie",
   "captcha": "CAPTCHA",
   "auth_source": "Authenticatiebron",
   "local": "Lokaal",

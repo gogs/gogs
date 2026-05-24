@@ -24,7 +24,6 @@
   "username": "Nama pengguna",
   "email": "Email",
   "password": "Sandi",
-  "re_type": "Ketik ulang",
   "captcha": "Captcha",
   "auth_source": "Sumber Autentikasi",
   "local": "Lokal",

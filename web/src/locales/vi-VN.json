@@ -24,7 +24,6 @@
   "username": "Username",
   "email": "Email",
   "password": "Mật khẩu",
-  "re_type": "Nhập lại",
   "captcha": "Mã xác minh",
   "auth_source": "Authentication Source",
   "local": "Local",
