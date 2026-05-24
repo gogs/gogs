@@ -75,7 +75,7 @@ function CmdLink({
   spa?: boolean;
 }) {
   const className =
-    "group inline-flex items-baseline gap-2 rounded-sm hover:bg-(--color-surface) hover:text-(--color-foreground)";
+    "group inline-flex items-baseline gap-2 rounded-sm hover:text-(--color-foreground) hover:[animation:flame-flicker_2.4s_ease-in-out_infinite]";
   const inner = (
     <>
       <span className="inline-block w-16 text-(--color-foreground) sm:w-20">{cmd}</span>
