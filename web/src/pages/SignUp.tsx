@@ -1,6 +1,6 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
@@ -140,10 +140,11 @@ export function SignUp() {
       return (
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
-            {t("confirmation_email_sent")
-              .replace(/<[^>]+>/g, "")
-              .replace("%s", sent.email!)
-              .replace("%d", String(sent.hours))}
+            <Trans
+              i18nKey="activate_email_sent"
+              values={{ email: sent.email, hours: sent.hours }}
+              components={{ email: <b />, hours: <b /> }}
+            />
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
             <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>

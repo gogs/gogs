@@ -63,7 +63,6 @@ const REUSED_KEYS = [
   "disable_register_prompt",
   "reset_password_resend_limited",
   "non_local_account",
-  "confirmation_email_sent",
   "create_new_account",
   "register_hepler_msg",
   "sign_up",
