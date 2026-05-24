@@ -116,7 +116,7 @@ const activateRoute = createRoute({
       // a full navigation so the server-rendered dashboard handler decides
       // where to land.
       window.location.assign(subUrl("/"));
-      return { code, authenticated: true, email: "", serviceNotEnabled: false, hours: 0 };
+      return { code, email: "", hours: 0 };
     }
     if (!res.ok) {
       throw await loaderResponseError(res);

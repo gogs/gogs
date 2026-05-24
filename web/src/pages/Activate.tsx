@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
+import { useUserInfo } from "@/lib/use-user-info";
 
 export interface ActivatePage {
   code: string;
-  authenticated: boolean;
   email: string;
-  serviceNotEnabled: boolean;
   hours: number;
 }
 
@@ -28,7 +27,8 @@ const route = getRouteApi("/user/activate");
 
 export function Activate() {
   const { t } = useTranslation();
-  const { code, authenticated, email, serviceNotEnabled, hours } = route.useLoaderData();
+  const { code, email, hours } = route.useLoaderData();
+  const authenticated = useUserInfo() !== null;
   usePageTitle(t("active_your_account"));
 
   const isVerifying = code !== "";
@@ -113,14 +113,6 @@ export function Activate() {
       return (
         <p role="status" className="text-center text-sm text-(--color-foreground)">
           {t("activate_verifying")}
-        </p>
-      );
-    }
-
-    if (serviceNotEnabled) {
-      return (
-        <p role="alert" className="text-center text-sm text-(--color-destructive)">
-          {t("disable_register_mail")}
         </p>
       );
     }
