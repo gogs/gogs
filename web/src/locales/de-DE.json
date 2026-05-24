@@ -22,10 +22,16 @@
   "language": "Sprache",
   "page_not_found": "Seite nicht gefunden",
   "username": "Benutzername",
+  "email": "E-Mail",
   "password": "Passwort",
   "auth_source": "Authentifizierungsquelle",
   "local": "Lokal",
   "remember_me": "Angemeldet bleiben",
   "forget_password": "Passwort vergessen?",
-  "sign_up_now": "Benötigen Sie ein Konto? Registrieren Sie sich jetzt."
+  "disable_register_mail": "Es tut uns leid, die Bestätigung der Registrierungs-E-Mail wurde deaktiviert.",
+  "non_local_account": "Nicht-lokale Konten können Passwörter nicht via Gogs ändern.",
+  "sign_up_now": "Benötigen Sie ein Konto? Registrieren Sie sich jetzt.",
+  "reset_password": "Passwort zurücksetzen",
+  "invalid_code": "Es tut uns leid, der Bestätigungscode ist abgelaufen oder ungültig.",
+  "new_password": "Neues Passwort"
 }

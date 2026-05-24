@@ -22,10 +22,16 @@
   "language": "Dil",
   "page_not_found": "Sayfa Bulunamadı",
   "username": "Kullanıcı Adı",
+  "email": "E-Posta",
   "password": "Parola",
   "auth_source": "Yetkilendirme Kaynağı",
   "local": "Yerel",
   "remember_me": "Beni Hatırla",
   "forget_password": "Parolanızı mı unuttunuz?",
-  "sign_up_now": "Bir hesaba mı ihtiyacınız var? Şimdi kaydolun."
+  "disable_register_mail": "Üzgünüz, kayıt doğrulama e-postası devre dışı bırakıldı.",
+  "non_local_account": "Yerel olmayan hesapların şifrelerini Gogs aracılığıyla değiştiremezsiniz.",
+  "sign_up_now": "Bir hesaba mı ihtiyacınız var? Şimdi kaydolun.",
+  "reset_password": "Parolanızı Sıfırlayın",
+  "invalid_code": "Üzgünüz, doğrulama kodunuz geçersiz veya süresi dolmuş.",
+  "new_password": "Yeni Parola"
 }

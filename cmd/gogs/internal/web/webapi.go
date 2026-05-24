@@ -4,14 +4,16 @@ import (
 	stdctx "context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
+	"github.com/flamego/cache"
 	"github.com/flamego/flamego"
 	"github.com/flamego/validator"
-	"github.com/go-macaron/cache"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
@@ -21,7 +23,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/urlx"
+	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -30,17 +33,15 @@ type (
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
-	webAPICacheKey   struct{}
 )
 
-func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale, ca cache.Cache) {
-	return func(c *context.Context, l i18n.Locale, ca cache.Cache) {
+func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
+	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
 		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
-		ctx = stdctx.WithValue(ctx, webAPICacheKey{}, ca)
 		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 	}
 }
@@ -51,8 +52,7 @@ func webAPIInjector(c flamego.Context) {
 	sess, _ := ctx.Value(webAPISessionKey{}).(session.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	ca, _ := ctx.Value(webAPICacheKey{}).(cache.Cache)
-	c.Map(user, sess, mc, l, ca)
+	c.Map(user, sess, mc, l)
 }
 
 func webAPIBodyLimiter(c flamego.Context) {
@@ -116,6 +116,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
+			f.Group("/reset-password", func() {
+				f.Combo("").
+					Get(getUserResetPassword).
+					Post(bindJSON(userResetPasswordEmailRequest{}), postUserResetPassword)
+				f.Post("/complete", bindJSON(userResetPasswordCompleteRequest{}), postUserResetPasswordComplete)
+			})
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
 				Post(bindJSON(userSignInRequest{}), postUserSignIn)
@@ -128,16 +134,6 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Post("/sign-out", postUserSignOut)
 		})
 	}, webAPIBodyLimiter, webAPIInjector)
-
-	f.Get("/redirect", getRedirect)
-}
-
-func getRedirect(c flamego.Context) {
-	to := c.Request().URL.Query().Get("to")
-	if !urlx.IsSameSite(to) {
-		to = conf.Server.Subpath + "/"
-	}
-	c.Redirect(to, http.StatusSeeOther)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
@@ -216,11 +212,11 @@ type loginSource struct {
 	IsDefault bool   `json:"isDefault"`
 }
 
-type userSignInPageResponse struct {
+type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
 }
 
-func getUserSignIn(r *http.Request) (statusCode int, resp *userSignInPageResponse, err error) {
+func getUserSignIn(r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
 	sources, err := database.Handle.LoginSources().List(r.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
 		log.Error("getUserSignIn: list activated login sources: %v", err)
@@ -230,13 +226,94 @@ func getUserSignIn(r *http.Request) (statusCode int, resp *userSignInPageRespons
 	for _, s := range sources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &userSignInPageResponse{LoginSources: loginSources}, nil
+	return http.StatusOK, &getUserSignInResponse{LoginSources: loginSources}, nil
 }
 
 type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
+}
+
+type getUserResetPasswordResponse struct {
+	EmailEnabled bool `json:"emailEnabled"`
+	Valid        bool `json:"valid"`
+}
+
+func getUserResetPassword(r *http.Request) (statusCode int, resp *getUserResetPasswordResponse, err error) {
+	code := r.URL.Query().Get("code")
+	return http.StatusOK, &getUserResetPasswordResponse{
+		EmailEnabled: conf.Email.Enabled,
+		Valid:        code != "" && user.VerifyUserActiveCode(code) != nil,
+	}, nil
+}
+
+type userResetPasswordEmailRequest struct {
+	Email string `json:"email" validate:"required,email,max=254"`
+}
+
+type userResetPasswordCompleteRequest struct {
+	Code     string `json:"code" validate:"required"`
+	Password string `json:"password" validate:"required,min=6,max=255"`
+}
+
+type userResetPasswordResponse struct {
+	Hours         int  `json:"hours,omitempty"`
+	ResendLimited bool `json:"resendLimited,omitempty"`
+}
+
+func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
+	if !conf.Email.Enabled {
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
+	}
+
+	ctx := r.Context()
+	u, err := database.Handle.Users().GetByEmail(ctx, req.Email)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
+		}
+		log.Error("postUserResetPassword: get user by email %q: %v", req.Email, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
+	}
+
+	if !u.IsLocal() {
+		msg := l.Tr("auth.non_local_account")
+		return http.StatusForbidden, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
+	}
+
+	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
+		return http.StatusOK, &userResetPasswordResponse{
+			Hours:         conf.Auth.ActivateCodeLives / 60,
+			ResendLimited: true,
+		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Error("postUserResetPassword: get mail resend cache for user %q: %v", u.Name, err)
+	}
+
+	if err = email.SendResetPasswordMail(l, database.NewMailerUser(u)); err != nil {
+		log.Error("postUserResetPassword: send reset password mail to user %q: %v", u.Name, err)
+	}
+	if err = ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
+		log.Error("postUserResetPassword: put mail resend cache for user %q: %v", u.Name, err)
+	}
+
+	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
+}
+
+func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
+	u := user.VerifyUserActiveCode(req.Code)
+	if u == nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+	}
+
+	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {
+		log.Error("postUserResetPasswordComplete: update password for user %q: %v", u.Name, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+	}
+
+	log.Trace("User password reset: %s", u.Name)
+	return http.StatusNoContent, nil, nil
 }
 
 type userSignInResponse struct {
@@ -324,13 +401,16 @@ func postUserMFA(r *http.Request, sess session.Store, mc *macaron.Context, ca ca
 		}, nil
 	}
 
-	if ca.IsExist(userx.TwoFactorCacheKey(userID, req.Passcode)) {
+	cacheKey := userx.TwoFactorCacheKey(userID, req.Passcode)
+	if _, err := ca.Get(r.Context(), cacheKey); err == nil {
 		msg := l.Tr("auth.mfa_reused_passcode")
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Fields: fieldErrors{"passcode": &msg},
 		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Error("postUserMFA: get two factor passcode cache for user %d: %v", userID, err)
 	}
-	if err = ca.Put(userx.TwoFactorCacheKey(userID, req.Passcode), 1, 60); err != nil {
+	if err = ca.Set(r.Context(), cacheKey, 1, 60*time.Second); err != nil {
 		log.Error("postUserMFA: cache two factor passcode for user %d: %v", userID, err)
 	}
 

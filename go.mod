@@ -10,6 +10,7 @@ require (
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
 	github.com/fatih/color v1.18.0
 	github.com/flamego/binding v1.3.0
+	github.com/flamego/cache v1.5.1
 	github.com/flamego/flamego v1.12.0
 	github.com/flamego/validator v1.0.0
 	github.com/glebarez/go-sqlite v1.21.2
@@ -66,6 +67,7 @@ require (
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
 	charm.land/lipgloss/v2 v2.0.1 // indirect
 	charm.land/log/v2 v2.0.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
@@ -94,7 +96,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
+	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
@@ -128,6 +130,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/redis/go-redis/v9 v9.5.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect

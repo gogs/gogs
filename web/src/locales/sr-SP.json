@@ -22,10 +22,16 @@
   "language": "Језик",
   "page_not_found": "Page Not Found",
   "username": "Корисничко име",
+  "email": "E-пошта",
   "password": "Лозинка",
   "auth_source": "Извор аутентикације",
   "local": "Локално",
   "remember_me": "Запамти ме",
   "forget_password": "Заборавили сте лозинку?",
-  "sign_up_now": "Немате налог? Пријавите се."
+  "disable_register_mail": "Извините, потврда путем поште је онемогућено.",
+  "non_local_account": "Нелокални налози не могу да промените лозинку преко Gogs.",
+  "sign_up_now": "Немате налог? Пријавите се.",
+  "reset_password": "Ресет лозинке",
+  "invalid_code": "Извините, ваш код за потврду је истекао или није валидан.",
+  "new_password": "Нова лозинка"
 }

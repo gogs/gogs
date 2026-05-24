@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-func mountWebRoutes(f *flamego.Flame) error {
+func mountWebAppRoutes(f *flamego.Flame) error {
 	viteURL, err := url.Parse("http://localhost:5173")
 	if err != nil {
 		return errors.Wrap(err, "parse Vite URL")

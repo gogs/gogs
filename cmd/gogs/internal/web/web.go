@@ -14,9 +14,10 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/cache"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/binding"
-	"github.com/go-macaron/cache"
+	macaroncache "github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/gzip"
@@ -36,12 +37,12 @@ import (
 	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
-	"gogs.io/gogs/internal/route/dev"
 	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/public"
 	"gogs.io/gogs/templates"
 )
@@ -89,8 +90,6 @@ func Run(configPath string, portOverride int) error {
 		m.Group("/user", func() {
 			m.Get("/sign_up", user.SignUp)
 			m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
-			m.Get("/reset_password", user.ResetPasswd)
-			m.Post("/reset_password", user.ResetPasswdPost)
 		}, reqSignOut)
 
 		m.Group("/user/settings", func() {
@@ -137,8 +136,6 @@ func Run(configPath string, portOverride int) error {
 			m.Any("/activate", user.Activate)
 			m.Any("/activate_email", user.ActivateEmail)
 			m.Get("/email2user", user.Email2User)
-			m.Get("/forget_password", user.ForgotPasswd)
-			m.Post("/forget_password", user.ForgotPasswdPost)
 			m.Post("/logout", user.SignOut)
 		})
 		// ***** END: User *****
@@ -228,10 +225,6 @@ func Run(configPath string, portOverride int) error {
 		m.Group("/:username", func() {
 			m.Post("/action/:action", user.Action)
 		}, reqSignIn, context.InjectParamsUser())
-
-		if macaron.Env == macaron.DEV {
-			m.Get("/template/*", dev.TemplatePreview)
-		}
 
 		reqRepoAdmin := context.RequireRepoAdmin()
 		reqRepoWriter := context.RequireRepoWriter()
@@ -689,12 +682,28 @@ func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
 
-	mountWebAPIRoutes(f)
+	cacherOpts, err := parseCacheOptions(conf.Cache)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse cache options")
+	}
+	f.Use(cache.Cacher(cacherOpts))
 
-	if err := mountWebRoutes(f); err != nil {
-		return nil, errors.Wrap(err, "mount web routes")
+	f.Get("/redirect", getRedirect)
+
+	mountWebAPIRoutes(f)
+	err = mountWebAppRoutes(f)
+	if err != nil {
+		return nil, errors.Wrap(err, "mount web app routes")
 	}
 	return f, nil
+}
+
+func getRedirect(c flamego.Context) {
+	to := c.Request().URL.Query().Get("to")
+	if !urlx.IsSameSite(to) {
+		to = conf.Server.Subpath + "/"
+	}
+	c.Redirect(to, http.StatusSeeOther)
 }
 
 // newMacaron initializes Macaron instance.
@@ -780,7 +789,7 @@ func newMacaron() (*macaron.Macaron, error) {
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
-	m.Use(cache.Cacher(cache.Options{
+	m.Use(macaroncache.Cacher(macaroncache.Options{
 		Adapter:       conf.Cache.Adapter,
 		AdapterConfig: conf.Cache.Host,
 		Interval:      conf.Cache.Interval,

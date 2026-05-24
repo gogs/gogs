@@ -22,10 +22,16 @@
   "language": "Limba",
   "page_not_found": "Pagina nu a fost găsită",
   "username": "Numele de utilizator",
+  "email": "E-mail",
   "password": "Parolă",
   "auth_source": "Sursa de autentificare",
   "local": "Local",
   "remember_me": "Ține-mă minte",
   "forget_password": "Ați uitat parola?",
-  "sign_up_now": "Nevoie de un cont? Inscrie-te acum."
+  "disable_register_mail": "Ne pare rău, serviciile de e-mail sunt dezactivate. Vă rugăm să contactați administratorul site-ului.",
+  "non_local_account": "Conturile non-locale nu pot schimba parolele prin Gogs.",
+  "sign_up_now": "Nevoie de un cont? Inscrie-te acum.",
+  "reset_password": "Resetați-vă parola",
+  "invalid_code": "Ne pare rău, codul dvs. de confirmare a expirat sau nu este valabil.",
+  "new_password": "Parolă nouă"
 }

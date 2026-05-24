@@ -22,10 +22,16 @@
   "language": "Ngôn ngữ",
   "page_not_found": "Không tìm thấy trang này!",
   "username": "Username",
+  "email": "Email",
   "password": "Mật khẩu",
   "auth_source": "Authentication Source",
   "local": "Local",
   "remember_me": "Ghi nhớ tôi",
   "forget_password": "Quên mật khẩu?",
-  "sign_up_now": "Cần một tài khoản? Đăng ký bây giờ."
+  "disable_register_mail": "Xin lỗi, đăng ký đã bị vô hiệu. Xin vui lòng liên hệ với người quản trị trang web.",
+  "non_local_account": "Tài khoản Non-local không thể thay đổi mật khẩu thông qua Gogs.",
+  "sign_up_now": "Cần một tài khoản? Đăng ký bây giờ.",
+  "reset_password": "Đặt lại mật khẩu của bạn",
+  "invalid_code": "Xin lỗi, mã số xác nhận của bạn đã hết hạn hoặc không hợp lệ.",
+  "new_password": "Mật khẩu mới"
 }

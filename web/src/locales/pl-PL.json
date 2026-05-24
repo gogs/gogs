@@ -22,10 +22,16 @@
   "language": "Język",
   "page_not_found": "Strona nie została znaleziona",
   "username": "Nazwa użytkownika",
+  "email": "E-mail",
   "password": "Hasło",
   "auth_source": "Źródło uwierzytelniania",
   "local": "Lokalne",
   "remember_me": "Zapamiętaj mnie",
   "forget_password": "Zapomniałeś hasła?",
-  "sign_up_now": "Potrzebujesz konta? Zarejestruj się teraz."
+  "disable_register_mail": "Przepraszamy, potwierdzenia rejestracji zostały wyłączone przez administratora.",
+  "non_local_account": "Nie lokalne konta nie mogą zmieniać haseł przez Gogs.",
+  "sign_up_now": "Potrzebujesz konta? Zarejestruj się teraz.",
+  "reset_password": "Resetowanie hasła",
+  "invalid_code": "Niestety, Twój kod potwierdzający wygasł lub jest nieprawidłowy.",
+  "new_password": "Nowe hasło"
 }

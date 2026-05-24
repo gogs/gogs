@@ -16,7 +16,7 @@ export function NotFound() {
             <span className="size-2.5 rounded-full bg-(--color-foreground)/20" />
             <span className="ml-2 text-xs text-(--color-muted-foreground) sm:ml-3">gogs — zsh</span>
           </div>
-          <pre className="px-4 py-4 text-xs leading-relaxed break-all whitespace-pre-wrap text-(--color-foreground) sm:px-5 sm:py-5 sm:text-sm">
+          <pre className="px-4 py-4 font-pixel text-sm leading-relaxed break-all whitespace-pre-wrap text-(--color-foreground) sm:px-5 sm:py-5 sm:text-base">
             <span className="text-(--color-muted-foreground)">$ </span>
             <span>gogs show {path}</span>
             {"\n"}

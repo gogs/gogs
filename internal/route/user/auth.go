@@ -19,10 +19,8 @@ import (
 )
 
 const (
-	tmplUserAuthSignup         = "user/auth/signup"
-	TmplUserAuthActivate       = "user/auth/activate"
-	tmplUserAuthForgotPassword = "user/auth/forgot_passwd"
-	tmplUserAuthResetPassword  = "user/auth/reset_passwd"
+	tmplUserAuthSignup   = "user/auth/signup"
+	TmplUserAuthActivate = "user/auth/activate"
 )
 
 func SignOut(c *context.Context) {
@@ -163,8 +161,8 @@ func parseUserFromCode(code string) (user *database.User) {
 	return nil
 }
 
-// verify active code when active account
-func verifyUserActiveCode(code string) (user *database.User) {
+// VerifyUserActiveCode verifies an account activation or password reset code.
+func VerifyUserActiveCode(code string) (user *database.User) {
 	minutes := conf.Auth.ActivateCodeLives
 
 	if user = parseUserFromCode(code); user != nil {
@@ -228,7 +226,7 @@ func Activate(c *context.Context) {
 	}
 
 	// Verify code.
-	if user := verifyUserActiveCode(code); user != nil {
+	if user := VerifyUserActiveCode(code); user != nil {
 		v := true
 		err := database.Handle.Users().Update(
 			c.Req.Context(),
@@ -272,114 +270,4 @@ func ActivateEmail(c *context.Context) {
 	}
 
 	c.RedirectSubpath("/user/settings/email")
-}
-
-func ForgotPasswd(c *context.Context) {
-	c.Title("auth.forgot_password")
-
-	if !conf.Email.Enabled {
-		c.Data["IsResetDisable"] = true
-		c.Success(tmplUserAuthForgotPassword)
-		return
-	}
-
-	c.Data["IsResetRequest"] = true
-	c.Success(tmplUserAuthForgotPassword)
-}
-
-func ForgotPasswdPost(c *context.Context) {
-	c.Title("auth.forgot_password")
-
-	if !conf.Email.Enabled {
-		c.Status(403)
-		return
-	}
-	c.Data["IsResetRequest"] = true
-
-	emailAddr := c.Query("email")
-	c.Data["Email"] = emailAddr
-
-	u, err := database.Handle.Users().GetByEmail(c.Req.Context(), emailAddr)
-	if err != nil {
-		if database.IsErrUserNotExist(err) {
-			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-			c.Data["IsResetSent"] = true
-			c.Success(tmplUserAuthForgotPassword)
-			return
-		}
-
-		c.Error(err, "get user by email")
-		return
-	}
-
-	if !u.IsLocal() {
-		c.FormErr("Email")
-		c.RenderWithErr(c.Tr("auth.non_local_account"), http.StatusForbidden, tmplUserAuthForgotPassword, nil)
-		return
-	}
-
-	if c.Cache.IsExist(userx.MailResendCacheKey(u.ID)) {
-		c.Data["ResendLimited"] = true
-		c.Success(tmplUserAuthForgotPassword)
-		return
-	}
-
-	if err = email.SendResetPasswordMail(c.Context, database.NewMailerUser(u)); err != nil {
-		log.Error("Failed to send reset password mail: %v", err)
-	}
-	if err = c.Cache.Put(userx.MailResendCacheKey(u.ID), 1, 180); err != nil {
-		log.Error("Failed to put cache key 'mail resend': %v", err)
-	}
-
-	c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-	c.Data["IsResetSent"] = true
-	c.Success(tmplUserAuthForgotPassword)
-}
-
-func ResetPasswd(c *context.Context) {
-	c.Title("auth.reset_password")
-
-	code := c.Query("code")
-	if code == "" {
-		c.NotFound()
-		return
-	}
-	c.Data["Code"] = code
-	c.Data["IsResetForm"] = true
-	c.Success(tmplUserAuthResetPassword)
-}
-
-func ResetPasswdPost(c *context.Context) {
-	c.Title("auth.reset_password")
-
-	code := c.Query("code")
-	if code == "" {
-		c.NotFound()
-		return
-	}
-	c.Data["Code"] = code
-
-	if u := verifyUserActiveCode(code); u != nil {
-		// Validate password length.
-		password := c.Query("password")
-		if len(password) < 6 {
-			c.Data["IsResetForm"] = true
-			c.Data["Err_Password"] = true
-			c.RenderWithErr(c.Tr("auth.password_too_short"), http.StatusBadRequest, tmplUserAuthResetPassword, nil)
-			return
-		}
-
-		err := database.Handle.Users().Update(c.Req.Context(), u.ID, database.UpdateUserOptions{Password: &password})
-		if err != nil {
-			c.Error(err, "update user")
-			return
-		}
-
-		log.Trace("User password reset: %s", u.Name)
-		c.RedirectSubpath("/user/sign-in")
-		return
-	}
-
-	c.Data["IsResetFailed"] = true
-	c.Success(tmplUserAuthResetPassword)
 }

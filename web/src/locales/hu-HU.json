@@ -22,10 +22,16 @@
   "language": "Nyelv",
   "page_not_found": "Az oldal nem található",
   "username": "Felhasználónév",
+  "email": "E-mail",
   "password": "Jelszó",
   "auth_source": "Hitelesítési forrás",
   "local": "Helyi",
   "remember_me": "Emlékezz rám",
   "forget_password": "Elfelejtette a jelszavát?",
-  "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most."
+  "disable_register_mail": "Elnézést, az email regisztráció megerősítését kikapcsolták.",
+  "non_local_account": "Nem helyi felhasználó nem cserélhet jelszót a Gogsban.",
+  "sign_up_now": "Szeretne bejelentkezni? Regisztráljon most.",
+  "reset_password": "Jelszó visszaállítása",
+  "invalid_code": "Elnézést, a megerősítő kód lejárt vagy hibás.",
+  "new_password": "Új jelszó"
 }

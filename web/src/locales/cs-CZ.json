@@ -22,10 +22,16 @@
   "language": "Jazyk",
   "page_not_found": "Page Not Found",
   "username": "Uživatelské jméno",
+  "email": "E-mail",
   "password": "Heslo",
   "auth_source": "Zdroj ověření",
   "local": "Lokální",
   "remember_me": "Zapamatovat si mne",
   "forget_password": "Zapomněli jste heslo?",
-  "sign_up_now": "Potřebujete účet? Zaregistrujte se."
+  "disable_register_mail": "Omlouváme se, ale e-mailové služby jsou vypnuté. Kontaktujte správce systému.",
+  "non_local_account": "Externí účty nemohou měnit hesla přes Gogs.",
+  "sign_up_now": "Potřebujete účet? Zaregistrujte se.",
+  "reset_password": "Obnova vašeho hesla",
+  "invalid_code": "Omlouváme se, ale kód z vašeho potvrzovacího e-mailu už vypršel nebo není správný.",
+  "new_password": "Nové heslo"
 }

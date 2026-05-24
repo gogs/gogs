@@ -22,10 +22,16 @@
   "language": "Kieli",
   "page_not_found": "Sivua ei löydy",
   "username": "Käyttäjätunnus",
+  "email": "Sähköposti",
   "password": "Salasana",
   "auth_source": "Todennuslähde",
   "local": "Paikallinen",
   "remember_me": "Muista minut",
   "forget_password": "Unohtuiko salasana?",
-  "sign_up_now": "Tarvitsetko tilin? Rekisteröidy nyt."
+  "disable_register_mail": "Valitettavasti sähköpostipalvelut ovat poissa käytöstä. Otathan yhteyttä sivuston ylläpitoon.",
+  "non_local_account": "Vain paikallisten käyttäjätilien salasanan vaihto onnistuu Gogsin kautta.",
+  "sign_up_now": "Tarvitsetko tilin? Rekisteröidy nyt.",
+  "reset_password": "Nollaa salasanasi",
+  "invalid_code": "Sori, varmistuskoodisi on vanhentunut tai väärä.",
+  "new_password": "Uusi salasana"
 }

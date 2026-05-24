@@ -22,10 +22,16 @@
   "language": "語言",
   "page_not_found": "Page Not Found",
   "username": "用戶名稱",
+  "email": "電子郵件",
   "password": "密碼",
   "auth_source": "Authentication Source",
   "local": "Local",
   "remember_me": "記住登錄",
   "forget_password": "忘記密碼？",
-  "sign_up_now": "還沒帳戶？馬上註冊。"
+  "disable_register_mail": "對不起，註冊郵箱確認功能已被關閉。",
+  "non_local_account": "Non-local accounts cannot change passwords through Gogs.",
+  "sign_up_now": "還沒帳戶？馬上註冊。",
+  "reset_password": "重置密碼",
+  "invalid_code": "對不起，您的確認代碼已過期或已失效。",
+  "new_password": "新的密碼"
 }

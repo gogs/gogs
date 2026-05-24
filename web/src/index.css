@@ -3,10 +3,19 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+@font-face {
+  font-family: "Geist Pixel";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/GeistPixel-Square.woff2") format("woff2");
+}
+
 @theme inline {
   --font-sans:
     "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono Variable", "PingFang SC", "Microsoft YaHei", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono Variable", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -86,5 +95,68 @@
   }
   body {
     -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Flame flicker for terminal-style hover affordances: a Hermès-orange glow
+   that irregularly pulses, like an ember catching from underneath the text.
+   Pauses for users who prefer reduced motion. */
+@property --flame-core {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff6b35;
+}
+@property --flame-halo {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff8a4c;
+}
+
+@keyframes flame-flicker {
+  0% {
+    text-shadow:
+      0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+      0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+  }
+  18% {
+    text-shadow:
+      0 0 6px color-mix(in srgb, var(--flame-core) 70%, transparent),
+      0 0 14px color-mix(in srgb, var(--flame-halo) 40%, transparent);
+  }
+  31% {
+    text-shadow:
+      0 0 3px color-mix(in srgb, var(--flame-core) 35%, transparent),
+      0 0 6px color-mix(in srgb, var(--flame-halo) 18%, transparent);
+  }
+  47% {
+    text-shadow:
+      0 0 8px color-mix(in srgb, var(--flame-core) 75%, transparent),
+      0 0 18px color-mix(in srgb, var(--flame-halo) 45%, transparent);
+  }
+  62% {
+    text-shadow:
+      0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+      0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+  }
+  78% {
+    text-shadow:
+      0 0 5px color-mix(in srgb, var(--flame-core) 60%, transparent),
+      0 0 11px color-mix(in srgb, var(--flame-halo) 32%, transparent);
+  }
+  100% {
+    text-shadow:
+      0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+      0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes flame-flicker {
+    0%,
+    100% {
+      text-shadow:
+        0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+        0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+    }
   }
 }

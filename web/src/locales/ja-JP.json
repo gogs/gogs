@@ -22,10 +22,16 @@
   "language": "言語",
   "page_not_found": "ページが見つかりません",
   "username": "ユーザー名",
+  "email": "メールアドレス",
   "password": "パスワード",
   "auth_source": "認証ソース",
   "local": "ローカル",
   "remember_me": "ログインしたままにする",
   "forget_password": "パスワードを忘れましたか？",
-  "sign_up_now": "アカウントが必要ですか？今すぐ登録しましょう！"
+  "disable_register_mail": "申し訳ありませんが、登録メールの確認機能が無効になっています。",
+  "non_local_account": "非ローカルアカウントではGogs経由でのパスワード変更はできません。",
+  "sign_up_now": "アカウントが必要ですか？今すぐ登録しましょう！",
+  "reset_password": "パスワードリセット",
+  "invalid_code": "申し訳ありませんが、確認用コードが期限切れまたは無効です。",
+  "new_password": "新しいパスワード"
 }

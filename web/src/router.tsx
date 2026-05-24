@@ -15,6 +15,7 @@ import type { UserInfo } from "@/lib/user-info";
 import { Landing } from "@/pages/Landing";
 import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
+import { ResetPassword, type ResetPasswordPage } from "@/pages/ResetPassword";
 import { SignIn, type SignInPage } from "@/pages/SignIn";
 
 interface RouterContext {
@@ -42,22 +43,21 @@ const landingRoute = createRoute({
   component: Landing,
 });
 
+function requireUnauthenticated({ context }: { context: RouterContext }) {
+  if (!context.user) return;
+  // Bounce authenticated visits to "/" via full navigation so the server-rendered
+  // dashboard handler runs.
+  window.location.assign(subUrl("/"));
+  // The thrown redirect is a sentinel to halt loader execution;
+  // the document-level navigation above is what actually moves the user.
+  // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+  throw redirect({ to: "/", replace: true });
+}
+
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/sign-in",
-  beforeLoad: ({ context }) => {
-    if (context.user) {
-      // Full navigation to "/" so the server-rendered dashboard handler runs.
-      // A client-side TanStack redirect would render the SPA's "/" route
-      // (Landing, the anon page) and make an authed user look signed out.
-      window.location.assign(subUrl("/"));
-      // Throw to halt loader execution. TanStack treats the thrown redirect
-      // as a sentinel; we never reach a SPA navigation because the line
-      // above already started a document-level one.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ to: "/", replace: true });
-    }
-  },
+  beforeLoad: requireUnauthenticated,
   loader: async (): Promise<SignInPage> => {
     const res = await fetch(subUrl("/api/web/user/sign-in"), { credentials: "same-origin" });
     if (!res.ok) {
@@ -66,6 +66,25 @@ const signInRoute = createRoute({
     return (await res.json()) as SignInPage;
   },
   component: SignIn,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/reset-password",
+  beforeLoad: requireUnauthenticated,
+  loader: async (): Promise<ResetPasswordPage> => {
+    const code = new URLSearchParams(window.location.search).get("code") ?? "";
+    const url = code
+      ? subUrl("/api/web/user/reset-password") + "?code=" + encodeURIComponent(code)
+      : subUrl("/api/web/user/reset-password");
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (!res.ok) {
+      return { code, emailEnabled: false, valid: false };
+    }
+    const data = (await res.json()) as { emailEnabled: boolean; valid: boolean };
+    return { code, emailEnabled: data.emailEnabled, valid: data.valid };
+  },
+  component: ResetPassword,
 });
 
 const mfaRoute = createRoute({
@@ -85,7 +104,7 @@ const mfaRoute = createRoute({
   component: MFA,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, signInRoute, mfaRoute]);
+const routeTree = rootRoute.addChildren([landingRoute, signInRoute, resetPasswordRoute, mfaRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

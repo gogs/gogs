@@ -22,10 +22,16 @@
   "language": "Taal",
   "page_not_found": "Pagina niet gevonden",
   "username": "Gebruikersnaam",
+  "email": "E-mail",
   "password": "Wachtwoord",
   "auth_source": "Authenticatiebron",
   "local": "Lokaal",
   "remember_me": "Onthoud mij",
   "forget_password": "Wachtwoord vergeten?",
-  "sign_up_now": "Een account nodig? Meld u nu aan."
+  "disable_register_mail": "Sorry, bevestiging van registratie per e-mail is uitgeschakeld.",
+  "non_local_account": "Niet lokale accounts mogen hun wachtwoord niet veranderen via Gogs.",
+  "sign_up_now": "Een account nodig? Meld u nu aan.",
+  "reset_password": "Reset uw wachtwoord",
+  "invalid_code": "Sorry, uw bevestigingscode is verlopen of niet meer geldig.",
+  "new_password": "Nieuw wachtwoord"
 }

@@ -22,10 +22,16 @@
   "language": "Språk",
   "page_not_found": "Sidan hittades inte",
   "username": "Användarnamn",
+  "email": "E-post",
   "password": "Lösenord",
   "auth_source": "Autentiseringskälla",
   "local": "Lokal",
   "remember_me": "Kom ihåg mig",
   "forget_password": "Glömt lösenordet?",
-  "sign_up_now": "Behöver du ett konto? Registrera dig nu."
+  "disable_register_mail": "Tyvärr så är registreringsbekräftelemailutskick inaktiverat.",
+  "non_local_account": "Icke-lokala konton får inte ändra lösenord genom Gogs.",
+  "sign_up_now": "Behöver du ett konto? Registrera dig nu.",
+  "reset_password": "Återställ ditt lösenord",
+  "invalid_code": "Tyvärr, din bekräftelsekod har antingen upphört att gälla eller är ogiltig.",
+  "new_password": "Nytt lösenord"
 }

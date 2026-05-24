@@ -22,10 +22,16 @@
   "language": "Bahasa",
   "page_not_found": "Halaman tidak ditemukan",
   "username": "Nama pengguna",
+  "email": "Email",
   "password": "Sandi",
   "auth_source": "Sumber Autentikasi",
   "local": "Lokal",
   "remember_me": "Ingat saya",
   "forget_password": "Lupa sandi?",
-  "sign_up_now": "Membutuhkan akun? Daftar sekarang."
+  "disable_register_mail": "Maaf, konfirmasi pendaftaran melalui email telah dinonaktifkan.",
+  "non_local_account": "Akun non-lokal tidak dapat mengganti password lewat Gogs.",
+  "sign_up_now": "Membutuhkan akun? Daftar sekarang.",
+  "reset_password": "Atur Ulang Sandi",
+  "invalid_code": "Maaf, kode konfirmasi Anda telah kadaluarsa atau tidak valid.",
+  "new_password": "Sandi baru"
 }

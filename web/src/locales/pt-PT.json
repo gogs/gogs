@@ -22,10 +22,16 @@
   "language": "Língua",
   "page_not_found": "Página Não Encontrada",
   "username": "Nome de utilizador",
+  "email": "Endereço de email",
   "password": "Palavra-chave",
   "auth_source": "Tipo de autenticação",
   "local": "Local",
   "remember_me": "Manter sessão iniciada",
   "forget_password": "Esqueceu a sua senha?",
-  "sign_up_now": "Precisa de uma conta? Inscreva-se agora."
+  "disable_register_mail": "Desculpe, os serviços de email estão desativados. Por favor contacte o administrador.",
+  "non_local_account": "Contas não-locais não podem mudar a palavra-passe através do Gogs.",
+  "sign_up_now": "Precisa de uma conta? Inscreva-se agora.",
+  "reset_password": "Restaurar a sua senha",
+  "invalid_code": "Desculpe, o seu código de confirmação expirou ou é inválido.",
+  "new_password": "Nova senha"
 }
