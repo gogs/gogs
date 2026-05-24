@@ -600,9 +600,16 @@ func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error
 		nil
 }
 
-func postUserSignOut(sess macaronsession.Store, mc *macaron.Context) (statusCode int, resp any, err error) {
+type postUserSignOutResponse struct {
+	RedirectTo string `json:"redirectTo,omitempty"`
+}
+
+func postUserSignOut(sess macaronsession.Store, mc *macaron.Context) (statusCode int, resp *postUserSignOutResponse, err error) {
 	_ = sess.Flush()
 	_ = sess.Destory(mc)
 	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	if conf.Auth.CustomLogoutURL != "" {
+		return http.StatusOK, &postUserSignOutResponse{RedirectTo: conf.Auth.CustomLogoutURL}, nil
+	}
 	return http.StatusNoContent, nil, nil
 }

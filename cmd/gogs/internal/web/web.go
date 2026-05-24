@@ -130,7 +130,6 @@ func Run(configPath string, portOverride int) error {
 			m.Any("/activate", user.Activate)
 			m.Any("/activate_email", user.ActivateEmail)
 			m.Get("/email2user", user.Email2User)
-			m.Post("/logout", user.SignOut)
 		})
 		// ***** END: User *****
 
