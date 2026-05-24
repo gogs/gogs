@@ -21,6 +21,7 @@
   "settings": "設定",
   "language": "語言",
   "page_not_found": "找不到頁面",
+  "internal_server_error": "內部伺服器錯誤",
   "username": "用戶名稱",
   "email": "電子郵件",
   "password": "密碼",

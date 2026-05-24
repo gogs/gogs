@@ -21,6 +21,7 @@
   "settings": "Nastavenia",
   "language": "Jazyk",
   "page_not_found": "Page Not Found",
+  "internal_server_error": "Internal Server Error",
   "username": "Používateľské meno",
   "email": "E-mail",
   "password": "Heslo",

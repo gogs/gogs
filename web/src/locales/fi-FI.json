@@ -21,6 +21,7 @@
   "settings": "Asetukset",
   "language": "Kieli",
   "page_not_found": "Sivua ei löydy",
+  "internal_server_error": "Sisäinen palvelinvirhe",
   "username": "Käyttäjätunnus",
   "email": "Sähköposti",
   "password": "Salasana",

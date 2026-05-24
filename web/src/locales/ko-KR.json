@@ -21,6 +21,7 @@
   "settings": "설정",
   "language": "언어",
   "page_not_found": "페이지를 찾을 수 없음",
+  "internal_server_error": "내부 서버 오류",
   "username": "사용자명",
   "email": "이메일",
   "password": "비밀번호",

@@ -21,6 +21,7 @@
   "settings": "Beállítások",
   "language": "Nyelv",
   "page_not_found": "Az oldal nem található",
+  "internal_server_error": "Belső kiszolgálóhiba",
   "username": "Felhasználónév",
   "email": "E-mail",
   "password": "Jelszó",

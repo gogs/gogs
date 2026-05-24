@@ -35,6 +35,7 @@ const REUSED_KEYS = [
   "settings",
   "language",
   "page_not_found",
+  "internal_server_error",
   "theme",
   "theme_light",
   "theme_dark",

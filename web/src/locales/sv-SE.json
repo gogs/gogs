@@ -21,6 +21,7 @@
   "settings": "inställningar",
   "language": "Språk",
   "page_not_found": "Sidan hittades inte",
+  "internal_server_error": "Internt serverfel",
   "username": "Användarnamn",
   "email": "E-post",
   "password": "Lösenord",

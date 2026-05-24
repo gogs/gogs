@@ -21,6 +21,7 @@
   "settings": "Cài đặt",
   "language": "Ngôn ngữ",
   "page_not_found": "Không tìm thấy trang này!",
+  "internal_server_error": "Lỗi nội bộ máy chủ.",
   "username": "Username",
   "email": "Email",
   "password": "Mật khẩu",

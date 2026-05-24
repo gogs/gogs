@@ -21,6 +21,7 @@
   "settings": "Подешавања",
   "language": "Језик",
   "page_not_found": "Page Not Found",
+  "internal_server_error": "Internal Server Error",
   "username": "Корисничко име",
   "email": "E-пошта",
   "password": "Лозинка",

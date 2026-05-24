@@ -21,6 +21,7 @@
   "settings": "Настройки",
   "language": "Език",
   "page_not_found": "Страницата не е намерена",
+  "internal_server_error": "Вътрешна грешка в сървър",
   "username": "Потребител",
   "email": "Ел. поща",
   "password": "Парола",

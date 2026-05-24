@@ -21,6 +21,7 @@
   "settings": "Einstellungen",
   "language": "Sprache",
   "page_not_found": "Seite nicht gefunden",
+  "internal_server_error": "Interner Serverfehler",
   "username": "Benutzername",
   "email": "E-Mail",
   "password": "Passwort",

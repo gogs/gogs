@@ -21,6 +21,7 @@
   "settings": "Instellingen",
   "language": "Taal",
   "page_not_found": "Pagina niet gevonden",
+  "internal_server_error": "Interne Server Fout",
   "username": "Gebruikersnaam",
   "email": "E-mail",
   "password": "Wachtwoord",

@@ -21,6 +21,7 @@
   "settings": "帐户设置",
   "language": "语言选项",
   "page_not_found": "页面未找到",
+  "internal_server_error": "内部服务器错误",
   "username": "用户名",
   "email": "邮箱",
   "password": "密码",

@@ -21,6 +21,7 @@
   "settings": "Ustawienia",
   "language": "Język",
   "page_not_found": "Strona nie została znaleziona",
+  "internal_server_error": "Wewnętrzny błąd serwera",
   "username": "Nazwa użytkownika",
   "email": "E-mail",
   "password": "Hasło",

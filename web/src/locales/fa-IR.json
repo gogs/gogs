@@ -21,6 +21,7 @@
   "settings": "تنظيمات",
   "language": "زبان",
   "page_not_found": "صفحه مورد نظر یافت نشد.",
+  "internal_server_error": "خطای داخلی سرور",
   "username": "نام کاربری",
   "email": "ایمیل",
   "password": "رمز عبور",

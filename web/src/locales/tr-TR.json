@@ -21,6 +21,7 @@
   "settings": "Ayarlar",
   "language": "Dil",
   "page_not_found": "Sayfa Bulunamadı",
+  "internal_server_error": "İç Sunucu Hatası.",
   "username": "Kullanıcı Adı",
   "email": "E-Posta",
   "password": "Parola",

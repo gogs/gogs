@@ -21,6 +21,7 @@
   "settings": "Settings",
   "language": "Language",
   "page_not_found": "Page not found",
+  "internal_server_error": "Internal server error",
   "theme": "Theme",
   "theme_light": "Light",
   "theme_dark": "Dark",

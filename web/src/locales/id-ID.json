@@ -21,6 +21,7 @@
   "settings": "Pengaturan",
   "language": "Bahasa",
   "page_not_found": "Halaman tidak ditemukan",
+  "internal_server_error": "Kesalahan Server Internal",
   "username": "Nama pengguna",
   "email": "Email",
   "password": "Sandi",

@@ -21,6 +21,7 @@
   "settings": "Definições",
   "language": "Língua",
   "page_not_found": "Página Não Encontrada",
+  "internal_server_error": "Erro do servidor interno",
   "username": "Nome de utilizador",
   "email": "Endereço de email",
   "password": "Palavra-chave",

@@ -21,6 +21,7 @@
   "settings": "Iestatījumi",
   "language": "Valoda",
   "page_not_found": "Page Not Found",
+  "internal_server_error": "Internal Server Error",
   "username": "Lietotājvārds",
   "email": "E-pasts",
   "password": "Parole",

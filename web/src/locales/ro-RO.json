@@ -21,6 +21,7 @@
   "settings": "Setări",
   "language": "Limba",
   "page_not_found": "Pagina nu a fost găsită",
+  "internal_server_error": "Eroare internă de server",
   "username": "Numele de utilizator",
   "email": "E-mail",
   "password": "Parolă",

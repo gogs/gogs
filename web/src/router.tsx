@@ -10,12 +10,14 @@ import {
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { webContext } from "@/lib/context";
+import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
 import { Landing } from "@/pages/Landing";
 import { MFA } from "@/pages/MFA";
 import { NotFound } from "@/pages/NotFound";
 import { ResetPassword, type ResetPasswordPage } from "@/pages/ResetPassword";
+import { ServerError } from "@/pages/ServerError";
 import { SignIn, type SignInPage } from "@/pages/SignIn";
 import { SignUp, type SignUpPage } from "@/pages/SignUp";
 
@@ -72,17 +74,11 @@ const signInRoute = createRoute({
 const signUpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/sign-up",
-  beforeLoad: ({ context }) => {
-    if (context.user) {
-      window.location.assign(subUrl("/"));
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ to: "/", replace: true });
-    }
-  },
+  beforeLoad: requireUnauthenticated,
   loader: async (): Promise<SignUpPage> => {
     const res = await fetch(subUrl("/api/web/user/sign-up"), { credentials: "same-origin" });
     if (!res.ok) {
-      return { registrationDisabled: true, captchaEnabled: false };
+      throw await loaderResponseError(res);
     }
     return (await res.json()) as SignUpPage;
   },
@@ -132,6 +128,7 @@ function makeRouter(context: RouterContext) {
     routeTree,
     basepath: webContext.subURL || "/",
     defaultNotFoundComponent: NotFound,
+    defaultErrorComponent: ServerError,
     context,
   });
 }

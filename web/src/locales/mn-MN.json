@@ -21,6 +21,7 @@
   "settings": "Тохиргоо",
   "language": "Хэл",
   "page_not_found": "Хуудас олдсонгүй",
+  "internal_server_error": "Сервертэй холбогдоход алдаа гарлаа.",
   "username": "Нэвтрэх нэр",
   "email": "Имэйл",
   "password": "Нууц үг",
