@@ -39,5 +39,8 @@
   "reset_password": "Restablecer o teu contrasinal",
   "invalid_code": "Sentímolo, o teu código de confirmación expirou ou non é válido.",
   "new_password": "Novo contrasinal",
-  "confirm_password": "Confirmar contrasinal"
+  "confirm_password": "Confirmar contrasinal",
+  "active_your_account": "Activa a túa conta",
+  "resent_limit_prompt": "Sentímolo, estás solicitando o reenvío do correo de activación con demasiada frecuencia. Por favor, agarda 3 minutos.",
+  "resend_mail": "Preme aquí para reenviar o teu correo electrónico de activación"
 }

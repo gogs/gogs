@@ -98,6 +98,15 @@ const REUSED_KEYS = [
   "mfa_verifying",
   "mfa_session_expired",
   "mfa_verify_failed",
+  "active_your_account",
+  "resent_limit_prompt",
+  "resend_mail",
+  "activate_check_email",
+  "activate_resend_prompt",
+  "activate_email_sent",
+  "activate_resending",
+  "activate_resend_failed",
+  "activate_verifying",
 ];
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores

@@ -39,5 +39,8 @@
   "reset_password": "Passwort zurücksetzen",
   "invalid_code": "Es tut uns leid, der Bestätigungscode ist abgelaufen oder ungültig.",
   "new_password": "Neues Passwort",
-  "confirm_password": "Passwort bestätigen"
+  "confirm_password": "Passwort bestätigen",
+  "active_your_account": "Aktivieren Sie Ihr Konto",
+  "resent_limit_prompt": "Es tut uns leid, aber Sie haben bereits eine Aktivierungs-E-Mail angefordert. Bitte warten Sie 3 Minuten und probieren Sie es dann nochmal.",
+  "resend_mail": "Hier klicken, um die Aktivierungs-E-Mail erneut zu versenden"
 }

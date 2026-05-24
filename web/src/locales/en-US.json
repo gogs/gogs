@@ -83,5 +83,14 @@
   "mfa_verify": "Verify",
   "mfa_verifying": "Verifying...",
   "mfa_session_expired": "Your sign-in session has expired. Please sign in again.",
-  "mfa_verify_failed": "Verification failed. Please try again."
+  "mfa_verify_failed": "Verification failed. Please try again.",
+  "active_your_account": "Activate Your Account",
+  "resent_limit_prompt": "Sorry, you already requested an activation email recently. Please wait 3 minutes then try again.",
+  "resend_mail": "Resend activation email",
+  "activate_check_email": "Please check your email and click the activation link to finish setting up your account.",
+  "activate_resend_prompt": "Your email address <email>{email}</email> is not yet confirmed. Click below to send a new activation email valid for <hours>{hours} hours</hours>.",
+  "activate_email_sent": "A new activation email has been sent to <email>{email}</email>. Please check your inbox within <hours>{hours} hours</hours>.",
+  "activate_resending": "Sending activation email...",
+  "activate_resend_failed": "Could not send activation email, please try again.",
+  "activate_verifying": "Activating your account..."
 }

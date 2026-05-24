@@ -159,6 +159,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Post(bindJSON(userMFARequest{}), postUserMFA)
 				f.Post("/recovery", bindJSON(userMFARecoveryRequest{}), postUserMFARecovery)
 			})
+			f.Group("/activate", func() {
+				f.Combo("").
+					Get(getUserActivate).
+					Post(postUserActivate)
+				f.Post("/complete", bindJSON(userActivateCompleteRequest{}), postUserActivateComplete)
+			})
 			f.Post("/sign-out", postUserSignOut)
 		})
 	}, webAPIBodyLimiter)
@@ -598,6 +604,97 @@ func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error
 			CanCreateOrganization: user.CanCreateOrganization(),
 		},
 		nil
+}
+
+type getUserActivateResponse struct {
+	// SignedIn indicates whether the visitor is signed in. The React page uses
+	// this to decide whether to offer a resend button (signed-in inactive user)
+	// or just to show "click the link in your email" prose (anonymous visitor
+	// who landed here without a code).
+	SignedIn bool `json:"signedIn"`
+	// Email is the address the activation link was sent to. Only populated when
+	// SignedIn is true.
+	Email string `json:"email,omitempty"`
+	// ServiceNotEnabled is true when email confirmation is disabled in config,
+	// in which case the page cannot do anything useful.
+	ServiceNotEnabled bool `json:"serviceNotEnabled,omitempty"`
+	// Hours is the lifetime of the activation code in hours, for prose.
+	Hours int `json:"hours,omitempty"`
+}
+
+func getUserActivate(u *database.User) (statusCode int, resp *getUserActivateResponse, err error) {
+	out := &getUserActivateResponse{
+		ServiceNotEnabled: !conf.Auth.RequireEmailConfirmation,
+		Hours:             conf.Auth.ActivateCodeLives / 60,
+	}
+	if u != nil {
+		out.SignedIn = true
+		out.Email = u.Email
+	}
+	return http.StatusOK, out, nil
+}
+
+type postUserActivateResponse struct {
+	ResendLimited bool `json:"resendLimited,omitempty"`
+	Hours         int  `json:"hours,omitempty"`
+}
+
+func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
+	if u == nil {
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.activate_requires_sign_in")}, nil
+	}
+	if u.IsActive {
+		return http.StatusNotFound, nil, nil
+	}
+	if !conf.Auth.RequireEmailConfirmation {
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
+	}
+
+	ctx := r.Context()
+	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
+		return http.StatusOK, &postUserActivateResponse{
+			ResendLimited: true,
+			Hours:         conf.Auth.ActivateCodeLives / 60,
+		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Error("postUserActivate: get mail resend cache for user %q: %v", u.Name, err)
+	}
+
+	if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
+		log.Error("postUserActivate: send activation mail to user %q: %v", u.Name, err)
+	}
+	if err := ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
+		log.Error("postUserActivate: put mail resend cache for user %q: %v", u.Name, err)
+	}
+	return http.StatusOK, &postUserActivateResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
+}
+
+type userActivateCompleteRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
+	target := user.VerifyUserActiveCode(req.Code)
+	if target == nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+	}
+
+	v := true
+	if err := database.Handle.Users().Update(
+		r.Context(),
+		target.ID,
+		database.UpdateUserOptions{
+			GenerateNewRands: true,
+			IsActivated:      &v,
+		},
+	); err != nil {
+		log.Error("postUserActivateComplete: update user %q: %v", target.Name, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+	}
+
+	log.Trace("User activated: %s", target.Name)
+	completeSignIn(sess, mc, target)
+	return http.StatusNoContent, nil, nil
 }
 
 type postUserSignOutResponse struct {

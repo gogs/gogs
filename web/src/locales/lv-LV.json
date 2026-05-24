@@ -39,5 +39,8 @@
   "reset_password": "Atjaunot savu paroli",
   "invalid_code": "Atvainojiet, Jūsu apstiprināšanas kodam ir beidzies derīguma termiņš vai arī tas ir nepareizs.",
   "new_password": "Jauna parole",
-  "confirm_password": "Apstipriniet paroli"
+  "confirm_password": "Apstipriniet paroli",
+  "active_your_account": "Aktivizēt savu kontu",
+  "resent_limit_prompt": "Atvainojiet, Jūs sūtījāt aktivizācijas e-pastu pārāk bieži. Lūdzu, gaidiet 3 minūtes.",
+  "resend_mail": "Nospiediet šeit, lai vēlreiz nosūtītu aktivizācijas e-pastu"
 }
