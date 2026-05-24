@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -126,11 +125,6 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 
 	if !createNewUser {
 		return user, nil
-	}
-
-	// Validate username make sure it satisfies requirement.
-	if disallowedUsernameChars.MatchString(extAccount.Name) {
-		return nil, errors.Newf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
 	return s.Create(ctx, extAccount.Name, extAccount.Email,
