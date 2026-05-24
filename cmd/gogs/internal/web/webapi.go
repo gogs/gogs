@@ -623,9 +623,7 @@ type getUserActivateResponse struct {
 }
 
 func getUserActivate(u *database.User) (statusCode int, resp *getUserActivateResponse, err error) {
-	// An already-active signed-in user has no business on the activation page.
-	// Match the legacy 404 so a stale bookmark or forwarded link does not
-	// surface a confusing resend form.
+	// An already-active and authenticated user has no business on the activation page.
 	if u != nil && u.IsActive {
 		return http.StatusNotFound, nil, nil
 	}
