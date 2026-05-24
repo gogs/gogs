@@ -28,7 +28,6 @@
   "captcha": "Pārbaudes kods",
   "auth_source": "Autentificēšanas avots",
   "local": "Local",
-  "remember_me": "Atcerēties mani",
   "forget_password": "Aizmirsi paroli?",
   "disable_register_mail": "Atvainojiet, reģistrācijas e-pasta apstiprināšana ir atspējota.",
   "disable_register_prompt": "Atvainojiet, reģistrācija ir atspējota. Lūdzu, sazinieties ar vietnes administratoru.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Nepieciešams konts? Reģistrējies tagad.",
   "reset_password": "Atjaunot savu paroli",
   "invalid_code": "Atvainojiet, Jūsu apstiprināšanas kodam ir beidzies derīguma termiņš vai arī tas ir nepareizs.",
-  "new_password": "Jauna parole"
+  "new_password": "Jauna parole",
+  "confirm_password": "Apstipriniet paroli"
 }

@@ -28,7 +28,6 @@
   "captcha": "Captcha=Captcha",
   "auth_source": "Fonte de Autenticación",
   "local": "Configuración rexional",
-  "remember_me": "Recórdame",
   "forget_password": "Esqueciches o teu contrasinal?",
   "disable_register_mail": "Sentímolo. Os correos de confirmación de rexistro están deshabilitados.",
   "disable_register_prompt": "Sentímolo, o rexistro está deshabilitado. Por favor, contacta co administrador do sitio.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Necesitas unha conta? Rexístrate agora.",
   "reset_password": "Restablecer o teu contrasinal",
   "invalid_code": "Sentímolo, o teu código de confirmación expirou ou non é válido.",
-  "new_password": "Novo contrasinal"
+  "new_password": "Novo contrasinal",
+  "confirm_password": "Confirmar contrasinal"
 }

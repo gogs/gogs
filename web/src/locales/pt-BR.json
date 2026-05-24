@@ -28,7 +28,6 @@
   "captcha": "Captcha",
   "auth_source": "Fonte de autenticação",
   "local": "Local",
-  "remember_me": "Lembrar de mim",
   "forget_password": "Esqueceu a senha?",
   "disable_register_mail": "Desculpe, a confirmação de registro por e-mail foi desabilitada.",
   "disable_register_prompt": "Desculpe, novos registros estão desabilitados. Por favor entre em contato com o administrador do site.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Precisa de uma conta? Cadastre-se agora.",
   "reset_password": "Redefinir sua senha",
   "invalid_code": "Desculpe, seu código de confirmação expirou ou não é válido.",
-  "new_password": "Nova senha"
+  "new_password": "Nova senha",
+  "confirm_password": "Confirmar senha"
 }

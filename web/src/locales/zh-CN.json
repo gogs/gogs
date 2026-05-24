@@ -28,7 +28,6 @@
   "captcha": "验证码",
   "auth_source": "认证源",
   "local": "本地",
-  "remember_me": "记住登录",
   "forget_password": "忘记密码？",
   "disable_register_mail": "对不起，注册邮箱确认功能已被关闭。",
   "disable_register_prompt": "对不起，注册功能已被关闭。请联系网站管理员。",
@@ -39,5 +38,6 @@
   "sign_up_now": "还没帐户？马上注册。",
   "reset_password": "重置密码",
   "invalid_code": "对不起，您的确认代码已过期或已失效。",
-  "new_password": "新的密码"
+  "new_password": "新的密码",
+  "confirm_password": "确认密码"
 }

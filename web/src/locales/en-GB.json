@@ -28,7 +28,6 @@
   "captcha": "Captcha",
   "auth_source": "Authentication Source",
   "local": "Local",
-  "remember_me": "Remember Me",
   "forget_password": "Forgot password?",
   "disable_register_mail": "Sorry, Register Mail Confirmation has been disabled.",
   "disable_register_prompt": "Sorry, registration has been disabled. Please contact the site administrator.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Need an account? Sign up now.",
   "reset_password": "Reset Your Password",
   "invalid_code": "Sorry, your confirmation code has expired or not valid.",
-  "new_password": "New Password"
+  "new_password": "New Password",
+  "confirm_password": "Confirm Password"
 }

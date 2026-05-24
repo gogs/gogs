@@ -28,7 +28,6 @@
   "captcha": "Captcha",
   "auth_source": "Fonte di autenticazione",
   "local": "Locale",
-  "remember_me": "Ricordami",
   "forget_password": "Password dimenticata?",
   "disable_register_mail": "Siamo spiacenti, la conferma di registrazione via Mail è stata disattivata.",
   "disable_register_prompt": "Siamo spiacenti, registrazione è stata disabilitata. Si prega di contattare l'amministratore del sito.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Bisogno di un account? Iscriviti ora.",
   "reset_password": "Reimposta la tua Password",
   "invalid_code": "Siamo spiacenti, il codice di conferma è scaduto o non valido.",
-  "new_password": "Nuova Password"
+  "new_password": "Nuova Password",
+  "confirm_password": "Conferma Password"
 }

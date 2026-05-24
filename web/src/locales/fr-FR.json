@@ -28,7 +28,6 @@
   "captcha": "Captcha",
   "auth_source": "Sources d'authentification",
   "local": "Locale",
-  "remember_me": "Se souvenir de moi",
   "forget_password": "Mot de passe oublié ?",
   "disable_register_mail": "Désolé, la confirmation par courriel des enregistrements a été désactivée.",
   "disable_register_prompt": "Désolé, les enregistrements ont été désactivés. Veuillez contacter l'administrateur du site.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Pas de compte ? Inscrivez-vous maintenant.",
   "reset_password": "Réinitialiser le mot de passe",
   "invalid_code": "Désolé, votre code de confirmation est invalide ou a expiré.",
-  "new_password": "Nouveau mot de passe"
+  "new_password": "Nouveau mot de passe",
+  "confirm_password": "Confirmez le mot de passe"
 }

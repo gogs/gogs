@@ -55,7 +55,7 @@ export function ResetPassword() {
 
     if (isResetForm && password !== confirmPassword) {
       setFormError(null);
-      setFieldErrors({ password: null, confirmPassword: t("reset_password_mismatch") });
+      setFieldErrors({ password: null, confirmPassword: t("password_mismatch") });
       requestAnimationFrame(() => confirmPasswordRef.current?.focus());
       return;
     }
@@ -160,6 +160,7 @@ export function ResetPassword() {
                 required
                 autoFocus
                 tabIndex={1}
+                placeholder={t("email_placeholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 aria-invalid={"email" in fieldErrors ? true : undefined}

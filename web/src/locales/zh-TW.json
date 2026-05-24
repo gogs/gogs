@@ -28,7 +28,6 @@
   "captcha": "驗證碼",
   "auth_source": "認證來源",
   "local": "本地",
-  "remember_me": "記住登錄",
   "forget_password": "忘記密碼？",
   "disable_register_mail": "對不起，註冊郵箱確認功能已被關閉。",
   "disable_register_prompt": "對不起，註冊功能已被關閉。請聯系網站管理員。",
@@ -39,5 +38,6 @@
   "sign_up_now": "還沒帳戶？馬上註冊。",
   "reset_password": "重置密碼",
   "invalid_code": "對不起，您的確認代碼已過期或已失效。",
-  "new_password": "新的密碼"
+  "new_password": "新的密碼",
+  "confirm_password": "確認密碼"
 }

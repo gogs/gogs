@@ -28,7 +28,6 @@
   "captcha": "Mã xác minh",
   "auth_source": "Authentication Source",
   "local": "Local",
-  "remember_me": "Ghi nhớ tôi",
   "forget_password": "Quên mật khẩu?",
   "disable_register_mail": "Xin lỗi, đăng ký đã bị vô hiệu. Xin vui lòng liên hệ với người quản trị trang web.",
   "disable_register_prompt": "Xin lỗi, đăng ký đã bị vô hiệu. Xin vui lòng liên hệ với người quản trị trang web.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Cần một tài khoản? Đăng ký bây giờ.",
   "reset_password": "Đặt lại mật khẩu của bạn",
   "invalid_code": "Xin lỗi, mã số xác nhận của bạn đã hết hạn hoặc không hợp lệ.",
-  "new_password": "Mật khẩu mới"
+  "new_password": "Mật khẩu mới",
+  "confirm_password": "Xác nhận mật khẩu"
 }

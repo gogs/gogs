@@ -28,7 +28,6 @@
   "captcha": "Kontrolný kód",
   "auth_source": "Zdroj overovania",
   "local": "Lokálny",
-  "remember_me": "Zapamätať prihlásenie",
   "forget_password": "Zabudli ste heslo?",
   "disable_register_mail": "Ospravedlňujeme sa, potvrdenie registračného e-mailu bolo vypnuté.",
   "disable_register_prompt": "Ospravedlňujeme sa, ale registrácia bola vypnutá. Obráťte sa na administrátora stránky.",
@@ -39,5 +38,6 @@
   "sign_up_now": "Potrebujete účet? Zaregistrujte sa teraz.",
   "reset_password": "Obnovenie hesla",
   "invalid_code": "Ospravedlňujeme sa, váš potvrdzovací kód vypršal alebo nie je platný.",
-  "new_password": "Nové heslo"
+  "new_password": "Nové heslo",
+  "confirm_password": "Potvrdiť heslo"
 }

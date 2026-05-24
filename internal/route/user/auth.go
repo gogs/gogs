@@ -3,25 +3,19 @@ package user
 import (
 	gocontext "context"
 	"encoding/hex"
-	"net/http"
 	"strconv"
 
-	"github.com/go-macaron/captcha"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
-const (
-	tmplUserAuthSignup   = "user/auth/signup"
-	TmplUserAuthActivate = "user/auth/activate"
-)
+const TmplUserAuthActivate = "user/auth/activate"
 
 func SignOut(c *context.Context) {
 	_ = c.Session.Flush()
@@ -32,113 +26,6 @@ func SignOut(c *context.Context) {
 		return
 	}
 	c.RedirectSubpath("/")
-}
-
-func SignUp(c *context.Context) {
-	c.Title("sign_up")
-
-	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
-
-	if conf.Auth.DisableRegistration {
-		c.Data["DisableRegistration"] = true
-		c.Success(tmplUserAuthSignup)
-		return
-	}
-
-	c.Success(tmplUserAuthSignup)
-}
-
-func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
-	c.Title("sign_up")
-
-	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
-
-	if conf.Auth.DisableRegistration {
-		c.Status(http.StatusForbidden)
-		return
-	}
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplUserAuthSignup)
-		return
-	}
-
-	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
-		c.FormErr("Captcha")
-		c.RenderWithErr(c.Tr("form.captcha_incorrect"), http.StatusUnauthorized, tmplUserAuthSignup, &f)
-		return
-	}
-
-	if f.Password != f.Retype {
-		c.FormErr("Password")
-		c.RenderWithErr(c.Tr("form.password_not_match"), http.StatusBadRequest, tmplUserAuthSignup, &f)
-		return
-	}
-
-	user, err := database.Handle.Users().Create(
-		c.Req.Context(),
-		f.UserName,
-		f.Email,
-		database.CreateUserOptions{
-			Password:  f.Password,
-			Activated: !conf.Auth.RequireEmailConfirmation,
-		},
-	)
-	if err != nil {
-		switch {
-		case database.IsErrUserAlreadyExist(err):
-			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplUserAuthSignup, &f)
-		case database.IsErrEmailAlreadyUsed(err):
-			c.FormErr("Email")
-			c.RenderWithErr(c.Tr("form.email_been_used"), http.StatusUnprocessableEntity, tmplUserAuthSignup, &f)
-		case database.IsErrNameNotAllowed(err):
-			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplUserAuthSignup, &f)
-		default:
-			c.Error(err, "create user")
-		}
-		return
-	}
-	log.Trace("Account created: %s", user.Name)
-
-	// FIXME: Count has pretty bad performance implication in large instances, we
-	// should have a dedicate method to check whether the "user" table is empty.
-	//
-	// Auto-set admin for the only user.
-	if database.Handle.Users().Count(c.Req.Context()) == 1 {
-		v := true
-		err := database.Handle.Users().Update(
-			c.Req.Context(),
-			user.ID,
-			database.UpdateUserOptions{
-				IsActivated: &v,
-				IsAdmin:     &v,
-			},
-		)
-		if err != nil {
-			c.Error(err, "update user")
-			return
-		}
-	}
-
-	// Send confirmation email.
-	if conf.Auth.RequireEmailConfirmation && user.ID > 1 {
-		if err := email.SendActivateAccountMail(c.Context, database.NewMailerUser(user)); err != nil {
-			log.Error("Failed to send activate account mail: %v", err)
-		}
-		c.Data["IsSendRegisterMail"] = true
-		c.Data["Email"] = user.Email
-		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
-		c.Success(TmplUserAuthActivate)
-
-		if err := c.Cache.Put(userx.MailResendCacheKey(user.ID), 1, 180); err != nil {
-			log.Error("Failed to put cache key 'mail resend': %v", err)
-		}
-		return
-	}
-
-	c.RedirectSubpath("/user/sign-in")
 }
 
 // parseUserFromCode returns user by username encoded in code.

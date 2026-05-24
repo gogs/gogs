@@ -15,10 +15,10 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
+	"github.com/flamego/captcha"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/binding"
 	macaroncache "github.com/go-macaron/cache"
-	"github.com/go-macaron/captcha"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
@@ -511,8 +511,9 @@ func Run(configPath string, portOverride int) error {
 			apiv1.RegisterRoutes(m)
 		}, ignSignIn)
 
-		m.Any("/api/web/*", bridgeToWebAPI(webHandler))
-		m.Get("/redirect", bridgeToWebAPI(webHandler))
+		m.Any("/api/web/*", flamegoBridger(webHandler))
+		m.Get("/redirect", flamegoBridger(webHandler))
+		m.Get("/captcha/*", flamegoBridger(webHandler))
 		m.Any("/*", func(c *context.Context) { c.ServeWeb() })
 	},
 		session.Sessioner(session.Options{
@@ -675,6 +676,8 @@ func Run(configPath string, portOverride int) error {
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
+	f.Use(flamegoInjector)
+	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
 
 	cacherOpts, err := parseCacheOptions(conf.Cache)
 	if err != nil {
@@ -683,6 +686,11 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Use(cache.Cacher(cacherOpts))
 
 	f.Get("/redirect", getRedirect)
+
+	// The captcha middleware writes the image response itself when the request path
+	// matches its URLPrefix. This route just needs to exist so the request reaches
+	// the middleware chain.
+	f.Get("/captcha/image.jpeg", func() {})
 
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
@@ -787,9 +795,6 @@ func newMacaron() (*macaron.Macaron, error) {
 		Adapter:       conf.Cache.Adapter,
 		AdapterConfig: conf.Cache.Host,
 		Interval:      conf.Cache.Interval,
-	}))
-	m.Use(captcha.Captchaer(captcha.Options{
-		SubURL: conf.Server.Subpath,
 	}))
 	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
 	return m, nil

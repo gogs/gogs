@@ -12,9 +12,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
 	"github.com/flamego/cache"
-	flamecaptcha "github.com/flamego/captcha"
+	"github.com/flamego/captcha"
 	"github.com/flamego/flamego"
-	flamesession "github.com/flamego/session"
+	"github.com/flamego/session"
 	"github.com/flamego/validator"
 	"github.com/go-macaron/i18n"
 	macaronsession "github.com/go-macaron/session"
@@ -37,7 +37,7 @@ type (
 	webAPILocaleKey  struct{}
 )
 
-func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
+func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
 	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
 		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
@@ -48,15 +48,20 @@ func bridgeToWebAPI(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 	}
 }
 
-func webAPIInjector(c flamego.Context) {
+func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
 	user, _ := ctx.Value(webAPIUserKey{}).(*database.User)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
 	c.Map(user, sess, mc, l)
+	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 
+// flamegoSessionAdapter exposes the underlying Macaron session via the Flamego
+// session interface so the captcha middleware (and any future Flamego-native
+// session consumer) can read/write the same session store the rest of the app
+// uses.
 type flamegoSessionAdapter struct {
 	sess macaronsession.Store
 }
@@ -68,10 +73,6 @@ func (s flamegoSessionAdapter) SetFlash(val interface{})        { _ = s.sess.Set
 func (s flamegoSessionAdapter) Delete(key interface{})          { _ = s.sess.Delete(key) }
 func (s flamegoSessionAdapter) Flush()                          { _ = s.sess.Flush() }
 func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
-
-func webAPICaptchaSession(c flamego.Context, sess macaronsession.Store) {
-	c.MapTo(flamegoSessionAdapter{sess: sess}, (*flamesession.Session)(nil))
-}
 
 func webAPIBodyLimiter(c flamego.Context) {
 	r := c.Request().Request
@@ -154,7 +155,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			})
 			f.Post("/sign-out", postUserSignOut)
 		})
-	}, webAPIBodyLimiter, webAPIInjector, webAPICaptchaSession, flamecaptcha.Captchaer(flamecaptcha.Options{URLPrefix: "/api/web/.captcha/"}))
+	}, webAPIBodyLimiter)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
@@ -253,7 +254,6 @@ type userSignUpRequest struct {
 	UserName string `json:"userName" validate:"required,max=35"`
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
-	Retype   string `json:"retype" validate:"required,max=255"`
 	Captcha  string `json:"captcha"`
 }
 
@@ -263,25 +263,16 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n.Locale, cpt flamecaptcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
+func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_prompt")}, nil
 	}
 	if conf.Auth.EnableRegistrationCaptcha && !cpt.ValidText(req.Captcha) {
 		msg := l.Tr("form.captcha_incorrect")
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Error:  msg,
 			Fields: fieldErrors{"captcha": &msg},
 		}, nil
 	}
-	if req.Password != req.Retype {
-		msg := l.Tr("form.password_not_match")
-		return http.StatusBadRequest, &bindingErrorResponse{
-			Error:  msg,
-			Fields: fieldErrors{"password": nil, "retype": nil},
-		}, nil
-	}
-
 	u, err := database.Handle.Users().Create(
 		r.Context(),
 		req.UserName,
@@ -449,7 +440,7 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
 	u, err := database.Handle.Users().Authenticate(r.Context(), req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
@@ -467,7 +458,7 @@ func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Cont
 	}
 
 	if database.Handle.TwoFactors().IsEnabled(r.Context(), u.ID) {
-		_ = sess.Set("mfaUserID", u.ID)
+		sess.Set("mfaUserID", u.ID)
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
@@ -479,10 +470,10 @@ func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Cont
 // clears any in-flight MFA state, and sets the login-status cookie. The
 // caller is responsible for navigating to a post-login destination via
 // /redirect?to=.
-func completeSignIn(sess macaronsession.Store, mc *macaron.Context, u *database.User) {
-	_ = sess.Set("uid", u.ID)
-	_ = sess.Set("uname", u.Name)
-	_ = sess.Delete("mfaUserID")
+func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) {
+	sess.Set("uid", u.ID)
+	sess.Set("uname", u.Name)
+	sess.Delete("mfaUserID")
 
 	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
@@ -490,7 +481,7 @@ func completeSignIn(sess macaronsession.Store, mc *macaron.Context, u *database.
 	}
 }
 
-func getUserMFA(sess macaronsession.Store) (statusCode int, resp any, err error) {
+func getUserMFA(sess session.Session) (statusCode int, resp any, err error) {
 	if _, ok := sess.Get("mfaUserID").(int64); !ok {
 		return http.StatusNotFound, nil, nil
 	}
@@ -503,7 +494,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(r *http.Request, sess macaronsession.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
+func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -554,7 +545,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
-func postUserMFARecovery(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
+func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil

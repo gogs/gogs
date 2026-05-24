@@ -45,7 +45,7 @@ export function Landing() {
             {"\n"}
             <CmdLink href="/user/sign-in" cmd="sign-in" desc={t("sign_in")} spa />
             {"\n"}
-            <CmdLink href="/user/sign_up" cmd="sign-up" desc={t("register")} />
+            <CmdLink href="/user/sign-up" cmd="sign-up" desc={t("register")} spa />
             {"\n"}
             <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} />
             {"\n"}
