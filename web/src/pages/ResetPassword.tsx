@@ -65,12 +65,15 @@ export function ResetPassword() {
     setSubmitting(true);
     void (async () => {
       try {
-        const res = await fetch(subUrl("/api/web/user/reset-password"), {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(isResetForm ? { code, password } : { email }),
-        });
+        const res = await fetch(
+          subUrl(isResetForm ? "/api/web/user/reset-password/complete" : "/api/web/user/reset-password"),
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(isResetForm ? { code, password } : { email }),
+          },
+        );
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as ResetPasswordErrorResponse;
           if (body.error) setFormError(body.error);

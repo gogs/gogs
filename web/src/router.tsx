@@ -43,22 +43,21 @@ const landingRoute = createRoute({
   component: Landing,
 });
 
+function requireUnauthenticated({ context }: { context: RouterContext }) {
+  if (!context.user) return;
+  // Bounce authenticated visits to "/" via full navigation so the server-rendered
+  // dashboard handler runs.
+  window.location.assign(subUrl("/"));
+  // The thrown redirect is a sentinel to halt loader execution;
+  // the document-level navigation above is what actually moves the user.
+  // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+  throw redirect({ to: "/", replace: true });
+}
+
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/sign-in",
-  beforeLoad: ({ context }) => {
-    if (context.user) {
-      // Full navigation to "/" so the server-rendered dashboard handler runs.
-      // A client-side TanStack redirect would render the SPA's "/" route
-      // (Landing, the anon page) and make an authed user look signed out.
-      window.location.assign(subUrl("/"));
-      // Throw to halt loader execution. TanStack treats the thrown redirect
-      // as a sentinel; we never reach a SPA navigation because the line
-      // above already started a document-level one.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ to: "/", replace: true });
-    }
-  },
+  beforeLoad: requireUnauthenticated,
   loader: async (): Promise<SignInPage> => {
     const res = await fetch(subUrl("/api/web/user/sign-in"), { credentials: "same-origin" });
     if (!res.ok) {
@@ -72,16 +71,7 @@ const signInRoute = createRoute({
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/reset-password",
-  beforeLoad: ({ context }) => {
-    if (context.user) {
-      // Matches the legacy reqSignOut gate: a signed-in user has no business
-      // on the reset form, so bounce to "/" via full navigation so the server
-      // renders the authed dashboard rather than the SPA's anon Landing.
-      window.location.assign(subUrl("/"));
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ to: "/", replace: true });
-    }
-  },
+  beforeLoad: requireUnauthenticated,
   loader: async (): Promise<ResetPasswordPage> => {
     const code = new URLSearchParams(window.location.search).get("code") ?? "";
     const url = code

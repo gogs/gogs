@@ -116,9 +116,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
-			f.Combo("/reset-password").
-				Get(getUserResetPassword).
-				Post(bindJSON(userResetPasswordRequest{}), postUserResetPassword)
+			f.Group("/reset-password", func() {
+				f.Combo("").
+					Get(getUserResetPassword).
+					Post(bindJSON(userResetPasswordEmailRequest{}), postUserResetPassword)
+				f.Post("/complete", bindJSON(userResetPasswordCompleteRequest{}), postUserResetPasswordComplete)
+			})
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
 				Post(bindJSON(userSignInRequest{}), postUserSignIn)
@@ -245,10 +248,13 @@ func getUserResetPassword(r *http.Request) (statusCode int, resp *getUserResetPa
 	}, nil
 }
 
-type userResetPasswordRequest struct {
-	Email    string `json:"email"`
-	Code     string `json:"code"`
-	Password string `json:"password"`
+type userResetPasswordEmailRequest struct {
+	Email string `json:"email" validate:"required,email,max=254"`
+}
+
+type userResetPasswordCompleteRequest struct {
+	Code     string `json:"code" validate:"required"`
+	Password string `json:"password" validate:"required,min=6,max=255"`
 }
 
 type userResetPasswordResponse struct {
@@ -256,20 +262,9 @@ type userResetPasswordResponse struct {
 	ResendLimited bool `json:"resendLimited,omitempty"`
 }
 
-func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordRequest) (statusCode int, resp any, err error) {
-	if req.Code != "" || req.Password != "" {
-		return completeUserResetPassword(r, l, req)
-	}
-	return sendUserResetPasswordMail(r, ca, l, req)
-}
-
-func sendUserResetPasswordMail(r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordRequest) (statusCode int, resp any, err error) {
+func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
 	if !conf.Email.Enabled {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
-	}
-	if req.Email == "" {
-		msg := l.Tr("form.Email") + l.Tr("form.require_error")
-		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 	}
 
 	ctx := r.Context()
@@ -278,7 +273,7 @@ func sendUserResetPasswordMail(r *http.Request, ca cache.Cache, l i18n.Locale, r
 		if database.IsErrUserNotExist(err) {
 			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
 		}
-		log.Error("sendUserResetPasswordMail: get user by email %q: %v", req.Email, err)
+		log.Error("postUserResetPassword: get user by email %q: %v", req.Email, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
 	}
 
@@ -293,39 +288,27 @@ func sendUserResetPasswordMail(r *http.Request, ca cache.Cache, l i18n.Locale, r
 			ResendLimited: true,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		log.Error("sendUserResetPasswordMail: get mail resend cache for user %q: %v", u.Name, err)
+		log.Error("postUserResetPassword: get mail resend cache for user %q: %v", u.Name, err)
 	}
 
 	if err = email.SendResetPasswordMail(l, database.NewMailerUser(u)); err != nil {
-		log.Error("sendUserResetPasswordMail: send reset password mail to user %q: %v", u.Name, err)
+		log.Error("postUserResetPassword: send reset password mail to user %q: %v", u.Name, err)
 	}
 	if err = ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-		log.Error("sendUserResetPasswordMail: put mail resend cache for user %q: %v", u.Name, err)
+		log.Error("postUserResetPassword: put mail resend cache for user %q: %v", u.Name, err)
 	}
 
 	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
 }
 
-func completeUserResetPassword(r *http.Request, l i18n.Locale, req userResetPasswordRequest) (statusCode int, resp any, err error) {
-	if req.Code == "" {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
-	}
-	if len(req.Password) < 6 {
-		msg := l.Tr("auth.password_too_short")
-		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"password": &msg}}, nil
-	}
-	if len(req.Password) > 255 {
-		msg := l.Tr("form.Password") + l.Tr("form.max_size_error", "255")
-		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"password": &msg}}, nil
-	}
-
+func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
 	u := user.VerifyUserActiveCode(req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
 	}
 
 	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {
-		log.Error("postUserResetPassword: update password for user %q: %v", u.Name, err)
+		log.Error("postUserResetPasswordComplete: update password for user %q: %v", u.Name, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 
