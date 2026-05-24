@@ -3,7 +3,11 @@ import { Outlet, RouterProvider, createRootRouteWithContext, createRoute, create
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { webContext } from "@/lib/context";
+import { loaderResponseError } from "@/lib/loader-error";
+import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
+import { CommitDiff, type CommitDiffPage } from "@/pages/CommitDiff";
+import { DiffSpike } from "@/pages/DiffSpike";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
@@ -34,7 +38,32 @@ const landingRoute = createRoute({
   component: Landing,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, ...createUserRoutes(rootRoute)]);
+const diffSpikeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/_diff-spike",
+  component: DiffSpike,
+});
+
+const commitDiffRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/$owner/$repo/_diff/$sha",
+  loader: async ({ params }): Promise<CommitDiffPage> => {
+    const url = subUrl(`/${params.owner}/${params.repo}/_api/diff/${params.sha}`);
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (!res.ok) {
+      throw await loaderResponseError(res);
+    }
+    return (await res.json()) as CommitDiffPage;
+  },
+  component: CommitDiff,
+});
+
+const routeTree = rootRoute.addChildren([
+  landingRoute,
+  ...createUserRoutes(rootRoute),
+  diffSpikeRoute,
+  commitDiffRoute,
+]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

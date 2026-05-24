@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	gocontext "context"
 	"path"
 	"time"
@@ -179,6 +180,93 @@ func RawDiff(c *context.Context) {
 		c.NotFoundOrError(gitx.NewError(err), "get raw diff")
 		return
 	}
+}
+
+type commitDiffSignature struct {
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatarUrl"`
+	UserPath  string `json:"userPath,omitempty"`
+	When      string `json:"when"`
+}
+
+type commitDiffCommit struct {
+	SHA       string              `json:"sha"`
+	ShortSHA  string              `json:"shortSha"`
+	Summary   string              `json:"summary"`
+	Message   string              `json:"message"`
+	Author    commitDiffSignature `json:"author"`
+	Committer commitDiffSignature `json:"committer"`
+	Parents   []string            `json:"parents"`
+}
+
+type commitDiffPayload struct {
+	Commit     commitDiffCommit `json:"commit"`
+	Patch      string           `json:"patch"`
+	SourcePath string           `json:"sourcePath"`
+	RawDiffURL string           `json:"rawDiffUrl"`
+}
+
+func DiffJSON(c *context.Context) {
+	userName := c.Repo.Owner.Name
+	repoName := c.Repo.Repository.Name
+	commitID := c.Params(":sha")
+
+	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
+	if err != nil {
+		c.NotFoundOrError(gitx.NewError(err), "get commit by ID")
+		return
+	}
+
+	var buf bytes.Buffer
+	if err := c.Repo.GitRepo.RawDiff(commitID, git.RawDiffNormal, &buf); err != nil {
+		c.NotFoundOrError(gitx.NewError(err), "get raw diff")
+		return
+	}
+
+	parents := make([]string, commit.ParentsCount())
+	for i := 0; i < commit.ParentsCount(); i++ {
+		sha, err := commit.ParentID(i)
+		if err != nil {
+			c.NotFound()
+			return
+		}
+		parents[i] = sha.String()
+	}
+
+	ctx := c.Req.Context()
+	sig := func(s *git.Signature) commitDiffSignature {
+		out := commitDiffSignature{
+			Name:      s.Name,
+			Email:     s.Email,
+			AvatarURL: tool.AvatarLink(s.Email),
+			When:      s.When.UTC().Format(time.RFC3339),
+		}
+		if u, err := database.Handle.Users().GetByEmail(ctx, s.Email); err == nil && u != nil {
+			out.UserPath = conf.Server.Subpath + "/" + u.Name
+		}
+		return out
+	}
+
+	body := ""
+	if msg := commit.Message; len(msg) > len(commit.Summary()) {
+		body = msg[len(commit.Summary()):]
+	}
+
+	c.JSONSuccess(commitDiffPayload{
+		Commit: commitDiffCommit{
+			SHA:       commitID,
+			ShortSHA:  tool.ShortSHA1(commitID),
+			Summary:   commit.Summary(),
+			Message:   body,
+			Author:    sig(commit.Author),
+			Committer: sig(commit.Committer),
+			Parents:   parents,
+		},
+		Patch:      buf.String(),
+		SourcePath: conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", commitID),
+		RawDiffURL: conf.Server.Subpath + "/" + path.Join(userName, repoName, "commit", commitID+".diff"),
+	})
 }
 
 type userCommit struct {

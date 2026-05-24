@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { webContext } from "@/lib/context";
-import { type Theme, useTheme } from "@/lib/theme";
+import { type Theme, useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
 
 const LANGUAGES: { code: string; name: string }[] = [

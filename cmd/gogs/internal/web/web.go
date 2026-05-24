@@ -487,6 +487,7 @@ func Run(configPath string, portOverride int) error {
 				m.Get("/raw/*", repo.SingleDownload)
 				m.Get("/commits/*", repo.RefCommits)
 				m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.Diff)
+				m.Get("/_api/diff/:sha([a-f0-9]{7,40})$", repo.DiffJSON)
 				m.Get("/forks", repo.Forks)
 			}, repo.MustBeNotBare, context.RepoRef())
 			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.MustBeNotBare, repo.RawDiff)

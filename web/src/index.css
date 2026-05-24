@@ -160,3 +160,23 @@
     }
   }
 }
+
+/* @pierre/diffs renders each file into a <diffs-container> custom element with
+   its own shadow root. Custom properties inherit across the boundary, so set
+   the font tokens and the diff bg here so the library's :host font-family and
+   :host bg rules resolve to our tokens instead of its SF Mono / pure-black
+   fallbacks. Matching --diffs-{light,dark}-bg to our page bg eliminates the
+   seam between the diff panel and the surrounding page chrome. */
+diffs-container {
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-sans);
+  --diffs-light-bg: var(--color-background);
+  --diffs-dark-bg: var(--color-background);
+  --diffs-tab-size: 4;
+  display: block;
+  border: 1px solid var(--color-border);
+  /* Top corners square so when the file header sticks (floating below the
+     card's top edge), no rounded host corners frame the gap. The header
+     carries its own rounded top corners in both docked and sticky state. */
+  border-radius: 0 0 3px 3px;
+}
