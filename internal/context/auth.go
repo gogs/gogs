@@ -82,12 +82,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 				// Inactive users get bounced to the React activation page, which
 				// is responsible for offering a resend and showing status.
-				p := strings.TrimPrefix(c.Req.URL.Path, conf.Server.Subpath)
-				if p != "/user/activate" {
-					c.RedirectSubpath("/user/activate")
-					return
-				}
-				c.ServeWeb()
+				c.RedirectSubpath("/user/activate")
 				return
 			}
 		}

@@ -607,13 +607,13 @@ func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error
 }
 
 type getUserActivateResponse struct {
-	// SignedIn indicates whether the visitor is signed in. The React page uses
-	// this to decide whether to offer a resend button (signed-in inactive user)
-	// or just to show "click the link in your email" prose (anonymous visitor
-	// who landed here without a code).
-	SignedIn bool `json:"signedIn"`
+	// Authenticated indicates whether the visitor is signed in. The React page
+	// uses this to decide whether to offer a resend button (signed-in inactive
+	// user) or just to show "click the link in your email" prose (anonymous
+	// visitor who landed here without a code).
+	Authenticated bool `json:"authenticated"`
 	// Email is the address the activation link was sent to. Only populated when
-	// SignedIn is true.
+	// Authenticated is true.
 	Email string `json:"email,omitempty"`
 	// ServiceNotEnabled is true when email confirmation is disabled in config,
 	// in which case the page cannot do anything useful.
@@ -634,7 +634,7 @@ func getUserActivate(u *database.User) (statusCode int, resp *getUserActivateRes
 		Hours:             conf.Auth.ActivateCodeLives / 60,
 	}
 	if u != nil {
-		out.SignedIn = true
+		out.Authenticated = true
 		out.Email = u.Email
 	}
 	return http.StatusOK, out, nil

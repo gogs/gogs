@@ -9,7 +9,7 @@ import { subUrl } from "@/lib/url";
 
 export interface ActivatePage {
   code: string;
-  signedIn: boolean;
+  authenticated: boolean;
   email: string;
   serviceNotEnabled: boolean;
   hours: number;
@@ -28,7 +28,7 @@ const route = getRouteApi("/user/activate");
 
 export function Activate() {
   const { t } = useTranslation();
-  const { code, signedIn, email, serviceNotEnabled, hours } = route.useLoaderData();
+  const { code, authenticated, email, serviceNotEnabled, hours } = route.useLoaderData();
   usePageTitle(t("active_your_account"));
 
   const isVerifying = code !== "";
@@ -125,7 +125,7 @@ export function Activate() {
       );
     }
 
-    if (!signedIn) {
+    if (!authenticated) {
       return (
         <div className="flex flex-col gap-4 text-center">
           <p className="text-sm text-(--color-foreground)">{t("activate_check_email")}</p>
