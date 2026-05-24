@@ -65,7 +65,9 @@ export function Navbar() {
               <NavLink href="/user/sign-in" spa>
                 {t("sign_in")}
               </NavLink>
-              <NavLink href="/user/sign_up">{t("register")}</NavLink>
+              <NavLink href="/user/sign-up" spa>
+                {t("register")}
+              </NavLink>
             </>
           )}
         </div>
@@ -153,7 +155,7 @@ export function Navbar() {
                     <MobileLink href="/user/sign-in" spa onClick={() => setOpen(false)}>
                       {t("sign_in")}
                     </MobileLink>
-                    <MobileLink href="/user/sign_up" onClick={() => setOpen(false)}>
+                    <MobileLink href="/user/sign-up" spa onClick={() => setOpen(false)}>
                       {t("register")}
                     </MobileLink>
                   </>

@@ -54,24 +54,6 @@ func (f *Install) Validate(ctx *macaron.Context, errs binding.Errors) binding.Er
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-//    _____   ____ _________________ ___
-//   /  _  \ |    |   \__    ___/   |   \
-//  /  /_\  \|    |   / |    | /    ~    \
-// /    |    \    |  /  |    | \    Y    /
-// \____|__  /______/   |____|  \___|_  /
-//         \/                         \/
-
-type Register struct {
-	UserName string `binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email    string `binding:"Required;Email;MaxSize(254)"`
-	Password string `binding:"Required;MaxSize(255)"`
-	Retype   string
-}
-
-func (f *Register) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 //   __________________________________________.___ _______    ________  _________
 //  /   _____/\_   _____/\__    ___/\__    ___/|   |\      \  /  _____/ /   _____/
 //  \_____  \  |    __)_   |    |     |    |   |   |/   |   \/   \  ___ \_____  \

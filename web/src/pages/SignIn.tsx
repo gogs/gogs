@@ -235,7 +235,7 @@ export function SignIn() {
                   </Button>
                   <Button variant="link" size="inline" asChild className="self-center">
                     <a
-                      href={subUrl("/user/sign_up")}
+                      href={subUrl("/user/sign-up")}
                       tabIndex={submitting ? -1 : 7}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}

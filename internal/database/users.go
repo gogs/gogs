@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -50,10 +49,6 @@ func IsErrLoginSourceMismatch(err error) bool {
 func (err ErrLoginSourceMismatch) Error() string {
 	return fmt.Sprintf("login source mismatch: %v", err.args)
 }
-
-// disallowedUsernameChars matches any character not allowed in a username:
-// anything outside ASCII letters, digits, underscore, hyphen, or dot.
-var disallowedUsernameChars = regexp.MustCompile(`[^\d\w-_\.]`)
 
 // Authenticate validates username and password via given login source ID. It
 // returns ErrUserNotExist when the user was not found.
@@ -130,11 +125,6 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 
 	if !createNewUser {
 		return user, nil
-	}
-
-	// Validate username make sure it satisfies requirement.
-	if disallowedUsernameChars.MatchString(extAccount.Name) {
-		return nil, errors.Newf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
 	return s.Create(ctx, extAccount.Name, extAccount.Email,

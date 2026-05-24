@@ -1,8 +1,8 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
 import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
+import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,7 @@ export function ResetPassword() {
 
     if (isResetForm && password !== confirmPassword) {
       setFormError(null);
-      setFieldErrors({ password: null, confirmPassword: t("reset_password_mismatch") });
+      setFieldErrors({ password: null, confirmPassword: t("password_mismatch") });
       requestAnimationFrame(() => confirmPasswordRef.current?.focus());
       return;
     }
@@ -160,6 +160,7 @@ export function ResetPassword() {
                 required
                 autoFocus
                 tabIndex={1}
+                placeholder={t("email_placeholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 aria-invalid={"email" in fieldErrors ? true : undefined}
@@ -202,35 +203,20 @@ export function ResetPassword() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="password">{t("new_password")}</Label>
-              <div className="relative">
-                <Input
-                  ref={passwordRef}
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  autoFocus
-                  tabIndex={1}
-                  placeholder={t("new_password_placeholder")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={"password" in fieldErrors ? true : undefined}
-                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  tabIndex={2}
-                  disabled={submitting}
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? t("hide_password") : t("show_password")}
-                  aria-pressed={showPassword}
-                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                </button>
-              </div>
+              <PasswordInput
+                inputRef={passwordRef}
+                id="password"
+                value={password}
+                tabIndex={1}
+                placeholder={t("new_password_placeholder")}
+                show={showPassword}
+                onToggleShow={() => setShowPassword((v) => !v)}
+                disabled={submitting}
+                autoFocus
+                describedBy={fieldErrors.password ? "password-error" : undefined}
+                invalid={"password" in fieldErrors}
+                onChange={setPassword}
+              />
               {fieldErrors.password && (
                 <p id="password-error" className="text-sm text-(--color-destructive)">
                   {fieldErrors.password}
@@ -239,38 +225,19 @@ export function ResetPassword() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="confirmPassword">{t("confirm_new_password")}</Label>
-              <div className="relative">
-                <Input
-                  ref={confirmPasswordRef}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  tabIndex={3}
-                  placeholder={t("confirm_new_password_placeholder")}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  aria-invalid={"confirmPassword" in fieldErrors ? true : undefined}
-                  aria-describedby={fieldErrors.confirmPassword ? "confirmPassword-error" : undefined}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  tabIndex={4}
-                  disabled={submitting}
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  aria-label={showConfirmPassword ? t("hide_password") : t("show_password")}
-                  aria-pressed={showConfirmPassword}
-                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="size-4" aria-hidden />
-                  ) : (
-                    <Eye className="size-4" aria-hidden />
-                  )}
-                </button>
-              </div>
+              <PasswordInput
+                inputRef={confirmPasswordRef}
+                id="confirmPassword"
+                value={confirmPassword}
+                tabIndex={3}
+                placeholder={t("confirm_new_password_placeholder")}
+                show={showConfirmPassword}
+                onToggleShow={() => setShowConfirmPassword((v) => !v)}
+                disabled={submitting}
+                describedBy={fieldErrors.confirmPassword ? "confirmPassword-error" : undefined}
+                invalid={"confirmPassword" in fieldErrors}
+                onChange={setConfirmPassword}
+              />
               {fieldErrors.confirmPassword && (
                 <p id="confirmPassword-error" className="text-sm text-(--color-destructive)">
                   {fieldErrors.confirmPassword}
