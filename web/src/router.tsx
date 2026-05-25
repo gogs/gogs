@@ -2,11 +2,13 @@ import { Outlet, RouterProvider, createRootRouteWithContext, createRoute, create
 
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
 import { CommitDiff, type CommitDiffPage } from "@/pages/CommitDiff";
+import { validateCommitDiffSearch } from "@/pages/CommitDiff.search";
 import { DiffSpike } from "@/pages/DiffSpike";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
@@ -47,8 +49,11 @@ const diffSpikeRoute = createRoute({
 const commitDiffRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/$owner/$repo/_diff/$sha",
-  loader: async ({ params }): Promise<CommitDiffPage> => {
-    const url = subUrl(`/${params.owner}/${params.repo}/_api/diff/${params.sha}`);
+  validateSearch: validateCommitDiffSearch,
+  loaderDeps: ({ search }) => ({ whitespace: search.whitespace }),
+  loader: async ({ params, deps }): Promise<CommitDiffPage> => {
+    const base = subUrl(`/${params.owner}/${params.repo}/_api/diff/${params.sha}`);
+    const url = deps.whitespace ? `${base}?whitespace=${encodeURIComponent(deps.whitespace)}` : base;
     const res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) {
       throw await loaderResponseError(res);
@@ -85,5 +90,9 @@ declare module "@tanstack/react-router" {
 
 export function AppRouter({ user }: { user: UserInfo | null }) {
   const router = makeRouter({ user });
-  return <RouterProvider router={router} />;
+  return (
+    <TooltipProvider delayDuration={300}>
+      <RouterProvider router={router} />
+    </TooltipProvider>
+  );
 }

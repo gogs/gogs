@@ -35,6 +35,9 @@
   --color-muted-foreground: initial;
   --color-destructive: initial;
   --color-destructive-foreground: initial;
+  --color-success: initial;
+  --color-diff-added: initial;
+  --color-diff-removed: initial;
   --color-border: initial;
   --color-input: initial;
   --color-ring: initial;
@@ -60,6 +63,9 @@
   --color-muted-foreground: #737373;
   --color-destructive: #d52c36;
   --color-destructive-foreground: #ffffff;
+  --color-success: #15803d;
+  --color-diff-added: #16a34a;
+  --color-diff-removed: #dc2626;
   --color-border: #e5e5e5;
   --color-input: #d4d4d4;
   --color-ring: #009fff;
@@ -82,6 +88,9 @@
   --color-muted-foreground: #8a8a8a;
   --color-destructive: #ff6762;
   --color-destructive-foreground: #ffffff;
+  --color-success: #4ade80;
+  --color-diff-added: #4ade80;
+  --color-diff-removed: #f87171;
   --color-border: #1d1d1d;
   --color-input: #262626;
   --color-ring: #009fff;

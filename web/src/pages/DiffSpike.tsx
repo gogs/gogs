@@ -62,7 +62,7 @@ export function DiffSpike() {
           theme: { light: "pierre-light", dark: "pierre-dark" },
           themeType: theme,
           diffStyle: "unified",
-          stickyHeader: true,
+          stickyHeaders: true,
         }}
       />
     </main>

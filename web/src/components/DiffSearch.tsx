@@ -193,7 +193,7 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
         onClick={() => navigate(-1)}
         disabled={matches.length === 0}
         aria-label="Previous match"
-        className="rounded p-1 hover:bg-(--color-surface) disabled:opacity-40"
+        className="cursor-pointer rounded p-1 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronUp className="size-4" aria-hidden />
       </button>
@@ -202,7 +202,7 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
         onClick={() => navigate(1)}
         disabled={matches.length === 0}
         aria-label="Next match"
-        className="rounded p-1 hover:bg-(--color-surface) disabled:opacity-40"
+        className="cursor-pointer rounded p-1 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronDown className="size-4" aria-hidden />
       </button>
@@ -213,7 +213,7 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
           viewRef.current?.setSelectedLines(null);
         }}
         aria-label="Close search"
-        className="rounded p-1 hover:bg-(--color-surface)"
+        className="cursor-pointer rounded p-1 hover:bg-(--color-surface)"
       >
         <X className="size-4" aria-hidden />
       </button>

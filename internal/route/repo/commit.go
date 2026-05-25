@@ -207,6 +207,22 @@ type commitDiffPayload struct {
 	RawDiffURL string           `json:"rawDiffUrl"`
 }
 
+// whitespaceFlag maps the `whitespace` query value used on the diff page to
+// the matching git diff flag. `ignore-all` → `-w` ignores all whitespace
+// changes. `ignore-change` → `-b` is the milder variant that still surfaces
+// added/removed blank lines. An empty or unknown value means no whitespace
+// handling.
+func whitespaceFlag(v string) string {
+	switch v {
+	case "ignore-all":
+		return "-w"
+	case "ignore-change":
+		return "-b"
+	default:
+		return ""
+	}
+}
+
 func DiffJSON(c *context.Context) {
 	userName := c.Repo.Owner.Name
 	repoName := c.Repo.Repository.Name
@@ -218,8 +234,15 @@ func DiffJSON(c *context.Context) {
 		return
 	}
 
+	var rawOpts []git.RawDiffOptions
+	if flag := whitespaceFlag(c.Query("whitespace")); flag != "" {
+		rawOpts = append(rawOpts, git.RawDiffOptions{
+			CommandOptions: git.CommandOptions{Args: []string{flag}},
+		})
+	}
+
 	var buf bytes.Buffer
-	if err := c.Repo.GitRepo.RawDiff(commitID, git.RawDiffNormal, &buf); err != nil {
+	if err := c.Repo.GitRepo.RawDiff(commitID, git.RawDiffNormal, &buf, rawOpts...); err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get raw diff")
 		return
 	}
