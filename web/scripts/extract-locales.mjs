@@ -63,7 +63,6 @@ const REUSED_KEYS = [
   "disable_register_prompt",
   "reset_password_resend_limited",
   "non_local_account",
-  "confirmation_email_sent",
   "create_new_account",
   "register_hepler_msg",
   "sign_up",
@@ -98,6 +97,15 @@ const REUSED_KEYS = [
   "mfa_verifying",
   "mfa_session_expired",
   "mfa_verify_failed",
+  "activate_your_account",
+  "resend_rate_limited",
+  "send_activation_email",
+  "check_activation_email",
+  "activation_email_pending",
+  "activation_email_sent",
+  "sending_activation_email",
+  "send_activation_email_failed",
+  "activating_account",
 ];
 
 // Lightweight INI parser: handles `key = value` and `key=value`, ignores

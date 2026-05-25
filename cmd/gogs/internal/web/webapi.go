@@ -2,11 +2,13 @@ package web
 
 import (
 	stdctx "context"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,7 +29,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/route/user"
+	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -78,6 +80,33 @@ func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, ni
 func webAPIBodyLimiter(c flamego.Context) {
 	r := c.Request().Request
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, 4*1024) // 4 KiB
+}
+
+func parseUserFromCode(ctx stdctx.Context, code string) (user *database.User) {
+	if len(code) <= tool.TimeLimitCodeLength {
+		return nil
+	}
+
+	hexStr := code[tool.TimeLimitCodeLength:]
+	if b, err := hex.DecodeString(hexStr); err == nil {
+		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
+			return user
+		} else if !database.IsErrUserNotExist(err) {
+			log.Error("parseUserFromCode: get user by name %q: %v", string(b), err)
+		}
+	}
+	return nil
+}
+
+func verifyUserActiveCode(ctx stdctx.Context, code string) (user *database.User) {
+	if user = parseUserFromCode(ctx, code); user != nil {
+		prefix := code[:tool.TimeLimitCodeLength]
+		data := strconv.FormatInt(user.ID, 10) + user.Email + user.LowerName + user.Password + user.Rands
+		if tool.VerifyTimeLimitCode(data, conf.Auth.ActivateCodeLives, prefix) {
+			return user
+		}
+	}
+	return nil
 }
 
 // webAPIValidator is the shared validator instance used by every webapi
@@ -158,6 +187,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Get(getUserMFA).
 					Post(bindJSON(userMFARequest{}), postUserMFA)
 				f.Post("/recovery", bindJSON(userMFARecoveryRequest{}), postUserMFARecovery)
+			})
+			f.Group("/activate", func() {
+				f.Combo("").
+					Get(getUserActivate).
+					Post(postUserActivate)
+				f.Post("/complete", bindJSON(userActivateCompleteRequest{}), postUserActivateComplete)
 			})
 			f.Post("/sign-out", postUserSignOut)
 		})
@@ -368,7 +403,7 @@ func getUserResetPassword(r *http.Request) (statusCode int, resp *getUserResetPa
 	code := r.URL.Query().Get("code")
 	return http.StatusOK, &getUserResetPasswordResponse{
 		EmailEnabled: conf.Email.Enabled,
-		Valid:        code != "" && user.VerifyUserActiveCode(code) != nil,
+		Valid:        code != "" && verifyUserActiveCode(r.Context(), code) != nil,
 	}, nil
 }
 
@@ -426,7 +461,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 }
 
 func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
-	u := user.VerifyUserActiveCode(req.Code)
+	u := verifyUserActiveCode(r.Context(), req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
 	}
@@ -598,6 +633,88 @@ func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error
 			CanCreateOrganization: user.CanCreateOrganization(),
 		},
 		nil
+}
+
+type getUserActivateResponse struct {
+	Email             string `json:"email,omitempty"`
+	CodeLifetimeHours int    `json:"codeLifetimeHours,omitempty"`
+}
+
+func getUserActivate(u *database.User) (statusCode int, resp any, err error) {
+	if u == nil {
+		return http.StatusUnauthorized, nil, nil
+	}
+	// An already-active and authenticated user has no business on the activation page.
+	if u.IsActive {
+		return http.StatusNotFound, nil, nil
+	}
+	return http.StatusOK, &getUserActivateResponse{
+		Email:             u.Email,
+		CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
+	}, nil
+}
+
+type postUserActivateResponse struct {
+	RateLimited       bool `json:"rateLimited,omitempty"`
+	CodeLifetimeHours int  `json:"codeLifetimeHours,omitempty"`
+}
+
+func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
+	if u == nil {
+		return http.StatusUnauthorized, nil, nil
+	}
+	if u.IsActive {
+		return http.StatusNotFound, nil, nil
+	}
+	if !conf.Auth.RequireEmailConfirmation {
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
+	}
+
+	ctx := r.Context()
+	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
+		return http.StatusOK, &postUserActivateResponse{
+			RateLimited:       true,
+			CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
+		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Error("postUserActivate: get mail resend cache for user %q: %v", u.Name, err)
+	}
+
+	if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
+		log.Error("postUserActivate: send activation mail to user %q: %v", u.Name, err)
+	}
+	if err := ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
+		log.Error("postUserActivate: put mail resend cache for user %q: %v", u.Name, err)
+	}
+	return http.StatusOK, &postUserActivateResponse{CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60}, nil
+}
+
+type userActivateCompleteRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
+	target := verifyUserActiveCode(r.Context(), req.Code)
+	if target == nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+	}
+
+	v := true
+	if err := database.Handle.Users().Update(
+		r.Context(),
+		target.ID,
+		database.UpdateUserOptions{
+			GenerateNewRands: true,
+			IsActivated:      &v,
+		},
+	); err != nil {
+		log.Error("postUserActivateComplete: update user %q: %v", target.Name, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+	}
+
+	log.Trace("User activated: %s", target.Name)
+	completeSignIn(sess, mc, target)
+	return http.StatusNoContent, nil, nil
 }
 
 type postUserSignOutResponse struct {
