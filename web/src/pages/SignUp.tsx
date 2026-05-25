@@ -141,7 +141,7 @@ export function SignUp() {
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
             <Trans
-              i18nKey="activate_email_sent"
+              i18nKey="activation_email_sent"
               values={{ email: sent.email, hours: sent.hours }}
               components={{ email: <b />, hours: <b /> }}
             />

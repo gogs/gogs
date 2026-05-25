@@ -39,8 +39,5 @@
   "reset_password": "重置密码",
   "invalid_code": "对不起，您的确认代码已过期或已失效。",
   "new_password": "新的密码",
-  "confirm_password": "确认密码",
-  "active_your_account": "激活您的帐户",
-  "resent_limit_prompt": "对不起，您请求发送激活邮件过于频繁，请等待 3 分钟后再试！",
-  "resend_mail": "单击此处重新发送确认邮件"
+  "confirm_password": "确认密码"
 }

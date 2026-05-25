@@ -39,8 +39,5 @@
   "reset_password": "비밀번호 초기화",
   "invalid_code": "죄송합니다. 확인 코드가 만료되었거나 유효하지 않습니다.",
   "new_password": "새 비밀번호",
-  "confirm_password": "비밀번호 확인",
-  "active_your_account": "계정 활성화",
-  "resent_limit_prompt": "죄송합니다. 이미 최근에 활성화 메일을 요청하셨습니다. 다른 이메일 요청을 하시기 전 3분을 기다리셔야 합니다.",
-  "resend_mail": "여기를 눌러 확인 메일 재전송"
+  "confirm_password": "비밀번호 확인"
 }

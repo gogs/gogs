@@ -39,8 +39,5 @@
   "reset_password": "Nollaa salasanasi",
   "invalid_code": "Sori, varmistuskoodisi on vanhentunut tai väärä.",
   "new_password": "Uusi salasana",
-  "confirm_password": "Varmista salasana",
-  "active_your_account": "Aktivoi tilisi",
-  "resent_limit_prompt": "Sori, olet jo tilannut aktivointi sähköpostin lähiaikoina. Ole hyvä ja odota 3 minuuttia ja yritä sitten uudelleen.",
-  "resend_mail": "Napsauta tästä uudelleenlähettääksesi aktivointisähköpostisi"
+  "confirm_password": "Varmista salasana"
 }

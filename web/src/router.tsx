@@ -108,15 +108,18 @@ const resetPasswordRoute = createRoute({
 const activateRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user/activate",
-  loader: async (): Promise<ActivatePage> => {
+  loader: async ({ context }): Promise<ActivatePage> => {
     const code = new URLSearchParams(window.location.search).get("code") ?? "";
+    if (!context.user) {
+      return { code, email: "", codeLifetimeHours: 0 };
+    }
     const res = await fetch(subUrl("/api/web/user/activate"), { credentials: "same-origin" });
     if (res.status === 404) {
       // Already-active user hit a stale activation link. Send them home via
       // a full navigation so the server-rendered dashboard handler decides
       // where to land.
       window.location.assign(subUrl("/"));
-      return { code, email: "", hours: 0 };
+      return { code, email: "", codeLifetimeHours: 0 };
     }
     if (!res.ok) {
       throw await loaderResponseError(res);

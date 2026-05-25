@@ -11,12 +11,12 @@ import { useUserInfo } from "@/lib/use-user-info";
 export interface ActivatePage {
   code: string;
   email: string;
-  hours: number;
+  codeLifetimeHours: number;
 }
 
 interface ActivateResponse {
   resendLimited?: boolean;
-  hours?: number;
+  codeLifetimeHours?: number;
 }
 
 interface ActivateErrorResponse {
@@ -27,9 +27,9 @@ const route = getRouteApi("/user/activate");
 
 export function Activate() {
   const { t } = useTranslation();
-  const { code, email, hours } = route.useLoaderData();
+  const { code, email, codeLifetimeHours } = route.useLoaderData();
   const authenticated = useUserInfo() !== null;
-  usePageTitle(t("active_your_account"));
+  usePageTitle(t("activate_your_account"));
 
   const isVerifying = code !== "";
   const [verifyFailed, setVerifyFailed] = useState(false);
@@ -72,14 +72,14 @@ export function Activate() {
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as ActivateErrorResponse;
-          setFormError(body.error ?? t("activate_resend_failed"));
+          setFormError(body.error ?? t("resend_activation_email_failed"));
           setSubmitting(false);
           return;
         }
         setResent((await res.json()) as ActivateResponse);
         setSubmitting(false);
       } catch {
-        setFormError(t("activate_resend_failed"));
+        setFormError(t("resend_activation_email_failed"));
         setSubmitting(false);
       }
     })();
@@ -89,7 +89,7 @@ export function Activate() {
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
-          <CardTitle>{t("active_your_account")}</CardTitle>
+          <CardTitle>{t("activate_your_account")}</CardTitle>
         </CardHeader>
         <CardContent className="pt-2">{renderContent()}</CardContent>
       </Card>
@@ -112,7 +112,7 @@ export function Activate() {
       }
       return (
         <p role="status" className="text-center text-sm text-(--color-foreground)">
-          {t("activate_verifying")}
+          {t("activating_account")}
         </p>
       );
     }
@@ -120,7 +120,7 @@ export function Activate() {
     if (!authenticated) {
       return (
         <div className="flex flex-col gap-4 text-center">
-          <p className="text-sm text-(--color-foreground)">{t("activate_check_email")}</p>
+          <p className="text-sm text-(--color-foreground)">{t("check_activation_email")}</p>
           <Button variant="link" size="inline" asChild className="self-center">
             <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
           </Button>
@@ -132,11 +132,11 @@ export function Activate() {
       return (
         <p role="status" className="text-center text-sm text-(--color-foreground)">
           {resent.resendLimited ? (
-            t("resent_limit_prompt")
+            t("resend_rate_limited")
           ) : (
             <Trans
-              i18nKey="activate_email_sent"
-              values={{ email, hours: resent.hours }}
+              i18nKey="activation_email_sent"
+              values={{ email, hours: resent.codeLifetimeHours }}
               components={{ email: <b />, hours: <b /> }}
             />
           )}
@@ -158,13 +158,13 @@ export function Activate() {
           <div className="flex flex-col gap-4">
             <p className="text-sm text-(--color-foreground)">
               <Trans
-                i18nKey="activate_resend_prompt"
-                values={{ email, hours }}
+                i18nKey="activation_email_pending"
+                values={{ email, hours: codeLifetimeHours }}
                 components={{ email: <b />, hours: <b /> }}
               />
             </p>
             <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? t("activate_resending") : t("resend_mail")}
+              {submitting ? t("resending_activation_email") : t("resend_activation_email")}
             </Button>
           </div>
         </fieldset>

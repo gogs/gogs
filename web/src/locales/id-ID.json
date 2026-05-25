@@ -39,8 +39,5 @@
   "reset_password": "Atur Ulang Sandi",
   "invalid_code": "Maaf, kode konfirmasi Anda telah kadaluarsa atau tidak valid.",
   "new_password": "Sandi baru",
-  "confirm_password": "Konfirmasi sandi",
-  "active_your_account": "Aktifkan Akun Anda",
-  "resent_limit_prompt": "Maaf, Anda telah meminta email aktivasi beberapa saat lalu. Silakan tunggu 3 menit kemudian untuk dapat mencoba lagi.",
-  "resend_mail": "Klik di sini untuk mengirim kembali email aktivasi"
+  "confirm_password": "Konfirmasi sandi"
 }

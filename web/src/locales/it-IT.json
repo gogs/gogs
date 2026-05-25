@@ -39,8 +39,5 @@
   "reset_password": "Reimposta la tua Password",
   "invalid_code": "Siamo spiacenti, il codice di conferma è scaduto o non valido.",
   "new_password": "Nuova Password",
-  "confirm_password": "Conferma Password",
-  "active_your_account": "Attiva il tuo Account",
-  "resent_limit_prompt": "Siamo spiacenti, si stanno inviando e-mail di attivazione troppo spesso. Si prega di attendere 3 minuti.",
-  "resend_mail": "Clicca qui per inviare nuovamente l'e-mail di attivazione"
+  "confirm_password": "Conferma Password"
 }

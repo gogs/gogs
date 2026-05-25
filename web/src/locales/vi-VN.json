@@ -39,8 +39,5 @@
   "reset_password": "Đặt lại mật khẩu của bạn",
   "invalid_code": "Xin lỗi, mã số xác nhận của bạn đã hết hạn hoặc không hợp lệ.",
   "new_password": "Mật khẩu mới",
-  "confirm_password": "Xác nhận mật khẩu",
-  "active_your_account": "Kích hoạt tài khoản của bạn",
-  "resent_limit_prompt": "Xin lỗi, bạn đã yêu cầu một email kích hoạt mới. Xin vui lòng chờ 3 phút sau đó thử lại.",
-  "resend_mail": "Click vào đây để gửi lại email kích hoạt"
+  "confirm_password": "Xác nhận mật khẩu"
 }

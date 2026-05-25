@@ -39,8 +39,5 @@
   "reset_password": "Redefinir sua senha",
   "invalid_code": "Desculpe, seu código de confirmação expirou ou não é válido.",
   "new_password": "Nova senha",
-  "confirm_password": "Confirmar senha",
-  "active_your_account": "Ativar sua conta",
-  "resent_limit_prompt": "Desculpe, você está enviando um e-mail de ativação com muita frequência. Por favor, aguarde 3 minutos.",
-  "resend_mail": "Clique aqui para reenviar seu e-mail de ativação"
+  "confirm_password": "Confirmar senha"
 }

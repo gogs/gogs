@@ -39,8 +39,5 @@
   "reset_password": "パスワードリセット",
   "invalid_code": "申し訳ありませんが、確認用コードが期限切れまたは無効です。",
   "new_password": "新しいパスワード",
-  "confirm_password": "パスワード確認",
-  "active_your_account": "アカウントを有効化",
-  "resent_limit_prompt": "申し訳ありませんが、アクティベーションメールは頻繁に送信しています。3 分お待ちください。",
-  "resend_mail": "アクティベーションメールを再送信するにはここをクリック"
+  "confirm_password": "パスワード確認"
 }

@@ -39,8 +39,5 @@
   "reset_password": "Reset Your Password",
   "invalid_code": "Sorry, your confirmation code has expired or not valid.",
   "new_password": "New Password",
-  "confirm_password": "Confirm Password",
-  "active_your_account": "Activate Your Account",
-  "resent_limit_prompt": "Sorry, you already requested an activation email recently. Please wait 3 minutes then try again.",
-  "resend_mail": "Click here to resend your activation email"
+  "confirm_password": "Confirm Password"
 }

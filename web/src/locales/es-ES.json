@@ -39,8 +39,5 @@
   "reset_password": "Restablecer su contraseña",
   "invalid_code": "Lo sentimos, su código de confirmación ha expirado o no es valido.",
   "new_password": "Nueva contraseña",
-  "confirm_password": "Confirmar Contraseña",
-  "active_your_account": "Activa tu cuenta",
-  "resent_limit_prompt": "Lo sentimos, estás solicitando el reenvío del mail de activación con demasiada frecuencia. Por favor, espera 3 minutos.",
-  "resend_mail": "Haz click aquí para reenviar tu correo electrónico de activación"
+  "confirm_password": "Confirmar Contraseña"
 }

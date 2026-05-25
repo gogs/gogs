@@ -39,8 +39,5 @@
   "reset_password": "Parolanızı Sıfırlayın",
   "invalid_code": "Üzgünüz, doğrulama kodunuz geçersiz veya süresi dolmuş.",
   "new_password": "Yeni Parola",
-  "confirm_password": "Parolayı Doğrula",
-  "active_your_account": "Hesabınızı Aktifleştirin",
-  "resent_limit_prompt": "Üzgünüz, zaten bir doğrulama e-postası talep ettiniz. Lütfen 3 dakika bekleyip tekrar deneyin.",
-  "resend_mail": "Doğrulama e-postasını tekrar almak için buraya tıklayın"
+  "confirm_password": "Parolayı Doğrula"
 }

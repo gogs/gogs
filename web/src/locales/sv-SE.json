@@ -39,8 +39,5 @@
   "reset_password": "Återställ ditt lösenord",
   "invalid_code": "Tyvärr, din bekräftelsekod har antingen upphört att gälla eller är ogiltig.",
   "new_password": "Nytt lösenord",
-  "confirm_password": "Bekräfta lösenord",
-  "active_your_account": "Aktivera ditt konto",
-  "resent_limit_prompt": "Tyvärr, du har nyligen begärt ett aktiveringsmail. Vänligen vänta 3 minuter och försök sedan igen.",
-  "resend_mail": "Klicka här för att skicka ditt aktiveringsmejl igen"
+  "confirm_password": "Bekräfta lösenord"
 }
