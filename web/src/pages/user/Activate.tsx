@@ -15,7 +15,7 @@ export interface ActivatePage {
 }
 
 interface ActivateResponse {
-  resendLimited?: boolean;
+  rateLimited?: boolean;
   codeLifetimeHours?: number;
 }
 
@@ -72,14 +72,14 @@ export function Activate() {
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as ActivateErrorResponse;
-          setFormError(body.error ?? t("resend_activation_email_failed"));
+          setFormError(body.error ?? t("send_activation_email_failed"));
           setSubmitting(false);
           return;
         }
         setResent((await res.json()) as ActivateResponse);
         setSubmitting(false);
       } catch {
-        setFormError(t("resend_activation_email_failed"));
+        setFormError(t("send_activation_email_failed"));
         setSubmitting(false);
       }
     })();
@@ -131,7 +131,7 @@ export function Activate() {
     if (resent) {
       return (
         <p role="status" className="text-center text-sm text-(--color-foreground)">
-          {resent.resendLimited ? (
+          {resent.rateLimited ? (
             t("resend_rate_limited")
           ) : (
             <Trans
@@ -164,7 +164,7 @@ export function Activate() {
               />
             </p>
             <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? t("resending_activation_email") : t("resend_activation_email")}
+              {submitting ? t("sending_activation_email") : t("send_activation_email")}
             </Button>
           </div>
         </fieldset>

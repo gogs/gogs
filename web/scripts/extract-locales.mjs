@@ -99,12 +99,12 @@ const REUSED_KEYS = [
   "mfa_verify_failed",
   "activate_your_account",
   "resend_rate_limited",
-  "resend_activation_email",
+  "send_activation_email",
   "check_activation_email",
   "activation_email_pending",
   "activation_email_sent",
-  "resending_activation_email",
-  "resend_activation_email_failed",
+  "sending_activation_email",
+  "send_activation_email_failed",
   "activating_account",
 ];
 

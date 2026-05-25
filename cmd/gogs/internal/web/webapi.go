@@ -640,9 +640,9 @@ type getUserActivateResponse struct {
 	CodeLifetimeHours int    `json:"codeLifetimeHours,omitempty"`
 }
 
-func getUserActivate(u *database.User, l i18n.Locale) (statusCode int, resp any, err error) {
+func getUserActivate(u *database.User) (statusCode int, resp any, err error) {
 	if u == nil {
-		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.resend_activation_requires_authentication")}, nil
+		return http.StatusUnauthorized, nil, nil
 	}
 	// An already-active and authenticated user has no business on the activation page.
 	if u.IsActive {
@@ -655,13 +655,13 @@ func getUserActivate(u *database.User, l i18n.Locale) (statusCode int, resp any,
 }
 
 type postUserActivateResponse struct {
-	ResendLimited     bool `json:"resendLimited,omitempty"`
+	RateLimited       bool `json:"rateLimited,omitempty"`
 	CodeLifetimeHours int  `json:"codeLifetimeHours,omitempty"`
 }
 
 func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
 	if u == nil {
-		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.resend_activation_requires_authentication")}, nil
+		return http.StatusUnauthorized, nil, nil
 	}
 	if u.IsActive {
 		return http.StatusNotFound, nil, nil
@@ -673,7 +673,7 @@ func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca
 	ctx := r.Context()
 	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
 		return http.StatusOK, &postUserActivateResponse{
-			ResendLimited:     true,
+			RateLimited:       true,
 			CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
