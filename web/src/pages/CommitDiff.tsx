@@ -258,6 +258,7 @@ export function CommitDiff() {
           wrap: next.wrapLines ? true : undefined,
           status: serializeStatusFilter(next.statusFilter),
         }),
+        resetScroll: false,
       });
     },
     [navigate],
@@ -273,6 +274,7 @@ export function CommitDiff() {
           ...prev,
           whitespace: next === "show" ? undefined : next,
         }),
+        resetScroll: false,
       });
     },
     [navigate],

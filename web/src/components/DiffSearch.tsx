@@ -8,45 +8,9 @@ interface Match {
   lineNumber: number;
 }
 
-// `additionLines` and `deletionLines` on a partial (patch-only) FileDiffMetadata
-// are flat arrays of every line on that side of the diff (context lines plus
-// changed lines), indexed in patch order, not new-/old-file line numbers. Each
-// hunk declares `additionStart`/`deletionStart` (the line number in the
-// respective file where the hunk begins) and `additionLineIndex`/
-// `deletionLineIndex` (where in the flat array that hunk's lines start). The
-// span of each hunk in the flat array is `additionCount`/`deletionCount`, NOT
-// the `+`/`-`-only `additionLines`/`deletionLines` counts on the hunk, since
-// the flat array includes context lines too.
-function flatIndexToLineNumber(
-  hunks: readonly {
-    additionStart: number;
-    deletionStart: number;
-    additionLineIndex: number;
-    deletionLineIndex: number;
-    additionCount: number;
-    deletionCount: number;
-  }[],
-  flatIndex: number,
-  side: "additions" | "deletions",
-): number | null {
-  for (const h of hunks) {
-    if (side === "additions") {
-      const startIdx = h.additionLineIndex;
-      const endIdx = startIdx + h.additionCount;
-      if (flatIndex >= startIdx && flatIndex < endIdx) {
-        return h.additionStart + (flatIndex - startIdx);
-      }
-    } else {
-      const startIdx = h.deletionLineIndex;
-      const endIdx = startIdx + h.deletionCount;
-      if (flatIndex >= startIdx && flatIndex < endIdx) {
-        return h.deletionStart + (flatIndex - startIdx);
-      }
-    }
-  }
-  return null;
-}
-
+// Walk `hunkContent` so context lines (which exist on both `additionLines` and
+// `deletionLines`) are counted once, not twice. Changes are counted on each
+// side they actually appear.
 function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
   if (!query) return [];
   const needle = query.toLowerCase();
@@ -54,19 +18,37 @@ function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
   for (const item of items) {
     if (item.type !== "diff") continue;
     const { additionLines, deletionLines, hunks } = item.fileDiff;
-    for (let i = 0; i < additionLines.length; i++) {
-      if (additionLines[i].toLowerCase().includes(needle)) {
-        const lineNumber = flatIndexToLineNumber(hunks, i, "additions");
-        if (lineNumber != null) {
-          out.push({ itemId: item.id, side: "additions", lineNumber });
-        }
-      }
-    }
-    for (let i = 0; i < deletionLines.length; i++) {
-      if (deletionLines[i].toLowerCase().includes(needle)) {
-        const lineNumber = flatIndexToLineNumber(hunks, i, "deletions");
-        if (lineNumber != null) {
-          out.push({ itemId: item.id, side: "deletions", lineNumber });
+    for (const h of hunks) {
+      for (const c of h.hunkContent) {
+        if (c.type === "context") {
+          for (let k = 0; k < c.lines; k++) {
+            if (additionLines[c.additionLineIndex + k].toLowerCase().includes(needle)) {
+              out.push({
+                itemId: item.id,
+                side: "additions",
+                lineNumber: h.additionStart + (c.additionLineIndex + k - h.additionLineIndex),
+              });
+            }
+          }
+        } else {
+          for (let k = 0; k < c.deletions; k++) {
+            if (deletionLines[c.deletionLineIndex + k].toLowerCase().includes(needle)) {
+              out.push({
+                itemId: item.id,
+                side: "deletions",
+                lineNumber: h.deletionStart + (c.deletionLineIndex + k - h.deletionLineIndex),
+              });
+            }
+          }
+          for (let k = 0; k < c.additions; k++) {
+            if (additionLines[c.additionLineIndex + k].toLowerCase().includes(needle)) {
+              out.push({
+                itemId: item.id,
+                side: "additions",
+                lineNumber: h.additionStart + (c.additionLineIndex + k - h.additionLineIndex),
+              });
+            }
+          }
         }
       }
     }
