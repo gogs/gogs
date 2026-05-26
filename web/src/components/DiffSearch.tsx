@@ -9,21 +9,22 @@ interface Match {
 }
 
 // `additionLines` and `deletionLines` on a partial (patch-only) FileDiffMetadata
-// are flat arrays indexed in patch order, not new-/old-file line numbers. Each
+// are flat arrays of every line on that side of the diff (context lines plus
+// changed lines), indexed in patch order, not new-/old-file line numbers. Each
 // hunk declares `additionStart`/`deletionStart` (the line number in the
 // respective file where the hunk begins) and `additionLineIndex`/
-// `deletionLineIndex` (where in the flat array that hunk's lines start). Walk
-// hunks to find which one contains a given flat index, then offset from the
-// hunk's start to get the real file line number, which is what
-// `CodeView.scrollTo`/`setSelectedLines` expect.
+// `deletionLineIndex` (where in the flat array that hunk's lines start). The
+// span of each hunk in the flat array is `additionCount`/`deletionCount`, NOT
+// the `+`/`-`-only `additionLines`/`deletionLines` counts on the hunk, since
+// the flat array includes context lines too.
 function flatIndexToLineNumber(
   hunks: readonly {
     additionStart: number;
     deletionStart: number;
     additionLineIndex: number;
     deletionLineIndex: number;
-    additionLines: number;
-    deletionLines: number;
+    additionCount: number;
+    deletionCount: number;
   }[],
   flatIndex: number,
   side: "additions" | "deletions",
@@ -31,13 +32,13 @@ function flatIndexToLineNumber(
   for (const h of hunks) {
     if (side === "additions") {
       const startIdx = h.additionLineIndex;
-      const endIdx = startIdx + h.additionLines;
+      const endIdx = startIdx + h.additionCount;
       if (flatIndex >= startIdx && flatIndex < endIdx) {
         return h.additionStart + (flatIndex - startIdx);
       }
     } else {
       const startIdx = h.deletionLineIndex;
-      const endIdx = startIdx + h.deletionLines;
+      const endIdx = startIdx + h.deletionCount;
       if (flatIndex >= startIdx && flatIndex < endIdx) {
         return h.deletionStart + (flatIndex - startIdx);
       }
@@ -167,7 +168,7 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
   return (
     <div
       role="search"
-      className="absolute top-3 right-4 z-10 flex h-8 items-center gap-1 rounded-md border border-(--color-border) bg-(--color-background) px-1 shadow-md"
+      className="absolute top-1 right-4 z-10 flex h-8 items-center gap-1 rounded-md border border-(--color-border) bg-(--color-background) px-1 shadow-md"
     >
       <Search className="ml-1 size-4 text-(--color-muted-foreground)" aria-hidden />
       <input

@@ -23,6 +23,7 @@ import { RepoHeader, type RepoHeaderRepo } from "@/components/RepoHeader";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 import { type DiffFileStatus, parseStatusFilter, serializeStatusFilter } from "@/pages/CommitDiff.search";
@@ -107,12 +108,15 @@ const DIFF_UNSAFE_CSS = `
   [data-separator=line-info-basic] {
     background-color: var(--diffs-bg-separator) !important;
   }
+  /* GitHub-style yellow highlight for the in-page search match. Pierre
+     reaches into these custom properties when computing the selected-line
+     background and gutter tint; overriding the *-override hook keeps the
+     blending logic intact while swapping the source color. */
+  :host {
+    --diffs-bg-selection-override: light-dark(#ffe066, #ffd633);
+    --diffs-bg-selection-number-override: light-dark(#f5c518, #fff066);
+  }
 `;
-
-function formatWhen(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
-}
 
 function resolveTheme(theme: "light" | "dark" | "system"): "light" | "dark" {
   if (theme === "system") {
@@ -399,6 +403,7 @@ export function CommitDiff() {
   const mockRepo: RepoHeaderRepo = {
     owner,
     name: repo,
+    avatarUrl: subUrl("/img/favicon.png"),
     visibility: "public",
     isAdmin: true,
     enableIssues: true,
@@ -529,7 +534,9 @@ export function CommitDiff() {
           <img src={commit.author.avatarUrl} alt="" className="size-6 rounded-full" />
           {authorLabel}
           <span>authored</span>
-          <time dateTime={commit.author.when}>{formatWhen(commit.author.when)}</time>
+          <time dateTime={commit.author.when} title={formatAbsoluteTime(commit.author.when)}>
+            {formatRelativeTime(commit.author.when)}
+          </time>
           {committerDiffers ? (
             <>
               <span aria-hidden>·</span>

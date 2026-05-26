@@ -1,20 +1,26 @@
 import {
   Bell,
-  BookOpen,
-  Clock,
+  CircleDot,
   Code,
   FileText,
   GitFork,
   GitPullRequest,
   Link as LinkIcon,
-  Lock,
+  Menu,
   Settings,
   Star,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
+import { useState } from "react";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
+
+// Mobile collapses the tab strip after this many items into a hamburger
+// overflow menu. The active tab is always pulled into the inline group so the
+// user can see the active indicator without opening the menu.
+const MOBILE_INLINE_LIMIT = 3;
 
 export type RepoVisibility = "public" | "private";
 
@@ -23,6 +29,10 @@ export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settin
 export interface RepoHeaderRepo {
   owner: string;
   name: string;
+  // Per-repo avatar URL. Gogs lets repos set their own avatar and falls back
+  // to the owner's avatar, then to a default badge. Callers should pass the
+  // already-resolved URL; this component does no fallback chain itself.
+  avatarUrl: string;
   visibility: RepoVisibility;
   isAdmin?: boolean;
   enableIssues?: boolean;
@@ -62,11 +72,11 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <h1 className="flex min-w-0 flex-wrap items-center gap-2 text-base">
-            {repo.visibility === "private" ? (
-              <Lock className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-            ) : (
-              <BookOpen className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-            )}
+            <img
+              src={repo.avatarUrl}
+              alt=""
+              className="relative top-0.5 size-5 shrink-0 rounded border border-(--color-border) bg-(--color-surface) object-cover"
+            />
             <a href={subUrl(`/${repo.owner}`)} className="text-(--color-primary) hover:underline">
               {repo.owner}
             </a>
@@ -117,43 +127,132 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
           </div>
         </div>
 
-        <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Repository">
-          <TabLink href={repoLink} icon={Code} active={activeTab === "code"}>
-            Code
-          </TabLink>
-          {repo.enableIssues !== false ? (
-            <TabLink
-              href={`${repoLink}/issues`}
-              icon={Clock}
-              active={activeTab === "issues"}
-              badge={repo.counts.openIssues}
-            >
-              Issues
-            </TabLink>
-          ) : null}
-          {repo.allowsPulls !== false ? (
-            <TabLink
-              href={`${repoLink}/pulls`}
-              icon={GitPullRequest}
-              active={activeTab === "pulls"}
-              badge={repo.counts.openPulls}
-            >
-              Pull requests
-            </TabLink>
-          ) : null}
-          {repo.enableWiki !== false ? (
-            <TabLink href={`${repoLink}/wiki`} icon={FileText} active={activeTab === "wiki"}>
-              Wiki
-            </TabLink>
-          ) : null}
-          {repo.isAdmin ? (
-            <TabLink href={`${repoLink}/settings`} icon={Settings} active={activeTab === "settings"}>
-              Settings
-            </TabLink>
-          ) : null}
-        </nav>
+        <RepoTabs repo={repo} activeTab={activeTab} repoLink={repoLink} />
       </div>
     </div>
+  );
+}
+
+interface TabDescriptor {
+  key: RepoTab;
+  href: string;
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  label: string;
+  badge?: number;
+}
+
+function buildTabs(repo: RepoHeaderRepo, repoLink: string): TabDescriptor[] {
+  const tabs: TabDescriptor[] = [{ key: "code", href: repoLink, icon: Code, label: "Code" }];
+  if (repo.enableIssues !== false) {
+    tabs.push({
+      key: "issues",
+      href: `${repoLink}/issues`,
+      icon: CircleDot,
+      label: "Issues",
+      badge: repo.counts.openIssues,
+    });
+  }
+  if (repo.allowsPulls !== false) {
+    tabs.push({
+      key: "pulls",
+      href: `${repoLink}/pulls`,
+      icon: GitPullRequest,
+      label: "Pull requests",
+      badge: repo.counts.openPulls,
+    });
+  }
+  if (repo.enableWiki !== false) {
+    tabs.push({ key: "wiki", href: `${repoLink}/wiki`, icon: FileText, label: "Wiki" });
+  }
+  if (repo.isAdmin) {
+    tabs.push({ key: "settings", href: `${repoLink}/settings`, icon: Settings, label: "Settings" });
+  }
+  return tabs;
+}
+
+function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoHeaderRepo; activeTab: RepoTab; repoLink: string }) {
+  const tabs = buildTabs(repo, repoLink);
+
+  // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
+  // fold into a hamburger overflow. If the active tab is past the cutoff,
+  // swap it into the last inline slot so the indicator stays visible without
+  // opening the menu.
+  const activeIndex = tabs.findIndex((t) => t.key === activeTab);
+  let mobileInline = tabs.slice(0, MOBILE_INLINE_LIMIT);
+  let mobileOverflow = tabs.slice(MOBILE_INLINE_LIMIT);
+  if (activeIndex >= MOBILE_INLINE_LIMIT) {
+    const swappedOut = mobileInline[MOBILE_INLINE_LIMIT - 1];
+    mobileInline = [...mobileInline.slice(0, MOBILE_INLINE_LIMIT - 1), tabs[activeIndex]];
+    mobileOverflow = mobileOverflow.map((t) => (t.key === tabs[activeIndex].key ? swappedOut : t));
+  }
+
+  return (
+    <>
+      {/* Mobile: first 3 inline + hamburger overflow for the rest. */}
+      <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label="Repository">
+        {mobileInline.map((tab) => (
+          <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
+            {tab.label}
+          </TabLink>
+        ))}
+        {mobileOverflow.length > 0 ? <OverflowMenu tabs={mobileOverflow} activeTab={activeTab} /> : null}
+      </nav>
+
+      {/* sm and up: full strip, scrolls horizontally if it ever overflows. */}
+      <nav className="-mb-px hidden gap-1 overflow-x-auto sm:flex" aria-label="Repository">
+        {tabs.map((tab) => (
+          <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
+            {tab.label}
+          </TabLink>
+        ))}
+      </nav>
+    </>
+  );
+}
+
+function OverflowMenu({ tabs, activeTab }: { tabs: TabDescriptor[]; activeTab: RepoTab }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="More tabs"
+          className="flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
+        >
+          <Menu className="size-4" aria-hidden />
+          <span>More</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-1">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const active = tab.key === activeTab;
+          return (
+            <a
+              key={tab.key}
+              href={tab.href}
+              onClick={() => setOpen(false)}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-2 rounded px-2 py-1.5 text-sm",
+                active
+                  ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
+                  : "text-(--color-foreground) hover:bg-(--color-surface)",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+              <span className="flex-1">{tab.label}</span>
+              {tab.badge && tab.badge > 0 ? (
+                <span className="rounded-full bg-(--color-background) px-1.5 text-xs leading-5 tabular-nums text-(--color-muted-foreground)">
+                  {formatCount(tab.badge)}
+                </span>
+              ) : null}
+            </a>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
   );
 }
 
