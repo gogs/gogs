@@ -10,7 +10,7 @@ import {
   Copy,
   ExternalLink,
   FileCode2,
-  FolderTree,
+  PanelLeftOpen,
   ShieldCheck,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -699,7 +699,7 @@ export function CommitDiff() {
                 type="button"
                 className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 border-b border-(--color-border) bg-(--color-background) px-4 text-sm font-medium text-(--color-foreground) hover:bg-(--color-surface) lg:hidden"
               >
-                <FolderTree className="size-4" aria-hidden />
+                <PanelLeftOpen className="size-4" aria-hidden />
                 <span>Files changed</span>
                 <span className="rounded-full bg-(--color-surface) px-1.5 leading-5 tabular-nums text-(--color-muted-foreground)">
                   {stats.fileCount}
