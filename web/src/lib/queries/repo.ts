@@ -3,7 +3,8 @@ import { queryOptions } from "@tanstack/react-query";
 import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
 
-export interface RepoInfo {
+export interface RepoHeaderData {
+  id: number;
   owner: string;
   name: string;
   avatarURL: string;
@@ -24,25 +25,25 @@ export interface RepoInfo {
   mirrorOf?: string;
 }
 
-export function repoInfoQuery(owner: string, name: string) {
+export function repoHeaderQuery(owner: string, name: string) {
   return queryOptions({
-    queryKey: ["repo", owner, name, "info"] as const,
+    queryKey: ["repo", owner, name, "header"] as const,
     queryFn: async ({ signal }) => {
-      const res = await fetch(subUrl(`/api/web/${owner}/${name}/info`), {
+      const res = await fetch(subUrl(`/api/web/${owner}/${name}/header`), {
         credentials: "same-origin",
         signal,
       });
       if (!res.ok) throw await loaderResponseError(res);
-      return (await res.json()) as RepoInfo;
+      return (await res.json()) as RepoHeaderData;
     },
   });
 }
 
 export interface RepoActionResult {
-  viewerWatching?: boolean;
-  viewerStarred?: boolean;
-  watchers?: number;
-  stars?: number;
+  viewerWatching: boolean;
+  viewerStarred: boolean;
+  watchers: number;
+  stars: number;
 }
 
 async function repoAction(method: "POST" | "DELETE", owner: string, name: string, action: "watch" | "star") {

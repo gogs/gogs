@@ -20,8 +20,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   type RepoActionResult,
-  type RepoInfo,
-  repoInfoQuery,
+  type RepoHeaderData,
+  repoHeaderQuery,
   starRepo,
   unstarRepo,
   unwatchRepo,
@@ -39,7 +39,7 @@ const MOBILE_INLINE_LIMIT = 3;
 export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settings";
 
 export interface RepoHeaderProps {
-  repo: RepoInfo;
+  repo: RepoHeaderData;
   activeTab: RepoTab;
 }
 
@@ -57,19 +57,20 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const signedIn = user !== null;
 
   // Apply the mutation result back to the cached `repoInfo` so the button
-  // labels and counts update without a refetch. The server returns only the
-  // delta fields it touched, so we patch them in via `setQueryData`.
+  // labels and counts update without a refetch. The server echoes the full
+  // viewer/count state for both watch and star on every action, so we can
+  // overwrite all four fields directly.
   const applyResult = (result: RepoActionResult) => {
-    queryClient.setQueryData(repoInfoQuery(repo.owner, repo.name).queryKey, (prev) => {
+    queryClient.setQueryData(repoHeaderQuery(repo.owner, repo.name).queryKey, (prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        viewerWatching: result.viewerWatching ?? prev.viewerWatching,
-        viewerStarred: result.viewerStarred ?? prev.viewerStarred,
+        viewerWatching: result.viewerWatching,
+        viewerStarred: result.viewerStarred,
         counts: {
           ...prev.counts,
-          watchers: result.watchers ?? prev.counts.watchers,
-          stars: result.stars ?? prev.counts.stars,
+          watchers: result.watchers,
+          stars: result.stars,
         },
       };
     });
@@ -119,8 +120,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             <SplitActionButton
               countHref={`${repoLink}/watchers`}
               onAction={signedIn ? () => watchMutation.mutate() : undefined}
-              signInHref={subUrl(`/user/login?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
               disabled={watchMutation.isPending}
+              signedIn={signedIn}
+              signInTooltip="Sign in to watch this repository"
               icon={Bell}
               label={repo.viewerWatching ? "Unwatch" : "Watch"}
               count={repo.counts.watchers}
@@ -130,8 +133,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             <SplitActionButton
               countHref={`${repoLink}/stars`}
               onAction={signedIn ? () => starMutation.mutate() : undefined}
-              signInHref={subUrl(`/user/login?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
               disabled={starMutation.isPending}
+              signedIn={signedIn}
+              signInTooltip="Sign in to star this repository"
               icon={Star}
               label={repo.viewerStarred ? "Starred" : "Star"}
               count={repo.counts.stars}
@@ -143,7 +148,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               // Fork still goes through the legacy "choose where to fork to"
               // page (not yet migrated). Treat it as a navigation link, not a
               // one-click action.
-              actionHref={subUrl(`/repo/fork/${repo.owner}/${repo.name}`)}
+              actionHref={signedIn ? subUrl(`/repo/fork/${repo.id}`) : undefined}
+              signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              signedIn={signedIn}
+              signInTooltip="Sign in to fork this repository"
               icon={GitFork}
               label="Fork"
               count={repo.counts.forks}
@@ -166,7 +174,7 @@ interface TabDescriptor {
   badge?: number;
 }
 
-function buildTabs(repo: RepoInfo, repoLink: string): TabDescriptor[] {
+function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
   const tabs: TabDescriptor[] = [{ key: "code", href: repoLink, icon: Code, label: "Code" }];
   if (repo.enableIssues !== false) {
     tabs.push({
@@ -195,7 +203,7 @@ function buildTabs(repo: RepoInfo, repoLink: string): TabDescriptor[] {
   return tabs;
 }
 
-function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoInfo; activeTab: RepoTab; repoLink: string }) {
+function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoHeaderData; activeTab: RepoTab; repoLink: string }) {
   const tabs = buildTabs(repo, repoLink);
 
   // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
@@ -281,7 +289,7 @@ function OverflowMenu({ tabs, activeTab }: { tabs: TabDescriptor[]; activeTab: R
   );
 }
 
-function VisibilityBadge({ visibility }: { visibility: RepoInfo["visibility"] }) {
+function VisibilityBadge({ visibility }: { visibility: RepoHeaderData["visibility"] }) {
   const isPrivate = visibility === "private";
   const Icon = isPrivate ? Lock : Globe;
   const tooltip = isPrivate ? "This repository is private" : "This repository is public";
@@ -307,11 +315,19 @@ interface SplitActionButtonProps {
   // signed-in users with a real mutation in flight).
   onAction?: () => void;
   // Fallback href for the action half when `onAction` is not set (legacy
-  // page-navigation actions like Fork, or when the user is signed out).
+  // page-navigation actions like Fork). Only used when the viewer is signed
+  // in; `signInHref` takes over when signed out.
   actionHref?: string;
-  // Fallback href when the user is signed out. Set together with `onAction`
-  // to swap the click target without losing a path for anonymous viewers.
+  // Where to send signed-out viewers when they click the action half. The
+  // half renders disabled-looking but stays clickable so the affordance
+  // works without forcing the viewer to dig for a sign-in button.
   signInHref?: string;
+  // Whether the viewer is signed in. Drives both the click target and the
+  // disabled-looking styling + sign-in tooltip below.
+  signedIn?: boolean;
+  // Tooltip text shown when signed out. Should explain the gated action,
+  // e.g. "Sign in to watch this repository".
+  signInTooltip?: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   label: string;
   count: number;
@@ -325,6 +341,8 @@ function SplitActionButton({
   onAction,
   actionHref,
   signInHref,
+  signedIn = true,
+  signInTooltip,
   icon: Icon,
   label,
   count,
@@ -333,8 +351,9 @@ function SplitActionButton({
   disabled,
 }: SplitActionButtonProps) {
   const actionClassName = cn(
-    "flex items-center gap-1.5 px-2 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-60",
+    "flex items-center gap-1.5 px-2 hover:bg-(--color-surface)",
     active && "text-(--color-primary)",
+    disabled && "cursor-not-allowed opacity-60 hover:bg-transparent",
   );
   const actionContent = (
     <>
@@ -344,7 +363,19 @@ function SplitActionButton({
   );
 
   let action: ReactNode;
-  if (onAction) {
+  if (!signedIn) {
+    const href = signInHref ?? countHref;
+    action = (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <a href={href} aria-label={ariaLabel} className={actionClassName}>
+            {actionContent}
+          </a>
+        </TooltipTrigger>
+        {signInTooltip ? <TooltipContent>{signInTooltip}</TooltipContent> : null}
+      </Tooltip>
+    );
+  } else if (onAction) {
     action = (
       <button
         type="button"
@@ -357,7 +388,7 @@ function SplitActionButton({
       </button>
     );
   } else {
-    const href = actionHref ?? signInHref ?? countHref;
+    const href = actionHref ?? countHref;
     action = (
       <a href={href} aria-label={ariaLabel} className={actionClassName}>
         {actionContent}

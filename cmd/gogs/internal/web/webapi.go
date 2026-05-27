@@ -159,7 +159,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Post("/sign-out", postUserSignOut)
 		})
 		f.Group("/{owner}/{name}", func() {
-			f.Get("/info", getRepoInfo)
+			f.Get("/header", getRepoHeader)
 			f.Get("/commit/{sha}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)

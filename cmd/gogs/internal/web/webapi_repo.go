@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-type repoInfoCounts struct {
+type repoHeaderCounts struct {
 	Watchers   int `json:"watchers"`
 	Stars      int `json:"stars"`
 	Forks      int `json:"forks"`
@@ -26,22 +26,23 @@ type repoInfoCounts struct {
 	OpenPulls  int `json:"openPulls"`
 }
 
-type repoInfo struct {
-	Owner          string         `json:"owner"`
-	Name           string         `json:"name"`
-	AvatarURL      string         `json:"avatarURL"`
-	Visibility     string         `json:"visibility"`
-	IsAdmin        bool           `json:"isAdmin"`
-	EnableIssues   bool           `json:"enableIssues"`
-	AllowsPulls    bool           `json:"allowsPulls"`
-	EnableWiki     bool           `json:"enableWiki"`
-	Counts         repoInfoCounts `json:"counts"`
-	ViewerWatching bool           `json:"viewerWatching"`
-	ViewerStarred  bool           `json:"viewerStarred"`
-	MirrorOf       string         `json:"mirrorOf,omitempty"`
+type repoHeader struct {
+	ID             int64            `json:"id"`
+	Owner          string           `json:"owner"`
+	Name           string           `json:"name"`
+	AvatarURL      string           `json:"avatarURL"`
+	Visibility     string           `json:"visibility"`
+	IsAdmin        bool             `json:"isAdmin"`
+	EnableIssues   bool             `json:"enableIssues"`
+	AllowsPulls    bool             `json:"allowsPulls"`
+	EnableWiki     bool             `json:"enableWiki"`
+	Counts         repoHeaderCounts `json:"counts"`
+	ViewerWatching bool             `json:"viewerWatching"`
+	ViewerStarred  bool             `json:"viewerStarred"`
+	MirrorOf       string           `json:"mirrorOf,omitempty"`
 }
 
-func getRepoInfo(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoInfo, err error) {
+func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoHeader, err error) {
 	ctx := r.Context()
 	params := c.Params()
 	ownerName := params["owner"]
@@ -107,7 +108,8 @@ func getRepoInfo(c flamego.Context, r *http.Request, user *database.User) (statu
 		visibility = "private"
 	}
 
-	out := &repoInfo{
+	out := &repoHeader{
+		ID:           repo.ID,
 		Owner:        owner.Name,
 		Name:         repo.Name,
 		AvatarURL:    avatarURL,
@@ -116,12 +118,12 @@ func getRepoInfo(c flamego.Context, r *http.Request, user *database.User) (statu
 		EnableIssues: enableIssues,
 		AllowsPulls:  repo.AllowsPulls(),
 		EnableWiki:   enableWiki,
-		Counts: repoInfoCounts{
+		Counts: repoHeaderCounts{
 			Watchers:   repo.NumWatches,
 			Stars:      repo.NumStars,
 			Forks:      repo.NumForks,
-			OpenIssues: repo.NumOpenIssues,
-			OpenPulls:  repo.NumOpenPulls,
+			OpenIssues: repo.NumIssues - repo.NumClosedIssues,
+			OpenPulls:  repo.NumPulls - repo.NumClosedPulls,
 		},
 		ViewerWatching: viewerID > 0 && database.IsWatching(viewerID, repo.ID),
 		ViewerStarred:  viewerID > 0 && database.IsStaring(viewerID, repo.ID),
@@ -130,7 +132,7 @@ func getRepoInfo(c flamego.Context, r *http.Request, user *database.User) (statu
 	if repo.IsMirror {
 		mirror, err := database.GetMirrorByRepoID(repo.ID)
 		if err != nil {
-			log.Error("getRepoInfo: get mirror by repo ID %d: %v", repo.ID, err)
+			log.Error("getRepoHeader: get mirror by repo ID %d: %v", repo.ID, err)
 		} else if mirror != nil {
 			out.MirrorOf = mirror.Address()
 		}
@@ -405,12 +407,15 @@ func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.
 }
 
 // repoActionResponse echoes the new viewer/count state so the client can
-// update without a follow-up GET. Used by watch/star endpoints.
+// update without a follow-up GET. Used by watch/star endpoints. Fields are
+// always emitted: `false` and `0` are meaningful (an unwatch transitions
+// `viewerWatching` to `false`, and a repo with zero watchers is a valid
+// state), so `omitempty` would drop the very signals the client needs.
 type repoActionResponse struct {
-	ViewerWatching bool `json:"viewerWatching,omitempty"`
-	ViewerStarred  bool `json:"viewerStarred,omitempty"`
-	Watchers       int  `json:"watchers,omitempty"`
-	Stars          int  `json:"stars,omitempty"`
+	ViewerWatching bool `json:"viewerWatching"`
+	ViewerStarred  bool `json:"viewerStarred"`
+	Watchers       int  `json:"watchers"`
+	Stars          int  `json:"stars"`
 }
 
 func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, watching bool) (statusCode int, resp *repoActionResponse, err error) {
@@ -438,7 +443,9 @@ func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, wa
 	}
 	return http.StatusOK, &repoActionResponse{
 		ViewerWatching: watching,
+		ViewerStarred:  database.IsStaring(user.ID, repo.ID),
 		Watchers:       updated.NumWatches,
+		Stars:          updated.NumStars,
 	}, nil
 }
 
@@ -473,8 +480,10 @@ func repoStarAction(c flamego.Context, r *http.Request, user *database.User, sta
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
-		ViewerStarred: starred,
-		Stars:         updated.NumStars,
+		ViewerWatching: database.IsWatching(user.ID, repo.ID),
+		ViewerStarred:  starred,
+		Watchers:       updated.NumWatches,
+		Stars:          updated.NumStars,
 	}, nil
 }
 

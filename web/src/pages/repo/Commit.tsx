@@ -26,7 +26,7 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { repoInfoQuery } from "@/lib/queries/repo";
+import { repoHeaderQuery } from "@/lib/queries/repo";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
@@ -120,36 +120,6 @@ const DIFF_UNSAFE_CSS = `
   [data-deletions-count] {
     font-family: inherit;
   }
-  /* The filename is now a click target ("Copy file path"). Use the link
-     cursor so the affordance is discoverable. */
-  [data-title] {
-    cursor: pointer;
-  }
-  /* Smooth crossfade between Pierre's change-state icon and the green
-     check we inject via JS. When the filename is clicked, data-copied
-     is set on the SVG for ~1.2s; the original use element fades out
-     while the data-gogs-copied-check path fades in, then reverses.
-     The transform on the check adds a tiny scale-up bounce. */
-  [data-change-icon] {
-    transition: transform 180ms ease-out;
-  }
-  [data-change-icon] > use {
-    transition: opacity 180ms ease-out;
-    opacity: 1;
-  }
-  [data-change-icon] > [data-gogs-copied-check] {
-    transition: opacity 180ms ease-out, transform 180ms ease-out;
-    opacity: 0;
-    transform-origin: 8px 8px;
-    transform: scale(0.7);
-  }
-  [data-change-icon][data-copied] > use {
-    opacity: 0;
-  }
-  [data-change-icon][data-copied] > [data-gogs-copied-check] {
-    opacity: 1;
-    transform: scale(1);
-  }
   /* File-to-file separator. The first header has no top border so it does
      not double up with the toolbar's bottom border above it. */
   * + [data-diffs-header] {
@@ -199,12 +169,36 @@ const TREE_THEME_STYLE: CSSProperties = {
   "--trees-search-fg-override": "var(--color-foreground)",
 };
 
+const BODY_CLAMP_LINES = 3;
+
+function CommitBody({ message }: { message: string }) {
+  const lines = message.split("\n");
+  const needsClamp = lines.length > BODY_CLAMP_LINES;
+  const [expanded, setExpanded] = useState(!needsClamp);
+  const visible = expanded ? message : lines.slice(0, BODY_CLAMP_LINES).join("\n");
+
+  return (
+    <div className="mt-2 max-w-3xl">
+      <pre className="text-sm whitespace-pre-wrap text-(--color-muted-foreground)">{visible}</pre>
+      {needsClamp ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1.5 cursor-pointer rounded border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs text-(--color-muted-foreground) hover:bg-(--color-surface)/80 hover:text-(--color-foreground)"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function RepoCommit() {
   const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
   const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
   const search = useSearch({ from: "/$owner/$repo/commit/$sha" });
   const navigate = useNavigate({ from: "/$owner/$repo/commit/$sha" });
-  const { data: repoInfo } = useSuspenseQuery(repoInfoQuery(owner, repo));
+  const { data: repoHeader } = useSuspenseQuery(repoHeaderQuery(owner, repo));
   const { t } = useTranslation();
   const { theme } = useTheme();
   const resolvedTheme = resolveTheme(theme);
@@ -309,11 +303,10 @@ export function RepoCommit() {
   // `items` useMemo swaps in the upgraded fileDiff so Pierre's controlled
   // CodeView re-renders the file with full file contents.
   const [upgradedById, setUpgradedById] = useState<Record<string, FileDiffMetadata>>({});
-  // Per-file "copied filename" feedback. The flag is short-lived (1.2s) and
-  // only used to drive a write-side state machine; we don't currently render
-  // anything from it, but it gates further copies and keeps the indicator
-  // intent explicit if the affordance needs to come back.
-  const [, setCopiedPathById] = useState<Record<string, boolean>>({});
+  // Per-file "copied path" feedback. Drives the transient check-mark swap on
+  // the "Copy file path" icon button in the file header's metadata row. The
+  // flag clears 1.2s after the copy.
+  const [copiedPathById, setCopiedPathById] = useState<Record<string, boolean>>({});
 
   // Derive the in-memory settings from the URL. Missing search fields fall
   // back to defaults, so the URL only carries non-default values.
@@ -428,12 +421,6 @@ export function RepoCommit() {
     return map;
   }, [allItems]);
 
-  // Stable ref to `copyFilePath` so the click delegation effect (which lives
-  // above the callback's declaration) always reaches the latest closure.
-  const copyFilePathRef = useRef<(id: string, path: string) => void>(() => undefined);
-  // Memoize the tooltip label so the effect dependency is stable per locale.
-  const titleTooltipLabel = t("diff.copy_file_path");
-
   useEffect(() => {
     const scroller = document.querySelector<HTMLDivElement>(".gogs-diff-scroller");
     if (!scroller) return;
@@ -441,8 +428,6 @@ export function RepoCommit() {
     function onClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      // Skip clicks on Pierre's metadata controls (the collapse chevron is
-      // also inside the header but Pierre handles its own toggle behavior).
       // Walk composedPath through any shadow boundaries to find the header.
       const path = event.composedPath();
       const header = path.find(
@@ -453,13 +438,9 @@ export function RepoCommit() {
       // (a button, link, or any element whose own listener already handled
       // the click, like our FileHeaderMenu trigger or Pierre's expand
       // chevron). Those nodes appear earlier in `path` than the header.
-      let landedOnTitle = false;
       for (const node of path) {
         if (node === header) break;
         if (node instanceof Element) {
-          if (node.matches("[data-title]")) {
-            landedOnTitle = true;
-          }
           if (node.matches("button, a, [role='button']") || node.hasAttribute("data-no-collapse-on-click")) {
             return;
           }
@@ -469,24 +450,6 @@ export function RepoCommit() {
       if (!title) return;
       const ids = nameToItemIds.get(title);
       if (!ids || ids.length === 0) return;
-      // Filename click copies the path; header background click toggles the
-      // file's collapsed state. Matches GitHub's behavior.
-      if (landedOnTitle) {
-        copyFilePathRef.current(ids[0], title);
-        // Cross-fade Pierre's change-state icon to a green check for ~1.2s.
-        // We append a sibling `<path>` inside the existing SVG and toggle
-        // a `data-copied` flag on the SVG; the unsafeCSS below uses
-        // `:has`/sibling selectors to crossfade between the two paths via
-        // opacity transitions for a smooth swap.
-        const icon = header.querySelector<SVGElement>("[data-change-icon]");
-        if (icon) {
-          icon.setAttribute("data-copied", "");
-          window.setTimeout(() => {
-            icon.removeAttribute("data-copied");
-          }, 1200);
-        }
-        return;
-      }
       setCollapsedById((prev) => {
         const next = { ...prev };
         for (const id of ids) {
@@ -496,128 +459,11 @@ export function RepoCommit() {
       });
     }
 
-    // Light-DOM tooltip for the filename. Pierre's [data-title] sits in the
-    // shadow DOM and has overflow:hidden, so a Radix tooltip can't reach it
-    // and a CSS pseudo-element would be clipped. We render one shared
-    // tooltip element in document.body and reposition on hover.
-    let tooltipEl = document.querySelector<HTMLDivElement>("[data-gogs-title-tooltip]");
-    if (!tooltipEl) {
-      tooltipEl = document.createElement("div");
-      tooltipEl.setAttribute("data-gogs-title-tooltip", "");
-      tooltipEl.setAttribute("role", "tooltip");
-      // Match `@/components/ui/tooltip` (Radix): inverted foreground/background,
-      // rounded-md, px-2 py-1, text-xs, subtle shadow-sm.
-      Object.assign(tooltipEl.style, {
-        position: "fixed",
-        zIndex: "9999",
-        padding: "4px 8px",
-        borderRadius: "6px",
-        background: "var(--color-foreground)",
-        color: "var(--color-background)",
-        fontSize: "12px",
-        lineHeight: "16px",
-        whiteSpace: "nowrap",
-        opacity: "0",
-        pointerEvents: "none",
-        transform: "translate(-50%, 0)",
-        transition: "opacity 80ms linear",
-        boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-      });
-      document.body.appendChild(tooltipEl);
-    }
-    const tooltip = tooltipEl;
-    let tooltipShowTimer: number | null = null;
-    let currentTitleEl: Element | null = null;
-    function showTitleTooltip(titleEl: Element) {
-      if (tooltipShowTimer != null) window.clearTimeout(tooltipShowTimer);
-      currentTitleEl = titleEl;
-      tooltipShowTimer = window.setTimeout(() => {
-        if (currentTitleEl !== titleEl) return;
-        const rect = titleEl.getBoundingClientRect();
-        tooltip.textContent = titleTooltipLabel;
-        tooltip.style.left = `${rect.left + Math.min(rect.width / 2, 180)}px`;
-        // Render the tooltip ABOVE the filename to match every other Radix
-        // tooltip on the page (Radix defaults to side="top"). We measure
-        // after assigning text so offsetHeight reflects the final size.
-        tooltip.style.opacity = "0";
-        tooltip.style.top = `${rect.top - tooltip.offsetHeight - 6}px`;
-        tooltip.style.opacity = "1";
-      }, 80);
-    }
-    function hideTitleTooltip() {
-      currentTitleEl = null;
-      if (tooltipShowTimer != null) {
-        window.clearTimeout(tooltipShowTimer);
-        tooltipShowTimer = null;
-      }
-      tooltip.style.opacity = "0";
-    }
-
-    // Attach mouseenter/mouseleave directly on each `[data-title]` element.
-    // Bubbling-based delegation (`mouseover` on the scroller) is unreliable
-    // here because Pierre's `<diffs-container>` aggressively interposes
-    // listeners; non-bubbling per-element listeners avoid the indirection.
-    const titleListeners = new WeakMap<Element, { enter: () => void; leave: () => void }>();
-    function attachTitleListeners(titleEl: Element) {
-      if (titleListeners.has(titleEl)) return;
-      const enter = () => showTitleTooltip(titleEl);
-      const leave = () => {
-        if (currentTitleEl === titleEl) hideTitleTooltip();
-      };
-      titleEl.addEventListener("mouseenter", enter);
-      titleEl.addEventListener("mouseleave", leave);
-      titleListeners.set(titleEl, { enter, leave });
-    }
-    // Inject the green-check `<path>` into each change-icon SVG once so the
-    // copy-confirmation flash is a CSS opacity swap rather than an
-    // innerHTML replace. Pairs with the [data-copied] selectors in
-    // DIFF_UNSAFE_CSS below.
-    function decorateChangeIcon(icon: SVGElement) {
-      if (icon.querySelector("[data-gogs-copied-check]")) return;
-      const ns = "http://www.w3.org/2000/svg";
-      const check = document.createElementNS(ns, "path");
-      check.setAttribute("data-gogs-copied-check", "");
-      check.setAttribute("d", "M3.5 8.5 6.5 11.5 12.5 4.5");
-      check.setAttribute("fill", "none");
-      check.setAttribute("stroke", "var(--color-success)");
-      check.setAttribute("stroke-width", "1.8");
-      check.setAttribute("stroke-linecap", "round");
-      check.setAttribute("stroke-linejoin", "round");
-      icon.appendChild(check);
-    }
-    function scanTitles(root: ParentNode) {
-      root.querySelectorAll("[data-title]").forEach((el) => attachTitleListeners(el));
-      root.querySelectorAll<SVGElement>("[data-change-icon]").forEach(decorateChangeIcon);
-    }
-    const container = scroller.querySelector("diffs-container");
-    const shadow = (container as (Element & { shadowRoot?: ShadowRoot }) | null)?.shadowRoot;
-    if (shadow) {
-      scanTitles(shadow);
-      const observer = new MutationObserver((records) => {
-        for (const record of records) {
-          for (const node of record.addedNodes) {
-            if (node instanceof Element) {
-              if (node.matches("[data-title]")) attachTitleListeners(node);
-              if (node.matches("[data-change-icon]")) decorateChangeIcon(node as unknown as SVGElement);
-              scanTitles(node);
-            }
-          }
-        }
-      });
-      observer.observe(shadow, { childList: true, subtree: true });
-      scroller.addEventListener("click", onClick);
-      return () => {
-        scroller.removeEventListener("click", onClick);
-        observer.disconnect();
-        tooltip.remove();
-      };
-    }
     scroller.addEventListener("click", onClick);
     return () => {
       scroller.removeEventListener("click", onClick);
-      tooltip.remove();
     };
-  }, [nameToItemIds, titleTooltipLabel]);
+  }, [nameToItemIds]);
 
   const { commit } = data;
   const authorLabel = commit.author.userPath ? (
@@ -666,11 +512,6 @@ export function RepoCommit() {
     })();
   }, []);
 
-  // Sync the ref the click delegation effect reads.
-  useEffect(() => {
-    copyFilePathRef.current = copyFilePath;
-  }, [copyFilePath]);
-
   const expandAllLinesFor = useCallback(
     async (item: CodeViewItem) => {
       if (item.type !== "diff") return;
@@ -713,9 +554,9 @@ export function RepoCommit() {
 
   // Pierre renders our callback's output into a `<slot name="header-prefix">`
   // on the left of each file header (before its file-type icon and name).
-  // We only put the collapse chevron here now — clicking the filename copies
-  // the path (handled by the shadow-DOM click delegation below), and "Copy
-  // file link" lives in the three-dot menu.
+  // Only the collapse chevron lives here. Copy file path sits in the metadata
+  // slot on the right (next to "Expand all lines"); "Copy file link" lives in
+  // the three-dot menu.
   const renderHeaderPrefix = useCallback(
     (item: CodeViewItem) => {
       if (item.type !== "diff") return null;
@@ -767,10 +608,34 @@ export function RepoCommit() {
       const supportsExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted";
       const expandDone = expandState === "done";
       const expandLoading = expandState === "loading";
+      const justCopied = copiedPathById[item.id] === true;
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-(--color-muted-foreground)";
       return (
         <span className="inline-flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("diff.copy_file_path")}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyFilePath(item.id, path);
+                }}
+                className={buttonClass}
+                data-no-collapse-on-click
+              >
+                {justCopied ? (
+                  <Check className="size-3.5 text-(--color-success)" aria-hidden />
+                ) : (
+                  <Copy className="size-3.5" aria-hidden />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t("diff.copy_file_path")}</TooltipContent>
+          </Tooltip>
           {supportsExpand ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -809,7 +674,7 @@ export function RepoCommit() {
         </span>
       );
     },
-    [commit.sha, expandAllLinesFor, expandedById, repoLink, t],
+    [commit.sha, copiedPathById, copyFilePath, expandAllLinesFor, expandedById, repoLink, t],
   );
 
   const copySha = useCallback(() => {
@@ -828,7 +693,7 @@ export function RepoCommit() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <style>{FULLWIDTH_CSS}</style>
-      <RepoHeader repo={repoInfo} activeTab="code" />
+      <RepoHeader repo={repoHeader} activeTab="code" />
 
       <section className="mx-auto w-full max-w-7xl px-4 pt-6 pb-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -845,11 +710,7 @@ export function RepoCommit() {
             </a>
           </div>
         </div>
-        {commit.message.trim() ? (
-          <pre className="mt-2 max-w-3xl text-sm whitespace-pre-wrap text-(--color-muted-foreground)">
-            {commit.message.trim()}
-          </pre>
-        ) : null}
+        {commit.message.trim() ? <CommitBody message={commit.message.trim()} /> : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
           <span className="inline-flex items-center gap-1.5">
@@ -927,7 +788,7 @@ export function RepoCommit() {
           so the workspace doesn't span edge-to-edge. */}
       <div
         ref={stickyWorkspaceRef}
-        className="sticky top-[3.5rem] z-10 flex h-[calc(100dvh-3.5rem)] min-w-0 flex-col px-4 sm:px-6"
+        className="sticky top-[calc(3.5rem+1px)] z-10 flex h-[calc(100dvh-3.5rem-1px)] min-w-0 flex-col px-4 sm:px-6"
       >
         <DiffToolbar
           stats={stats}
@@ -1010,7 +871,17 @@ export function RepoCommit() {
                   // assumes when positioning the file's first line under its
                   // sticky header.
                   scrollPageToLock();
-                  viewRef.current?.scrollTo({ type: "item", id: itemId, align: "start", behavior: "smooth" });
+                  // Pierre's "start" alignment lands the item's top edge flush
+                  // with the viewport top, which clips the file header's bottom
+                  // border and the first line of code by a few pixels. Nudge up
+                  // so the header and first line are fully visible.
+                  viewRef.current?.scrollTo({
+                    type: "item",
+                    id: itemId,
+                    align: "start",
+                    offset: 8,
+                    behavior: "smooth",
+                  });
                 }}
                 className="lg:flex-1"
                 style={{ height: "100%" }}
@@ -1045,7 +916,17 @@ export function RepoCommit() {
                 searchOpen={treeSearchOpen}
                 onSelectItem={(itemId) => {
                   scrollPageToLock();
-                  viewRef.current?.scrollTo({ type: "item", id: itemId, align: "start", behavior: "smooth" });
+                  // Pierre's "start" alignment lands the item's top edge flush
+                  // with the viewport top, which clips the file header's bottom
+                  // border and the first line of code by a few pixels. Nudge up
+                  // so the header and first line are fully visible.
+                  viewRef.current?.scrollTo({
+                    type: "item",
+                    id: itemId,
+                    align: "start",
+                    offset: 8,
+                    behavior: "smooth",
+                  });
                   setMobileTreeOpen(false);
                 }}
                 className="flex-1"

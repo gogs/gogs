@@ -13,7 +13,7 @@ import { Navbar } from "@/components/Navbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
-import { repoInfoQuery } from "@/lib/queries/repo";
+import { repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
 import { DiffSpike } from "@/pages/DiffSpike";
@@ -90,7 +90,7 @@ const repoCommitRoute = createRoute({
     // patch separately from the metadata.
     try {
       const [, meta, patch] = await Promise.all([
-        context.queryClient.ensureQueryData(repoInfoQuery(params.owner, params.repo)),
+        context.queryClient.ensureQueryData(repoHeaderQuery(params.owner, params.repo)),
         fetch(metaURL, { credentials: "same-origin" }).then(async (res) => {
           if (!res.ok) throw await loaderResponseError(res);
           return (await res.json()) as Omit<RepoCommitPage, "patch">;
