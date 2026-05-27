@@ -158,7 +158,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			})
 			f.Post("/sign-out", postUserSignOut)
 		})
-		f.Group("/{owner}/{name}", func() {
+		f.Group("/{owner}/{repo}", func() {
 			f.Get("/header", getRepoHeader)
 			f.Get("/commit/{sha: /[0-9a-f]{7,40}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
@@ -166,8 +166,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		})
 	}, webAPIBodyLimiter)
 
-	f.Get("/{owner}/{name}/commit/{sha: /[0-9a-f]{7,40}/}.{ext: /(diff|patch)/}", getRepoCommitRaw)
-	f.Get("/{owner}/{name}/raw/{ref}/{filepath: **}", getRepoRaw)
+	f.Get("/{owner}/{repo}/commit/{sha: /[0-9a-f]{7,40}/}.{ext: /(diff|patch)/}", getRepoCommitRaw)
+	f.Get("/{owner}/{repo}/raw/{ref}/{filepath: **}", getRepoRaw)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil

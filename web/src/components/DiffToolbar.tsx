@@ -97,6 +97,8 @@ export function DiffToolbar({
                   onClick={onToggleTreeDesktop}
                   aria-label={desktopTreeOpen ? t("diff.hide_file_tree") : t("diff.show_file_tree")}
                   aria-pressed={desktopTreeOpen}
+                  // `pl-1` nudges the icon right so it visually aligns with
+                  // the sidebar's collapsed-rail edge on desktop.
                   className="hidden size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid pl-1"
                 >
                   {desktopTreeOpen ? (
@@ -195,7 +197,7 @@ export function DiffToolbar({
 const ToolbarButton = forwardRef<
   HTMLButtonElement,
   {
-    icon: typeof Settings2;
+    icon: typeof SlidersHorizontal;
     label: string;
   } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type">
 >(function ToolbarButton({ icon: Icon, label, className, ...rest }, ref) {

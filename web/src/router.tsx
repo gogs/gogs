@@ -16,7 +16,6 @@ import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
 import { repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import type { UserInfo } from "@/lib/user-info";
-import { DiffSpike } from "@/pages/DiffSpike";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
@@ -54,12 +53,6 @@ const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: Landing,
-});
-
-const diffSpikeRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/_diff-spike",
-  component: DiffSpike,
 });
 
 const repoCommitRoute = createRoute({
@@ -112,12 +105,7 @@ const repoCommitRoute = createRoute({
   component: RepoCommit,
 });
 
-const routeTree = rootRoute.addChildren([
-  landingRoute,
-  ...createUserRoutes(rootRoute),
-  diffSpikeRoute,
-  repoCommitRoute,
-]);
+const routeTree = rootRoute.addChildren([landingRoute, ...createUserRoutes(rootRoute), repoCommitRoute]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({

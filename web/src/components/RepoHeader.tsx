@@ -328,7 +328,7 @@ interface SplitActionButtonProps {
   // Tooltip text shown when signed out. Should explain the gated action,
   // e.g. "Sign in to watch this repository".
   signInTooltip?: string;
-  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean; fill?: string }>;
   label: string;
   count: number;
   ariaLabel: string;
@@ -357,7 +357,7 @@ function SplitActionButton({
   );
   const actionContent = (
     <>
-      <Icon className="size-3.5" aria-hidden />
+      <Icon className="size-3.5" aria-hidden fill={active ? "currentColor" : "none"} />
       <span>{label}</span>
     </>
   );

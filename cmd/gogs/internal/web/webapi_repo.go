@@ -47,7 +47,7 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 	ctx := r.Context()
 	params := c.Params()
 	ownerName := params["owner"]
-	repoName := params["name"]
+	repoName := params["repo"]
 
 	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
@@ -186,7 +186,7 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 	ctx := r.Context()
 	params := c.Params()
 	ownerName := params["owner"]
-	repoName := params["name"]
+	repoName := params["repo"]
 	commitID := params["sha"]
 
 	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
@@ -291,7 +291,7 @@ func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	ctx := r.Context()
 	params := c.Params()
 	ownerName := params["owner"]
-	repoName := params["name"]
+	repoName := params["repo"]
 	commitID := params["sha"]
 	ext := params["ext"]
 
@@ -375,7 +375,7 @@ func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	}
 }
 
-// resolveRepoForViewer loads the repo identified by `{owner}/{name}` path
+// resolveRepoForViewer loads the repo identified by `{owner}/{repo}` path
 // params and asserts the viewer has at least read access. Returns the repo or
 // a (statusCode, error) tuple suitable for short-circuiting a handler.
 func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.User) (*database.Repository, int, error) {
@@ -387,7 +387,7 @@ func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.
 		}
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "get user by username")
 	}
-	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, params["name"])
+	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, params["repo"])
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return nil, http.StatusNotFound, nil
