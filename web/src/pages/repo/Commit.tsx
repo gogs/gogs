@@ -434,7 +434,6 @@ export function RepoCommit() {
     <span className="font-semibold text-(--color-foreground)">{commit.author.name}</span>
   );
 
-  const committerDiffers = commit.committer.email !== commit.author.email;
   const repoLink = subUrl(`/${owner}/${repo}`);
   const browseFilesHref = `${repoLink}/src/${commit.sha}`;
 
@@ -609,57 +608,38 @@ export function RepoCommit() {
         ) : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
-          <img src={commit.author.avatarURL} alt="" className="size-6 rounded-full" />
-          {authorLabel}
-          <span>authored</span>
-          <time dateTime={commit.author.when} title={formatAbsoluteTime(commit.author.when)}>
-            {formatRelativeTime(commit.author.when)}
-          </time>
-          {committerDiffers ? (
-            <>
-              <span aria-hidden>·</span>
-              <img src={commit.committer.avatarURL} alt="" className="size-5 rounded-full" />
-              <span>
-                committed by{" "}
-                {commit.committer.userPath ? (
-                  <a href={commit.committer.userPath} className="font-medium text-(--color-foreground) hover:underline">
-                    {commit.committer.name}
-                  </a>
-                ) : (
-                  <span className="font-medium text-(--color-foreground)">{commit.committer.name}</span>
-                )}
-              </span>
-            </>
-          ) : null}
+          <span className="inline-flex items-center gap-1.5">
+            <img src={commit.author.avatarURL} alt="" className="size-6 rounded-full" />
+            {authorLabel}
+            <span>authored</span>
+            <time dateTime={commit.author.when} title={formatAbsoluteTime(commit.author.when)}>
+              {formatRelativeTime(commit.author.when)}
+            </time>
+          </span>
           {/* TODO: render a "Verified" pill once the backend exposes commit
               signature verification. Hidden for now to avoid claiming
               verification we don't actually perform. */}
-        </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-(--color-muted-foreground)">
+          <span aria-hidden className="hidden h-4 w-px bg-(--color-border) sm:inline-block" />
+
           {commit.parents.length > 0 ? (
             <span className="inline-flex items-center gap-1">
               <span>{commit.parents.length > 1 ? `${commit.parents.length} parents` : "parent"}</span>
-              {commit.parents.map((p, i) => (
+              {commit.parents.map((p) => (
                 <a
                   key={p}
                   href={`${repoLink}/commit/${p}`}
-                  className="rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-[0.7rem] text-(--color-foreground) hover:underline"
+                  className="rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-xs text-(--color-foreground) hover:underline"
                 >
                   {p.slice(0, 7)}
-                  {i < commit.parents.length - 1 ? "," : ""}
                 </a>
               ))}
             </span>
           ) : null}
 
-          <span aria-hidden className="opacity-50">
-            ·
-          </span>
-
           <span className="inline-flex items-center gap-1">
             <span>commit</span>
-            <code className="rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-[0.7rem] text-(--color-foreground)">
+            <code className="rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-xs text-(--color-foreground)">
               {commit.shortSha}
             </code>
             <button
@@ -676,7 +656,7 @@ export function RepoCommit() {
             </button>
           </span>
 
-          <span className="ml-auto inline-flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 sm:ml-auto">
             <a
               href={data.rawDiffURL}
               className="inline-flex h-7 items-center gap-1 rounded-md border border-(--color-border) px-2 hover:bg-(--color-surface)"
