@@ -7,7 +7,7 @@ import type {
   GitStatus,
   GitStatusEntry,
 } from "@pierre/trees";
-import { FileTree, useFileTree } from "@pierre/trees/react";
+import { FileTree, useFileTree, useFileTreeSearch } from "@pierre/trees/react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -48,8 +48,6 @@ const TREE_UNSAFE_CSS = `
   :host([data-search-open="false"]) [data-file-tree-search] {
     display: none !important;
   }
-  /* Breathing room above the search input so it doesn't crowd the toolbar
-     border above it. */
   [data-file-tree-search],
   [data-file-tree-search-input] {
     margin-top: 6px;
@@ -140,11 +138,18 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     onSelectItemRef.current = onSelectItem;
   }, [onSelectItem]);
 
+  const searchOpenRef = useRef(searchOpen);
+  useEffect(() => {
+    searchOpenRef.current = searchOpen;
+  }, [searchOpen]);
+
+  const selectionJustFiredRef = useRef(false);
   const onSelectionChange = useCallback((selectedPaths: readonly string[]) => {
     const target = selectedPaths[0];
     if (!target) return;
     const id = pathToItemIdRef.current.get(target);
     if (!id) return;
+    selectionJustFiredRef.current = true;
     onSelectItemRef.current(id);
   }, []);
 
@@ -184,11 +189,31 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     initialExpansion: "open",
     flattenEmptyDirectories: true,
     search: true,
+    searchBlurBehavior: "retain",
     stickyFolders: true,
     gitStatus,
     onSelectionChange,
     unsafeCSS: TREE_UNSAFE_CSS,
   });
+
+  // Pierre closes search in two cases we do NOT want: row clicks and input
+  // blur (clicking outside the tree). It only calls closeSearch() — not a
+  // prop toggle — so `searchOpen` (the prop) stays true while Pierre's
+  // internal state flips to false. Reopen with the last typed value whenever
+  // Pierre closes search while our prop says it should be open.
+  const search = useFileTreeSearch(model);
+  const searchValueRef = useRef(search.value);
+  const searchOpenFnRef = useRef(search.open);
+  searchOpenFnRef.current = search.open;
+  useEffect(() => {
+    if (search.value !== "") {
+      searchValueRef.current = search.value;
+    }
+    if (!search.isOpen && searchOpenRef.current && searchValueRef.current !== "") {
+      searchOpenFnRef.current(searchValueRef.current);
+    }
+    selectionJustFiredRef.current = false;
+  }, [search.value, search.isOpen]);
 
   // When the patch changes (e.g. navigating to a different commit without
   // unmounting), reset the tree contents and refresh git status without

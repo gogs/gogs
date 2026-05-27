@@ -14,6 +14,7 @@ import {
   Loader2,
   Search,
   UnfoldVertical,
+  X,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -204,6 +205,7 @@ export function RepoCommit() {
   const resolvedTheme = resolveTheme(theme);
   const viewRef = useRef<CodeViewHandle<undefined> | null>(null);
   const treeRef = useRef<CommitFileTreeHandle | null>(null);
+  const mobileTreeRef = useRef<CommitFileTreeHandle | null>(null);
   const stickyWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const [copied, setCopied] = useState(false);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
@@ -897,7 +899,13 @@ export function RepoCommit() {
             <SheetContent
               side="left"
               className="flex w-[85vw] max-w-sm flex-col p-0"
+              hideCloseButton
               style={TREE_THEME_STYLE}
+              onOpenAutoFocus={(event) => {
+                // Prevent Radix from auto-focusing the first button (expand
+                // all folders), which would trigger its tooltip on open.
+                event.preventDefault();
+              }}
               onCloseAutoFocus={(event) => {
                 // Don't yank focus back to the trigger. The trigger lives
                 // in the diff pane and stealing focus from a just-selected
@@ -905,15 +913,57 @@ export function RepoCommit() {
                 event.preventDefault();
               }}
             >
-              <SheetTitle className="border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
-                Files changed
-                <span className="ml-2 rounded-full bg-(--color-surface) px-1.5 text-xs leading-5 tabular-nums text-(--color-muted-foreground)">
-                  {stats.fileCount}
+              <SheetTitle className="flex items-center justify-between border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
+                <span>
+                  Files changed
+                  <span className="ml-2 rounded-full bg-(--color-surface) px-1.5 text-xs leading-5 tabular-nums text-(--color-muted-foreground)">
+                    {stats.fileCount}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-stretch overflow-hidden rounded-md border border-(--color-border)">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => mobileTreeRef.current?.expandAll()}
+                          aria-label={t("diff.expand_all_folders")}
+                          className="grid size-7 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                        >
+                          <ChevronsUpDown className="size-3.5" aria-hidden />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("diff.expand_all_folders")}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => mobileTreeRef.current?.collapseAll()}
+                          aria-label={t("diff.collapse_all_folders")}
+                          className="grid size-7 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                        >
+                          <ChevronsDownUp className="size-3.5" aria-hidden />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("diff.collapse_all_folders")}</TooltipContent>
+                    </Tooltip>
+                  </span>
+                  <SheetClose asChild>
+                    <button
+                      type="button"
+                      aria-label="Close"
+                      className="grid size-7 cursor-pointer place-items-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                    >
+                      <X className="size-4" aria-hidden />
+                    </button>
+                  </SheetClose>
                 </span>
               </SheetTitle>
               <CommitFileTree
+                ref={mobileTreeRef}
                 items={items}
-                searchOpen={treeSearchOpen}
+                searchOpen
                 onSelectItem={(itemId) => {
                   scrollPageToLock();
                   // Pierre's "start" alignment lands the item's top edge flush
@@ -932,14 +982,6 @@ export function RepoCommit() {
                 className="flex-1"
                 style={{ height: "100%" }}
               />
-              <SheetClose asChild>
-                <button
-                  type="button"
-                  className="cursor-pointer border-t border-(--color-border) px-3 py-2 text-left text-sm text-(--color-muted-foreground) hover:bg-(--color-surface)"
-                >
-                  Close
-                </button>
-              </SheetClose>
             </SheetContent>
           </Sheet>
 
