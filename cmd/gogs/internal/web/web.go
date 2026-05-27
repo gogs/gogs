@@ -412,10 +412,9 @@ func Run(configPath string, portOverride int) error {
 				c.Data["PageIsViewFiles"] = true
 			})
 
-			// FIXME: Should use c.Repo.PullRequest to unify template, currently we have inconsistent URL
-			// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
-			// e.g. /org1/test-repo/compare/master...org1:develop
-			// which should be /org1/test-repo/compare/master...develop
+			// FIXME: Should use c.Repo.PullRequest to unify the template. Same-repo PR URLs include a
+			// redundant head user, e.g. /org1/test-repo/compare/master...org1:develop should be
+			// /org1/test-repo/compare/master...develop.
 			m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 				Post(bindIgnErr(form.NewIssue{}), repo.CompareAndPullRequestPost)
 
@@ -487,16 +486,10 @@ func Run(configPath string, portOverride int) error {
 				m.Get("/commits/*", repo.RefCommits)
 				m.Get("/forks", repo.Forks)
 			}, repo.MustBeNotBare, context.RepoRef())
-			// Raw file downloads have been migrated to Flamego (`getRepoRaw`).
-			// We bridge here so the public URL pattern is preserved without
-			// running the legacy `RepoRef` middleware (which double-resolves
-			// the ref against branches/tags before the handler runs).
+			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
 			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", flamegoBridger(webHandler))
-			// The React commit page is served by the SPA, but constrain the
-			// SHA shape here so non-matching `/commit/...` paths fall through
-			// to a natural 404 instead of loading the SPA with a malformed
-			// param. `RepoAssignment` (above) already 404s on missing repo.
+			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
 			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.MustBeNotBare, func(c *context.Context) { c.ServeWeb() })
 
 			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
@@ -693,9 +686,7 @@ func newRoutingHandler() (http.Handler, error) {
 
 	f.Get("/redirect", getRedirect)
 
-	// The captcha middleware writes the image response itself when the request path
-	// matches its URLPrefix. This route just needs to exist so the request reaches
-	// the middleware chain.
+	// The captcha middleware writes the response. This route exists so the request reaches it.
 	f.Get("/captcha/image.jpeg", func() {})
 
 	mountWebAPIRoutes(f)
@@ -809,9 +800,7 @@ func newMacaron() (*macaron.Macaron, error) {
 // renderIndex returns the index.html shell with per-request substitutions
 // applied for the given WebContext.
 func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
-	// json.Marshal escapes <, >, and & to their \uXXXX forms by default, so
-	// the payload cannot break out of the surrounding <script> with "</script>"
-	// even if a field carries attacker-influenced text.
+	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
 		Lang   string `json:"lang"`
 		SubURL string `json:"subURL"`
@@ -829,8 +818,7 @@ func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
 		"{{.WebContext}}", script,
 	}
 	if wc.SubURL != "" {
-		// Vite bakes absolute root paths into the bundle output. Prefix them
-		// with the subpath so they resolve correctly under non-root mounts.
+		// Prefix Vite's absolute root paths with the subpath for non-root mounts.
 		pairs = append(pairs,
 			`src="/assets/`, `src="`+wc.SubURL+`/assets/`,
 			`href="/assets/`, `href="`+wc.SubURL+`/assets/`,
