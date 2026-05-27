@@ -170,6 +170,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	// stay accessible to external consumers. The Macaron router forwards
 	// matching requests here via `flamegoBridger`.
 	f.Get("/{owner}/{name}/commit/{sha}.{ext}", getRepoCommitRawDiff)
+	f.Get("/{owner}/{name}/raw/{**}", getRepoRaw)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil

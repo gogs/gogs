@@ -484,10 +484,14 @@ func Run(configPath string, portOverride int) error {
 
 			m.Group("", func() {
 				m.Get("/src/*", repo.Home)
-				m.Get("/raw/*", repo.SingleDownload)
 				m.Get("/commits/*", repo.RefCommits)
 				m.Get("/forks", repo.Forks)
 			}, repo.MustBeNotBare, context.RepoRef())
+			// Raw file downloads have been migrated to Flamego (`getRepoRaw`).
+			// We bridge here so the public URL pattern is preserved without
+			// running the legacy `RepoRef` middleware (which double-resolves
+			// the ref against branches/tags before the handler runs).
+			m.Get("/raw/*", flamegoBridger(webHandler))
 			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", flamegoBridger(webHandler))
 			// The React commit page is served by the SPA, but constrain the
 			// SHA shape here so non-matching `/commit/...` paths fall through

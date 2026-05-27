@@ -1,4 +1,4 @@
-import { type ChangeTypes, parsePatchFiles } from "@pierre/diffs";
+import { type ChangeTypes, type FileDiffMetadata, parseDiffFromFile, parsePatchFiles } from "@pierre/diffs";
 import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useLoaderData, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -11,6 +11,8 @@ import {
   Copy,
   ExternalLink,
   FileCode2,
+  Loader2,
+  UnfoldVertical,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -246,6 +248,15 @@ export function RepoCommit() {
   // keyed by item id (which contains the file's position in the patch),
   // so serializing it would bloat the URL and not be portably shareable.
   const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
+  // Per-file expansion state. "loading" while the raw file contents are
+  // being fetched, "done" once Pierre has been handed the full file (after
+  // which the item is `isPartial: false` and native expansion controls
+  // render). Missing key = not yet expanded.
+  const [expandedById, setExpandedById] = useState<Record<string, "loading" | "done">>({});
+  // Upgraded (non-partial) `FileDiffMetadata` per item id. When set, the
+  // `items` useMemo swaps in the upgraded fileDiff so Pierre's controlled
+  // CodeView re-renders the file with full file contents.
+  const [upgradedById, setUpgradedById] = useState<Record<string, FileDiffMetadata>>({});
 
   // Derive the in-memory settings from the URL. Missing search fields fall
   // back to defaults, so the URL only carries non-default values.
@@ -314,9 +325,14 @@ export function RepoCommit() {
       })
       .map((item) => {
         const collapsed = collapsedById[item.id] ?? false;
-        return { ...item, collapsed, version: collapsed ? 1 : 0 };
+        const upgraded = item.type === "diff" ? upgradedById[item.id] : undefined;
+        const next: CodeViewItem = upgraded != null && item.type === "diff" ? { ...item, fileDiff: upgraded } : item;
+        // Bump version when collapsed state OR upgrade state changes so
+        // Pierre re-reads the item payload.
+        const version = (collapsed ? 1 : 0) + (upgraded != null ? 2 : 0);
+        return { ...next, collapsed, version };
       });
-  }, [allItems, settings.statusFilter, collapsedById]);
+  }, [allItems, settings.statusFilter, collapsedById, upgradedById]);
 
   const stats = useMemo(() => {
     let additions = 0;
@@ -473,6 +489,46 @@ export function RepoCommit() {
     [collapsedById, toggleCollapsed],
   );
 
+  const expandAllLinesFor = useCallback(
+    async (item: CodeViewItem) => {
+      if (item.type !== "diff") return;
+      if (expandedById[item.id]) return;
+      const fileDiff = item.fileDiff;
+      const parent = commit.parents[0];
+      // Added files have no pre-image; deleted files have no post-image.
+      // Renames carry the pre-image at `prevName`.
+      const prevPath = fileDiff.prevName ?? fileDiff.name;
+      const fetchSide = async (sha: string | undefined, p: string) => {
+        if (!sha) return "";
+        const url = subUrl(`/${owner}/${repo}/raw/${sha}/${p}`);
+        const res = await fetch(url, { credentials: "same-origin" });
+        if (!res.ok) throw new Error(`raw fetch ${res.status}`);
+        return res.text();
+      };
+      setExpandedById((prev) => ({ ...prev, [item.id]: "loading" }));
+      try {
+        const [oldContents, newContents] = await Promise.all([
+          fileDiff.type === "new" ? Promise.resolve("") : fetchSide(parent, prevPath),
+          fileDiff.type === "deleted" ? Promise.resolve("") : fetchSide(commit.sha, fileDiff.name),
+        ]);
+        const upgraded = parseDiffFromFile(
+          { name: prevPath, contents: oldContents },
+          { name: fileDiff.name, contents: newContents },
+        );
+        setUpgradedById((prev) => ({ ...prev, [item.id]: upgraded }));
+        setExpandedById((prev) => ({ ...prev, [item.id]: "done" }));
+      } catch (err) {
+        console.error("expandAllLinesFor: failed", err);
+        setExpandedById((prev) => {
+          const next = { ...prev };
+          delete next[item.id];
+          return next;
+        });
+      }
+    },
+    [commit.parents, commit.sha, expandedById, owner, repo],
+  );
+
   const renderHeaderMetadata = useCallback(
     (item: CodeViewItem) => {
       if (item.type !== "diff") return null;
@@ -481,17 +537,49 @@ export function RepoCommit() {
       const viewFileHref = `${repoLink}/src/${commit.sha}/${path}`;
       const blameHref = `${repoLink}/blame/${commit.sha}/${path}`;
       const permalinkHref = `${window.location.pathname}#${item.id}`;
+      const expandState = expandedById[item.id];
+      // Added/deleted files don't have an opposite side to expand against,
+      // so the button would do nothing useful.
+      const canExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted" && expandState !== "done";
       return (
-        <FileHeaderMenu
-          filePath={path}
-          prevFilePath={prev}
-          viewFileHref={viewFileHref}
-          blameHref={blameHref}
-          permalinkHref={permalinkHref}
-        />
+        <span className="inline-flex items-center gap-1">
+          {canExpand ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void expandAllLinesFor(item);
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  disabled={expandState === "loading"}
+                  aria-label="Expand all lines"
+                  className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) disabled:cursor-not-allowed disabled:opacity-60"
+                  data-no-collapse-on-click
+                >
+                  {expandState === "loading" ? (
+                    <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <UnfoldVertical className="size-3.5" aria-hidden />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Expand all lines</TooltipContent>
+            </Tooltip>
+          ) : null}
+          <FileHeaderMenu
+            filePath={path}
+            prevFilePath={prev}
+            viewFileHref={viewFileHref}
+            blameHref={blameHref}
+            permalinkHref={permalinkHref}
+          />
+        </span>
       );
     },
-    [repoLink, commit.sha],
+    [commit.sha, expandAllLinesFor, expandedById, repoLink],
   );
 
   const copySha = useCallback(() => {
@@ -738,6 +826,10 @@ export function RepoCommit() {
                 diffStyle: settings.diffStyle,
                 overflow: settings.wrapLines ? "wrap" : "scroll",
                 stickyHeaders: true,
+                // No-op for partial files (the patch is all the data we have).
+                // Once a file is upgraded via "Expand all lines", Pierre uses
+                // this flag to render every context line from the full file.
+                expandUnchanged: true,
                 unsafeCSS: DIFF_UNSAFE_CSS,
               }}
             />

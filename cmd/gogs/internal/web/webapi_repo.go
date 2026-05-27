@@ -4,6 +4,7 @@ import (
 	stdctx "context"
 	"net/http"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -483,4 +484,175 @@ func postRepoStar(c flamego.Context, r *http.Request, user *database.User) (stat
 
 func deleteRepoStar(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
 	return repoStarAction(c, r, user, false)
+}
+
+// getRepoRaw streams the contents of a single file at the given ref (branch,
+// tag, or commit SHA). Replaces the legacy `repo.SingleDownload` handler.
+// Matches its behavior: `Last-Modified` from the commit that last touched
+// the file, `Content-Disposition: attachment` for binary non-image blobs,
+// `text/plain; charset=utf-8` for text blobs (unless `?render=true` and the
+// site has `EnableRawFileRenderMode` set).
+func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
+	w := c.ResponseWriter()
+	ctx := r.Context()
+
+	writeStatus := func(code int) {
+		w.WriteHeader(code)
+	}
+
+	ownerName := c.Param("owner")
+	repoName := c.Param("name")
+	rest := c.Param("**")
+	// The `{ref}/{path...}` segment is collapsed into a single `**` capture
+	// so a ref like `feat/foo` resolves correctly: we walk it left-to-right
+	// against the git repo's known refs (branches and tags) and treat the
+	// first prefix that resolves to a commit as the ref, leaving the rest as
+	// the in-tree path. Bare commit SHAs are matched first since they're the
+	// common case for the React diff page's "Expand all lines" fetch.
+	if rest == "" {
+		writeStatus(http.StatusNotFound)
+		return
+	}
+
+	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			writeStatus(http.StatusNotFound)
+			return
+		}
+		log.Error("getRepoRaw: get user by username %q: %v", ownerName, err)
+		writeStatus(http.StatusInternalServerError)
+		return
+	}
+
+	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, repoName)
+	if err != nil {
+		if database.IsErrRepoNotExist(err) {
+			writeStatus(http.StatusNotFound)
+			return
+		}
+		log.Error("getRepoRaw: get repo by name %q/%q: %v", ownerName, repoName, err)
+		writeStatus(http.StatusInternalServerError)
+		return
+	}
+	if repo.IsBare {
+		writeStatus(http.StatusNotFound)
+		return
+	}
+
+	var mode database.AccessMode
+	if user != nil && user.IsAdmin {
+		mode = database.AccessModeOwner
+	} else {
+		var viewerID int64
+		if user != nil {
+			viewerID = user.ID
+		}
+		mode = database.Handle.Permissions().AccessMode(ctx, viewerID, repo.ID, database.AccessModeOptions{
+			OwnerID: repo.OwnerID,
+			Private: repo.IsPrivate,
+		})
+	}
+	if mode < database.AccessModeRead {
+		writeStatus(http.StatusNotFound)
+		return
+	}
+
+	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
+	if err != nil {
+		log.Error("getRepoRaw: open repository %q/%q: %v", ownerName, repoName, err)
+		writeStatus(http.StatusInternalServerError)
+		return
+	}
+
+	ref, filePath, commit, err := resolveRefPath(gitRepo, rest)
+	if err != nil || commit == nil {
+		writeStatus(http.StatusNotFound)
+		return
+	}
+	_ = ref // ref is implied by the path; kept for future logging if needed.
+
+	blob, err := commit.Blob(filePath)
+	if err != nil {
+		writeStatus(http.StatusNotFound)
+		return
+	}
+
+	data, err := blob.Bytes()
+	if err != nil {
+		log.Error("getRepoRaw: read blob %s:%s: %v", commit.ID, filePath, err)
+		writeStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if pathCommit, err := commit.CommitByPath(git.CommitByRevisionOptions{Path: filePath}); err == nil && pathCommit != nil {
+		w.Header().Set("Last-Modified", pathCommit.Committer.When.Format(http.TimeFormat))
+	}
+
+	switch {
+	case !tool.IsTextFile(data) && !tool.IsImageFile(data):
+		w.Header().Set("Content-Disposition", `attachment; filename="`+path.Base(filePath)+`"`)
+		w.Header().Set("Content-Transfer-Encoding", "binary")
+	case tool.IsTextFile(data) && (!conf.Repository.EnableRawFileRenderMode || r.URL.Query().Get("render") != "true"):
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	}
+
+	_, _ = w.Write(data)
+}
+
+// resolveRefPath walks the `{ref}/{filepath...}` segment left-to-right,
+// returning the first prefix that resolves to a commit. Commit SHAs match
+// in a single step; multi-segment branch and tag names (e.g. `feat/foo`)
+// require walking until the prefix matches a known ref.
+func resolveRefPath(gitRepo *git.Repository, rest string) (string, string, *git.Commit, error) {
+	// Fast path: a full or short commit SHA as the first segment.
+	first, after, _ := strings.Cut(rest, "/")
+	if isHexSHA(first) {
+		if commit, err := gitRepo.CatFileCommit(first); err == nil {
+			return first, after, commit, nil
+		}
+	}
+
+	branches, _ := gitRepo.Branches()
+	tags, _ := gitRepo.Tags()
+	knownRefs := append([]string{}, branches...)
+	knownRefs = append(knownRefs, tags...)
+	// Match the longest ref prefix first so `release/v1` wins over `release`.
+	sortDescByLength(knownRefs)
+	for _, ref := range knownRefs {
+		if rest == ref {
+			return ref, "", nil, nil
+		}
+		if strings.HasPrefix(rest, ref+"/") {
+			commit, err := gitRepo.BranchCommit(ref)
+			if err != nil {
+				commit, err = gitRepo.TagCommit(ref)
+				if err != nil {
+					continue
+				}
+			}
+			return ref, rest[len(ref)+1:], commit, nil
+		}
+	}
+	return "", "", nil, errors.New("ref not found")
+}
+
+func isHexSHA(s string) bool {
+	if len(s) < 4 || len(s) > 40 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return true
+}
+
+func sortDescByLength(s []string) {
+	for i := 1; i < len(s); i++ {
+		for j := i; j > 0 && len(s[j]) > len(s[j-1]); j-- {
+			s[j], s[j-1] = s[j-1], s[j]
+		}
+	}
 }
