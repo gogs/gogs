@@ -1,5 +1,6 @@
 import { type ChangeTypes, parsePatchFiles } from "@pierre/diffs";
 import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useLoaderData, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   Check,
@@ -10,8 +11,6 @@ import {
   Copy,
   ExternalLink,
   FileCode2,
-  PanelLeftOpen,
-  ShieldCheck,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -19,36 +18,37 @@ import { CommitFileTree, type CommitFileTreeHandle } from "@/components/CommitFi
 import { DiffSearch } from "@/components/DiffSearch";
 import { DiffToolbar, type DiffToolbarSettings, type WhitespaceMode } from "@/components/DiffToolbar";
 import { FileHeaderMenu } from "@/components/FileHeaderMenu";
-import { RepoHeader, type RepoHeaderRepo } from "@/components/RepoHeader";
+import { RepoHeader } from "@/components/RepoHeader";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
-import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { repoInfoQuery } from "@/lib/queries/repo";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
-import { type DiffFileStatus, parseStatusFilter, serializeStatusFilter } from "@/pages/CommitDiff.search";
+import { type DiffFileStatus, parseStatusFilter, serializeStatusFilter } from "@/pages/repo/Commit.search";
 
-export interface CommitDiffSignature {
+export interface RepoCommitSignature {
   name: string;
   email: string;
-  avatarUrl: string;
+  avatarURL: string;
   userPath?: string;
   when: string;
 }
 
-export interface CommitDiffPage {
+export interface RepoCommitPage {
   commit: {
     sha: string;
     shortSha: string;
     summary: string;
     message: string;
-    author: CommitDiffSignature;
-    committer: CommitDiffSignature;
+    author: RepoCommitSignature;
+    committer: RepoCommitSignature;
     parents: string[];
   };
   patch: string;
   sourcePath: string;
-  rawDiffUrl: string;
+  rawDiffURL: string;
 }
 
 // Pierre's default file header sits on the same buffer tint as the surrounding
@@ -162,11 +162,12 @@ function diffTypeToFilterKey(t: ChangeTypes): DiffFileStatus {
   }
 }
 
-export function CommitDiff() {
-  const data = useLoaderData({ from: "/$owner/$repo/_diff/$sha" });
-  const { owner, repo } = useParams({ from: "/$owner/$repo/_diff/$sha" });
-  const search = useSearch({ from: "/$owner/$repo/_diff/$sha" });
-  const navigate = useNavigate({ from: "/$owner/$repo/_diff/$sha" });
+export function RepoCommit() {
+  const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
+  const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
+  const search = useSearch({ from: "/$owner/$repo/commit/$sha" });
+  const navigate = useNavigate({ from: "/$owner/$repo/commit/$sha" });
+  const { data: repoInfo } = useSuspenseQuery(repoInfoQuery(owner, repo));
   const { theme } = useTheme();
   const resolvedTheme = resolveTheme(theme);
   const viewRef = useRef<CodeViewHandle<undefined> | null>(null);
@@ -174,6 +175,15 @@ export function CommitDiff() {
   const stickyWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const [copied, setCopied] = useState(false);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
+  // Desktop tree starts open; the user can collapse it via the sidebar
+  // header. The choice persists across navigations within the session.
+  const [desktopTreeOpen, setDesktopTreeOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("gogs-commit-diff-sidebar-open") !== "false";
+  });
+  useEffect(() => {
+    window.localStorage.setItem("gogs-commit-diff-sidebar-open", desktopTreeOpen ? "true" : "false");
+  }, [desktopTreeOpen]);
 
   // Pierre's `<diffs-container>` swallows wheel events for its own virtual
   // scroller, which means scrolling down inside the diff before the page has
@@ -399,28 +409,6 @@ export function CommitDiff() {
     };
   }, [nameToItemIds]);
 
-  // Repo header data is mocked until the diff JSON payload includes the repo
-  // metadata. Shape matches what the backend will eventually return so the
-  // swap is a single field-mapping change.
-  const mockRepo: RepoHeaderRepo = {
-    owner,
-    name: repo,
-    avatarUrl: subUrl("/img/favicon.png"),
-    visibility: "public",
-    isAdmin: true,
-    enableIssues: true,
-    allowsPulls: true,
-    enableWiki: true,
-    counts: {
-      watchers: 42,
-      stars: 1284,
-      forks: 96,
-      openIssues: 17,
-      openPulls: 4,
-    },
-    mirrorOf: "https://github.com/gogs/gogs",
-  };
-
   const { commit } = data;
   const authorLabel = commit.author.userPath ? (
     <a href={commit.author.userPath} className="font-semibold text-(--color-foreground) hover:underline">
@@ -522,7 +510,7 @@ export function CommitDiff() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <style>{FULLWIDTH_CSS}</style>
-      <RepoHeader repo={mockRepo} activeTab="code" />
+      <RepoHeader repo={repoInfo} activeTab="code" />
 
       <section className="mx-auto w-full max-w-7xl px-4 pt-6 pb-4 sm:px-6">
         <h2 className="text-xl font-semibold break-words text-(--color-foreground)">{commit.summary}</h2>
@@ -533,7 +521,7 @@ export function CommitDiff() {
         ) : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
-          <img src={commit.author.avatarUrl} alt="" className="size-6 rounded-full" />
+          <img src={commit.author.avatarURL} alt="" className="size-6 rounded-full" />
           {authorLabel}
           <span>authored</span>
           <time dateTime={commit.author.when} title={formatAbsoluteTime(commit.author.when)}>
@@ -542,7 +530,7 @@ export function CommitDiff() {
           {committerDiffers ? (
             <>
               <span aria-hidden>·</span>
-              <img src={commit.committer.avatarUrl} alt="" className="size-5 rounded-full" />
+              <img src={commit.committer.avatarURL} alt="" className="size-5 rounded-full" />
               <span>
                 committed by{" "}
                 {commit.committer.userPath ? (
@@ -555,13 +543,9 @@ export function CommitDiff() {
               </span>
             </>
           ) : null}
-          <span
-            aria-label="Signature verified"
-            className="ml-1 inline-flex items-center gap-1 rounded-full border border-(--color-success)/40 px-2 py-0 text-xs leading-5 text-(--color-success)"
-          >
-            <ShieldCheck className="size-3" aria-hidden />
-            Verified
-          </span>
+          {/* TODO: render a "Verified" pill once the backend exposes commit
+              signature verification. Hidden for now to avoid claiming
+              verification we don't actually perform. */}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-(--color-muted-foreground)">
@@ -606,7 +590,7 @@ export function CommitDiff() {
 
           <span className="ml-auto inline-flex items-center gap-2">
             <a
-              href={data.rawDiffUrl}
+              href={data.rawDiffURL}
               className="inline-flex h-7 items-center gap-1 rounded-md border border-(--color-border) px-2 hover:bg-(--color-surface)"
             >
               <ExternalLink className="size-3.5" aria-hidden />
@@ -638,76 +622,70 @@ export function CommitDiff() {
           onWhitespaceChange={onWhitespaceChange}
           onExpandAll={expandAllDiff}
           onCollapseAll={collapseAllDiff}
+          onShowTreeMobile={() => setMobileTreeOpen(true)}
+          onToggleTreeDesktop={() => setDesktopTreeOpen((open) => !open)}
+          desktopTreeOpen={desktopTreeOpen}
         />
 
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <ResizableSidebar
-            storageKey="gogs-commit-diff-sidebar-width"
-            defaultWidth={320}
-            minWidth={220}
-            maxWidth={560}
-            className="hidden border-b border-(--color-border) bg-(--color-background) lg:flex lg:border-r lg:border-b-0"
-            style={TREE_THEME_STYLE}
-          >
-            <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-(--color-border) px-3 text-xs">
-              <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-(--color-foreground)">
-                <ChevronRight className="size-3.5 shrink-0" aria-hidden />
-                <span className="truncate">Files changed</span>
-                <span className="rounded-full bg-(--color-surface) px-1.5 leading-5 tabular-nums text-(--color-muted-foreground)">
-                  {stats.fileCount}
+          {desktopTreeOpen ? (
+            <ResizableSidebar
+              storageKey="gogs-commit-diff-sidebar-width"
+              defaultWidth={320}
+              minWidth={220}
+              maxWidth={560}
+              className="hidden border-b border-(--color-border) bg-(--color-background) lg:flex lg:border-r lg:border-b-0"
+              style={TREE_THEME_STYLE}
+            >
+              <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-(--color-border) px-3 text-xs">
+                <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-(--color-foreground)">
+                  <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">Files changed</span>
+                  <span className="rounded-full bg-(--color-surface) px-1.5 leading-5 tabular-nums text-(--color-muted-foreground)">
+                    {stats.fileCount}
+                  </span>
                 </span>
-              </span>
-              <span className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-(--color-border)">
-                <button
-                  type="button"
-                  onClick={() => treeRef.current?.expandAll()}
-                  aria-label="Expand all folders"
-                  className="grid size-6 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
-                >
-                  <ChevronsUpDown className="size-3.5" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => treeRef.current?.collapseAll()}
-                  aria-label="Collapse all folders"
-                  className="grid size-6 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
-                >
-                  <ChevronsDownUp className="size-3.5" aria-hidden />
-                </button>
-              </span>
-            </div>
-            <CommitFileTree
-              ref={treeRef}
-              items={items}
-              onSelectItem={(itemId) => {
-                // Make sure the page is in the locked state before scrolling
-                // inside Pierre, so the viewport layout matches what Pierre
-                // assumes when positioning the file's first line under its
-                // sticky header.
-                scrollPageToLock();
-                viewRef.current?.scrollTo({ type: "item", id: itemId, align: "start", behavior: "smooth" });
-              }}
-              className="lg:flex-1"
-              style={{ height: "100%" }}
-            />
-          </ResizableSidebar>
+                <span className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-(--color-border)">
+                  <button
+                    type="button"
+                    onClick={() => treeRef.current?.expandAll()}
+                    aria-label="Expand all folders"
+                    className="grid size-6 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                  >
+                    <ChevronsUpDown className="size-3.5" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => treeRef.current?.collapseAll()}
+                    aria-label="Collapse all folders"
+                    className="grid size-6 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                  >
+                    <ChevronsDownUp className="size-3.5" aria-hidden />
+                  </button>
+                </span>
+              </div>
+              <CommitFileTree
+                ref={treeRef}
+                items={items}
+                onSelectItem={(itemId) => {
+                  // Make sure the page is in the locked state before scrolling
+                  // inside Pierre, so the viewport layout matches what Pierre
+                  // assumes when positioning the file's first line under its
+                  // sticky header.
+                  scrollPageToLock();
+                  viewRef.current?.scrollTo({ type: "item", id: itemId, align: "start", behavior: "smooth" });
+                }}
+                className="lg:flex-1"
+                style={{ height: "100%" }}
+              />
+            </ResizableSidebar>
+          ) : null}
 
           {/* Mobile-only: a Sheet slide-over presents the same file tree.
-              The trigger button is rendered inside the diff pane below `lg`
-              because the desktop sidebar is hidden at that breakpoint. */}
+              The trigger lives on the toolbar's "Showing N changed files"
+              row (see DiffToolbar). The Sheet has no inline trigger of its
+              own. */}
           <Sheet open={mobileTreeOpen} onOpenChange={setMobileTreeOpen}>
-            <SheetTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 border-b border-(--color-border) bg-(--color-background) px-4 text-sm font-medium text-(--color-foreground) hover:bg-(--color-surface) lg:hidden"
-              >
-                <PanelLeftOpen className="size-4" aria-hidden />
-                <span>Files changed</span>
-                <span className="rounded-full bg-(--color-surface) px-1.5 leading-5 tabular-nums text-(--color-muted-foreground)">
-                  {stats.fileCount}
-                </span>
-              </button>
-            </SheetTrigger>
             <SheetContent
               side="left"
               className="flex w-[85vw] max-w-sm flex-col p-0"

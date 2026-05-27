@@ -486,11 +486,14 @@ func Run(configPath string, portOverride int) error {
 				m.Get("/src/*", repo.Home)
 				m.Get("/raw/*", repo.SingleDownload)
 				m.Get("/commits/*", repo.RefCommits)
-				m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.Diff)
-				m.Get("/_api/diff/:sha([a-f0-9]{7,40})$", repo.DiffJSON)
 				m.Get("/forks", repo.Forks)
 			}, repo.MustBeNotBare, context.RepoRef())
-			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.MustBeNotBare, repo.RawDiff)
+			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", flamegoBridger(webHandler))
+			// The React commit page is served by the SPA, but constrain the
+			// SHA shape here so non-matching `/commit/...` paths fall through
+			// to a natural 404 instead of loading the SPA with a malformed
+			// param. `RepoAssignment` (above) already 404s on missing repo.
+			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.MustBeNotBare, func(c *context.Context) { c.ServeWeb() })
 
 			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
 		}, ignSignIn, context.RepoAssignment())

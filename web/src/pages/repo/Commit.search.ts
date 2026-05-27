@@ -19,7 +19,7 @@ export type DiffFileStatus = "added" | "modified" | "deleted" | "renamed";
 
 export const ALL_STATUSES: readonly DiffFileStatus[] = ["added", "modified", "deleted", "renamed"];
 
-export interface CommitDiffSearch {
+export interface RepoCommitSearch {
   whitespace?: WhitespaceUrlValue;
   style?: DiffStyleUrlValue;
   wrap?: true;
@@ -61,8 +61,8 @@ export function normalizeStatusParam(raw: unknown): string | undefined {
   return ALL_STATUSES.filter((s) => parts.includes(s)).join(",");
 }
 
-export function validateCommitDiffSearch(search: Record<string, unknown>): CommitDiffSearch {
-  const out: CommitDiffSearch = {};
+export function validateRepoCommitSearch(search: Record<string, unknown>): RepoCommitSearch {
+  const out: RepoCommitSearch = {};
   if (search.whitespace === "ignore-all" || search.whitespace === "ignore-change") {
     out.whitespace = search.whitespace;
   }

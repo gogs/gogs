@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   CircleDot,
@@ -5,7 +6,9 @@ import {
   FileText,
   GitFork,
   GitPullRequest,
+  Globe,
   Link as LinkIcon,
+  Lock,
   Menu,
   Settings,
   Star,
@@ -14,7 +17,18 @@ import type { ComponentType, ReactNode } from "react";
 import { useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  type RepoActionResult,
+  type RepoInfo,
+  repoInfoQuery,
+  starRepo,
+  unstarRepo,
+  unwatchRepo,
+  watchRepo,
+} from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
+import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
 // Mobile collapses the tab strip after this many items into a hamburger
@@ -22,38 +36,10 @@ import { cn } from "@/lib/utils";
 // user can see the active indicator without opening the menu.
 const MOBILE_INLINE_LIMIT = 3;
 
-export type RepoVisibility = "public" | "private";
-
 export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settings";
 
-export interface RepoHeaderRepo {
-  owner: string;
-  name: string;
-  // Per-repo avatar URL. Gogs lets repos set their own avatar and falls back
-  // to the owner's avatar, then to a default badge. Callers should pass the
-  // already-resolved URL; this component does no fallback chain itself.
-  avatarUrl: string;
-  visibility: RepoVisibility;
-  isAdmin?: boolean;
-  enableIssues?: boolean;
-  allowsPulls?: boolean;
-  enableWiki?: boolean;
-  counts: {
-    watchers: number;
-    stars: number;
-    forks: number;
-    openIssues?: number;
-    openPulls?: number;
-  };
-  viewerWatching?: boolean;
-  viewerStarred?: boolean;
-  // When set, the repo is a mirror of this upstream URL. Rendered next to
-  // the owner/name breadcrumb to match the existing Gogs repo page.
-  mirrorOf?: string;
-}
-
 export interface RepoHeaderProps {
-  repo: RepoHeaderRepo;
+  repo: RepoInfo;
   activeTab: RepoTab;
 }
 
@@ -66,6 +52,37 @@ function formatCount(n: number): string {
 
 export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
+  const user = useUserInfo();
+  const queryClient = useQueryClient();
+  const signedIn = user !== null;
+
+  // Apply the mutation result back to the cached `repoInfo` so the button
+  // labels and counts update without a refetch. The server returns only the
+  // delta fields it touched, so we patch them in via `setQueryData`.
+  const applyResult = (result: RepoActionResult) => {
+    queryClient.setQueryData(repoInfoQuery(repo.owner, repo.name).queryKey, (prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        viewerWatching: result.viewerWatching ?? prev.viewerWatching,
+        viewerStarred: result.viewerStarred ?? prev.viewerStarred,
+        counts: {
+          ...prev.counts,
+          watchers: result.watchers ?? prev.counts.watchers,
+          stars: result.stars ?? prev.counts.stars,
+        },
+      };
+    });
+  };
+
+  const watchMutation = useMutation({
+    mutationFn: () => (repo.viewerWatching ? unwatchRepo(repo.owner, repo.name) : watchRepo(repo.owner, repo.name)),
+    onSuccess: applyResult,
+  });
+  const starMutation = useMutation({
+    mutationFn: () => (repo.viewerStarred ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
+    onSuccess: applyResult,
+  });
 
   return (
     <div className="border-b border-(--color-border) bg-(--color-background)">
@@ -73,9 +90,9 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
         <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <h1 className="flex min-w-0 flex-wrap items-center gap-2 text-base">
             <img
-              src={repo.avatarUrl}
+              src={repo.avatarURL}
               alt=""
-              className="relative top-0.5 size-5 shrink-0 rounded border border-(--color-border) bg-(--color-surface) object-cover"
+              className="relative size-5 shrink-0 rounded border border-(--color-border) bg-(--color-surface) object-cover"
             />
             <a href={subUrl(`/${repo.owner}`)} className="text-(--color-primary) hover:underline">
               {repo.owner}
@@ -100,24 +117,32 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
 
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <SplitActionButton
-              href={`${repoLink}/watchers`}
-              actionHref={`${repoLink}/action/${repo.viewerWatching ? "un" : ""}watch`}
+              countHref={`${repoLink}/watchers`}
+              onAction={signedIn ? () => watchMutation.mutate() : undefined}
+              signInHref={subUrl(`/user/login?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              disabled={watchMutation.isPending}
               icon={Bell}
               label={repo.viewerWatching ? "Unwatch" : "Watch"}
               count={repo.counts.watchers}
-              ariaLabel="Watch this repository"
+              ariaLabel={repo.viewerWatching ? "Unwatch this repository" : "Watch this repository"}
+              active={repo.viewerWatching}
             />
             <SplitActionButton
-              href={`${repoLink}/stars`}
-              actionHref={`${repoLink}/action/${repo.viewerStarred ? "un" : ""}star`}
+              countHref={`${repoLink}/stars`}
+              onAction={signedIn ? () => starMutation.mutate() : undefined}
+              signInHref={subUrl(`/user/login?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              disabled={starMutation.isPending}
               icon={Star}
               label={repo.viewerStarred ? "Starred" : "Star"}
               count={repo.counts.stars}
-              ariaLabel="Star this repository"
+              ariaLabel={repo.viewerStarred ? "Unstar this repository" : "Star this repository"}
               active={repo.viewerStarred}
             />
             <SplitActionButton
-              href={`${repoLink}/forks`}
+              countHref={`${repoLink}/forks`}
+              // Fork still goes through the legacy "choose where to fork to"
+              // page (not yet migrated). Treat it as a navigation link, not a
+              // one-click action.
               actionHref={subUrl(`/repo/fork/${repo.owner}/${repo.name}`)}
               icon={GitFork}
               label="Fork"
@@ -141,7 +166,7 @@ interface TabDescriptor {
   badge?: number;
 }
 
-function buildTabs(repo: RepoHeaderRepo, repoLink: string): TabDescriptor[] {
+function buildTabs(repo: RepoInfo, repoLink: string): TabDescriptor[] {
   const tabs: TabDescriptor[] = [{ key: "code", href: repoLink, icon: Code, label: "Code" }];
   if (repo.enableIssues !== false) {
     tabs.push({
@@ -170,7 +195,7 @@ function buildTabs(repo: RepoHeaderRepo, repoLink: string): TabDescriptor[] {
   return tabs;
 }
 
-function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoHeaderRepo; activeTab: RepoTab; repoLink: string }) {
+function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoInfo; activeTab: RepoTab; repoLink: string }) {
   const tabs = buildTabs(repo, repoLink);
 
   // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
@@ -256,45 +281,95 @@ function OverflowMenu({ tabs, activeTab }: { tabs: TabDescriptor[]; activeTab: R
   );
 }
 
-function VisibilityBadge({ visibility }: { visibility: RepoVisibility }) {
+function VisibilityBadge({ visibility }: { visibility: RepoInfo["visibility"] }) {
   const isPrivate = visibility === "private";
+  const Icon = isPrivate ? Lock : Globe;
+  const tooltip = isPrivate ? "This repository is private" : "This repository is public";
   return (
-    <span
-      className={cn(
-        "ml-1 rounded-full border px-2 py-0 text-xs leading-5",
-        isPrivate
-          ? "border-(--color-border) bg-(--color-surface) text-(--color-muted-foreground)"
-          : "border-(--color-border) text-(--color-muted-foreground)",
-      )}
-    >
-      {isPrivate ? "Private" : "Public"}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          aria-label={tooltip}
+          className="ml-1 grid size-5 place-items-center rounded text-(--color-muted-foreground)"
+        >
+          <Icon className="size-3.5" aria-hidden />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
 interface SplitActionButtonProps {
-  href: string;
-  actionHref: string;
+  // URL for the count half (always renders as `<a>`).
+  countHref: string;
+  // When set, the action half fires this callback on click (used for
+  // signed-in users with a real mutation in flight).
+  onAction?: () => void;
+  // Fallback href for the action half when `onAction` is not set (legacy
+  // page-navigation actions like Fork, or when the user is signed out).
+  actionHref?: string;
+  // Fallback href when the user is signed out. Set together with `onAction`
+  // to swap the click target without losing a path for anonymous viewers.
+  signInHref?: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   label: string;
   count: number;
   ariaLabel: string;
   active?: boolean;
+  disabled?: boolean;
 }
 
-function SplitActionButton({ href, actionHref, icon: Icon, label, count, ariaLabel, active }: SplitActionButtonProps) {
+function SplitActionButton({
+  countHref,
+  onAction,
+  actionHref,
+  signInHref,
+  icon: Icon,
+  label,
+  count,
+  ariaLabel,
+  active,
+  disabled,
+}: SplitActionButtonProps) {
+  const actionClassName = cn(
+    "flex items-center gap-1.5 px-2 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-60",
+    active && "text-(--color-primary)",
+  );
+  const actionContent = (
+    <>
+      <Icon className="size-3.5" aria-hidden />
+      <span>{label}</span>
+    </>
+  );
+
+  let action: ReactNode;
+  if (onAction) {
+    action = (
+      <button
+        type="button"
+        onClick={onAction}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        className={cn(actionClassName, "cursor-pointer")}
+      >
+        {actionContent}
+      </button>
+    );
+  } else {
+    const href = actionHref ?? signInHref ?? countHref;
+    action = (
+      <a href={href} aria-label={ariaLabel} className={actionClassName}>
+        {actionContent}
+      </a>
+    );
+  }
+
   return (
     <span className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
+      {action}
       <a
-        href={actionHref}
-        aria-label={ariaLabel}
-        className={cn("flex items-center gap-1.5 px-2 hover:bg-(--color-surface)", active && "text-(--color-primary)")}
-      >
-        <Icon className="size-3.5" aria-hidden />
-        <span>{label}</span>
-      </a>
-      <a
-        href={href}
+        href={countHref}
         aria-label={`${label} count`}
         className="flex items-center border-l border-(--color-border) bg-(--color-surface)/60 px-2 tabular-nums hover:bg-(--color-surface)"
       >
