@@ -157,7 +157,8 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
   // them, so the file tree always agrees with what `CodeView` renders below.
   // Without this, Pierre's default alpha sort places root-level files
   // (e.g. go.mod, go.sum) in a different spot than the diff body shows them.
-  // Directories inherit their position from their first file in the patch.
+  // Each directory's index is the patch index of the earliest file under it,
+  // so a directory sorts to the position of its first appearing child.
   const patchOrder = useMemo(() => {
     const fileIdx = new Map<string, number>();
     paths.forEach((p, i) => fileIdx.set(p, i));

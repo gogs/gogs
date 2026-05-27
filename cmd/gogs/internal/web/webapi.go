@@ -160,17 +160,14 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		})
 		f.Group("/{owner}/{name}", func() {
 			f.Get("/header", getRepoHeader)
-			f.Get("/commit/{sha}", getRepoCommit)
+			f.Get("/commit/{sha: /[0-9a-f]{7,40}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)
 		})
 	}, webAPIBodyLimiter)
 
-	// Bare-path routes (no `/api/web` prefix) that mirror legacy URLs so they
-	// stay accessible to external consumers. The Macaron router forwards
-	// matching requests here via `flamegoBridger`.
-	f.Get("/{owner}/{name}/commit/{sha}.{ext}", getRepoCommitRawDiff)
-	f.Get("/{owner}/{name}/raw/{**}", getRepoRaw)
+	f.Get("/{owner}/{name}/commit/{sha: /[0-9a-f]{7,40}/}.{ext: /(diff|patch)/}", getRepoCommitRaw)
+	f.Get("/{owner}/{name}/raw/{ref}/{filepath: **}", getRepoRaw)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil

@@ -55,14 +55,6 @@ export interface RepoCommitPage {
   rawDiffURL: string;
 }
 
-// Pierre's default file header sits on the same buffer tint as the surrounding
-// padding, so 200+ headers blur together. Give each header an opaque, slightly
-// stronger tint plus a bottom hairline so they read as distinct cards. The
-// background must be opaque or sticky headers bleed through scrolling content.
-//
-// The "N unmodified lines" metadata separator ships with `inset-inline: 100%
-// auto` so it spans only as wide as a downstream column boundary forces it.
-// Override to span the full row width, matching the file header above it.
 // Page-local override that unconstrains the shared Navbar, Footer, and
 // RepoHeader containers while this page is mounted (see the useEffect that
 // sets `data-fullwidth`). We target the unique max-width utility classes
@@ -115,7 +107,7 @@ const DIFF_UNSAFE_CSS = `
     margin-right: 4px;
   }
   /* The +N / -N counts in Pierre's metadata row inherit a mono font from
-     the diff body styles. They're UI chrome, not code — pin them to the
+     the diff body styles. They're UI chrome, not code. Pin them to the
      surrounding sans stack to match the rest of the toolbar text. */
   [data-additions-count],
   [data-deletions-count] {

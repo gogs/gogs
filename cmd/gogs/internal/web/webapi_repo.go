@@ -3,8 +3,8 @@ package web
 import (
 	stdctx "context"
 	"net/http"
+	"net/url"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -14,6 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 )
@@ -229,21 +230,21 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
-	// Treat any `CatFileCommit` failure as "commit not found". The git CLI
-	// returns several different errors for unknown revisions (parse failure,
-	// "bad file" from cat-file, exit code 128) and only `ErrRevisionNotExist`
-	// is recognized by `gitx.IsErrRevisionNotExist`. Surfacing those as 500
-	// would render a Server error page for a routine "wrong SHA" navigation.
 	commit, err := gitRepo.CatFileCommit(commitID)
 	if err != nil {
-		return http.StatusNotFound, nil, nil
+		if gitx.IsErrRevisionNotExist(err) {
+			return http.StatusNotFound, nil, nil
+		}
+		log.Error("getRepoCommit: cat-file commit %q in %q/%q: %v", commitID, ownerName, repoName, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "cat-file commit")
 	}
 
 	parents := make([]string, commit.ParentsCount())
 	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, err := commit.ParentID(i)
 		if err != nil {
-			return http.StatusNotFound, nil, nil
+			log.Error("getRepoCommit: parent ID %d for %q in %q/%q: %v", i, commitID, ownerName, repoName, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "parent ID")
 		}
 		parents[i] = sha.String()
 	}
@@ -281,12 +282,11 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 	}, nil
 }
 
-// getRepoCommitRawDiff streams the unified diff for a single commit as
-// `text/plain`. Replaces the legacy `repo.RawDiff` handler. The `{ext}` path
-// param controls the output format (`diff` or `patch`, matching `git diff`
-// vs `git format-patch` output). Supports the same `?whitespace=` flag as
-// `getRepoCommit` so the React diff page's whitespace toggle works.
-func getRepoCommitRawDiff(c flamego.Context, r *http.Request, user *database.User) {
+// getRepoCommitRaw streams the unified diff for a single commit as
+// `text/plain`. The `{ext}` path param controls the output format (`diff`
+// or `patch`, matching `git diff` vs `git format-patch` output). The
+// `?whitespace=` flag is honored at `git diff` time.
+func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	w := c.ResponseWriter()
 	ctx := r.Context()
 	params := c.Params()
@@ -352,7 +352,12 @@ func getRepoCommitRawDiff(c flamego.Context, r *http.Request, user *database.Use
 	}
 
 	if _, err := gitRepo.CatFileCommit(commitID); err != nil {
-		writeStatus(http.StatusNotFound)
+		if gitx.IsErrRevisionNotExist(err) {
+			writeStatus(http.StatusNotFound)
+			return
+		}
+		log.Error("getRepoCommitRawDiff: cat-file commit %q in %q/%q: %v", commitID, ownerName, repoName, err)
+		writeStatus(http.StatusInternalServerError)
 		return
 	}
 
@@ -407,10 +412,10 @@ func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.
 }
 
 // repoActionResponse echoes the new viewer/count state so the client can
-// update without a follow-up GET. Used by watch/star endpoints. Fields are
-// always emitted: `false` and `0` are meaningful (an unwatch transitions
-// `viewerWatching` to `false`, and a repo with zero watchers is a valid
-// state), so `omitempty` would drop the very signals the client needs.
+// update without a follow-up GET. Fields are always emitted: `false` and
+// `0` are meaningful (an unwatch transitions `viewerWatching` to `false`,
+// and a repo with zero watchers is a valid state), so `omitempty` would
+// drop the very signals the client needs.
 type repoActionResponse struct {
 	ViewerWatching bool `json:"viewerWatching"`
 	ViewerStarred  bool `json:"viewerStarred"`
@@ -496,11 +501,14 @@ func deleteRepoStar(c flamego.Context, r *http.Request, user *database.User) (st
 }
 
 // getRepoRaw streams the contents of a single file at the given ref (branch,
-// tag, or commit SHA). Replaces the legacy `repo.SingleDownload` handler.
-// Matches its behavior: `Last-Modified` from the commit that last touched
-// the file, `Content-Disposition: attachment` for binary non-image blobs,
+// tag, or commit SHA). `Last-Modified` from the commit that last touched the
+// file, `Content-Disposition: attachment` for binary non-image blobs,
 // `text/plain; charset=utf-8` for text blobs (unless `?render=true` and the
 // site has `EnableRawFileRenderMode` set).
+//
+// The `{ref}` path segment must be URL-encoded. Slashes inside a ref name
+// (e.g. `feat/foo`) must be percent-encoded as `%2F` so the router can
+// unambiguously split ref from filepath. Bare commit SHAs need no encoding.
 func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 	w := c.ResponseWriter()
 	ctx := r.Context()
@@ -511,14 +519,14 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 
 	ownerName := c.Param("owner")
 	repoName := c.Param("name")
-	rest := c.Param("**")
-	// The `{ref}/{path...}` segment is collapsed into a single `**` capture
-	// so a ref like `feat/foo` resolves correctly: we walk it left-to-right
-	// against the git repo's known refs (branches and tags) and treat the
-	// first prefix that resolves to a commit as the ref, leaving the rest as
-	// the in-tree path. Bare commit SHAs are matched first since they're the
-	// common case for the React diff page's "Expand all lines" fetch.
-	if rest == "" {
+	rawRef := c.Param("ref")
+	filePath := c.Param("filepath")
+	if rawRef == "" || filePath == "" {
+		writeStatus(http.StatusNotFound)
+		return
+	}
+	ref, err := url.PathUnescape(rawRef)
+	if err != nil {
 		writeStatus(http.StatusNotFound)
 		return
 	}
@@ -574,16 +582,25 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 		return
 	}
 
-	ref, filePath, commit, err := resolveRefPath(gitRepo, rest)
-	if err != nil || commit == nil {
-		writeStatus(http.StatusNotFound)
+	commit, err := resolveRef(gitRepo, ref)
+	if err != nil {
+		if gitx.IsErrRevisionNotExist(err) {
+			writeStatus(http.StatusNotFound)
+			return
+		}
+		log.Error("getRepoRaw: resolve ref %q in %q/%q: %v", ref, ownerName, repoName, err)
+		writeStatus(http.StatusInternalServerError)
 		return
 	}
-	_ = ref // ref is implied by the path; kept for future logging if needed.
 
 	blob, err := commit.Blob(filePath)
 	if err != nil {
-		writeStatus(http.StatusNotFound)
+		if gitx.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
+			writeStatus(http.StatusNotFound)
+			return
+		}
+		log.Error("getRepoRaw: blob %s:%s in %q/%q: %v", commit.ID, filePath, ownerName, repoName, err)
+		writeStatus(http.StatusInternalServerError)
 		return
 	}
 
@@ -609,59 +626,23 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 	_, _ = w.Write(data)
 }
 
-// resolveRefPath walks the `{ref}/{filepath...}` segment left-to-right,
-// returning the first prefix that resolves to a commit. Commit SHAs match
-// in a single step; multi-segment branch and tag names (e.g. `feat/foo`)
-// require walking until the prefix matches a known ref.
-func resolveRefPath(gitRepo *git.Repository, rest string) (string, string, *git.Commit, error) {
-	// Fast path: a full or short commit SHA as the first segment.
-	first, after, _ := strings.Cut(rest, "/")
-	if isHexSHA(first) {
-		if commit, err := gitRepo.CatFileCommit(first); err == nil {
-			return first, after, commit, nil
-		}
+// resolveRef returns the commit identified by ref, which may be a commit SHA,
+// branch name, or tag name (tried in that order). Returns `git.ErrRevisionNotExist`
+// when none match, which the caller maps to a 404.
+func resolveRef(gitRepo *git.Repository, ref string) (*git.Commit, error) {
+	commit, err := gitRepo.CatFileCommit(ref)
+	if err == nil {
+		return commit, nil
 	}
-
-	branches, _ := gitRepo.Branches()
-	tags, _ := gitRepo.Tags()
-	knownRefs := append([]string{}, branches...)
-	knownRefs = append(knownRefs, tags...)
-	// Match the longest ref prefix first so `release/v1` wins over `release`.
-	sortDescByLength(knownRefs)
-	for _, ref := range knownRefs {
-		if rest == ref {
-			return ref, "", nil, nil
-		}
-		if strings.HasPrefix(rest, ref+"/") {
-			commit, err := gitRepo.BranchCommit(ref)
-			if err != nil {
-				commit, err = gitRepo.TagCommit(ref)
-				if err != nil {
-					continue
-				}
-			}
-			return ref, rest[len(ref)+1:], commit, nil
-		}
+	if !gitx.IsErrRevisionNotExist(err) {
+		return nil, err
 	}
-	return "", "", nil, errors.New("ref not found")
-}
-
-func isHexSHA(s string) bool {
-	if len(s) < 4 || len(s) > 40 {
-		return false
+	commit, err = gitRepo.BranchCommit(ref)
+	if err == nil {
+		return commit, nil
 	}
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
-			return false
-		}
+	if !gitx.IsErrRevisionNotExist(err) {
+		return nil, err
 	}
-	return true
-}
-
-func sortDescByLength(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && len(s[j]) > len(s[j-1]); j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
+	return gitRepo.TagCommit(ref)
 }
