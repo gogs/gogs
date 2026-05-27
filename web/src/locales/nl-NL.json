@@ -39,5 +39,10 @@
   "reset_password": "Reset uw wachtwoord",
   "invalid_code": "Sorry, uw bevestigingscode is verlopen of niet meer geldig.",
   "new_password": "Nieuw wachtwoord",
-  "confirm_password": "Verifieer wachtwoord"
+  "confirm_password": "Verifieer wachtwoord",
+  "diff.parent": "bovenliggende",
+  "diff.commit": "commit",
+  "diff.view_file": "Bestand weergeven",
+  "editor.edit_file": "Bewerk bestand",
+  "editor.delete_this_file": "Verwijder dit bestand"
 }

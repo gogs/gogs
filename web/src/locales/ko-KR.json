@@ -39,5 +39,10 @@
   "reset_password": "비밀번호 초기화",
   "invalid_code": "죄송합니다. 확인 코드가 만료되었거나 유효하지 않습니다.",
   "new_password": "새 비밀번호",
-  "confirm_password": "비밀번호 확인"
+  "confirm_password": "비밀번호 확인",
+  "diff.parent": "부모",
+  "diff.commit": "커밋",
+  "diff.view_file": "파일 보기",
+  "editor.edit_file": "파일 수정",
+  "editor.delete_this_file": "이 파일을 삭제"
 }

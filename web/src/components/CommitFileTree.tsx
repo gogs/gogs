@@ -25,14 +25,41 @@ interface Props {
   // page can drive the diff view's scroll. The callback abstraction lets us
   // avoid plumbing the diff view's `LAnnotation` generic through forwardRef.
   onSelectItem: (itemId: string) => void;
+  // Show or hide Pierre's built-in search row. The model itself stays around,
+  // so toggling does not lose tree state.
+  searchOpen?: boolean;
   header?: ReactNode;
   className?: string;
   style?: CSSProperties;
 }
 
+// Pierre's FileTree renders into a shadow root. We can inject CSS via the
+// `unsafeCSS` option, and gate the search row's visibility off a host
+// attribute we set via the spread `data-*` prop on `<FileTree>`. That gives
+// us a CSS-only toggle without remounting the tree.
+const TREE_UNSAFE_CSS = `
+  :host([data-search-open="false"]) [data-file-tree-search-input],
+  :host([data-search-open="false"]) [data-file-tree-search-input]
+    ~ *:not([data-file-tree-list]):not([role="tree"]) {
+    display: none !important;
+  }
+  /* The search input lives inside a wrapper row; hide that whole row when
+     closed so we don't leave an empty band of padding. */
+  :host([data-search-open="false"]) [data-file-tree-search] {
+    display: none !important;
+  }
+  /* Breathing room above the search input so it doesn't crowd the toolbar
+     border above it. */
+  [data-file-tree-search],
+  [data-file-tree-search-input] {
+    margin-top: 6px;
+  }
+`;
+
 export interface CommitFileTreeHandle {
   expandAll(): void;
   collapseAll(): void;
+  focusSearch(): void;
 }
 
 // Pierre's icon sets ship with file-type glyphs and chevrons. `standard`
@@ -81,7 +108,7 @@ function collectDirectoryPaths(paths: readonly string[]): string[] {
 }
 
 export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function CommitFileTreeImpl(
-  { items, onSelectItem, header, className, style },
+  { items, onSelectItem, searchOpen = true, header, className, style },
   ref,
 ) {
   const { paths, gitStatus, pathToItemId } = useMemo(() => {
@@ -160,6 +187,7 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     stickyFolders: true,
     gitStatus,
     onSelectionChange,
+    unsafeCSS: TREE_UNSAFE_CSS,
   });
 
   // When the patch changes (e.g. navigating to a different commit without
@@ -178,6 +206,10 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     }
   }, [model, paths, gitStatus]);
 
+  // Wrap the tree so we can reach its host element (and its shadow root) to
+  // imperatively focus the search input on demand.
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -193,9 +225,41 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
           handle?.collapse();
         }
       },
+      focusSearch: () => {
+        // The search input lives in Pierre's shadow root. Walk through any
+        // descendant element with a shadowRoot to find it.
+        const host = wrapperRef.current?.querySelector<HTMLElement>("[data-file-tree-search-input]");
+        if (host instanceof HTMLInputElement) {
+          host.focus();
+          host.select();
+          return;
+        }
+        // Fall back to descending into shadow roots if the input wasn't in
+        // light DOM (it isn't — Pierre keeps it in the shadow root).
+        const walker = wrapperRef.current?.querySelectorAll("*") ?? [];
+        for (const el of Array.from(walker)) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (!sr) continue;
+          const input = sr.querySelector<HTMLInputElement>("[data-file-tree-search-input]");
+          if (input) {
+            input.focus();
+            input.select();
+            return;
+          }
+        }
+      },
     }),
     [directoryPaths, model],
   );
 
-  return <FileTree model={model} header={header} className={className} style={style} />;
+  return (
+    <div ref={wrapperRef} className={className} style={style}>
+      <FileTree
+        model={model}
+        header={header}
+        data-search-open={searchOpen ? "true" : "false"}
+        style={{ height: "100%" }}
+      />
+    </div>
+  );
 });

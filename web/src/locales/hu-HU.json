@@ -39,5 +39,10 @@
   "reset_password": "Jelszó visszaállítása",
   "invalid_code": "Elnézést, a megerősítő kód lejárt vagy hibás.",
   "new_password": "Új jelszó",
-  "confirm_password": "Jelszó megerősítése"
+  "confirm_password": "Jelszó megerősítése",
+  "diff.parent": "szülő",
+  "diff.commit": "commit",
+  "diff.view_file": "Fájl Megtekintése",
+  "editor.edit_file": "Fájl szerkesztése",
+  "editor.delete_this_file": "A fájl törlése"
 }

@@ -39,5 +39,10 @@
   "reset_password": "Ресет лозинке",
   "invalid_code": "Извините, ваш код за потврду је истекао или није валидан.",
   "new_password": "Нова лозинка",
-  "confirm_password": "Потврдите лозинку"
+  "confirm_password": "Потврдите лозинку",
+  "diff.parent": "родитељ",
+  "diff.commit": "комит",
+  "diff.view_file": "Прегледај датотеку",
+  "editor.edit_file": "Ажурирај датотеку",
+  "editor.delete_this_file": "Уклони ову датотеку"
 }

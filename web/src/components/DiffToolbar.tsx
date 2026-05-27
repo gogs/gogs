@@ -5,15 +5,14 @@ import {
   Minimize2,
   PanelLeftClose,
   PanelLeftOpen,
-  Settings2,
   SlidersHorizontal,
 } from "lucide-react";
 import { type ReactNode, forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { DiffFileStatus } from "@/pages/repo/Commit.search";
 
 export type DiffStyle = "unified" | "split";
 
@@ -30,7 +29,6 @@ export interface DiffToolbarStats {
 export interface DiffToolbarSettings {
   diffStyle: DiffStyle;
   wrapLines: boolean;
-  statusFilter: Record<DiffFileStatus, boolean>;
 }
 
 export interface DiffToolbarProps {
@@ -41,6 +39,10 @@ export interface DiffToolbarProps {
   onWhitespaceChange: (next: WhitespaceMode) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
+  // Slot for the always-visible in-diff search box. Rendered between the
+  // left-side stats and the right-side controls on desktop; wraps to its own
+  // line on narrow viewports.
+  search?: ReactNode;
   // Mobile sheet trigger: opens the slide-over file tree below `lg` since
   // the desktop sidebar doesn't render at that breakpoint.
   onShowTreeMobile?: () => void;
@@ -51,13 +53,6 @@ export interface DiffToolbarProps {
   desktopTreeOpen?: boolean;
 }
 
-const STATUS_LABELS: Record<DiffFileStatus, string> = {
-  added: "Added",
-  modified: "Modified",
-  deleted: "Deleted",
-  renamed: "Renamed",
-};
-
 export function DiffToolbar({
   stats,
   settings,
@@ -66,21 +61,18 @@ export function DiffToolbar({
   onWhitespaceChange,
   onExpandAll,
   onCollapseAll,
+  search,
   onShowTreeMobile,
   onToggleTreeDesktop,
   desktopTreeOpen,
 }: DiffToolbarProps) {
+  const { t } = useTranslation();
   const setStyle = (diffStyle: DiffStyle) => onSettingsChange({ ...settings, diffStyle });
   const setWrap = (wrapLines: boolean) => onSettingsChange({ ...settings, wrapLines });
-  const setStatus = (key: DiffFileStatus, value: boolean) =>
-    onSettingsChange({
-      ...settings,
-      statusFilter: { ...settings.statusFilter, [key]: value },
-    });
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--color-border) bg-(--color-background) px-4 py-2 text-sm">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-(--color-border) bg-(--color-background) py-2 text-sm">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <span className="flex items-center gap-1.5 text-(--color-foreground)">
           {onShowTreeMobile ? (
             <Tooltip>
@@ -88,13 +80,13 @@ export function DiffToolbar({
                 <button
                   type="button"
                   onClick={onShowTreeMobile}
-                  aria-label="Show file tree"
+                  aria-label={t("diff.show_file_tree")}
                   className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:hidden"
                 >
                   <PanelLeftOpen className="size-4" aria-hidden />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Show file tree</TooltipContent>
+              <TooltipContent>{t("diff.show_file_tree")}</TooltipContent>
             </Tooltip>
           ) : null}
           {onToggleTreeDesktop ? (
@@ -103,9 +95,9 @@ export function DiffToolbar({
                 <button
                   type="button"
                   onClick={onToggleTreeDesktop}
-                  aria-label={desktopTreeOpen ? "Hide file tree" : "Show file tree"}
+                  aria-label={desktopTreeOpen ? t("diff.hide_file_tree") : t("diff.show_file_tree")}
                   aria-pressed={desktopTreeOpen}
-                  className="hidden size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid"
+                  className="hidden size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid pl-1"
                 >
                   {desktopTreeOpen ? (
                     <PanelLeftClose className="size-4" aria-hidden />
@@ -114,92 +106,84 @@ export function DiffToolbar({
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{desktopTreeOpen ? "Hide file tree" : "Show file tree"}</TooltipContent>
+              <TooltipContent>{desktopTreeOpen ? t("diff.hide_file_tree") : t("diff.show_file_tree")}</TooltipContent>
             </Tooltip>
           ) : null}
           <span>
-            Showing{" "}
+            {t("diff.showing")}{" "}
             <strong className="font-semibold">
-              {stats.fileCount} changed {stats.fileCount === 1 ? "file" : "files"}
+              {stats.fileCount} {stats.fileCount === 1 ? t("diff.changed_file") : t("diff.changed_files")}
             </strong>
           </span>
         </span>
-        <span className="flex items-center gap-1 text-(--color-muted-foreground)">
-          <span aria-hidden className="size-1.5 rounded-full bg-(--color-diff-added)" />
-          <span className="tabular-nums">+{stats.additions.toLocaleString()} additions</span>
-        </span>
-        <span className="flex items-center gap-1 text-(--color-muted-foreground)">
-          <span aria-hidden className="size-1.5 rounded-full bg-(--color-diff-removed)" />
-          <span className="tabular-nums">-{stats.deletions.toLocaleString()} deletions</span>
+        {/* On mobile, force the additions+deletions pair onto its own row
+            below the "Showing X changed files" label via `basis-full`. From
+            `sm+` they fit inline on one line. */}
+        <span className="flex basis-full items-center gap-3 sm:basis-auto">
+          <span className="tabular-nums text-(--color-diff-added)">
+            +{stats.additions.toLocaleString()} {t("diff.additions")}
+          </span>
+          <span className="tabular-nums text-(--color-diff-removed)">
+            -{stats.deletions.toLocaleString()} {t("diff.deletions")}
+          </span>
         </span>
       </div>
+
+      {search ? (
+        // `order-last` on mobile + `lg:order-none` on desktop puts the search
+        // box on its own row at narrow viewports (after the right-side
+        // controls wrap) and inline next to the right controls on wide ones.
+        // `basis-full` on mobile forces the row break; `lg:ml-auto` on
+        // desktop pushes the search box to the right side of the toolbar.
+        <div className="order-last basis-full lg:order-none lg:ml-auto lg:basis-auto">{search}</div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
           <SegmentButton active={settings.diffStyle === "unified"} onClick={() => setStyle("unified")}>
-            Unified
+            {t("diff.unified")}
           </SegmentButton>
           <SegmentButton active={settings.diffStyle === "split"} onClick={() => setStyle("split")}>
-            Split
+            {t("diff.split")}
           </SegmentButton>
         </div>
 
         <Popover>
           <PopoverTrigger asChild>
-            <ToolbarButton icon={SlidersHorizontal} label="Diff settings" />
+            <ToolbarButton icon={SlidersHorizontal} label={t("diff.diff_settings")} />
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64 p-2">
             <div className="px-2 pb-1 text-xs font-semibold tracking-wide text-(--color-muted-foreground) uppercase">
-              Whitespace
+              {t("diff.whitespace")}
             </div>
             <MenuRadio checked={whitespace === "show"} onSelect={() => onWhitespaceChange("show")}>
-              Show whitespace
+              {t("diff.show_whitespace")}
             </MenuRadio>
             <MenuRadio checked={whitespace === "ignore-change"} onSelect={() => onWhitespaceChange("ignore-change")}>
-              Ignore whitespace changes
+              {t("diff.ignore_whitespace_changes")}
             </MenuRadio>
             <MenuRadio checked={whitespace === "ignore-all"} onSelect={() => onWhitespaceChange("ignore-all")}>
-              Ignore all whitespace
+              {t("diff.ignore_all_whitespace")}
             </MenuRadio>
             <div className="my-1 h-px bg-(--color-border)" />
             <div className="px-2 pb-1 text-xs font-semibold tracking-wide text-(--color-muted-foreground) uppercase">
-              Display
+              {t("diff.display")}
             </div>
             <MenuCheckbox checked={settings.wrapLines} onSelect={() => setWrap(!settings.wrapLines)}>
-              Wrap long lines
+              {t("diff.wrap_long_lines")}
             </MenuCheckbox>
-          </PopoverContent>
-        </Popover>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <ToolbarButton icon={Settings2} label="Filter files" />
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-2">
-            <div className="px-2 pb-1 text-xs font-semibold tracking-wide text-(--color-muted-foreground) uppercase">
-              By status
-            </div>
-            {(Object.keys(STATUS_LABELS) as DiffFileStatus[]).map((key) => (
-              <MenuCheckbox
-                key={key}
-                checked={settings.statusFilter[key]}
-                onSelect={() => setStatus(key, !settings.statusFilter[key])}
-              >
-                {STATUS_LABELS[key]}
-              </MenuCheckbox>
-            ))}
           </PopoverContent>
         </Popover>
 
         <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
           <IconActionButton
             onClick={onExpandAll}
-            label="Expand all files"
+            label={t("diff.expand_all_files")}
             icon={<Maximize2 className="size-3.5" aria-hidden />}
           />
           <IconActionButton
             onClick={onCollapseAll}
-            label="Collapse all files"
+            label={t("diff.collapse_all_files")}
             icon={<Minimize2 className="size-3.5" aria-hidden />}
           />
         </div>

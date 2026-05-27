@@ -39,5 +39,10 @@
   "reset_password": "Passwort zurücksetzen",
   "invalid_code": "Es tut uns leid, der Bestätigungscode ist abgelaufen oder ungültig.",
   "new_password": "Neues Passwort",
-  "confirm_password": "Passwort bestätigen"
+  "confirm_password": "Passwort bestätigen",
+  "diff.parent": "Ursprung",
+  "diff.commit": "Commit",
+  "diff.view_file": "Datei anzeigen",
+  "editor.edit_file": "Datei bearbeiten",
+  "editor.delete_this_file": "Datei löschen"
 }

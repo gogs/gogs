@@ -39,5 +39,10 @@
   "reset_password": "Restaurar a sua senha",
   "invalid_code": "Desculpe, o seu código de confirmação expirou ou é inválido.",
   "new_password": "Nova senha",
-  "confirm_password": "Confirmar senha"
+  "confirm_password": "Confirmar senha",
+  "diff.parent": "pai",
+  "diff.commit": "commit",
+  "diff.view_file": "Ver Ficheiro",
+  "editor.edit_file": "Edita ficheiro",
+  "editor.delete_this_file": "Apagar este ficheiro"
 }

@@ -39,5 +39,10 @@
   "reset_password": "重置密碼",
   "invalid_code": "對不起，您的確認代碼已過期或已失效。",
   "new_password": "新的密碼",
-  "confirm_password": "確認密碼"
+  "confirm_password": "確認密碼",
+  "diff.parent": "父節點",
+  "diff.commit": "當前提交",
+  "diff.view_file": "查看文件",
+  "editor.edit_file": "Edit file",
+  "editor.delete_this_file": "Delete this file"
 }

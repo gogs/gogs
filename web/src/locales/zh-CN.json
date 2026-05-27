@@ -39,5 +39,10 @@
   "reset_password": "重置密码",
   "invalid_code": "对不起，您的确认代码已过期或已失效。",
   "new_password": "新的密码",
-  "confirm_password": "确认密码"
+  "confirm_password": "确认密码",
+  "diff.parent": "父节点",
+  "diff.commit": "当前提交",
+  "diff.view_file": "查看文件",
+  "editor.edit_file": "编辑文件",
+  "editor.delete_this_file": "删除此文件"
 }

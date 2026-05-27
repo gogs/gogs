@@ -39,5 +39,10 @@
   "reset_password": "Reimposta la tua Password",
   "invalid_code": "Siamo spiacenti, il codice di conferma è scaduto o non valido.",
   "new_password": "Nuova Password",
-  "confirm_password": "Conferma Password"
+  "confirm_password": "Conferma Password",
+  "diff.parent": "parent",
+  "diff.commit": "commit",
+  "diff.view_file": "Vedi File",
+  "editor.edit_file": "Modifica file",
+  "editor.delete_this_file": "Elimina questo file"
 }

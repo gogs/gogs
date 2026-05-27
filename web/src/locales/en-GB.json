@@ -39,5 +39,10 @@
   "reset_password": "Reset Your Password",
   "invalid_code": "Sorry, your confirmation code has expired or not valid.",
   "new_password": "New Password",
-  "confirm_password": "Confirm Password"
+  "confirm_password": "Confirm Password",
+  "diff.parent": "parent",
+  "diff.commit": "commit",
+  "diff.view_file": "View File",
+  "editor.edit_file": "Edit file",
+  "editor.delete_this_file": "Delete this file"
 }

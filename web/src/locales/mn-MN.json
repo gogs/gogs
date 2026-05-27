@@ -39,5 +39,10 @@
   "reset_password": "Нууц үгээ сэргээх",
   "invalid_code": "Уучлаарай, таны баталгаажуулах кодын хугацаа дууссан эсвэл хүчин төгөлдөр бус байна.",
   "new_password": "Шинэ нууц үг",
-  "confirm_password": "Confirm Password"
+  "confirm_password": "Confirm Password",
+  "diff.parent": "parent",
+  "diff.commit": "commit",
+  "diff.view_file": "Файл харах",
+  "editor.edit_file": "Файл засах",
+  "editor.delete_this_file": "Энэ файлыг устгах"
 }

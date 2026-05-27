@@ -39,5 +39,10 @@
   "reset_password": "Сброс пароля",
   "invalid_code": "Извините, ваш код подтверждения истек или не является допустимым.",
   "new_password": "Новый пароль",
-  "confirm_password": "Подтвердить пароль"
+  "confirm_password": "Подтвердить пароль",
+  "diff.parent": "Родитель",
+  "diff.commit": "Сommit",
+  "diff.view_file": "Просмотреть файл",
+  "editor.edit_file": "Редактировать файл",
+  "editor.delete_this_file": "Удалить файл"
 }

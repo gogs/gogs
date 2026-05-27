@@ -15,50 +15,11 @@
 export type WhitespaceUrlValue = "ignore-all" | "ignore-change";
 // `unified` is the default and stays implicit. Only `split` ever appears.
 export type DiffStyleUrlValue = "split";
-export type DiffFileStatus = "added" | "modified" | "deleted" | "renamed";
-
-export const ALL_STATUSES: readonly DiffFileStatus[] = ["added", "modified", "deleted", "renamed"];
 
 export interface RepoCommitSearch {
   whitespace?: WhitespaceUrlValue;
   style?: DiffStyleUrlValue;
   wrap?: true;
-  // Comma-separated list of enabled statuses, e.g. "added,modified". The
-  // string form keeps the URL human-readable (`?status=added,modified`) and
-  // sidesteps TanStack's default array stringification.
-  status?: string;
-}
-
-export function parseStatusFilter(raw: string | undefined): Record<DiffFileStatus, boolean> {
-  if (!raw) {
-    return { added: true, modified: true, deleted: true, renamed: true };
-  }
-  const enabled = new Set(
-    raw.split(",").filter((s): s is DiffFileStatus => (ALL_STATUSES as readonly string[]).includes(s)),
-  );
-  return {
-    added: enabled.has("added"),
-    modified: enabled.has("modified"),
-    deleted: enabled.has("deleted"),
-    renamed: enabled.has("renamed"),
-  };
-}
-
-// Serialize a filter map back to the URL string form. Returns undefined when
-// every status is enabled, so the URL stays clean by omitting the default.
-export function serializeStatusFilter(filter: Record<DiffFileStatus, boolean>): string | undefined {
-  const enabled = ALL_STATUSES.filter((k) => filter[k]);
-  if (enabled.length === ALL_STATUSES.length) return undefined;
-  return enabled.join(",");
-}
-
-export function normalizeStatusParam(raw: unknown): string | undefined {
-  if (typeof raw !== "string" || raw === "") return undefined;
-  const parts = raw.split(",").filter((s): s is DiffFileStatus => (ALL_STATUSES as readonly string[]).includes(s));
-  if (parts.length === 0 || parts.length === ALL_STATUSES.length) return undefined;
-  // Re-emit in canonical order so the URL is stable regardless of input
-  // order and users can't smuggle in arbitrary strings via the URL.
-  return ALL_STATUSES.filter((s) => parts.includes(s)).join(",");
 }
 
 export function validateRepoCommitSearch(search: Record<string, unknown>): RepoCommitSearch {
@@ -68,7 +29,5 @@ export function validateRepoCommitSearch(search: Record<string, unknown>): RepoC
   }
   if (search.style === "split") out.style = "split";
   if (search.wrap === true || search.wrap === "true") out.wrap = true;
-  const status = normalizeStatusParam(search.status);
-  if (status) out.status = status;
   return out;
 }

@@ -1,69 +1,80 @@
-import { Check, Copy, ExternalLink, FileCode2, MoreHorizontal } from "lucide-react";
-import { type ButtonHTMLAttributes, forwardRef, useCallback, useState } from "react";
+import { Binary, FileCode2, History, Loader2, MoreHorizontal, Pencil, Trash2, UnfoldVertical } from "lucide-react";
+import { type ButtonHTMLAttributes, forwardRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface FileHeaderMenuProps {
   filePath: string;
   prevFilePath?: string;
   viewFileHref: string;
-  blameHref: string;
-  permalinkHref: string;
+  rawFileHref: string;
+  historyHref: string;
+  // Edit/Delete only make sense when the diff is anchored to a branch (e.g.
+  // PR diffs). Omit on commit pages — gogs' editor needs a branch ref, and
+  // routing through a SHA returns 404.
+  editFileHref?: string;
+  deleteFileHref?: string;
+  // Mobile-only "Expand all lines" surfaced inside the menu (only visible
+  // below `lg`). The desktop chrome renders the button inline in the right-
+  // side metadata, so it's hidden on desktop here to avoid double-listing.
+  onExpandAllLines?: () => void;
+  expandAllLinesState?: "loading" | "done";
 }
 
 // Per-file overflow menu rendered into Pierre's `renderHeaderMetadata` slot.
 // Sits on the right of each file header (next to the +/- stats and collapse
 // chevron) and matches GitHub's three-dot pattern.
 export function FileHeaderMenu({
-  filePath,
   prevFilePath,
   viewFileHref,
-  blameHref,
-  permalinkHref,
+  rawFileHref,
+  historyHref,
+  editFileHref,
+  deleteFileHref,
+  onExpandAllLines,
+  expandAllLinesState,
 }: FileHeaderMenuProps) {
-  const [copiedPath, setCopiedPath] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-
-  const copyPath = useCallback(() => {
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(filePath);
-        setCopiedPath(true);
-        window.setTimeout(() => {
-          setCopiedPath(false);
-          setOpen(false);
-        }, 800);
-      } catch {
-        // Clipboard API can fail in insecure contexts. The menu still shows
-        // the path on the file header so the user can copy manually.
-      }
-    })();
-  }, [filePath]);
-
-  const copyLink = useCallback(() => {
-    void (async () => {
-      try {
-        const absolute = new URL(permalinkHref, window.location.origin).toString();
-        await navigator.clipboard.writeText(absolute);
-        setCopiedLink(true);
-        window.setTimeout(() => {
-          setCopiedLink(false);
-          setOpen(false);
-        }, 800);
-      } catch {
-        // See note above.
-      }
-    })();
-  }, [permalinkHref]);
+  const expandLoading = expandAllLinesState === "loading";
+  const expandDone = expandAllLinesState === "done";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <MenuTrigger />
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={4} className="w-56 p-1 text-sm">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <MenuTrigger aria-label={t("diff.more_actions")} />
+          </PopoverTrigger>
+        </TooltipTrigger>
+        {!open ? <TooltipContent>{t("diff.more_actions")}</TooltipContent> : null}
+      </Tooltip>
+      <PopoverContent align="end" sideOffset={4} className="w-48 p-1 text-sm">
         <ul role="menu" className="flex flex-col">
+          {onExpandAllLines ? (
+            <li className="lg:hidden">
+              <button
+                type="button"
+                role="menuitem"
+                disabled={expandLoading || expandDone}
+                onClick={() => {
+                  onExpandAllLines();
+                  setOpen(false);
+                }}
+                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                {expandLoading ? (
+                  <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <UnfoldVertical className="size-3.5 shrink-0" aria-hidden />
+                )}
+                <span>{expandDone ? t("diff.all_lines_expanded") : t("diff.expand_all_lines")}</span>
+              </button>
+            </li>
+          ) : null}
+          {onExpandAllLines ? <li role="separator" className="my-1 h-px bg-(--color-border) lg:hidden" /> : null}
           <li>
             <a
               href={viewFileHref}
@@ -71,55 +82,59 @@ export function FileHeaderMenu({
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
             >
               <FileCode2 className="size-3.5 shrink-0" aria-hidden />
-              <span>View file at this commit</span>
+              <span>{t("diff.view_file")}</span>
             </a>
           </li>
           <li>
             <a
-              href={blameHref}
+              href={rawFileHref}
               role="menuitem"
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
             >
-              <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-              <span>View blame</span>
+              <Binary className="size-3.5 shrink-0" aria-hidden />
+              <span>{t("diff.view_raw")}</span>
             </a>
           </li>
-          <li role="separator" className="my-1 h-px bg-(--color-border)" />
           <li>
-            <button
-              type="button"
+            <a
+              href={historyHref}
               role="menuitem"
-              onClick={copyPath}
-              className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface)"
+              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
             >
-              {copiedPath ? (
-                <Check className="size-3.5 shrink-0 text-(--color-success)" aria-hidden />
-              ) : (
-                <Copy className="size-3.5 shrink-0" aria-hidden />
-              )}
-              <span>Copy file path</span>
-            </button>
+              <History className="size-3.5 shrink-0" aria-hidden />
+              <span>{t("diff.view_history")}</span>
+            </a>
           </li>
-          <li>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={copyLink}
-              className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface)"
-            >
-              {copiedLink ? (
-                <Check className="size-3.5 shrink-0 text-(--color-success)" aria-hidden />
-              ) : (
-                <Copy className="size-3.5 shrink-0" aria-hidden />
-              )}
-              <span>Copy permalink</span>
-            </button>
-          </li>
+          {editFileHref || deleteFileHref ? <li role="separator" className="my-1 h-px bg-(--color-border)" /> : null}
+          {editFileHref ? (
+            <li>
+              <a
+                href={editFileHref}
+                role="menuitem"
+                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
+              >
+                <Pencil className="size-3.5 shrink-0" aria-hidden />
+                <span>{t("editor.edit_file")}</span>
+              </a>
+            </li>
+          ) : null}
+          {deleteFileHref ? (
+            <li>
+              <a
+                href={deleteFileHref}
+                role="menuitem"
+                className="flex items-center gap-2 rounded px-2 py-1.5 text-(--color-destructive) hover:bg-(--color-surface)"
+              >
+                <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                <span>{t("editor.delete_this_file")}</span>
+              </a>
+            </li>
+          ) : null}
           {prevFilePath ? (
             <>
               <li role="separator" className="my-1 h-px bg-(--color-border)" />
               <li role="menuitem" aria-disabled className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
-                Renamed from <span className="font-mono">{prevFilePath}</span>
+                {t("diff.renamed_from")} <span className="font-mono">{prevFilePath}</span>
               </li>
             </>
           ) : null}
@@ -146,7 +161,6 @@ const MenuTrigger = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButto
     <button
       ref={ref}
       type="button"
-      aria-label="More actions"
       className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       onPointerDown={(e) => {
         e.stopPropagation();

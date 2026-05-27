@@ -39,5 +39,10 @@
   "reset_password": "Resetowanie hasła",
   "invalid_code": "Niestety, Twój kod potwierdzający wygasł lub jest nieprawidłowy.",
   "new_password": "Nowe hasło",
-  "confirm_password": "Potwierdź hasło"
+  "confirm_password": "Potwierdź hasło",
+  "diff.parent": "rodzic",
+  "diff.commit": "commit",
+  "diff.view_file": "Wyświetl plik",
+  "editor.edit_file": "Edytuj plik",
+  "editor.delete_this_file": "Usuń ten plik"
 }

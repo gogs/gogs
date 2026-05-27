@@ -39,5 +39,10 @@
   "reset_password": "Atur Ulang Sandi",
   "invalid_code": "Maaf, kode konfirmasi Anda telah kadaluarsa atau tidak valid.",
   "new_password": "Sandi baru",
-  "confirm_password": "Konfirmasi sandi"
+  "confirm_password": "Konfirmasi sandi",
+  "diff.parent": "induk",
+  "diff.commit": "melakukan",
+  "diff.view_file": "Tampilan Berkas",
+  "editor.edit_file": "Edit berkas",
+  "editor.delete_this_file": "Hapus berkas ini"
 }

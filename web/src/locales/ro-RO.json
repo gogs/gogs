@@ -39,5 +39,10 @@
   "reset_password": "Resetați-vă parola",
   "invalid_code": "Ne pare rău, codul dvs. de confirmare a expirat sau nu este valabil.",
   "new_password": "Parolă nouă",
-  "confirm_password": "Confirmați Parola"
+  "confirm_password": "Confirmați Parola",
+  "diff.parent": "părinte",
+  "diff.commit": "comite",
+  "diff.view_file": "Vizualizați fișierul",
+  "editor.edit_file": "Modifica fisier",
+  "editor.delete_this_file": "Șterge acest fișier"
 }

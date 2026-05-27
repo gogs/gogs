@@ -39,5 +39,10 @@
   "reset_password": "Скинути пароль",
   "invalid_code": "На жаль, код підтвердження, закінчився або помилковий.",
   "new_password": "Новий пароль",
-  "confirm_password": "Підтвердження паролю"
+  "confirm_password": "Підтвердження паролю",
+  "diff.parent": "батько",
+  "diff.commit": "коміт",
+  "diff.view_file": "Переглянути файл",
+  "editor.edit_file": "Редагування файла",
+  "editor.delete_this_file": "Видалити цей файл"
 }

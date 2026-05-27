@@ -39,5 +39,10 @@
   "reset_password": "パスワードリセット",
   "invalid_code": "申し訳ありませんが、確認用コードが期限切れまたは無効です。",
   "new_password": "新しいパスワード",
-  "confirm_password": "パスワード確認"
+  "confirm_password": "パスワード確認",
+  "diff.parent": "親",
+  "diff.commit": "コミット",
+  "diff.view_file": "ファイルの表示",
+  "editor.edit_file": "ファイルを編集",
+  "editor.delete_this_file": "このファイルを削除"
 }

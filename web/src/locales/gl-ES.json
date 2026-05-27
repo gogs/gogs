@@ -39,5 +39,10 @@
   "reset_password": "Restablecer o teu contrasinal",
   "invalid_code": "Sentímolo, o teu código de confirmación expirou ou non é válido.",
   "new_password": "Novo contrasinal",
-  "confirm_password": "Confirmar contrasinal"
+  "confirm_password": "Confirmar contrasinal",
+  "diff.parent": "pai",
+  "diff.commit": "achega",
+  "diff.view_file": "Ver ficheiro",
+  "editor.edit_file": "Editar arquivo",
+  "editor.delete_this_file": "Borrar este arquivo"
 }

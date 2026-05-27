@@ -39,5 +39,10 @@
   "reset_password": "Réinitialiser le mot de passe",
   "invalid_code": "Désolé, votre code de confirmation est invalide ou a expiré.",
   "new_password": "Nouveau mot de passe",
-  "confirm_password": "Confirmez le mot de passe"
+  "confirm_password": "Confirmez le mot de passe",
+  "diff.parent": "Parent",
+  "diff.commit": "commit",
+  "diff.view_file": "Voir le fichier",
+  "editor.edit_file": "Modifier fichier",
+  "editor.delete_this_file": "Supprimer ce fichier"
 }

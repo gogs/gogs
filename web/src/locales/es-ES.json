@@ -39,5 +39,10 @@
   "reset_password": "Restablecer su contraseña",
   "invalid_code": "Lo sentimos, su código de confirmación ha expirado o no es valido.",
   "new_password": "Nueva contraseña",
-  "confirm_password": "Confirmar Contraseña"
+  "confirm_password": "Confirmar Contraseña",
+  "diff.parent": "padre",
+  "diff.commit": "commit",
+  "diff.view_file": "Ver fichero",
+  "editor.edit_file": "Editar archivo",
+  "editor.delete_this_file": "Eliminar este archivo"
 }

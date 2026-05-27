@@ -39,5 +39,10 @@
   "reset_password": "Parolanızı Sıfırlayın",
   "invalid_code": "Üzgünüz, doğrulama kodunuz geçersiz veya süresi dolmuş.",
   "new_password": "Yeni Parola",
-  "confirm_password": "Parolayı Doğrula"
+  "confirm_password": "Parolayı Doğrula",
+  "diff.parent": "ebeveyn",
+  "diff.commit": "işleme",
+  "diff.view_file": "Dosyayı Görüntüle",
+  "editor.edit_file": "Dosya düzenle",
+  "editor.delete_this_file": "Bu dosyayı sil"
 }

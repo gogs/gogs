@@ -39,5 +39,10 @@
   "reset_password": "Atjaunot savu paroli",
   "invalid_code": "Atvainojiet, Jūsu apstiprināšanas kodam ir beidzies derīguma termiņš vai arī tas ir nepareizs.",
   "new_password": "Jauna parole",
-  "confirm_password": "Apstipriniet paroli"
+  "confirm_password": "Apstipriniet paroli",
+  "diff.parent": "vecāks",
+  "diff.commit": "revīzija",
+  "diff.view_file": "Parādīt failu",
+  "editor.edit_file": "Labot failu",
+  "editor.delete_this_file": "Dzēst šo failu"
 }

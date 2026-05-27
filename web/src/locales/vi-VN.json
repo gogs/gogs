@@ -39,5 +39,10 @@
   "reset_password": "Đặt lại mật khẩu của bạn",
   "invalid_code": "Xin lỗi, mã số xác nhận của bạn đã hết hạn hoặc không hợp lệ.",
   "new_password": "Mật khẩu mới",
-  "confirm_password": "Xác nhận mật khẩu"
+  "confirm_password": "Xác nhận mật khẩu",
+  "diff.parent": "mục cha",
+  "diff.commit": "commit",
+  "diff.view_file": "Xem Tập Tin",
+  "editor.edit_file": "Sửa tập tin",
+  "editor.delete_this_file": "Xóa tập tin này"
 }

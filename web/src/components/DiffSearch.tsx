@@ -1,6 +1,7 @@
 import type { CodeViewHandle, CodeViewItem } from "@pierre/diffs/react";
-import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Match {
   itemId: string;
@@ -62,7 +63,7 @@ interface Props<L> {
 }
 
 export function DiffSearch<L>({ items, viewRef }: Props<L>) {
-  const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -121,38 +122,27 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
     [matches, surface],
   );
 
-  // Window-level Cmd/Ctrl-F intercept. Opens the overlay and focuses the
-  // input. Esc closes and clears selection.
+  // Window-level Cmd/Ctrl-F intercept. The search box is always visible in
+  // the toolbar, so the shortcut just focuses (and selects) the input.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const isFind = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f";
       if (isFind) {
         e.preventDefault();
-        setOpen(true);
-        queueMicrotask(() => {
-          inputRef.current?.focus();
-          inputRef.current?.select();
-        });
-        return;
-      }
-      if (e.key === "Escape" && open) {
-        e.preventDefault();
-        setOpen(false);
-        viewRef.current?.setSelectedLines(null);
+        inputRef.current?.focus();
+        inputRef.current?.select();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, viewRef]);
-
-  if (!open) return null;
+  }, []);
 
   return (
     <div
       role="search"
-      className="absolute top-1 right-4 z-10 flex h-8 items-center gap-1 rounded-md border border-(--color-border) bg-(--color-background) px-1 shadow-md"
+      className="flex h-7 items-center gap-1 rounded-md border border-(--color-border) bg-(--color-background) px-1 focus-within:border-(--color-ring) focus-within:ring-2 focus-within:ring-(--color-ring)/30"
     >
-      <Search className="ml-1 size-4 text-(--color-muted-foreground)" aria-hidden />
+      <Search className="ml-1 size-3.5 text-(--color-muted-foreground)" aria-hidden />
       <input
         ref={inputRef}
         type="search"
@@ -162,43 +152,37 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
           if (e.key === "Enter") {
             e.preventDefault();
             navigate(e.shiftKey ? -1 : 1);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            updateQuery("");
+            viewRef.current?.setSelectedLines(null);
+            inputRef.current?.blur();
           }
         }}
-        placeholder="Search in diff"
-        aria-label="Search in diff"
-        className="w-48 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-(--color-muted-foreground)"
+        placeholder={t("diff.search_in_diff")}
+        aria-label={t("diff.search_in_diff")}
+        className="w-40 min-w-0 flex-1 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-(--color-muted-foreground)"
       />
       <span className="px-1 text-xs tabular-nums text-(--color-muted-foreground)">
-        {matches.length === 0 ? "0/0" : `${activeIndex + 1}/${matches.length}`}
+        {matches.length === 0 ? (query ? "0/0" : "") : `${activeIndex + 1}/${matches.length}`}
       </span>
       <button
         type="button"
         onClick={() => navigate(-1)}
         disabled={matches.length === 0}
-        aria-label="Previous match"
+        aria-label={t("diff.previous_match")}
         className="cursor-pointer rounded p-1 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <ChevronUp className="size-4" aria-hidden />
+        <ChevronUp className="size-3.5" aria-hidden />
       </button>
       <button
         type="button"
         onClick={() => navigate(1)}
         disabled={matches.length === 0}
-        aria-label="Next match"
+        aria-label={t("diff.next_match")}
         className="cursor-pointer rounded p-1 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <ChevronDown className="size-4" aria-hidden />
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(false);
-          viewRef.current?.setSelectedLines(null);
-        }}
-        aria-label="Close search"
-        className="cursor-pointer rounded p-1 hover:bg-(--color-surface)"
-      >
-        <X className="size-4" aria-hidden />
+        <ChevronDown className="size-3.5" aria-hidden />
       </button>
     </div>
   );

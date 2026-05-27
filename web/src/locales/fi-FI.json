@@ -39,5 +39,10 @@
   "reset_password": "Nollaa salasanasi",
   "invalid_code": "Sori, varmistuskoodisi on vanhentunut tai väärä.",
   "new_password": "Uusi salasana",
-  "confirm_password": "Varmista salasana"
+  "confirm_password": "Varmista salasana",
+  "diff.parent": "vanhempi",
+  "diff.commit": "sitoutus",
+  "diff.view_file": "Näytä tiedosto",
+  "editor.edit_file": "Muokkaa tiedostoa",
+  "editor.delete_this_file": "Poista tämä tiedosto"
 }

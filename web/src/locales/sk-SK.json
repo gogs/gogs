@@ -39,5 +39,10 @@
   "reset_password": "Obnovenie hesla",
   "invalid_code": "Ospravedlňujeme sa, váš potvrdzovací kód vypršal alebo nie je platný.",
   "new_password": "Nové heslo",
-  "confirm_password": "Potvrdiť heslo"
+  "confirm_password": "Potvrdiť heslo",
+  "diff.parent": "rodič",
+  "diff.commit": "commit",
+  "diff.view_file": "Zobraziť súbor",
+  "editor.edit_file": "Upraviť súbor",
+  "editor.delete_this_file": "Vymazať tento súbor"
 }

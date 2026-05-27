@@ -39,5 +39,10 @@
   "reset_password": "Нулиране на паролата",
   "invalid_code": "За съжаление Вашия код за потвърждение е изтекъл или е невалиден.",
   "new_password": "Нова парола",
-  "confirm_password": "Потвърждение на паролата"
+  "confirm_password": "Потвърждение на паролата",
+  "diff.parent": "родител",
+  "diff.commit": "ревизия",
+  "diff.view_file": "Целия файл",
+  "editor.edit_file": "Редактирай файл",
+  "editor.delete_this_file": "Изтрий този файл"
 }
