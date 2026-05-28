@@ -1,4 +1,4 @@
-import { Check, Monitor, Moon, Settings, Sun } from "lucide-react";
+import { Bug, Check, Monitor, Moon, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -42,6 +42,19 @@ const LANGUAGES: { code: string; name: string }[] = [
   { code: "mn-MN", name: "Монгол" },
   { code: "ro-RO", name: "Română" },
 ];
+
+// Dev-only feature flag: toggles a `?i18n_debug=1` query param that makes
+// every translated string render with its key wrapped around it. `i18n.ts`
+// reads the param at module load, so toggling forces a full reload.
+const i18nDebugEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("i18n_debug");
+
+function toggleI18nDebug() {
+  const params = new URLSearchParams(window.location.search);
+  if (i18nDebugEnabled) params.delete("i18n_debug");
+  else params.set("i18n_debug", "1");
+  const qs = params.toString();
+  window.location.search = qs ? "?" + qs : "";
+}
 
 export function SettingsMenu() {
   const { t } = useTranslation();
@@ -112,6 +125,23 @@ export function SettingsMenu() {
             );
           })}
         </ul>
+
+        {import.meta.env.DEV ? (
+          <>
+            <div className="my-1 h-px bg-(--color-border)" />
+            <div className="p-1">
+              <button
+                type="button"
+                onClick={toggleI18nDebug}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-(--color-surface) hover:text-(--color-foreground)"
+              >
+                <Bug className="size-4" aria-hidden />
+                <span className="flex-1">i18n debug</span>
+                <Check className={cn("size-4", i18nDebugEnabled ? "opacity-100" : "opacity-0")} />
+              </button>
+            </div>
+          </>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

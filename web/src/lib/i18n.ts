@@ -35,6 +35,20 @@ import zhCN from "@/locales/zh-CN.json";
 import zhHK from "@/locales/zh-HK.json";
 import zhTW from "@/locales/zh-TW.json";
 
+// Toggle via `?i18n_debug=1` to wrap every translated string with its key
+// for visual inspection. Read once at module load so it survives navigation
+// within the SPA.
+const showKeys = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("i18n_debug");
+
+if (showKeys) {
+  // eslint-disable-next-line import/no-named-as-default-member
+  i18n.use({
+    type: "postProcessor",
+    name: "i18n-debug",
+    process: (value: string, keys: string[]) => `「${keys.join(",")}」${value}`,
+  });
+}
+
 // eslint-disable-next-line import/no-named-as-default-member
 void i18n.use(initReactI18next).init({
   resources: {
@@ -75,6 +89,7 @@ void i18n.use(initReactI18next).init({
   fallbackLng: "en-US",
   interpolation: { escapeValue: false, prefix: "{", suffix: "}" },
   returnNull: false,
+  postProcess: showKeys ? ["i18n-debug"] : undefined,
 });
 
 export default i18n;

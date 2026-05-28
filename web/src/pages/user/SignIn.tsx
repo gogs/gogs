@@ -75,7 +75,7 @@ export function SignIn() {
             focusField = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
           }
           if (!body.error && !body.fields) {
-            setFormError(t("sign_in_failed"));
+            setFormError(t("auth.sign_in_failed"));
           }
           setSubmitting(false);
           // Defer focus past the React commit so the fieldset is re-enabled
@@ -101,7 +101,7 @@ export function SignIn() {
         // /redirect is a server endpoint (303), must be a full navigation.
         window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
       } catch {
-        setFormError(t("sign_in_failed"));
+        setFormError(t("auth.sign_in_failed"));
         setSubmitting(false);
       }
     })();
@@ -163,7 +163,7 @@ export function SignIn() {
                           if (submitting) e.preventDefault();
                         }}
                       >
-                        {t("forget_password")}
+                        {t("auth.forget_password")}
                       </a>
                     </Button>
                   </div>
@@ -188,7 +188,7 @@ export function SignIn() {
                       tabIndex={3}
                       disabled={submitting}
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? t("hide_password") : t("show_password")}
+                      aria-label={showPassword ? t("auth.hide_password") : t("auth.show_password")}
                       aria-pressed={showPassword}
                       className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -208,7 +208,7 @@ export function SignIn() {
 
                 {loginSources.length > 0 && (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="login_source">{t("auth_source")}</Label>
+                    <Label htmlFor="login_source">{t("auth.auth_source")}</Label>
                     <Select
                       value={String(loginSource)}
                       onValueChange={(v) => setLoginSource(Number(v))}
@@ -218,7 +218,7 @@ export function SignIn() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0">{t("local")}</SelectItem>
+                        <SelectItem value="0">{t("auth.local")}</SelectItem>
                         {loginSources.map((s) => (
                           <SelectItem key={s.id} value={String(s.id)}>
                             {s.name}
@@ -231,7 +231,7 @@ export function SignIn() {
 
                 <div className="mt-2 flex flex-col gap-3">
                   <Button type="submit" disabled={submitting} tabIndex={5} className="w-full">
-                    {submitting ? t("sign_in_submitting") : t("sign_in")}
+                    {submitting ? t("auth.sign_in_submitting") : t("sign_in")}
                   </Button>
                   <Button variant="link" size="inline" asChild className="self-center">
                     <a
@@ -243,7 +243,7 @@ export function SignIn() {
                         if (submitting) e.preventDefault();
                       }}
                     >
-                      {t("sign_up_now")}
+                      {t("auth.sign_up_now")}
                     </a>
                   </Button>
                 </div>

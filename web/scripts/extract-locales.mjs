@@ -12,7 +12,7 @@ const outDir = join(here, "..", "src/locales");
 
 // Keys pulled from Gogs's INI files. Add new entries here when the SPA needs
 // another translation. Locales missing a key fall back to en-US via react-i18next.
-const REUSED_KEYS = [
+const KEYS = [
   "app_desc",
   "home",
   "dashboard",
@@ -34,8 +34,7 @@ const REUSED_KEYS = [
   "admin_panel",
   "settings",
   "language",
-  "page_not_found",
-  "internal_server_error",
+  "repository",
   "theme",
   "theme_light",
   "theme_dark",
@@ -52,125 +51,179 @@ const REUSED_KEYS = [
   "captcha_image_alt",
   "refresh_captcha",
   "click_to_refresh_captcha",
-  "auth_source",
-  "local",
-  "forget_password",
-  "send_reset_email",
-  "reset_password_email_submitting",
-  "reset_password_email_failed",
-  "reset_password_email_sent",
-  "disable_register_mail",
-  "disable_register_prompt",
-  "reset_password_resend_limited",
-  "non_local_account",
-  "create_new_account",
-  "register_hepler_msg",
-  "sign_up",
-  "sign_up_now",
-  "sign_up_submitting",
-  "sign_up_failed",
-  "sign_in_submitting",
-  "sign_in_failed",
-  "show_password",
-  "hide_password",
-  "back_to_sign_in",
-  "reset_password",
-  "invalid_code",
-  "reset_password_submit",
-  "reset_password_submitting",
-  "reset_password_failed",
-  "new_password",
-  "new_password_placeholder",
-  "confirm_password",
-  "confirm_password_placeholder",
-  "confirm_new_password",
-  "confirm_new_password_placeholder",
-  "password_mismatch",
-  "mfa_title",
-  "mfa_passcode",
-  "mfa_passcode_placeholder",
-  "mfa_recovery_code",
-  "mfa_recovery_code_placeholder",
-  "mfa_use_recovery_code",
-  "mfa_use_passcode",
-  "mfa_verify",
-  "mfa_verifying",
-  "mfa_session_expired",
-  "mfa_verify_failed",
-  "activate_your_account",
-  "resend_rate_limited",
-  "send_activation_email",
-  "check_activation_email",
-  "activation_email_pending",
-  "activation_email_sent",
-  "sending_activation_email",
-  "send_activation_email_failed",
-  "activating_account",
-  // Commit diff page chrome (web/src/pages/repo/Commit.tsx and friends).
-  "diff.showing_changed_files",
-  "diff.additions",
-  "diff.deletions",
-  "diff.unified",
-  "diff.split",
-  "diff.diff_settings",
-  "diff.whitespace",
-  "diff.show_whitespace",
-  "diff.ignore_whitespace_changes",
-  "diff.ignore_all_whitespace",
-  "diff.display",
-  "diff.wrap_long_lines",
-  "diff.expand_all_files",
-  "diff.collapse_all_files",
-  "diff.show_file_tree",
-  "diff.hide_file_tree",
-  "diff.expand_all_directories",
-  "diff.collapse_all_directories",
-  "diff.search_files",
-  "diff.hide_search",
-  "diff.search_in_diff",
-  "diff.previous_match",
-  "diff.next_match",
-  "diff.expand_file",
-  "diff.collapse_file",
-  "diff.copy_file_path",
-  "diff.expand_all_lines",
-  "diff.all_lines_expanded",
-  "diff.more_actions",
-  "diff.view_history",
-  "diff.view_raw",
-  "diff.renamed_from",
-  "diff.authored",
-  "diff.copy_full_sha",
-  "diff.diff",
-  "diff.patch",
-  "diff.browse_files",
-  "diff.parents",
-  "diff.parent",
-  "diff.commit",
-  // Reused from existing locale entries.
-  "diff.view_file",
-  "editor.edit_file",
-  "editor.delete_this_file",
+  "close",
+  "show_more",
+  "show_less",
+  "resize_sidebar",
+  "more",
+  "more_tabs",
+  "more_actions",
+  "status.page_not_found",
+  "status.internal_server_error",
+  "auth.auth_source",
+  "auth.local",
+  "auth.forget_password",
+  "auth.send_reset_email",
+  "auth.reset_password_email_submitting",
+  "auth.reset_password_email_failed",
+  "auth.reset_password_email_sent",
+  "auth.disable_register_mail",
+  "auth.disable_register_prompt",
+  "auth.reset_password_resend_limited",
+  "auth.non_local_account",
+  "auth.create_new_account",
+  "auth.register_hepler_msg",
+  "auth.sign_up_now",
+  "auth.sign_up_submitting",
+  "auth.sign_up_failed",
+  "auth.sign_in_submitting",
+  "auth.sign_in_failed",
+  "auth.show_password",
+  "auth.hide_password",
+  "auth.back_to_sign_in",
+  "auth.reset_password",
+  "auth.invalid_code",
+  "auth.reset_password_submit",
+  "auth.reset_password_submitting",
+  "auth.reset_password_failed",
+  "auth.new_password",
+  "auth.new_password_placeholder",
+  "auth.confirm_password",
+  "auth.confirm_password_placeholder",
+  "auth.confirm_new_password",
+  "auth.confirm_new_password_placeholder",
+  "auth.password_mismatch",
+  "auth.mfa_title",
+  "auth.mfa_passcode",
+  "auth.mfa_passcode_placeholder",
+  "auth.mfa_recovery_code",
+  "auth.mfa_recovery_code_placeholder",
+  "auth.mfa_use_recovery_code",
+  "auth.mfa_use_passcode",
+  "auth.mfa_verify",
+  "auth.mfa_verifying",
+  "auth.mfa_session_expired",
+  "auth.mfa_verify_failed",
+  "auth.activate_your_account",
+  "auth.resend_rate_limited",
+  "auth.send_activation_email",
+  "auth.check_activation_email",
+  "auth.activation_email_pending",
+  "auth.activation_email_sent",
+  "auth.sending_activation_email",
+  "auth.send_activation_email_failed",
+  "auth.activating_account",
+  "tool.now",
+  "tool.ago",
+  "tool.from_now",
+  "tool.1s",
+  "tool.1m",
+  "tool.1h",
+  "tool.1d",
+  "tool.1w",
+  "tool.1mon",
+  "tool.1y",
+  "tool.seconds",
+  "tool.minutes",
+  "tool.hours",
+  "tool.days",
+  "tool.weeks",
+  "tool.months",
+  "tool.years",
+  "repo.diff.showing_changed_files",
+  "repo.diff.additions",
+  "repo.diff.deletions",
+  "repo.diff.unified",
+  "repo.diff.split",
+  "repo.diff.diff_settings",
+  "repo.diff.whitespace",
+  "repo.diff.show_whitespace",
+  "repo.diff.ignore_whitespace_changes",
+  "repo.diff.ignore_all_whitespace",
+  "repo.diff.display",
+  "repo.diff.wrap_long_lines",
+  "repo.diff.expand_all_files",
+  "repo.diff.collapse_all_files",
+  "repo.show_file_tree",
+  "repo.hide_file_tree",
+  "repo.expand_all_directories",
+  "repo.collapse_all_directories",
+  "repo.search_files",
+  "repo.search_hide",
+  "repo.search_diff",
+  "repo.search_previous_match",
+  "repo.search_next_match",
+  "repo.diff.expand_file",
+  "repo.diff.collapse_file",
+  "repo.diff.expand_all_lines",
+  "repo.diff.all_lines_expanded",
+  "repo.commit_parent",
+  "repo.commit_label",
+  "repo.view_file",
+  "repo.editor.edit_file",
+  "repo.editor.delete_this_file",
+  "repo.files",
+  "repo.settings",
+  "repo.wiki",
+  "repo.watch",
+  "repo.unwatch",
+  "repo.star",
+  "repo.starred",
+  "repo.fork",
+  "repo.mirror_of",
+  "repo.sign_in_to_watch",
+  "repo.sign_in_to_star",
+  "repo.sign_in_to_fork",
+  "repo.watch_this_repository",
+  "repo.unwatch_this_repository",
+  "repo.star_this_repository",
+  "repo.unstar_this_repository",
+  "repo.fork_this_repository",
+  "repo.visibility_private",
+  "repo.visibility_public",
+  "repo.view_watchers",
+  "repo.view_stargazers",
+  "repo.view_forks",
+  "repo.browse_files",
+  "repo.view_history",
+  "repo.view_raw",
+  "repo.copy_file_path",
+  "repo.copy_full_sha",
+  "repo.renamed_from",
+  "repo.authored",
+  "repo.parents",
+  "repo.diff_label",
+  "repo.patch_label",
 ];
 
-// Lightweight INI parser: handles `key = value` and `key=value`, ignores
-// comments, and flattens sections into a single namespace. Gogs's locale
-// files group keys under sections like [status] (e.g. status.page_not_found
-// resolves to a key named "page_not_found" inside [status]), but downstream
-// callers reference keys by their bare name, so the section header is
-// dropped here. First occurrence wins on collisions.
+// Lightweight INI parser. Returns two views of the same file:
+//   - `flat`: bare key name to value, first occurrence wins (matches the
+//     historical SPA behavior where keys are referenced without their section).
+//   - `sectioned`: `section.key` to value, so callers can disambiguate when the
+//     same bare name appears in two sections (e.g. `[user] starred` vs
+//     `[repo] starred`). Top-level keys (no section header above them) are
+//     also stored bare in `sectioned`.
 function parseIni(text) {
-  const out = {};
+  const flat = {};
+  const sectioned = {};
+  let section = "";
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line || line.startsWith(";") || line.startsWith("#") || line.startsWith("[")) continue;
+    if (!line || line.startsWith(";") || line.startsWith("#")) continue;
+    if (line.startsWith("[") && line.endsWith("]")) {
+      section = line.slice(1, -1).trim();
+      continue;
+    }
     const eq = line.indexOf("=");
     if (eq < 0) continue;
     const key = line.slice(0, eq).trim();
     const value = line.slice(eq + 1).trim();
-    if (key && !(key in out)) out[key] = value;
+    if (!key) continue;
+    if (!(key in flat)) flat[key] = value;
+    const qualified = section ? `${section}.${key}` : key;
+    if (!(qualified in sectioned)) sectioned[qualified] = value;
   }
-  return out;
+  return { flat, sectioned };
 }
 
 mkdirSync(outDir, { recursive: true });
@@ -178,10 +231,16 @@ mkdirSync(outDir, { recursive: true });
 const files = readdirSync(inDir).filter((f) => f.startsWith("locale_") && f.endsWith(".ini"));
 for (const file of files) {
   const lang = file.slice("locale_".length, -".ini".length);
-  const parsed = parseIni(readFileSync(join(inDir, file), "utf8"));
+  const { flat, sectioned } = parseIni(readFileSync(join(inDir, file), "utf8"));
   const out = {};
-  for (const key of REUSED_KEYS) {
-    if (parsed[key]) out[key] = parsed[key];
+  for (const key of KEYS) {
+    // Prefer the literal flat name if it exists in the INI (handles entries
+    // like `editor.edit_file` or `diff.parent`, whose literal flat name is
+    // the dotted string with no enclosing section). Fall back to a
+    // section-qualified lookup so `repo.starred` finds `starred` under
+    // `[repo]` and bypasses the colliding `[user] starred`.
+    const value = flat[key] ?? sectioned[key];
+    if (value) out[key] = value;
   }
   writeFileSync(join(outDir, `${lang}.json`), JSON.stringify(out, null, 2) + "\n", "utf8");
   console.log(`wrote ${lang}.json (${Object.keys(out).length} keys)`);

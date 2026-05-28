@@ -1,14 +1,16 @@
-// Date formatting helpers that mirror Gogs's server-side conventions:
+// Date formatting helpers used by commit metadata and similar timestamps.
 //   - Relative time matches `internal/tool/tool.go`'s `timeSince` thresholds
 //     (now / seconds / minutes / hours / days / weeks / months / years ago).
-//   - Absolute format matches `time.RFC1123`, which is Gogs's default
-//     `[time].FORMAT` and what server templates put in the `title` attribute
-//     of `<span class="time-since">` elements.
-//
-// English-only for now: the Go side runs these strings through i18n, but the
-// SPA's other date renderings (none yet) don't, and the source INI uses printf
-// placeholders that don't round-trip through i18next. Wiring i18n through this
-// helper is a follow-up once there's a second caller to motivate the shape.
+//     Strings come from Gogs's `[tool]` section so the SPA reuses the existing
+//     community translations. Quantity templates carry `%d` (count) and `%s`
+//     (suffix) printf placeholders, substituted manually since i18next uses
+//     `{count}` style interpolation.
+//   - Absolute time uses `Intl.DateTimeFormat` keyed on `webContext.lang`, so
+//     each locale gets its own calendar conventions out of the box without
+//     shipping per-locale day/month strings.
+import type { TFunction } from "i18next";
+
+import { webContext } from "@/lib/context";
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
@@ -17,52 +19,56 @@ const WEEK = 7 * DAY;
 const MONTH = 30 * DAY;
 const YEAR = 12 * MONTH;
 
-export function formatRelativeTime(iso: string, nowMs: number = Date.now()): string {
+// Substitute Go-style printf placeholders. Quantity templates may use either
+// the simple `%d` / `%s` form (English, most locales) or the positional
+// `%[1]d` / `%[2]s` form used by community translations that need to reorder
+// the count and suffix (e.g. German: `%[2]s %[1]d Jahren`).
+function fillQuantity(template: string, count: number, suffix: string): string {
+  return template.replace(/%(?:\[1\])?d/g, String(count)).replace(/%(?:\[2\])?s/g, suffix);
+}
+
+function fillSuffix(template: string, suffix: string): string {
+  return template.replace(/%(?:\[1\])?s/g, suffix);
+}
+
+export function formatRelativeTime(t: TFunction, iso: string, nowMs: number = Date.now()): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return iso;
 
   let diff = Math.floor((nowMs - then) / 1000);
-  let suffix = "ago";
-  if (diff < 0) {
-    diff = -diff;
-    suffix = "from now";
-  }
+  const suffix = diff < 0 ? t("tool.from_now") : t("tool.ago");
+  if (diff < 0) diff = -diff;
 
-  if (diff <= 0) return "now";
-  if (diff <= 2) return `1 second ${suffix}`;
-  if (diff < MINUTE) return `${diff} seconds ${suffix}`;
-  if (diff < 2 * MINUTE) return `1 minute ${suffix}`;
-  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} minutes ${suffix}`;
-  if (diff < 2 * HOUR) return `1 hour ${suffix}`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} hours ${suffix}`;
-  if (diff < 2 * DAY) return `1 day ${suffix}`;
-  if (diff < WEEK) return `${Math.floor(diff / DAY)} days ${suffix}`;
-  if (diff < 2 * WEEK) return `1 week ${suffix}`;
-  if (diff < MONTH) return `${Math.floor(diff / WEEK)} weeks ${suffix}`;
-  if (diff < 2 * MONTH) return `1 month ${suffix}`;
-  if (diff < YEAR) return `${Math.floor(diff / MONTH)} months ${suffix}`;
-  if (diff < 2 * YEAR) return `1 year ${suffix}`;
-  return `${Math.floor(diff / YEAR)} years ${suffix}`;
+  if (diff <= 0) return t("tool.now");
+  if (diff <= 2) return fillSuffix(t("tool.1s"), suffix);
+  if (diff < MINUTE) return fillQuantity(t("tool.seconds"), diff, suffix);
+  if (diff < 2 * MINUTE) return fillSuffix(t("tool.1m"), suffix);
+  if (diff < HOUR) return fillQuantity(t("tool.minutes"), Math.floor(diff / MINUTE), suffix);
+  if (diff < 2 * HOUR) return fillSuffix(t("tool.1h"), suffix);
+  if (diff < DAY) return fillQuantity(t("tool.hours"), Math.floor(diff / HOUR), suffix);
+  if (diff < 2 * DAY) return fillSuffix(t("tool.1d"), suffix);
+  if (diff < WEEK) return fillQuantity(t("tool.days"), Math.floor(diff / DAY), suffix);
+  if (diff < 2 * WEEK) return fillSuffix(t("tool.1w"), suffix);
+  if (diff < MONTH) return fillQuantity(t("tool.weeks"), Math.floor(diff / WEEK), suffix);
+  if (diff < 2 * MONTH) return fillSuffix(t("tool.1mon"), suffix);
+  if (diff < YEAR) return fillQuantity(t("tool.months"), Math.floor(diff / MONTH), suffix);
+  if (diff < 2 * YEAR) return fillSuffix(t("tool.1y"), suffix);
+  return fillQuantity(t("tool.years"), Math.floor(diff / YEAR), suffix);
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const ABSOLUTE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZoneName: "short",
+});
 
-function pad2(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
-}
-
-// Mirrors Go's `time.RFC1123` layout (`Mon, 02 Jan 2006 15:04:05 MST`) in the
-// viewer's local timezone, so the tooltip reads the same as what server
-// templates emit via `t.Format(conf.Time.FormatLayout)`.
 export function formatAbsoluteTime(iso: string, now: Date = new Date(Date.parse(iso))): string {
   if (Number.isNaN(now.getTime())) return iso;
-  const tz =
-    new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
-      .formatToParts(now)
-      .find((p) => p.type === "timeZoneName")?.value ?? "";
-  return (
-    `${DAY_NAMES[now.getDay()]}, ${pad2(now.getDate())} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()} ` +
-    `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())} ${tz}`
-  );
+  return ABSOLUTE_TIME_FMT.format(now);
 }

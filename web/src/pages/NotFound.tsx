@@ -4,7 +4,7 @@ import { usePageTitle } from "@/lib/page-title";
 
 export function NotFound() {
   const { t } = useTranslation();
-  usePageTitle(t("page_not_found"));
+  usePageTitle(t("status.page_not_found"));
   const path = typeof window === "undefined" ? "/" : window.location.pathname;
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">

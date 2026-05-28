@@ -159,8 +159,8 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
             inputRef.current?.blur();
           }
         }}
-        placeholder={t("diff.search_in_diff")}
-        aria-label={t("diff.search_in_diff")}
+        placeholder={t("repo.search_diff")}
+        aria-label={t("repo.search_diff")}
         className="w-40 min-w-0 flex-1 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-(--color-muted-foreground)"
       />
       <span className="px-1 text-xs tabular-nums text-(--color-muted-foreground)">
@@ -170,7 +170,7 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
         type="button"
         onClick={() => navigate(-1)}
         disabled={matches.length === 0}
-        aria-label={t("diff.previous_match")}
+        aria-label={t("repo.search_previous_match")}
         className="cursor-pointer rounded p-1 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronUp className="size-3.5" aria-hidden />
@@ -179,7 +179,7 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
         type="button"
         onClick={() => navigate(1)}
         disabled={matches.length === 0}
-        aria-label={t("diff.next_match")}
+        aria-label={t("repo.search_next_match")}
         className="cursor-pointer rounded p-1 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronDown className="size-3.5" aria-hidden />

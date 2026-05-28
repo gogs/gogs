@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ export function ResizableSidebar({
   className,
   style,
 }: Props) {
+  const { t } = useTranslation();
   const [width, setWidth] = useState(() => readStoredWidth(storageKey, defaultWidth));
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
@@ -107,7 +109,7 @@ export function ResizableSidebar({
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize sidebar"
+        aria-label={t("resize_sidebar")}
         aria-valuemin={minWidth}
         aria-valuemax={maxWidth}
         aria-valuenow={width}

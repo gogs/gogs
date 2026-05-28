@@ -80,13 +80,13 @@ export function DiffToolbar({
                 <button
                   type="button"
                   onClick={onShowTreeMobile}
-                  aria-label={t("diff.show_file_tree")}
+                  aria-label={t("repo.show_file_tree")}
                   className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:hidden"
                 >
                   <PanelLeftOpen className="size-4" aria-hidden />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t("diff.show_file_tree")}</TooltipContent>
+              <TooltipContent>{t("repo.show_file_tree")}</TooltipContent>
             </Tooltip>
           ) : null}
           {onToggleTreeDesktop ? (
@@ -95,7 +95,7 @@ export function DiffToolbar({
                 <button
                   type="button"
                   onClick={onToggleTreeDesktop}
-                  aria-label={desktopTreeOpen ? t("diff.hide_file_tree") : t("diff.show_file_tree")}
+                  aria-label={desktopTreeOpen ? t("repo.hide_file_tree") : t("repo.show_file_tree")}
                   aria-pressed={desktopTreeOpen}
                   // `pl-1` nudges the icon right so it visually aligns with
                   // the sidebar's collapsed-rail edge on desktop.
@@ -108,12 +108,12 @@ export function DiffToolbar({
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{desktopTreeOpen ? t("diff.hide_file_tree") : t("diff.show_file_tree")}</TooltipContent>
+              <TooltipContent>{desktopTreeOpen ? t("repo.hide_file_tree") : t("repo.show_file_tree")}</TooltipContent>
             </Tooltip>
           ) : null}
           <span>
             <Trans
-              i18nKey="diff.showing_changed_files"
+              i18nKey="repo.diff.showing_changed_files"
               values={{ count: stats.fileCount }}
               components={{ count: <strong className="font-semibold" /> }}
             />
@@ -124,10 +124,10 @@ export function DiffToolbar({
             `sm+` they fit inline on one line. */}
         <span className="flex basis-full items-center gap-3 sm:basis-auto">
           <span className="tabular-nums text-(--color-diff-added)">
-            +{stats.additions.toLocaleString()} {t("diff.additions")}
+            +{stats.additions.toLocaleString()} {t("repo.diff.additions")}
           </span>
           <span className="tabular-nums text-(--color-diff-removed)">
-            -{stats.deletions.toLocaleString()} {t("diff.deletions")}
+            -{stats.deletions.toLocaleString()} {t("repo.diff.deletions")}
           </span>
         </span>
       </div>
@@ -144,36 +144,36 @@ export function DiffToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
           <SegmentButton active={settings.diffStyle === "unified"} onClick={() => setStyle("unified")}>
-            {t("diff.unified")}
+            {t("repo.diff.unified")}
           </SegmentButton>
           <SegmentButton active={settings.diffStyle === "split"} onClick={() => setStyle("split")}>
-            {t("diff.split")}
+            {t("repo.diff.split")}
           </SegmentButton>
         </div>
 
         <Popover>
           <PopoverTrigger asChild>
-            <ToolbarButton icon={SlidersHorizontal} label={t("diff.diff_settings")} />
+            <ToolbarButton icon={SlidersHorizontal} label={t("repo.diff.diff_settings")} />
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64 p-2">
             <div className="px-2 pb-1 text-xs font-semibold tracking-wide text-(--color-muted-foreground) uppercase">
-              {t("diff.whitespace")}
+              {t("repo.diff.whitespace")}
             </div>
             <MenuRadio checked={whitespace === "show"} onSelect={() => onWhitespaceChange("show")}>
-              {t("diff.show_whitespace")}
+              {t("repo.diff.show_whitespace")}
             </MenuRadio>
             <MenuRadio checked={whitespace === "ignore-change"} onSelect={() => onWhitespaceChange("ignore-change")}>
-              {t("diff.ignore_whitespace_changes")}
+              {t("repo.diff.ignore_whitespace_changes")}
             </MenuRadio>
             <MenuRadio checked={whitespace === "ignore-all"} onSelect={() => onWhitespaceChange("ignore-all")}>
-              {t("diff.ignore_all_whitespace")}
+              {t("repo.diff.ignore_all_whitespace")}
             </MenuRadio>
             <div className="my-1 h-px bg-(--color-border)" />
             <div className="px-2 pb-1 text-xs font-semibold tracking-wide text-(--color-muted-foreground) uppercase">
-              {t("diff.display")}
+              {t("repo.diff.display")}
             </div>
             <MenuCheckbox checked={settings.wrapLines} onSelect={() => setWrap(!settings.wrapLines)}>
-              {t("diff.wrap_long_lines")}
+              {t("repo.diff.wrap_long_lines")}
             </MenuCheckbox>
           </PopoverContent>
         </Popover>
@@ -181,12 +181,12 @@ export function DiffToolbar({
         <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
           <IconActionButton
             onClick={onExpandAll}
-            label={t("diff.expand_all_files")}
+            label={t("repo.diff.expand_all_files")}
             icon={<Maximize2 className="size-3.5" aria-hidden />}
           />
           <IconActionButton
             onClick={onCollapseAll}
-            label={t("diff.collapse_all_files")}
+            label={t("repo.diff.collapse_all_files")}
             icon={<Minimize2 className="size-3.5" aria-hidden />}
           />
         </div>

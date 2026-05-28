@@ -149,8 +149,8 @@ const TREE_THEME_STYLE: CSSProperties = {
   "--trees-selected-bg-override": "var(--color-surface)",
   "--trees-focus-ring-color-override": "var(--color-ring)",
   // The search input's defaults fall through `--trees-input-bg`, which uses
-  // `light-dark()` keyed off the shadow host's own `color-scheme: light dark`
-  // — that resolves to the OS preference, not the app's class-based theme,
+  // `light-dark()` keyed off the shadow host's own `color-scheme: light dark`.
+  // That resolves to the OS preference, not the app's class-based theme,
   // so the box stays light when the page is dark. Pin it to our tokens.
   "--trees-search-bg-override": "var(--color-surface)",
   "--trees-search-fg-override": "var(--color-foreground)",
@@ -159,6 +159,7 @@ const TREE_THEME_STYLE: CSSProperties = {
 const BODY_CLAMP_LINES = 3;
 
 function CommitBody({ body }: { body: string }) {
+  const { t } = useTranslation();
   const lines = body.split("\n");
   const needsClamp = lines.length > BODY_CLAMP_LINES;
   const [expanded, setExpanded] = useState(!needsClamp);
@@ -173,7 +174,7 @@ function CommitBody({ body }: { body: string }) {
           onClick={() => setExpanded((e) => !e)}
           className="mt-1.5 cursor-pointer rounded border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs text-(--color-muted-foreground) hover:bg-(--color-surface)/80 hover:text-(--color-foreground)"
         >
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? t("show_less") : t("show_more")}
         </button>
       ) : null}
     </div>
@@ -231,8 +232,8 @@ export function RepoCommit() {
       // Desktop-only handler. The lock-and-forward dance was designed for the
       // two-pane workspace pinned to the viewport on `lg+`. On mobile the
       // workspace stacks into a single column and Pierre's container handles
-      // wheel events directly — any redirection here breaks trackpad
-      // scrolling inside the diff body.
+      // wheel events directly. Any redirection here breaks trackpad scrolling
+      // inside the diff body.
       if (!desktopMatch.matches) return;
       const root = document.scrollingElement ?? document.documentElement;
       const pageMaxScroll = root.scrollHeight - root.clientHeight;
@@ -550,7 +551,7 @@ export function RepoCommit() {
       if (item.type !== "diff") return null;
       const collapsed = collapsedById[item.id] ?? false;
       const Icon = collapsed ? ChevronRight : ChevronDown;
-      const label = collapsed ? t("diff.expand_file") : t("diff.collapse_file");
+      const label = collapsed ? t("repo.diff.expand_file") : t("repo.diff.collapse_file");
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)";
       return (
@@ -614,7 +615,7 @@ export function RepoCommit() {
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label={t("diff.copy_file_path")}
+                aria-label={t("repo.copy_file_path")}
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -631,14 +632,14 @@ export function RepoCommit() {
                 )}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t("diff.copy_file_path")}</TooltipContent>
+            <TooltipContent>{t("repo.copy_file_path")}</TooltipContent>
           </Tooltip>
           {supportsExpand ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  aria-label={expandDone ? t("diff.all_lines_expanded") : t("diff.expand_all_lines")}
+                  aria-label={expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}
                   disabled={expandLoading || expandDone}
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -656,7 +657,9 @@ export function RepoCommit() {
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{expandDone ? t("diff.all_lines_expanded") : t("diff.expand_all_lines")}</TooltipContent>
+              <TooltipContent>
+                {expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}
+              </TooltipContent>
             </Tooltip>
           ) : null}
           <FileHeaderMenu
@@ -701,7 +704,7 @@ export function RepoCommit() {
               className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-(--color-border) px-2 text-sm hover:bg-(--color-surface)"
             >
               <FileCode2 className="size-3.5" aria-hidden />
-              <span>{t("diff.browse_files")}</span>
+              <span>{t("repo.browse_files")}</span>
             </a>
           </div>
         </div>
@@ -711,10 +714,10 @@ export function RepoCommit() {
           <span className="inline-flex items-center gap-1.5">
             <img src={author.avatarURL} alt="" className="size-6 rounded-full" />
             {authorLabel}
-            <span>{t("diff.authored")}</span>
+            <span>{t("repo.authored")}</span>
             <Tooltip>
               <TooltipTrigger asChild>
-                <time dateTime={author.when}>{formatRelativeTime(author.when)}</time>
+                <time dateTime={author.when}>{formatRelativeTime(t, author.when)}</time>
               </TooltipTrigger>
               <TooltipContent>{formatAbsoluteTime(author.when)}</TooltipContent>
             </Tooltip>
@@ -727,16 +730,16 @@ export function RepoCommit() {
 
           <span className="inline-flex items-center gap-1 font-mono text-xs">
             <a href={subUrl(`/${owner}/${repo}/commit/${sha}.patch`)} className="hover:underline">
-              {t("diff.patch")}
+              {t("repo.patch_label")}
             </a>
             <span aria-hidden>·</span>
             <a href={subUrl(`/${owner}/${repo}/commit/${sha}.diff`)} className="hover:underline">
-              {t("diff.diff")}
+              {t("repo.diff_label")}
             </a>
             {parents.length > 0 ? (
               <>
                 <span aria-hidden>·</span>
-                <span>{parents.length > 1 ? `${parents.length} ${t("diff.parents")}` : t("diff.parent")}</span>
+                <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
                 {parents.map((p) => (
                   <a
                     key={p}
@@ -749,7 +752,7 @@ export function RepoCommit() {
               </>
             ) : null}
             <span aria-hidden>·</span>
-            <span>{t("diff.commit")}</span>
+            <span>{t("repo.commit_label")}</span>
             <code className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground)">
               {sha.slice(0, 10)}
             </code>
@@ -758,7 +761,7 @@ export function RepoCommit() {
                 <button
                   type="button"
                   onClick={copySha}
-                  aria-label={t("diff.copy_full_sha")}
+                  aria-label={t("repo.copy_full_sha")}
                   className="grid size-6 cursor-pointer place-items-center rounded hover:bg-(--color-surface)"
                 >
                   {copied ? (
@@ -768,7 +771,7 @@ export function RepoCommit() {
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t("diff.copy_full_sha")}</TooltipContent>
+              <TooltipContent>{t("repo.copy_full_sha")}</TooltipContent>
             </Tooltip>
           </span>
         </div>
@@ -818,14 +821,14 @@ export function RepoCommit() {
                       <button
                         type="button"
                         onClick={() => setTreeSearchOpen((open) => !open)}
-                        aria-label={treeSearchOpen ? t("diff.hide_search") : t("diff.search_files")}
+                        aria-label={treeSearchOpen ? t("repo.search_hide") : t("repo.search_files")}
                         aria-pressed={treeSearchOpen}
                         className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                       >
                         <Search className="size-3.5" aria-hidden />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>{treeSearchOpen ? t("diff.hide_search") : t("diff.search_files")}</TooltipContent>
+                    <TooltipContent>{treeSearchOpen ? t("repo.search_hide") : t("repo.search_files")}</TooltipContent>
                   </Tooltip>
                   <span className="inline-flex items-stretch overflow-hidden rounded-md border border-(--color-border)">
                     <Tooltip>
@@ -833,26 +836,26 @@ export function RepoCommit() {
                         <button
                           type="button"
                           onClick={() => treeRef.current?.expandAll()}
-                          aria-label={t("diff.expand_all_directories")}
+                          aria-label={t("repo.expand_all_directories")}
                           className="grid size-6 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsUpDown className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.expand_all_directories")}</TooltipContent>
+                      <TooltipContent>{t("repo.expand_all_directories")}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
                           onClick={() => treeRef.current?.collapseAll()}
-                          aria-label={t("diff.collapse_all_directories")}
+                          aria-label={t("repo.collapse_all_directories")}
                           className="grid size-6 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsDownUp className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.collapse_all_directories")}</TooltipContent>
+                      <TooltipContent>{t("repo.collapse_all_directories")}</TooltipContent>
                     </Tooltip>
                   </span>
                 </span>
@@ -907,12 +910,10 @@ export function RepoCommit() {
                 event.preventDefault();
               }}
             >
-              <SheetTitle className="flex items-center justify-between border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
-                <span>
-                  Files changed
-                  <span className="ml-2 rounded-full bg-(--color-surface) px-1.5 text-xs leading-5 tabular-nums text-(--color-muted-foreground)">
-                    {stats.fileCount}
-                  </span>
+              <SheetTitle className="flex items-center justify-between border-b border-(--color-border) py-2 pl-4 pr-3 text-sm font-semibold">
+                <span className="inline-flex items-center text-(--color-muted-foreground)">
+                  <FolderTree className="size-4 shrink-0" aria-hidden />
+                  <span className="sr-only">{t("repo.show_file_tree")}</span>
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <span className="inline-flex items-stretch overflow-hidden rounded-md border border-(--color-border)">
@@ -921,32 +922,32 @@ export function RepoCommit() {
                         <button
                           type="button"
                           onClick={() => mobileTreeRef.current?.expandAll()}
-                          aria-label={t("diff.expand_all_directories")}
+                          aria-label={t("repo.expand_all_directories")}
                           className="grid size-7 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsUpDown className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.expand_all_directories")}</TooltipContent>
+                      <TooltipContent>{t("repo.expand_all_directories")}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
                           onClick={() => mobileTreeRef.current?.collapseAll()}
-                          aria-label={t("diff.collapse_all_directories")}
+                          aria-label={t("repo.collapse_all_directories")}
                           className="grid size-7 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsDownUp className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.collapse_all_directories")}</TooltipContent>
+                      <TooltipContent>{t("repo.collapse_all_directories")}</TooltipContent>
                     </Tooltip>
                   </span>
                   <SheetClose asChild>
                     <button
                       type="button"
-                      aria-label="Close"
+                      aria-label={t("close")}
                       className="grid size-7 cursor-pointer place-items-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                     >
                       <X className="size-4" aria-hidden />

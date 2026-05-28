@@ -195,7 +195,7 @@ export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffF
 
   // Pierre closes search on row click. Reopen with the last typed value so
   // the user does not have to retype after navigating to a matched file.
-  // Blur (clicking outside the tree) is intentionally NOT restored — only
+  // Blur (clicking outside the tree) is intentionally NOT restored. Only
   // row-click closures are, gated by `selectionJustFiredRef`.
   const search = useFileTreeSearch(model);
   const searchValueRef = useRef(search.value);
@@ -256,7 +256,7 @@ export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffF
           return;
         }
         // Fall back to descending into shadow roots if the input wasn't in
-        // light DOM (it isn't — Pierre keeps it in the shadow root).
+        // light DOM (it isn't, Pierre keeps it in the shadow root).
         const walker = wrapperRef.current?.querySelectorAll("*") ?? [];
         for (const el of Array.from(walker)) {
           const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;

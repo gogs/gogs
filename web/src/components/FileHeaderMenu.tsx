@@ -12,8 +12,8 @@ export interface FileHeaderMenuProps {
   rawFileHref: string;
   historyHref: string;
   // Edit/Delete only make sense when the diff is anchored to a branch (e.g.
-  // PR diffs). Omit on commit pages — gogs' editor needs a branch ref, and
-  // routing through a SHA returns 404.
+  // PR diffs). Omit on commit pages, since gogs' editor needs a branch ref
+  // and routing through a SHA returns 404.
   editFileHref?: string;
   deleteFileHref?: string;
   // Mobile-only "Expand all lines" surfaced inside the menu (only visible
@@ -46,10 +46,10 @@ export function FileHeaderMenu({
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <MenuTrigger aria-label={t("diff.more_actions")} />
+            <MenuTrigger aria-label={t("more_actions")} />
           </PopoverTrigger>
         </TooltipTrigger>
-        {!open ? <TooltipContent>{t("diff.more_actions")}</TooltipContent> : null}
+        {!open ? <TooltipContent>{t("more_actions")}</TooltipContent> : null}
       </Tooltip>
       <PopoverContent align="end" sideOffset={4} className="w-48 p-1 text-sm">
         <ul role="menu" className="flex flex-col">
@@ -70,7 +70,7 @@ export function FileHeaderMenu({
                 ) : (
                   <UnfoldVertical className="size-3.5 shrink-0" aria-hidden />
                 )}
-                <span>{expandDone ? t("diff.all_lines_expanded") : t("diff.expand_all_lines")}</span>
+                <span>{expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}</span>
               </button>
             </li>
           ) : null}
@@ -82,7 +82,7 @@ export function FileHeaderMenu({
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
             >
               <FileCode2 className="size-3.5 shrink-0" aria-hidden />
-              <span>{t("diff.view_file")}</span>
+              <span>{t("repo.view_file")}</span>
             </a>
           </li>
           <li>
@@ -92,7 +92,7 @@ export function FileHeaderMenu({
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
             >
               <Binary className="size-3.5 shrink-0" aria-hidden />
-              <span>{t("diff.view_raw")}</span>
+              <span>{t("repo.view_raw")}</span>
             </a>
           </li>
           <li>
@@ -102,7 +102,7 @@ export function FileHeaderMenu({
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
             >
               <History className="size-3.5 shrink-0" aria-hidden />
-              <span>{t("diff.view_history")}</span>
+              <span>{t("repo.view_history")}</span>
             </a>
           </li>
           {editFileHref || deleteFileHref ? <li role="separator" className="my-1 h-px bg-(--color-border)" /> : null}
@@ -114,7 +114,7 @@ export function FileHeaderMenu({
                 className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
               >
                 <Pencil className="size-3.5 shrink-0" aria-hidden />
-                <span>{t("editor.edit_file")}</span>
+                <span>{t("repo.editor.edit_file")}</span>
               </a>
             </li>
           ) : null}
@@ -126,7 +126,7 @@ export function FileHeaderMenu({
                 className="flex items-center gap-2 rounded px-2 py-1.5 text-(--color-destructive) hover:bg-(--color-surface)"
               >
                 <Trash2 className="size-3.5 shrink-0" aria-hidden />
-                <span>{t("editor.delete_this_file")}</span>
+                <span>{t("repo.editor.delete_this_file")}</span>
               </a>
             </li>
           ) : null}
@@ -134,7 +134,7 @@ export function FileHeaderMenu({
             <>
               <li role="separator" className="my-1 h-px bg-(--color-border)" />
               <li role="menuitem" aria-disabled className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
-                {t("diff.renamed_from")} <span className="font-mono">{prevFilePath}</span>
+                {t("repo.renamed_from")} <span className="font-mono">{prevFilePath}</span>
               </li>
             </>
           ) : null}

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import {
   Bell,
   CircleDot,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -52,6 +54,7 @@ function formatCount(n: number): string {
 }
 
 export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
+  const { t } = useTranslation();
   const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
   const user = useUserInfo();
   const queryClient = useQueryClient();
@@ -122,7 +125,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             {repo.mirrorOf ? (
               <span className="inline-flex min-w-0 items-center gap-1 text-xs text-(--color-muted-foreground)">
                 <LinkIcon className="size-3 shrink-0" aria-hidden />
-                <span className="shrink-0">mirror of</span>
+                <span className="shrink-0">{t("repo.mirror_of")}</span>
                 <a href={repo.mirrorOf} className="truncate hover:underline" rel="noopener noreferrer" target="_blank">
                   {repo.mirrorOf}
                 </a>
@@ -137,11 +140,12 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
               disabled={watchMutation.isPending}
               signedIn={signedIn}
-              signInTooltip="Sign in to watch this repository"
+              signInTooltip={t("repo.sign_in_to_watch")}
               icon={Bell}
-              label={repo.viewerIsWatching ? "Unwatch" : "Watch"}
+              label={repo.viewerIsWatching ? t("repo.unwatch") : t("repo.watch")}
               count={repo.watchCount}
-              ariaLabel={repo.viewerIsWatching ? "Unwatch this repository" : "Watch this repository"}
+              ariaLabel={repo.viewerIsWatching ? t("repo.unwatch_this_repository") : t("repo.watch_this_repository")}
+              countAriaLabel={t("repo.view_watchers")}
               active={repo.viewerIsWatching}
             />
             <SplitActionButton
@@ -150,11 +154,12 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
               disabled={starMutation.isPending}
               signedIn={signedIn}
-              signInTooltip="Sign in to star this repository"
+              signInTooltip={t("repo.sign_in_to_star")}
               icon={Star}
-              label={repo.viewerIsStarring ? "Starred" : "Star"}
+              label={repo.viewerIsStarring ? t("repo.starred") : t("repo.star")}
               count={repo.starCount}
-              ariaLabel={repo.viewerIsStarring ? "Unstar this repository" : "Star this repository"}
+              ariaLabel={repo.viewerIsStarring ? t("repo.unstar_this_repository") : t("repo.star_this_repository")}
+              countAriaLabel={t("repo.view_stargazers")}
               active={repo.viewerIsStarring}
             />
             <SplitActionButton
@@ -165,16 +170,17 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               actionHref={signedIn ? subUrl(`/repo/fork/${repo.id}`) : undefined}
               signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
               signedIn={signedIn}
-              signInTooltip="Sign in to fork this repository"
+              signInTooltip={t("repo.sign_in_to_fork")}
               icon={GitFork}
-              label="Fork"
+              label={t("repo.fork")}
               count={repo.forkCount}
-              ariaLabel="Fork this repository"
+              ariaLabel={t("repo.fork_this_repository")}
+              countAriaLabel={t("repo.view_forks")}
             />
           </div>
         </div>
 
-        <RepoTabs repo={repo} activeTab={activeTab} repoLink={repoLink} />
+        <RepoTabs repo={repo} activeTab={activeTab} repoLink={repoLink} t={t} />
       </div>
     </div>
   );
@@ -188,14 +194,14 @@ interface TabDescriptor {
   badge?: number;
 }
 
-function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
-  const tabs: TabDescriptor[] = [{ key: "code", href: repoLink, icon: Code, label: "Code" }];
+function buildTabs(repo: RepoHeaderData, repoLink: string, t: TFunction): TabDescriptor[] {
+  const tabs: TabDescriptor[] = [{ key: "code", href: repoLink, icon: Code, label: t("repo.files") }];
   if (repo.issuesEnabled !== false) {
     tabs.push({
       key: "issues",
       href: `${repoLink}/issues`,
       icon: CircleDot,
-      label: "Issues",
+      label: t("issues"),
       badge: repo.openIssueCount,
     });
   }
@@ -204,21 +210,31 @@ function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
       key: "pulls",
       href: `${repoLink}/pulls`,
       icon: GitPullRequest,
-      label: "Pull requests",
+      label: t("pull_requests"),
       badge: repo.openPullRequestCount,
     });
   }
   if (repo.wikiEnabled !== false) {
-    tabs.push({ key: "wiki", href: `${repoLink}/wiki`, icon: FileText, label: "Wiki" });
+    tabs.push({ key: "wiki", href: `${repoLink}/wiki`, icon: FileText, label: t("repo.wiki") });
   }
   if (repo.viewerCanAdminister) {
-    tabs.push({ key: "settings", href: `${repoLink}/settings`, icon: Settings, label: "Settings" });
+    tabs.push({ key: "settings", href: `${repoLink}/settings`, icon: Settings, label: t("repo.settings") });
   }
   return tabs;
 }
 
-function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoHeaderData; activeTab: RepoTab; repoLink: string }) {
-  const tabs = buildTabs(repo, repoLink);
+function RepoTabs({
+  repo,
+  activeTab,
+  repoLink,
+  t,
+}: {
+  repo: RepoHeaderData;
+  activeTab: RepoTab;
+  repoLink: string;
+  t: TFunction;
+}) {
+  const tabs = buildTabs(repo, repoLink, t);
 
   // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
   // fold into a hamburger overflow. If the active tab is past the cutoff,
@@ -236,17 +252,17 @@ function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoHeaderData; activeT
   return (
     <>
       {/* Mobile: first 3 inline + hamburger overflow for the rest. */}
-      <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label="Repository">
+      <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label={t("repository")}>
         {mobileInline.map((tab) => (
           <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
             {tab.label}
           </TabLink>
         ))}
-        {mobileOverflow.length > 0 ? <OverflowMenu tabs={mobileOverflow} activeTab={activeTab} /> : null}
+        {mobileOverflow.length > 0 ? <OverflowMenu tabs={mobileOverflow} activeTab={activeTab} t={t} /> : null}
       </nav>
 
       {/* sm and up: full strip, scrolls horizontally if it ever overflows. */}
-      <nav className="-mb-px hidden gap-1 overflow-x-auto sm:flex" aria-label="Repository">
+      <nav className="-mb-px hidden gap-1 overflow-x-auto sm:flex" aria-label={t("repository")}>
         {tabs.map((tab) => (
           <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
             {tab.label}
@@ -257,18 +273,18 @@ function RepoTabs({ repo, activeTab, repoLink }: { repo: RepoHeaderData; activeT
   );
 }
 
-function OverflowMenu({ tabs, activeTab }: { tabs: TabDescriptor[]; activeTab: RepoTab }) {
+function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab: RepoTab; t: TFunction }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label="More tabs"
+          aria-label={t("more_tabs")}
           className="flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
         >
           <Menu className="size-4" aria-hidden />
-          <span>More</span>
+          <span>{t("more")}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-1">
@@ -304,9 +320,10 @@ function OverflowMenu({ tabs, activeTab }: { tabs: TabDescriptor[]; activeTab: R
 }
 
 function VisibilityBadge({ visibility }: { visibility: RepoHeaderData["visibility"] }) {
+  const { t } = useTranslation();
   const isPrivate = visibility === "private";
   const Icon = isPrivate ? Lock : Globe;
-  const tooltip = isPrivate ? "This repository is private" : "This repository is public";
+  const tooltip = isPrivate ? t("repo.visibility_private") : t("repo.visibility_public");
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -346,6 +363,10 @@ interface SplitActionButtonProps {
   label: string;
   count: number;
   ariaLabel: string;
+  // Accessible name for the count half (e.g. "View watchers"). The visible
+  // text is just the number, so this label tells assistive tech what the
+  // link goes to.
+  countAriaLabel: string;
   active?: boolean;
   disabled?: boolean;
 }
@@ -361,6 +382,7 @@ function SplitActionButton({
   label,
   count,
   ariaLabel,
+  countAriaLabel,
   active,
   disabled,
 }: SplitActionButtonProps) {
@@ -415,7 +437,7 @@ function SplitActionButton({
       {action}
       <a
         href={countHref}
-        aria-label={`${label} count`}
+        aria-label={countAriaLabel}
         className="flex items-center border-l border-(--color-border) bg-(--color-surface)/60 px-2 tabular-nums hover:bg-(--color-surface)"
       >
         {formatCount(count)}
