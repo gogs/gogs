@@ -19,7 +19,7 @@
   "your_settings": "Your settings",
   "admin_panel": "Admin panel",
   "settings": "Settings",
-  "language": "Language",
+  "language_current": "Language: <name>{name}</name>",
   "repository": "Repository",
   "theme": "Theme",
   "theme_light": "Light",

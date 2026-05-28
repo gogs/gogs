@@ -33,7 +33,7 @@ const KEYS = [
   "your_settings",
   "admin_panel",
   "settings",
-  "language",
+  "language_current",
   "repository",
   "theme",
   "theme_light",
