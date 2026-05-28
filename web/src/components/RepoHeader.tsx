@@ -65,8 +65,8 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       if (!prev) return prev;
       return {
         ...prev,
-        isViewerWatching: result.isViewerWatching,
-        isViewerStarring: result.isViewerStarring,
+        viewerIsWatching: result.viewerIsWatching,
+        viewerIsStarring: result.viewerIsStarring,
         watchCount: result.watchCount,
         starCount: result.starCount,
       };
@@ -74,11 +74,11 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   };
 
   const watchMutation = useMutation({
-    mutationFn: () => (repo.isViewerWatching ? unwatchRepo(repo.owner, repo.name) : watchRepo(repo.owner, repo.name)),
+    mutationFn: () => (repo.viewerIsWatching ? unwatchRepo(repo.owner, repo.name) : watchRepo(repo.owner, repo.name)),
     onSuccess: applyResult,
   });
   const starMutation = useMutation({
-    mutationFn: () => (repo.isViewerStarring ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
+    mutationFn: () => (repo.viewerIsStarring ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
     onSuccess: applyResult,
   });
 
@@ -122,10 +122,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signedIn={signedIn}
               signInTooltip="Sign in to watch this repository"
               icon={Bell}
-              label={repo.isViewerWatching ? "Unwatch" : "Watch"}
+              label={repo.viewerIsWatching ? "Unwatch" : "Watch"}
               count={repo.watchCount}
-              ariaLabel={repo.isViewerWatching ? "Unwatch this repository" : "Watch this repository"}
-              active={repo.isViewerWatching}
+              ariaLabel={repo.viewerIsWatching ? "Unwatch this repository" : "Watch this repository"}
+              active={repo.viewerIsWatching}
             />
             <SplitActionButton
               countHref={`${repoLink}/stars`}
@@ -135,10 +135,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signedIn={signedIn}
               signInTooltip="Sign in to star this repository"
               icon={Star}
-              label={repo.isViewerStarring ? "Starred" : "Star"}
+              label={repo.viewerIsStarring ? "Starred" : "Star"}
               count={repo.starCount}
-              ariaLabel={repo.isViewerStarring ? "Unstar this repository" : "Star this repository"}
-              active={repo.isViewerStarring}
+              ariaLabel={repo.viewerIsStarring ? "Unstar this repository" : "Star this repository"}
+              active={repo.viewerIsStarring}
             />
             <SplitActionButton
               countHref={`${repoLink}/forks`}
@@ -194,7 +194,7 @@ function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
   if (repo.wikiEnabled !== false) {
     tabs.push({ key: "wiki", href: `${repoLink}/wiki`, icon: FileText, label: "Wiki" });
   }
-  if (repo.isViewerAdmin) {
+  if (repo.viewerCanAdminister) {
     tabs.push({ key: "settings", href: `${repoLink}/settings`, icon: Settings, label: "Settings" });
   }
   return tabs;

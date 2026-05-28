@@ -9,7 +9,7 @@ export interface RepoHeaderData {
   name: string;
   avatarURL: string;
   visibility: "public" | "private";
-  isViewerAdmin: boolean;
+  viewerCanAdminister: boolean;
   issuesEnabled: boolean;
   pullRequestsEnabled: boolean;
   wikiEnabled: boolean;
@@ -18,8 +18,8 @@ export interface RepoHeaderData {
   forkCount: number;
   openIssueCount: number;
   openPullRequestCount: number;
-  isViewerWatching: boolean;
-  isViewerStarring: boolean;
+  viewerIsWatching: boolean;
+  viewerIsStarring: boolean;
   mirrorOf?: string;
 }
 
@@ -38,8 +38,8 @@ export function repoHeaderQuery(owner: string, name: string) {
 }
 
 export interface RepoActionResult {
-  isViewerWatching: boolean;
-  isViewerStarring: boolean;
+  viewerIsWatching: boolean;
+  viewerIsStarring: boolean;
   watchCount: number;
   starCount: number;
 }

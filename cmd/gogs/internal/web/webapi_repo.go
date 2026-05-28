@@ -36,9 +36,9 @@ type repoHeader struct {
 	OpenPullRequestCount int  `json:"openPullRequestCount"`
 	WikiEnabled          bool `json:"wikiEnabled"`
 
-	IsViewerAdmin    bool `json:"isViewerAdmin"`
-	IsViewerWatching bool `json:"isViewerWatching"`
-	IsViewerStarring bool `json:"isViewerStarring"`
+	ViewerCanAdminister bool `json:"viewerCanAdminister"`
+	ViewerIsWatching    bool `json:"viewerIsWatching"`
+	ViewerIsStarring    bool `json:"viewerIsStarring"`
 }
 
 func getRepoHeader(c flamego.Context, user *database.User) (statusCode int, resp *repoHeader, err error) {
@@ -114,9 +114,9 @@ func getRepoHeader(c flamego.Context, user *database.User) (statusCode int, resp
 		OpenPullRequestCount: repo.NumPulls - repo.NumClosedPulls,
 		WikiEnabled:          wikiEnabled,
 
-		IsViewerAdmin:    mode >= database.AccessModeAdmin,
-		IsViewerWatching: viewerID > 0 && database.IsWatching(viewerID, repo.ID),
-		IsViewerStarring: viewerID > 0 && database.IsStaring(viewerID, repo.ID),
+		ViewerCanAdminister: mode >= database.AccessModeAdmin,
+		ViewerIsWatching:    viewerID > 0 && database.IsWatching(viewerID, repo.ID),
+		ViewerIsStarring:    viewerID > 0 && database.IsStaring(viewerID, repo.ID),
 	}
 
 	if repo.IsMirror {
@@ -132,41 +132,19 @@ func getRepoHeader(c flamego.Context, user *database.User) (statusCode int, resp
 }
 
 type repoCommitSignature struct {
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatarURL"`
-	UserPath  string `json:"userPath,omitempty"`
-	When      string `json:"when"`
-}
-
-type repoCommitMeta struct {
-	SHA       string              `json:"sha"`
-	ShortSHA  string              `json:"shortSha"`
-	Summary   string              `json:"summary"`
-	Message   string              `json:"message"`
-	Author    repoCommitSignature `json:"author"`
-	Committer repoCommitSignature `json:"committer"`
-	Parents   []string            `json:"parents"`
+	Name       string    `json:"name"`
+	Email      string    `json:"email"`
+	When       time.Time `json:"when"`
+	AvatarURL  string    `json:"avatarURL"`
+	ProfileURL string    `json:"profileURL,omitempty"`
 }
 
 type repoCommit struct {
-	Commit     repoCommitMeta `json:"commit"`
-	SourcePath string         `json:"sourcePath"`
-	RawDiffURL string         `json:"rawDiffURL"`
-}
-
-// whitespaceFlag maps the `whitespace` query value to its `git diff` flag.
-// `ignore-change` (`-b`) still surfaces added/removed blank lines, unlike
-// `ignore-all` (`-w`). Empty or unknown values disable whitespace handling.
-func whitespaceFlag(v string) string {
-	switch v {
-	case "ignore-all":
-		return "-w"
-	case "ignore-change":
-		return "-b"
-	default:
-		return ""
-	}
+	SHA     string              `json:"sha"`
+	Subject string              `json:"subject"`
+	Body    string              `json:"body"`
+	Author  repoCommitSignature `json:"author"`
+	Parents []string            `json:"parents"`
 }
 
 func getRepoCommit(c flamego.Context, user *database.User) (statusCode int, resp *repoCommit, err error) {
@@ -242,33 +220,42 @@ func getRepoCommit(c flamego.Context, user *database.User) (statusCode int, resp
 		out := repoCommitSignature{
 			Name:      s.Name,
 			Email:     s.Email,
+			When:      s.When.UTC(),
 			AvatarURL: tool.AvatarLink(s.Email),
-			When:      s.When.UTC().Format(time.RFC3339),
 		}
 		if u, err := database.Handle.Users().GetByEmail(ctx, s.Email); err == nil && u != nil {
-			out.UserPath = conf.Server.Subpath + "/" + u.Name
+			out.ProfileURL = conf.Server.Subpath + "/" + u.Name
 		}
 		return out
 	}
 
-	body := ""
-	if msg := commit.Message; len(msg) > len(commit.Summary()) {
-		body = msg[len(commit.Summary()):]
+	subject := commit.Summary()
+	var body string
+	if msg := commit.Message; len(msg) > len(subject) {
+		body = msg[len(subject):]
 	}
 
 	return http.StatusOK, &repoCommit{
-		Commit: repoCommitMeta{
-			SHA:       commitID,
-			ShortSHA:  tool.ShortSHA1(commitID),
-			Summary:   commit.Summary(),
-			Message:   body,
-			Author:    sig(commit.Author),
-			Committer: sig(commit.Committer),
-			Parents:   parents,
-		},
-		SourcePath: conf.Server.Subpath + "/" + path.Join(owner.Name, repo.Name, "src", commitID),
-		RawDiffURL: conf.Server.Subpath + "/" + path.Join(owner.Name, repo.Name, "commit", commitID+".diff"),
+		SHA:     commitID,
+		Subject: subject,
+		Body:    body,
+		Author:  sig(commit.Author),
+		Parents: parents,
 	}, nil
+}
+
+// whitespaceFlag maps the `whitespace` query value to its `git diff` flag.
+// `ignore-change` (`-b`) still surfaces added/removed blank lines, unlike
+// `ignore-all` (`-w`). Empty or unknown values disable whitespace handling.
+func whitespaceFlag(v string) string {
+	switch v {
+	case "ignore-all":
+		return "-w"
+	case "ignore-change":
+		return "-b"
+	default:
+		return ""
+	}
 }
 
 // `{ext}` selects `git diff` (`diff`) vs `git format-patch` (`patch`) output.
@@ -398,10 +385,10 @@ func resolveRepoForViewer(c flamego.Context, user *database.User) (*database.Rep
 }
 
 // No `omitempty`: `false` and `0` are meaningful states the client must see
-// (e.g. an unwatch transitions `isViewerWatching` to `false`).
+// (e.g. an unwatch transitions `viewerIsWatching` to `false`).
 type repoActionResponse struct {
-	IsViewerWatching bool `json:"isViewerWatching"`
-	IsViewerStarring bool `json:"isViewerStarring"`
+	ViewerIsWatching bool `json:"viewerIsWatching"`
+	ViewerIsStarring bool `json:"viewerIsStarring"`
 	WatchCount       int  `json:"watchCount"`
 	StarCount        int  `json:"starCount"`
 }
@@ -433,8 +420,8 @@ func repoWatchAction(c flamego.Context, user *database.User, watching bool) (sta
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
-		IsViewerWatching: watching,
-		IsViewerStarring: database.IsStaring(user.ID, repo.ID),
+		ViewerIsWatching: watching,
+		ViewerIsStarring: database.IsStaring(user.ID, repo.ID),
 		WatchCount:       updated.NumWatches,
 		StarCount:        updated.NumStars,
 	}, nil
@@ -474,8 +461,8 @@ func repoStarAction(c flamego.Context, user *database.User, starred bool) (statu
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
-		IsViewerWatching: database.IsWatching(user.ID, repo.ID),
-		IsViewerStarring: starred,
+		ViewerIsWatching: database.IsWatching(user.ID, repo.ID),
+		ViewerIsStarring: starred,
 		WatchCount:       updated.NumWatches,
 		StarCount:        updated.NumStars,
 	}, nil

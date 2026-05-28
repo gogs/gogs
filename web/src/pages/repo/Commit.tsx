@@ -36,23 +36,17 @@ export interface RepoCommitSignature {
   name: string;
   email: string;
   avatarURL: string;
-  userPath?: string;
+  profileURL?: string;
   when: string;
 }
 
 export interface RepoCommitPage {
-  commit: {
-    sha: string;
-    shortSha: string;
-    summary: string;
-    message: string;
-    author: RepoCommitSignature;
-    committer: RepoCommitSignature;
-    parents: string[];
-  };
+  sha: string;
+  subject: string;
+  body: string;
+  author: RepoCommitSignature;
+  parents: string[];
   patch: string;
-  sourcePath: string;
-  rawDiffURL: string;
 }
 
 // Page-local override that unconstrains the shared Navbar, Footer, and
@@ -164,11 +158,11 @@ const TREE_THEME_STYLE: CSSProperties = {
 
 const BODY_CLAMP_LINES = 3;
 
-function CommitBody({ message }: { message: string }) {
-  const lines = message.split("\n");
+function CommitBody({ body }: { body: string }) {
+  const lines = body.split("\n");
   const needsClamp = lines.length > BODY_CLAMP_LINES;
   const [expanded, setExpanded] = useState(!needsClamp);
-  const visible = expanded ? message : lines.slice(0, BODY_CLAMP_LINES).join("\n");
+  const visible = expanded ? body : lines.slice(0, BODY_CLAMP_LINES).join("\n");
 
   return (
     <div className="mt-2 max-w-3xl">
@@ -188,6 +182,7 @@ function CommitBody({ message }: { message: string }) {
 
 export function RepoCommit() {
   const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
+  const { sha, subject, body, author, parents, patch } = data;
   const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
   const search = useSearch({ from: "/$owner/$repo/commit/$sha" });
   const navigate = useNavigate({ from: "/$owner/$repo/commit/$sha" });
@@ -345,14 +340,14 @@ export function RepoCommit() {
 
   const allItems = useMemo<CodeViewItem[]>(
     () =>
-      parsePatchFiles(data.patch).flatMap((parsed, patchIndex) =>
+      parsePatchFiles(patch).flatMap((parsed, patchIndex) =>
         parsed.files.map<CodeViewItem>((fileDiff, fileIndex) => ({
           id: `${patchIndex}:${fileIndex}:${fileDiff.name}`,
           type: "diff",
           fileDiff,
         })),
       ),
-    [data.patch],
+    [patch],
   );
 
   // Stamp each item with its current collapse state. Pierre's CodeView caches
@@ -459,17 +454,16 @@ export function RepoCommit() {
     };
   }, [nameToItemIds]);
 
-  const { commit } = data;
-  const authorLabel = commit.author.userPath ? (
-    <a href={commit.author.userPath} className="font-semibold text-(--color-foreground) hover:underline">
-      {commit.author.name}
+  const authorLabel = author.profileURL ? (
+    <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
+      {author.name}
     </a>
   ) : (
-    <span className="font-semibold text-(--color-foreground)">{commit.author.name}</span>
+    <span className="font-semibold text-(--color-foreground)">{author.name}</span>
   );
 
   const repoLink = subUrl(`/${owner}/${repo}`);
-  const browseFilesHref = `${repoLink}/src/${commit.sha}`;
+  const browseFilesHref = `${repoLink}/src/${sha}`;
 
   // Snap the document scroller to the position where the sticky workspace
   // (toolbar + diff body) is locked to the viewport. We call this before
@@ -511,7 +505,7 @@ export function RepoCommit() {
       if (item.type !== "diff") return;
       if (expandedById[item.id]) return;
       const fileDiff = item.fileDiff;
-      const parent = commit.parents[0];
+      const parent = parents[0];
       // Added files have no pre-image; deleted files have no post-image.
       // Renames carry the pre-image at `prevName`.
       const prevPath = fileDiff.prevName ?? fileDiff.name;
@@ -526,7 +520,7 @@ export function RepoCommit() {
       try {
         const [oldContents, newContents] = await Promise.all([
           fileDiff.type === "new" ? Promise.resolve("") : fetchSide(parent, prevPath),
-          fileDiff.type === "deleted" ? Promise.resolve("") : fetchSide(commit.sha, fileDiff.name),
+          fileDiff.type === "deleted" ? Promise.resolve("") : fetchSide(sha, fileDiff.name),
         ]);
         const upgraded = parseDiffFromFile(
           { name: prevPath, contents: oldContents },
@@ -543,7 +537,7 @@ export function RepoCommit() {
         });
       }
     },
-    [commit.parents, commit.sha, expandedById, owner, repo],
+    [parents, sha, expandedById, owner, repo],
   );
 
   // Pierre renders our callback's output into a `<slot name="header-prefix">`
@@ -589,12 +583,12 @@ export function RepoCommit() {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const prev = item.fileDiff.prevName;
-      const viewFileHref = `${repoLink}/src/${commit.sha}/${path}`;
-      const rawFileHref = `${repoLink}/raw/${commit.sha}/${path}`;
+      const viewFileHref = `${repoLink}/src/${sha}/${path}`;
+      const rawFileHref = `${repoLink}/raw/${sha}/${path}`;
       // Gogs' file-history view lives at `/commits/{ref}/{path}`. The ref can
       // be a SHA, so we point at this commit; gogs walks history back from
       // there.
-      const historyHref = `${repoLink}/commits/${commit.sha}/${path}`;
+      const historyHref = `${repoLink}/commits/${sha}/${path}`;
       // Edit/Delete are omitted on the commit page: gogs' editor needs a
       // branch ref, and the commit SHA produces 404. The PR diff view (when
       // it lands here) is the right home for those.
@@ -668,13 +662,13 @@ export function RepoCommit() {
         </span>
       );
     },
-    [commit.sha, copiedPathById, copyFilePath, expandAllLinesFor, expandedById, repoLink, t],
+    [sha, copiedPathById, copyFilePath, expandAllLinesFor, expandedById, repoLink, t],
   );
 
   const copySha = useCallback(() => {
     void (async () => {
       try {
-        await navigator.clipboard.writeText(commit.sha);
+        await navigator.clipboard.writeText(sha);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
       } catch {
@@ -682,7 +676,7 @@ export function RepoCommit() {
         // visible inline, so silently swallow.
       }
     })();
-  }, [commit.sha]);
+  }, [sha]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -691,9 +685,7 @@ export function RepoCommit() {
 
       <section className="mx-auto w-full max-w-7xl px-4 pt-6 pb-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-          <h2 className="min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground)">
-            {commit.summary}
-          </h2>
+          <h2 className="min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground)">{subject}</h2>
           <div className="basis-full sm:basis-auto">
             <a
               href={browseFilesHref}
@@ -704,16 +696,19 @@ export function RepoCommit() {
             </a>
           </div>
         </div>
-        {commit.message.trim() ? <CommitBody message={commit.message.trim()} /> : null}
+        {body.trim() ? <CommitBody body={body.trim()} /> : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
           <span className="inline-flex items-center gap-1.5">
-            <img src={commit.author.avatarURL} alt="" className="size-6 rounded-full" />
+            <img src={author.avatarURL} alt="" className="size-6 rounded-full" />
             {authorLabel}
             <span>{t("diff.authored")}</span>
-            <time dateTime={commit.author.when} title={formatAbsoluteTime(commit.author.when)}>
-              {formatRelativeTime(commit.author.when)}
-            </time>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <time dateTime={author.when}>{formatRelativeTime(author.when)}</time>
+              </TooltipTrigger>
+              <TooltipContent>{formatAbsoluteTime(author.when)}</TooltipContent>
+            </Tooltip>
           </span>
           {/* TODO: render a "Verified" pill once the backend exposes commit
               signature verification. Hidden for now to avoid claiming
@@ -722,20 +717,18 @@ export function RepoCommit() {
           <span aria-hidden className="hidden h-4 w-px bg-(--color-border) sm:inline-block" />
 
           <span className="inline-flex items-center gap-1 font-mono text-xs">
-            <a href={subUrl(`/${owner}/${repo}/commit/${commit.sha}.patch`)} className="hover:underline">
+            <a href={subUrl(`/${owner}/${repo}/commit/${sha}.patch`)} className="hover:underline">
               {t("diff.patch_short")}
             </a>
             <span aria-hidden>·</span>
-            <a href={data.rawDiffURL} className="hover:underline">
+            <a href={subUrl(`/${owner}/${repo}/commit/${sha}.diff`)} className="hover:underline">
               {t("diff.diff_short")}
             </a>
-            {commit.parents.length > 0 ? (
+            {parents.length > 0 ? (
               <>
                 <span aria-hidden>·</span>
-                <span>
-                  {commit.parents.length > 1 ? `${commit.parents.length} ${t("diff.parents")}` : t("diff.parent")}
-                </span>
-                {commit.parents.map((p) => (
+                <span>{parents.length > 1 ? `${parents.length} ${t("diff.parents")}` : t("diff.parent")}</span>
+                {parents.map((p) => (
                   <a
                     key={p}
                     href={`${repoLink}/commit/${p}`}
@@ -749,7 +742,7 @@ export function RepoCommit() {
             <span aria-hidden>·</span>
             <span>{t("diff.commit")}</span>
             <code className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground)">
-              {commit.shortSha}
+              {sha.slice(0, 10)}
             </code>
             <Tooltip>
               <TooltipTrigger asChild>
