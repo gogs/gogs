@@ -1,7 +1,6 @@
 package web
 
 import (
-	stdctx "context"
 	"net/http"
 	"net/url"
 	"path"
@@ -156,6 +155,7 @@ type repoCommit struct {
 	RawDiffURL string         `json:"rawDiffURL"`
 }
 
+// whitespaceFlag maps the `whitespace` query value to its `git diff` flag.
 // `ignore-change` (`-b`) still surfaces added/removed blank lines, unlike
 // `ignore-all` (`-w`). Empty or unknown values disable whitespace handling.
 func whitespaceFlag(v string) string {
@@ -169,12 +169,11 @@ func whitespaceFlag(v string) string {
 	}
 }
 
-func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoCommit, err error) {
-	ctx := r.Context()
-	params := c.Params()
-	ownerName := params["owner"]
-	repoName := params["repo"]
-	commitID := params["sha"]
+func getRepoCommit(c flamego.Context, user *database.User) (statusCode int, resp *repoCommit, err error) {
+	ctx := c.Request().Context()
+	ownerName := c.Param("owner")
+	repoName := c.Param("repo")
+	commitID := c.Param("sha")
 
 	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
@@ -273,14 +272,13 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 }
 
 // `{ext}` selects `git diff` (`diff`) vs `git format-patch` (`patch`) output.
-func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
+func getRepoCommitRaw(c flamego.Context, user *database.User) {
 	w := c.ResponseWriter()
-	ctx := r.Context()
-	params := c.Params()
-	ownerName := params["owner"]
-	repoName := params["repo"]
-	commitID := params["sha"]
-	ext := params["ext"]
+	ctx := c.Request().Context()
+	ownerName := c.Param("owner")
+	repoName := c.Param("repo")
+	commitID := c.Param("sha")
+	ext := c.Param("ext")
 
 	writeStatus := func(code int) {
 		w.Header().Set("Cache-Control", "no-store")
@@ -349,7 +347,7 @@ func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	}
 
 	var rawOpts []git.RawDiffOptions
-	if flag := whitespaceFlag(r.URL.Query().Get("whitespace")); flag != "" {
+	if flag := whitespaceFlag(c.Request().URL.Query().Get("whitespace")); flag != "" {
 		rawOpts = append(rawOpts, git.RawDiffOptions{
 			CommandOptions: git.CommandOptions{Args: []string{flag}},
 		})
@@ -362,10 +360,10 @@ func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	}
 }
 
-func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.User) (*database.Repository, int, error) {
-	params := c.Params()
-	ownerName := params["owner"]
-	repoName := params["repo"]
+func resolveRepoForViewer(c flamego.Context, user *database.User) (*database.Repository, int, error) {
+	ctx := c.Request().Context()
+	ownerName := c.Param("owner")
+	repoName := c.Param("repo")
 	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
@@ -408,18 +406,19 @@ type repoActionResponse struct {
 	StarCount        int  `json:"starCount"`
 }
 
-func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, watching bool) (statusCode int, resp *repoActionResponse, err error) {
+func repoWatchAction(c flamego.Context, user *database.User, watching bool) (statusCode int, resp *repoActionResponse, err error) {
 	if user == nil {
 		return http.StatusUnauthorized, nil, nil
 	}
-	repo, status, err := resolveRepoForViewer(c, r.Context(), user)
+	ctx := c.Request().Context()
+	repo, status, err := resolveRepoForViewer(c, user)
 	if err != nil || repo == nil {
 		return status, nil, err
 	}
 	// The store layer only exposes `Watch` (not Unwatch) so far, hence the
 	// deprecated package-level helper for the unwatch branch.
 	if watching {
-		err = database.Handle.Repositories().Watch(r.Context(), user.ID, repo.ID)
+		err = database.Handle.Repositories().Watch(ctx, user.ID, repo.ID)
 	} else {
 		err = database.WatchRepo(user.ID, repo.ID, false)
 	}
@@ -428,7 +427,7 @@ func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, wa
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "watch repo")
 	}
 	// Reload to get the updated NumWatches count from the after-trigger.
-	updated, err := database.Handle.Repositories().GetByName(r.Context(), repo.OwnerID, repo.Name)
+	updated, err := database.Handle.Repositories().GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
 		log.Error("repoWatchAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
@@ -441,26 +440,27 @@ func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, wa
 	}, nil
 }
 
-func postRepoWatch(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
-	return repoWatchAction(c, r, user, true)
+func postRepoWatch(c flamego.Context, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
+	return repoWatchAction(c, user, true)
 }
 
-func deleteRepoWatch(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
-	return repoWatchAction(c, r, user, false)
+func deleteRepoWatch(c flamego.Context, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
+	return repoWatchAction(c, user, false)
 }
 
-func repoStarAction(c flamego.Context, r *http.Request, user *database.User, starred bool) (statusCode int, resp *repoActionResponse, err error) {
+func repoStarAction(c flamego.Context, user *database.User, starred bool) (statusCode int, resp *repoActionResponse, err error) {
 	if user == nil {
 		return http.StatusUnauthorized, nil, nil
 	}
-	repo, status, err := resolveRepoForViewer(c, r.Context(), user)
+	ctx := c.Request().Context()
+	repo, status, err := resolveRepoForViewer(c, user)
 	if err != nil || repo == nil {
 		return status, nil, err
 	}
 	// The store layer only exposes `Star` (not Unstar) so far, hence the
 	// deprecated package-level helper for the unstar branch.
 	if starred {
-		err = database.Handle.Repositories().Star(r.Context(), user.ID, repo.ID)
+		err = database.Handle.Repositories().Star(ctx, user.ID, repo.ID)
 	} else {
 		err = database.StarRepo(user.ID, repo.ID, false)
 	}
@@ -468,7 +468,7 @@ func repoStarAction(c flamego.Context, r *http.Request, user *database.User, sta
 		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starred, user.ID, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "star repo")
 	}
-	updated, err := database.Handle.Repositories().GetByName(r.Context(), repo.OwnerID, repo.Name)
+	updated, err := database.Handle.Repositories().GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
 		log.Error("repoStarAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
@@ -481,20 +481,20 @@ func repoStarAction(c flamego.Context, r *http.Request, user *database.User, sta
 	}, nil
 }
 
-func postRepoStar(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
-	return repoStarAction(c, r, user, true)
+func postRepoStar(c flamego.Context, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
+	return repoStarAction(c, user, true)
 }
 
-func deleteRepoStar(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
-	return repoStarAction(c, r, user, false)
+func deleteRepoStar(c flamego.Context, user *database.User) (statusCode int, resp *repoActionResponse, err error) {
+	return repoStarAction(c, user, false)
 }
 
 // Slashes inside a ref name (e.g. `feat/foo`) must be percent-encoded as
 // `%2F` in the `{ref}` segment so the router can split ref from filepath.
 // Bare commit SHAs need no encoding.
-func getRepoRawFile(c flamego.Context, r *http.Request, user *database.User) {
+func getRepoRawFile(c flamego.Context, user *database.User) {
 	w := c.ResponseWriter()
-	ctx := r.Context()
+	ctx := c.Request().Context()
 
 	writeStatus := func(code int) {
 		w.WriteHeader(code)
@@ -602,7 +602,7 @@ func getRepoRawFile(c flamego.Context, r *http.Request, user *database.User) {
 	case !tool.IsTextFile(data) && !tool.IsImageFile(data):
 		w.Header().Set("Content-Disposition", `attachment; filename="`+path.Base(filePath)+`"`)
 		w.Header().Set("Content-Transfer-Encoding", "binary")
-	case tool.IsTextFile(data) && (!conf.Repository.EnableRawFileRenderMode || r.URL.Query().Get("render") != "true"):
+	case tool.IsTextFile(data) && (!conf.Repository.EnableRawFileRenderMode || c.Request().URL.Query().Get("render") != "true"):
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 
