@@ -11,7 +11,9 @@ interface Match {
 
 // Walk `hunkContent` so context lines (which exist on both `additionLines` and
 // `deletionLines`) are counted once, not twice. Changes are counted on each
-// side they actually appear.
+// side they actually appear. Guard every array read because a malformed patch
+// or stale Pierre indices would otherwise crash the whole search panel on
+// `undefined.toLowerCase()`.
 function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
   if (!query) return [];
   const needle = query.toLowerCase();
@@ -23,7 +25,9 @@ function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
       for (const c of h.hunkContent) {
         if (c.type === "context") {
           for (let k = 0; k < c.lines; k++) {
-            if (additionLines[c.additionLineIndex + k].toLowerCase().includes(needle)) {
+            const line = additionLines[c.additionLineIndex + k];
+            if (line === undefined) continue;
+            if (line.toLowerCase().includes(needle)) {
               out.push({
                 itemId: item.id,
                 side: "additions",
@@ -33,7 +37,9 @@ function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
           }
         } else {
           for (let k = 0; k < c.deletions; k++) {
-            if (deletionLines[c.deletionLineIndex + k].toLowerCase().includes(needle)) {
+            const line = deletionLines[c.deletionLineIndex + k];
+            if (line === undefined) continue;
+            if (line.toLowerCase().includes(needle)) {
               out.push({
                 itemId: item.id,
                 side: "deletions",
@@ -42,7 +48,9 @@ function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
             }
           }
           for (let k = 0; k < c.additions; k++) {
-            if (additionLines[c.additionLineIndex + k].toLowerCase().includes(needle)) {
+            const line = additionLines[c.additionLineIndex + k];
+            if (line === undefined) continue;
+            if (line.toLowerCase().includes(needle)) {
               out.push({
                 itemId: item.id,
                 side: "additions",
@@ -122,16 +130,23 @@ export function DiffSearch<L>({ items, viewRef }: Props<L>) {
     [matches, surface],
   );
 
-  // Window-level Cmd/Ctrl-F intercept. The search box is always visible in
-  // the toolbar, so the shortcut just focuses (and selects) the input.
+  // Window-level Cmd/Ctrl-F intercept. First press focuses the diff search.
+  // A second press within 500ms falls through to the browser's native
+  // find-in-page, so users can still search outside the diff (e.g. their
+  // own comment text) without having to remap muscle memory.
   useEffect(() => {
+    let lastFindAt = 0;
     const onKey = (e: KeyboardEvent) => {
-      const isFind = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f";
-      if (isFind) {
-        e.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
+      if (!((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f")) return;
+      const now = Date.now();
+      if (now - lastFindAt < 500) {
+        lastFindAt = 0;
+        return;
       }
+      lastFindAt = now;
+      e.preventDefault();
+      inputRef.current?.focus();
+      inputRef.current?.select();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
