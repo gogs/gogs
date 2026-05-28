@@ -331,7 +331,7 @@ func (r *Repository) RelAvatarLink() string {
 // AvatarLink returns repository avatar absolute link.
 func (r *Repository) AvatarLink() string {
 	link := r.RelAvatarLink()
-	if link[0] == '/' && link[1] != '/' {
+	if len(link) > 2 && link[0] == '/' && link[1] != '/' {
 		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
 	}
 	return link

@@ -13,13 +13,13 @@ export interface RepoHeaderData {
   issuesEnabled: boolean;
   pullRequestsEnabled: boolean;
   wikiEnabled: boolean;
-  watches: number;
-  stars: number;
-  forks: number;
-  openIssues: number;
-  openPullRequests: number;
+  watchCount: number;
+  starCount: number;
+  forkCount: number;
+  openIssueCount: number;
+  openPullRequestCount: number;
   isViewerWatching: boolean;
-  hasViewerStarred: boolean;
+  isViewerStarring: boolean;
   mirrorOf?: string;
 }
 
@@ -39,9 +39,9 @@ export function repoHeaderQuery(owner: string, name: string) {
 
 export interface RepoActionResult {
   isViewerWatching: boolean;
-  hasViewerStarred: boolean;
-  watches: number;
-  stars: number;
+  isViewerStarring: boolean;
+  watchCount: number;
+  starCount: number;
 }
 
 async function repoAction(method: "POST" | "DELETE", owner: string, name: string, action: "watch" | "star") {

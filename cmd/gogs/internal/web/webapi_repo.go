@@ -16,40 +16,43 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
+	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
 )
 
 type repoHeader struct {
-	ID                  int64  `json:"id"`
-	Owner               string `json:"owner"`
-	Name                string `json:"name"`
-	AvatarURL           string `json:"avatarURL"`
-	Visibility          string `json:"visibility"`
-	IsViewerAdmin       bool   `json:"isViewerAdmin"`
-	IssuesEnabled       bool   `json:"issuesEnabled"`
-	PullRequestsEnabled bool   `json:"pullRequestsEnabled"`
-	WikiEnabled         bool   `json:"wikiEnabled"`
-	Watches             int    `json:"watches"`
-	Stars               int    `json:"stars"`
-	Forks               int    `json:"forks"`
-	OpenIssues          int    `json:"openIssues"`
-	OpenPullRequests    int    `json:"openPullRequests"`
-	IsViewerWatching    bool   `json:"isViewerWatching"`
-	HasViewerStarred    bool   `json:"hasViewerStarred"`
-	MirrorOf            string `json:"mirrorOf,omitempty"`
+	ID         int64  `json:"id"`
+	Owner      string `json:"owner"`
+	Name       string `json:"name"`
+	AvatarURL  string `json:"avatarURL"`
+	Visibility string `json:"visibility"`
+	MirrorOf   string `json:"mirrorOf,omitempty"`
+
+	WatchCount           int  `json:"watchCount"`
+	StarCount            int  `json:"starCount"`
+	ForkCount            int  `json:"forkCount"`
+	IssuesEnabled        bool `json:"issuesEnabled"`
+	OpenIssueCount       int  `json:"openIssueCount"`
+	PullRequestsEnabled  bool `json:"pullRequestsEnabled"`
+	OpenPullRequestCount int  `json:"openPullRequestCount"`
+	WikiEnabled          bool `json:"wikiEnabled"`
+
+	IsViewerAdmin    bool `json:"isViewerAdmin"`
+	IsViewerWatching bool `json:"isViewerWatching"`
+	IsViewerStarring bool `json:"isViewerStarring"`
 }
 
-func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoHeader, err error) {
-	ctx := r.Context()
-	params := c.Params()
-	ownerName := params["owner"]
-	repoName := params["repo"]
+func getRepoHeader(c flamego.Context, user *database.User) (statusCode int, resp *repoHeader, err error) {
+	ctx := c.Request().Context()
+	ownerName := c.Param("owner")
+	repoName := c.Param("repo")
 
 	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
+		log.Error("getRepoHeader: get user by username %q: %v", ownerName, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by username")
 	}
 
@@ -58,6 +61,7 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
+		log.Error("getRepoHeader: get repo by name %q/%q: %v", ownerName, repoName, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repo by name")
 	}
 
@@ -66,8 +70,7 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 		viewerID = user.ID
 	}
 
-	// Site admins get owner-level access on every repo, mirroring
-	// `RepoAssignment` in internal/context/repo.go.
+	// Site admins get owner-level access on every repo.
 	var mode database.AccessMode
 	if user != nil && user.IsAdmin {
 		mode = database.AccessModeOwner
@@ -80,24 +83,15 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 
 	// Viewer can see the header if they have read access OR the repo exposes
 	// issues/wiki publicly. In the partial-public case we mask the feature
-	// flags to what the guest is allowed to see, matching `RepoAssignment`.
-	enableIssues := repo.EnableIssues
-	enableWiki := repo.EnableWiki
+	// flags to what the guest is allowed to see.
+	issuesEnabled := repo.EnableIssues
+	wikiEnabled := repo.EnableWiki
 	if mode < database.AccessModeRead {
 		if !repo.IsPartialPublic() {
 			return http.StatusNotFound, nil, nil
 		}
-		enableIssues = repo.CanGuestViewIssues()
-		enableWiki = repo.CanGuestViewWiki()
-	}
-
-	repo.Owner = owner
-	// `repo.AvatarLink()` panics on an empty `RelAvatarLink()` (which is the
-	// common case: most repos don't set a custom avatar), so check that first
-	// and fall back to the owner's avatar.
-	avatarURL := owner.AvatarURL()
-	if repo.RelAvatarLink() != "" {
-		avatarURL = repo.AvatarLink()
+		issuesEnabled = repo.CanGuestViewIssues()
+		wikiEnabled = repo.CanGuestViewWiki()
 	}
 
 	visibility := "public"
@@ -105,23 +99,25 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 		visibility = "private"
 	}
 
-	out := &repoHeader{
-		ID:                  repo.ID,
-		Owner:               owner.Name,
-		Name:                repo.Name,
-		AvatarURL:           avatarURL,
-		Visibility:          visibility,
-		IsViewerAdmin:       mode >= database.AccessModeAdmin,
-		IssuesEnabled:       enableIssues,
-		PullRequestsEnabled: repo.AllowsPulls(),
-		WikiEnabled:         enableWiki,
-		Watches:             repo.NumWatches,
-		Stars:               repo.NumStars,
-		Forks:               repo.NumForks,
-		OpenIssues:          repo.NumIssues - repo.NumClosedIssues,
-		OpenPullRequests:    repo.NumPulls - repo.NumClosedPulls,
-		IsViewerWatching:    viewerID > 0 && database.IsWatching(viewerID, repo.ID),
-		HasViewerStarred:    viewerID > 0 && database.IsStaring(viewerID, repo.ID),
+	resp = &repoHeader{
+		ID:         repo.ID,
+		Owner:      owner.Name,
+		Name:       repo.Name,
+		AvatarURL:  strx.Coalesce(repo.AvatarLink(), owner.AvatarURL()),
+		Visibility: visibility,
+
+		WatchCount:           repo.NumWatches,
+		StarCount:            repo.NumStars,
+		ForkCount:            repo.NumForks,
+		IssuesEnabled:        issuesEnabled,
+		OpenIssueCount:       repo.NumIssues - repo.NumClosedIssues,
+		PullRequestsEnabled:  repo.AllowsPulls(),
+		OpenPullRequestCount: repo.NumPulls - repo.NumClosedPulls,
+		WikiEnabled:          wikiEnabled,
+
+		IsViewerAdmin:    mode >= database.AccessModeAdmin,
+		IsViewerWatching: viewerID > 0 && database.IsWatching(viewerID, repo.ID),
+		IsViewerStarring: viewerID > 0 && database.IsStaring(viewerID, repo.ID),
 	}
 
 	if repo.IsMirror {
@@ -129,11 +125,11 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 		if err != nil {
 			log.Error("getRepoHeader: get mirror by repo ID %d: %v", repo.ID, err)
 		} else if mirror != nil {
-			out.MirrorOf = mirror.Address()
+			resp.MirrorOf = mirror.Address()
 		}
 	}
 
-	return http.StatusOK, out, nil
+	return http.StatusOK, resp, nil
 }
 
 type repoCommitSignature struct {
@@ -160,11 +156,8 @@ type repoCommit struct {
 	RawDiffURL string         `json:"rawDiffURL"`
 }
 
-// whitespaceFlag maps the `whitespace` query value used on the diff page to
-// the matching git diff flag. `ignore-all` → `-w` ignores all whitespace
-// changes. `ignore-change` → `-b` is the milder variant that still surfaces
-// added/removed blank lines. An empty or unknown value means no whitespace
-// handling.
+// `ignore-change` (`-b`) still surfaces added/removed blank lines, unlike
+// `ignore-all` (`-w`). Empty or unknown values disable whitespace handling.
 func whitespaceFlag(v string) string {
 	switch v {
 	case "ignore-all":
@@ -188,6 +181,7 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 		if database.IsErrUserNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
+		log.Error("getRepoCommit: get user by username %q: %v", ownerName, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by username")
 	}
 
@@ -196,6 +190,7 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
+		log.Error("getRepoCommit: get repo by name %q/%q: %v", ownerName, repoName, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repo by name")
 	}
 	if repo.IsBare {
@@ -221,6 +216,7 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 
 	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
 	if err != nil {
+		log.Error("getRepoCommit: open repository %q/%q: %v", ownerName, repoName, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
@@ -276,10 +272,7 @@ func getRepoCommit(c flamego.Context, r *http.Request, user *database.User) (sta
 	}, nil
 }
 
-// getRepoCommitRaw streams the unified diff for a single commit as
-// `text/plain`. The `{ext}` path param controls the output format (`diff`
-// or `patch`, matching `git diff` vs `git format-patch` output). The
-// `?whitespace=` flag is honored at `git diff` time.
+// `{ext}` selects `git diff` (`diff`) vs `git format-patch` (`patch`) output.
 func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	w := c.ResponseWriter()
 	ctx := r.Context()
@@ -369,23 +362,24 @@ func getRepoCommitRaw(c flamego.Context, r *http.Request, user *database.User) {
 	}
 }
 
-// resolveRepoForViewer loads the repo identified by `{owner}/{repo}` path
-// params and asserts the viewer has at least read access. Returns the repo or
-// a (statusCode, error) tuple suitable for short-circuiting a handler.
 func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.User) (*database.Repository, int, error) {
 	params := c.Params()
-	owner, err := database.Handle.Users().GetByUsername(ctx, params["owner"])
+	ownerName := params["owner"]
+	repoName := params["repo"]
+	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			return nil, http.StatusNotFound, nil
 		}
+		log.Error("resolveRepoForViewer: get user by username %q: %v", ownerName, err)
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "get user by username")
 	}
-	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, params["repo"])
+	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, repoName)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return nil, http.StatusNotFound, nil
 		}
+		log.Error("resolveRepoForViewer: get repo by name %q/%q: %v", ownerName, repoName, err)
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "get repo by name")
 	}
 	repo.Owner = owner
@@ -405,16 +399,13 @@ func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.
 	return repo, 0, nil
 }
 
-// repoActionResponse echoes the new viewer/count state so the client can
-// update without a follow-up GET. Fields are always emitted: `false` and
-// `0` are meaningful (an unwatch transitions `viewerWatching` to `false`,
-// and a repo with zero watchers is a valid state), so `omitempty` would
-// drop the very signals the client needs.
+// No `omitempty`: `false` and `0` are meaningful states the client must see
+// (e.g. an unwatch transitions `isViewerWatching` to `false`).
 type repoActionResponse struct {
 	IsViewerWatching bool `json:"isViewerWatching"`
-	HasViewerStarred bool `json:"hasViewerStarred"`
-	Watches          int  `json:"watches"`
-	Stars            int  `json:"stars"`
+	IsViewerStarring bool `json:"isViewerStarring"`
+	WatchCount       int  `json:"watchCount"`
+	StarCount        int  `json:"starCount"`
 }
 
 func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, watching bool) (statusCode int, resp *repoActionResponse, err error) {
@@ -433,18 +424,20 @@ func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, wa
 		err = database.WatchRepo(user.ID, repo.ID, false)
 	}
 	if err != nil {
+		log.Error("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, user.ID, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "watch repo")
 	}
 	// Reload to get the updated NumWatches count from the after-trigger.
 	updated, err := database.Handle.Repositories().GetByName(r.Context(), repo.OwnerID, repo.Name)
 	if err != nil {
+		log.Error("repoWatchAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
 		IsViewerWatching: watching,
-		HasViewerStarred: database.IsStaring(user.ID, repo.ID),
-		Watches:          updated.NumWatches,
-		Stars:            updated.NumStars,
+		IsViewerStarring: database.IsStaring(user.ID, repo.ID),
+		WatchCount:       updated.NumWatches,
+		StarCount:        updated.NumStars,
 	}, nil
 }
 
@@ -472,17 +465,19 @@ func repoStarAction(c flamego.Context, r *http.Request, user *database.User, sta
 		err = database.StarRepo(user.ID, repo.ID, false)
 	}
 	if err != nil {
+		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starred, user.ID, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "star repo")
 	}
 	updated, err := database.Handle.Repositories().GetByName(r.Context(), repo.OwnerID, repo.Name)
 	if err != nil {
+		log.Error("repoStarAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
 		IsViewerWatching: database.IsWatching(user.ID, repo.ID),
-		HasViewerStarred: starred,
-		Watches:          updated.NumWatches,
-		Stars:            updated.NumStars,
+		IsViewerStarring: starred,
+		WatchCount:       updated.NumWatches,
+		StarCount:        updated.NumStars,
 	}, nil
 }
 
@@ -494,15 +489,9 @@ func deleteRepoStar(c flamego.Context, r *http.Request, user *database.User) (st
 	return repoStarAction(c, r, user, false)
 }
 
-// getRepoRawFile streams the contents of a single file at the given ref (branch,
-// tag, or commit SHA). `Last-Modified` from the commit that last touched the
-// file, `Content-Disposition: attachment` for binary non-image blobs,
-// `text/plain; charset=utf-8` for text blobs (unless `?render=true` and the
-// site has `EnableRawFileRenderMode` set).
-//
-// The `{ref}` path segment must be URL-encoded. Slashes inside a ref name
-// (e.g. `feat/foo`) must be percent-encoded as `%2F` so the router can
-// unambiguously split ref from filepath. Bare commit SHAs need no encoding.
+// Slashes inside a ref name (e.g. `feat/foo`) must be percent-encoded as
+// `%2F` in the `{ref}` segment so the router can split ref from filepath.
+// Bare commit SHAs need no encoding.
 func getRepoRawFile(c flamego.Context, r *http.Request, user *database.User) {
 	w := c.ResponseWriter()
 	ctx := r.Context()
@@ -620,9 +609,8 @@ func getRepoRawFile(c flamego.Context, r *http.Request, user *database.User) {
 	_, _ = w.Write(data)
 }
 
-// resolveRef returns the commit identified by ref, which may be a commit SHA,
-// branch name, or tag name (tried in that order). Returns `git.ErrRevisionNotExist`
-// when none match, which the caller maps to a 404.
+// ref is tried as commit SHA, then branch name, then tag name, so a branch
+// and tag of the same name resolve to the branch.
 func resolveRef(gitRepo *git.Repository, ref string) (*git.Commit, error) {
 	commit, err := gitRepo.CatFileCommit(ref)
 	if err == nil {

@@ -17,6 +17,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 - Use `github.com/cockroachdb/errors` for error handling.
 - Use `github.com/stretchr/testify` for assertions in tests. Be mindful about the choice of `require` and `assert`, the former should be used when the test cannot proceed meaningfully after a failed assertion.
+- Every 5xx response must log the error directly inside the handler, do not log errors in a shared helper.
 
 ## Localization
 

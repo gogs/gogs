@@ -66,9 +66,9 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       return {
         ...prev,
         isViewerWatching: result.isViewerWatching,
-        hasViewerStarred: result.hasViewerStarred,
-        watches: result.watches,
-        stars: result.stars,
+        isViewerStarring: result.isViewerStarring,
+        watchCount: result.watchCount,
+        starCount: result.starCount,
       };
     });
   };
@@ -78,7 +78,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
     onSuccess: applyResult,
   });
   const starMutation = useMutation({
-    mutationFn: () => (repo.hasViewerStarred ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
+    mutationFn: () => (repo.isViewerStarring ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
     onSuccess: applyResult,
   });
 
@@ -123,7 +123,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signInTooltip="Sign in to watch this repository"
               icon={Bell}
               label={repo.isViewerWatching ? "Unwatch" : "Watch"}
-              count={repo.watches}
+              count={repo.watchCount}
               ariaLabel={repo.isViewerWatching ? "Unwatch this repository" : "Watch this repository"}
               active={repo.isViewerWatching}
             />
@@ -135,10 +135,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signedIn={signedIn}
               signInTooltip="Sign in to star this repository"
               icon={Star}
-              label={repo.hasViewerStarred ? "Starred" : "Star"}
-              count={repo.stars}
-              ariaLabel={repo.hasViewerStarred ? "Unstar this repository" : "Star this repository"}
-              active={repo.hasViewerStarred}
+              label={repo.isViewerStarring ? "Starred" : "Star"}
+              count={repo.starCount}
+              ariaLabel={repo.isViewerStarring ? "Unstar this repository" : "Star this repository"}
+              active={repo.isViewerStarring}
             />
             <SplitActionButton
               countHref={`${repoLink}/forks`}
@@ -151,7 +151,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signInTooltip="Sign in to fork this repository"
               icon={GitFork}
               label="Fork"
-              count={repo.forks}
+              count={repo.forkCount}
               ariaLabel="Fork this repository"
             />
           </div>
@@ -179,7 +179,7 @@ function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
       href: `${repoLink}/issues`,
       icon: CircleDot,
       label: "Issues",
-      badge: repo.openIssues,
+      badge: repo.openIssueCount,
     });
   }
   if (repo.pullRequestsEnabled !== false) {
@@ -188,7 +188,7 @@ function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
       href: `${repoLink}/pulls`,
       icon: GitPullRequest,
       label: "Pull requests",
-      badge: repo.openPullRequests,
+      badge: repo.openPullRequestCount,
     });
   }
   if (repo.wikiEnabled !== false) {
