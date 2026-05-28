@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, RouterProvider, createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -66,6 +67,7 @@ export function AppRouter({ user }: { user: UserInfo | null }) {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
         <RouterProvider router={router} />
+        <Toaster position="bottom-right" closeButton richColors />
       </TooltipProvider>
     </QueryClientProvider>
   );

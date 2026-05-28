@@ -17,6 +17,7 @@ import {
 import type { ComponentType, ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -59,6 +60,9 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const user = useUserInfo();
   const queryClient = useQueryClient();
   const signedIn = user !== null;
+  const signInHref = subUrl(
+    `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`,
+  );
 
   // Merge each mutation's response into the cached `repoInfo` so the button
   // labels and counts update without a refetch. The new `viewer*` flag is
@@ -92,6 +96,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       return { result, next };
     },
     onSuccess: ({ result, next }) => applyWatchResult(result, next),
+    onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
   });
   const starMutation = useMutation({
     mutationFn: async () => {
@@ -100,6 +105,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       return { result, next };
     },
     onSuccess: ({ result, next }) => applyStarResult(result, next),
+    onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
   });
 
   return (
@@ -137,7 +143,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             <SplitActionButton
               countHref={`${repoLink}/watchers`}
               onAction={signedIn ? () => watchMutation.mutate() : undefined}
-              signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              signInHref={signInHref}
               disabled={watchMutation.isPending}
               signedIn={signedIn}
               signInTooltip={t("repo.sign_in_to_watch")}
@@ -151,7 +157,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             <SplitActionButton
               countHref={`${repoLink}/stars`}
               onAction={signedIn ? () => starMutation.mutate() : undefined}
-              signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              signInHref={signInHref}
               disabled={starMutation.isPending}
               signedIn={signedIn}
               signInTooltip={t("repo.sign_in_to_star")}
@@ -168,7 +174,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               // page (not yet migrated). Treat it as a navigation link, not a
               // one-click action.
               actionHref={signedIn ? subUrl(`/repo/fork/${repo.id}`) : undefined}
-              signInHref={subUrl(`/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname)}`)}
+              signInHref={signInHref}
               signedIn={signedIn}
               signInTooltip={t("repo.sign_in_to_fork")}
               icon={GitFork}
