@@ -65,23 +65,20 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       if (!prev) return prev;
       return {
         ...prev,
-        viewerWatching: result.viewerWatching,
-        viewerStarred: result.viewerStarred,
-        counts: {
-          ...prev.counts,
-          watchers: result.watchers,
-          stars: result.stars,
-        },
+        isViewerWatching: result.isViewerWatching,
+        hasViewerStarred: result.hasViewerStarred,
+        watches: result.watches,
+        stars: result.stars,
       };
     });
   };
 
   const watchMutation = useMutation({
-    mutationFn: () => (repo.viewerWatching ? unwatchRepo(repo.owner, repo.name) : watchRepo(repo.owner, repo.name)),
+    mutationFn: () => (repo.isViewerWatching ? unwatchRepo(repo.owner, repo.name) : watchRepo(repo.owner, repo.name)),
     onSuccess: applyResult,
   });
   const starMutation = useMutation({
-    mutationFn: () => (repo.viewerStarred ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
+    mutationFn: () => (repo.hasViewerStarred ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
     onSuccess: applyResult,
   });
 
@@ -125,10 +122,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signedIn={signedIn}
               signInTooltip="Sign in to watch this repository"
               icon={Bell}
-              label={repo.viewerWatching ? "Unwatch" : "Watch"}
-              count={repo.counts.watchers}
-              ariaLabel={repo.viewerWatching ? "Unwatch this repository" : "Watch this repository"}
-              active={repo.viewerWatching}
+              label={repo.isViewerWatching ? "Unwatch" : "Watch"}
+              count={repo.watches}
+              ariaLabel={repo.isViewerWatching ? "Unwatch this repository" : "Watch this repository"}
+              active={repo.isViewerWatching}
             />
             <SplitActionButton
               countHref={`${repoLink}/stars`}
@@ -138,10 +135,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signedIn={signedIn}
               signInTooltip="Sign in to star this repository"
               icon={Star}
-              label={repo.viewerStarred ? "Starred" : "Star"}
-              count={repo.counts.stars}
-              ariaLabel={repo.viewerStarred ? "Unstar this repository" : "Star this repository"}
-              active={repo.viewerStarred}
+              label={repo.hasViewerStarred ? "Starred" : "Star"}
+              count={repo.stars}
+              ariaLabel={repo.hasViewerStarred ? "Unstar this repository" : "Star this repository"}
+              active={repo.hasViewerStarred}
             />
             <SplitActionButton
               countHref={`${repoLink}/forks`}
@@ -154,7 +151,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               signInTooltip="Sign in to fork this repository"
               icon={GitFork}
               label="Fork"
-              count={repo.counts.forks}
+              count={repo.forks}
               ariaLabel="Fork this repository"
             />
           </div>
@@ -176,28 +173,28 @@ interface TabDescriptor {
 
 function buildTabs(repo: RepoHeaderData, repoLink: string): TabDescriptor[] {
   const tabs: TabDescriptor[] = [{ key: "code", href: repoLink, icon: Code, label: "Code" }];
-  if (repo.enableIssues !== false) {
+  if (repo.issuesEnabled !== false) {
     tabs.push({
       key: "issues",
       href: `${repoLink}/issues`,
       icon: CircleDot,
       label: "Issues",
-      badge: repo.counts.openIssues,
+      badge: repo.openIssues,
     });
   }
-  if (repo.allowsPulls !== false) {
+  if (repo.pullRequestsEnabled !== false) {
     tabs.push({
       key: "pulls",
       href: `${repoLink}/pulls`,
       icon: GitPullRequest,
       label: "Pull requests",
-      badge: repo.counts.openPulls,
+      badge: repo.openPullRequests,
     });
   }
-  if (repo.enableWiki !== false) {
+  if (repo.wikiEnabled !== false) {
     tabs.push({ key: "wiki", href: `${repoLink}/wiki`, icon: FileText, label: "Wiki" });
   }
-  if (repo.isAdmin) {
+  if (repo.isViewerAdmin) {
     tabs.push({ key: "settings", href: `${repoLink}/settings`, icon: Settings, label: "Settings" });
   }
   return tabs;

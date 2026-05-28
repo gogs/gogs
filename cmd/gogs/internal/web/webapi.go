@@ -167,7 +167,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	}, webAPIBodyLimiter)
 
 	f.Get("/{owner}/{repo}/commit/{sha: /[0-9a-f]{7,40}/}.{ext: /(diff|patch)/}", getRepoCommitRaw)
-	f.Get("/{owner}/{repo}/raw/{ref}/{filepath: **}", getRepoRaw)
+	f.Get("/{owner}/{repo}/raw/{ref}/{file: **}", getRepoRawFile)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil

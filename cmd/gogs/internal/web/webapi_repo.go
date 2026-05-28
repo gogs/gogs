@@ -19,28 +19,24 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-type repoHeaderCounts struct {
-	Watchers   int `json:"watchers"`
-	Stars      int `json:"stars"`
-	Forks      int `json:"forks"`
-	OpenIssues int `json:"openIssues"`
-	OpenPulls  int `json:"openPulls"`
-}
-
 type repoHeader struct {
-	ID             int64            `json:"id"`
-	Owner          string           `json:"owner"`
-	Name           string           `json:"name"`
-	AvatarURL      string           `json:"avatarURL"`
-	Visibility     string           `json:"visibility"`
-	IsAdmin        bool             `json:"isAdmin"`
-	EnableIssues   bool             `json:"enableIssues"`
-	AllowsPulls    bool             `json:"allowsPulls"`
-	EnableWiki     bool             `json:"enableWiki"`
-	Counts         repoHeaderCounts `json:"counts"`
-	ViewerWatching bool             `json:"viewerWatching"`
-	ViewerStarred  bool             `json:"viewerStarred"`
-	MirrorOf       string           `json:"mirrorOf,omitempty"`
+	ID                  int64  `json:"id"`
+	Owner               string `json:"owner"`
+	Name                string `json:"name"`
+	AvatarURL           string `json:"avatarURL"`
+	Visibility          string `json:"visibility"`
+	IsViewerAdmin       bool   `json:"isViewerAdmin"`
+	IssuesEnabled       bool   `json:"issuesEnabled"`
+	PullRequestsEnabled bool   `json:"pullRequestsEnabled"`
+	WikiEnabled         bool   `json:"wikiEnabled"`
+	Watches             int    `json:"watches"`
+	Stars               int    `json:"stars"`
+	Forks               int    `json:"forks"`
+	OpenIssues          int    `json:"openIssues"`
+	OpenPullRequests    int    `json:"openPullRequests"`
+	IsViewerWatching    bool   `json:"isViewerWatching"`
+	HasViewerStarred    bool   `json:"hasViewerStarred"`
+	MirrorOf            string `json:"mirrorOf,omitempty"`
 }
 
 func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (statusCode int, resp *repoHeader, err error) {
@@ -110,24 +106,22 @@ func getRepoHeader(c flamego.Context, r *http.Request, user *database.User) (sta
 	}
 
 	out := &repoHeader{
-		ID:           repo.ID,
-		Owner:        owner.Name,
-		Name:         repo.Name,
-		AvatarURL:    avatarURL,
-		Visibility:   visibility,
-		IsAdmin:      mode >= database.AccessModeAdmin,
-		EnableIssues: enableIssues,
-		AllowsPulls:  repo.AllowsPulls(),
-		EnableWiki:   enableWiki,
-		Counts: repoHeaderCounts{
-			Watchers:   repo.NumWatches,
-			Stars:      repo.NumStars,
-			Forks:      repo.NumForks,
-			OpenIssues: repo.NumIssues - repo.NumClosedIssues,
-			OpenPulls:  repo.NumPulls - repo.NumClosedPulls,
-		},
-		ViewerWatching: viewerID > 0 && database.IsWatching(viewerID, repo.ID),
-		ViewerStarred:  viewerID > 0 && database.IsStaring(viewerID, repo.ID),
+		ID:                  repo.ID,
+		Owner:               owner.Name,
+		Name:                repo.Name,
+		AvatarURL:           avatarURL,
+		Visibility:          visibility,
+		IsViewerAdmin:       mode >= database.AccessModeAdmin,
+		IssuesEnabled:       enableIssues,
+		PullRequestsEnabled: repo.AllowsPulls(),
+		WikiEnabled:         enableWiki,
+		Watches:             repo.NumWatches,
+		Stars:               repo.NumStars,
+		Forks:               repo.NumForks,
+		OpenIssues:          repo.NumIssues - repo.NumClosedIssues,
+		OpenPullRequests:    repo.NumPulls - repo.NumClosedPulls,
+		IsViewerWatching:    viewerID > 0 && database.IsWatching(viewerID, repo.ID),
+		HasViewerStarred:    viewerID > 0 && database.IsStaring(viewerID, repo.ID),
 	}
 
 	if repo.IsMirror {
@@ -417,10 +411,10 @@ func resolveRepoForViewer(c flamego.Context, ctx stdctx.Context, user *database.
 // and a repo with zero watchers is a valid state), so `omitempty` would
 // drop the very signals the client needs.
 type repoActionResponse struct {
-	ViewerWatching bool `json:"viewerWatching"`
-	ViewerStarred  bool `json:"viewerStarred"`
-	Watchers       int  `json:"watchers"`
-	Stars          int  `json:"stars"`
+	IsViewerWatching bool `json:"isViewerWatching"`
+	HasViewerStarred bool `json:"hasViewerStarred"`
+	Watches          int  `json:"watches"`
+	Stars            int  `json:"stars"`
 }
 
 func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, watching bool) (statusCode int, resp *repoActionResponse, err error) {
@@ -447,10 +441,10 @@ func repoWatchAction(c flamego.Context, r *http.Request, user *database.User, wa
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
-		ViewerWatching: watching,
-		ViewerStarred:  database.IsStaring(user.ID, repo.ID),
-		Watchers:       updated.NumWatches,
-		Stars:          updated.NumStars,
+		IsViewerWatching: watching,
+		HasViewerStarred: database.IsStaring(user.ID, repo.ID),
+		Watches:          updated.NumWatches,
+		Stars:            updated.NumStars,
 	}, nil
 }
 
@@ -485,10 +479,10 @@ func repoStarAction(c flamego.Context, r *http.Request, user *database.User, sta
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoActionResponse{
-		ViewerWatching: database.IsWatching(user.ID, repo.ID),
-		ViewerStarred:  starred,
-		Watchers:       updated.NumWatches,
-		Stars:          updated.NumStars,
+		IsViewerWatching: database.IsWatching(user.ID, repo.ID),
+		HasViewerStarred: starred,
+		Watches:          updated.NumWatches,
+		Stars:            updated.NumStars,
 	}, nil
 }
 
@@ -500,7 +494,7 @@ func deleteRepoStar(c flamego.Context, r *http.Request, user *database.User) (st
 	return repoStarAction(c, r, user, false)
 }
 
-// getRepoRaw streams the contents of a single file at the given ref (branch,
+// getRepoRawFile streams the contents of a single file at the given ref (branch,
 // tag, or commit SHA). `Last-Modified` from the commit that last touched the
 // file, `Content-Disposition: attachment` for binary non-image blobs,
 // `text/plain; charset=utf-8` for text blobs (unless `?render=true` and the
@@ -509,7 +503,7 @@ func deleteRepoStar(c flamego.Context, r *http.Request, user *database.User) (st
 // The `{ref}` path segment must be URL-encoded. Slashes inside a ref name
 // (e.g. `feat/foo`) must be percent-encoded as `%2F` so the router can
 // unambiguously split ref from filepath. Bare commit SHAs need no encoding.
-func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
+func getRepoRawFile(c flamego.Context, r *http.Request, user *database.User) {
 	w := c.ResponseWriter()
 	ctx := r.Context()
 
@@ -520,7 +514,7 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 	ownerName := c.Param("owner")
 	repoName := c.Param("name")
 	rawRef := c.Param("ref")
-	filePath := c.Param("filepath")
+	filePath := c.Param("file")
 	if rawRef == "" || filePath == "" {
 		writeStatus(http.StatusNotFound)
 		return
@@ -537,7 +531,7 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 			writeStatus(http.StatusNotFound)
 			return
 		}
-		log.Error("getRepoRaw: get user by username %q: %v", ownerName, err)
+		log.Error("getRepoRawFile: get user by username %q: %v", ownerName, err)
 		writeStatus(http.StatusInternalServerError)
 		return
 	}
@@ -548,7 +542,7 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 			writeStatus(http.StatusNotFound)
 			return
 		}
-		log.Error("getRepoRaw: get repo by name %q/%q: %v", ownerName, repoName, err)
+		log.Error("getRepoRawFile: get repo by name %q/%q: %v", ownerName, repoName, err)
 		writeStatus(http.StatusInternalServerError)
 		return
 	}
@@ -577,7 +571,7 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 
 	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
 	if err != nil {
-		log.Error("getRepoRaw: open repository %q/%q: %v", ownerName, repoName, err)
+		log.Error("getRepoRawFile: open repository %q/%q: %v", ownerName, repoName, err)
 		writeStatus(http.StatusInternalServerError)
 		return
 	}
@@ -588,7 +582,7 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 			writeStatus(http.StatusNotFound)
 			return
 		}
-		log.Error("getRepoRaw: resolve ref %q in %q/%q: %v", ref, ownerName, repoName, err)
+		log.Error("getRepoRawFile: resolve ref %q in %q/%q: %v", ref, ownerName, repoName, err)
 		writeStatus(http.StatusInternalServerError)
 		return
 	}
@@ -599,14 +593,14 @@ func getRepoRaw(c flamego.Context, r *http.Request, user *database.User) {
 			writeStatus(http.StatusNotFound)
 			return
 		}
-		log.Error("getRepoRaw: blob %s:%s in %q/%q: %v", commit.ID, filePath, ownerName, repoName, err)
+		log.Error("getRepoRawFile: blob %s:%s in %q/%q: %v", commit.ID, filePath, ownerName, repoName, err)
 		writeStatus(http.StatusInternalServerError)
 		return
 	}
 
 	data, err := blob.Bytes()
 	if err != nil {
-		log.Error("getRepoRaw: read blob %s:%s: %v", commit.ID, filePath, err)
+		log.Error("getRepoRawFile: read blob %s:%s: %v", commit.ID, filePath, err)
 		writeStatus(http.StatusInternalServerError)
 		return
 	}
