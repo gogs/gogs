@@ -196,16 +196,10 @@ const KEYS = [
   "repo.patch_label",
 ];
 
-// Lightweight INI parser. Returns two views of the same file:
-//   - `flat`: bare key name to value, first occurrence wins (matches the
-//     historical SPA behavior where keys are referenced without their section).
-//   - `sectioned`: `section.key` to value, so callers can disambiguate when the
-//     same bare name appears in two sections (e.g. `[user] starred` vs
-//     `[repo] starred`). Top-level keys (no section header above them) are
-//     also stored bare in `sectioned`.
+// Parse the INI into a single `section.key` to value map. Top-level keys
+// (above any section header) are stored bare. First occurrence wins.
 function parseIni(text) {
-  const flat = {};
-  const sectioned = {};
+  const out = {};
   let section = "";
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
@@ -219,11 +213,10 @@ function parseIni(text) {
     const key = line.slice(0, eq).trim();
     const value = line.slice(eq + 1).trim();
     if (!key) continue;
-    if (!(key in flat)) flat[key] = value;
     const qualified = section ? `${section}.${key}` : key;
-    if (!(qualified in sectioned)) sectioned[qualified] = value;
+    if (!(qualified in out)) out[qualified] = value;
   }
-  return { flat, sectioned };
+  return out;
 }
 
 mkdirSync(outDir, { recursive: true });
@@ -231,16 +224,10 @@ mkdirSync(outDir, { recursive: true });
 const files = readdirSync(inDir).filter((f) => f.startsWith("locale_") && f.endsWith(".ini"));
 for (const file of files) {
   const lang = file.slice("locale_".length, -".ini".length);
-  const { flat, sectioned } = parseIni(readFileSync(join(inDir, file), "utf8"));
+  const parsed = parseIni(readFileSync(join(inDir, file), "utf8"));
   const out = {};
   for (const key of KEYS) {
-    // Prefer the literal flat name if it exists in the INI (handles entries
-    // like `editor.edit_file` or `diff.parent`, whose literal flat name is
-    // the dotted string with no enclosing section). Fall back to a
-    // section-qualified lookup so `repo.starred` finds `starred` under
-    // `[repo]` and bypasses the colliding `[user] starred`.
-    const value = flat[key] ?? sectioned[key];
-    if (value) out[key] = value;
+    if (parsed[key]) out[key] = parsed[key];
   }
   writeFileSync(join(outDir, `${lang}.json`), JSON.stringify(out, null, 2) + "\n", "utf8");
   console.log(`wrote ${lang}.json (${Object.keys(out).length} keys)`);
