@@ -592,8 +592,17 @@ export function RepoCommit() {
       // Edit/Delete are omitted on the commit page: gogs' editor needs a
       // branch ref, and the commit SHA produces 404. The PR diff view (when
       // it lands here) is the right home for those.
-      const expandState = expandedById[item.id];
-      const supportsExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted";
+      const rawExpandState = expandedById[item.id];
+      // Added files already show every line in the diff, so there's nothing
+      // more to expand. Render the button disabled (rather than hiding it) so
+      // the per-file action row stays the same width across the diff list.
+      // Deleted files have no post-image worth showing more of either, but we
+      // still hide their button: the file body is the full historical content
+      // and the action would be no-op without the symmetric "all expanded"
+      // affordance making sense to the reader.
+      const isAddedFile = item.fileDiff.type === "new";
+      const expandState = isAddedFile ? "done" : rawExpandState;
+      const supportsExpand = item.fileDiff.type !== "deleted";
       const expandDone = expandState === "done";
       const expandLoading = expandState === "loading";
       const justCopied = copiedPathById[item.id] === true;
