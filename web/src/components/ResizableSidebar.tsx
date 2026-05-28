@@ -1,52 +1,41 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
 interface Props {
   children: ReactNode;
-  /** Initial width in pixels, before any persisted value is loaded. */
+  /** Width in pixels. Resets to this on every mount; not persisted. */
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
-  /**
-   * localStorage key for persisting the width across reloads. Omit to make
-   * the sidebar non-persistent.
-   */
-  storageKey?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
-function readStoredWidth(key: string | undefined, fallback: number): number {
-  if (!key || typeof localStorage === "undefined") return fallback;
-  const v = Number(localStorage.getItem(key));
-  return Number.isFinite(v) && v > 0 ? v : fallback;
-}
-
 // Resizable left sidebar. Drag the right-edge handle to widen or narrow.
-// Width is persisted to localStorage when storageKey is provided, so the
-// chosen width survives page reloads. Below the lg breakpoint, the sidebar
-// stacks above content at full width, so the handle (and resize) is hidden.
+// The chosen width is in-memory only and resets each page load, so updating
+// `defaultWidth` in code always takes effect for every user. Below the lg
+// breakpoint, the sidebar stacks above content at full width, so the handle
+// (and resize) is hidden.
 export function ResizableSidebar({
   children,
   defaultWidth = 320,
   minWidth = 220,
   maxWidth = 560,
-  storageKey,
   className,
   style,
 }: Props) {
   const { t } = useTranslation();
-  const [width, setWidth] = useState(() => readStoredWidth(storageKey, defaultWidth));
+  const [width, setWidth] = useState(defaultWidth);
+  const asideRef = useRef<HTMLElement>(null);
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
-
-  useEffect(() => {
-    if (!storageKey || typeof localStorage === "undefined") return;
-    localStorage.setItem(storageKey, String(width));
-  }, [storageKey, width]);
+  // Latest width during a drag. Updated on every pointermove and committed to
+  // React state on pointerup, so the tree only re-renders once per drag
+  // instead of once per pointer event.
+  const liveWidthRef = useRef(defaultWidth);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -54,7 +43,8 @@ export function ResizableSidebar({
       draggingRef.current = true;
       startXRef.current = e.clientX;
       startWidthRef.current = width;
-      (e.target as HTMLDivElement).setPointerCapture(e.pointerId);
+      liveWidthRef.current = width;
+      e.currentTarget.setPointerCapture(e.pointerId);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
@@ -65,7 +55,8 @@ export function ResizableSidebar({
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!draggingRef.current) return;
       const next = Math.min(maxWidth, Math.max(minWidth, startWidthRef.current + (e.clientX - startXRef.current)));
-      setWidth(next);
+      liveWidthRef.current = next;
+      asideRef.current?.style.setProperty("--sidebar-w", `${next}px`);
     },
     [maxWidth, minWidth],
   );
@@ -73,9 +64,10 @@ export function ResizableSidebar({
   const stopDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    (e.target as HTMLDivElement).releasePointerCapture(e.pointerId);
+    e.currentTarget.releasePointerCapture(e.pointerId);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    setWidth(liveWidthRef.current);
   }, []);
 
   // Keyboard resize for accessibility: focus the handle, then arrow-left/right
@@ -99,6 +91,7 @@ export function ResizableSidebar({
 
   return (
     <aside
+      ref={asideRef}
       className={cn("relative flex w-full shrink-0 flex-col lg:w-[var(--sidebar-w)]", className)}
       style={{
         ...style,

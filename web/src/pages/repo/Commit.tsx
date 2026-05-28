@@ -806,7 +806,6 @@ export function RepoCommit() {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
           {desktopTreeOpen ? (
             <ResizableSidebar
-              storageKey="gogs-commit-diff-sidebar-width"
               defaultWidth={320}
               minWidth={220}
               maxWidth={560}
