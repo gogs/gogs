@@ -91,6 +91,23 @@ function asDirectoryHandle(handle: FileTreeItemHandle | null | undefined): FileT
   return handle && handle.isDirectory() ? (handle as FileTreeDirectoryHandle) : null;
 }
 
+// Pierre keeps its search input inside its shadow root, and may nest shadow
+// roots further. Recurse depth-first across both light-DOM children and any
+// shadow root attached to a descendant, returning the first matching input.
+function findSearchInput(root: ParentNode | null | undefined): HTMLInputElement | null {
+  if (!root) return null;
+  const direct = root.querySelector<HTMLInputElement>("input[data-file-tree-search-input]");
+  if (direct) return direct;
+  const descendants = root.querySelectorAll("*");
+  for (const el of descendants) {
+    const sr = (el as Element & { shadowRoot?: ShadowRoot | null }).shadowRoot;
+    if (!sr) continue;
+    const inner = findSearchInput(sr);
+    if (inner) return inner;
+  }
+  return null;
+}
+
 // Walk path segments to collect every directory prefix (e.g. "a/b/c.ts" →
 // ["a", "a/b"]). Used to drive expand-all/collapse-all from the toolbar
 // because @pierre/trees doesn't ship a one-shot bulk-toggle API.
@@ -173,9 +190,12 @@ export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffF
 
   const sortComparator = useCallback(
     (a: { path: string; isDirectory: boolean }, b: { path: string; isDirectory: boolean }) => {
+      // Unknown rows fall through to the end. A `?? 0` default would tie them
+      // with the patch's first entry, silently floating new or flattened
+      // paths to the top during a `resetPaths` transition.
       const ai = a.isDirectory ? patchOrder.dirIdx.get(a.path) : patchOrder.fileIdx.get(a.path);
       const bi = b.isDirectory ? patchOrder.dirIdx.get(b.path) : patchOrder.fileIdx.get(b.path);
-      return (ai ?? 0) - (bi ?? 0);
+      return (ai ?? Number.POSITIVE_INFINITY) - (bi ?? Number.POSITIVE_INFINITY);
     },
     [patchOrder],
   );
@@ -197,18 +217,34 @@ export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffF
   // the user does not have to retype after navigating to a matched file.
   // Blur (clicking outside the tree) is intentionally NOT restored. Only
   // row-click closures are, gated by `selectionJustFiredRef`.
+  //
+  // `lastQueryRef` tracks the last query the user actually intended. It is
+  // updated to any non-empty `search.value`, and cleared to `""` only when
+  // we observe `search.value === ""` *while search is still open* (that is
+  // the user emptying the box). An empty `search.value` that arrives in the
+  // same tick as `isOpen` flipping to `false` is Pierre's auto-clear on row
+  // click and must not wipe the ref.
   const search = useFileTreeSearch(model);
-  const searchValueRef = useRef(search.value);
+  const lastQueryRef = useRef(search.value);
+  // Track `search.open` via an effect rather than render-body assignment so
+  // discarded renders (Strict Mode, concurrent interruptions) cannot leave
+  // the ref pointing at a function captured from a never-committed render.
   const searchOpenFnRef = useRef(search.open);
-  searchOpenFnRef.current = search.open;
+  useEffect(() => {
+    searchOpenFnRef.current = search.open;
+  }, [search.open]);
   useEffect(() => {
     if (search.value !== "") {
-      searchValueRef.current = search.value;
+      lastQueryRef.current = search.value;
+    } else if (search.isOpen) {
+      lastQueryRef.current = "";
     }
-    if (!search.isOpen && selectionJustFiredRef.current && searchValueRef.current !== "") {
-      searchOpenFnRef.current(searchValueRef.current);
+    if (!search.isOpen && selectionJustFiredRef.current && lastQueryRef.current !== "") {
+      searchOpenFnRef.current(lastQueryRef.current);
     }
-    selectionJustFiredRef.current = false;
+    if (!search.isOpen) {
+      selectionJustFiredRef.current = false;
+    }
   }, [search.value, search.isOpen]);
 
   // When the patch changes (e.g. navigating to a different commit without
@@ -247,26 +283,10 @@ export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffF
         }
       },
       focusSearch: () => {
-        // The search input lives in Pierre's shadow root. Walk through any
-        // descendant element with a shadowRoot to find it.
-        const host = wrapperRef.current?.querySelector<HTMLElement>("[data-file-tree-search-input]");
-        if (host instanceof HTMLInputElement) {
-          host.focus();
-          host.select();
-          return;
-        }
-        // Fall back to descending into shadow roots if the input wasn't in
-        // light DOM (it isn't, Pierre keeps it in the shadow root).
-        const walker = wrapperRef.current?.querySelectorAll("*") ?? [];
-        for (const el of Array.from(walker)) {
-          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
-          if (!sr) continue;
-          const input = sr.querySelector<HTMLInputElement>("[data-file-tree-search-input]");
-          if (input) {
-            input.focus();
-            input.select();
-            return;
-          }
+        const input = findSearchInput(wrapperRef.current);
+        if (input) {
+          input.focus();
+          input.select();
         }
       },
     }),
