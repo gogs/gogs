@@ -727,11 +727,11 @@ export function RepoCommit() {
 
           <span className="inline-flex items-center gap-1 font-mono text-xs">
             <a href={subUrl(`/${owner}/${repo}/commit/${sha}.patch`)} className="hover:underline">
-              {t("diff.patch_short")}
+              {t("diff.patch")}
             </a>
             <span aria-hidden>·</span>
             <a href={subUrl(`/${owner}/${repo}/commit/${sha}.diff`)} className="hover:underline">
-              {t("diff.diff_short")}
+              {t("diff.diff")}
             </a>
             {parents.length > 0 ? (
               <>

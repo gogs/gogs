@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { type ReactNode, forwardRef } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -112,10 +112,11 @@ export function DiffToolbar({
             </Tooltip>
           ) : null}
           <span>
-            {t("diff.showing")}{" "}
-            <strong className="font-semibold">
-              {stats.fileCount} {t("diff.changed_files")}
-            </strong>
+            <Trans
+              i18nKey="diff.showing_changed_files"
+              values={{ count: stats.fileCount }}
+              components={{ count: <strong className="font-semibold" /> }}
+            />
           </span>
         </span>
         {/* On mobile, force the additions+deletions pair onto its own row
