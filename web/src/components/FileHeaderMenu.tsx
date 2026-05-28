@@ -52,12 +52,11 @@ export function FileHeaderMenu({
         {!open ? <TooltipContent>{t("more_actions")}</TooltipContent> : null}
       </Tooltip>
       <PopoverContent align="end" sideOffset={4} className="w-48 p-1 text-sm">
-        <ul role="menu" className="flex flex-col">
+        <ul className="flex flex-col">
           {onExpandAllLines ? (
             <li className="lg:hidden">
               <button
                 type="button"
-                role="menuitem"
                 disabled={expandLoading || expandDone}
                 onClick={() => {
                   onExpandAllLines();
@@ -76,31 +75,19 @@ export function FileHeaderMenu({
           ) : null}
           {onExpandAllLines ? <li role="separator" className="my-1 h-px bg-(--color-border) lg:hidden" /> : null}
           <li>
-            <a
-              href={viewFileHref}
-              role="menuitem"
-              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
-            >
+            <a href={viewFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
               <FileCode2 className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_file")}</span>
             </a>
           </li>
           <li>
-            <a
-              href={rawFileHref}
-              role="menuitem"
-              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
-            >
+            <a href={rawFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
               <Binary className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_raw")}</span>
             </a>
           </li>
           <li>
-            <a
-              href={historyHref}
-              role="menuitem"
-              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
-            >
+            <a href={historyHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
               <History className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_history")}</span>
             </a>
@@ -108,11 +95,7 @@ export function FileHeaderMenu({
           {editFileHref || deleteFileHref ? <li role="separator" className="my-1 h-px bg-(--color-border)" /> : null}
           {editFileHref ? (
             <li>
-              <a
-                href={editFileHref}
-                role="menuitem"
-                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
-              >
+              <a href={editFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
                 <Pencil className="size-3.5 shrink-0" aria-hidden />
                 <span>{t("repo.editor.edit_file")}</span>
               </a>
@@ -122,7 +105,6 @@ export function FileHeaderMenu({
             <li>
               <a
                 href={deleteFileHref}
-                role="menuitem"
                 className="flex items-center gap-2 rounded px-2 py-1.5 text-(--color-destructive) hover:bg-(--color-surface)"
               >
                 <Trash2 className="size-3.5 shrink-0" aria-hidden />
@@ -133,7 +115,7 @@ export function FileHeaderMenu({
           {prevFilePath ? (
             <>
               <li role="separator" className="my-1 h-px bg-(--color-border)" />
-              <li role="menuitem" aria-disabled className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
+              <li className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
                 {t("repo.renamed_from")} <span className="font-mono">{prevFilePath}</span>
               </li>
             </>
