@@ -35,27 +35,32 @@ func (c *repoContext) ViewerCanAdminister() bool {
 
 // withRepoContext injects the repoContext of the repository derived from the
 // route.
-func withRepoContext(c flamego.Context, user *database.User) (statusCode int, resp any, err error) {
+func withRepoContext(c flamego.Context, user *database.User) {
 	ctx := c.Request().Context()
+	w := c.ResponseWriter()
 	ownerName := c.Param("owner")
 	repoName := c.Param("repo")
 
 	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			return http.StatusNotFound, nil, errors.New("repository does not exist")
+			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
+			return
 		}
 		log.Error("repoContext: get user by username %q: %v", ownerName, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get owner")
+		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get owner"))
+		return
 	}
 
 	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, repoName)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
-			return http.StatusNotFound, nil, errors.New("repository does not exist")
+			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
+			return
 		}
 		log.Error("repoContext: get repo by name %q/%q: %v", ownerName, repoName, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repo")
+		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get repo"))
+		return
 	}
 
 	viewer := ptrx.Deref(user, database.User{})
@@ -80,5 +85,4 @@ func withRepoContext(c flamego.Context, user *database.User) (statusCode int, re
 		ViewerID:     viewer.ID,
 		viewerAccess: viewerAccess,
 	})
-	return StatusNextHandler, nil, nil
 }

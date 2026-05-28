@@ -672,8 +672,6 @@ func Run(configPath string, portOverride int) error {
 	return nil
 }
 
-const StatusNextHandler = 99
-
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
@@ -687,10 +685,6 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Use(cache.Cacher(cacherOpts))
 
 	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
-		if statusCode == StatusNextHandler {
-			return
-		}
-
 		w := c.ResponseWriter()
 		w.Header().Set("Cache-Control", "no-store")
 		if err != nil {
