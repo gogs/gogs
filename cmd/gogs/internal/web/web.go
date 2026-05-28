@@ -672,6 +672,8 @@ func Run(configPath string, portOverride int) error {
 	return nil
 }
 
+const StatusNextHandler = 99
+
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery())
@@ -684,10 +686,38 @@ func newRoutingHandler() (http.Handler, error) {
 	}
 	f.Use(cache.Cacher(cacherOpts))
 
+	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
+		if statusCode == StatusNextHandler {
+			return
+		}
+
+		w := c.ResponseWriter()
+		w.Header().Set("Cache-Control", "no-store")
+		if err != nil {
+			msg := err.Error()
+			if statusCode >= http.StatusInternalServerError && conf.IsProdMode() {
+				msg = "Internal server error"
+			}
+			resp = map[string]any{"error": msg}
+		}
+		if resp == nil {
+			w.WriteHeader(statusCode)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(statusCode)
+		_ = json.NewEncoder(w).Encode(resp)
+	})
+
 	f.Get("/redirect", getRedirect)
 
 	// The captcha middleware writes the response. This route exists so the request reaches it.
 	f.Get("/captcha/image.jpeg", func() {})
+
+	f.Group("/{owner}/{repo}", func() {
+		f.Get("/commit/{sha: /[0-9a-f]{7,40}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
+		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
+	}, withRepoContext)
 
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)

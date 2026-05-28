@@ -261,7 +261,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		if c.IsLogged {
 			c.Data["IsWatchingRepo"] = database.IsWatching(c.User.ID, repo.ID)
-			c.Data["IsStaringRepo"] = database.IsStaring(c.User.ID, repo.ID)
+			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
 		}
 
 		// repo is bare and display enable

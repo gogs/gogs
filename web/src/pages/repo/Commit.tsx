@@ -696,7 +696,7 @@ export function RepoCommit() {
             </a>
           </div>
         </div>
-        {body.trim() ? <CommitBody body={body.trim()} /> : null}
+        {(body ?? "").trim() ? <CommitBody body={(body ?? "").trim()} /> : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
           <span className="inline-flex items-center gap-1.5">

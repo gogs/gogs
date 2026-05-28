@@ -2362,6 +2362,9 @@ type Watch struct {
 }
 
 func isWatching(e Engine, userID, repoID int64) bool {
+	if userID <= 0 {
+		return false
+	}
 	has, _ := e.Get(&Watch{0, userID, repoID})
 	return has
 }
@@ -2484,7 +2487,7 @@ type Star struct {
 // Deprecated: Use Stars.Star instead.
 func StarRepo(userID, repoID int64, star bool) (err error) {
 	if star {
-		if IsStaring(userID, repoID) {
+		if IsStarring(userID, repoID) {
 			return nil
 		}
 		if _, err = x.Insert(&Star{UserID: userID, RepoID: repoID}); err != nil {
@@ -2494,7 +2497,7 @@ func StarRepo(userID, repoID int64, star bool) (err error) {
 		}
 		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", userID)
 	} else {
-		if !IsStaring(userID, repoID) {
+		if !IsStarring(userID, repoID) {
 			return nil
 		}
 		if _, err = x.Delete(&Star{0, userID, repoID}); err != nil {
@@ -2507,8 +2510,11 @@ func StarRepo(userID, repoID int64, star bool) (err error) {
 	return err
 }
 
-// IsStaring checks if user has starred given repository.
-func IsStaring(userID, repoID int64) bool {
+// IsStarring checks if user has starred given repository.
+func IsStarring(userID, repoID int64) bool {
+	if userID <= 0 {
+		return false
+	}
 	has, _ := x.Get(&Star{0, userID, repoID})
 	return has
 }

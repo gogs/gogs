@@ -19,8 +19,9 @@ import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  type RepoActionResult,
   type RepoHeaderData,
+  type RepoStarResult,
+  type RepoWatchResult,
   repoHeaderQuery,
   starRepo,
   unstarRepo,
@@ -56,30 +57,46 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const queryClient = useQueryClient();
   const signedIn = user !== null;
 
-  // Apply the mutation result back to the cached `repoInfo` so the button
-  // labels and counts update without a refetch. The server echoes the full
-  // viewer/count state for both watch and star on every action, so we can
-  // overwrite all four fields directly.
-  const applyResult = (result: RepoActionResult) => {
+  // Merge each mutation's response into the cached `repoInfo` so the button
+  // labels and counts update without a refetch. The new `viewer*` flag is
+  // derived from the action that was just dispatched, since the server's
+  // outcome is unambiguous (POST always watches/stars, DELETE always undoes).
+  const applyWatchResult = (result: RepoWatchResult, nextViewerIsWatching: boolean) => {
     queryClient.setQueryData(repoHeaderQuery(repo.owner, repo.name).queryKey, (prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        viewerIsWatching: result.viewerIsWatching,
-        viewerIsStarring: result.viewerIsStarring,
+        viewerIsWatching: nextViewerIsWatching,
         watchCount: result.watchCount,
+      };
+    });
+  };
+  const applyStarResult = (result: RepoStarResult, nextViewerIsStarring: boolean) => {
+    queryClient.setQueryData(repoHeaderQuery(repo.owner, repo.name).queryKey, (prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        viewerIsStarring: nextViewerIsStarring,
         starCount: result.starCount,
       };
     });
   };
 
   const watchMutation = useMutation({
-    mutationFn: () => (repo.viewerIsWatching ? unwatchRepo(repo.owner, repo.name) : watchRepo(repo.owner, repo.name)),
-    onSuccess: applyResult,
+    mutationFn: async () => {
+      const next = !repo.viewerIsWatching;
+      const result = next ? await watchRepo(repo.owner, repo.name) : await unwatchRepo(repo.owner, repo.name);
+      return { result, next };
+    },
+    onSuccess: ({ result, next }) => applyWatchResult(result, next),
   });
   const starMutation = useMutation({
-    mutationFn: () => (repo.viewerIsStarring ? unstarRepo(repo.owner, repo.name) : starRepo(repo.owner, repo.name)),
-    onSuccess: applyResult,
+    mutationFn: async () => {
+      const next = !repo.viewerIsStarring;
+      const result = next ? await starRepo(repo.owner, repo.name) : await unstarRepo(repo.owner, repo.name);
+      return { result, next };
+    },
+    onSuccess: ({ result, next }) => applyStarResult(result, next),
   });
 
   return (

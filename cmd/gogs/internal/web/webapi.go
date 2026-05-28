@@ -17,7 +17,6 @@ import (
 	macaronsession "github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 )
@@ -66,7 +65,7 @@ func (s flamegoSessionAdapter) Delete(key interface{})          { _ = s.sess.Del
 func (s flamegoSessionAdapter) Flush()                          { _ = s.sess.Flush() }
 func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
 
-func webAPIBodyLimiter(c flamego.Context) {
+func enforceWebAPIMaxBodySize(c flamego.Context) {
 	r := c.Request().Request
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, 4*1024) // 4 KiB
 }
@@ -110,25 +109,6 @@ func bindJSON(model any) flamego.Handler {
 }
 
 func mountWebAPIRoutes(f *flamego.Flame) {
-	f.ReturnHandler(func(c flamego.Context, statusCode int, resp any, err error) {
-		w := c.ResponseWriter()
-		w.Header().Set("Cache-Control", "no-store")
-		if err != nil {
-			msg := err.Error()
-			if statusCode >= http.StatusInternalServerError && conf.IsProdMode() {
-				msg = "Internal server error"
-			}
-			resp = map[string]any{"error": msg}
-		}
-		if resp == nil {
-			w.WriteHeader(statusCode)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(statusCode)
-		_ = json.NewEncoder(w).Encode(resp)
-	})
-
 	f.Group("/api/web", func() {
 		f.Group("/user", func() {
 			f.Get("/info", getUserInfo)
@@ -163,11 +143,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/commit/{sha: /[0-9a-f]{7,40}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)
-		})
-	}, webAPIBodyLimiter)
-
-	f.Get("/{owner}/{repo}/commit/{sha: /[0-9a-f]{7,40}/}.{ext: /(diff|patch)/}", getRepoCommitRaw)
-	f.Get("/{owner}/{repo}/raw/{ref}/{file: **}", getRepoRawFile)
+		}, withRepoContext)
+	}, enforceWebAPIMaxBodySize)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
