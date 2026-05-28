@@ -19,7 +19,7 @@ import {
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CommitFileTree, type CommitFileTreeHandle } from "@/components/CommitFileTree";
+import { DiffFileTree, type DiffFileTreeHandle } from "@/components/DiffFileTree";
 import { DiffSearch } from "@/components/DiffSearch";
 import { DiffToolbar, type DiffToolbarSettings, type WhitespaceMode } from "@/components/DiffToolbar";
 import { FileHeaderMenu } from "@/components/FileHeaderMenu";
@@ -196,8 +196,8 @@ export function RepoCommit() {
   const { theme } = useTheme();
   const resolvedTheme = resolveTheme(theme);
   const viewRef = useRef<CodeViewHandle<undefined> | null>(null);
-  const treeRef = useRef<CommitFileTreeHandle | null>(null);
-  const mobileTreeRef = useRef<CommitFileTreeHandle | null>(null);
+  const treeRef = useRef<DiffFileTreeHandle | null>(null);
+  const mobileTreeRef = useRef<DiffFileTreeHandle | null>(null);
   const stickyWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const [copied, setCopied] = useState(false);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
@@ -855,7 +855,7 @@ export function RepoCommit() {
                   </span>
                 </span>
               </div>
-              <CommitFileTree
+              <DiffFileTree
                 ref={treeRef}
                 items={items}
                 searchOpen={treeSearchOpen}
@@ -952,7 +952,7 @@ export function RepoCommit() {
                   </SheetClose>
                 </span>
               </SheetTitle>
-              <CommitFileTree
+              <DiffFileTree
                 ref={mobileTreeRef}
                 items={items}
                 searchOpen

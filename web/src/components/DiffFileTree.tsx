@@ -54,7 +54,7 @@ const TREE_UNSAFE_CSS = `
   }
 `;
 
-export interface CommitFileTreeHandle {
+export interface DiffFileTreeHandle {
   expandAll(): void;
   collapseAll(): void;
   focusSearch(): void;
@@ -105,7 +105,7 @@ function collectDirectoryPaths(paths: readonly string[]): string[] {
   return Array.from(dirs);
 }
 
-export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function CommitFileTreeImpl(
+export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffFileTreeImpl(
   { items, onSelectItem, searchOpen = true, header, className, style },
   ref,
 ) {
@@ -138,11 +138,8 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     onSelectItemRef.current = onSelectItem;
   }, [onSelectItem]);
 
-  const searchOpenRef = useRef(searchOpen);
-  useEffect(() => {
-    searchOpenRef.current = searchOpen;
-  }, [searchOpen]);
-
+  // Set when a row is clicked, then consumed by the search-restore effect so
+  // we only reopen search on selection (not on blur from clicks outside).
   const selectionJustFiredRef = useRef(false);
   const onSelectionChange = useCallback((selectedPaths: readonly string[]) => {
     const target = selectedPaths[0];
@@ -190,18 +187,16 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     initialExpansion: "open",
     flattenEmptyDirectories: true,
     search: true,
-    searchBlurBehavior: "retain",
     stickyFolders: true,
     gitStatus,
     onSelectionChange,
     unsafeCSS: TREE_UNSAFE_CSS,
   });
 
-  // Pierre closes search in two cases we do NOT want: row clicks and input
-  // blur (clicking outside the tree). It only calls closeSearch() — not a
-  // prop toggle — so `searchOpen` (the prop) stays true while Pierre's
-  // internal state flips to false. Reopen with the last typed value whenever
-  // Pierre closes search while our prop says it should be open.
+  // Pierre closes search on row click. Reopen with the last typed value so
+  // the user does not have to retype after navigating to a matched file.
+  // Blur (clicking outside the tree) is intentionally NOT restored — only
+  // row-click closures are, gated by `selectionJustFiredRef`.
   const search = useFileTreeSearch(model);
   const searchValueRef = useRef(search.value);
   const searchOpenFnRef = useRef(search.open);
@@ -210,7 +205,7 @@ export const CommitFileTree = forwardRef<CommitFileTreeHandle, Props>(function C
     if (search.value !== "") {
       searchValueRef.current = search.value;
     }
-    if (!search.isOpen && searchOpenRef.current && searchValueRef.current !== "") {
+    if (!search.isOpen && selectionJustFiredRef.current && searchValueRef.current !== "") {
       searchOpenFnRef.current(searchValueRef.current);
     }
     selectionJustFiredRef.current = false;

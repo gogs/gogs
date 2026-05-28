@@ -37,7 +37,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 ## Tool-use guidance
 
 - Use `gh` CLI to access information on github.com that is not publicly available.
-- Run the chrome-devtools MCP in headless mode so it does not steal focus from the user's foreground browser session.
+- Run the Chrome DevTools MCP in headless mode so it does not steal focus from the user's foreground browser session. After finishing any task that used the Chrome DevTools MCP, kill all `chrome-devtools-mcp` processes with `pkill -f chrome-devtools-mcp`.
 
 ## Source code control
 
