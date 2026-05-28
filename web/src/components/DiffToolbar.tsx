@@ -114,7 +114,7 @@ export function DiffToolbar({
           <span>
             {t("diff.showing")}{" "}
             <strong className="font-semibold">
-              {stats.fileCount} {stats.fileCount === 1 ? t("diff.changed_file") : t("diff.changed_files")}
+              {stats.fileCount} {t("diff.changed_files")}
             </strong>
           </span>
         </span>

@@ -109,7 +109,6 @@ const REUSED_KEYS = [
   // Commit diff page chrome (web/src/pages/repo/Commit.tsx and friends).
   "diff.showing",
   "diff.changed_files",
-  "diff.changed_file",
   "diff.additions",
   "diff.deletions",
   "diff.unified",
@@ -125,8 +124,8 @@ const REUSED_KEYS = [
   "diff.collapse_all_files",
   "diff.show_file_tree",
   "diff.hide_file_tree",
-  "diff.expand_all_folders",
-  "diff.collapse_all_folders",
+  "diff.expand_all_directories",
+  "diff.collapse_all_directories",
   "diff.search_files",
   "diff.hide_search",
   "diff.search_in_diff",

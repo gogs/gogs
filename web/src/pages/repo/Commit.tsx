@@ -833,26 +833,26 @@ export function RepoCommit() {
                         <button
                           type="button"
                           onClick={() => treeRef.current?.expandAll()}
-                          aria-label={t("diff.expand_all_folders")}
+                          aria-label={t("diff.expand_all_directories")}
                           className="grid size-6 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsUpDown className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.expand_all_folders")}</TooltipContent>
+                      <TooltipContent>{t("diff.expand_all_directories")}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
                           onClick={() => treeRef.current?.collapseAll()}
-                          aria-label={t("diff.collapse_all_folders")}
+                          aria-label={t("diff.collapse_all_directories")}
                           className="grid size-6 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsDownUp className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.collapse_all_folders")}</TooltipContent>
+                      <TooltipContent>{t("diff.collapse_all_directories")}</TooltipContent>
                     </Tooltip>
                   </span>
                 </span>
@@ -897,7 +897,7 @@ export function RepoCommit() {
               style={TREE_THEME_STYLE}
               onOpenAutoFocus={(event) => {
                 // Prevent Radix from auto-focusing the first button (expand
-                // all folders), which would trigger its tooltip on open.
+                // all directories), which would trigger its tooltip on open.
                 event.preventDefault();
               }}
               onCloseAutoFocus={(event) => {
@@ -921,26 +921,26 @@ export function RepoCommit() {
                         <button
                           type="button"
                           onClick={() => mobileTreeRef.current?.expandAll()}
-                          aria-label={t("diff.expand_all_folders")}
+                          aria-label={t("diff.expand_all_directories")}
                           className="grid size-7 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsUpDown className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.expand_all_folders")}</TooltipContent>
+                      <TooltipContent>{t("diff.expand_all_directories")}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
                           onClick={() => mobileTreeRef.current?.collapseAll()}
-                          aria-label={t("diff.collapse_all_folders")}
+                          aria-label={t("diff.collapse_all_directories")}
                           className="grid size-7 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsDownUp className="size-3.5" aria-hidden />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t("diff.collapse_all_folders")}</TooltipContent>
+                      <TooltipContent>{t("diff.collapse_all_directories")}</TooltipContent>
                     </Tooltip>
                   </span>
                   <SheetClose asChild>
