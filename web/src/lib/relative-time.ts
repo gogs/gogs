@@ -68,7 +68,8 @@ const ABSOLUTE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, {
   timeZoneName: "short",
 });
 
-export function formatAbsoluteTime(iso: string, now: Date = new Date(Date.parse(iso))): string {
-  if (Number.isNaN(now.getTime())) return iso;
-  return ABSOLUTE_TIME_FMT.format(now);
+export function formatAbsoluteTime(iso: string): string {
+  const d = new Date(Date.parse(iso));
+  if (Number.isNaN(d.getTime())) return iso;
+  return ABSOLUTE_TIME_FMT.format(d);
 }
