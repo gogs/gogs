@@ -11,7 +11,6 @@
 				</div>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="POST">
-						{{.CSRFTokenHTML}}
 						<input type="hidden" name="action" value="update">
 						<div class="required field {{if .Err_RepoName}}error{{end}}">
 							<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}<span class="text red hide" id="repo-name-change-prompt"> {{.i18n.Tr "repo.settings.change_reponame_prompt"}}</span></label>
@@ -56,7 +55,6 @@
 					<div class="ui divider"></div>
 
 					<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
-						{{.CSRFTokenHTML}}
 						<div class="inline field">
 							<label for="avatar">{{.i18n.Tr "settings.choose_new_avatar"}}</label>
 							<input name="avatar" type="file" >
@@ -74,7 +72,6 @@
 					</div>
 					<div class="ui attached segment">
 						<form class="ui form" method="POST">
-							{{.CSRFTokenHTML}}
 							<input type="hidden" name="action" value="mirror">
 							<div class="inline field {{if .Err_EnablePrune}}error{{end}}">
 							  <label>{{.i18n.Tr "repo.mirror_prune"}}</label>
@@ -101,7 +98,6 @@
 						<div class="ui divider"></div>
 
 						<form class="ui form" method="POST">
-							{{.CSRFTokenHTML}}
 							<input type="hidden" name="action" value="mirror-sync">
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.mirror_last_synced"}}</label>
@@ -119,7 +115,6 @@
 				</div>
 				<div class="ui attached segment">
 					<form class="ui form" method="POST">
-						{{.CSRFTokenHTML}}
 						<input type="hidden" name="action" value="advanced">
 
 						<!-- Wiki -->
@@ -316,7 +311,6 @@
 				{{.i18n.Tr "repo.settings.convert_notices_1" | Safe}}
 			</div>
 			<form class="ui form" action="{{.Link}}" method="POST">
-				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="convert">
 				<div class="field">
 					<label>
@@ -348,7 +342,6 @@
 				{{.i18n.Tr "repo.settings.transfer_notices_2" | Safe}}
 			</div>
 			<form class="ui form" action="{{.Link}}" method="POST">
-				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="transfer">
 				<div class="field">
 					<label>
@@ -386,7 +379,6 @@
 				{{end}}
 			</div>
 			<form class="ui form" action="{{.Link}}" method="POST">
-				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete">
 				<div class="field">
 					<label>
@@ -418,7 +410,6 @@
 				{{.i18n.Tr "repo.settings.wiki_delete_notices_1" .Repository.Name | Safe}}
 			</div>
 			<form class="ui form" action="{{.Link}}" method="POST">
-				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete-wiki">
 				<div class="field">
 					<label>

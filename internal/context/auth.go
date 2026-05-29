@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
 	"github.com/google/uuid"
 	"gopkg.in/macaron.v1"
@@ -24,7 +23,6 @@ type ToggleOptions struct {
 	SignInRequired  bool
 	SignOutRequired bool
 	AdminRequired   bool
-	DisableCSRF     bool
 }
 
 func Toggle(options *ToggleOptions) macaron.Handler {
@@ -52,13 +50,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		if options.SignOutRequired && c.IsLogged && c.Req.RequestURI != "/" {
 			c.RedirectSubpath("/")
 			return
-		}
-
-		if !options.SignOutRequired && !options.DisableCSRF && c.Req.Method == "POST" && !isAPIPath(c.Req.URL.Path) {
-			csrf.Validate(c.Context, c.csrf)
-			if c.Written() {
-				return
-			}
 		}
 
 		if options.SignInRequired {
