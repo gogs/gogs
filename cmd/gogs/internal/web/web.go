@@ -711,12 +711,11 @@ func newRoutingHandler() (http.Handler, error) {
 }
 
 func getRobotsTxt(c flamego.Context) {
-	w := c.ResponseWriter()
 	if !conf.HasRobotsTxt {
-		w.WriteHeader(http.StatusNotFound)
+		c.ResponseWriter().WriteHeader(http.StatusNotFound)
 		return
 	}
-	http.ServeFile(w, c.Request().Request, filepath.Join(conf.CustomDir(), "robots.txt"))
+	http.ServeFile(c.ResponseWriter(), c.Request().Request, filepath.Join(conf.CustomDir(), "robots.txt"))
 }
 
 func getRedirect(c flamego.Context) {
