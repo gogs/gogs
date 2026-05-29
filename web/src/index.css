@@ -20,6 +20,23 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Geist Mono carries a standard ligature set (liga, on by default) that
+   substitutes single glyphs for programming symbol sequences. In a code or diff
+   viewer this alters how the literal source bytes look. Turn ligatures off on
+   every mono surface so code-shaped content renders character-for-character.
+   font-variant-ligatures inherits, so listing diffs-container here also reaches
+   the @pierre/diffs shadow root, which never sets the property itself. */
+@layer base {
+  .font-mono,
+  code,
+  pre,
+  kbd,
+  samp,
+  diffs-container {
+    font-variant-ligatures: none;
+  }
+}
+
 @theme {
   --color-background: initial;
   --color-foreground: initial;
@@ -179,6 +196,11 @@
 diffs-container {
   --diffs-font-family: var(--font-mono);
   --diffs-header-font-family: var(--font-sans);
+  /* The inherited font-variant-ligatures: none above already disables ligatures
+     inside the shadow root. Pin the library's own --diffs-font-features off too,
+     so the diff stays ligature-free through @pierre/diffs' sanctioned knob and
+     not just the inherited property. */
+  --diffs-font-features: "liga" 0;
   --diffs-light-bg: var(--color-background);
   --diffs-dark-bg: var(--color-background);
   --diffs-tab-size: 4;
