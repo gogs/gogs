@@ -575,18 +575,6 @@ func Run(configPath string, portOverride int) error {
 		})
 	})
 
-	// **********************
-	// ----- robots.txt -----
-	// **********************
-
-	m.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
-		if conf.HasRobotsTxt {
-			http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	})
-
 	// Flag for port number in case first time run conflict.
 	if portOverride > 0 {
 		port := strconv.Itoa(portOverride)
@@ -704,6 +692,7 @@ func newRoutingHandler() (http.Handler, error) {
 	})
 
 	f.Get("/redirect", getRedirect)
+	f.Get("/robots.txt", getRobotsTxt)
 
 	// The captcha middleware writes the response. This route exists so the request reaches it.
 	f.Get("/captcha/image.jpeg", func() {})
@@ -727,6 +716,14 @@ func getRedirect(c flamego.Context) {
 		to = conf.Server.Subpath + "/"
 	}
 	c.Redirect(to, http.StatusSeeOther)
+}
+
+func getRobotsTxt(w http.ResponseWriter, r *http.Request) {
+	if !conf.HasRobotsTxt {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
 }
 
 // newMacaron initializes Macaron instance.
