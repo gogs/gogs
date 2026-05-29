@@ -55,6 +55,7 @@ const KEYS = [
   "show_more",
   "show_less",
   "resize_sidebar",
+  "copy_failed",
   "more",
   "more_tabs",
   "more_actions",

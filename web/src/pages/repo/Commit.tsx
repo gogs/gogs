@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { DiffFileTree, type DiffFileTreeHandle } from "@/components/DiffFileTree";
 import { DiffSearch } from "@/components/DiffSearch";
@@ -210,13 +211,20 @@ export function RepoCommit() {
   }, [treeSearchOpen]);
   // Desktop tree starts open; the user can collapse it via the sidebar
   // header. The choice persists across navigations within the session.
+  // Writing happens only inside `toggleDesktopTree` (not in a mount effect)
+  // so the default flowing through `useState` is not baked into localStorage,
+  // and a future default change still applies to users who never toggled.
   const [desktopTreeOpen, setDesktopTreeOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
-    return window.localStorage.getItem("gogs-commit-diff-sidebar-open") !== "false";
+    return window.localStorage.getItem("gogs-file-tree-open") !== "false";
   });
-  useEffect(() => {
-    window.localStorage.setItem("gogs-commit-diff-sidebar-open", desktopTreeOpen ? "true" : "false");
-  }, [desktopTreeOpen]);
+  const toggleDesktopTree = useCallback(() => {
+    setDesktopTreeOpen((prev) => {
+      const next = !prev;
+      window.localStorage.setItem("gogs-file-tree-open", next ? "true" : "false");
+      return next;
+    });
+  }, []);
 
   // Pierre's `<diffs-container>` swallows wheel events for its own virtual
   // scroller, which means scrolling down inside the diff before the page has
@@ -484,29 +492,41 @@ export function RepoCommit() {
     setCollapsedById((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  const copyFilePath = useCallback((id: string, filePath: string) => {
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(filePath);
-        setCopiedPathById((prev) => ({ ...prev, [id]: true }));
-        window.setTimeout(() => {
-          setCopiedPathById((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-          });
-        }, 1200);
-      } catch {
-        // Clipboard API can fail in insecure contexts. The file name is still
-        // visible in the header so the user can copy manually.
-      }
-    })();
-  }, []);
+  const copyFilePath = useCallback(
+    (id: string, filePath: string) => {
+      void (async () => {
+        try {
+          await navigator.clipboard.writeText(filePath);
+          setCopiedPathById((prev) => ({ ...prev, [id]: true }));
+          window.setTimeout(() => {
+            setCopiedPathById((prev) => {
+              const next = { ...prev };
+              delete next[id];
+              return next;
+            });
+          }, 1200);
+        } catch {
+          toast.error(t("copy_failed"));
+        }
+      })();
+    },
+    [t],
+  );
+
+  // Mirror `expandedById` into a ref so the in-flight guard below can read
+  // the latest state without making `expandAllLinesFor` churn on every
+  // expand. Otherwise the callback's identity changes per expand, cascading
+  // to `renderHeaderMetadata` and re-rendering every file header in the
+  // diff.
+  const expandedByIdRef = useRef(expandedById);
+  useEffect(() => {
+    expandedByIdRef.current = expandedById;
+  }, [expandedById]);
 
   const expandAllLinesFor = useCallback(
     async (item: CodeViewItem) => {
       if (item.type !== "diff") return;
-      if (expandedById[item.id]) return;
+      if (expandedByIdRef.current[item.id]) return;
       const fileDiff = item.fileDiff;
       const parent = parents[0];
       // Added files have no pre-image; deleted files have no post-image.
@@ -540,7 +560,7 @@ export function RepoCommit() {
         });
       }
     },
-    [parents, sha, expandedById, owner, repo],
+    [parents, sha, owner, repo],
   );
 
   // Pierre renders our callback's output into a `<slot name="header-prefix">`
@@ -686,11 +706,10 @@ export function RepoCommit() {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
       } catch {
-        // Clipboard API can fail in insecure contexts. The SHA is still
-        // visible inline, so silently swallow.
+        toast.error(t("copy_failed"));
       }
     })();
-  }, [sha]);
+  }, [sha, t]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -801,7 +820,7 @@ export function RepoCommit() {
           onCollapseAll={collapseAllDiff}
           search={<DiffSearch items={items} viewRef={viewRef} />}
           onShowTreeMobile={() => setMobileTreeOpen(true)}
-          onToggleTreeDesktop={() => setDesktopTreeOpen((open) => !open)}
+          onToggleTreeDesktop={toggleDesktopTree}
           desktopTreeOpen={desktopTreeOpen}
         />
 
