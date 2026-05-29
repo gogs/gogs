@@ -6,14 +6,14 @@ import { usePageTitle } from "@/lib/page-title";
 
 export function ServerError({ error }: ErrorComponentProps) {
   const { t } = useTranslation();
-  usePageTitle(t("internal_server_error"));
+  usePageTitle(t("status.internal_server_error"));
   const path = typeof window === "undefined" ? "/" : window.location.pathname;
 
   // Prefer the structured `error` field from the webapi JSON response; fall
   // back to the raw body when the upstream returned non-JSON (e.g. a proxy
   // error page); fall back again to the generic message when nothing useful
   // was carried over.
-  let detail = t("internal_server_error");
+  let detail = t("status.internal_server_error");
   if (error instanceof LoaderResponseError) {
     if (error.errorField) {
       detail = error.errorField;

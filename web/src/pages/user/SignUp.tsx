@@ -65,7 +65,7 @@ export function SignUp() {
 
     setFormError(null);
     if (password !== confirmPassword) {
-      setFieldErrors({ password: null, confirmPassword: t("password_mismatch") });
+      setFieldErrors({ password: null, confirmPassword: t("auth.password_mismatch") });
       requestAnimationFrame(() => confirmPasswordRef.current?.focus());
       return;
     }
@@ -88,7 +88,7 @@ export function SignUp() {
             focusField = FIELD_ORDER.find((f) => f in (body.fields ?? {}));
           }
           if (!body.error && !body.fields) {
-            setFormError(t("sign_up_failed"));
+            setFormError(t("auth.sign_up_failed"));
           }
           setSubmitting(false);
           if (captchaEnabled) refreshCaptcha();
@@ -110,7 +110,7 @@ export function SignUp() {
         }
         await navigate({ to: "/user/sign-in" });
       } catch {
-        setFormError(t("sign_up_failed"));
+        setFormError(t("auth.sign_up_failed"));
         setSubmitting(false);
         if (captchaEnabled) refreshCaptcha();
       }
@@ -132,7 +132,7 @@ export function SignUp() {
     if (registrationDisabled) {
       return (
         <p role="alert" className="text-center text-sm text-(--color-destructive)">
-          {t("disable_register_prompt")}
+          {t("auth.disable_register_prompt")}
         </p>
       );
     }
@@ -141,13 +141,13 @@ export function SignUp() {
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
             <Trans
-              i18nKey="activation_email_sent"
+              i18nKey="auth.activation_email_sent"
               values={{ email: sent.email, hours: sent.hours }}
               components={{ email: <b />, hours: <b /> }}
             />
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
+            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
           </Button>
         </div>
       );
@@ -236,13 +236,13 @@ export function SignUp() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="confirmPassword">{t("confirm_password")}</Label>
+              <Label htmlFor="confirmPassword">{t("auth.confirm_password")}</Label>
               <PasswordInput
                 inputRef={confirmPasswordRef}
                 id="confirmPassword"
                 value={confirmPassword}
                 tabIndex={5}
-                placeholder={t("confirm_password_placeholder")}
+                placeholder={t("auth.confirm_password_placeholder")}
                 show={showConfirmPassword}
                 onToggleShow={() => setShowConfirmPassword((v) => !v)}
                 disabled={submitting}
@@ -306,7 +306,7 @@ export function SignUp() {
 
             <div className="mt-2 flex flex-col gap-3">
               <Button type="submit" disabled={submitting} tabIndex={9} className="w-full">
-                {submitting ? t("sign_up_submitting") : t("create_new_account")}
+                {submitting ? t("auth.sign_up_submitting") : t("auth.create_new_account")}
               </Button>
               <Button variant="link" size="inline" asChild className="self-center">
                 <a
@@ -318,7 +318,7 @@ export function SignUp() {
                     if (submitting) e.preventDefault();
                   }}
                 >
-                  {t("register_hepler_msg")}
+                  {t("auth.register_hepler_msg")}
                 </a>
               </Button>
             </div>

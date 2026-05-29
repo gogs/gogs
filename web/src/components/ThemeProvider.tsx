@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
-export type Theme = "light" | "dark" | "system";
+import { ThemeContext, type ThemeContextValue } from "@/lib/theme-context";
 
 const STORAGE_KEY = "gogs-theme";
 
@@ -8,19 +8,19 @@ function systemPrefersDark(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-function readStoredTheme(): Theme {
+function readStoredTheme(): ThemeContextValue["theme"] {
   if (typeof localStorage === "undefined") return "system";
   const v = localStorage.getItem(STORAGE_KEY);
   return v === "light" || v === "dark" || v === "system" ? v : "system";
 }
 
-function applyTheme(theme: Theme) {
+function applyTheme(theme: ThemeContextValue["theme"]) {
   const dark = theme === "dark" || (theme === "system" && systemPrefersDark());
   document.documentElement.classList.toggle("dark", dark);
 }
 
-export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<ThemeContextValue["theme"]>(readStoredTheme);
 
   useEffect(() => {
     applyTheme(theme);
@@ -31,11 +31,17 @@ export function useTheme() {
     return () => mq.removeEventListener("change", onChange);
   }, [theme]);
 
-  const setTheme = (next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
-    setThemeState(next);
-    applyTheme(next);
-  };
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme,
+      setTheme: (next) => {
+        localStorage.setItem(STORAGE_KEY, next);
+        setThemeState(next);
+        applyTheme(next);
+      },
+    }),
+    [theme],
+  );
 
-  return { theme, setTheme };
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

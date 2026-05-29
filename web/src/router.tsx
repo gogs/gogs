@@ -1,16 +1,21 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, RouterProvider, createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import type { UserInfo } from "@/lib/user-info";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
+import { createRepoRoutes } from "@/routes/repo";
 import { createUserRoutes } from "@/routes/user";
 
 interface RouterContext {
   user: UserInfo | null;
+  queryClient: QueryClient;
 }
 
 function RootLayout() {
@@ -34,7 +39,7 @@ const landingRoute = createRoute({
   component: Landing,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, ...createUserRoutes(rootRoute)]);
+const routeTree = rootRoute.addChildren([landingRoute, ...createUserRoutes(rootRoute), ...createRepoRoutes(rootRoute)]);
 
 function makeRouter(context: RouterContext) {
   return createRouter({
@@ -54,7 +59,16 @@ declare module "@tanstack/react-router" {
   }
 }
 
+const queryClient = new QueryClient();
+
 export function AppRouter({ user }: { user: UserInfo | null }) {
-  const router = makeRouter({ user });
-  return <RouterProvider router={router} />;
+  const router = makeRouter({ user, queryClient });
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={300}>
+        <RouterProvider router={router} />
+        <Toaster position="bottom-right" closeButton richColors />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 }

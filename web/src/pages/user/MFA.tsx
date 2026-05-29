@@ -20,7 +20,7 @@ const route = getRouteApi("/user/mfa");
 
 export function MFA() {
   const { t } = useTranslation();
-  usePageTitle(t("mfa_title"));
+  usePageTitle(t("auth.mfa_title"));
   const navigate = useNavigate();
   // When no challenge is pending the loader has already kicked off a full
   // navigation away; the early return keeps this page from flashing.
@@ -80,7 +80,7 @@ export function MFA() {
           if (errBody.error) setFormError(errBody.error);
           if (errBody.fields) setFieldErrors(errBody.fields);
           if (!errBody.error && !errBody.fields) {
-            setFormError(t("mfa_verify_failed"));
+            setFormError(t("auth.mfa_verify_failed"));
           }
           setSubmitting(false);
           // Focus after React re-enables the fieldset; .focus() is a no-op
@@ -95,7 +95,7 @@ export function MFA() {
         const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
         window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
       } catch {
-        setFormError(t("mfa_verify_failed"));
+        setFormError(t("auth.mfa_verify_failed"));
         setSubmitting(false);
       }
     })();
@@ -109,7 +109,7 @@ export function MFA() {
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
-          <CardTitle>{t("mfa_title")}</CardTitle>
+          <CardTitle>{t("auth.mfa_title")}</CardTitle>
         </CardHeader>
         <CardContent className="pt-2">
           <form onSubmit={onSubmit} noValidate>
@@ -126,7 +126,7 @@ export function MFA() {
               <div className="flex flex-col gap-4">
                 {isPasscode ? (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={inputId}>{t("mfa_passcode")}</Label>
+                    <Label htmlFor={inputId}>{t("auth.mfa_passcode")}</Label>
                     <Input
                       ref={passcodeRef}
                       id={inputId}
@@ -137,7 +137,7 @@ export function MFA() {
                       required
                       autoFocus
                       tabIndex={1}
-                      placeholder={t("mfa_passcode_placeholder")}
+                      placeholder={t("auth.mfa_passcode_placeholder")}
                       value={passcode}
                       onChange={(e) => setPasscode(e.target.value)}
                       aria-invalid={inputErrorKey in fieldErrors ? true : undefined}
@@ -151,7 +151,7 @@ export function MFA() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={inputId}>{t("mfa_recovery_code")}</Label>
+                    <Label htmlFor={inputId}>{t("auth.mfa_recovery_code")}</Label>
                     <Input
                       ref={recoveryRef}
                       id={inputId}
@@ -161,7 +161,7 @@ export function MFA() {
                       required
                       autoFocus
                       tabIndex={1}
-                      placeholder={t("mfa_recovery_code_placeholder")}
+                      placeholder={t("auth.mfa_recovery_code_placeholder")}
                       value={recoveryCode}
                       onChange={(e) => setRecoveryCode(e.target.value)}
                       aria-invalid={inputErrorKey in fieldErrors ? true : undefined}
@@ -177,7 +177,7 @@ export function MFA() {
 
                 <div className="mt-2 flex flex-col gap-3">
                   <Button type="submit" disabled={submitting} tabIndex={2} className="w-full">
-                    {submitting ? t("mfa_verifying") : t("mfa_verify")}
+                    {submitting ? t("auth.mfa_verifying") : t("auth.mfa_verify")}
                   </Button>
                   <Button
                     type="button"
@@ -187,7 +187,7 @@ export function MFA() {
                     className="self-center"
                     onClick={() => switchMode(isPasscode ? "recovery" : "passcode")}
                   >
-                    {isPasscode ? t("mfa_use_recovery_code") : t("mfa_use_passcode")}
+                    {isPasscode ? t("auth.mfa_use_recovery_code") : t("auth.mfa_use_passcode")}
                   </Button>
                   <Button variant="link" size="inline" asChild className="self-center">
                     <Link
@@ -199,7 +199,7 @@ export function MFA() {
                         if (submitting) e.preventDefault();
                       }}
                     >
-                      {t("back_to_sign_in")}
+                      {t("auth.back_to_sign_in")}
                     </Link>
                   </Button>
                 </div>

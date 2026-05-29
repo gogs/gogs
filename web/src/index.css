@@ -35,6 +35,9 @@
   --color-muted-foreground: initial;
   --color-destructive: initial;
   --color-destructive-foreground: initial;
+  --color-success: initial;
+  --color-diff-added: initial;
+  --color-diff-removed: initial;
   --color-border: initial;
   --color-input: initial;
   --color-ring: initial;
@@ -60,6 +63,9 @@
   --color-muted-foreground: #737373;
   --color-destructive: #d52c36;
   --color-destructive-foreground: #ffffff;
+  --color-success: #15803d;
+  --color-diff-added: #16a34a;
+  --color-diff-removed: #dc2626;
   --color-border: #e5e5e5;
   --color-input: #d4d4d4;
   --color-ring: #009fff;
@@ -82,6 +88,9 @@
   --color-muted-foreground: #8a8a8a;
   --color-destructive: #ff6762;
   --color-destructive-foreground: #ffffff;
+  --color-success: #4ade80;
+  --color-diff-added: #4ade80;
+  --color-diff-removed: #f87171;
   --color-border: #1d1d1d;
   --color-input: #262626;
   --color-ring: #009fff;
@@ -159,4 +168,24 @@
         0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
     }
   }
+}
+
+/* @pierre/diffs renders each file into a <diffs-container> custom element with
+   its own shadow root. Custom properties inherit across the boundary, so set
+   the font tokens and the diff bg here so the library's :host font-family and
+   :host bg rules resolve to our tokens instead of its SF Mono / pure-black
+   fallbacks. Matching --diffs-{light,dark}-bg to our page bg eliminates the
+   seam between the diff panel and the surrounding page chrome. */
+diffs-container {
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-sans);
+  --diffs-light-bg: var(--color-background);
+  --diffs-dark-bg: var(--color-background);
+  --diffs-tab-size: 4;
+  display: block;
+  border: 1px solid var(--color-border);
+  /* Top corners square so when the file header sticks (floating below the
+     card's top edge), no rounded host corners frame the gap. The header
+     carries its own rounded top corners in both docked and sticky state. */
+  border-radius: 0 0 3px 3px;
 }

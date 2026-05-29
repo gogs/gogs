@@ -33,7 +33,7 @@ export function ResetPassword() {
   const navigate = useNavigate();
   const { code, emailEnabled, valid } = route.useLoaderData();
   const isResetForm = code !== "";
-  usePageTitle(t("reset_password"));
+  usePageTitle(t("auth.reset_password"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +55,7 @@ export function ResetPassword() {
 
     if (isResetForm && password !== confirmPassword) {
       setFormError(null);
-      setFieldErrors({ password: null, confirmPassword: t("password_mismatch") });
+      setFieldErrors({ password: null, confirmPassword: t("auth.password_mismatch") });
       requestAnimationFrame(() => confirmPasswordRef.current?.focus());
       return;
     }
@@ -102,7 +102,7 @@ export function ResetPassword() {
     })();
   }
 
-  const title = t("reset_password");
+  const title = t("auth.reset_password");
 
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -119,7 +119,7 @@ export function ResetPassword() {
     if (!emailEnabled) {
       return (
         <p role="alert" className="text-center text-sm text-(--color-destructive)">
-          {t("disable_register_mail")}
+          {t("auth.disable_register_mail")}
         </p>
       );
     }
@@ -128,17 +128,17 @@ export function ResetPassword() {
         <div className="flex flex-col gap-4 text-center">
           <p role="status" className="text-sm text-(--color-foreground)">
             {sent.resendLimited ? (
-              t("reset_password_resend_limited")
+              t("auth.reset_password_resend_limited")
             ) : (
               <Trans
-                i18nKey="reset_password_email_sent"
+                i18nKey="auth.reset_password_email_sent"
                 values={{ email, hours: sent.hours }}
                 components={{ email: <b />, hours: <b /> }}
               />
             )}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
+            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
           </Button>
         </div>
       );
@@ -173,7 +173,7 @@ export function ResetPassword() {
               )}
             </div>
             <FormActions
-              submitLabel={submitting ? t("reset_password_email_submitting") : t("send_reset_email")}
+              submitLabel={submitting ? t("auth.reset_password_email_submitting") : t("auth.send_reset_email")}
               submitTabIndex={3}
             />
           </div>
@@ -187,10 +187,10 @@ export function ResetPassword() {
       return (
         <div className="flex flex-col gap-4 text-center">
           <p role="alert" className="text-sm text-(--color-destructive)">
-            {t("invalid_code")}
+            {t("auth.invalid_code")}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("back_to_sign_in")}</a>
+            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
           </Button>
         </div>
       );
@@ -202,13 +202,13 @@ export function ResetPassword() {
           {renderFormError()}
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">{t("new_password")}</Label>
+              <Label htmlFor="password">{t("auth.new_password")}</Label>
               <PasswordInput
                 inputRef={passwordRef}
                 id="password"
                 value={password}
                 tabIndex={1}
-                placeholder={t("new_password_placeholder")}
+                placeholder={t("auth.new_password_placeholder")}
                 show={showPassword}
                 onToggleShow={() => setShowPassword((v) => !v)}
                 disabled={submitting}
@@ -224,13 +224,13 @@ export function ResetPassword() {
               )}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="confirmPassword">{t("confirm_new_password")}</Label>
+              <Label htmlFor="confirmPassword">{t("auth.confirm_new_password")}</Label>
               <PasswordInput
                 inputRef={confirmPasswordRef}
                 id="confirmPassword"
                 value={confirmPassword}
                 tabIndex={3}
-                placeholder={t("confirm_new_password_placeholder")}
+                placeholder={t("auth.confirm_new_password_placeholder")}
                 show={showConfirmPassword}
                 onToggleShow={() => setShowConfirmPassword((v) => !v)}
                 disabled={submitting}
@@ -245,7 +245,7 @@ export function ResetPassword() {
               )}
             </div>
             <FormActions
-              submitLabel={submitting ? t("reset_password_submitting") : t("reset_password_submit")}
+              submitLabel={submitting ? t("auth.reset_password_submitting") : t("auth.reset_password_submit")}
               submitTabIndex={5}
             />
           </div>
@@ -282,7 +282,7 @@ export function ResetPassword() {
               if (submitting) e.preventDefault();
             }}
           >
-            {t("back_to_sign_in")}
+            {t("auth.back_to_sign_in")}
           </a>
         </Button>
       </div>
