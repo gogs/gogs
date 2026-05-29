@@ -174,7 +174,7 @@ type repoWatchResponse struct {
 }
 
 func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (statusCode int, resp *repoWatchResponse, err error) {
-	if repoCtx.ViewerCanRead() {
+	if !repoCtx.ViewerCanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 
