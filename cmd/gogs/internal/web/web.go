@@ -710,20 +710,20 @@ func newRoutingHandler() (http.Handler, error) {
 	return f, nil
 }
 
-func getRobotsTxt(c flamego.Context) {
-	if !conf.HasRobotsTxt {
-		c.ResponseWriter().WriteHeader(http.StatusNotFound)
-		return
-	}
-	http.ServeFile(c.ResponseWriter(), c.Request().Request, filepath.Join(conf.CustomDir(), "robots.txt"))
-}
-
 func getRedirect(c flamego.Context) {
 	to := c.Request().URL.Query().Get("to")
 	if !urlx.IsSameSite(to) {
 		to = conf.Server.Subpath + "/"
 	}
 	c.Redirect(to, http.StatusSeeOther)
+}
+
+func getRobotsTxt(w http.ResponseWriter, r *http.Request) {
+	if !conf.HasRobotsTxt {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
 }
 
 // newMacaron initializes Macaron instance.
