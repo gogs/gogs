@@ -22,6 +22,7 @@ All notable changes to Gogs are documented in this file.
 - Support for MSSQL as the database backend. Stay on 0.14 for continued usage. [#8173](https://github.com/gogs/gogs/pull/8173)
 - Support for `memcache` as the cache adapter. Stay on 0.14 for continued usage. [#8270](https://github.com/gogs/gogs/pull/8270)
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
+- CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 
 ## 0.14.2
 

@@ -21,7 +21,6 @@
 					{{if not $.IsGuest}}
 						<div class="ui right">
 							<form class="display inline" action="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}" method="POST">
-								{{$.CSRFTokenHTML}}
 								<div class="ui labeled button" tabindex="0">
 									<button class="ui basic button">
 										<i class="eye{{if not $.IsWatchingRepo}} slash outline{{end}} icon"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
@@ -32,7 +31,6 @@
 								</div>
 							</form>
 							<form class="display inline" action="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}" method="POST">
-								{{$.CSRFTokenHTML}}
 								<div class="ui labeled button" tabindex="0">
 									<button class="ui basic button">
 										<i class="star{{if not $.IsStaringRepo}} outline{{end}} icon"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}

@@ -263,7 +263,6 @@
 							<div class="ui divider"></div>
 
 							<form class="ui form" action="{{AppSubURL}}/admin/config/test_mail" method="post">
-								{{.CSRFTokenHTML}}
 								<div class="inline field ui left">
 									<div class="ui input">
 										<input type="email" name="email" required>
@@ -344,8 +343,6 @@
 						<dd>{{.Session.GCInterval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.session.max_life_time"}}</dt>
 						<dd>{{.Session.MaxLifeTime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
-						<dt>{{.i18n.Tr "admin.config.session.csrf_cookie_name"}}</dt>
-						<dd>{{.Session.CSRFCookieName}}</dd>
 					</dl>
 				</div>
 

@@ -19,7 +19,6 @@ import (
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/binding"
 	macaroncache "github.com/go-macaron/cache"
-	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
@@ -505,7 +504,7 @@ func Run(configPath string, portOverride int) error {
 		// ----- API routes -----
 		// **********************
 
-		// TODO: Without session and CSRF
+		// TODO: Without session
 		m.Group("/api", func() {
 			apiv1.RegisterRoutes(m)
 		}, ignSignIn)
@@ -524,16 +523,6 @@ func Run(configPath string, portOverride int) error {
 			Maxlifetime:    conf.Session.MaxLifeTime,
 			Secure:         conf.Session.CookieSecure,
 			CookieLifeTime: 86400 * conf.Security.LoginRememberDays,
-		}),
-		csrf.Csrfer(csrf.Options{
-			Secret:         conf.Security.SecretKey,
-			Header:         "X-CSRF-Token",
-			Cookie:         conf.Session.CSRFCookieName,
-			CookieDomain:   conf.Server.URL.Hostname(),
-			CookiePath:     conf.Server.Subpath,
-			CookieHttpOnly: true,
-			SetCookie:      true,
-			Secure:         conf.Server.URL.Scheme == "https",
 		}),
 		context.Contexter(context.NewStore(), webHandler),
 	)

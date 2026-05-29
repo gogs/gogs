@@ -299,7 +299,6 @@ func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User)
 	sess.Set("uname", u.Name)
 	sess.Delete("mfaUserID")
 
-	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
 		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
@@ -506,7 +505,6 @@ type postUserSignOutResponse struct {
 func postUserSignOut(sess macaronsession.Store, mc *macaron.Context) (statusCode int, resp *postUserSignOutResponse, err error) {
 	_ = sess.Flush()
 	_ = sess.Destory(mc)
-	mc.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Auth.CustomLogoutURL != "" {
 		return http.StatusOK, &postUserSignOutResponse{RedirectTo: conf.Auth.CustomLogoutURL}, nil
 	}
