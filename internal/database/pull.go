@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -194,6 +195,15 @@ const (
 func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
 	ctx := context.TODO()
 
+	// Reject branch names that start with a hyphen to prevent argument injection
+	// into git commands (e.g. --exec=<cmd> being passed to git rebase).
+	if strings.HasPrefix(pr.BaseBranch, "-") {
+		return errors.Newf("invalid base branch name: %q", pr.BaseBranch)
+	}
+	if strings.HasPrefix(pr.HeadBranch, "-") {
+		return errors.Newf("invalid head branch name: %q", pr.HeadBranch)
+	}
+
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -279,7 +289,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		// Rebase head branch based on base branch, this creates a non-branch commit state.
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 			fmt.Sprintf("PullRequest.Merge (git rebase): %s", tmpBasePath),
-			"git", "rebase", "--quiet", pr.BaseBranch, remoteHeadBranch); err != nil {
+			"git", "rebase", "--quiet", "--end-of-options", pr.BaseBranch, remoteHeadBranch); err != nil {
 			return errors.Newf("git rebase [%s on %s]: %s", remoteHeadBranch, pr.BaseBranch, stderr)
 		}
 
