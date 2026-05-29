@@ -32,6 +32,8 @@ import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 
+import type { RepoCommitSearch } from "./Commit.search";
+
 export interface RepoCommitSignature {
   name: string;
   email: string;
@@ -185,7 +187,7 @@ export function RepoCommit() {
   const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
   const { sha, subject, body, author, parents, patch } = data;
   const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
-  const search = useSearch({ from: "/$owner/$repo/commit/$sha" });
+  const search: RepoCommitSearch = useSearch({ from: "/$owner/$repo/commit/$sha" });
   const navigate = useNavigate({ from: "/$owner/$repo/commit/$sha" });
   const { data: repoHeader } = useSuspenseQuery(repoHeaderQuery(owner, repo));
   const { t } = useTranslation();
@@ -312,7 +314,7 @@ export function RepoCommit() {
   const setSettings = useCallback(
     (next: DiffToolbarSettings) => {
       void navigate({
-        search: (prev) => ({
+        search: (prev: RepoCommitSearch) => ({
           ...prev,
           style: next.diffStyle === "split" ? "split" : undefined,
           wrap: next.wrapLines ? true : undefined,
@@ -329,7 +331,7 @@ export function RepoCommit() {
       // server because `-w` / `-b` happen at `git diff` time. The other
       // toggles are client-only, but all of them still ride the URL.
       void navigate({
-        search: (prev) => ({
+        search: (prev: RepoCommitSearch) => ({
           ...prev,
           whitespace: next === "show" ? undefined : next,
         }),
