@@ -33,6 +33,14 @@ var (
 	funcMapOnce sync.Once
 )
 
+// newSanitizePolicy extends the UGC policy to allow the title attribute on
+// span elements, which TimeSince uses for date tooltips.
+func newSanitizePolicy() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	p.AllowAttrs("title").OnElements("span")
+	return p
+}
+
 // FuncMap returns a list of user-defined template functions.
 func FuncMap() []template.FuncMap {
 	funcMapOnce.Do(func() {
@@ -73,7 +81,7 @@ func FuncMap() []template.FuncMap {
 			"AvatarLink":       tool.AvatarLink,
 			"AppendAvatarSize": tool.AppendAvatarSize,
 			"Safe":             Safe,
-			"Sanitize":         bluemonday.UGCPolicy().Sanitize,
+			"Sanitize":         newSanitizePolicy().Sanitize,
 			"Str2HTML":         Str2HTML,
 			"NewLine2br":       NewLine2br,
 			"TimeSince":        tool.TimeSince,
