@@ -23,7 +23,7 @@ Gogs has the following dependencies:
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
 - [Go](https://golang.org/doc/install) (v1.20 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
-- [Task](https://github.com/go-task/task) (v3)
+- [Moon](https://moonrepo.dev/docs/install)
 - [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
 - [go-mockgen](https://github.com/derision-test/go-mockgen)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
@@ -38,12 +38,15 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git npm go-task/tap/go-task
+    brew install go postgresql git npm moon portless
+    portless trust
     npm install -g less
     npm install -g less-plugin-clean-css
     go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
+
+    `portless trust` adds the local CA to your system trust store so `https://gogs.localhost` works without browser warnings. The `moon run gogs:dev` task will start the proxy and register the route automatically.
 
 1. Configure PostgreSQL to start automatically:
 
@@ -78,10 +81,11 @@ Gogs has the following dependencies:
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
-    go install github.com/go-task/task/v3/cmd/task@latest
     go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
+
+1. Install [Moon](https://moonrepo.dev/docs/install).
 
 1. Configure startup services:
 
@@ -146,10 +150,10 @@ SSL_MODE = disable
 The following command will start the web server and automatically recompile and restart the server if any Go files changed:
 
 ```bash
-task web --watch
+moon run gogs:dev
 ```
 
-**NOTE** If you changed any file under `conf/`, `template/` or `public/` directory, be sure to run `task generate` afterwards!
+**NOTE** If you changed any file under `conf/`, `templates/` or `public/` directory, be sure to rerun `moon run gogs:dev` afterwards!
 
 ## Other nice things
 

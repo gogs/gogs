@@ -1,0 +1,213 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@font-face {
+  font-family: "Geist Pixel";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/GeistPixel-Square.woff2") format("woff2");
+}
+
+@theme inline {
+  --font-sans:
+    "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", "PingFang SC", "Microsoft YaHei", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono Variable", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Geist Mono carries a standard ligature set (liga, on by default) that
+   substitutes single glyphs for programming symbol sequences. In a code or diff
+   viewer this alters how the literal source bytes look. Turn ligatures off on
+   every mono surface so code-shaped content renders character-for-character.
+   font-variant-ligatures inherits, so listing diffs-container here also reaches
+   the @pierre/diffs shadow root, which never sets the property itself. */
+@layer base {
+  .font-mono,
+  code,
+  pre,
+  kbd,
+  samp,
+  diffs-container {
+    font-variant-ligatures: none;
+  }
+}
+
+@theme {
+  --color-background: initial;
+  --color-foreground: initial;
+  --color-card: initial;
+  --color-card-foreground: initial;
+  --color-popover: initial;
+  --color-popover-foreground: initial;
+  --color-primary: initial;
+  --color-primary-foreground: initial;
+  --color-secondary: initial;
+  --color-secondary-foreground: initial;
+  --color-surface: initial;
+  --color-muted-foreground: initial;
+  --color-destructive: initial;
+  --color-destructive-foreground: initial;
+  --color-success: initial;
+  --color-diff-added: initial;
+  --color-diff-removed: initial;
+  --color-border: initial;
+  --color-input: initial;
+  --color-ring: initial;
+  --radius: 0.5rem;
+}
+
+/* Theme palettes are adapted from Pierre Theme's "Light" and "Dark"
+   (non-soft) variants (https://github.com/pierrecomputer/theme). */
+:root {
+  color-scheme: light dark;
+
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  --color-primary: #009fff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #0a0a0a;
+  --color-surface: #f5f5f5;
+  --color-muted-foreground: #737373;
+  --color-destructive: #d52c36;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #15803d;
+  --color-diff-added: #16a34a;
+  --color-diff-removed: #dc2626;
+  --color-border: #e5e5e5;
+  --color-input: #d4d4d4;
+  --color-ring: #009fff;
+}
+
+:root.dark {
+  color-scheme: dark;
+
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  --color-card: #171717;
+  --color-card-foreground: #fafafa;
+  --color-popover: #171717;
+  --color-popover-foreground: #fafafa;
+  --color-primary: #009fff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1d1d1d;
+  --color-secondary-foreground: #fafafa;
+  --color-surface: #1d1d1d;
+  --color-muted-foreground: #8a8a8a;
+  --color-destructive: #ff6762;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #4ade80;
+  --color-diff-added: #4ade80;
+  --color-diff-removed: #f87171;
+  --color-border: #1d1d1d;
+  --color-input: #262626;
+  --color-ring: #009fff;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Flame flicker for terminal-style hover affordances: a Hermès-orange glow
+   that irregularly pulses, like an ember catching from underneath the text.
+   Pauses for users who prefer reduced motion. */
+@property --flame-core {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff6b35;
+}
+@property --flame-halo {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff8a4c;
+}
+
+@keyframes flame-flicker {
+  0% {
+    text-shadow:
+      0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+      0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+  }
+  18% {
+    text-shadow:
+      0 0 6px color-mix(in srgb, var(--flame-core) 70%, transparent),
+      0 0 14px color-mix(in srgb, var(--flame-halo) 40%, transparent);
+  }
+  31% {
+    text-shadow:
+      0 0 3px color-mix(in srgb, var(--flame-core) 35%, transparent),
+      0 0 6px color-mix(in srgb, var(--flame-halo) 18%, transparent);
+  }
+  47% {
+    text-shadow:
+      0 0 8px color-mix(in srgb, var(--flame-core) 75%, transparent),
+      0 0 18px color-mix(in srgb, var(--flame-halo) 45%, transparent);
+  }
+  62% {
+    text-shadow:
+      0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+      0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+  }
+  78% {
+    text-shadow:
+      0 0 5px color-mix(in srgb, var(--flame-core) 60%, transparent),
+      0 0 11px color-mix(in srgb, var(--flame-halo) 32%, transparent);
+  }
+  100% {
+    text-shadow:
+      0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+      0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes flame-flicker {
+    0%,
+    100% {
+      text-shadow:
+        0 0 4px color-mix(in srgb, var(--flame-core) 50%, transparent),
+        0 0 8px color-mix(in srgb, var(--flame-halo) 25%, transparent);
+    }
+  }
+}
+
+/* @pierre/diffs renders each file into a <diffs-container> custom element with
+   its own shadow root. Custom properties inherit across the boundary, so set
+   the font tokens and the diff bg here so the library's :host font-family and
+   :host bg rules resolve to our tokens instead of its SF Mono / pure-black
+   fallbacks. Matching --diffs-{light,dark}-bg to our page bg eliminates the
+   seam between the diff panel and the surrounding page chrome. */
+diffs-container {
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-sans);
+  /* The inherited font-variant-ligatures: none above already disables ligatures
+     inside the shadow root. Pin the library's own --diffs-font-features off too,
+     so the diff stays ligature-free through @pierre/diffs' sanctioned knob and
+     not just the inherited property. */
+  --diffs-font-features: "liga" 0;
+  --diffs-light-bg: var(--color-background);
+  --diffs-dark-bg: var(--color-background);
+  --diffs-tab-size: 4;
+  display: block;
+  border: 1px solid var(--color-border);
+  /* Top corners square so when the file header sticks (floating below the
+     card's top edge), no rounded host corners frame the gap. The header
+     carries its own rounded top corners in both docked and sticky state. */
+  border-radius: 0 0 3px 3px;
+}

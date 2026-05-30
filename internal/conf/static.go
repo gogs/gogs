@@ -2,6 +2,7 @@ package conf
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"time"
@@ -39,8 +40,6 @@ var (
 		InstallLock             bool
 		SecretKey               string
 		LoginRememberDays       int
-		CookieRememberName      string
-		CookieUsername          string
 		CookieSecure            bool
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string
@@ -83,14 +82,6 @@ var (
 		CookieSecure   bool
 		GCInterval     int64 `ini:"GC_INTERVAL"`
 		MaxLifeTime    int64
-		CSRFCookieName string `ini:"CSRF_COOKIE_NAME"`
-	}
-
-	// Cache settings
-	Cache struct {
-		Adapter  string
-		Interval int
-		Host     string
 	}
 
 	// HTTP settings
@@ -221,13 +212,20 @@ var (
 
 	// Other settings
 	Other struct {
-		ShowFooterBranding         bool
 		ShowFooterTemplateLoadTime bool
 	}
 
 	// Global setting
 	HasRobotsTxt bool
 )
+
+type CacheOptions struct {
+	Adapter  string
+	Interval int
+	Host     string
+}
+
+var Cache CacheOptions
 
 type AppOpts struct {
 	// ⚠️ WARNING: Should only be set by the main package (i.e. "cmd/gogs/main.go").
@@ -252,7 +250,11 @@ type AuthOpts struct {
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
 	ReverseProxyAuthenticationHeader   string
-	CustomLogoutURL                    string `ini:"CUSTOM_LOGOUT_URL"`
+	TrustedProxyIPs                    []string `ini:"TRUSTED_PROXY_IPS"`
+	CustomLogoutURL                    string   `ini:"CUSTOM_LOGOUT_URL"`
+
+	// Derived from other static values
+	TrustedProxyCIDRs []*net.IPNet `ini:"-"` // Parsed CIDR form of TrustedProxyIPs.
 }
 
 // Authentication settings
@@ -263,7 +265,7 @@ type ServerOpts struct {
 	Domain               string
 	Protocol             string
 	HTTPAddr             string `ini:"HTTP_ADDR"`
-	HTTPPort             string `ini:"HTTP_PORT"`
+	HTTPPort             int    `ini:"HTTP_PORT"`
 	CertFile             string
 	KeyFile              string
 	TLSMinVersion        string `ini:"TLS_MIN_VERSION"`

@@ -202,10 +202,6 @@
 					<dl class="dl-horizontal admin-dl-horizontal">
 						<dt>{{.i18n.Tr "admin.config.security.login_remember_days"}}</dt>
 						<dd>{{.Security.LoginRememberDays}}</dd>
-						<dt>{{.i18n.Tr "admin.config.security.cookie_remember_name"}}</dt>
-						<dd>{{.Security.CookieRememberName}}</dd>
-						<dt>{{.i18n.Tr "admin.config.security.cookie_username"}}</dt>
-						<dd>{{.Security.CookieUsername}}</dd>
 						<dt>{{.i18n.Tr "admin.config.security.cookie_secure"}}</dt>
 						<dd><i class="fa fa{{if .Security.CookieSecure}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.security.enable_login_status_cookie"}}</dt>
@@ -267,7 +263,6 @@
 							<div class="ui divider"></div>
 
 							<form class="ui form" action="{{AppSubURL}}/admin/config/test_mail" method="post">
-								{{.CSRFTokenHTML}}
 								<div class="inline field ui left">
 									<div class="ui input">
 										<input type="email" name="email" required>
@@ -306,6 +301,8 @@
 						<dd><i class="fa fa{{if .Auth.EnableReverseProxyAutoRegistration}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.auth.reverse_proxy_authentication_header"}}</dt>
 						<dd><code>{{.Auth.ReverseProxyAuthenticationHeader}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.auth.trusted_proxy_ips"}}</dt>
+						<dd><code>{{Join .Auth.TrustedProxyIPs ", "}}</code></dd>
 						<dt>{{.i18n.Tr "admin.config.auth_custom_logout_url"}}</dt>
 						<dd>
 							{{if .Auth.CustomLogoutURL}}
@@ -346,8 +343,6 @@
 						<dd>{{.Session.GCInterval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.session.max_life_time"}}</dt>
 						<dd>{{.Session.MaxLifeTime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
-						<dt>{{.i18n.Tr "admin.config.session.csrf_cookie_name"}}</dt>
-						<dd>{{.Session.CSRFCookieName}}</dd>
 					</dl>
 				</div>
 

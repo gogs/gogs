@@ -64,14 +64,12 @@
 								<li class="follow">
 									{{if .LoggedUser.IsFollowing .Owner.ID}}
 										<form action="{{.Link}}/action/unfollow?redirect_to={{$.Link}}" method="POST">
-											{{.CSRFTokenHTML}}
 											<button class="ui basic red button">
 												<i class="octicon octicon-person"></i> {{.i18n.Tr "user.unfollow"}}
 											</button>
 										</form>
 									{{else}}
 										<form action="{{.Link}}/action/follow?redirect_to={{$.Link}}" method="POST">
-											{{.CSRFTokenHTML}}
 											<button class="ui basic green button">
 												<i class="octicon octicon-person"></i> {{.i18n.Tr "user.follow"}}
 											</button>

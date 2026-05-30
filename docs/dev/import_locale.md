@@ -10,7 +10,7 @@
     Locale files has been successfully imported!
     ```
 
-1. Run `task web` to start the web server, then visit the site in the browser to make sure nothing blows up.
+1. Run `moon run gogs:dev` to start the web server, then visit the site in the browser to make sure nothing blows up.
 1. Check out a new branch using `git checkout -b update-locales`.
 1. Stage changes
 1. Run `git commit -m "locale: sync from Crowdin"`.

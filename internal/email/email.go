@@ -1,20 +1,32 @@
 package email
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/mail"
+	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/templates"
 )
+
+// Translator is the minimal locale-translation contract used by mail
+// composition. It decouples this package from any specific web framework so
+// callers can pass either macaron.Context or, post-migration, Flamego's
+// i18n.Locale.
+type Translator interface {
+	Tr(format string, args ...any) string
+}
 
 const (
 	tmplAuthActivate       = "auth/activate"
@@ -29,46 +41,130 @@ const (
 )
 
 var (
-	tplRender     *macaron.TplRender
-	tplRenderOnce sync.Once
+	tplSet     *template.Template
+	tplSetOnce sync.Once
+	tplSetErr  error
 )
 
-// render renders a mail template with given data.
-func render(tpl string, data map[string]any) (string, error) {
-	tplRenderOnce.Do(func() {
-		customDir := filepath.Join(conf.CustomDir(), "templates")
-		opt := &macaron.RenderOptions{
-			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
-			AppendDirectories: []string{filepath.Join(customDir, "mail")},
-			Extensions:        []string{".tmpl", ".html"},
-			Funcs: []template.FuncMap{map[string]any{
-				"AppName": func() string {
-					return conf.App.BrandName
-				},
-				"AppURL": func() string {
-					return conf.Server.ExternalURL
-				},
-				"Year": func() int {
-					return time.Now().Year()
-				},
-				"Str2HTML": func(raw string) template.HTML {
-					return template.HTML(markup.Sanitize(raw))
-				},
-			}},
-		}
-		if !conf.Server.LoadAssetsFromDisk {
-			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", customDir)
-		}
+func funcMap() template.FuncMap {
+	return template.FuncMap{
+		"AppName": func() string {
+			return conf.App.BrandName
+		},
+		"AppURL": func() string {
+			return conf.Server.ExternalURL
+		},
+		"Year": func() int {
+			return time.Now().Year()
+		},
+		"Str2HTML": func(raw string) template.HTML {
+			return template.HTML(markup.Sanitize(raw))
+		},
+	}
+}
 
-		ts := macaron.NewTemplateSet()
-		ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)
-		tplRender = &macaron.TplRender{
-			TemplateSet: ts,
-			Opt:         opt,
+// Recognized mail-template file extensions. A template's name is its path
+// relative to the "mail" directory, without extension (e.g. "auth/activate").
+var mailTemplateExts = []string{".tmpl", ".html"}
+
+// loadMailTemplates parses every mail template under the embedded "mail" tree
+// (or "<work>/templates/mail" when LoadAssetsFromDisk is set), then overlays
+// files from "<custom>/templates/mail" so an admin can override any builtin.
+func loadMailTemplates() (*template.Template, error) {
+	root := template.New("").Funcs(funcMap())
+	parse := func(name string, data []byte) error {
+		_, err := root.New(name).Parse(string(data))
+		return errors.Wrapf(err, "parse %q", name)
+	}
+
+	if conf.Server.LoadAssetsFromDisk {
+		baseRoot := filepath.Join(conf.WorkDir(), "templates", "mail")
+		if _, err := os.Stat(baseRoot); err != nil {
+			return nil, errors.Wrapf(err, "stat base mail templates %q", baseRoot)
 		}
+		if err := overlayDiskMailTemplates(baseRoot, parse); err != nil {
+			return nil, err
+		}
+	} else {
+		for _, name := range templates.MailFileNames() {
+			ext := strings.ToLower(filepath.Ext(name))
+			if !slices.Contains(mailTemplateExts, ext) {
+				continue
+			}
+			data, err := templates.ReadMailFile(name)
+			if err != nil {
+				return nil, errors.Wrapf(err, "read embedded %q", name)
+			}
+			if err := parse(strings.TrimSuffix(filepath.ToSlash(name), ext), data); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if err := overlayDiskMailTemplates(filepath.Join(conf.CustomDir(), "templates", "mail"), parse); err != nil {
+		return nil, err
+	}
+	return root, nil
+}
+
+// overlayDiskMailTemplates walks root and parses every recognized template
+// file via parse. A missing root is not an error: custom overrides are optional.
+func overlayDiskMailTemplates(root string, parse func(name string, data []byte) error) error {
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fs.SkipAll
+			}
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(p))
+		if !slices.Contains(mailTemplateExts, ext) {
+			return nil
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return errors.Wrapf(err, "read %q", p)
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return err
+		}
+		return parse(strings.TrimSuffix(filepath.ToSlash(rel), ext), data)
 	})
+}
 
-	return tplRender.HTMLString(tpl, data)
+func render(tpl string, data map[string]any) (string, error) {
+	set, err := mailTemplateSet()
+	if err != nil {
+		return "", errors.Wrap(err, "load mail templates")
+	}
+	t := set.Lookup(tpl)
+	if t == nil {
+		return "", errors.Newf("mail template %q not found", tpl)
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", errors.Wrapf(err, "execute %q", tpl)
+	}
+	return buf.String(), nil
+}
+
+// mailTemplateSet returns the parsed template set. When assets are loaded from
+// disk, templates are reloaded on every call so admin edits under
+// <work>/templates/mail or <custom>/templates/mail take effect without a
+// restart — matching the hot-reload behavior of the previous macaron renderer
+// for non-production environments. When assets are embedded, the set is loaded
+// once and cached for the process lifetime.
+func mailTemplateSet() (*template.Template, error) {
+	if conf.Server.LoadAssetsFromDisk {
+		return loadMailTemplates()
+	}
+	tplSetOnce.Do(func() {
+		tplSet, tplSetErr = loadMailTemplates()
+	})
+	return tplSet, tplSetErr
 }
 
 func SendTestMail(email string) error {
@@ -102,7 +198,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) error {
+func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
 	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
@@ -124,15 +220,15 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) e
 	return nil
 }
 
-func SendActivateAccountMail(c *macaron.Context, u User) error {
-	return SendUserMail(c, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
+func SendActivateAccountMail(t Translator, u User) error {
+	return SendUserMail(t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(c *macaron.Context, u User) error {
-	return SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
+func SendResetPasswordMail(t Translator, u User) error {
+	return SendUserMail(t, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
 }
 
-func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
+func SendActivateEmailMail(t Translator, u User, email string) error {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
@@ -144,7 +240,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{email}, c.Tr("mail.activate_email"), body)
+	msg, err := newMessage([]string{email}, t.Tr("mail.activate_email"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -154,7 +250,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) error {
 	return nil
 }
 
-func SendRegisterNotifyMail(c *macaron.Context, u User) error {
+func SendRegisterNotifyMail(t Translator, u User) error {
 	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
@@ -163,7 +259,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
+	msg, err := newMessage([]string{u.Email()}, t.Tr("mail.register_notify"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}

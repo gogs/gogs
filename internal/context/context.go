@@ -1,6 +1,7 @@
 package context
 
 import (
+	stdctx "context"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-macaron/cache"
-	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
@@ -18,7 +18,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -26,7 +25,6 @@ import (
 type Context struct {
 	*macaron.Context
 	Cache   cache.Cache
-	csrf    csrf.CSRF
 	Flash   *session.Flash
 	Session session.Store
 
@@ -38,6 +36,8 @@ type Context struct {
 
 	Repo *Repository
 	Org  *Organization
+
+	webHandler http.Handler
 }
 
 // RawTitle sets the "Title" field in template data.
@@ -156,10 +156,54 @@ func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
 	c.HTML(status, tpl)
 }
 
-// NotFound renders the 404 page.
+// WebContext carries per-request inputs into the web handler so it can
+// render the React shell. Fields are read by helpers like WebContextFrom.
+type WebContext struct {
+	Lang       string
+	SubURL     string
+	StatusCode int
+}
+
+// WebContextKey is the request context key for WebContext values. Exported
+// so callers outside this package (e.g. the web NotFound handler) can attach
+// a WebContext when the request bypasses Contexter.
+type WebContextKey struct{}
+
+// WebContextFrom returns the WebContext attached to r, or a zero value with
+// sensible defaults when nothing was attached.
+func WebContextFrom(r *http.Request) WebContext {
+	wr, ok := r.Context().Value(WebContextKey{}).(WebContext)
+	if !ok {
+		return WebContext{Lang: "en-US"}
+	}
+	if wr.Lang == "" {
+		wr.Lang = "en-US"
+	}
+	return wr
+}
+
+// NotFound renders the React 404 page through the web handler with a 404
+// status.
 func (c *Context) NotFound() {
-	c.Title("status.page_not_found")
-	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
+	c.serveWeb(WebContext{
+		Lang:       c.Language(),
+		SubURL:     conf.Server.Subpath,
+		StatusCode: http.StatusNotFound,
+	})
+}
+
+// ServeWeb delegates the current request to the web handler. The web frontend
+// decides what to render based on the request path.
+func (c *Context) ServeWeb() {
+	c.serveWeb(WebContext{
+		Lang:   c.Language(),
+		SubURL: conf.Server.Subpath,
+	})
+}
+
+func (c *Context) serveWeb(wr WebContext) {
+	ctx := stdctx.WithValue(c.Req.Context(), WebContextKey{}, wr)
+	c.webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 }
 
 // Error renders the 500 page.
@@ -216,21 +260,17 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 	http.ServeContent(c.Resp, c.Req.Request, name, modtime, r)
 }
 
-// csrfTokenExcludePattern matches characters that are not used for generating
-// CSRF tokens, see all possible characters at
-// https://github.com/go-macaron/csrf/blob/5d38f39de352972063d1ef026fc477283841bb9b/csrf.go#L148.
-var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
-
-// Contexter initializes a classic context for a request.
-func Contexter(store Store) macaron.Handler {
-	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
+// Contexter initializes a classic context for a request. webHandler
+// receives 404 responses so the React frontend can render its own 404 page.
+func Contexter(store Store, webHandler http.Handler) macaron.Handler {
+	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash) {
 		c := &Context{
-			Context: ctx,
-			Cache:   cache,
-			csrf:    x,
-			Flash:   f,
-			Session: sess,
-			Link:    conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Context:    ctx,
+			Cache:      cache,
+			Flash:      f,
+			Session:    sess,
+			Link:       conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			webHandler: webHandler,
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
@@ -261,7 +301,7 @@ func Contexter(store Store) macaron.Handler {
 			c.Data["LoggedUserName"] = ""
 		}
 
-		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
+		// If request sends files, parse them here otherwise the Query() can't be parsed.
 		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
 			if err := c.Req.ParseMultipartForm(conf.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
 				c.Error(err, "parse multipart form")
@@ -269,17 +309,9 @@ func Contexter(store Store) macaron.Handler {
 			}
 		}
 
-		// 🚨 SECURITY: Prevent XSS from injected CSRF cookie by stripping all
-		// characters that are not used for generating CSRF tokens, see
-		// https://github.com/gogs/gogs/issues/6953 for details.
-		csrfToken := csrfTokenExcludePattern.ReplaceAllString(x.GetToken(), "")
-		c.Data["CSRFToken"] = csrfToken
-		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + csrfToken + `">`)
 		log.Trace("Session ID: %s", sess.ID())
-		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
 		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
-		c.Data["ShowFooterBranding"] = conf.Other.ShowFooterBranding
 
 		c.renderNoticeBanner()
 

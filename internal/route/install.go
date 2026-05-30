@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/flamego"
 	"github.com/gogs/git-module"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
@@ -35,6 +36,7 @@ const (
 func checkRunMode() {
 	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
+		flamego.SetEnv(flamego.EnvTypeProd)
 		macaron.ColorLog = false
 		git.SetOutput(nil)
 	} else {
@@ -157,7 +159,7 @@ func Install(c *context.Context) {
 	f.Domain = conf.Server.Domain
 	f.SSHPort = conf.SSH.Port
 	f.UseBuiltinSSHServer = conf.SSH.StartBuiltinServer
-	f.HTTPPort = conf.Server.HTTPPort
+	f.HTTPPort = strconv.Itoa(conf.Server.HTTPPort)
 	f.AppUrl = conf.Server.ExternalURL
 	f.LogRootPath = conf.Log.RootPath
 	f.DefaultBranch = conf.Repository.DefaultBranch
@@ -415,5 +417,5 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	log.Info("First-time run install finished!")
 	c.Flash.Success(c.Tr("install.install_success"))
-	c.Redirect(f.AppUrl + "user/login")
+	c.Redirect(f.AppUrl + "user/sign-in")
 }

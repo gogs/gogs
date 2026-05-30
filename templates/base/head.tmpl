@@ -9,7 +9,6 @@
 		<meta name="keywords" content="go, git, self-hosted, gogs">
 	{{end}}
 	<meta name="referrer" content="no-referrer" />
-	<meta name="_csrf" content="{{.CSRFToken}}" />
 	<meta name="_suburl" content="{{AppSubURL}}" />
 
 	<!-- Open Graph Tags -->
@@ -161,8 +160,7 @@
 
 												<div class="divider"></div>
 
-												<form id="logout-form" class="item" action="{{AppSubURL}}/user/logout" method="POST">
-													{{.CSRFTokenHTML}}
+												<form id="logout-form" class="item" action="{{AppSubURL}}/api/web/user/sign-out" method="POST" data-done-url="{{AppSubURL}}/">
 													<div class="submit-button" data-form="#logout-form">
 														<i class="octicon octicon-sign-out"></i> {{.i18n.Tr "sign_out"}}
 													</div>
@@ -180,7 +178,7 @@
 												<i class="octicon octicon-person"></i> {{.i18n.Tr "register"}}
 											</a>
 										{{end}}
-										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubURL}}/user/login?redirect_to={{.Link}}">
+										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubURL}}/user/sign-in?redirect_to={{.Link}}">
 											<i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
 										</a>
 									</div><!-- end anonymous right menu -->

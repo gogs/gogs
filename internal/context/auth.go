@@ -2,12 +2,12 @@ package context
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
 	"github.com/google/uuid"
 	"gopkg.in/macaron.v1"
@@ -23,7 +23,6 @@ type ToggleOptions struct {
 	SignInRequired  bool
 	SignOutRequired bool
 	AdminRequired   bool
-	DisableCSRF     bool
 }
 
 func Toggle(options *ToggleOptions) macaron.Handler {
@@ -53,13 +52,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
-		if !options.SignOutRequired && !options.DisableCSRF && c.Req.Method == "POST" && !isAPIPath(c.Req.URL.Path) {
-			csrf.Validate(c.Context, c.csrf)
-			if c.Written() {
-				return
-			}
-		}
-
 		if options.SignInRequired {
 			if !c.IsLogged {
 				// Restrict API calls with error message.
@@ -70,22 +62,20 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 					return
 				}
 
+				if isWebPath(c.Req.URL.Path) {
+					c.ServeWeb()
+					return
+				}
+
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-				c.RedirectSubpath("/user/login")
+				c.RedirectSubpath("/user/sign-in")
 				return
 			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-				c.Title("auth.active_your_account")
-				c.Success("user/auth/activate")
+				// Inactive users get bounced to the React activation page, which
+				// is responsible for offering a resend and showing status.
+				c.RedirectSubpath("/user/activate")
 				return
 			}
-		}
-
-		// Redirect to log in page if auto-signin info is provided and has not signed in.
-		if !options.SignOutRequired && !c.IsLogged && !isAPIPath(c.Req.URL.Path) &&
-			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
-			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-			c.RedirectSubpath("/user/login")
-			return
 		}
 
 		if options.AdminRequired {
@@ -100,6 +90,21 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 func isAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
+}
+
+func isWebPath(p string) bool {
+	p = strings.TrimPrefix(p, conf.Server.Subpath)
+	switch {
+	case p == "/user/sign-in",
+		p == "/user/mfa",
+		strings.HasPrefix(p, "/assets/"),
+		strings.HasPrefix(p, "/src/"),
+		strings.HasPrefix(p, "/node_modules/"),
+		strings.HasPrefix(p, "/@"),
+		strings.HasPrefix(p, "/img/"):
+		return true
+	}
+	return false
 }
 
 type AuthStore interface {
@@ -198,7 +203,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
 
 	if uid <= 0 {
-		if conf.Auth.EnableReverseProxyAuthentication {
+		if conf.Auth.EnableReverseProxyAuthentication && isRequestFromTrustedProxy(ctx.Req.Request) {
 			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
 				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
@@ -255,6 +260,32 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
+}
+
+// isRequestFromTrustedProxy reports whether the request's immediate remote
+// address falls within one of the configured trusted proxy CIDR ranges. The
+// reverse proxy authentication header is only honored for such requests so an
+// attacker reaching Gogs directly cannot forge it.
+func isRequestFromTrustedProxy(req *http.Request) bool {
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		return false
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	// Normalize IPv4-mapped IPv6 (e.g. "::ffff:127.0.0.1" on dual-stack listeners)
+	// to its IPv4 form so it matches IPv4 CIDRs like 127.0.0.0/8.
+	if v4 := ip.To4(); v4 != nil {
+		ip = v4
+	}
+	for _, cidr := range conf.Auth.TrustedProxyCIDRs {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 // AuthenticateByToken attempts to authenticate a user by the given access

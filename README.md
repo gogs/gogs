@@ -1,8 +1,19 @@
-![gogs-brand](https://user-images.githubusercontent.com/2946214/146899259-6a8b58ad-8d6e-40d2-ab02-79dc6aadabbf.png)
 
-[![GitHub Workflow Status](https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge)](https://github.com/gogs/gogs/actions?query=branch%3Amain) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
-
-👉 Deploy on DigitalOcean and [get $200 in free credits](https://m.do.co/c/5aeb02268b55)!
+ <p>
+  <div align="center">
+    <img src="docs/images/logo-light.svg#gh-light-mode-only" alt="Gogs">
+    <img src="docs/images/logo-dark.svg#gh-dark-mode-only" alt="Gogs">
+  </div>
+  <div align="center">
+    <a href="https://github.com/gogs/gogs/actions?query=branch%3Amain"><img
+  src="https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge" alt="GitHub Workflow Status"></a>
+    <a href="https://sourcegraph.com/github.com/gogs/gogs"><img
+src="https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph" alt="Sourcegraph"></a>
+  </div>
+  <div align="center">
+    👉 Deploy on DigitalOcean and <a href="https://m.do.co/c/5aeb02268b55">get $200 in free credits</a>!
+  </div>
+</p>
 
 ## 🔮 Vision
 

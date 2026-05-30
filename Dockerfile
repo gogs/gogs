@@ -1,3 +1,12 @@
+FROM --platform=$BUILDPLATFORM node:24-alpine AS webbuilder
+RUN corepack enable
+WORKDIR /src
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY web ./web
+COPY conf/locale ./conf/locale
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter gogs-web run build
+
 FROM golang:1.26-alpine3.23 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
@@ -7,9 +16,11 @@ RUN apk --no-cache --no-progress add --virtual \
 
 WORKDIR /gogs.io/gogs
 COPY . .
+COPY --from=webbuilder /src/public/dist ./public/dist
 
-RUN ./docker/build/install-task.sh
-RUN TAGS="cert pam" task build
+RUN go build -v -trimpath -tags "pam prod" \
+  -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
+  -o .bin/gogs ./cmd/gogs
 
 FROM alpine:3.23
 RUN apk --no-cache --no-progress add \

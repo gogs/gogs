@@ -10,7 +10,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/binding"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -126,11 +125,6 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 
 	if !createNewUser {
 		return user, nil
-	}
-
-	// Validate username make sure it satisfies requirement.
-	if binding.AlphaDashDotPattern.MatchString(extAccount.Name) {
-		return nil, errors.Newf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
 	return s.Create(ctx, extAccount.Name, extAccount.Email,

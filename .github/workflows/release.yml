@@ -23,22 +23,23 @@ permissions:
 jobs:
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.suffix }}
-    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'gogs/gogs' }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {goos: linux, goarch: amd64}
-          - {goos: linux, goarch: arm64}
-          - {goos: linux, goarch: "386"}
-          - {goos: darwin, goarch: amd64}
-          - {goos: darwin, goarch: arm64}
-          - {goos: windows, goarch: amd64}
-          - {goos: windows, goarch: arm64}
-          - {goos: windows, goarch: "386"}
-          - {goos: windows, goarch: amd64, suffix: "_mws", tags: minwinsvc}
-          - {goos: windows, goarch: arm64, suffix: "_mws", tags: minwinsvc}
-          - {goos: windows, goarch: "386", suffix: "_mws", tags: minwinsvc}
+          - {goos: linux, goarch: amd64, runner: ubuntu-latest}
+          - {goos: linux, goarch: arm64, runner: ubuntu-latest}
+          - {goos: linux, goarch: "386", runner: ubuntu-latest}
+          - {goos: darwin, goarch: amd64, runner: macos-latest}
+          - {goos: darwin, goarch: arm64, runner: macos-latest}
+          - {goos: windows, goarch: amd64, runner: ubuntu-latest}
+          - {goos: windows, goarch: arm64, runner: ubuntu-latest}
+          - {goos: windows, goarch: "386", runner: ubuntu-latest}
+          - {goos: windows, goarch: amd64, suffix: "_mws", tags: minwinsvc, runner: ubuntu-latest}
+          - {goos: windows, goarch: arm64, suffix: "_mws", tags: minwinsvc, runner: ubuntu-latest}
+          - {goos: windows, goarch: "386", suffix: "_mws", tags: minwinsvc, runner: ubuntu-latest}
     steps:
       - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -46,6 +47,17 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: 1.26.x
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Build web assets
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter gogs-web run build
       - name: Determine version
         id: version
         run: |
@@ -70,9 +82,9 @@ jobs:
             BINARY_NAME="gogs.exe"
           fi
 
-          TAGS_FLAG=""
+          TAGS="prod"
           if [ -n "${{ matrix.tags }}" ]; then
-            TAGS_FLAG="-tags ${{ matrix.tags }}"
+            TAGS="$TAGS ${{ matrix.tags }}"
           fi
 
           go build -v \
@@ -80,8 +92,44 @@ jobs:
               -X \"gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')\"
               -X \"gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)\"
             " \
-            $TAGS_FLAG \
+            -tags "$TAGS" \
             -trimpath -o "$BINARY_NAME" ./cmd/gogs
+      - name: Import Apple signing certificate
+        if: ${{ matrix.goos == 'darwin' }}
+        env:
+          APPLE_DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -z "$APPLE_DEVELOPER_ID_CERTIFICATE_BASE64" ] || [ -z "$APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD" ] || [ -z "$APPLE_KEYCHAIN_PASSWORD" ]; then
+            echo "Missing required Apple signing secrets." >&2
+            exit 1
+          fi
+
+          CERTIFICATE_PATH="$RUNNER_TEMP/developer_id_application.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          printf '%s' "$APPLE_DEVELOPER_ID_CERTIFICATE_BASE64" | base64 -d > "$CERTIFICATE_PATH"
+          security create-keychain -p "$APPLE_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$APPLE_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$APPLE_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+      - name: Sign macOS binary
+        if: ${{ matrix.goos == 'darwin' }}
+        env:
+          APPLE_DEVELOPER_IDENTITY: ${{ secrets.APPLE_DEVELOPER_IDENTITY }}
+        run: |
+          if [ -z "$APPLE_DEVELOPER_IDENTITY" ]; then
+            echo "Missing required Apple signing identity secret." >&2
+            exit 1
+          fi
+
+          security find-identity -v -p codesigning
+          codesign --force --options runtime --timestamp --sign "$APPLE_DEVELOPER_IDENTITY" "gogs"
+          codesign --verify --verbose=2 "gogs"
       - name: Prepare archive contents
         run: |
           mkdir -p dist/gogs
@@ -103,6 +151,28 @@ jobs:
           if [ "${{ matrix.goos }}" = "linux" ]; then
             tar -czvf "${ARCHIVE_BASE}.tar.gz" gogs
           fi
+      - name: Notarize macOS archive
+        if: ${{ matrix.goos == 'darwin' }}
+        env:
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+        run: |
+          if [ -z "$APPLE_NOTARY_ISSUER_ID" ] || [ -z "$APPLE_NOTARY_KEY_BASE64" ] || [ -z "$APPLE_NOTARY_KEY_ID" ]; then
+            echo "Missing required Apple notarization secrets." >&2
+            exit 1
+          fi
+
+          VERSION="${{ steps.version.outputs.version }}"
+          ARCHIVE_PATH="dist/gogs_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.suffix }}.zip"
+          NOTARY_KEY_PATH="$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
+
+          printf '%s' "$APPLE_NOTARY_KEY_BASE64" | base64 -d > "$NOTARY_KEY_PATH"
+          xcrun notarytool submit "$ARCHIVE_PATH" \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$APPLE_NOTARY_KEY_ID" \
+            --issuer "$APPLE_NOTARY_ISSUER_ID" \
+            --wait
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}

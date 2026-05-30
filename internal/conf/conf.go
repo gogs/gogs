@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"net"
 	"net/mail"
 	"net/url"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	_ "github.com/go-macaron/cache/memcache"
+	"github.com/fatih/color"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
@@ -23,6 +24,13 @@ import (
 )
 
 func init() {
+	// fatih/color disables ANSI codes when stdout is not a TTY, which is the
+	// case under process managers like moon. Honor TTY_FORCE so callers can
+	// opt back in without a real terminal.
+	if os.Getenv("TTY_FORCE") != "" {
+		color.NoColor = false
+	}
+
 	// Initialize the primary logger until logging service is up.
 	err := log.NewConsole()
 	if err != nil {
@@ -220,6 +228,26 @@ func Init(customConf string) error {
 
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
+	}
+	// Reset before re-parsing so repeated Init calls (e.g. via the web installer)
+	// do not carry over CIDRs from a previous configuration.
+	Auth.TrustedProxyCIDRs = nil
+	for _, raw := range Auth.TrustedProxyIPs {
+		// Allow bare IPs as a convenience by promoting them to single-host CIDRs.
+		if !strings.Contains(raw, "/") {
+			if ip := net.ParseIP(raw); ip != nil {
+				if ip.To4() != nil {
+					raw += "/32"
+				} else {
+					raw += "/128"
+				}
+			}
+		}
+		_, cidr, err := net.ParseCIDR(raw)
+		if err != nil {
+			return errors.Wrapf(err, "parse trusted proxy CIDR %q", raw)
+		}
+		Auth.TrustedProxyCIDRs = append(Auth.TrustedProxyCIDRs, cidr)
 	}
 
 	// *************************

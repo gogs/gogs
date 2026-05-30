@@ -166,7 +166,6 @@
 									<div class="ui divider"></div>
 									<div>
 										<form class="ui form" action="{{.DeleteBranchLink}}" method="post">
-											{{.CSRFTokenHTML}}
 											<button class="ui red button">{{$.i18n.Tr "repo.pulls.delete_branch"}}</button>
 										</form>
 									</div>
@@ -194,7 +193,6 @@
 								{{if .IsRepositoryWriter}}
 									<div class="ui divider"></div>
 									<form class="ui form" action="{{.Link}}/merge" method="post">
-										{{.CSRFTokenHTML}}
 										<div class="field">
 											<div class="ui radio checkbox">
 											  <input type="radio" name="merge_style" value="create_merge_commit" checked="checked">
@@ -243,7 +241,6 @@
 					<div class="content">
 						<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
 							{{template "repo/issue/comment_tab" .}}
-							{{.CSRFTokenHTML}}
 							<input id="status" name="status" type="hidden">
 							<div class="text right">
 								{{if and .IsIssueOwner (not .DisableStatusChange)}}
