@@ -7,7 +7,7 @@ import {
   PanelLeftOpen,
   SlidersHorizontal,
 } from "lucide-react";
-import { type ReactNode, forwardRef } from "react";
+import { type ReactNode, type Ref } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -195,13 +195,17 @@ export function DiffToolbar({
   );
 }
 
-const ToolbarButton = forwardRef<
-  HTMLButtonElement,
-  {
-    icon: typeof SlidersHorizontal;
-    label: string;
-  } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type">
->(function ToolbarButton({ icon: Icon, label, className, ...rest }, ref) {
+function ToolbarButton({
+  icon: Icon,
+  label,
+  className,
+  ref,
+  ...rest
+}: {
+  icon: typeof SlidersHorizontal;
+  label: string;
+  ref?: Ref<HTMLButtonElement>;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type">) {
   return (
     <button
       ref={ref}
@@ -217,7 +221,7 @@ const ToolbarButton = forwardRef<
       <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
     </button>
   );
-});
+}
 
 function SegmentButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (

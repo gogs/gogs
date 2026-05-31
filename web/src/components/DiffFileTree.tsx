@@ -11,7 +11,7 @@ import { FileTree, useFileTree, useFileTreeSearch } from "@pierre/trees/react";
 import {
   type CSSProperties,
   type ReactNode,
-  forwardRef,
+  type Ref,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -31,6 +31,7 @@ interface Props {
   header?: ReactNode;
   className?: string;
   style?: CSSProperties;
+  ref?: Ref<DiffFileTreeHandle>;
 }
 
 // Pierre's FileTree renders into a shadow root. We can inject CSS via the
@@ -122,10 +123,7 @@ function collectDirectoryPaths(paths: readonly string[]): string[] {
   return Array.from(dirs);
 }
 
-export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffFileTreeImpl(
-  { items, onSelectItem, searchOpen = true, header, className, style },
-  ref,
-) {
+export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, className, style, ref }: Props) {
   const { paths, gitStatus, pathToItemId } = useMemo(() => {
     const collectedPaths: string[] = [];
     const status: GitStatusEntry[] = [];
@@ -303,4 +301,4 @@ export const DiffFileTree = forwardRef<DiffFileTreeHandle, Props>(function DiffF
       />
     </div>
   );
-});
+}
