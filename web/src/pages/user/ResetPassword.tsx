@@ -28,6 +28,41 @@ interface ResetPasswordErrorResponse {
 
 const route = getRouteApi("/user/reset-password");
 
+function FormActions({
+  submitLabel,
+  submitTabIndex,
+  submitting,
+  backLabel,
+  backHref,
+}: {
+  submitLabel: string;
+  submitTabIndex: number;
+  submitting: boolean;
+  backLabel: string;
+  backHref: string;
+}) {
+  return (
+    <div className="mt-2 flex flex-col gap-3">
+      <Button type="submit" disabled={submitting} tabIndex={submitTabIndex} className="w-full">
+        {submitLabel}
+      </Button>
+      <Button variant="link" size="inline" asChild className="self-center">
+        <a
+          href={backHref}
+          tabIndex={submitting ? -1 : submitTabIndex + 1}
+          aria-disabled={submitting || undefined}
+          className={submitting ? "pointer-events-none opacity-50" : undefined}
+          onClick={(e) => {
+            if (submitting) e.preventDefault();
+          }}
+        >
+          {backLabel}
+        </a>
+      </Button>
+    </div>
+  );
+}
+
 export function ResetPassword() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -175,6 +210,9 @@ export function ResetPassword() {
             <FormActions
               submitLabel={submitting ? t("auth.reset_password_email_submitting") : t("auth.send_reset_email")}
               submitTabIndex={3}
+              submitting={submitting}
+              backLabel={t("auth.back_to_sign_in")}
+              backHref={subUrl("/user/sign-in")}
             />
           </div>
         </fieldset>
@@ -247,6 +285,9 @@ export function ResetPassword() {
             <FormActions
               submitLabel={submitting ? t("auth.reset_password_submitting") : t("auth.reset_password_submit")}
               submitTabIndex={5}
+              submitting={submitting}
+              backLabel={t("auth.back_to_sign_in")}
+              backHref={subUrl("/user/sign-in")}
             />
           </div>
         </fieldset>
@@ -262,29 +303,6 @@ export function ResetPassword() {
         className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
       >
         {formError}
-      </div>
-    );
-  }
-
-  function FormActions({ submitLabel, submitTabIndex }: { submitLabel: string; submitTabIndex: number }) {
-    return (
-      <div className="mt-2 flex flex-col gap-3">
-        <Button type="submit" disabled={submitting} tabIndex={submitTabIndex} className="w-full">
-          {submitLabel}
-        </Button>
-        <Button variant="link" size="inline" asChild className="self-center">
-          <a
-            href={subUrl("/user/sign-in")}
-            tabIndex={submitting ? -1 : submitTabIndex + 1}
-            aria-disabled={submitting || undefined}
-            className={submitting ? "pointer-events-none opacity-50" : undefined}
-            onClick={(e) => {
-              if (submitting) e.preventDefault();
-            }}
-          >
-            {t("auth.back_to_sign_in")}
-          </a>
-        </Button>
       </div>
     );
   }
