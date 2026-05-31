@@ -126,21 +126,29 @@ tasks:
       ' .bin/custom/conf/app.ini > .bin/custom/conf/app.ini.tmp \
         && mv .bin/custom/conf/app.ini.tmp .bin/custom/conf/app.ini
 
-  dev:
+  server:
     script: "cd .bin && ./gogs web"
     preset: "server"
     env:
       TTY_FORCE: "1"
+
+  dev:
+    command: "noop"
+    options:
+      runInCI: false
+      persistent: true
     deps:
       - "build"
+      - "server"
       - "web:dev"
       - "portless"
 
   prod:
-    script: "cd .bin && ./gogs web"
-    preset: "server"
-    env:
-      TTY_FORCE: "1"
+    command: "noop"
+    options:
+      runInCI: false
+      persistent: true
     deps:
       - "build-prod"
+      - "server"
       - "portless"

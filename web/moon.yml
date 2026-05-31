@@ -26,6 +26,8 @@ tasks:
   dev:
     command: "pnpm run dev"
     preset: "server"
+    options:
+      runFromWorkspaceRoot: false
     deps:
       - "install"
 
@@ -36,6 +38,8 @@ tasks:
       - "@group(configs)"
     outputs:
       - "/public/dist"
+    options:
+      runFromWorkspaceRoot: false
     deps:
       - "install"
 
@@ -44,6 +48,8 @@ tasks:
     inputs:
       - "@group(sources)"
       - "@group(configs)"
+    options:
+      runFromWorkspaceRoot: false
     deps:
       - "install"
       - "format"
@@ -55,5 +61,7 @@ tasks:
       - "@group(configs)"
       - ".prettierrc.*"
       - ".prettierignore"
+    options:
+      runFromWorkspaceRoot: false
     deps:
       - "install"
