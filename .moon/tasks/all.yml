@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/tasks.json
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+taskOptions:
+  outputStyle: "stream"
+  runFromWorkspaceRoot: true
