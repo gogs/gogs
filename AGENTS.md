@@ -33,7 +33,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 ## Build instructions
 
 - Prefer `moon run <project>:<task>` over vanilla `go` or `pnpm` commands when available (e.g. `moon run gogs:build`, `moon run web:dev`). Pass `--force` to bypass cache when necessary.
-- Run `moon run gogs:lint` after every time you finish changing Go code, and `moon run web:lint` after changing frontend code; fix all linter errors.
+- Run `moon run gogs:lint` after every time you finish changing Go code, and `moon run web:lint` after changing frontend code, then fix all linter errors.
 
 ## Tool-use guidance
 
