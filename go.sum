@@ -101,8 +101,8 @@ github.com/editorconfig/editorconfig-core-go/v2 v2.6.4 h1:CHwUbBVVyKWRX9kt5A/Otw
 github.com/editorconfig/editorconfig-core-go/v2 v2.6.4/go.mod h1:JWRVKHdVW+dkv6F8p+xGCa6a+TyMrqsFbFkSs/aQkrQ=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
-github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
-github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
+github.com/fatih/color v1.19.0 h1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=
+github.com/fatih/color v1.19.0/go.mod h1:zNk67I0ZUT1bEGsSGyCZYZNrHuTkJJB+r6Q9VuMi0LE=
 github.com/flamego/binding v1.3.0 h1:CPbnSuP0SxT50JR7lK2khTjcQi1oOECqRK7kbOYw91U=
 github.com/flamego/binding v1.3.0/go.mod h1:xgm6FEpEKKkF8CQilK2X3MJ5kTjOTnYdz/ooFctDTdc=
 github.com/flamego/cache v1.5.1 h1:2B4QhLFV7je0oUMCVKsAGAT+OyDHlXhozOoUffm+O3s=
