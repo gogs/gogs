@@ -15,6 +15,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Server-side request forgery in webhook deliveries via HTTP redirects to local network addresses. [#8263](https://github.com/gogs/gogs/pull/8263) - [GHSA-c4v7-xg93-qf8g](https://github.com/gogs/gogs/security/advisories/GHSA-c4v7-xg93-qf8g)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - _Security:_ Denial of service when rendering issue references against a malformed external issue tracker URL format. [#8312](https://github.com/gogs/gogs/pull/8312) - [GHSA-4j89-2c4f-44c6](https://github.com/gogs/gogs/security/advisories/GHSA-4j89-2c4f-44c6)
+- _Security:_ Path traversal in the web editor via symbolic links in the repository's local copy. The local copy now uses a separate Git directory, web editor file operations are scoped to the worktree via `os.Root`, and writes that would land on the Git directory redirector or follow an in-worktree symlink are rejected. [#PR_LINK](https://github.com/gogs/gogs/pull/PR_LINK) - [GHSA-8x5h-6c5j-mm8q](https://github.com/gogs/gogs/security/advisories/GHSA-8x5h-6c5j-mm8q)
 
 ### Removed
 

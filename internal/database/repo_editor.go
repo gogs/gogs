@@ -20,7 +20,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/gitx"
-	"gogs.io/gogs/internal/iox"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/process"
@@ -117,17 +116,46 @@ func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
 	return nil
 }
 
-// hasSymlinkInPath returns true if there is any symlink in path hierarchy using
-// the given base and relative path.
-func hasSymlinkInPath(base, relPath string) bool {
-	parts := strings.Split(filepath.ToSlash(relPath), "/")
-	for i := range parts {
-		filePath := path.Join(append([]string{base}, parts[:i+1]...)...)
-		if osx.IsSymlink(filePath) {
-			return true
+// rejectSymlinkTarget refuses to write to a path inside root whose final
+// component is a symlink. os.Root follows in-root symlinks transparently,
+// which would otherwise let an attacker who controls the repository's contents
+// create a symlink (e.g. "foo" -> ".git") and trick the editor into overwriting
+// the gitdir redirector. Callers hold repoWorkingPool, so no concurrent editor
+// op can flip the path between this check and the subsequent open.
+func rejectSymlinkTarget(root *os.Root, relPath string) error {
+	info, err := root.Lstat(relPath)
+	if err != nil {
+		// Missing file is fine — we are about to create it.
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
 		}
+		return errors.Newf("lstat: %v", err)
 	}
-	return false
+	if info.Mode()&os.ModeSymlink != 0 {
+		return errors.Newf("refusing to overwrite symbolic link: %s", relPath)
+	}
+	return nil
+}
+
+// copyFileIntoRoot copies the contents of src on the host filesystem into
+// dstPath inside the given os.Root. The destination's parent directory must
+// already exist.
+func copyFileIntoRoot(src string, root *os.Root, dstPath string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return errors.Newf("open source: %v", err)
+	}
+	defer func() { _ = in.Close() }()
+
+	out, err := root.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return errors.Newf("open destination: %v", err)
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		return errors.Newf("write: %v", err)
+	}
+	return out.Close()
 }
 
 type UpdateRepoFileOptions struct {
@@ -142,8 +170,9 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) error {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.NewTreeName) {
+	// 🚨 SECURITY: Reject paths that reference the ".git" redirector at the root
+	// of the worktree, or any nested ".git" segment.
+	if isRepositoryGitPath(opts.OldTreeName) || isRepositoryGitPath(opts.NewTreeName) {
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
 	}
 
@@ -157,13 +186,6 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	}
 
 	localPath := r.LocalCopyPath()
-
-	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involve symlinks.
-	if hasSymlinkInPath(localPath, opts.OldTreeName) || hasSymlinkInPath(localPath, opts.NewTreeName) {
-		return errors.New("cannot update file with symbolic link in path")
-	}
-
 	repoPath := r.RepoPath()
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
@@ -185,32 +207,54 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		}
 	}
 
-	oldFilePath := path.Join(localPath, opts.OldTreeName)
-	newFilePath := path.Join(localPath, opts.NewTreeName)
+	// 🚨 SECURITY: All filesystem writes go through os.Root so the worktree
+	// boundary is enforced by the kernel. Combined with isRepositoryGitPath
+	// above and the gitdir living outside the worktree, in-worktree symlinks
+	// cannot reach Git internals.
+	root, err := os.OpenRoot(localPath)
+	if err != nil {
+		return errors.Newf("open root: %v", err)
+	}
+	defer func() { _ = root.Close() }()
 
 	// Prompt the user if the meant-to-be new file already exists.
-	if osx.Exist(newFilePath) && opts.IsNewFile {
-		return ErrRepoFileAlreadyExist{newFilePath}
+	if _, err := root.Lstat(opts.NewTreeName); err == nil && opts.IsNewFile {
+		return ErrRepoFileAlreadyExist{path.Join(localPath, opts.NewTreeName)}
 	}
 
-	if err := os.MkdirAll(path.Dir(newFilePath), os.ModePerm); err != nil {
-		return errors.Wrapf(err, "create parent directories of %q", newFilePath)
-	}
-
-	if osx.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
-		if err := git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
-			return errors.Wrapf(err, "git mv %q %q", opts.OldTreeName, opts.NewTreeName)
+	if parent := path.Dir(opts.NewTreeName); parent != "" && parent != "." {
+		if err := root.MkdirAll(parent, os.ModePerm); err != nil {
+			return errors.Wrapf(err, "create parent directories of %q", opts.NewTreeName)
 		}
 	}
 
-	if err := os.WriteFile(newFilePath, []byte(opts.Content), 0o600); err != nil {
+	if opts.OldTreeName != opts.NewTreeName {
+		if info, err := root.Lstat(opts.OldTreeName); err == nil && info.Mode().IsRegular() {
+			if err := git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
+				return errors.Wrapf(err, "git mv %q %q", opts.OldTreeName, opts.NewTreeName)
+			}
+		}
+	}
+
+	if err := rejectSymlinkTarget(root, opts.NewTreeName); err != nil {
+		return err
+	}
+	f, err := root.OpenFile(opts.NewTreeName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return errors.Newf("open file: %v", err)
+	}
+	if _, err := f.Write([]byte(opts.Content)); err != nil {
+		_ = f.Close()
 		return errors.Newf("write file: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		return errors.Newf("close file: %v", err)
 	}
 
 	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return errors.Newf("git add --all: %v", err)
 	}
-	err := git.CreateCommit(
+	err = git.CreateCommit(
 		localPath,
 		&git.Signature{
 			Name:  doer.DisplayName(),
@@ -245,7 +289,8 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
 func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Diff, error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
+	// 🚨 SECURITY: Reject paths that reference the ".git" redirector at the root
+	// of the worktree, or any nested ".git" segment.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
@@ -260,18 +305,33 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Dif
 	}
 
 	localPath := r.LocalCopyPath()
-	filePath := path.Join(localPath, treePath)
 
-	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involve symlinks.
-	if hasSymlinkInPath(localPath, treePath) {
-		return nil, errors.New("cannot update file with symbolic link in path")
+	// 🚨 SECURITY: All filesystem writes go through os.Root so the worktree
+	// boundary is enforced by the kernel.
+	root, err := os.OpenRoot(localPath)
+	if err != nil {
+		return nil, errors.Newf("open root: %v", err)
 	}
+	defer func() { _ = root.Close() }()
 
-	if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
-		return nil, errors.Wrap(err, "create parent directories")
-	} else if err = os.WriteFile(filePath, []byte(content), 0o600); err != nil {
+	if parent := path.Dir(treePath); parent != "" && parent != "." {
+		if err := root.MkdirAll(parent, os.ModePerm); err != nil {
+			return nil, errors.Wrap(err, "create parent directories")
+		}
+	}
+	if err := rejectSymlinkTarget(root, treePath); err != nil {
+		return nil, err
+	}
+	f, err := root.OpenFile(treePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return nil, errors.Newf("open file: %v", err)
+	}
+	if _, err := f.Write([]byte(content)); err != nil {
+		_ = f.Close()
 		return nil, errors.Newf("write file: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		return nil, errors.Newf("close file: %v", err)
 	}
 
 	// 🚨 SECURITY: Prevent including unintended options in the path to the Git command.
@@ -318,7 +378,8 @@ type DeleteRepoFileOptions struct {
 }
 
 func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
+	// 🚨 SECURITY: Reject paths that reference the ".git" redirector at the root
+	// of the worktree, or any nested ".git" segment.
 	if isRepositoryGitPath(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
@@ -334,20 +395,21 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 
 	localPath := r.LocalCopyPath()
 
-	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involve symlinks.
-	if hasSymlinkInPath(localPath, opts.TreePath) {
-		return errors.New("cannot update file with symbolic link in path")
-	}
-
 	if opts.OldBranch != opts.NewBranch {
 		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
 			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
 		}
 	}
 
-	filePath := path.Join(localPath, opts.TreePath)
-	if err = os.Remove(filePath); err != nil {
+	// 🚨 SECURITY: All filesystem writes go through os.Root so the worktree
+	// boundary is enforced by the kernel.
+	root, err := os.OpenRoot(localPath)
+	if err != nil {
+		return errors.Newf("open root: %v", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	if err = root.Remove(opts.TreePath); err != nil {
 		return errors.Newf("remove file %q: %v", opts.TreePath, err)
 	}
 
@@ -579,9 +641,19 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 	}
 
 	localPath := r.LocalCopyPath()
-	dirPath := path.Join(localPath, opts.TreePath)
-	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
-		return err
+
+	// 🚨 SECURITY: All filesystem writes go through os.Root so the worktree
+	// boundary is enforced by the kernel.
+	root, err := os.OpenRoot(localPath)
+	if err != nil {
+		return errors.Newf("open root: %v", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	if opts.TreePath != "" && opts.TreePath != "." {
+		if err = root.MkdirAll(opts.TreePath, os.ModePerm); err != nil {
+			return errors.Newf("create upload directory: %v", err)
+		}
 	}
 
 	// Copy uploaded files into repository
@@ -594,21 +666,18 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		// 🚨 SECURITY: Prevent path traversal.
 		upload.Name = pathx.Clean(upload.Name)
 
-		// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-		if isRepositoryGitPath(upload.Name) {
+		// 🚨 SECURITY: Reject names that reference the ".git" redirector or any
+		// nested ".git" segment.
+		relPath := path.Join(opts.TreePath, upload.Name)
+		if isRepositoryGitPath(relPath) {
 			continue
 		}
 
-		targetPath := path.Join(dirPath, upload.Name)
-
-		// 🚨 SECURITY: Prevent updating files in surprising place, check if the target
-		// is a symlink.
-		if osx.IsSymlink(targetPath) {
-			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
+		if err = rejectSymlinkTarget(root, relPath); err != nil {
+			return err
 		}
-
-		if err = iox.CopyFile(tmpPath, targetPath); err != nil {
-			return errors.Newf("copy: %v", err)
+		if err = copyFileIntoRoot(tmpPath, root, relPath); err != nil {
+			return errors.Newf("copy %q: %v", upload.Name, err)
 		}
 	}
 
