@@ -42,7 +42,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Jupyter Notebook and PDF rendering.
 - Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
 - Customize HTML templates, static files and many others.
-- Rich database backend support, including PostgreSQL, MySQL, SQLite3 or any database backend that speaks one of those protocols.
+- Rich database backend support, including PostgreSQL, MySQL, MariaDB, SQLite3 or any database backend that speaks one of those protocols.
 - Have localization over [31 languages](https://crowdin.com/project/gogs).
 
 ## 💾 Hardware requirements
