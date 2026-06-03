@@ -83,31 +83,12 @@ func cutoutVerbosePrefix(prefix string) string {
 }
 
 // expand substitutes "{key}" placeholders in template with values from match.
-// Unclosed "{" sequences are emitted verbatim instead of causing a panic, which
-// is the behavior of github.com/unknwon/com.Expand when given a malformed
-// template such as an external issue tracker URL containing a stray "{".
 func expand(template string, match map[string]string) string {
-	var p []byte
-	for {
-		i := strings.Index(template, "{")
-		if i < 0 {
-			break
-		}
-		p = append(p, template[:i]...)
-		template = template[i+1:]
-		j := strings.Index(template, "}")
-		if j < 0 {
-			// Unclosed placeholder: emit the literal "{" and stop expanding.
-			p = append(p, '{')
-			break
-		}
-		if s, ok := match[template[:j]]; ok {
-			p = append(p, s...)
-		}
-		template = template[j+1:]
+	pairs := make([]string, 0, len(match)*2)
+	for k, v := range match {
+		pairs = append(pairs, "{"+k+"}", v)
 	}
-	p = append(p, template...)
-	return string(p)
+	return strings.NewReplacer(pairs...).Replace(template)
 }
 
 // RenderIssueIndexPattern renders issue indexes to corresponding links.
