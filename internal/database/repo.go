@@ -675,37 +675,16 @@ func localCopyGitDirPath(localPath string) string {
 // scoped file operations and rejecting writes to ".git", this prevents symlinks
 // inside the worktree from reaching Git internals.
 func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
-	gitDirPath := localCopyGitDirPath(localPath)
-
-	// Detect legacy layouts where ".git" lived inside the worktree as a directory,
-	// or the gitdir is missing. In either case, wipe and re-clone.
-	if osx.Exist(localPath) {
-		dotGit := filepath.Join(localPath, ".git")
-		info, statErr := os.Lstat(dotGit)
-		legacyLayout := statErr == nil && info.IsDir()
-		if legacyLayout || !osx.Exist(gitDirPath) {
-			if err = os.RemoveAll(localPath); err != nil {
-				return errors.Newf("remove legacy local copy: %v", err)
-			}
-			if err = os.RemoveAll(gitDirPath); err != nil {
-				return errors.Newf("remove stale gitdir: %v", err)
-			}
-		}
-	}
-
 	if !osx.Exist(localPath) {
 		// Checkout to a specific branch fails when wiki is an empty repository.
 		if isWiki {
 			branch = ""
 		}
-		if err = os.RemoveAll(gitDirPath); err != nil {
-			return errors.Newf("remove stale gitdir: %v", err)
-		}
 		if err = git.Clone(repoPath, localPath, git.CloneOptions{
 			Branch:  branch,
 			Timeout: time.Duration(conf.Git.Timeout.Clone) * time.Second,
 			CommandOptions: git.CommandOptions{
-				Args: []string{"--separate-git-dir=" + gitDirPath},
+				Args: []string{"--separate-git-dir=" + localCopyGitDirPath(localPath)},
 			},
 		}); err != nil {
 			return errors.Newf("git clone [branch: %s]: %v", branch, err)
