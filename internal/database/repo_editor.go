@@ -401,8 +401,8 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		}
 	}
 
-	// 🚨 SECURITY: All filesystem writes go through os.Root so the worktree
-	// boundary is enforced by the kernel.
+	// 🚨 SECURITY: The deletion goes through os.Root so the worktree boundary
+	// is enforced by the kernel.
 	root, err := os.OpenRoot(localPath)
 	if err != nil {
 		return errors.Newf("open root: %v", err)

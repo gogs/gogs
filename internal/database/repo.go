@@ -670,21 +670,27 @@ func localCopyGitDirPath(localPath string) string {
 // assume subsequent operations are against target branch when caller has confidence
 // about no race condition.
 //
-// 🚨 SECURITY: The local copy is cloned with --separate-git-dir so the worktree
-// at localPath contains only a redirector file at ".git". Combined with os.Root-
-// scoped file operations and rejecting writes to ".git", this prevents symlinks
-// inside the worktree from reaching Git internals.
+// 🚨 SECURITY: New clones use --separate-git-dir so the worktree at localPath
+// contains only a redirector file at ".git" instead of a real Git directory.
+// Editor callers complement this by routing writes through os.Root and
+// rejecting any tree path that resolves to ".git".
 func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
 	if !osx.Exist(localPath) {
 		// Checkout to a specific branch fails when wiki is an empty repository.
 		if isWiki {
 			branch = ""
 		}
+		// Callers that delete the worktree (transfer, rename, user delete) do not
+		// also remove the sibling gitdir, so clear any leftover before cloning.
+		gitDirPath := localCopyGitDirPath(localPath)
+		if err = os.RemoveAll(gitDirPath); err != nil {
+			return errors.Newf("remove stale gitdir: %v", err)
+		}
 		if err = git.Clone(repoPath, localPath, git.CloneOptions{
 			Branch:  branch,
 			Timeout: time.Duration(conf.Git.Timeout.Clone) * time.Second,
 			CommandOptions: git.CommandOptions{
-				Args: []string{"--separate-git-dir=" + localCopyGitDirPath(localPath)},
+				Args: []string{"--separate-git-dir=" + gitDirPath},
 			},
 		}); err != nil {
 			return errors.Newf("git clone [branch: %s]: %v", branch, err)
