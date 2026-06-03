@@ -379,19 +379,3 @@ jobs:
         with:
           smtp_username: ${{ secrets.SMTP_USERNAME }}
           smtp_password: ${{ secrets.SMTP_PASSWORD }}
-
-  digitalocean-gc:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'gogs/gogs' }}
-    needs: buildx-next
-    permissions:
-      contents: read
-    uses: ./.github/workflows/digitalocean_gc.yml
-    secrets: inherit
-
-  digitalocean-gc-pull-request:
-    if: ${{ github.event_name == 'pull_request' && github.repository == 'gogs/gogs' }}
-    needs: buildx-next-pull-request
-    permissions:
-      contents: read
-    uses: ./.github/workflows/digitalocean_gc.yml
-    secrets: inherit
