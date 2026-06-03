@@ -1,4 +1,11 @@
-Analyze and help fix the GitHub Security Advisory (GHSA) at: $ARGUMENTS
+---
+name: ghsa
+description: Analyze and help fix a GitHub Security Advisory (GHSA) in this repository. Use when the user types `/ghsa <id>` or asks to triage, verify, or patch a reported GHSA.
+---
+
+# GHSA
+
+Analyze and help fix the GitHub Security Advisory (GHSA) provided as the skill argument.
 
 Steps:
 1. Fetch the GHSA page using `gh api repos/gogs/gogs/security-advisories` and understand the vulnerability details (description, severity, affected versions, CWE).
