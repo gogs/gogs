@@ -30,7 +30,6 @@ Gogs has the following dependencies:
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
     - [MariaDB](https://mariadb.org/) with `TYPE = mysql` (v10.3 or higher)
-    - [TiDB](https://github.com/pingcap/tidb) with `TYPE = mysql`
     - [SQLite3](https://www.sqlite.org/index.html)
 
 ### macOS
