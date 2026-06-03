@@ -3,8 +3,7 @@
 dist/
 .moon/cache/
 node_modules/
-.agents/skills/
-.claude/skills
+.agents/skills/shadcn
 
 # Runtime data
 log/
