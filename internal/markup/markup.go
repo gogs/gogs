@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/unknwon/com"
 	"golang.org/x/net/html"
 
 	"gogs.io/gogs/internal/conf"
@@ -81,6 +80,15 @@ func cutoutVerbosePrefix(prefix string) string {
 	return prefix
 }
 
+// expand substitutes "{key}" placeholders in template with values from match.
+func expand(template string, match map[string]string) string {
+	pairs := make([]string, 0, len(match)*2)
+	for k, v := range match {
+		pairs = append(pairs, "{"+k+"}", v)
+	}
+	return strings.NewReplacer(pairs...).Replace(template)
+}
+
 // RenderIssueIndexPattern renders issue indexes to corresponding links.
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	urlPrefix = cutoutVerbosePrefix(urlPrefix)
@@ -106,7 +114,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 			} else {
 				metas["index"] = string(m[1:])
 			}
-			link = fmt.Sprintf(`<a href="%s">%s</a>`, com.Expand(metas["format"], metas), m)
+			link = fmt.Sprintf(`<a href="%s">%s</a>`, expand(metas["format"], metas), m)
 		}
 		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
