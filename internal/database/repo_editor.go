@@ -172,7 +172,10 @@ type UpdateRepoFileOptions struct {
 func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) error {
 	// 🚨 SECURITY: Reject paths that reference the ".git" redirector at the root
 	// of the worktree, or any nested ".git" segment.
-	if isRepositoryGitPath(opts.OldTreeName) || isRepositoryGitPath(opts.NewTreeName) {
+	if hasGitBasename(opts.OldTreeName) {
+		return errors.Errorf("bad tree path %q", opts.OldTreeName)
+	}
+	if hasGitBasename(opts.NewTreeName) {
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
 	}
 
@@ -208,7 +211,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	}
 
 	// 🚨 SECURITY: All filesystem writes go through os.Root so the worktree
-	// boundary is enforced by the kernel. Combined with isRepositoryGitPath
+	// boundary is enforced by the kernel. Combined with hasGitBasename
 	// above and the gitdir living outside the worktree, in-worktree symlinks
 	// cannot reach Git internals.
 	root, err := os.OpenRoot(localPath)
@@ -291,7 +294,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Diff, error) {
 	// 🚨 SECURITY: Reject paths that reference the ".git" redirector at the root
 	// of the worktree, or any nested ".git" segment.
-	if isRepositoryGitPath(treePath) {
+	if hasGitBasename(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
 
@@ -380,7 +383,7 @@ type DeleteRepoFileOptions struct {
 func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
 	// 🚨 SECURITY: Reject paths that reference the ".git" redirector at the root
 	// of the worktree, or any nested ".git" segment.
-	if isRepositoryGitPath(opts.TreePath) {
+	if hasGitBasename(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
@@ -595,19 +598,18 @@ type UploadRepoFileOptions struct {
 	Files        []string // In UUID format
 }
 
-// isRepositoryGitPath returns true if given path is or resides inside ".git"
-// path of the repository.
+// hasGitBasename returns true if the final component of the given path is
+// ".git". This is the only forbidden write target inside the worktree since
+// the gitdir is stored outside it and only a ".git" redirector file lives at
+// the worktree root. An intermediate in-root symlink (e.g. "evil -> .")
+// combined with a basename of ".git" would otherwise let os.Root resolve the
+// write onto the redirector.
 //
 // TODO(unknwon): Move to repox during refactoring for this file.
-func isRepositoryGitPath(path string) bool {
-	path = strings.ToLower(path)
-	return strings.HasSuffix(path, ".git") ||
-		strings.Contains(path, ".git/") ||
-		strings.Contains(path, `.git\`) ||
-		// Windows treats ".git." the same as ".git"
-		strings.HasSuffix(path, ".git.") ||
-		strings.Contains(path, ".git./") ||
-		strings.Contains(path, `.git.\`)
+func hasGitBasename(p string) bool {
+	base := strings.ToLower(path.Base(p))
+	// Windows treats ".git." the same as ".git".
+	return base == ".git" || base == ".git."
 }
 
 func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
@@ -616,7 +618,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 	}
 
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.TreePath) {
+	if hasGitBasename(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
@@ -669,7 +671,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		// 🚨 SECURITY: Reject names that reference the ".git" redirector or any
 		// nested ".git" segment.
 		relPath := path.Join(opts.TreePath, upload.Name)
-		if isRepositoryGitPath(relPath) {
+		if hasGitBasename(relPath) {
 			continue
 		}
 
