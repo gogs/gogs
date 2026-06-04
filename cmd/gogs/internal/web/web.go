@@ -188,8 +188,8 @@ func Run(configPath string, portOverride int) error {
 				}
 
 				// Resolve the repository that owns this attachment so we can enforce
-				// repository-level read permission, otherwise anyone with the UUID can
-				// download files belonging to private repositories.
+				// repository-level read permission. Without this check, anyone with
+				// the UUID could download files belonging to private repositories.
 				var repo *database.Repository
 				switch {
 				case attach.IssueID > 0:
@@ -229,7 +229,7 @@ func Run(configPath string, portOverride int) error {
 				defer fr.Close()
 
 				c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-				c.Header().Set("Cache-Control", "public,max-age=86400")
+				c.Header().Set("Cache-Control", "private,max-age=86400")
 				c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
 
 				if _, err = io.Copy(c.Resp, fr); err != nil {
