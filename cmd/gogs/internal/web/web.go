@@ -211,7 +211,7 @@ func Run(configPath string, portOverride int) error {
 					c.NotFound()
 					return
 				}
-				if repo.IsPrivate && !repo.IsOwnedBy(c.UserID()) && !repo.HasAccess(c.UserID()) {
+				if !repo.HasAccess(c.UserID()) {
 					c.NotFound()
 					return
 				}
