@@ -1,6 +1,5 @@
-// Inline POST forms wrap action buttons (member/team add/remove/leave/join)
-// so they behave like the anchors they replaced — needed because those
-// state-changing routes are now POST-only.
+// Renders a POST form inline so a submit button can sit alongside surrounding
+// text in place of a link.
 .inline-form {
 	display: inline;
 
@@ -9,8 +8,8 @@
 	}
 }
 
-// Mimic an anchor for buttons inside an inline-form when the original markup
-// used a plain text link instead of a styled button.
+// Styles a submit button to look like a plain text link, used for inline form
+// actions that read as links (e.g. the public/private visibility toggle).
 .link-button {
 	background: none;
 	border: 0;
