@@ -64,8 +64,40 @@
 							renderer.image = function (href, title, text) {
 								return `<img src="${context}/${href}"`
 							};
+							// Reject dangerous URL schemes (javascript:, vbscript:, data:)
+							// before they reach the DOM. marked.js does not sanitize URLs
+							// in its default link renderer.
+							var unsafeURLScheme = /^(?:javascript|vbscript|data):/i;
+							var escapeHTML = function (s) {
+								return String(s).replace(/[&<>"']/g, function (c) {
+									return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+								});
+							};
+							var decodeEntities = function (s) {
+								var el = document.createElement('textarea');
+								el.innerHTML = s;
+								return el.value;
+							};
+							renderer.link = function (href, title, text) {
+								var raw = String(href || '').trim();
+								var normalized;
+								try {
+									normalized = decodeURIComponent(decodeEntities(raw));
+								} catch (e) {
+									normalized = decodeEntities(raw);
+								}
+								normalized = normalized.replace(/[\x00-\x20]/g, '');
+								if (unsafeURLScheme.test(normalized)) {
+									return text;
+								}
+								var out = '<a href="' + escapeHTML(raw) + '"';
+								if (title) {
+									out += ' title="' + escapeHTML(title) + '"';
+								}
+								return out + '>' + text + '</a>';
+							};
 							$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
-								$(markdown).html(marked($(markdown).html(), {renderer: renderer}));
+								$(markdown).html(marked.parse($(markdown).html(), {renderer: renderer}));
 							});
 						});
 					});
