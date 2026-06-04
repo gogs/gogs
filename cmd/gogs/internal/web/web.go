@@ -185,7 +185,38 @@ func Run(configPath string, portOverride int) error {
 				if err != nil {
 					c.NotFoundOrError(err, "get attachment by UUID")
 					return
-				} else if !osx.IsFile(attach.LocalPath()) {
+				}
+
+				// Resolve the repository that owns this attachment so we can enforce
+				// repository-level read permission, otherwise anyone with the UUID can
+				// download files belonging to private repositories.
+				var repo *database.Repository
+				switch {
+				case attach.IssueID > 0:
+					issue, err := database.GetIssueByID(attach.IssueID)
+					if err != nil {
+						c.NotFoundOrError(err, "get issue by ID")
+						return
+					}
+					repo = issue.Repo
+				case attach.ReleaseID > 0:
+					release, err := database.GetReleaseByID(attach.ReleaseID)
+					if err != nil {
+						c.NotFoundOrError(err, "get release by ID")
+						return
+					}
+					repo = release.Repo
+				}
+				if repo == nil {
+					c.NotFound()
+					return
+				}
+				if repo.IsPrivate && !repo.IsOwnedBy(c.UserID()) && !repo.HasAccess(c.UserID()) {
+					c.NotFound()
+					return
+				}
+
+				if !osx.IsFile(attach.LocalPath()) {
 					c.NotFound()
 					return
 				}
