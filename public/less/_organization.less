@@ -1,3 +1,29 @@
+// Inline POST forms wrap action buttons (member/team add/remove/leave/join)
+// so they behave like the anchors they replaced — needed because those
+// state-changing routes are now POST-only.
+.inline-form {
+	display: inline;
+
+	&.right {
+		float: right;
+	}
+}
+
+// Mimic an anchor for buttons inside an inline-form when the original markup
+// used a plain text link instead of a styled button.
+.link-button {
+	background: none;
+	border: 0;
+	padding: 0;
+	color: #4183c4;
+	cursor: pointer;
+	font: inherit;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
 .organization {
 	padding-top: 15px;
 	padding-bottom: @footer-margin * 2;

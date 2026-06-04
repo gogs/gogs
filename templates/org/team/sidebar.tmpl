@@ -3,9 +3,17 @@
 		<strong>{{.Team.Name}}</strong>
 		<div class="ui right">
 			{{if .Team.IsMember $.LoggedUser.ID}}
-				<a class="ui red tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/leave?uid={{$.LoggedUser.ID}}&page=team">{{$.i18n.Tr "org.teams.leave"}}</a>
+				<form class="inline-form" action="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/leave" method="post">
+					<input type="hidden" name="uid" value="{{$.LoggedUser.ID}}">
+					<input type="hidden" name="page" value="team">
+					<button class="ui red tiny button" type="submit">{{$.i18n.Tr "org.teams.leave"}}</button>
+				</form>
 			{{else if .IsOrganizationOwner}}
-				<a class="ui blue tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/join?uid={{$.LoggedUser.ID}}&page=team">{{$.i18n.Tr "org.teams.join"}}</a>
+				<form class="inline-form" action="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/join" method="post">
+					<input type="hidden" name="uid" value="{{$.LoggedUser.ID}}">
+					<input type="hidden" name="page" value="team">
+					<button class="ui blue tiny button" type="submit">{{$.i18n.Tr "org.teams.join"}}</button>
+				</form>
 			{{end}}
 		</div>
 	</h4>

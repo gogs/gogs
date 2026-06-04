@@ -14,7 +14,10 @@
 					{{range .Team.Repos}}
 						<div class="item">
 							{{if $canAddRemove}}
-								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove?repoid={{.ID}}">{{$.i18n.Tr "org.teams.remove_repo"}}</a>
+								<form class="inline-form right" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove" method="post">
+									<input type="hidden" name="repoid" value="{{.ID}}">
+									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.teams.remove_repo"}}</button>
+								</form>
 							{{end}}
 							<a class="member" href="{{AppSubURL}}/{{$.Org.Name}}/{{.Name}}">
 								<i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
