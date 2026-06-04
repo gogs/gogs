@@ -65,7 +65,7 @@
 								return `<img src="${context}/${href}"`
 							};
 							$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
-								$(markdown).html(marked($(markdown).html(), {renderer: renderer}));
+								$(markdown).html(marked.parse($(markdown).html(), {renderer: renderer}));
 							});
 						});
 					});
