@@ -308,7 +308,38 @@ func runWeb(c *cli.Context) error {
 				if err != nil {
 					c.NotFoundOrError(err, "get attachment by UUID")
 					return
-				} else if !com.IsFile(attach.LocalPath()) {
+				}
+
+				// Resolve the repository that owns this attachment so we can enforce
+				// repository-level read permission. Without this check, anyone with
+				// the UUID could download files belonging to private repositories.
+				var repo *database.Repository
+				switch {
+				case attach.IssueID > 0:
+					issue, err := database.GetIssueByID(attach.IssueID)
+					if err != nil {
+						c.NotFoundOrError(err, "get issue by ID")
+						return
+					}
+					repo = issue.Repo
+				case attach.ReleaseID > 0:
+					release, err := database.GetReleaseByID(attach.ReleaseID)
+					if err != nil {
+						c.NotFoundOrError(err, "get release by ID")
+						return
+					}
+					repo = release.Repo
+				}
+				if repo == nil {
+					c.NotFound()
+					return
+				}
+				if !repo.HasAccess(c.UserID()) {
+					c.NotFound()
+					return
+				}
+
+				if !com.IsFile(attach.LocalPath()) {
 					c.NotFound()
 					return
 				}
@@ -321,7 +352,7 @@ func runWeb(c *cli.Context) error {
 				defer fr.Close()
 
 				c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-				c.Header().Set("Cache-Control", "public,max-age=86400")
+				c.Header().Set("Cache-Control", "private,max-age=86400")
 				c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
 
 				if _, err = io.Copy(c.Resp, fr); err != nil {
