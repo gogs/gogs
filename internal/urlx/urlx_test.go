@@ -15,9 +15,19 @@ func TestIsSameSite(t *testing.T) {
 		{url: "http://github.com", want: false},
 		{url: "https://github.com", want: false},
 		{url: "/\\github.com", want: false},
+		{url: "/a/../\\example.com", want: false},
+		{url: "/\\\\example.com", want: false},
+		{url: "/%5Cexample.com", want: false},
+		{url: "/a/..%5Cexample.com", want: false},
+		{url: "/a/../%5Cexample.com", want: false},
+		{url: "", want: false},
+		{url: "/", want: false},
+		{url: "javascript:alert(1)", want: false},
 
 		{url: "/admin", want: true},
 		{url: "/user/repo", want: true},
+		{url: "/user/repo?key=value", want: true},
+		{url: "/user/repo#anchor", want: true},
 	}
 
 	for _, test := range tests {
