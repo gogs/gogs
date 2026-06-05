@@ -264,7 +264,7 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
 	u, err := database.Handle.Users().Authenticate(r.Context(), req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
@@ -282,7 +282,7 @@ func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Cont
 	}
 
 	if database.Handle.TwoFactors().IsEnabled(r.Context(), u.ID) {
-		_ = sess.Set("mfaUserID", u.ID)
+		sess.Set("mfaUserID", u.ID)
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
@@ -297,19 +297,24 @@ func postUserSignIn(r *http.Request, sess macaronsession.Store, mc *macaron.Cont
 // to prevent fixation, writes the auth session, clears any in-flight MFA
 // state, and sets the login-status cookie. The caller is responsible for
 // navigating to a post-login destination via /redirect?to=.
-func completeSignIn(sess macaronsession.Store, mc *macaron.Context, u *database.User) error {
-	// Rotate the session ID on authentication boundary so a pre-login session
-	// ID that may have been planted on the victim cannot be reused once the
-	// session is authenticated.
-	raw, err := sess.RegenerateId(mc)
-	if err != nil {
-		return errors.Wrap(err, "regenerate session ID")
+func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) error {
+	// Rotate the session ID on the authentication boundary so a pre-login
+	// session ID that may have been planted on the victim cannot be reused
+	// once the session is authenticated. The adapter routes the subsequent
+	// Set/Delete calls to the new RawStore so the authenticated state lands
+	// under the new session ID.
+	a, ok := sess.(*flamegoSessionAdapter)
+	if !ok {
+		return errors.New("session does not support ID rotation")
 	}
-	_ = raw.Set("uid", u.ID)
-	_ = raw.Set("uname", u.Name)
-	_ = raw.Delete("mfaUserID")
-	if err := raw.Release(); err != nil {
-		return errors.Wrap(err, "release session")
+	if err := a.RegenerateID(); err != nil {
+		return err
+	}
+	a.Set("uid", u.ID)
+	a.Set("uname", u.Name)
+	a.Delete("mfaUserID")
+	if err := a.releaseRotated(); err != nil {
+		return err
 	}
 
 	if conf.Security.EnableLoginStatusCookie {
@@ -331,7 +336,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(r *http.Request, sess macaronsession.Store, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
+func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -385,7 +390,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
-func postUserMFARecovery(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
+func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -494,7 +499,7 @@ type userActivateCompleteRequest struct {
 	Code string `json:"code" validate:"required"`
 }
 
-func postUserActivateComplete(r *http.Request, sess macaronsession.Store, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
+func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
 	target := verifyUserActiveCode(r.Context(), req.Code)
 	if target == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil

@@ -46,24 +46,67 @@ func flamegoInjector(c flamego.Context) {
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
 	c.Map(user, sess, mc, l)
-	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
+	c.MapTo(&flamegoSessionAdapter{sess: sess, mc: mc}, (*session.Session)(nil))
 }
 
 // flamegoSessionAdapter exposes the underlying Macaron session via the Flamego
 // session interface so the captcha middleware (and any future Flamego-native
 // session consumer) can read/write the same session store the rest of the app
 // uses.
+//
+// rotated, when non-nil, is the freshly issued RawStore returned by
+// macaronsession.Store.RegenerateId. After rotation, reads and writes go to
+// it so the new session ID is what carries the authenticated state into
+// subsequent requests. The Macaron Sessioner middleware will still call
+// Release on the original RawStore at the end of the request, but the cookie
+// already points at the new ID by then, so that orphaned write is harmless.
 type flamegoSessionAdapter struct {
-	sess macaronsession.Store
+	sess    macaronsession.Store
+	mc      *macaron.Context
+	rotated macaronsession.RawStore
 }
 
-func (s flamegoSessionAdapter) ID() string                      { return s.sess.ID() }
-func (s flamegoSessionAdapter) Get(key interface{}) interface{} { return s.sess.Get(key) }
-func (s flamegoSessionAdapter) Set(key, val interface{})        { _ = s.sess.Set(key, val) }
-func (s flamegoSessionAdapter) SetFlash(val interface{})        { _ = s.sess.Set("_flash", val) }
-func (s flamegoSessionAdapter) Delete(key interface{})          { _ = s.sess.Delete(key) }
-func (s flamegoSessionAdapter) Flush()                          { _ = s.sess.Flush() }
-func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
+func (s *flamegoSessionAdapter) active() macaronsession.RawStore {
+	if s.rotated != nil {
+		return s.rotated
+	}
+	return s.sess
+}
+
+func (s *flamegoSessionAdapter) ID() string                      { return s.active().ID() }
+func (s *flamegoSessionAdapter) Get(key interface{}) interface{} { return s.active().Get(key) }
+func (s *flamegoSessionAdapter) Set(key, val interface{})        { _ = s.active().Set(key, val) }
+func (s *flamegoSessionAdapter) SetFlash(val interface{})        { _ = s.active().Set("_flash", val) }
+func (s *flamegoSessionAdapter) Delete(key interface{})          { _ = s.active().Delete(key) }
+func (s *flamegoSessionAdapter) Flush()                          { _ = s.active().Flush() }
+func (s *flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
+
+// RegenerateID rotates the underlying Macaron session ID. Subsequent reads
+// and writes through the adapter target the new RawStore, and that store is
+// released so the next request can load it from the provider. Call this on
+// the authentication boundary (sign-in completion) to prevent session
+// fixation.
+func (s *flamegoSessionAdapter) RegenerateID() error {
+	raw, err := s.sess.RegenerateId(s.mc)
+	if err != nil {
+		return errors.Wrap(err, "regenerate session ID")
+	}
+	s.rotated = raw
+	return nil
+}
+
+// releaseRotated releases the rotated RawStore so the authenticated state
+// written through the adapter after RegenerateID is persisted under the new
+// session ID. Safe to call when no rotation happened.
+func (s *flamegoSessionAdapter) releaseRotated() error {
+	if s.rotated == nil {
+		return nil
+	}
+	if err := s.rotated.Release(); err != nil {
+		return errors.Wrap(err, "release rotated session")
+	}
+	return nil
+}
 
 func enforceWebAPIMaxBodySize(c flamego.Context) {
 	r := c.Request().Request
