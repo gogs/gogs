@@ -14,10 +14,29 @@ func TestIsSameSite(t *testing.T) {
 		{url: "//github.com", want: false},
 		{url: "http://github.com", want: false},
 		{url: "https://github.com", want: false},
-		{url: "/\\github.com", want: false},
+		{url: "", want: false},
+		{url: "javascript:alert(1)", want: false},
 
+		{url: "/", want: true},
 		{url: "/admin", want: true},
 		{url: "/user/repo", want: true},
+		{url: "/user/repo?key=value", want: true},
+		{url: "/user/repo#anchor", want: true},
+
+		// Backslash bypasses: browsers normalize `\` to `/` on Location headers.
+		{url: "/\\github.com", want: false},
+		{url: "/a/../\\example.com", want: false},
+		{url: "/\\\\example.com", want: false},
+		// Percent-encoded backslashes decode after c.Query, so they're caught too.
+		{url: "/%5Cexample.com", want: false},
+		{url: "/%5cexample.com", want: false},
+		{url: "/a/../%5Cexample.com", want: false},
+
+		// Whitespace bypasses: browsers strip tab/CR/LF before resolving.
+		{url: "/\t/example.com", want: false},
+		{url: "/\n/example.com", want: false},
+		{url: "/\r/example.com", want: false},
+		{url: "/\texample.com", want: true},
 	}
 
 	for _, test := range tests {
