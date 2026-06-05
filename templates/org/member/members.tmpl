@@ -28,10 +28,10 @@
 							{{ $isPublic := .IsPublicMember $.Org.ID}}
 							{{if $isPublic}}
 								<strong>{{$.i18n.Tr "org.members.public"}}</strong>
-								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{$.i18n.Tr "org.members.public_helper"}}</a>){{end}}
+								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<form class="inline-form" action="{{$.OrgLink}}/members/action/private" method="post"><input type="hidden" name="uid" value="{{.ID}}"><button class="link-button" type="submit">{{$.i18n.Tr "org.members.public_helper"}}</button></form>){{end}}
 							{{else}}
 								<strong>{{$.i18n.Tr "org.members.private"}}</strong>
-								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{$.i18n.Tr "org.members.private_helper"}}</a>){{end}}
+								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<form class="inline-form" action="{{$.OrgLink}}/members/action/public" method="post"><input type="hidden" name="uid" value="{{.ID}}"><button class="link-button" type="submit">{{$.i18n.Tr "org.members.private_helper"}}</button></form>){{end}}
 							{{end}}
 						</div>
 					</div>
@@ -46,9 +46,15 @@
 					<div class="ui four wide column">
 						<div class="text right">
 							{{if eq $.LoggedUser.ID .ID}}
-								<a class="ui red small button" href="{{$.OrgLink}}/members/action/leave?uid={{.ID}}">{{$.i18n.Tr "org.members.leave"}}</a>
+								<form class="inline-form" action="{{$.OrgLink}}/members/action/leave" method="post">
+									<input type="hidden" name="uid" value="{{.ID}}">
+									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.members.leave"}}</button>
+								</form>
 							{{else if $.IsOrganizationOwner}}
-								<a class="ui red small button" href="{{$.OrgLink}}/members/action/remove?uid={{.ID}}">{{$.i18n.Tr "org.members.remove"}}</a>
+								<form class="inline-form" action="{{$.OrgLink}}/members/action/remove" method="post">
+									<input type="hidden" name="uid" value="{{.ID}}">
+									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.members.remove"}}</button>
+								</form>
 							{{end}}
 						</div>
 					</div>

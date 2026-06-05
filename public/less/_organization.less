@@ -1,3 +1,28 @@
+// Renders a POST form inline so a submit button can sit alongside surrounding
+// text in place of a link.
+.inline-form {
+	display: inline;
+
+	&.right {
+		float: right;
+	}
+}
+
+// Styles a submit button to look like a plain text link, used for inline form
+// actions that read as links (e.g. the public/private visibility toggle).
+.link-button {
+	background: none;
+	border: 0;
+	padding: 0;
+	color: #4183c4;
+	cursor: pointer;
+	font: inherit;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
 .organization {
 	padding-top: 15px;
 	padding-bottom: @footer-margin * 2;

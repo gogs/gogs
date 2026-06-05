@@ -13,7 +13,10 @@
 					{{range .Team.Members}}
 						<div class="item">
 							{{if $.IsOrganizationOwner}}
-								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.ID}}">{{$.i18n.Tr "org.members.remove"}}</a>
+								<form class="inline-form right" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove" method="post">
+									<input type="hidden" name="uid" value="{{.ID}}">
+									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.members.remove"}}</button>
+								</form>
 							{{end}}
 							<a href="{{.HomeURLPath}}">
 								<img class="ui avatar image" src="{{.AvatarURLPath}}">

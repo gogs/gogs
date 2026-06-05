@@ -410,7 +410,7 @@ func runWeb(c *cli.Context) error {
 				m.Get("/dashboard", user.Dashboard)
 				m.Get("/^:type(issues|pulls)$", user.Issues)
 				m.Get("/members", org.Members)
-				m.Get("/members/action/:action", org.MembersAction)
+				m.Post("/members/action/:action", org.MembersAction)
 
 				m.Get("/teams", org.Teams)
 			}, context.OrgAssignment(true))
@@ -418,8 +418,8 @@ func runWeb(c *cli.Context) error {
 			m.Group("/:org", func() {
 				m.Get("/teams/:team", org.TeamMembers)
 				m.Get("/teams/:team/repositories", org.TeamRepositories)
-				m.Route("/teams/:team/action/:action", "GET,POST", org.TeamsAction)
-				m.Route("/teams/:team/action/repo/:action", "GET,POST", org.TeamsRepoAction)
+				m.Post("/teams/:team/action/:action", org.TeamsAction)
+				m.Post("/teams/:team/action/repo/:action", org.TeamsRepoAction)
 			}, context.OrgAssignment(true, false, true))
 
 			m.Group("/:org", func() {
