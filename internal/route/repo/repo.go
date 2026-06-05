@@ -170,7 +170,12 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	remoteAddr, err := f.ParseRemoteAddr(c.User)
+	remoteAddr, err := form.ParseRemoteAddr(form.ParseRemoteAddrOptions{
+		CloneAddr:    f.CloneAddr,
+		User:         c.User,
+		AuthUsername: f.AuthUsername,
+		AuthPassword: f.AuthPassword,
+	})
 	if err != nil {
 		if database.IsErrInvalidCloneAddr(err) {
 			c.Data["Err_CloneAddr"] = true
