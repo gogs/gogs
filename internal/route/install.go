@@ -410,9 +410,21 @@ func InstallPost(c *context.Context, f form.Install) {
 			}
 		}
 
-		// Auto-login for admin
-		_ = c.Session.Set("uid", user.ID)
-		_ = c.Session.Set("uname", user.Name)
+		// Auto-login for admin. Rotate the session ID on the authentication
+		// boundary to prevent session fixation.
+		raw, err := c.Session.RegenerateId(c.Context)
+		if err != nil {
+			log.Error("Failed to regenerate session ID: %v", err)
+			c.Error(err, "regenerate session ID")
+			return
+		}
+		_ = raw.Set("uid", user.ID)
+		_ = raw.Set("uname", user.Name)
+		if err = raw.Release(); err != nil {
+			log.Error("Failed to release session: %v", err)
+			c.Error(err, "release session")
+			return
+		}
 	}
 
 	log.Info("First-time run install finished!")
