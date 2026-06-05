@@ -20,7 +20,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Organization team and member management actions accepted GET requests, allowing a logged-in owner to be tricked into adding an attacker to the Owners team via a crafted link. [#8321](https://github.com/gogs/gogs/pull/8321) - [GHSA-pwx3-qcgw-vh7h](https://github.com/gogs/gogs/security/advisories/GHSA-pwx3-qcgw-vh7h)
 - _Security:_ SSRF via mirror address update bypassing clone address validation. [#8225](https://github.com/gogs/gogs/pull/8225) - [GHSA-wv27-2vqp-j7g5](https://github.com/gogs/gogs/security/advisories/GHSA-wv27-2vqp-j7g5)
 - _Security:_ Open redirect on login and other post-action flows via the `redirect_to` query parameter. [#8322](https://github.com/gogs/gogs/pull/8322) - [GHSA-xxhq-69mf-w8cr](https://github.com/gogs/gogs/security/advisories/GHSA-xxhq-69mf-w8cr)
-- _Security:_ Session fixation on sign-in allowed an attacker who could plant a session cookie on a victim to take over the account once the victim signed in. [#PRNUM](https://github.com/gogs/gogs/pull/PRNUM) - [GHSA-h48f-pxp7-c4mj](https://github.com/gogs/gogs/security/advisories/GHSA-h48f-pxp7-c4mj)
+- _Security:_ Session fixation on sign-in allowed an attacker who could plant a session cookie on a victim to take over the account once the victim signed in. [#8323](https://github.com/gogs/gogs/pull/8323) - [GHSA-h48f-pxp7-c4mj](https://github.com/gogs/gogs/security/advisories/GHSA-h48f-pxp7-c4mj)
 
 ### Removed
 
