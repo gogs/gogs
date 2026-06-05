@@ -797,6 +797,15 @@ func wikiRemoteURL(remote string) string {
 	return ""
 }
 
+// isCertificateError reports whether the error is caused by an SSL/TLS certificate issue.
+func isCertificateError(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "certificate") ||
+		strings.Contains(s, "SSL") ||
+		strings.Contains(s, "x509") ||
+		strings.Contains(s, "server certificate")
+}
+
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
 	repo, err := CreateRepository(doer, owner, CreateRepoOptionsLegacy{
@@ -831,6 +840,9 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		Quiet:   true,
 		Timeout: migrateTimeout,
 	}); err != nil {
+		if isCertificateError(err) {
+			return repo, errors.New("Migration failed due to an SSL certificate error. Please contact your site admin to configure git sslVerify or install the required certificate.")
+		}
 		return repo, errors.Newf("clone: %v", err)
 	}
 
