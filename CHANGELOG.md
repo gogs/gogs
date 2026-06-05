@@ -18,6 +18,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview through Markdown links with `javascript:` URLs. [#8319](https://github.com/gogs/gogs/pull/8319) - [GHSA-jq8v-rmf6-65jw](https://github.com/gogs/gogs/security/advisories/GHSA-jq8v-rmf6-65jw)
 - _Security:_ Missing authorization check on the attachment download endpoint allowed anyone who knew (or guessed) an attachment UUID to download files belonging to private repositories. [#8320](https://github.com/gogs/gogs/pull/8320) - [GHSA-p9f5-h3rx-j5qw](https://github.com/gogs/gogs/security/advisories/GHSA-p9f5-h3rx-j5qw)
 - _Security:_ Organization team and member management actions accepted GET requests, allowing a logged-in owner to be tricked into adding an attacker to the Owners team via a crafted link. [#8321](https://github.com/gogs/gogs/pull/8321) - [GHSA-pwx3-qcgw-vh7h](https://github.com/gogs/gogs/security/advisories/GHSA-pwx3-qcgw-vh7h)
+- _Security:_ SSRF via mirror address update bypassing clone address validation. [#8225](https://github.com/gogs/gogs/pull/8225) - [GHSA-wv27-2vqp-j7g5](https://github.com/gogs/gogs/security/advisories/GHSA-wv27-2vqp-j7g5)
 
 ### Removed
 
