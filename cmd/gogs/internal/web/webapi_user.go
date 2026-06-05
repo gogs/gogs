@@ -293,21 +293,12 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
-// completeSignIn finalizes the sign-in session for u: rotates the session ID
-// to prevent fixation, writes the auth session, clears any in-flight MFA
-// state, and sets the login-status cookie. The caller is responsible for
-// navigating to a post-login destination via /redirect?to=.
 func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) error {
-	// Rotate the session ID on the authentication boundary so a pre-login
-	// session ID that may have been planted on the victim cannot be reused
-	// once the session is authenticated. The adapter routes the subsequent
-	// Set/Delete calls to the new RawStore so the authenticated state lands
-	// under the new session ID.
 	a, ok := sess.(*flamegoSessionAdapter)
 	if !ok {
 		return errors.New("session does not support ID rotation")
 	}
-	if err := a.RegenerateID(); err != nil {
+	if err := a.RegenerateID(mc); err != nil {
 		return err
 	}
 	a.Set("uid", u.ID)

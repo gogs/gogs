@@ -410,8 +410,7 @@ func InstallPost(c *context.Context, f form.Install) {
 			}
 		}
 
-		// Auto-login for admin. Rotate the session ID on the authentication
-		// boundary to prevent session fixation.
+		// Auto-login for admin.
 		raw, err := c.Session.RegenerateId(c.Context)
 		if err != nil {
 			log.Error("Failed to regenerate session ID: %v", err)
