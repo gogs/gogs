@@ -12,6 +12,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Never use em dashes (`—`) or en dashes (`–`) in prose. Rewrite the sentence with a comma, period, colon, or parentheses instead. Exception: em/en dashes are allowed as visual separators in UI design (e.g., between a title and description, in a terminal prompt label) where they function as a graphic element rather than punctuation.
 - Do not overuse semicolons. Two short sentences are almost always clearer than one sentence joined by a semicolon. Reserve the semicolon for the rare case where the two clauses are so tightly coupled that splitting them loses meaning, never as a default em-dash replacement or a way to chain related thoughts.
 - Do not add comments that repeat what the code is doing, always prefer more descriptive names. Do add comments for intentions that aren't obvious via reading the code alone. This rule takes precedence over matching existing patterns.
+- Do not include implementation details in CHANGELOG entries, describe the visible impact only from user's POV.
 
 ## Coding guidelines
 
