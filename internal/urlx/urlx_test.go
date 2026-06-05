@@ -27,9 +27,16 @@ func TestIsSameSite(t *testing.T) {
 		{url: "/\\github.com", want: false},
 		{url: "/a/../\\example.com", want: false},
 		{url: "/\\\\example.com", want: false},
-		// Percent-encoded backslashes decode after url.Parse, so they're caught too.
+		// Percent-encoded backslashes decode after c.Query, so they're caught too.
 		{url: "/%5Cexample.com", want: false},
+		{url: "/%5cexample.com", want: false},
 		{url: "/a/../%5Cexample.com", want: false},
+
+		// Whitespace bypasses: browsers strip tab/CR/LF before resolving.
+		{url: "/\t/example.com", want: false},
+		{url: "/\n/example.com", want: false},
+		{url: "/\r/example.com", want: false},
+		{url: "/\texample.com", want: true},
 	}
 
 	for _, test := range tests {
