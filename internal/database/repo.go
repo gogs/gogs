@@ -784,11 +784,12 @@ type MigrateRepoOptions struct {
 */
 var commonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
 
-// migrationGitArgs returns the git-level arguments used by every remote
-// network operation during migration. Disabling HTTP redirects prevents an
-// attacker-controlled public URL from redirecting to an internal endpoint
-// that the up-front clone address validation would otherwise have blocked.
+// migrationGitArgs returns the git-level arguments used by every remote network
+// operation during migration.
 func migrationGitArgs() []string {
+	// Disabling HTTP redirects prevents an attacker-controlled public URL from
+	// redirecting to an internal endpoint that the up-front clone address
+	// validation would otherwise have blocked.
 	return []string{"-c", "http.followRedirects=false"}
 }
 
