@@ -16,6 +16,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/netx"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
@@ -222,9 +223,25 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	wikiPath := m.Repo.WikiPath()
 	timeout := time.Duration(conf.Git.Timeout.Mirror) * time.Second
 
+	// Re-check the mirror address against the local-network blocklist on every
+	// sync. The address was validated when the mirror was created, but DNS for
+	// that hostname may have changed in the meantime to point at an internal
+	// host, so the up-front check is not sufficient on its own.
+	rawAddr := m.RawAddress()
+	if u, err := url.Parse(rawAddr); err == nil &&
+		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") &&
+		netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress())
+		log.Error("Mirror.runSync: %s", desc)
+		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+			log.Error("CreateRepositoryNotice: %v", err)
+		}
+		return nil, false
+	}
+
 	// Do a fast-fail testing against on repository URL to ensure it is accessible under
 	// good condition to prevent long blocking on URL resolution without syncing anything.
-	if !git.IsURLAccessible(time.Minute, m.RawAddress()) {
+	if !isMigrationURLAccessible(time.Minute, rawAddr) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
@@ -232,7 +249,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	gitArgs := []string{"remote", "update"}
+	gitArgs := append(migrationGitArgs(), "remote", "update")
 	if m.EnablePrune {
 		gitArgs = append(gitArgs, "--prune")
 	}
@@ -258,10 +275,11 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	}
 
 	if m.Repo.HasWiki() {
+		wikiArgs := append(migrationGitArgs(), "remote", "update", "--prune")
 		// Even if wiki sync failed, we still want results from the main repository
 		if _, stderr, err := process.ExecDir(
 			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
-			"git", "remote", "update", "--prune"); err != nil {
+			"git", wikiArgs...); err != nil {
 			const fmtStr = "Failed to update mirror wiki repository %q: %s"
 			log.Error(fmtStr, wikiPath, stderr)
 			if err = Handle.Notices().Create(
