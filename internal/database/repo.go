@@ -784,13 +784,30 @@ type MigrateRepoOptions struct {
 */
 var commonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
 
+// migrationGitArgs returns the git-level arguments used by every remote
+// network operation during migration. Disabling HTTP redirects prevents an
+// attacker-controlled public URL from redirecting to an internal endpoint
+// that the up-front clone address validation would otherwise have blocked.
+func migrationGitArgs() []string {
+	return []string{"-c", "http.followRedirects=false"}
+}
+
+// isMigrationURLAccessible reports whether the given remote URL is reachable
+// without following HTTP redirects, matching the redirect policy used by the
+// migration clone itself.
+func isMigrationURLAccessible(timeout time.Duration, url string) bool {
+	args := append(migrationGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
+	_, _, err := process.ExecTimeout(timeout, fmt.Sprintf("isMigrationURLAccessible: %s", url), "git", args...)
+	return err == nil
+}
+
 // wikiRemoteURL returns accessible repository URL for wiki if exists.
 // Otherwise, it returns an empty string.
 func wikiRemoteURL(remote string) string {
 	remote = strings.TrimSuffix(remote, ".git")
 	for _, suffix := range commonWikiURLSuffixes {
 		wikiURL := remote + suffix
-		if git.IsURLAccessible(time.Minute, wikiURL) {
+		if isMigrationURLAccessible(time.Minute, wikiURL) {
 			return wikiURL
 		}
 	}
@@ -826,23 +843,21 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
-	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneOptions{
-		Mirror:  true,
-		Quiet:   true,
-		Timeout: migrateTimeout,
-	}); err != nil {
-		return repo, errors.Newf("clone: %v", err)
+	cloneArgs := append(migrationGitArgs(), "clone", "--mirror", "--quiet", "--end-of-options", opts.RemoteAddr, repoPath)
+	if _, stderr, err := process.ExecTimeout(migrateTimeout,
+		fmt.Sprintf("MigrateRepository 'git clone': %s/%s", owner.Name, opts.Name),
+		"git", cloneArgs...); err != nil {
+		return repo, errors.Newf("clone: %v - %s", err, stderr)
 	}
 
 	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
 	if len(wikiRemotePath) > 0 {
 		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
-		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneOptions{
-			Mirror:  true,
-			Quiet:   true,
-			Timeout: migrateTimeout,
-		}); err != nil {
-			log.Error("Failed to clone wiki: %v", err)
+		wikiCloneArgs := append(migrationGitArgs(), "clone", "--mirror", "--quiet", "--end-of-options", wikiRemotePath, wikiPath)
+		if _, stderr, err := process.ExecTimeout(migrateTimeout,
+			fmt.Sprintf("MigrateRepository 'git clone' wiki: %s/%s", owner.Name, opts.Name),
+			"git", wikiCloneArgs...); err != nil {
+			log.Error("Failed to clone wiki: %v - %s", err, stderr)
 			RemoveAllWithNotice("Delete repository wiki for initialization failure", wikiPath)
 		}
 	}
