@@ -827,7 +827,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
 	cloneArgs := append(mirrorGitArgs(), "clone", "--mirror", "--quiet", "--end-of-options", opts.RemoteAddr, repoPath)
-	if _, stderr, err := process.ExecTimeout(migrateTimeout,
+	if _, stderr, err := process.ExecTimeoutEnv(migrateTimeout, mirrorGitEnv(),
 		fmt.Sprintf("MigrateRepository 'git clone': %s/%s", owner.Name, opts.Name),
 		"git", cloneArgs...); err != nil {
 		return repo, errors.Newf("clone: %v - %s", err, stderr)
@@ -837,7 +837,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	if len(wikiRemotePath) > 0 {
 		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
 		wikiCloneArgs := append(mirrorGitArgs(), "clone", "--mirror", "--quiet", "--end-of-options", wikiRemotePath, wikiPath)
-		if _, stderr, err := process.ExecTimeout(migrateTimeout,
+		if _, stderr, err := process.ExecTimeoutEnv(migrateTimeout, mirrorGitEnv(),
 			fmt.Sprintf("MigrateRepository 'git clone' wiki: %s/%s", owner.Name, opts.Name),
 			"git", wikiCloneArgs...); err != nil {
 			log.Error("Failed to clone wiki: %v - %s", err, stderr)

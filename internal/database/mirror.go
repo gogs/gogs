@@ -226,12 +226,24 @@ func mirrorGitArgs() []string {
 	return []string{"-c", "http.followRedirects=false"}
 }
 
+// mirrorGitEnv returns environment variables that keep git non-interactive
+// during mirror operations. Without these, a network failure or a missing
+// remote endpoint can make git ask for credentials and stall the server-side
+// process waiting on a terminal that never responds.
+func mirrorGitEnv() []string {
+	return []string{
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_ASKPASS=/bin/true",
+		"GCM_INTERACTIVE=Never",
+	}
+}
+
 // isMirrorURLAccessible reports whether the given remote URL is reachable
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
 func isMirrorURLAccessible(timeout time.Duration, url string) bool {
 	args := append(mirrorGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
-	_, _, err := process.ExecTimeout(timeout, fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
+	_, _, err := process.ExecTimeoutEnv(timeout, mirrorGitEnv(), fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
 	return err == nil
 }
 
@@ -271,8 +283,8 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	if m.EnablePrune {
 		gitArgs = append(gitArgs, "--prune")
 	}
-	_, stderr, err := process.ExecDir(
-		timeout, repoPath, fmt.Sprintf("Mirror.runSync: %s", repoPath),
+	_, stderr, err := process.ExecDirEnv(
+		timeout, repoPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", repoPath),
 		"git", gitArgs...)
 	if err != nil {
 		const fmtStr = "Failed to update mirror repository %q: %s"
@@ -295,8 +307,8 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	if m.Repo.HasWiki() {
 		wikiArgs := append(mirrorGitArgs(), "remote", "update", "--prune")
 		// Even if wiki sync failed, we still want results from the main repository
-		if _, stderr, err := process.ExecDir(
-			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
+		if _, stderr, err := process.ExecDirEnv(
+			timeout, wikiPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", wikiPath),
 			"git", wikiArgs...); err != nil {
 			const fmtStr = "Failed to update mirror wiki repository %q: %s"
 			log.Error(fmtStr, wikiPath, stderr)
