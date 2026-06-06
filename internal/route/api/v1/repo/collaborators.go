@@ -40,7 +40,7 @@ func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 	}
 
 	if form.Permission != nil {
-		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
+		if err := c.Repo.Repository.ChangeCollaborationAccessMode(c.Repo.AccessMode, collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
 			c.Error(err, "change collaboration access mode")
 			return
 		}

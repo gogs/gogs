@@ -124,9 +124,16 @@ func (r *Repository) GetCollaborators() ([]*Collaborator, error) {
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
-func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
-	// Discard invalid input
-	if mode <= AccessModeNone || mode > AccessModeOwner {
+// The actor's access mode bounds the new mode, so an actor can never grant a
+// level higher than their own.
+func (r *Repository) ChangeCollaborationAccessMode(actorMode AccessMode, userID int64, mode AccessMode) error {
+	// Collaborators can hold at most admin access.
+	if mode <= AccessModeNone || mode > AccessModeAdmin {
+		return nil
+	}
+
+	// Actors must not grant a level above their own.
+	if mode > actorMode {
 		return nil
 	}
 
