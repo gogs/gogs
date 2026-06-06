@@ -226,11 +226,13 @@ func mirrorGitArgs() []string {
 	return []string{"-c", "http.followRedirects=false"}
 }
 
-// mirrorGitEnv returns environment variables that keep git non-interactive
-// during mirror operations. Without these, a network failure or a missing
-// remote endpoint can make git ask for credentials and stall the server-side
-// process waiting on a terminal that never responds.
+// mirrorGitEnv returns the git-level environment variables used by every remote network
+// operation against a mirror source.
 func mirrorGitEnv() []string {
+	// Keep git non-interactive during mirror operations. Without these, a
+	// network failure or a missing remote endpoint can make git ask for
+	// credentials and stall the server-side process waiting on a terminal that
+	// never responds.
 	return []string{
 		"GIT_TERMINAL_PROMPT=0",
 		"GIT_ASKPASS=/bin/true",
