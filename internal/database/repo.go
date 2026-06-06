@@ -785,7 +785,7 @@ func wikiRemoteURL(remote string) string {
 	remote = strings.TrimSuffix(remote, ".git")
 	for _, suffix := range commonWikiURLSuffixes {
 		wikiURL := remote + suffix
-		if git.IsURLAccessible(time.Minute, wikiURL) {
+		if isMirrorURLAccessible(time.Minute, wikiURL) {
 			return wikiURL
 		}
 	}
@@ -821,23 +821,21 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
-	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneOptions{
-		Mirror:  true,
-		Quiet:   true,
-		Timeout: migrateTimeout,
-	}); err != nil {
-		return repo, errors.Newf("clone: %v", err)
+	cloneArgs := append(mirrorGitArgs(), "clone", "--mirror", "--quiet", "--end-of-options", opts.RemoteAddr, repoPath)
+	if _, stderr, err := process.ExecTimeoutEnv(migrateTimeout, mirrorGitEnv(),
+		fmt.Sprintf("MigrateRepository 'git clone': %s/%s", owner.Name, opts.Name),
+		"git", cloneArgs...); err != nil {
+		return repo, errors.Newf("clone: %v - %s", err, stderr)
 	}
 
 	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
 	if len(wikiRemotePath) > 0 {
 		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
-		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneOptions{
-			Mirror:  true,
-			Quiet:   true,
-			Timeout: migrateTimeout,
-		}); err != nil {
-			log.Error("Failed to clone wiki: %v", err)
+		wikiCloneArgs := append(mirrorGitArgs(), "clone", "--mirror", "--quiet", "--end-of-options", wikiRemotePath, wikiPath)
+		if _, stderr, err := process.ExecTimeoutEnv(migrateTimeout, mirrorGitEnv(),
+			fmt.Sprintf("MigrateRepository 'git clone' wiki: %s/%s", owner.Name, opts.Name),
+			"git", wikiCloneArgs...); err != nil {
+			log.Error("Failed to clone wiki: %v - %s", err, stderr)
 			RemoveAllWithNotice("Delete repository wiki for initialization failure", wikiPath)
 		}
 	}

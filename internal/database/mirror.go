@@ -16,6 +16,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/netx"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
@@ -216,15 +217,61 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 	return results
 }
 
+// mirrorGitArgs returns the git-level arguments used by every remote network
+// operation against a mirror source.
+func mirrorGitArgs() []string {
+	// Disabling HTTP redirects prevents an attacker-controlled public URL from
+	// redirecting to an internal endpoint that the up-front clone address
+	// validation would otherwise have blocked.
+	return []string{"-c", "http.followRedirects=false"}
+}
+
+// mirrorGitEnv returns environment variables that keep git non-interactive
+// during mirror operations. Without these, a network failure or a missing
+// remote endpoint can make git ask for credentials and stall the server-side
+// process waiting on a terminal that never responds.
+func mirrorGitEnv() []string {
+	return []string{
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_ASKPASS=/bin/true",
+		"GCM_INTERACTIVE=Never",
+	}
+}
+
+// isMirrorURLAccessible reports whether the given remote URL is reachable
+// without following HTTP redirects, matching the redirect policy used by the
+// mirror clone and sync.
+func isMirrorURLAccessible(timeout time.Duration, url string) bool {
+	args := append(mirrorGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
+	_, _, err := process.ExecTimeoutEnv(timeout, mirrorGitEnv(), fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
+	return err == nil
+}
+
 // runSync returns true if sync finished without error.
 func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	repoPath := m.Repo.RepoPath()
 	wikiPath := m.Repo.WikiPath()
 	timeout := time.Duration(conf.Git.Timeout.Mirror) * time.Second
 
+	// Re-check the mirror address against the local-network blocklist on every
+	// sync. The address was validated when the mirror was created, but DNS for
+	// that hostname may have changed in the meantime to point at an internal
+	// host, so the up-front check is not sufficient on its own.
+	rawAddr := m.RawAddress()
+	if u, err := url.Parse(rawAddr); err == nil &&
+		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") &&
+		netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress())
+		log.Error("Mirror.runSync: %s", desc)
+		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+			log.Error("CreateRepositoryNotice: %v", err)
+		}
+		return nil, false
+	}
+
 	// Do a fast-fail testing against on repository URL to ensure it is accessible under
 	// good condition to prevent long blocking on URL resolution without syncing anything.
-	if !git.IsURLAccessible(time.Minute, m.RawAddress()) {
+	if !isMirrorURLAccessible(time.Minute, rawAddr) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
@@ -232,12 +279,12 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	gitArgs := []string{"remote", "update"}
+	gitArgs := append(mirrorGitArgs(), "remote", "update")
 	if m.EnablePrune {
 		gitArgs = append(gitArgs, "--prune")
 	}
-	_, stderr, err := process.ExecDir(
-		timeout, repoPath, fmt.Sprintf("Mirror.runSync: %s", repoPath),
+	_, stderr, err := process.ExecDirEnv(
+		timeout, repoPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", repoPath),
 		"git", gitArgs...)
 	if err != nil {
 		const fmtStr = "Failed to update mirror repository %q: %s"
@@ -258,10 +305,11 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	}
 
 	if m.Repo.HasWiki() {
+		wikiArgs := append(mirrorGitArgs(), "remote", "update", "--prune")
 		// Even if wiki sync failed, we still want results from the main repository
-		if _, stderr, err := process.ExecDir(
-			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
-			"git", "remote", "update", "--prune"); err != nil {
+		if _, stderr, err := process.ExecDirEnv(
+			timeout, wikiPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", wikiPath),
+			"git", wikiArgs...); err != nil {
 			const fmtStr = "Failed to update mirror wiki repository %q: %s"
 			log.Error(fmtStr, wikiPath, stderr)
 			if err = Handle.Notices().Create(

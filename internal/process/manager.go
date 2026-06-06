@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -71,6 +72,13 @@ func Remove(pid int64) bool {
 
 // Exec starts executing a shell command in given path, it tracks corresponding process and timeout.
 func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(timeout, dir, nil, desc, cmdName, args...)
+}
+
+// ExecDirEnv is the same as ExecDir but allows appending additional environment
+// variables to the child process. Pass nil for env to inherit the parent
+// process environment unchanged.
+func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
 		timeout = defaultTimeout
 	}
@@ -82,6 +90,9 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 	cmd.Dir = dir
 	cmd.Stdout = bufOut
 	cmd.Stderr = bufErr
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	if err := cmd.Start(); err != nil {
 		return "", err.Error(), err
 	}
@@ -110,6 +121,13 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 // Exec starts executing a shell command, it tracks corresponding process and timeout.
 func ExecTimeout(timeout time.Duration, desc, cmdName string, args ...string) (string, string, error) {
 	return ExecDir(timeout, "", desc, cmdName, args...)
+}
+
+// ExecTimeoutEnv is the same as ExecTimeout but allows appending additional
+// environment variables to the child process. Pass nil for env to inherit the
+// parent process environment unchanged.
+func ExecTimeoutEnv(timeout time.Duration, env []string, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(timeout, "", env, desc, cmdName, args...)
 }
 
 // Exec starts executing a shell command, it tracks corresponding its process and use default timeout.
