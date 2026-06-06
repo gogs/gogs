@@ -241,7 +241,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 
 	// Do a fast-fail testing against on repository URL to ensure it is accessible under
 	// good condition to prevent long blocking on URL resolution without syncing anything.
-	if !isMigrationURLAccessible(time.Minute, rawAddr) {
+	if !isMirrorURLAccessible(time.Minute, rawAddr) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
@@ -249,7 +249,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	gitArgs := append(migrationGitArgs(), "remote", "update")
+	gitArgs := append(mirrorGitArgs(), "remote", "update")
 	if m.EnablePrune {
 		gitArgs = append(gitArgs, "--prune")
 	}
@@ -275,7 +275,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	}
 
 	if m.Repo.HasWiki() {
-		wikiArgs := append(migrationGitArgs(), "remote", "update", "--prune")
+		wikiArgs := append(mirrorGitArgs(), "remote", "update", "--prune")
 		// Even if wiki sync failed, we still want results from the main repository
 		if _, stderr, err := process.ExecDir(
 			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
