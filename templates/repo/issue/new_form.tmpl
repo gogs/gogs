@@ -69,7 +69,7 @@
 							{{.i18n.Tr "repo.issues.new.open_milestone"}}
 						</div>
 						{{range .OpenMilestones}}
-							<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name}}</div>
+							<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name | Sanitize}}</div>
 						{{end}}
 					{{end}}
 					{{if .ClosedMilestones}}
@@ -79,7 +79,7 @@
 							{{.i18n.Tr "repo.issues.new.closed_milestone"}}
 						</div>
 						{{range .ClosedMilestones}}
-							<a class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name}}</a>
+							<a class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name | Sanitize}}</a>
 						{{end}}
 					{{end}}
 				</div>
@@ -88,7 +88,7 @@
 				<span class="no-select item {{if .Milestone}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_milestone"}}</span>
 				<div class="selected">
 					{{if .Milestone}}
-						<a class="item" href="{{.RepoLink}}/issues?milestone={{.Milestone.ID}}"> {{.Milestone.Name}}</a>
+						<a class="item" href="{{.RepoLink}}/issues?milestone={{.Milestone.ID}}"> {{.Milestone.Name | Sanitize}}</a>
 					{{end}}
 				</div>
 			</div>
