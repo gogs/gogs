@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -195,15 +194,6 @@ const (
 func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
 	ctx := context.TODO()
 
-	// Reject branch names that start with a hyphen to prevent argument injection
-	// into git commands (e.g. --exec=<cmd> being passed to git rebase).
-	if strings.HasPrefix(pr.BaseBranch, "-") {
-		return errors.Newf("invalid base branch name: %q", pr.BaseBranch)
-	}
-	if strings.HasPrefix(pr.HeadBranch, "-") {
-		return errors.Newf("invalid head branch name: %q", pr.HeadBranch)
-	}
-
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -238,10 +228,11 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	// Clone the base repository to the defined temporary directory,
 	// and checks out to base branch directly.
 	var stderr string
-	if _, stderr, err = process.ExecTimeout(5*time.Minute,
-		fmt.Sprintf("PullRequest.Merge (git clone): %s", tmpBasePath),
-		"git", "clone", "-b", pr.BaseBranch, baseGitRepo.Path(), tmpBasePath); err != nil {
-		return errors.Newf("git clone: %s", stderr)
+	if err = git.Clone(baseGitRepo.Path(), tmpBasePath, git.CloneOptions{
+		Branch:  pr.BaseBranch,
+		Timeout: 5 * time.Minute,
+	}); err != nil {
+		return errors.Newf("git clone: %v", err)
 	}
 
 	// Add remote which points to the head repository.
@@ -271,7 +262,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		// Merge changes from head branch.
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 			fmt.Sprintf("PullRequest.Merge (git merge --no-ff --no-commit): %s", tmpBasePath),
-			"git", "merge", "--no-ff", "--no-commit", remoteHeadBranch); err != nil {
+			"git", "merge", "--no-ff", "--no-commit", "--end-of-options", remoteHeadBranch); err != nil {
 			return errors.Newf("git merge --no-ff --no-commit [%s]: %v - %s", tmpBasePath, err, stderr)
 		}
 
@@ -304,14 +295,14 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		// Check out the base branch to be operated on.
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 			fmt.Sprintf("PullRequest.Merge (git checkout): %s", tmpBasePath),
-			"git", "checkout", pr.BaseBranch); err != nil {
+			"git", "checkout", "--end-of-options", pr.BaseBranch); err != nil {
 			return errors.Newf("git checkout '%s': %s", pr.BaseBranch, stderr)
 		}
 
 		// Merge changes from temporary branch to the base branch.
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 			fmt.Sprintf("PullRequest.Merge (git merge): %s", tmpBasePath),
-			"git", "merge", tmpBranch); err != nil {
+			"git", "merge", "--end-of-options", tmpBranch); err != nil {
 			return errors.Newf("git merge [%s]: %v - %s", tmpBasePath, err, stderr)
 		}
 
@@ -320,10 +311,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	}
 
 	// Push changes on base branch to upstream.
-	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge (git push): %s", tmpBasePath),
-		"git", "push", baseGitRepo.Path(), pr.BaseBranch); err != nil {
-		return errors.Newf("git push: %s", stderr)
+	if err = git.Push(tmpBasePath, baseGitRepo.Path(), pr.BaseBranch); err != nil {
+		return errors.Newf("git push: %v", err)
 	}
 
 	pr.MergedCommitID, err = headGitRepo.BranchCommitID(pr.HeadBranch)
