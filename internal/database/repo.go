@@ -784,24 +784,6 @@ type MigrateRepoOptions struct {
 */
 var commonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
 
-// mirrorGitArgs returns the git-level arguments used by every remote network
-// operation during migration.
-func mirrorGitArgs() []string {
-	// Disabling HTTP redirects prevents an attacker-controlled public URL from
-	// redirecting to an internal endpoint that the up-front clone address
-	// validation would otherwise have blocked.
-	return []string{"-c", "http.followRedirects=false"}
-}
-
-// isMirrorURLAccessible reports whether the given remote URL is reachable
-// without following HTTP redirects, matching the redirect policy used by the
-// migration clone itself.
-func isMirrorURLAccessible(timeout time.Duration, url string) bool {
-	args := append(mirrorGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
-	_, _, err := process.ExecTimeout(timeout, fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
-	return err == nil
-}
-
 // wikiRemoteURL returns accessible repository URL for wiki if exists.
 // Otherwise, it returns an empty string.
 func wikiRemoteURL(remote string) string {

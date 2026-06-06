@@ -217,6 +217,24 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 	return results
 }
 
+// mirrorGitArgs returns the git-level arguments used by every remote network
+// operation against a mirror source.
+func mirrorGitArgs() []string {
+	// Disabling HTTP redirects prevents an attacker-controlled public URL from
+	// redirecting to an internal endpoint that the up-front clone address
+	// validation would otherwise have blocked.
+	return []string{"-c", "http.followRedirects=false"}
+}
+
+// isMirrorURLAccessible reports whether the given remote URL is reachable
+// without following HTTP redirects, matching the redirect policy used by the
+// mirror clone and sync.
+func isMirrorURLAccessible(timeout time.Duration, url string) bool {
+	args := append(mirrorGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
+	_, _, err := process.ExecTimeout(timeout, fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
+	return err == nil
+}
+
 // runSync returns true if sync finished without error.
 func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	repoPath := m.Repo.RepoPath()
