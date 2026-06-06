@@ -36,15 +36,15 @@ func NewSanitizer() {
 
 		// Only allow data URIs with safe image MIME types to prevent XSS via
 		// "data:text/html" payloads.
-		sanitizer.policy.AllowURLSchemeWithCustomPolicy("data", isSafeDataURI)
+		sanitizer.policy.AllowURLSchemeWithCustomPolicy("data", IsSafeDataURI)
 
 		// Custom URL-Schemes
 		sanitizer.policy.AllowURLSchemes(conf.Markdown.CustomURLSchemes...)
 	})
 }
 
-// isSafeDataURI returns whether the given data URI uses a safe image MIME type.
-func isSafeDataURI(u *url.URL) bool {
+// IsSafeDataURI returns whether the given data URI uses a safe image MIME type.
+func IsSafeDataURI(u *url.URL) bool {
 	// The opaque data of a data URI has the form "mediatype;base64,data" or
 	// "mediatype,data". We only allow common image MIME types.
 	mediatype, _, _ := strings.Cut(u.Opaque, ";")
