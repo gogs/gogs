@@ -20,6 +20,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Organization team and member management actions accepted GET requests, allowing a logged-in owner to be tricked into adding an attacker to the Owners team via a crafted link. [#8321](https://github.com/gogs/gogs/pull/8321) - [GHSA-pwx3-qcgw-vh7h](https://github.com/gogs/gogs/security/advisories/GHSA-pwx3-qcgw-vh7h)
 - _Security:_ SSRF via mirror address update bypassing clone address validation. [#8225](https://github.com/gogs/gogs/pull/8225) - [GHSA-wv27-2vqp-j7g5](https://github.com/gogs/gogs/security/advisories/GHSA-wv27-2vqp-j7g5)
 - _Security:_ Open redirect on login and other post-action flows via the `redirect_to` query parameter. [#8322](https://github.com/gogs/gogs/pull/8322) - [GHSA-xxhq-69mf-w8cr](https://github.com/gogs/gogs/security/advisories/GHSA-xxhq-69mf-w8cr)
+- _Security:_ Privilege escalation to repository owner via collaboration access mode update. [#8227](https://github.com/gogs/gogs/pull/8227) - [GHSA-4565-r4x7-hg8j](https://github.com/gogs/gogs/security/advisories/GHSA-4565-r4x7-hg8j)
 
 ### Removed
 

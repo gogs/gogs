@@ -439,6 +439,7 @@ func SettingsCollaborationPost(c *context.Context) {
 
 func ChangeCollaborationAccessMode(c *context.Context) {
 	if err := c.Repo.Repository.ChangeCollaborationAccessMode(
+		c.Repo.AccessMode,
 		c.QueryInt64("uid"),
 		database.AccessMode(c.QueryInt("mode"))); err != nil {
 		log.Error("ChangeCollaborationAccessMode: %v", err)
