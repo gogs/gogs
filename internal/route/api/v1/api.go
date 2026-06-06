@@ -362,9 +362,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Delete(deleteMilestone)
 				}, reqRepoWriter())
 
-				m.Patch("/issue-tracker", reqRepoWriter(), bind(editIssueTrackerRequest{}), issueTracker)
-				m.Patch("/wiki", reqRepoWriter(), bind(editWikiRequest{}), wiki)
-				m.Post("/mirror-sync", reqRepoWriter(), mirrorSync)
+				m.Patch("/issue-tracker", reqRepoAdmin(), bind(editIssueTrackerRequest{}), issueTracker)
+				m.Patch("/wiki", reqRepoAdmin(), bind(editWikiRequest{}), wiki)
+				m.Post("/mirror-sync", reqRepoAdmin(), mirrorSync)
 				m.Get("/editorconfig/:filename", context.RepoRef(), getEditorconfig)
 			}, repoAssignment())
 		}, reqToken())
