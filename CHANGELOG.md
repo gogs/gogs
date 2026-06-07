@@ -26,7 +26,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview through `data:text/html` URIs that bypassed the sanitizer. [#8326](https://github.com/gogs/gogs/pull/8326) - [GHSA-3w28-36p9-w929](https://github.com/gogs/gogs/security/advisories/GHSA-3w28-36p9-w929)
 - _Security:_ Stored XSS in the milestone dropdown on the new issue page via crafted milestone names. [#8325](https://github.com/gogs/gogs/pull/8325) - [GHSA-vcm5-gvmp-78mp](https://github.com/gogs/gogs/security/advisories/GHSA-vcm5-gvmp-78mp)
 - _Security:_ Write-level collaborators could change admin-only repository settings (issue tracker, wiki, mirror sync) via API. [#8327](https://github.com/gogs/gogs/pull/8327) - [GHSA-268j-37xf-pp52](https://github.com/gogs/gogs/security/advisories/GHSA-268j-37xf-pp52)
-- _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview where a post-sanitizer re-parse of markdown cells turned escaped HTML back into live tags. [#PR](https://github.com/gogs/gogs/pull/PR) - [GHSA-6vxv-wg6j-5qwp](https://github.com/gogs/gogs/security/advisories/GHSA-6vxv-wg6j-5qwp)
+- _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview where a post-sanitizer re-parse of markdown cells turned escaped HTML back into live tags. [#8329](https://github.com/gogs/gogs/pull/8329) - [GHSA-6vxv-wg6j-5qwp](https://github.com/gogs/gogs/security/advisories/GHSA-6vxv-wg6j-5qwp)
 
 ### Removed
 
