@@ -52,52 +52,22 @@
 							contentType: false,
 						}).done(function(data) {
 							$("#ipython-notebook").append(data);
-							$("#ipython-notebook code").each(function(i, block) {
+							$("#ipython-notebook .nb-input pre code").each(function(i, block) {
 								$(block).addClass("py").addClass("python");
 								hljs.highlightBlock(block);
 							});
 
-							// Overwrite image method to append proper prefix to the source URL
-							var renderer = new marked.Renderer();
+							// Resolve relative image sources against the notebook's
+							// directory so `![alt](./fig.png)` still works.
 							var context = '{{.RawFileLink}}';
 							context = context.substring(0, context.lastIndexOf("/"));
-							renderer.image = function (href, title, text) {
-								return `<img src="${context}/${href}"`
-							};
-							// Reject dangerous URL schemes (javascript:, vbscript:, data:)
-							// before they reach the DOM. marked.js does not sanitize URLs
-							// in its default link renderer.
-							var unsafeURLScheme = /^(?:javascript|vbscript|data):/i;
-							var escapeHTML = function (s) {
-								return String(s).replace(/[&<>"']/g, function (c) {
-									return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-								});
-							};
-							var decodeEntities = function (s) {
-								var el = document.createElement('textarea');
-								el.innerHTML = s;
-								return el.value;
-							};
-							renderer.link = function (href, title, text) {
-								var raw = String(href || '').trim();
-								var normalized;
-								try {
-									normalized = decodeURIComponent(decodeEntities(raw));
-								} catch (e) {
-									normalized = decodeEntities(raw);
+							var absURL = /^[a-z][a-z0-9+.-]*:|^\/\//i;
+							$("#ipython-notebook .nb-markdown-cell img").each(function(i, img) {
+								var src = img.getAttribute("src") || "";
+								if (src === "" || src.charAt(0) === "/" || absURL.test(src)) {
+									return;
 								}
-								normalized = normalized.replace(/[\x00-\x20]/g, '');
-								if (unsafeURLScheme.test(normalized)) {
-									return text;
-								}
-								var out = '<a href="' + escapeHTML(raw) + '"';
-								if (title) {
-									out += ' title="' + escapeHTML(title) + '"';
-								}
-								return out + '>' + text + '</a>';
-							};
-							$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
-								$(markdown).html(marked.parse($(markdown).html(), {renderer: renderer}));
+								img.setAttribute("src", context + "/" + src);
 							});
 						});
 					});
