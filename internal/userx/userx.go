@@ -34,9 +34,20 @@ func DashboardURLPath(name string, isOrganization bool) string {
 // GenerateActivateCode generates an activate code based on user information and
 // the given email.
 func GenerateActivateCode(userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+}
+
+// GenerateResetPasswordCode generates a password-reset code based on user
+// information and the given email. The token's lifetime is bound to
+// [conf.AuthOpts.ResetPasswordCodeLives].
+func GenerateResetPasswordCode(userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(userID, email, name, password, rands, conf.Auth.ResetPasswordCodeLives)
+}
+
+func generateTimeLimitedUserCode(userID int64, email, name, password, rands string, minutes int) string {
 	code := tool.CreateTimeLimitCode(
 		fmt.Sprintf("%d%s%s%s%s", userID, email, strings.ToLower(name), password, rands),
-		conf.Auth.ActivateCodeLives,
+		minutes,
 		nil,
 	)
 

@@ -184,6 +184,7 @@ type User interface {
 	DisplayName() string
 	Email() string
 	GenerateEmailActivateCode(string) string
+	GenerateEmailResetPasswordCode(string) string
 }
 
 type Repository interface {
@@ -225,7 +226,7 @@ func SendActivateAccountMail(t Translator, u User) error {
 }
 
 func SendResetPasswordMail(t Translator, u User) error {
-	return SendUserMail(t, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
+	return SendUserMail(t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
 }
 
 func SendActivateEmailMail(t Translator, u User, email string) error {
