@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
@@ -125,6 +126,11 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 		// For example, user could be asked to trust server key fingerprint and hangs.
 		go func() {
 			log.Trace("SSH: Handshaking for %s", conn.RemoteAddr())
+			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+				log.Error("SSH: Failed to set handshake deadline: %v", err)
+				_ = conn.Close()
+				return
+			}
 			sConn, chans, reqs, err := ssh.NewServerConn(conn, config)
 			if err != nil {
 				if err == io.EOF || errors.Is(err, syscall.ECONNRESET) {
@@ -132,6 +138,11 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 				} else {
 					log.Error("SSH: Error on handshaking: %v", err)
 				}
+				return
+			}
+			if err := conn.SetDeadline(time.Time{}); err != nil {
+				log.Error("SSH: Failed to clear handshake deadline: %v", err)
+				_ = sConn.Close()
 				return
 			}
 
