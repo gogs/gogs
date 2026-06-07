@@ -255,6 +255,13 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # Full history with tags is required so the next step can determine
+          # whether this release is the highest stable version across the repo.
+          fetch-depth: 0
+          fetch-tags: true
       - name: Compute image tags
         run: |
           IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)
@@ -263,19 +270,34 @@ jobs:
           TAGS="gogs/gogs:$IMAGE_TAG
           ghcr.io/gogs/gogs:$IMAGE_TAG"
 
-          # Add minor version tag for stable releases (no prerelease suffix per semver).
+          # For stable releases (no prerelease suffix per semver), add the
+          # minor-version tag only if this release is the highest patch of that
+          # minor line, and add `latest` only if this release is the highest
+          # stable version across the repository. Back-patches on older lines
+          # must not clobber moving tags.
           if [[ ! "$IMAGE_TAG" =~ - ]]; then
+            STABLE_TAGS=$(git tag --list 'v*' | sed 's/^v//' | grep -v -- '-' || true)
+            HIGHEST_STABLE=$(echo "$STABLE_TAGS" | sort -V | tail -n 1)
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
-            TAGS="$TAGS
+            # `|| true` keeps the step running when `grep` finds no matches,
+            # since bash runs with `-e -o pipefail` in GitHub Actions.
+            HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | { grep "^${MINOR_TAG}\." || true; } | sort -V | tail -n 1)
+
+            if [[ "$IMAGE_TAG" == "$HIGHEST_IN_MINOR" ]]; then
+              TAGS="$TAGS
           gogs/gogs:$MINOR_TAG
           ghcr.io/gogs/gogs:$MINOR_TAG"
+            fi
+            if [[ "$IMAGE_TAG" == "$HIGHEST_STABLE" ]]; then
+              TAGS="$TAGS
+          gogs/gogs:latest
+          ghcr.io/gogs/gogs:latest"
+            fi
           fi
 
           echo "TAGS<<EOF" >> $GITHUB_ENV
           echo "$TAGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-      - name: Checkout code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
         with:
