@@ -601,10 +601,8 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 		targetPath := path.Join(dirPath, upload.Name)
 
-		// 🚨 SECURITY: Prevent writes that escape the working tree by following a
-		// symlink at any component of the target path, including parent directories
-		// committed as symlinks. Checking only the leaf misses parent-symlink
-		// redirection through paths like "hijack/authorized_keys".
+		// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
+		// that involve symlinks.
 		if hasSymlinkInPath(localPath, path.Join(opts.TreePath, upload.Name)) {
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
