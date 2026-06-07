@@ -79,10 +79,22 @@ func TestLocalStorage_Upload(t *testing.T) {
 		assert.False(t, osx.IsFile(s.storagePath(oid)))
 	})
 
-	t.Run("duplicate upload returns existing size", func(t *testing.T) {
-		written, err := s.Upload(helloWorldOID, io.NopCloser(strings.NewReader("should be ignored")))
+	t.Run("duplicate upload with matching content returns existing size", func(t *testing.T) {
+		written, err := s.Upload(helloWorldOID, io.NopCloser(strings.NewReader("Hello world!")))
 		require.NoError(t, err)
 		assert.Equal(t, int64(12), written)
+
+		// Verify original content is preserved.
+		var buf bytes.Buffer
+		err = s.Download(helloWorldOID, &buf)
+		require.NoError(t, err)
+		assert.Equal(t, "Hello world!", buf.String())
+	})
+
+	t.Run("duplicate upload with mismatched content is rejected", func(t *testing.T) {
+		written, err := s.Upload(helloWorldOID, io.NopCloser(strings.NewReader("different bytes")))
+		assert.Equal(t, int64(0), written)
+		assert.Equal(t, ErrOIDMismatch, err)
 
 		// Verify original content is preserved.
 		var buf bytes.Buffer
