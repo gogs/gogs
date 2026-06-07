@@ -22,12 +22,6 @@ import (
 	"gogs.io/gogs/internal/osx"
 )
 
-// sshHandshakeTimeout bounds how long a freshly accepted SSH connection may
-// stall before completing the protocol handshake. A client that holds the
-// socket open without sending the SSH banner would otherwise pin a file
-// descriptor and goroutine for the lifetime of the process.
-const sshHandshakeTimeout = 15 * time.Second
-
 func cleanCommand(cmd string) string {
 	i := strings.Index(cmd, "git")
 	if i == -1 {
@@ -132,7 +126,7 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 		// For example, user could be asked to trust server key fingerprint and hangs.
 		go func() {
 			log.Trace("SSH: Handshaking for %s", conn.RemoteAddr())
-			if err := conn.SetDeadline(time.Now().Add(sshHandshakeTimeout)); err != nil {
+			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
 				log.Error("SSH: Failed to set handshake deadline: %v", err)
 				_ = conn.Close()
 				return
@@ -146,7 +140,6 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 				}
 				return
 			}
-			// Clear the handshake deadline now that the session is established.
 			if err := conn.SetDeadline(time.Time{}); err != nil {
 				log.Error("SSH: Failed to clear handshake deadline: %v", err)
 				_ = sConn.Close()
