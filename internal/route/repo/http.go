@@ -61,14 +61,11 @@ func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
 	return ""
 }
 
-func gitHTTPIsPull(method, action, service string) bool {
-	if method != http.MethodGet {
-		return action == "git-upload-pack"
-	}
+func gitHTTPIsPull(c *macaron.Context, action string) bool {
 	if action == "info/refs" {
-		return service != "git-receive-pack"
+		return c.Query("service") != "git-receive-pack"
 	}
-	return true
+	return action != "git-receive-pack"
 }
 
 func HTTPContexter(store Store) macaron.Handler {
@@ -87,7 +84,7 @@ func HTTPContexter(store Store) macaron.Handler {
 		repoName = strings.TrimSuffix(repoName, ".wiki")
 
 		action := gitHTTPAction(c)
-		isPull := gitHTTPIsPull(c.Req.Method, action, c.Query("service"))
+		isPull := gitHTTPIsPull(c, action)
 
 		owner, err := store.GetUserByUsername(c.Req.Context(), ownerName)
 		if err != nil {
