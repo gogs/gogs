@@ -41,10 +41,11 @@
 	<link rel="stylesheet" href="{{AppSubURL}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
 	<link rel="stylesheet" href="{{AppSubURL}}/assets/octicons-4.3.0/octicons.min.css">
 
-	<!-- notebook.js for rendering ipython notebooks and marked.js for rendering markdown in notebooks -->
+	<!-- notebook.js for rendering ipython notebooks, marked.js for rendering markdown in notebooks, and DOMPurify for sanitizing the rendered HTML -->
 	{{if .IsIPythonNotebook}}
-		<script src="{{AppSubURL}}/plugins/notebookjs-0.4.2/notebook.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/dompurify-3.4.8/purify.min.js"></script>
 		<script src="{{AppSubURL}}/plugins/marked-4.3.0/marked.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/notebookjs-0.8.3/notebook.min.js"></script>
 	{{end}}
 
 	{{if .RequireSimpleMDE}}
