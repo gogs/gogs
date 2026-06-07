@@ -41,7 +41,7 @@ func Assign(form any, data map[string]any) {
 	typ := reflect.TypeOf(form)
 	val := reflect.ValueOf(form)
 
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 		val = val.Elem()
 	}
@@ -95,7 +95,7 @@ func validate(errs binding.Errors, data map[string]any, f Form, l macaron.Locale
 	Assign(f, data)
 
 	typ := reflect.TypeOf(f)
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 

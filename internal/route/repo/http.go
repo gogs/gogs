@@ -68,7 +68,6 @@ func gitHTTPIsPull(c *macaron.Context, action string) bool {
 	return action != "git-receive-pack"
 }
 
-
 func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
