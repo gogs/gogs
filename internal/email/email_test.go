@@ -118,7 +118,8 @@ func resetTemplateCache(t *testing.T) {
 // testDoer satisfies the User interface for fields the issue templates touch.
 type testDoer struct{}
 
-func (testDoer) ID() int64                               { return 1 }
-func (testDoer) DisplayName() string                     { return "alice" }
-func (testDoer) Email() string                           { return "alice@example.test" }
-func (testDoer) GenerateEmailActivateCode(string) string { return "abc" }
+func (testDoer) ID() int64                                    { return 1 }
+func (testDoer) DisplayName() string                          { return "alice" }
+func (testDoer) Email() string                                { return "alice@example.test" }
+func (testDoer) GenerateEmailActivateCode(string) string      { return "abc" }
+func (testDoer) GenerateEmailResetPasswordCode(string) string { return "abc" }
