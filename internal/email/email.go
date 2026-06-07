@@ -84,6 +84,7 @@ type User interface {
 	DisplayName() string
 	Email() string
 	GenerateEmailActivateCode(string) string
+	GenerateEmailResetPasswordCode(string) string
 }
 
 type Repository interface {
@@ -122,7 +123,7 @@ func SendActivateAccountMail(c *macaron.Context, u User) {
 }
 
 func SendResetPasswordMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
+	SendUserMail(c, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
