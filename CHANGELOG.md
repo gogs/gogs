@@ -31,6 +31,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Read-only Git HTTP access could be confused with write access during repository pushes. [#8331](https://github.com/gogs/gogs/pull/8331) - [GHSA-wmfg-5p4h-5fw3](https://github.com/gogs/gogs/security/advisories/GHSA-wmfg-5p4h-5fw3)
 - _Security:_ Arbitrary file write outside the repository working tree via crafted upload filename routed through a committed directory symlink. [#8332](https://github.com/gogs/gogs/pull/8332) - [GHSA-89mr-xqfv-758m](https://github.com/gogs/gogs/security/advisories/GHSA-89mr-xqfv-758m)
 - _Security:_ Cross-repository disclosure of Git LFS object contents by binding a known OID to another repository without proving possession of the bytes. [#8333](https://github.com/gogs/gogs/pull/8333) - [GHSA-6p9m-q3jp-47h4](https://github.com/gogs/gogs/security/advisories/GHSA-6p9m-q3jp-47h4)
+- _Security:_ Remote code execution via path traversal in organization names accepted through the API. [#PR](https://github.com/gogs/gogs/pull/PR) - [GHSA-c39w-43gm-34h5](https://github.com/gogs/gogs/security/advisories/GHSA-c39w-43gm-34h5)
 
 ### Removed
 

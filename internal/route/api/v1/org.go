@@ -9,7 +9,7 @@ import (
 )
 
 type createOrgRequest struct {
-	UserName    string `json:"username" binding:"Required"`
+	UserName    string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
 	FullName    string `json:"full_name"`
 	Description string `json:"description"`
 	Website     string `json:"website"`
