@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,6 +70,40 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := gitHTTPActionFromPath(tc.urlPath, tc.subpath, tc.owner, tc.repo)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGitHTTPIsPull(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		action string
+		want   bool
+	}{
+		{
+			name:   "upload pack post is pull",
+			method: http.MethodPost,
+			action: "git-upload-pack",
+			want:   true,
+		},
+		{
+			name:   "receive pack post is push",
+			method: http.MethodPost,
+			action: "git-receive-pack",
+			want:   false,
+		},
+		{
+			name:   "info refs get is pull",
+			method: http.MethodGet,
+			action: "info/refs",
+			want:   true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := gitHTTPIsPull(tc.method, tc.action)
 			assert.Equal(t, tc.want, got)
 		})
 	}

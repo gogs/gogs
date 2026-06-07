@@ -28,6 +28,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Write-level collaborators could change admin-only repository settings (issue tracker, wiki, mirror sync) via API. [#8327](https://github.com/gogs/gogs/pull/8327) - [GHSA-268j-37xf-pp52](https://github.com/gogs/gogs/security/advisories/GHSA-268j-37xf-pp52)
 - _Security:_ Password reset tokens stayed valid for the account-activation lifetime, ignoring `[auth] RESET_PASSWORD_CODE_LIVES`. [#8328](https://github.com/gogs/gogs/pull/8328) - [GHSA-5c3f-6486-3g7g](https://github.com/gogs/gogs/security/advisories/GHSA-5c3f-6486-3g7g)
 - _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview through raw HTML in markdown cells. [#8330](https://github.com/gogs/gogs/pull/8330) - [GHSA-6vxv-wg6j-5qwp](https://github.com/gogs/gogs/security/advisories/GHSA-6vxv-wg6j-5qwp)
+- _Security:_ Read-only Git HTTP access could be confused with write access during repository pushes. [#PR](https://github.com/gogs/gogs/pull/PR) - [GHSA-wmfg-5p4h-5fw3](https://github.com/gogs/gogs/security/advisories/GHSA-wmfg-5p4h-5fw3)
 
 ### Removed
 
