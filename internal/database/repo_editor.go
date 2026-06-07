@@ -600,9 +600,9 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 		targetPath := path.Join(dirPath, upload.Name)
 
-		// 🚨 SECURITY: Prevent updating files in surprising place, check if the target
-		// is a symlink.
-		if osutil.IsSymlink(targetPath) {
+		// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
+		// that involve symlinks.
+		if hasSymlinkInPath(localPath, path.Join(opts.TreePath, upload.Name)) {
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
 		}
 
