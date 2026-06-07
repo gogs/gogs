@@ -16,7 +16,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/netx"
+	"gogs.io/gogs/internal/netutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
@@ -260,7 +260,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	rawAddr := m.RawAddress()
 	if u, err := url.Parse(rawAddr); err == nil &&
 		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") &&
-		netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		netutil.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress())
 		log.Error("Mirror.runSync: %s", desc)
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
