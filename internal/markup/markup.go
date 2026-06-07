@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/unknwon/com"
 	"golang.org/x/net/html"
 
 	"gogs.io/gogs/internal/conf"
