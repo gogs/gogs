@@ -37,10 +37,11 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
+- Support for customizing pages with Go template files stops being possible.
+- Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)
+- Support for `memcache` as the cache adapter. [#8270](https://github.com/gogs/gogs/pull/8270)
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
 - The `[email] DISABLE_HELO` configuration option. HELO/EHLO is now always sent during SMTP handshake. [#8164](https://github.com/gogs/gogs/pull/8164)
-- Support for MSSQL as the database backend. Stay on 0.14 for continued usage. [#8173](https://github.com/gogs/gogs/pull/8173)
-- Support for `memcache` as the cache adapter. Stay on 0.14 for continued usage. [#8270](https://github.com/gogs/gogs/pull/8270)
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
 - CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 - Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
