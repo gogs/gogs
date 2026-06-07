@@ -40,6 +40,35 @@ func askCredentials(c *macaron.Context, status int, text string) {
 	c.Error(status, text)
 }
 
+// gitHTTPAction returns the Git HTTP path suffix after /:username/:reponame/.
+func gitHTTPAction(c *macaron.Context) string {
+	return gitHTTPActionFromPath(
+		c.Req.URL.Path,
+		conf.Server.Subpath,
+		c.Params(":username"),
+		c.Params(":reponame"),
+	)
+}
+
+func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
+	if subpath != "" {
+		urlPath = strings.TrimPrefix(urlPath, subpath)
+	}
+	prefix := path.Join("/", owner, repo) + "/"
+	if after, ok := strings.CutPrefix(urlPath, prefix); ok {
+		return after
+	}
+	return ""
+}
+
+func gitHTTPIsPull(c *macaron.Context, action string) bool {
+	if action == "info/refs" {
+		return c.Query("service") != "git-receive-pack"
+	}
+	return action != "git-receive-pack"
+}
+
+
 func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
@@ -58,9 +87,8 @@ func HTTPContexter(store Store) macaron.Handler {
 		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
 		repoName = strings.TrimSuffix(repoName, ".wiki")
 
-		isPull := c.Query("service") == "git-upload-pack" ||
-			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
-			c.Req.Method == "GET"
+		action := gitHTTPAction(c)
+		isPull := gitHTTPIsPull(c, action)
 
 		owner, err := store.GetUserByUsername(c.Req.Context(), ownerName)
 		if err != nil {
@@ -93,7 +121,6 @@ func HTTPContexter(store Store) macaron.Handler {
 		}
 
 		// In case user requested a wrong URL and not intended to access Git objects.
-		action := c.Params("*")
 		if !strings.Contains(action, "git-") &&
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
