@@ -33,6 +33,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Cross-repository disclosure of Git LFS object contents by binding a known OID to another repository without proving possession of the bytes. [#8333](https://github.com/gogs/gogs/pull/8333) - [GHSA-6p9m-q3jp-47h4](https://github.com/gogs/gogs/security/advisories/GHSA-6p9m-q3jp-47h4)
 - _Security:_ Remote code execution via path traversal in organization names accepted through the API. [#8334](https://github.com/gogs/gogs/pull/8334) - [GHSA-c39w-43gm-34h5](https://github.com/gogs/gogs/security/advisories/GHSA-c39w-43gm-34h5)
 - _Security:_ Stalled SSH handshakes pinned a file descriptor and goroutine indefinitely. The built-in SSH server now drops connections that do not complete the handshake within 15 seconds. [#8335](https://github.com/gogs/gogs/pull/8335) - [GHSA-xp79-5mx3-jx52](https://github.com/gogs/gogs/security/advisories/GHSA-xp79-5mx3-jx52)
+- _Security:_ Organization metadata and team list endpoints were reachable without authentication. [#PR](https://github.com/gogs/gogs/pull/PR) - [GHSA-744x-3838-5r56](https://github.com/gogs/gogs/security/advisories/GHSA-744x-3838-5r56)
 
 ### Removed
 
