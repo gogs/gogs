@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/pathx"
 )
 
 // CloneLink represents different types of clone URLs of repository.
@@ -49,13 +50,15 @@ func CompareCommitsPath(owner, repo, oldCommitID, newCommitID string) string {
 
 // UserPath returns the absolute path for storing user repositories.
 func UserPath(user string) string {
-	return filepath.Join(conf.Repository.Root, strings.ToLower(user))
+	// 🚨 SECURITY: Prevent path traversal in user name.
+	return filepath.Join(conf.Repository.Root, pathx.Clean(strings.ToLower(user)))
 }
 
 // RepositoryPath returns the absolute path using given user and repository
 // name.
 func RepositoryPath(owner, repo string) string {
-	return filepath.Join(UserPath(owner), strings.ToLower(repo)+".git")
+	// 🚨 SECURITY: Prevent path traversal in repository name.
+	return filepath.Join(UserPath(owner), pathx.Clean(strings.ToLower(repo))+".git")
 }
 
 // RepositoryLocalPath returns the absolute path of the repository local copy
