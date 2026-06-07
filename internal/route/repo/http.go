@@ -61,6 +61,13 @@ func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
 	return ""
 }
 
+func gitHTTPIsPull(c *macaron.Context, action string) bool {
+	if action == "info/refs" {
+		return c.Query("service") != "git-receive-pack"
+	}
+	return action != "git-receive-pack"
+}
+
 func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
@@ -76,9 +83,8 @@ func HTTPContexter(store Store) macaron.Handler {
 		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
 		repoName = strings.TrimSuffix(repoName, ".wiki")
 
-		isPull := c.Query("service") == "git-upload-pack" ||
-			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
-			c.Req.Method == "GET"
+		action := gitHTTPAction(c)
+		isPull := gitHTTPIsPull(c, action)
 
 		owner, err := store.GetUserByUsername(c.Req.Context(), ownerName)
 		if err != nil {
@@ -111,7 +117,6 @@ func HTTPContexter(store Store) macaron.Handler {
 		}
 
 		// In case user requested a wrong URL and not intended to access Git objects.
-		action := gitHTTPAction(c)
 		if !strings.Contains(action, "git-") &&
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
