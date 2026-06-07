@@ -3,6 +3,8 @@ package org
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
+	"github.com/go-macaron/binding"
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
@@ -13,6 +15,18 @@ import (
 
 func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *database.User) {
 	if c.Written() {
+		return
+	}
+
+	// 🚨 SECURITY: Reject org names containing characters that could let a
+	// traversal sequence reach the filesystem layer in repoutil.UserPath /
+	// repoutil.RepositoryPath. The web form already validates the same way, but
+	// the JSON struct lives in an external module and cannot carry binding tags
+	// on this branch, so enforce here.
+	if apiForm.UserName == "" ||
+		len(apiForm.UserName) > 35 ||
+		binding.AlphaDashDotPattern.MatchString(apiForm.UserName) {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("invalid org name: %q", apiForm.UserName))
 		return
 	}
 
