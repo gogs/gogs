@@ -389,7 +389,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				Get(org.Get).
 				Patch(bind(api.EditOrgOption{}), org.Edit)
 			m.Get("/teams", org.ListTeams)
-		}, orgAssignment(true))
+		}, reqToken(), orgAssignment(true))
 
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
