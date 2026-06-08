@@ -682,7 +682,7 @@ func Run(configPath string, portOverride int) error {
 
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
-	f.Use(flamego.Recovery())
+	f.Use(recovery())
 	f.Use(flamegoInjector)
 	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
 

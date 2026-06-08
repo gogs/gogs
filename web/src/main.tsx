@@ -6,16 +6,24 @@ import { UserInfoProvider } from "./components/UserInfoProvider";
 import "./index.css";
 import "./lib/i18n";
 import { fetchUserInfo } from "./lib/user-info";
-
-const userInfo = await fetchUserInfo();
+import { ServerError } from "./pages/ServerError";
 
 const root = document.getElementById("root");
 if (root) {
-  createRoot(root).render(
-    <ThemeProvider>
-      <UserInfoProvider value={userInfo}>
-        <App user={userInfo} />
-      </UserInfoProvider>
-    </ThemeProvider>,
-  );
+  try {
+    const userInfo = await fetchUserInfo();
+    createRoot(root).render(
+      <ThemeProvider>
+        <UserInfoProvider value={userInfo}>
+          <App user={userInfo} />
+        </UserInfoProvider>
+      </ThemeProvider>,
+    );
+  } catch (err) {
+    createRoot(root).render(
+      <ThemeProvider>
+        <ServerError error={err} />
+      </ThemeProvider>,
+    );
+  }
 }
