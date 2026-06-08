@@ -1,10 +1,9 @@
-import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { LoaderResponseError } from "@/lib/loader-error";
 import { usePageTitle } from "@/lib/page-title";
 
-export function ServerError({ error }: ErrorComponentProps) {
+export function ServerError({ error }: { error: unknown }) {
   const { t } = useTranslation();
   usePageTitle(t("status.internal_server_error"));
   const path = typeof window === "undefined" ? "/" : window.location.pathname;

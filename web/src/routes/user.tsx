@@ -32,7 +32,7 @@ export function createUserRoutes(rootRoute: AnyRoute) {
     loader: async (): Promise<SignInPage> => {
       const res = await fetch(subUrl("/api/web/user/sign-in"), { credentials: "same-origin" });
       if (!res.ok) {
-        return { loginSources: [] };
+        throw await loaderResponseError(res);
       }
       return (await res.json()) as SignInPage;
     },
@@ -64,7 +64,7 @@ export function createUserRoutes(rootRoute: AnyRoute) {
         : subUrl("/api/web/user/reset-password");
       const res = await fetch(url, { credentials: "same-origin" });
       if (!res.ok) {
-        return { code, emailEnabled: false, valid: false };
+        throw await loaderResponseError(res);
       }
       const data = (await res.json()) as { emailEnabled: boolean; valid: boolean };
       return { code, emailEnabled: data.emailEnabled, valid: data.valid };
@@ -114,7 +114,10 @@ export function createUserRoutes(rootRoute: AnyRoute) {
         window.location.assign(subUrl("/"));
         return { pending: false };
       }
-      return { pending: res.ok };
+      if (!res.ok) {
+        throw await loaderResponseError(res);
+      }
+      return { pending: true };
     },
     component: MFA,
   });
