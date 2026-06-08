@@ -287,6 +287,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					})
 				})
 				m.Get("/forks", listForks)
+                m.Post("/forks",forkRepo)
 				m.Get("/tags", listTags)
 				m.Group("/branches", func() {
 					m.Get("", listBranches)

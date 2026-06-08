@@ -5104,6 +5104,73 @@
             "description": "Repository not found."
           }
         }
+      },
+      "post": {
+        "operationId": "createFork",
+        "summary": "Create fork",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Owner of the repository"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the repository"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                    "organization": {
+                      "type": "string",
+                      "description": "Optionally fork into the provided organization instead of your user"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Optionally rename the fork to the provided name"
+                    }
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Repository"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Repository not found."
+          }
+        }
       }
     },
     "/repos/{owner}/{repo}/tags": {

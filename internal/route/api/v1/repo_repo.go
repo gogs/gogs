@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 	"path"
+	"fmt"
 
 	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
@@ -392,6 +393,74 @@ func listForks(c *context.APIContext) {
 	}
 
 	c.JSONSuccess(&apiForks)
+}
+
+type forkRepoRequest struct {
+    Organization    string `json:"organization" binding:"AlphaDashDot;MaxSize(100)"`
+    Name            string `json:"name" binding:"AlphaDashDot;MaxSize(100)"`
+}
+
+func forkRepo(c *context.APIContext, owner string, repository string, opt forkRepoRequest) {
+
+    // Resolve user/org to a struct forkRepository will understand
+    users, cnt, err := database.Handle.Users().SearchByName(c, owner)
+    u_name = owner
+    if err != nil {
+        // Mayhap organization
+        if otp.Organization != nil {
+            users, err := database.Handle.Organizations().SearchByName(c, opt.Organization)
+            u_name = opt.Organization
+        }
+        if err != nil {
+            c.Error(err, "fork repository")
+            return
+        }
+    }
+
+    // XXX deal with there not being a straightforward getUserByNameAndIMeanExactMatch
+    // XXX if there's a better way to filter in go, I'd love to see it.
+    ctxUser = nil
+    for i, obj := range users {
+        if obj.name != u_name {
+            continue;
+        }
+        ctxUser := obj
+    }
+    if ctxUser == nil {
+        //XXX maybe this needs an error object, which is too much thonking for me to track down rn
+        c.Error("Could not get an exact match for the provided user/org", "fork repository")
+    }
+
+    // Resolve ctxRepository to actual repository object
+	ctxRepo, err := database.Handle.Repositories().GetByName(ctxUser.id, repository)
+    if err != nil {
+        c.Error(err, "fork repository")
+        return
+    }
+
+    ctxName := repository
+    if opt.Name != nil {
+        ctxName = opt.Name
+    }
+
+    ctxDesc := fmt.Sprintf("Fork of %s", repository)
+
+	//XXX much of the above probably should be abstracted into database.Handle.Repositories()
+	repo, err = database.ForkRepository(
+        c.User,
+        ctxUser,
+        ctxRepo,
+        ctxName,
+        ctxDesc
+    )
+	if err != nil {
+		c.Error(err, "fork repository")
+		return
+	}
+
+    //XXX may need more massaging for json ret?
+	apiFork := make(repo)
+	c.JSONSuccess(&apiFork)
 }
 
 type editIssueTrackerRequest struct {
