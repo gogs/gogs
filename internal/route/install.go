@@ -185,6 +185,19 @@ func Install(c *context.Context) {
 	c.Success(INSTALL)
 }
 
+func normalizeInstallPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+
+	if conf.IsWindowsRuntime() {
+		return filepath.Clean(filepath.FromSlash(path))
+	}
+
+	return filepath.Clean(strings.ReplaceAll(path, "\\", "/"))
+}
+
 func InstallPost(c *context.Context, f form.Install) {
 	c.Data["CurDbOption"] = f.DbType
 
@@ -236,7 +249,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test repository root path.
-	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
+	f.RepoRootPath = normalizeInstallPath(f.RepoRootPath)
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), http.StatusBadRequest, INSTALL, &f)
@@ -244,7 +257,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test log root path.
-	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
+	f.LogRootPath = normalizeInstallPath(f.LogRootPath)
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), http.StatusBadRequest, INSTALL, &f)
