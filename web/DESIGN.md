@@ -44,7 +44,7 @@ Use these tokens. Don't introduce raw hex values in components.
 - `--color-border`: soft container and divider lines. Used for the navbar bottom border, popover edges, card outlines, mobile-menu separators. Deliberately low-contrast (close to `--color-secondary`) so chrome reads as quiet boundary, not as a hard rule.
 - `--color-input`: input field borders. Similar weight to `--color-border` but kept as a separate token so form fields can drift independently if needed.
 
-**The terminal frame is the exception.** `NotFound.tsx` wraps its faux-CLI output in a heavy outline so it actually looks like a terminal window — that frame uses `border-(--color-foreground)/80` (light) and the regular `--color-border` token (dark) directly, instead of the shared chrome token. Don't reuse this heavy outline elsewhere. If you need to introduce another heavy outline, promote a `--color-frame` token rather than inlining `--color-foreground`.
+**The terminal frame is the exception.** Faux-CLI surfaces (`Landing.tsx`, `NotFound.tsx`, `ServerError.tsx`) wrap their output in a heavy outline so it actually looks like a terminal window. That frame uses `border-(--color-foreground)/80` (light) and the regular `--color-border` token (dark) directly, instead of the shared chrome token.
 
 **Peer-item rule**
 
@@ -56,7 +56,7 @@ The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the 
 
 ## Surface chrome
 
-The 404 page wraps its content in a faux-terminal frame (rounded border, traffic-light dots, monospace body). Reuse the same frame for any page that represents a Git/CLI state: error pages, command-output stubs, raw diff fallbacks. Don't reuse it for normal content pages.
+The landing and 404/500 pages wrap their content in a faux-terminal frame (rounded border, traffic-light dots, monospace body). Reuse the same frame for any page that represents a Git/CLI state: the landing page, error pages, command-output stubs, raw diff fallbacks. Don't reuse it for normal content pages like settings or repository views.
 
 Strings rendered inside a terminal frame stay in English across all locales, regardless of the active UI language. Real CLI output (`git`, `ls`, `cat`, etc.) doesn't localize. Faux-CLI that does loses authenticity and reads as a translated error page in a costume. Translate the surrounding prose (headings, descriptions, CTAs), but leave command names, prompts, error tokens like `fatal:`, and command output strings untouched.
 

@@ -12,7 +12,7 @@ import (
 	"github.com/flamego/flamego/inject"
 )
 
-// recovery is a copy of [flamego.Recovery] except always responses in plain
+// recovery is a copy of [flamego.Recovery] except always responds in plain
 // text.
 func recovery() flamego.Handler {
 	var (
@@ -24,7 +24,7 @@ func recovery() flamego.Handler {
 
 	// source returns a space-trimmed slice of the n'th line.
 	source := func(lines [][]byte, n int) []byte {
-		n-- // In a stack trace, lines are 1-indexed but our array is 0-indexed
+		n-- // In a stack trace, lines are 1-indexed but our array is 0-indexed.
 		if n < 0 || n >= len(lines) {
 			return dunno
 		}
@@ -55,14 +55,14 @@ func recovery() flamego.Handler {
 		return name
 	}
 
-	// stack returns a nicely formated stack frame, skipping skip frames
+	// stack returns a nicely formatted stack frame, skipping skip frames.
 	stack := func(skip int) []byte {
 		buf := new(bytes.Buffer)
 		// As we loop, we open files and read them. These variables record the currently
 		// loaded file.
 		var lines [][]byte
 		var lastFile string
-		for i := skip; ; i++ { // Skip the expected number of frames
+		for i := skip; ; i++ { // Skip the expected number of frames.
 			pc, file, line, ok := runtime.Caller(i)
 			if !ok {
 				break
