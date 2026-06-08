@@ -294,6 +294,8 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 
 		if database.IsErrReachLimitOfRepo(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
+		} else if database.IsMirrorTLSVerificationError(err) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Migration failed because the remote server TLS certificate could not be verified. Trust the remote certificate on the Gogs server and try again."))
 		} else {
 			c.Error(errors.New(database.HandleMirrorCredentials(err.Error(), true)), "migrate repository")
 		}
