@@ -1,9 +1,10 @@
 package v1
 
 import (
+	stdctx "context"
+	"fmt"
 	"net/http"
 	"path"
-	"fmt"
 
 	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
@@ -14,6 +15,34 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
+
+// forkStore abstracts the database operations needed by forkRepo so they can
+// be replaced with a test double without a live database.
+type forkStore interface {
+	getUserByUsername(ctx stdctx.Context, username string) (*database.User, error)
+	getOrgByName(name string) (*database.User, error)
+	getRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error)
+	forkRepository(doer, owner *database.User, baseRepo *database.Repository, name, desc string) (*database.Repository, error)
+}
+
+// dbForkStore delegates to the real database layer.
+type dbForkStore struct{}
+
+func (dbForkStore) getUserByUsername(ctx stdctx.Context, username string) (*database.User, error) {
+	return database.Handle.Users().GetByUsername(ctx, username)
+}
+
+func (dbForkStore) getOrgByName(name string) (*database.User, error) {
+	return database.GetOrgByName(name)
+}
+
+func (dbForkStore) getRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
+	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
+}
+
+func (dbForkStore) forkRepository(doer, owner *database.User, baseRepo *database.Repository, name, desc string) (*database.Repository, error) {
+	return database.ForkRepository(doer, owner, baseRepo, name, desc)
+}
 
 func searchRepos(c *context.APIContext) {
 	opts := &database.SearchRepoOptions{
@@ -396,71 +425,49 @@ func listForks(c *context.APIContext) {
 }
 
 type forkRepoRequest struct {
-    Organization    string `json:"organization" binding:"AlphaDashDot;MaxSize(100)"`
-    Name            string `json:"name" binding:"AlphaDashDot;MaxSize(100)"`
+	Organization string `json:"organization" binding:"AlphaDashDot;MaxSize(100)"`
+	Name         string `json:"name" binding:"AlphaDashDot;MaxSize(100)"`
 }
 
-func forkRepo(c *context.APIContext, owner string, repository string, opt forkRepoRequest) {
+func forkRepo(c *context.APIContext, opt forkRepoRequest) {
+	doForkRepo(c, dbForkStore{}, opt)
+}
 
-    // Resolve user/org to a struct forkRepository will understand
-    users, cnt, err := database.Handle.Users().SearchByName(c, owner)
-    u_name = owner
-    if err != nil {
-        // Mayhap organization
-        if otp.Organization != nil {
-            users, err := database.Handle.Organizations().SearchByName(c, opt.Organization)
-            u_name = opt.Organization
-        }
-        if err != nil {
-            c.Error(err, "fork repository")
-            return
-        }
-    }
+// doForkRepo contains the fork logic and accepts a forkStore for testability.
+func doForkRepo(c *context.APIContext, store forkStore, opt forkRepoRequest) {
+	repoOwner, err := store.getUserByUsername(c.Req.Context(), c.Params(":username"))
+	if err != nil {
+		c.NotFoundOrError(err, "get user by name")
+		return
+	}
 
-    // XXX deal with there not being a straightforward getUserByNameAndIMeanExactMatch
-    // XXX if there's a better way to filter in go, I'd love to see it.
-    ctxUser = nil
-    for i, obj := range users {
-        if obj.name != u_name {
-            continue;
-        }
-        ctxUser := obj
-    }
-    if ctxUser == nil {
-        //XXX maybe this needs an error object, which is too much thonking for me to track down rn
-        c.Error("Could not get an exact match for the provided user/org", "fork repository")
-    }
+	baseRepo, err := store.getRepositoryByName(c.Req.Context(), repoOwner.ID, c.Params(":reponame"))
+	if err != nil {
+		c.NotFoundOrError(err, "get repository by name")
+		return
+	}
 
-    // Resolve ctxRepository to actual repository object
-	ctxRepo, err := database.Handle.Repositories().GetByName(ctxUser.id, repository)
-    if err != nil {
-        c.Error(err, "fork repository")
-        return
-    }
+	forkOwner := c.User
+	if opt.Organization != "" {
+		forkOwner, err = store.getOrgByName(opt.Organization)
+		if err != nil {
+			c.NotFoundOrError(err, "get organization by name")
+			return
+		}
+	}
 
-    ctxName := repository
-    if opt.Name != nil {
-        ctxName = opt.Name
-    }
+	forkName := baseRepo.Name
+	if opt.Name != "" {
+		forkName = opt.Name
+	}
 
-    ctxDesc := fmt.Sprintf("Fork of %s", repository)
-
-	//XXX much of the above probably should be abstracted into database.Handle.Repositories()
-	repo, err = database.ForkRepository(
-        c.User,
-        ctxUser,
-        ctxRepo,
-        ctxName,
-        ctxDesc
-    )
+	repo, err := store.forkRepository(c.User, forkOwner, baseRepo, forkName, fmt.Sprintf("Fork of %s", baseRepo.Name))
 	if err != nil {
 		c.Error(err, "fork repository")
 		return
 	}
 
-    //XXX may need more massaging for json ret?
-	apiFork := make(repo)
-	c.JSONSuccess(&apiFork)
+	c.JSON(http.StatusCreated, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 type editIssueTrackerRequest struct {
