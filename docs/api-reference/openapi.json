@@ -3507,7 +3507,39 @@
           }
         ],
         "description": "Requires basic authentication."
-      }
+      },
+      "delete": {
+        "operationId": "deleteAccessToken",
+        "summary": "Delete an access token",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessToken"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "parameters": [
+          {
+            "name": "sha1",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "token to delete"
+          }
+        ]
     },
     "/user/emails": {
       "get": {
