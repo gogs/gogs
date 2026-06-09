@@ -1,6 +1,8 @@
 package v1
 
 import (
+	stdctx "context"
+	"fmt"
 	"net/http"
 	"path"
 
@@ -13,6 +15,34 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
+
+// forkStore abstracts the database operations needed by forkRepo so they can
+// be replaced with a test double without a live database.
+type forkStore interface {
+	getUserByUsername(ctx stdctx.Context, username string) (*database.User, error)
+	getOrgByName(name string) (*database.User, error)
+	getRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error)
+	forkRepository(doer, owner *database.User, baseRepo *database.Repository, name, desc string) (*database.Repository, error)
+}
+
+// dbForkStore delegates to the real database layer.
+type dbForkStore struct{}
+
+func (dbForkStore) getUserByUsername(ctx stdctx.Context, username string) (*database.User, error) {
+	return database.Handle.Users().GetByUsername(ctx, username)
+}
+
+func (dbForkStore) getOrgByName(name string) (*database.User, error) {
+	return database.GetOrgByName(name)
+}
+
+func (dbForkStore) getRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
+	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
+}
+
+func (dbForkStore) forkRepository(doer, owner *database.User, baseRepo *database.Repository, name, desc string) (*database.Repository, error) {
+	return database.ForkRepository(doer, owner, baseRepo, name, desc)
+}
 
 func searchRepos(c *context.APIContext) {
 	opts := &database.SearchRepoOptions{
@@ -392,6 +422,52 @@ func listForks(c *context.APIContext) {
 	}
 
 	c.JSONSuccess(&apiForks)
+}
+
+type forkRepoRequest struct {
+	Organization string `json:"organization" binding:"AlphaDashDot;MaxSize(100)"`
+	Name         string `json:"name" binding:"AlphaDashDot;MaxSize(100)"`
+}
+
+func forkRepo(c *context.APIContext, opt forkRepoRequest) {
+	doForkRepo(c, dbForkStore{}, opt)
+}
+
+// doForkRepo contains the fork logic and accepts a forkStore for testability.
+func doForkRepo(c *context.APIContext, store forkStore, opt forkRepoRequest) {
+	repoOwner, err := store.getUserByUsername(c.Req.Context(), c.Params(":username"))
+	if err != nil {
+		c.NotFoundOrError(err, "get user by name")
+		return
+	}
+
+	baseRepo, err := store.getRepositoryByName(c.Req.Context(), repoOwner.ID, c.Params(":reponame"))
+	if err != nil {
+		c.NotFoundOrError(err, "get repository by name")
+		return
+	}
+
+	forkOwner := c.User
+	if opt.Organization != "" {
+		forkOwner, err = store.getOrgByName(opt.Organization)
+		if err != nil {
+			c.NotFoundOrError(err, "get organization by name")
+			return
+		}
+	}
+
+	forkName := baseRepo.Name
+	if opt.Name != "" {
+		forkName = opt.Name
+	}
+
+	repo, err := store.forkRepository(c.User, forkOwner, baseRepo, forkName, fmt.Sprintf("Fork of %s", baseRepo.Name))
+	if err != nil {
+		c.Error(err, "fork repository")
+		return
+	}
+
+	c.JSON(http.StatusCreated, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 type editIssueTrackerRequest struct {
