@@ -6,12 +6,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/gogs/git-module"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -42,7 +45,20 @@ func checkRunMode() {
 	} else {
 		git.SetOutput(os.Stdout)
 	}
-	log.Info("Run mode: %s", strings.Title(macaron.Env))
+	log.Info("Run mode: %s", cases.Title(language.Und).String(macaron.Env))
+}
+
+func normalizeInstallRootPathByOS(path string, isWindows bool) string {
+	// Keep native Windows paths (including UNC paths like `\\server\share`)
+	// unchanged, otherwise the replacement below may produce invalid paths.
+	if isWindows {
+		return path
+	}
+	return strings.ReplaceAll(path, "\\", "/")
+}
+
+func normalizeInstallRootPath(path string) string {
+	return normalizeInstallRootPathByOS(path, runtime.GOOS == "windows")
 }
 
 // GlobalInit is for global configuration reload-able.
@@ -72,7 +88,7 @@ func GlobalInit(customConf string) error {
 		markup.NewSanitizer()
 		err := database.NewEngine()
 		if err != nil {
-			log.Fatal("Failed to initialize ORM engine: %v", err)
+			return errors.Wrap(err, "initialize ORM engine")
 		}
 		database.HasEngine = true
 
@@ -106,7 +122,7 @@ func GlobalInit(customConf string) error {
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
-		if err := database.RewriteAuthorizedKeys(); err != nil {
+		if err := database.Handle.PublicKey().RewriteAuthorizedKeys(); err != nil {
 			log.Warn("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
@@ -185,6 +201,8 @@ func Install(c *context.Context) {
 	c.Success(INSTALL)
 }
 
+// InstallPost handles the submission of installation settings.
+// skipcq: GO-R1005
 func InstallPost(c *context.Context, f form.Install) {
 	c.Data["CurDbOption"] = f.DbType
 
@@ -236,16 +254,16 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test repository root path.
-	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
-	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
+	f.RepoRootPath = normalizeInstallRootPath(f.RepoRootPath)
+	if err := os.MkdirAll(f.RepoRootPath, 0o750); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
 	// Test log root path.
-	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
-	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
+	f.LogRootPath = normalizeInstallRootPath(f.LogRootPath)
+	if err := os.MkdirAll(f.LogRootPath, 0o750); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), http.StatusBadRequest, INSTALL, &f)
 		return
@@ -259,14 +277,14 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Check host address and port
-	if len(f.SMTPHost) > 0 && !strings.Contains(f.SMTPHost, ":") {
+	if f.SMTPHost != "" && !strings.Contains(f.SMTPHost, ":") {
 		c.FormErr("SMTP", "SMTPHost")
 		c.RenderWithErr(c.Tr("install.smtp_host_missing_port"), http.StatusBadRequest, INSTALL, &f)
 		return
 	}
 
 	// Make sure FROM field is valid
-	if len(f.SMTPFrom) > 0 {
+	if f.SMTPFrom != "" {
 		_, err := mail.ParseAddress(f.SMTPFrom)
 		if err != nil {
 			c.FormErr("SMTP", "SMTPFrom")
@@ -283,7 +301,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Check admin password.
-	if len(f.AdminName) > 0 && f.AdminPasswd == "" {
+	if f.AdminName != "" && f.AdminPasswd == "" {
 		c.FormErr("Admin", "AdminPasswd")
 		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), http.StatusBadRequest, INSTALL, f)
 		return
@@ -331,7 +349,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		cfg.Section("server").Key("START_SSH_SERVER").SetValue(strconv.FormatBool(f.UseBuiltinSSHServer))
 	}
 
-	if len(strings.TrimSpace(f.SMTPHost)) > 0 {
+	if strings.TrimSpace(f.SMTPHost) != "" {
 		cfg.Section("email").Key("ENABLED").SetValue("true")
 		cfg.Section("email").Key("HOST").SetValue(f.SMTPHost)
 		cfg.Section("email").Key("FROM").SetValue(f.SMTPFrom)
@@ -369,7 +387,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
-	_ = os.MkdirAll(filepath.Dir(conf.CustomConf), os.ModePerm)
+	_ = os.MkdirAll(filepath.Dir(conf.CustomConf), 0o750)
 	if err := cfg.SaveTo(conf.CustomConf); err != nil {
 		c.RenderWithErr(c.Tr("install.save_config_failed", err), http.StatusInternalServerError, INSTALL, &f)
 		return
@@ -383,7 +401,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Create admin account
-	if len(f.AdminName) > 0 {
+	if f.AdminName != "" {
 		user, err := database.Handle.Users().Create(
 			c.Req.Context(),
 			f.AdminName,
