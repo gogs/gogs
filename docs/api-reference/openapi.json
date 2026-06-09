@@ -3529,17 +3529,30 @@
             "description": "Validation error."
           }
         },
-        "parameters": [
-          {
-            "name": "sha1",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "token to delete"
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sha1": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sha1"
+                ]
+              }
+            }
           }
-        ]
+        },
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "description": "Requires basic authentication."
     },
     "/user/emails": {
       "get": {
