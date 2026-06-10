@@ -23,7 +23,7 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 	if err != nil {
 		return errors.Wrap(err, "parse Vite URL")
 	}
-	proxy := httputil.NewSingleHostReverseProxy(viteURL)
+	proxy := newViteReverseProxy(viteURL)
 	proxy.ModifyResponse = func(resp *http.Response) error {
 		if !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/html") {
 			return nil
@@ -59,4 +59,14 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		proxy.ServeHTTP(w, r)
 	})
 	return nil
+}
+
+func newViteReverseProxy(viteURL *url.URL) *httputil.ReverseProxy {
+	proxy := httputil.NewSingleHostReverseProxy(viteURL)
+	director := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		director(req)
+		req.Host = viteURL.Host
+	}
+	return proxy
 }
