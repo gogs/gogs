@@ -16,7 +16,7 @@ Answers to common questions about Gogs configuration, administration, and usage.
     gogs web -port 3001
     ```
 
-    This flag also updates the port number shown on the install page, so pick the port you intend to keep using.
+    Make sure to update `[server] HTTP_PORT` in `custom/conf/app.ini` to match, so subsequent restarts pick up the same port.
   </Accordion>
 
   <Accordion title="How do I run Gogs in offline mode or on an intranet?">
@@ -47,7 +47,7 @@ Answers to common questions about Gogs configuration, administration, and usage.
   <Accordion title="How can I become an administrator?">
     The first user to register (with `ID = 1`) is automatically granted administrator privileges. No email confirmation is required for this account, even if email confirmation is enabled.
 
-    Once logged in, the administrator can promote other users by navigating to **Admin Panel** > **Users** and editing user accounts. A user who registers through the initial install page is also made an administrator.
+    Once logged in, the administrator can promote other users by navigating to **Admin Panel** > **Users** and editing user accounts.
   </Accordion>
 
   <Accordion title="How do I reset a forgotten administrator password?">

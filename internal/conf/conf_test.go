@@ -12,9 +12,11 @@ import (
 )
 
 func TestInit(t *testing.T) {
+	// The fixture uses RUN_USER = git.
+	t.Setenv("USER", "git")
+
 	ini.PrettyFormat = false
 	defer func() {
-		MustInit("")
 		ini.PrettyFormat = true
 	}()
 

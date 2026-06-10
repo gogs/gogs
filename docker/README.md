@@ -14,67 +14,101 @@
 
 Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs) to see all available images and tags.
 
-## Usage
+## Configuration
 
-To keep your data out of Docker container, we do a volume (`/var/gogs` -> `/data`) here, and you can change it based on your situation.
+Gogs requires an `app.ini` before it can start, which overlays the shipped defaults, so it only needs the keys you actually want to change. For example, serving Gogs at `https://gogs.example.com` with the container's HTTP port mapped to host port `10880` and SSH port mapped to `10022`, backed by a Postgres on the Docker host:
 
-```sh
-$ docker pull gogs/gogs
+```ini
+RUN_MODE = prod
+; USE AS-IS because the image already created this user.
+RUN_USER = git
 
-# Create local directory for volume.
-$ mkdir -p /var/gogs
+[server]
+EXTERNAL_URL = https://gogs.example.com/
+DOMAIN       = gogs.example.com
+; The port exposed by `docker run -p 10022:22`. Shown in clone URLs.
+SSH_PORT     = 10022
+; The builtin SSH server is not supported inside legacy Docker.
+START_SSH_SERVER = false
 
-# Use `docker run` for the first time.
+[repository]
+; USE AS-IS to match the data volume layout shipped in the image.
+ROOT = /home/git/gogs-repositories
+
+[database]
+TYPE     = postgres
+; Use host.docker.internal (or the host's LAN IP) to reach a DB on the host.
+HOST     = host.docker.internal:5432
+NAME     = gogs
+USER     = gogs
+PASSWORD = ${GOGS_DATABASE_PASSWORD}
+
+[security]
+SECRET_KEY = ${GOGS_SECURITY_SECRET_KEY}
+```
+
+`SECRET_KEY` can be any unguessable string, e.g., a UUID from [uuidgenerator.net](https://www.uuidgenerator.net). Gogs refuses to start while it is still using the unsafe default.
+
+> [!NOTE]
+> `${...}` references in any value expand from the container's environment at startup, which keeps secrets out of `app.ini` on disk. Pass them with `docker run -e GOGS_DATABASE_PASSWORD=… -e GOGS_SECURITY_SECRET_KEY=…` (or `--env-file secrets.env`). Plain literal values work too, e.g., `PASSWORD = hunter2`.
+
+See [configuration primer](https://gogs.io/fine-tuning/configuration-primer) to learn more about how the configuration system works.
+
+### Bind mount
+
+Write `app.ini` to the host directory, then `docker run` with `-v`:
+
+```zsh
+$ mkdir -p /var/gogs/gogs/conf
+$ vi /var/gogs/gogs/conf/app.ini   # Paste the example above and edit
 $ docker run --name=gogs -p 10022:22 -p 10880:3000 -v /var/gogs:/data gogs/gogs
+```
 
-# Use `docker start` if you have stopped it.
+### Named volume
+
+A named volume lives inside Docker's storage, so the file has to be written through a container. Gogs refuses to start without an `app.ini`, so the container must be **created** (not run) first:
+
+```zsh
+$ docker volume create --name gogs-data
+$ docker create --name=gogs -p 10022:22 -p 10880:3000 -v gogs-data:/data gogs/gogs
+$ docker cp app.ini gogs:/data/gogs/conf/app.ini
 $ docker start gogs
 ```
 
-> [!NOTE] It is important to map the SSH service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
+### Custom directory
 
-Files will be store in local path `/var/gogs` in my case.
+The "custom" directory may not be obvious in Docker environment. The `/data/gogs` (in the container) is already the "custom" directory. You don't need to create another layer, edit files there directly.
 
-Directory `/var/gogs` keeps Git repositories and Gogs data:
+Directory layout inside Docker container:
 
-    /var/gogs
-    |-- git
-    |   |-- gogs-repositories
-    |-- ssh
-    |   |-- # ssh public/private keys for Gogs
-    |-- gogs
-        |-- conf
-        |-- data
-        |-- log
-
-#### Custom directory
-
-The "custom" directory may not be obvious in Docker environment. The `/var/gogs/gogs` (in the host) and `/data/gogs` (in the container) is already the "custom" directory and you do not need to create another layer but directly edit corresponding files under this directory.
-
-#### Using Docker volumes
-
-```sh
-# Create docker volume.
-$ docker volume create --name gogs-data
-
-# Use `docker run` for the first time.
-$ docker run --name=gogs -p 10022:22 -p 10880:3000 -v gogs-data:/data gogs/gogs
+```
+/data
+|-- git
+|   |-- gogs-repositories
+|-- ssh
+|   |-- # ssh public/private keys for Gogs
+|-- gogs
+    |-- conf
+    |-- data
+    |-- log
 ```
 
-## Settings
+## First start
 
-### Application
+Open `https://gogs.example.com/` and sign up. Whoever signs up while there are no other users becomes the admin.
 
-Most of the settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
+Alternatively, the admin user can be created from the command line. The command runs inside the container so it reaches the database through the same configuration:
 
-- **Repository Root Path**: keep it as default value `/home/git/gogs-repositories` because `start.sh` already made a symbolic link for you.
-- **Run User**: keep it as default value `git` because `build/finalize.sh` already setup a user with name `git`.
-- **Domain**: fill in with Docker container IP (e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
-- **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `22` inside Docker, **but** you expose it by `10022:22`, then use `10022` for this value. **Builtin SSH server is not recommended inside Docker Container**
-- **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, **and** you expose it by `10880:3000`, but you still use `3000` for this value.
-- **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values (e.g. `http://192.168.99.100:10880/`).
+```zsh
+$ docker exec -it gogs gogs admin create-user \
+    --name admin \
+    --password ${PASSWORD} \
+    --email admin@example.com \
+    --admin \
+    --config /data/gogs/conf/app.ini
+```
 
-Full documentation of application settings can be found [here](https://github.com/gogs/gogs/blob/main/conf/app.ini).
+Once Gogs is running, use `docker start gogs` / `docker stop gogs` for subsequent restarts.
 
 ### Container options
 

@@ -77,3 +77,48 @@ If you choose to use MySQL, MariaDB or PostgreSQL as your database backend, you 
     |Arch User Repository ([link](https://aur.archlinux.org/packages/gogs/))| Stable releases | Detailed instructions available in the [Arch Linux Wiki entry](https://wiki.archlinux.org/title/Gogs). |
   </Tab>
 </Tabs>
+
+## Configuration
+
+Gogs requires a `custom/conf/app.ini` before it can start, which overlays the shipped defaults, so it only needs the keys you actually want to change. For example, pointing Gogs at a local PostgreSQL database and serving it at `https://gogs.example.com`:
+
+```ini
+RUN_MODE = prod
+
+[server]
+EXTERNAL_URL = https://gogs.example.com/
+DOMAIN       = gogs.example.com
+
+[database]
+TYPE     = postgres
+HOST     = 127.0.0.1:5432
+NAME     = gogs
+USER     = gogs
+PASSWORD = ${GOGS_DATABASE_PASSWORD}
+
+[security]
+SECRET_KEY = ${GOGS_SECURITY_SECRET_KEY}
+```
+
+`SECRET_KEY` can be any unguessable string, e.g., a UUID from [uuidgenerator.net](https://www.uuidgenerator.net). Gogs refuses to start while it is still using the unsafe default.
+
+<Note>
+`${...}` references in any value expand from the process environment at startup, which keeps secrets out of `app.ini` on disk. Export them from the shell that launches `gogs web`, or under a service manager use the equivalent (e.g., systemd `Environment=` directives). Plain literal values work too, e.g., `PASSWORD = hunter2`.
+</Note>
+
+By default, the `custom/` directory is expected to sit next to the `gogs` binary. To put it elsewhere, set the `GOGS_CUSTOM` environment variable, e.g., `GOGS_CUSTOM=/etc/gogs`.
+
+See [configuration primer](/fine-tuning/configuration-primer) to learn more about how the configuration system works.
+
+Whoever signs up while there are no other users becomes the admin.
+
+Alternatively, the admin user can be created from the command line. The command must run on the same server as Gogs because it connects to the database directly and reads the same `custom/conf/app.ini`:
+
+```zsh
+gogs admin create-user \
+  --name admin \
+  --password ${PASSWORD} \
+  --email admin@example.com \
+  --admin \
+  --config custom/conf/app.ini
+```

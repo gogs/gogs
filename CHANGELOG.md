@@ -7,6 +7,7 @@ All notable changes to Gogs are documented in this file.
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
+- Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 
 ### Fixed
 
@@ -14,6 +15,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
+- The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)
 - Support for customizing pages with Go template files stops being possible.
 - Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)
 - Support for `memcache` as the cache adapter. [#8270](https://github.com/gogs/gogs/pull/8270)

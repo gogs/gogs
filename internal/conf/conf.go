@@ -79,7 +79,7 @@ func Init(customConf string) error {
 			return errors.Wrapf(err, "append %q", customConf)
 		}
 	} else if !HookMode {
-		log.Warn("Custom config %q not found. Ignore this warning if you're running for the first time", customConf)
+		return errors.Newf("custom config %q not found: see https://gogs.io/getting-started/installation#configuration for first-time setup", customConf)
 	}
 
 	if err = File.Section(ini.DefaultSection).MapTo(&App); err != nil {
@@ -194,12 +194,13 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [security] section")
 	}
 
-	// Check run user when the install is locked.
-	if Security.InstallLock {
-		currentUser, match := CheckRunUser(App.RunUser)
-		if !match {
-			return errors.Newf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
-		}
+	if Security.SecretKey == "" || Security.SecretKey == "CHANGE-ME-OR-FAIL-TO-START" {
+		return errors.New("[security] SECRET_KEY must be set to a strong, unguessable value")
+	}
+
+	currentUser, match := CheckRunUser(App.RunUser)
+	if !match {
+		return errors.Newf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
 	}
 
 	// **************************
@@ -413,12 +414,4 @@ func Init(customConf string) error {
 
 	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
 	return nil
-}
-
-// MustInit panics if configuration initialization failed.
-func MustInit(customConf string) {
-	err := Init(customConf)
-	if err != nil {
-		panic(err)
-	}
 }

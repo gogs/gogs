@@ -27,12 +27,6 @@ type ToggleOptions struct {
 
 func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(c *Context) {
-		// Cannot view any page before installation.
-		if !conf.Security.InstallLock {
-			c.RedirectSubpath("/install")
-			return
-		}
-
 		// Check prohibit login users.
 		if c.IsLogged && c.User.ProhibitLogin {
 			c.Data["Title"] = c.Tr("auth.prohibit_login")
@@ -145,10 +139,6 @@ type AuthStore interface {
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
 func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
-	if !database.HasEngine {
-		return 0, false
-	}
-
 	// Check access token.
 	if isAPIPath(c.Req.URL.Path) {
 		var tokenSHA string
@@ -196,10 +186,6 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
 func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
-	if !database.HasEngine {
-		return nil, false, false
-	}
-
 	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
 
 	if uid <= 0 {

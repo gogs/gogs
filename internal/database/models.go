@@ -42,7 +42,6 @@ type Engine interface {
 var (
 	x            *xorm.Engine
 	legacyTables []any
-	HasEngine    bool
 )
 
 func init() {
