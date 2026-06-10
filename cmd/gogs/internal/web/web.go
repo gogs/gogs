@@ -22,16 +22,20 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
+	"github.com/gogs/git-module"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	embedConf "gogs.io/gogs/conf"
+	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/route/admin"
@@ -40,7 +44,9 @@ import (
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
+	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/public"
 	"gogs.io/gogs/templates"
@@ -48,7 +54,7 @@ import (
 
 // Run starts the web server with the given configuration path and port override.
 func Run(configPath string, portOverride int) error {
-	err := route.GlobalInit(configPath)
+	err := initServices(configPath)
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
@@ -80,8 +86,6 @@ func Run(configPath string, portOverride int) error {
 			m.Get("/users", route.ExploreUsers)
 			m.Get("/organizations", route.ExploreOrganizations)
 		}, ignSignIn)
-		m.Combo("/install", route.InstallInit).Get(route.Install).
-			Post(bindIgnErr(form.Install{}), route.InstallPost)
 		m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 		// ***** START: User *****
@@ -809,13 +813,13 @@ func newMacaron() (*macaron.Macaron, error) {
 	}
 	m.Use(macaron.Renderer(renderOpt))
 
-	localeNames, err := embedConf.FileNames("locale")
+	localeNames, err := embedconf.FileNames("locale")
 	if err != nil {
 		return nil, errors.Wrap(err, "list locale files")
 	}
 	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
+		localeFiles[name], err = embedconf.Files.ReadFile("locale/" + name)
 		if err != nil {
 			return nil, errors.Wrapf(err, "read locale file %q", name)
 		}
@@ -883,4 +887,73 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write([]byte("* Database connection: OK\n"))
+}
+
+func initServices(customConf string) error {
+	err := conf.Init(customConf)
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
+	}
+
+	conf.InitLogging(false)
+	log.Info("%s %s", conf.App.BrandName, conf.App.Version)
+	log.Trace("Work directory: %s", conf.WorkDir())
+	log.Trace("Custom path: %s", conf.CustomDir())
+	log.Trace("Custom config: %s", conf.CustomConf)
+	log.Trace("Log path: %s", conf.Log.RootPath)
+	log.Trace("Build time: %s", conf.BuildTime)
+	log.Trace("Build commit: %s", conf.BuildCommit)
+
+	if conf.IsProdMode() {
+		macaron.Env = macaron.PROD
+		flamego.SetEnv(flamego.EnvTypeProd)
+		macaron.ColorLog = false
+		git.SetOutput(nil)
+	} else {
+		git.SetOutput(os.Stdout)
+	}
+	log.Info("Run mode: %s", strings.Title(macaron.Env))
+
+	if conf.Email.Enabled {
+		log.Trace("Email service is enabled")
+	}
+
+	email.NewContext()
+
+	highlight.NewContext()
+	markup.NewSanitizer()
+	if err := database.NewEngine(); err != nil {
+		return errors.Wrap(err, "initialize ORM engine")
+	}
+
+	database.LoadRepoConfig()
+	database.NewRepoContext()
+
+	cron.NewContext()
+	database.InitSyncMirrors()
+	database.InitDeliverHooks()
+	database.InitTestPullRequests()
+
+	if conf.HasMinWinSvc {
+		log.Info("Builtin Windows Service is supported")
+	}
+	if conf.Server.LoadAssetsFromDisk {
+		log.Trace("Assets are loaded from disk")
+	}
+
+	if conf.SSH.StartBuiltinServer {
+		ssh.Listen(conf.SSH, conf.Server.AppDataPath)
+		log.Info("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
+		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
+		log.Trace("SSH server MAC list: %v", conf.SSH.ServerMACs)
+		log.Trace("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
+	}
+
+	if conf.SSH.RewriteAuthorizedKeysAtStart {
+		if err := database.RewriteAuthorizedKeys(); err != nil {
+			log.Warn("Failed to rewrite authorized_keys file: %v", err)
+		}
+	}
+
+	return nil
 }

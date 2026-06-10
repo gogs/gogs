@@ -62,7 +62,7 @@ Please follow [the guide in our documentation](https://gogs.io/getting-started/i
 
 ### Deploy to cloud
 
-- [Cloudron](https://www.cloudron.io/store/io.gogs.cloudronapp.html)
+- [Cloudron](https://www.cloudron.io/store/gogs.html)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
 

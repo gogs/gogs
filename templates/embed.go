@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/osx"
 )
 
-//go:embed *.tmpl **/*
+//go:embed **/*
 var files embed.FS
 
 // fileSystem implements the macaron.TemplateFileSystem interface.

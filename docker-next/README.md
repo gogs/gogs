@@ -49,58 +49,41 @@ If you need a different UID/GID, build the image with custom arguments:
 docker build -f Dockerfile.next --build-arg GOGS_UID=1001 --build-arg GOGS_GID=1001 -t my-gogs .
 ```
 
-## Usage
+## Configuration
 
-```zsh
-$ docker pull gogs/gogs:next-latest
+Gogs requires an `app.ini` before it can start, which overlays the shipped defaults, so it only needs the keys you actually want to change. For example, serving Gogs at `https://gogs.example.com` with the container's HTTP port mapped to host port `10880` and SSH port mapped to `10022`, backed by a Postgres on the Docker host:
 
-# Create local directory for volume.
-$ mkdir -p /var/gogs
-$ chown 1000:1000 /var/gogs
+```ini
+RUN_MODE = prod
+; USE AS-IS because the image already created this user with UID 1000.
+RUN_USER = git
 
-# Use `docker run` for the first time.
-$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v /var/gogs:/data gogs/gogs:next-latest
+[server]
+EXTERNAL_URL = https://gogs.example.com/
+DOMAIN       = gogs.example.com
 
-# Use `docker start` if you have stopped it.
-$ docker start gogs
+[repository]
+; USE AS-IS to match the data volume layout shipped in the image.
+ROOT = /data/git/gogs-repositories
+
+[database]
+TYPE     = postgres
+; Use host.docker.internal (or the host's LAN IP) to reach a DB on the host.
+HOST     = host.docker.internal:5432
+NAME     = gogs
+USER     = gogs
+PASSWORD = ${GOGS_DATABASE_PASSWORD}
+
+[security]
+SECRET_KEY = ${GOGS_SECURITY_SECRET_KEY}
 ```
 
-Files will be stored in local path `/var/gogs`.
+`SECRET_KEY` can be any unguessable string, e.g., a UUID from [uuidgenerator.net](https://www.uuidgenerator.net). Gogs refuses to start while it is still using the unsafe default.
 
-Directory `/var/gogs` keeps Git repositories and Gogs data:
+> [!NOTE]
+> `${...}` references in any value expand from the container's environment at startup, which keeps secrets out of `app.ini` on disk. Pass them with `docker run -e GOGS_DATABASE_PASSWORD=… -e GOGS_SECURITY_SECRET_KEY=…` (or `--env-file secrets.env`). Plain literal values work too, e.g., `PASSWORD = hunter2`.
 
-```zsh
-/var/gogs
-|-- git
-    |-- gogs-repositories
-|-- gogs
-    |-- conf
-    |-- data
-    |-- log
-|-- ssh
-```
-
-### Using Docker volumes
-
-```zsh
-$ docker volume create --name gogs-data
-$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v gogs-data:/data gogs/gogs:next-latest
-```
-
-## Settings
-
-### Application
-
-Most of the settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
-
-- **Repository Root Path**: either `/data/git/gogs-repositories` or `/home/git/gogs-repositories` works.
-- **Run User**: default `git` (UID 1000)
-- **Domain**: fill in with Docker container IP (e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
-- **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `2222` inside Docker, **but** you expose it by `10022:2222`, then use `10022` for this value.
-- **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, **and** you expose it by `10880:3000`, but you still use `3000` for this value.
-- **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values (e.g. `http://192.168.99.100:10880/`).
-
-Full documentation of application settings can be found in the [default `app.ini`](https://github.com/gogs/gogs/blob/main/conf/app.ini).
+See [configuration primer](https://gogs.io/fine-tuning/configuration-primer) to learn more about how the configuration system works.
 
 ### Git over SSH
 
@@ -112,9 +95,71 @@ To enable Git over SSH access, the use of builtin SSH server is required as foll
 ```ini
 [server]
 START_SSH_SERVER = true
-SSH_PORT         = 10022 # The port shown in the clone URL
-SSH_LISTEN_PORT  = 2222  # The port that builtin server listens on
+; The port exposed by `docker run -p 10022:2222`. Shown in clone URLs.
+SSH_PORT         = 10022
+; The port that the builtin SSH server listens on.
+SSH_LISTEN_PORT  = 2222
 ```
+
+### Bind mount
+
+Write `app.ini` to the host directory, then `docker run` with `-v`:
+
+```zsh
+$ mkdir -p /var/gogs/gogs/conf
+$ chown -R 1000:1000 /var/gogs
+$ vi /var/gogs/gogs/conf/app.ini   # Paste the example above and edit
+$ docker run --name=gogs -p 10022:2222 -p 10880:3000 -v /var/gogs:/data gogs/gogs:next-latest
+```
+
+### Named volume
+
+A named volume lives inside Docker's storage, so the file has to be written through a container. Gogs refuses to start without an `app.ini`, so the container must be **created** (not run) first:
+
+```zsh
+$ docker volume create --name gogs-data
+$ docker create --name=gogs -p 10022:2222 -p 10880:3000 -v gogs-data:/data gogs/gogs:next-latest
+$ docker cp app.ini gogs:/data/gogs/conf/app.ini
+$ docker run --rm -v gogs-data:/data alpine chown -R 1000:1000 /data/gogs/conf
+$ docker start gogs
+```
+
+The `chown` step exists because the non-root image runs as UID 1000 but `docker cp` writes as root.
+
+### Custom directory
+
+The "custom" directory may not be obvious in Docker environment. The `/data/gogs` (in the container) is already the "custom" directory. You don't need to create another layer, edit files there directly.
+
+Directory layout inside Docker container:
+
+```
+/data
+|-- git
+|   |-- gogs-repositories
+|-- ssh
+|   |-- # ssh public/private keys for Gogs
+|-- gogs
+    |-- conf
+    |-- data
+    |-- log
+```
+
+## First start
+
+Open `https://gogs.example.com/` and sign up. Whoever signs up while there are no other users becomes the admin.
+
+Alternatively, the admin user can be created from the command line. The command runs inside the container so it reaches the database through the same configuration:
+
+```zsh
+$ docker exec -it gogs gogs admin create-user \
+    --name admin \
+    --password ${PASSWORD} \
+    --email admin@example.com \
+    --admin \
+    --config /data/gogs/conf/app.ini
+```
+
+Once Gogs is running, use `docker start gogs` / `docker stop gogs` for subsequent restarts.
 
 ## Upgrade
 

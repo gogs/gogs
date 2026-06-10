@@ -1,3 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap');
+
+/* Apply Geist Mono to all code blocks and inline code.
+   The body font (Geist) is loaded by Mintlify via docs.json `fonts.family`. */
+code,
+kbd,
+samp,
+pre,
+.font-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
 /* Fix sidebar HTTP method badge overflow for PATCH (5-char badge exceeds the default 32px container) */
 .method-nav-pill {
   width: 2.5rem !important;

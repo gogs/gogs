@@ -37,7 +37,6 @@ var CustomConf string
 var (
 	// Security settings
 	Security struct {
-		InstallLock             bool
 		SecretKey               string
 		LoginRememberDays       int
 		CookieSecure            bool
