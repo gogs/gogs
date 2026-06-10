@@ -586,19 +586,12 @@ function initRepository() {
   }
 
   // Quick start and repository home
-  $("#repo-clone-ssh").click(function() {
+  $(".clone.button").click(function() {
     $(".clone-url").text($(this).data("link"));
     $("#repo-clone-url").val($(this).data("link"));
+    $(".clone.button").removeClass("blue");
     $(this).addClass("blue");
-    $("#repo-clone-https").removeClass("blue");
-    localStorage.setItem("repo-clone-protocol", "ssh");
-  });
-  $("#repo-clone-https").click(function() {
-    $(".clone-url").text($(this).data("link"));
-    $("#repo-clone-url").val($(this).data("link"));
-    $(this).addClass("blue");
-    $("#repo-clone-ssh").removeClass("blue");
-    localStorage.setItem("repo-clone-protocol", "https");
+    localStorage.setItem("repo-clone-protocol", this.id.replace("repo-clone-", ""));
   });
   $("#repo-clone-url").click(function() {
     $(this).select();
@@ -1674,8 +1667,15 @@ $(document).ready(function() {
           $("#repo-clone-https").click();
         }
         break;
+      case "git":
+        if ($("#repo-clone-git").click().length === 0) {
+          $(".clone.button").first().click();
+        }
+        break;
       default:
-        $("#repo-clone-https").click();
+        if ($("#repo-clone-https").click().length === 0) {
+          $(".clone.button").first().click();
+        }
         break;
     }
   }
