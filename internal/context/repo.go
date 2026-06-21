@@ -117,8 +117,8 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 	return fmt.Sprintf("%s/compare/%s...%s:%s", repoLink, baseBranch, r.Owner.Name, headBranch)
 }
 
-// [0]: issues, [1]: wiki
-func RepoAssignment(pages ...bool) macaron.Handler {
+// RepoAssignment loads repository context for the current request; pages selects issue and wiki permission checks.
+func RepoAssignment(pages ...bool) macaron.Handler { // skipcq: GO-R1005 - Existing handler intentionally centralizes repository setup.
 	return func(c *Context) {
 		var (
 			owner        *database.User
@@ -281,7 +281,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
 		if c.Repo.BranchName == "" {
-			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
+			if c.Repo.Repository.DefaultBranch != "" && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
 				c.Repo.BranchName = c.Repo.Repository.DefaultBranch
 			} else if len(branches) > 0 {
 				c.Repo.BranchName = branches[0]
@@ -294,8 +294,8 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 	}
 }
 
-// RepoRef handles repository reference name including those contain `/`.
-func RepoRef() macaron.Handler {
+// RepoRef handles repository reference names, including those that contain `/`.
+func RepoRef() macaron.Handler { // skipcq: GO-R1005 - Existing handler intentionally centralizes repository reference setup.
 	return func(c *Context) {
 		// Empty repository does not have reference information.
 		if c.Repo.Repository.IsBare {
@@ -337,20 +337,13 @@ func RepoRef() macaron.Handler {
 			c.Repo.IsViewBranch = true
 
 		} else {
-			hasMatched := false
 			parts := strings.Split(c.Params("*"), "/")
-			for i, part := range parts {
-				refName = strings.TrimPrefix(refName+"/"+part, "/")
-
-				if c.Repo.GitRepo.HasBranch(refName) ||
-					c.Repo.GitRepo.HasTag(refName) {
-					if i < len(parts)-1 {
-						c.Repo.TreePath = strings.Join(parts[i+1:], "/")
-					}
-					hasMatched = true
-					break
-				}
-			}
+			var hasMatched bool
+			refName, c.Repo.TreePath, hasMatched = matchRepoRef(
+				c.Params("*"),
+				func(name string) bool { return c.Repo.GitRepo.HasBranch(name) },
+				func(name string) bool { return c.Repo.GitRepo.HasTag(name) },
+			)
 			if !hasMatched && len(parts[0]) == 40 {
 				refName = parts[0]
 				c.Repo.TreePath = strings.Join(parts[1:], "/")
@@ -429,6 +422,21 @@ func RepoRef() macaron.Handler {
 		}
 		c.Data["PullRequestCtx"] = c.Repo.PullRequest
 	}
+}
+
+func matchRepoRef(rawPath string, hasBranch, hasTag func(string) bool) (refName, treePath string, ok bool) {
+	parts := strings.Split(rawPath, "/")
+	for i := len(parts); i > 0; i-- {
+		refName = strings.Join(parts[:i], "/")
+		if hasBranch(refName) || hasTag(refName) {
+			if i < len(parts) {
+				treePath = strings.Join(parts[i:], "/")
+			}
+			return refName, treePath, true
+		}
+	}
+
+	return "", "", false
 }
 
 func RequireRepoAdmin() macaron.Handler {
