@@ -29,28 +29,29 @@
 				</tr>
 			</thead>
 			<tbody>
-				{{range .Commits}}
-					<tr>
-						<td class="author">
-							{{if .User}}
-								<img class="ui avatar image" src="{{.User.AvatarURLPath}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubURL}}/{{.User.Name}}">{{.Author.Name}}</a>
-							{{else}}
-								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
-							{{end}}
-						</td>
+			{{range .Commits}}
+				<tr{{if gt .ParentsCount 1}} class="merge-commit"{{end}}>
+					<td class="author">
+						{{if .User}}
+							<img class="ui avatar image" src="{{.User.AvatarURLPath}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubURL}}/{{.User.Name}}">{{.Author.Name}}</a>
+						{{else}}
+							<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
+						{{end}}
+					</td>
 
-						<td class="message collapsing">
-							{{/* Username or Reponame doesn't present we assume the source repository no longer exists */}}
-							{{if not (and $.Username $.Reponame)}}
-								<span class="ui sha label">{{ShortSHA1 .ID.String}}</span>
-							{{else}}
-								<a rel="nofollow" class="ui sha label" href="{{AppSubURL}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
-							{{end}}
-							<span class="{{if gt .ParentsCount 1}}grey text {{end}} has-emoji">{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
-						</td>
-						<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
-					</tr>
-				{{end}}
+					<td class="message collapsing">
+						{{/* Username or Reponame doesn't present we assume the source repository no longer exists */}}
+						{{if not (and $.Username $.Reponame)}}
+							<span class="ui sha label">{{ShortSHA1 .ID.String}}</span>
+						{{else}}
+							<a rel="nofollow" class="ui sha label" href="{{AppSubURL}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
+						{{end}}
+						{{if gt .ParentsCount 1}}<span class="ui basic tiny label merge-label" title="Merge commit"><i class="octicon octicon-git-merge"></i> {{$.i18n.Tr "repo.commits.merge_commit"}}</span>{{end}}
+						<span class="{{if gt .ParentsCount 1}}grey text {{end}} has-emoji">{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
+					</td>
+					<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
+				</tr>
+			{{end}}
 			</tbody>
 		</table>
 	</div>
