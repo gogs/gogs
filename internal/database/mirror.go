@@ -119,6 +119,31 @@ func HandleMirrorCredentials(url string, mosaics bool) string {
 	return url[:start+3] + url[i+1:]
 }
 
+var mirrorTLSVerificationErrors = []string{
+	"peer's certificate issuer is not recognized",
+	"peer certificate cannot be authenticated with known ca certificates",
+	"server certificate verification failed",
+	"ssl certificate problem",
+	"tls: failed to verify certificate",
+	"x509: certificate signed by unknown authority",
+}
+
+// IsMirrorTLSVerificationError reports whether the error looks like a TLS
+// certificate verification failure from Git while talking to a remote mirror.
+func IsMirrorTLSVerificationError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	message := strings.ToLower(err.Error())
+	for _, fragment := range mirrorTLSVerificationErrors {
+		if strings.Contains(message, fragment) {
+			return true
+		}
+	}
+	return false
+}
+
 // Address returns mirror address from Git repository config without credentials.
 func (m *Mirror) Address() string {
 	m.readAddress()
