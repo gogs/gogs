@@ -187,6 +187,7 @@ function CommitBody({ body }: { body: string }) {
 export function RepoCommit() {
   const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
   const { sha, subject, body, author, parents, patch } = data;
+  const isMergeCommit = parents.length > 1;
   const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
   const search: RepoCommitSearch = useSearch({ from: "/$owner/$repo/commit/$sha" });
   const navigate = useNavigate({ from: "/$owner/$repo/commit/$sha" });
@@ -718,7 +719,16 @@ export function RepoCommit() {
 
       <section className="mx-auto w-full max-w-7xl px-4 pt-6 pb-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-          <h2 className="min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground)">{subject}</h2>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground)">{subject}</h2>
+              {isMergeCommit ? (
+                <span className="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs font-medium text-(--color-muted-foreground)">
+                  {t("repo.merge_commit")}
+                </span>
+              ) : null}
+            </div>
+          </div>
           <div className="basis-full sm:basis-auto">
             <a
               href={browseFilesHref}
