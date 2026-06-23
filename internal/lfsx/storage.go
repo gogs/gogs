@@ -74,10 +74,18 @@ func (s *LocalStorage) Upload(oid OID, rc io.ReadCloser) (int64, error) {
 		return 0, errors.Wrap(err, "create directories")
 	}
 
-	// If the object file already exists, skip the upload and return the
-	// existing file's size.
+	// If the object file already exists, verify the incoming body still hashes
+	// to the claimed OID before returning the dedupe shortcut. Without this
+	// check, a caller could bind any known OID to a different repo without
+	// possessing the actual content, enabling cross-tenant data access.
 	if fi, err := os.Stat(fpath); err == nil {
-		_, _ = io.Copy(io.Discard, rc)
+		hash := sha256.New()
+		if _, err := io.Copy(hash, rc); err != nil {
+			return 0, errors.Wrap(err, "hash object for dedup verification")
+		}
+		if computed := hex.EncodeToString(hash.Sum(nil)); computed != string(oid) {
+			return 0, ErrOIDMismatch
+		}
 		return fi.Size(), nil
 	}
 
