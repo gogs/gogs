@@ -121,7 +121,7 @@ func SaveAvatar(userID int64, data []byte) error {
 
 // EncodePassword encodes password using PBKDF2 SHA256 with given salt.
 func EncodePassword(password, salt string) string {
-	newPasswd := pbkdf2.Key([]byte(password), []byte(salt), 10000, 50, sha256.New)
+	newPasswd := pbkdf2.Key([]byte(password), []byte(salt), 600000, 50, sha256.New)
 	return fmt.Sprintf("%x", newPasswd)
 }
 
