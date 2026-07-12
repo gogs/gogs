@@ -94,6 +94,12 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [server] section")
 	}
 	Server.AppDataPath = ensureAbs(Server.AppDataPath)
+	if Server.CertFile != "" {
+		Server.CertFile = ensureAbs(Server.CertFile)
+	}
+	if Server.KeyFile != "" {
+		Server.KeyFile = ensureAbs(Server.KeyFile)
+	}
 
 	if !strings.HasSuffix(Server.ExternalURL, "/") {
 		Server.ExternalURL += "/"
@@ -210,6 +216,12 @@ func Init(customConf string) error {
 	if err = File.Section("email").MapTo(&Email); err != nil {
 		return errors.Wrap(err, "mapping [email] section")
 	}
+	if Email.CertFile != "" {
+		Email.CertFile = ensureAbs(Email.CertFile)
+	}
+	if Email.KeyFile != "" {
+		Email.KeyFile = ensureAbs(Email.KeyFile)
+	}
 
 	if Email.Enabled {
 		if Email.From == "" {
@@ -265,6 +277,9 @@ func Init(customConf string) error {
 
 	if err = File.Section("session").MapTo(&Session); err != nil {
 		return errors.Wrap(err, "mapping [session] section")
+	}
+	if Session.Provider == "file" {
+		Session.ProviderConfig = ensureAbs(Session.ProviderConfig)
 	}
 
 	// *******************************

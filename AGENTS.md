@@ -13,6 +13,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Do not overuse semicolons. Two short sentences are almost always clearer than one sentence joined by a semicolon. Reserve the semicolon for the rare case where the two clauses are so tightly coupled that splitting them loses meaning, never as a default em-dash replacement or a way to chain related thoughts.
 - Do not add comments that repeat what the code is doing, always prefer more descriptive names. Do add comments for intentions that aren't obvious via reading the code alone. This rule takes precedence over matching existing patterns.
 - Do not include implementation details in CHANGELOG entries, describe the visible impact only from user's POV.
+- Always use `e.g.,` and `i.e.,` with the trailing comma.
 
 ## Coding guidelines
 
@@ -33,7 +34,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 ## Build instructions
 
-- Prefer `moon run <project>:<task>` over vanilla `go` or `pnpm` commands when available (e.g. `moon run gogs:build`, `moon run web:dev`). Pass `--force` to bypass cache when necessary.
+- Prefer `moon run <project>:<task>` over vanilla `go` or `pnpm` commands when available (e.g., `moon run gogs:build`, `moon run web:dev`). Pass `--force` to bypass cache when necessary.
 - Run `moon run gogs:lint` after every time you finish changing Go code, and `moon run web:lint` after changing frontend code, then fix all linter errors.
 
 ## Tool-use guidance
