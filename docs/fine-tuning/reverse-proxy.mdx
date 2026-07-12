@@ -10,6 +10,10 @@ Running Gogs behind a reverse proxy allows you to serve it on standard ports (80
   Make sure the `EXTERNAL_URL` in your `custom/conf/app.ini` matches the actual URL users will access. When using a reverse proxy for TLS termination, keep `PROTOCOL = http` in Gogs and set `EXTERNAL_URL` to `https://`. The reverse proxy handles the encryption, and Gogs communicates with it over plain HTTP on the local network.
 </Note>
 
+<Warning>
+  Serving Gogs under a subpath (e.g., `https://example.com/gogs/`) makes it share a browser origin with every other site on the same host. Requests from those sibling sites are treated as same-site, so the `SameSite` attribute on the session cookie offers no protection against them. A compromised or malicious sibling site can then mount CSRF attacks against Gogs, such as forging state-changing requests with the victim's session. Only use a subpath when you fully trust every other application on the same host. Otherwise, serve Gogs on a dedicated subdomain.
+</Warning>
+
 ## Caddy 2
 
 <Tabs>
