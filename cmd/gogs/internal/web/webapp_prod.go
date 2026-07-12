@@ -10,7 +10,6 @@ import (
 	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/public"
 )
@@ -20,19 +19,12 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 	if err != nil {
 		return errors.Wrap(err, "load embedded web assets")
 	}
-	// Prefix matches the path rewrites renderIndex applies to the index
-	// shell. Without it the browser fetches /<subpath>/assets/... and the
-	// static handler looks them up in webFS at "<subpath>/assets/...",
-	// which has no <subpath> directory, so every asset would 404 and fall
-	// through to the wildcard handler as text/html.
-	//
 	// Index is set to a sentinel that does not exist in the FS so flamego.Static
 	// never serves the raw index.html for "/" requests. The catch-all below
 	// always renders the shell through renderIndex instead, ensuring template
 	// substitutions are applied.
 	f.Use(flamego.Static(flamego.StaticOptions{
 		FileSystem: http.FS(webFS),
-		Prefix:     conf.Server.Subpath,
 		Index:      "__disabled__",
 	}))
 

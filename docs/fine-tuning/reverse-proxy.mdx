@@ -18,7 +18,7 @@ Running Gogs behind a reverse proxy allows you to serve it on standard ports (80
 
     ```caddy
     gogs.example.com {
-        proxy / http://localhost:3000
+        reverse_proxy http://localhost:3000
     }
     ```
 
@@ -34,11 +34,14 @@ Running Gogs behind a reverse proxy allows you to serve it on standard ports (80
     </Tip>
   </Tab>
   <Tab title="Subpath">
-    To serve Gogs under a subpath, note the trailing `/`:
+    To serve Gogs under a subpath, strip the external prefix before proxying requests:
 
     ```caddy
     example.com {
-        proxy /gogs/ http://localhost:3000
+        redir /gogs /gogs/
+        handle_path /gogs/* {
+            reverse_proxy http://localhost:3000
+        }
     }
     ```
 
