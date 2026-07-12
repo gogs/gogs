@@ -83,18 +83,18 @@ func TestInitHelper(_ *testing.T) {
 func TestInit(t *testing.T) {
 	outputPath := filepath.Join(t.TempDir(), "rendered.ini")
 
-	// Pin WorkDir to a fixed path in the subprocess so relative paths in the fixture
-	// resolve deterministically. USER matches the fixture's RUN_USER for CheckRunUser,
-	// and PATH is forwarded so the OpenSSH version probe can locate "ssh".
+	// Pin WorkDir to a fixed path in the subprocess so relative paths in the
+	// fixture resolve deterministically. USER matches the fixture's RUN_USER
+	// for CheckRunUser. The parent environment is inherited so
+	// platform-specific variables (e.g., SystemRoot on Windows) remain
+	// available to the subprocess.
 	cmd := exec.Command(os.Args[0], "-test.run=TestInitHelper", "--")
-	cmd.Env = []string{
+	cmd.Env = append(os.Environ(),
 		"GO_WANT_HELPER_PROCESS=1",
-		"GOCOVERDIR=" + os.TempDir(),
 		"GOGS_WORK_DIR=/tmp",
 		"USER=git",
-		"PATH=" + os.Getenv("PATH"),
-		initHelperOutputEnv + "=" + outputPath,
-	}
+		initHelperOutputEnv+"="+outputPath,
+	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "run helper: %s", out)
 
