@@ -863,10 +863,11 @@ func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
 		"{{.WebContext}}", script,
 	}
 	if wc.SubURL != "" {
-		// Prefix Vite's absolute root paths with the subpath for non-root mounts.
+		// Prefix entrypoint paths with the subpath for non-root mounts. Other
+		// bundled assets stay relative to the entrypoint that references them.
 		pairs = append(pairs,
-			`src="/assets/`, `src="`+wc.SubURL+`/assets/`,
-			`href="/assets/`, `href="`+wc.SubURL+`/assets/`,
+			`src="./assets/`, `src="`+wc.SubURL+`/assets/`,
+			`href="./assets/`, `href="`+wc.SubURL+`/assets/`,
 			`src="/src/`, `src="`+wc.SubURL+`/src/`,
 			`href="/img/`, `href="`+wc.SubURL+`/img/`,
 		)
