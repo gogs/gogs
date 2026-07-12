@@ -108,10 +108,15 @@ func reqToken() macaron.Handler {
 }
 
 // reqBasicAuth makes sure the context user is authorized via HTTP Basic Auth.
+// It also requires the connection to be over HTTPS to prevent credential interception.
 func reqBasicAuth() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.IsBasicAuth {
 			c.Status(http.StatusUnauthorized)
+			return
+		}
+		if c.Req.TLS == nil && c.Req.Header.Get("X-Forwarded-Proto") != "https" {
+			c.Status(http.StatusForbidden)
 			return
 		}
 	}
