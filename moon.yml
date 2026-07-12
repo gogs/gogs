@@ -91,7 +91,7 @@ tasks:
   portless:
     script: |
       portless alias gogs 3000 --force >/dev/null
-      portless proxy start >/dev/null 2>&1 || true
+      portless proxy start
       mkdir -p .bin/custom/conf
       touch .bin/custom/conf/app.ini
       awk '
@@ -125,6 +125,8 @@ tasks:
         }
       ' .bin/custom/conf/app.ini > .bin/custom/conf/app.ini.tmp \
         && mv .bin/custom/conf/app.ini.tmp .bin/custom/conf/app.ini
+    options:
+      interactive: true
 
   server:
     script: "cd .bin && ./gogs web"
