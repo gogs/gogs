@@ -868,8 +868,6 @@ func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
 		pairs = append(pairs,
 			`src="./assets/`, `src="`+wc.SubURL+`/assets/`,
 			`href="./assets/`, `href="`+wc.SubURL+`/assets/`,
-			`src="/assets/`, `src="`+wc.SubURL+`/assets/`,
-			`href="/assets/`, `href="`+wc.SubURL+`/assets/`,
 			`src="/src/`, `src="`+wc.SubURL+`/src/`,
 			`href="/img/`, `href="`+wc.SubURL+`/img/`,
 		)
