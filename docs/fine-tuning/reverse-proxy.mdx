@@ -10,7 +10,7 @@ Running Gogs behind a reverse proxy allows you to serve it on standard ports (80
   Make sure the `EXTERNAL_URL` in your `custom/conf/app.ini` matches the actual URL users will access. When using a reverse proxy for TLS termination, keep `PROTOCOL = http` in Gogs and set `EXTERNAL_URL` to `https://`. The reverse proxy handles the encryption, and Gogs communicates with it over plain HTTP on the local network.
 </Note>
 
-## Caddy
+## Caddy 2
 
 <Tabs>
   <Tab title="Standard">

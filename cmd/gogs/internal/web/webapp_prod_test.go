@@ -13,11 +13,10 @@ import (
 	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/public"
 )
 
-func TestMountWebAppRoutes_ServesAssetAtInternalPath(t *testing.T) {
+func TestMountWebAppRoutes_ServesAssetWithoutSubpathPrefix(t *testing.T) {
 	entries, err := fs.ReadDir(public.WebAssets, "dist/assets")
 	require.NoError(t, err)
 
@@ -41,7 +40,7 @@ func TestMountWebAppRoutes_ServesAssetAtInternalPath(t *testing.T) {
 	require.Contains(t, recorder.Header().Get("Content-Type"), "javascript")
 }
 
-func TestProductionBundle_UsesRelativeNestedAssets(t *testing.T) {
+func TestProductionBundle_UsesRelativeAssetReferences(t *testing.T) {
 	entries, err := fs.ReadDir(public.WebAssets, "dist/assets")
 	require.NoError(t, err)
 
@@ -55,13 +54,4 @@ func TestProductionBundle_UsesRelativeNestedAssets(t *testing.T) {
 		require.NotContains(t, string(contents), "url(/assets/", entry.Name())
 		require.NotContains(t, string(contents), "/assets/worker-", entry.Name())
 	}
-}
-
-func TestRenderIndex_PrefixesRelativeEntrypoints(t *testing.T) {
-	index := []byte(`<script src="./assets/app.js"></script><link href="./assets/app.css">`)
-
-	got, err := renderIndex(index, context.WebContext{SubURL: "/git"})
-	require.NoError(t, err)
-	require.Contains(t, string(got), `src="/git/assets/app.js"`)
-	require.Contains(t, string(got), `href="/git/assets/app.css"`)
 }
