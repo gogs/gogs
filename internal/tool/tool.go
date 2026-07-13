@@ -55,6 +55,11 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 	}
 
 	auth := strings.SplitN(string(s), ":", 2)
+	// A value with no colon splits into a single element, so guard the second
+	// index to avoid an out-of-range panic on malformed input.
+	if len(auth) != 2 {
+		return auth[0], "", nil
+	}
 	return auth[0], auth[1], nil
 }
 
