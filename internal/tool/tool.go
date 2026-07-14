@@ -12,6 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/cockroachdb/errors"
 	"github.com/unknwon/i18n"
 	log "unknwon.dev/clog/v2"
 
@@ -55,6 +56,9 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 	}
 
 	auth := strings.SplitN(string(s), ":", 2)
+	if len(auth) != 2 {
+		return "", "", errors.New("malformed Basic authentication credentials")
+	}
 	return auth[0], auth[1], nil
 }
 
