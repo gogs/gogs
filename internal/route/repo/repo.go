@@ -223,6 +223,10 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		c.Data["Err_Auth"] = true
 		c.RenderWithErr(c.Tr("form.auth_failed", database.HandleMirrorCredentials(err.Error(), true)), http.StatusUnauthorized, MIGRATE, &f)
 		return
+	} else if database.IsMirrorTLSVerificationError(err) {
+		c.Data["Err_CloneAddr"] = true
+		c.RenderWithErr(c.Tr("repo.migrate.untrusted_certificate"), http.StatusBadRequest, MIGRATE, &f)
+		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		c.Data["Err_CloneAddr"] = true
 		c.RenderWithErr(c.Tr("repo.migrate.failed", database.HandleMirrorCredentials(err.Error(), true)), http.StatusInternalServerError, MIGRATE, &f)
