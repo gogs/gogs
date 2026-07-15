@@ -55,6 +55,9 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 	}
 
 	auth := strings.SplitN(string(s), ":", 2)
+	if len(auth) != 2 {
+		return auth[0], "", nil
+	}
 	return auth[0], auth[1], nil
 }
 
