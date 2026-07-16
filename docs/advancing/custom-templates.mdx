@@ -5,7 +5,7 @@ icon: "paintbrush"
 ---
 
 <Danger>
-  Custom HTML templates are deprecated starting with 0.15.0. The web interface is being rebuilt as a React application, which no longer renders from the `templates/` directory, so template overrides under `custom/templates/` will stop taking effect. Injecting custom content through `head.tmpl` and `footer.tmpl` and overriding static files under `custom/public/` remain supported.
+  Custom HTML templates are deprecated starting with 0.15.0. The web interface is being rebuilt as a React application that no longer renders from the `templates/` directory. Template overrides under `custom/templates/`, including the `inject/head.tmpl` and `inject/footer.tmpl` content injection points, will stop taking effect once the migration is complete. The documentation below applies only to releases still served by the legacy template engine.
 </Danger>
 
 Gogs allows you to customize the appearance and behavior of your instance by overriding HTML templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
