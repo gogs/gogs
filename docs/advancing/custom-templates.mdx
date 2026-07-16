@@ -4,11 +4,11 @@ description: "Override HTML templates, static files, and inject custom content"
 icon: "paintbrush"
 ---
 
-Gogs allows you to customize the appearance and behavior of your instance by overriding HTML templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
-
-<Warning>
+<Danger>
   Custom HTML templates are deprecated starting with 0.15.0. The web interface is being rebuilt as a React application, which no longer renders from the `templates/` directory, so template overrides under `custom/templates/` will stop taking effect. Injecting custom content through `head.tmpl` and `footer.tmpl` and overriding static files under `custom/public/` remain supported.
-</Warning>
+</Danger>
+
+Gogs allows you to customize the appearance and behavior of your instance by overriding HTML templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
 
 <Warning>
   Be careful when overriding templates and static files, as changes to the upstream Gogs codebase may break your customizations in future releases. Keep track of what you have overridden.
