@@ -23,20 +23,23 @@ func TestIsSameSite(t *testing.T) {
 		{url: "/user/repo?key=value", want: true},
 		{url: "/user/repo#anchor", want: true},
 
-		// Backslash bypasses: browsers normalize `\` to `/` on Location headers.
+		// Backslash bypasses: browsers normalize `\` to `/` on Location headers,
+		// so any backslash makes the URL not same-site.
 		{url: "/\\github.com", want: false},
 		{url: "/a/../\\example.com", want: false},
 		{url: "/\\\\example.com", want: false},
-		// Percent-encoded backslashes decode after c.Query, so they're caught too.
+		{url: "/path\\segment", want: false},
+		// Percent-encoded backslashes survive c.Query and reach the browser raw.
 		{url: "/%5Cexample.com", want: false},
 		{url: "/%5cexample.com", want: false},
 		{url: "/a/../%5Cexample.com", want: false},
 
-		// Whitespace bypasses: browsers strip tab/CR/LF before resolving.
+		// Whitespace bypasses: browsers strip tab/CR/LF before resolving, so any
+		// occurrence makes the URL not same-site.
 		{url: "/\t/example.com", want: false},
 		{url: "/\n/example.com", want: false},
 		{url: "/\r/example.com", want: false},
-		{url: "/\texample.com", want: true},
+		{url: "/\texample.com", want: false},
 	}
 
 	for _, test := range tests {
