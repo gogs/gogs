@@ -12,6 +12,7 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/saml"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -53,6 +54,7 @@ var (
 		{auth.Name(auth.SMTP), auth.SMTP},
 		{auth.Name(auth.PAM), auth.PAM},
 		{auth.Name(auth.GitHub), auth.GitHub},
+		{auth.Name(auth.SAML), auth.SAML},
 	}
 	securityProtocols = []dropdownItem{
 		{ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted), ldap.SecurityProtocolUnencrypted},
@@ -72,6 +74,10 @@ func NewAuthSource(c *context.Context) {
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
 	c.Data["is_default"] = true
+	c.Data["saml_login_attribute"] = "uid"
+	c.Data["saml_username_attribute"] = "uid"
+	c.Data["saml_email_attribute"] = "mail"
+	c.Data["saml_full_name_attribute"] = "cn"
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
@@ -114,6 +120,20 @@ func parseSMTPConfig(f form.Authentication) *smtp.Config {
 	}
 }
 
+func parseSAMLConfig(f form.Authentication) *saml.Config {
+	return &saml.Config{
+		IDPMetadataURL:             f.SAMLIDPMetadataURL,
+		ServiceProviderIssuer:      f.SAMLServiceProviderIssuer,
+		ServiceProviderCertificate: f.SAMLServiceProviderCertificate,
+		ServiceProviderPrivateKey:  f.SAMLServiceProviderPrivateKey,
+		LoginAttribute:             f.SAMLLoginAttribute,
+		UsernameAttribute:          f.SAMLUsernameAttribute,
+		EmailAttribute:             f.SAMLEmailAttribute,
+		FullNameAttribute:          f.SAMLFullNameAttribute,
+		SkipVerify:                 f.SkipVerify,
+	}
+}
+
 func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Title("admin.auths.new")
 	c.PageIs("Admin")
@@ -142,6 +162,13 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		config = &github.Config{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 			SkipVerify:  f.SkipVerify,
+		}
+		hasTLS = true
+	case auth.SAML:
+		config = parseSAMLConfig(f)
+		if err := config.(*saml.Config).Validate(); err != nil {
+			c.RenderWithErr(c.Tr("admin.auths.saml_invalid_config", err), http.StatusUnprocessableEntity, tmplAdminAuthNew, f)
+			return
 		}
 		hasTLS = true
 	default:
@@ -244,6 +271,14 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 			SkipVerify:  f.SkipVerify,
 		})
+	case auth.SAML:
+		cfg := parseSAMLConfig(f)
+		if err := cfg.Validate(); err != nil {
+			source.Provider = saml.NewProvider(cfg)
+			c.RenderWithErr(c.Tr("admin.auths.saml_invalid_config", err), http.StatusUnprocessableEntity, tmplAdminAuthEdit, f)
+			return
+		}
+		provider = saml.NewProvider(cfg)
 	default:
 		c.Status(http.StatusBadRequest)
 		return
