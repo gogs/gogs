@@ -14,6 +14,7 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/saml"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errx"
 )
@@ -111,6 +112,14 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 		}
 		s.Provider = github.NewProvider(&cfg)
 
+	case auth.SAML:
+		var cfg saml.Config
+		err := json.Unmarshal([]byte(s.Config), &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = saml.NewProvider(&cfg)
+
 	case auth.Mock:
 		var cfg mockProviderConfig
 		err := json.Unmarshal([]byte(s.Config), &cfg)
@@ -151,6 +160,10 @@ func (s *LoginSource) IsGitHub() bool {
 	return s.Type == auth.GitHub
 }
 
+func (s *LoginSource) IsSAML() bool {
+	return s.Type == auth.SAML
+}
+
 func (s *LoginSource) LDAP() *ldap.Config {
 	return s.Provider.Config().(*ldap.Config)
 }
@@ -165,6 +178,10 @@ func (s *LoginSource) PAM() *pam.Config {
 
 func (s *LoginSource) GitHub() *github.Config {
 	return s.Provider.Config().(*github.Config)
+}
+
+func (s *LoginSource) SAML() *saml.Config {
+	return s.Provider.Config().(*saml.Config)
 }
 
 // LoginSourcesStore is the storage layer for login sources.

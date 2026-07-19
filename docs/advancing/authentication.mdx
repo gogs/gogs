@@ -4,7 +4,7 @@ description: "Integrate with your existing IAM system"
 icon: "key"
 ---
 
-Gogs supports authentication through various external sources. Currently supported backends are **LDAP**, **SMTP**, **PAM**, and **HTTP header**. Authentication sources can be configured in two ways:
+Gogs supports authentication through various external sources. Currently supported backends are **LDAP**, **SAML 2.0**, **SMTP**, **PAM**, and **HTTP header**. Authentication sources can be configured in two ways:
 
 - **Admin Panel**: Navigate to **Admin Panel > Authentication Sources**
 - **Configuration files**: Place `.conf` files in the `custom/conf/auth.d/` directory. Each file describes one source using INI format. Files are loaded once at startup and keyed by `id`. See the "Configuration file" subsection under each backend below for examples.
@@ -193,6 +193,80 @@ It is possible to use either Bind DN or Simple Auth with FreeIPA. The examples b
     More precisely, Gogs maps the login name onto the user's "Authentication Login Name", which administrators can edit on the user's **Edit Account** page.
   </Accordion>
 </AccordionGroup>
+
+## SAML 2.0
+
+SAML authentication lets users sign in through an external identity provider (IdP). Gogs acts as the service provider (SP), validates signed SAML responses, and creates an activated Gogs account after the first successful sign-in.
+
+Gogs supports SP-initiated SAML 2.0 sign-in with the HTTP-Redirect or HTTP-POST request binding and the HTTP-POST response binding. IdP-initiated sign-in and single logout are not supported.
+
+### Prerequisites
+
+- Set `[server] EXTERNAL_URL` to the exact public URL users use to reach Gogs. The generated entity ID, metadata URL, and assertion consumer service (ACS) URL are based on this value.
+- Create a certificate and private key that Gogs can read. Gogs uses this key pair to sign authentication requests with SHA-256 and to protect pending sign-in cookies.
+- Configure your IdP to return stable login, username, and email attributes.
+
+For example, create a five-year self-signed SP certificate:
+
+```bash
+openssl req -newkey rsa:3072 -nodes -x509 -days 1825 \
+  -subj "/CN=gogs-saml" \
+  -keyout /etc/gogs/saml.key \
+  -out /etc/gogs/saml.crt
+chmod 600 /etc/gogs/saml.key
+```
+
+The private key must be readable only by the account running Gogs. The certificate may be shared with the IdP through Gogs' generated SP metadata.
+
+### Configuration
+
+Create a **SAML 2.0** source under **Admin Panel > Authentication Sources**. Configure these fields:
+
+| Field | Required | Description | Example |
+|---|---|---|---|
+| **Authentication Name** | Yes | The label shown on the sign-in button. | `Company SSO` |
+| **Identity provider metadata URL** | Yes | The IdP metadata endpoint. Gogs verifies TLS by default and caches valid metadata for one hour. | `https://idp.example.com/metadata` |
+| **Service provider issuer** | No | A custom entity ID. Leave empty to use the generated SP metadata URL. | `https://gogs.example.com/saml` |
+| **Service provider certificate file** | Yes | Absolute path to the PEM-encoded SP certificate. | `/etc/gogs/saml.crt` |
+| **Service provider private key file** | Yes | Absolute path to the matching PEM-encoded private key. | `/etc/gogs/saml.key` |
+| **Login identifier attribute** | Yes | A stable, unique IdP attribute used to match returning users. | `uid` |
+| **Username Attribute** | Yes | The IdP attribute used as the Gogs username on first sign-in. | `uid` |
+| **Email Attribute** | Yes | The IdP attribute used as the primary email address on first sign-in. | `mail` |
+| **Full name attribute** | No | The IdP attribute used as the display name. | `cn` |
+| **Skip TLS Verify** | No | Disable TLS certificate verification when loading IdP metadata. Use only for controlled test environments. | -- |
+
+After saving the source, open it again and copy the **Service provider metadata** URL into your IdP application. The metadata contains the entity ID, signing certificate, and ACS URL for that source.
+
+<Warning>
+  The login identifier must be stable and unique. Changing the configured attribute or changing its value in the IdP can prevent an existing user from being matched. Gogs never links a SAML identity to a local account based only on a matching username or email address.
+</Warning>
+
+SAML users are provisioned automatically after a valid assertion. If the asserted username or email is already owned by another account, sign-in stops and an administrator must resolve the conflict. Gogs' local multi-factor authentication remains in effect for SAML users that enabled it.
+
+### Configuration file
+
+SAML sources can also be defined in `custom/conf/auth.d/`:
+
+```ini
+id           = 106
+type         = saml
+name         = Company SSO
+is_activated = true
+is_default   = false
+
+[config]
+idp_metadata_url             = https://idp.example.com/metadata
+service_provider_issuer      =
+service_provider_certificate = /etc/gogs/saml.crt
+service_provider_private_key = /etc/gogs/saml.key
+login_attribute              = uid
+username_attribute           = uid
+email_attribute              = mail
+full_name_attribute          = cn
+skip_verify                  = false
+```
+
+The metadata URL for this example is `/api/web/user/saml/106/metadata` under the configured `EXTERNAL_URL`.
 
 ## PAM
 
