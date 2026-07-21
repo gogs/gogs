@@ -71,6 +71,19 @@ func ReadMailFile(name string) ([]byte, error) {
 	return files.ReadFile(path.Join("mail", name))
 }
 
+// ReadInjectFile returns the content of an injection template (e.g.,
+// "head.tmpl" or "footer.tmpl") from the "inject" directory. A file placed
+// under customDir on disk takes precedence over the embedded default, which is
+// empty. Both the embedded default and a missing custom file yield empty
+// content with no error, so an instance that injects nothing renders normally.
+func ReadInjectFile(customDir, name string) ([]byte, error) {
+	fpath := path.Join(customDir, "inject", name)
+	if osx.IsFile(fpath) {
+		return os.ReadFile(fpath)
+	}
+	return files.ReadFile(path.Join("inject", name))
+}
+
 // NewTemplateFileSystem returns a macaron.TemplateFileSystem instance for embedded assets.
 // The argument "dir" can be used to serve subset of embedded assets. Template file
 // found under the "customDir" on disk has higher precedence over embedded assets.

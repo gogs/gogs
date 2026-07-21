@@ -859,8 +859,22 @@ func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
 	script := `<script>window.__webContext=` + string(payload) +
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
 
+	customDir := filepath.Join(conf.CustomDir(), "templates")
+	head, err := templates.ReadInjectFile(customDir, "head.tmpl")
+	if err != nil {
+		return nil, errors.Wrap(err, "read head injection")
+	}
+	footer, err := templates.ReadInjectFile(customDir, "footer.tmpl")
+	if err != nil {
+		return nil, errors.Wrap(err, "read footer injection")
+	}
+
 	pairs := []string{
-		"{{.WebContext}}", script,
+		// Append the head injection after the web context script so custom
+		// tags land inside <head>. The footer injection replaces the closing
+		// body tag to land just before </body>.
+		"{{.WebContext}}", script + string(head),
+		"</body>", string(footer) + "</body>",
 	}
 	if wc.SubURL != "" {
 		// Prefix entrypoint paths with the subpath for non-root mounts. Other

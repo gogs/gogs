@@ -4,6 +4,12 @@ description: "Override HTML templates, static files, and inject custom content"
 icon: "paintbrush"
 ---
 
+<Danger>
+  Overriding full HTML page templates such as `custom/templates/home.tmpl` is deprecated starting with 0.15.0. The web interface is being rebuilt as a React application that renders pages on the client, so it no longer reads page templates from the `templates/` directory and your copies of them will stop taking effect once the migration is complete.
+
+  Content injection through `inject/head.tmpl` and `inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides all remain fully supported.
+</Danger>
+
 Gogs allows you to customize the appearance and behavior of your instance by overriding HTML templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
 
 <Warning>
@@ -13,6 +19,10 @@ Gogs allows you to customize the appearance and behavior of your instance by ove
 ## Override HTML templates
 
 You can replace any HTML template (including email templates) by placing a customized version under the `custom/templates/` directory.
+
+<Warning>
+  Overriding page templates such as `home.tmpl` is deprecated and stops working once the React web interface migration is complete (see the notice at the top of this page). Email template overrides are not affected, because emails are still rendered on the server.
+</Warning>
 
 <Steps>
   <Step title="Find the original template">
@@ -60,6 +70,10 @@ The injection points are:
 |---|---|---|
 | `custom/templates/inject/head.tmpl` | Inside `<head>` | Add stylesheets, meta tags, analytics scripts |
 | `custom/templates/inject/footer.tmpl` | Before `</body>` | Add scripts, tracking code, custom footer content |
+
+<Note>
+  The contents of these files are inserted into every page verbatim, so use plain HTML. Go template directives such as `{{.User}}` are not evaluated.
+</Note>
 
 ### Example: custom CSS file
 

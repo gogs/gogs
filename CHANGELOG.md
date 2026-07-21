@@ -19,7 +19,7 @@ All notable changes to Gogs are documented in this file.
 ### Removed
 
 - The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)
-- Support for customizing pages with Go template files stops being possible.
+- Support for overriding full page templates (e.g., `custom/templates/home.tmpl`), as the web interface no longer renders pages from server-side templates. Content injection through `custom/templates/inject/head.tmpl` and `custom/templates/inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides remain supported. [#8392](https://github.com/gogs/gogs/pull/8392)
 - Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)
 - Support for `memcache` as the cache adapter. [#8270](https://github.com/gogs/gogs/pull/8270)
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
