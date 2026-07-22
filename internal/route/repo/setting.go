@@ -82,11 +82,15 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repo.Description = f.Description
 		repo.Website = f.Website
 
-		// Visibility of forked repository is forced sync with base repository.
-		if repo.IsFork {
-			f.Private = repo.BaseRepo.IsPrivate
-			f.Unlisted = repo.BaseRepo.IsUnlisted
-		}
+		f.Private, f.Unlisted = normalizeRepoSettingsVisibility(
+			repo.IsFork,
+			repo.BaseRepo != nil && repo.BaseRepo.IsPrivate,
+			repo.BaseRepo != nil && repo.BaseRepo.IsUnlisted,
+			conf.Repository.ForcePrivate,
+			c.User.IsAdmin,
+			f.Private,
+			f.Unlisted,
+		)
 
 		visibilityChanged := repo.IsPrivate != f.Private || repo.IsUnlisted != f.Unlisted
 		repo.IsPrivate = f.Private
@@ -324,6 +328,19 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	default:
 		c.NotFound()
 	}
+}
+
+func normalizeRepoSettingsVisibility(repoIsFork, basePrivate, baseUnlisted, forcePrivate, actorIsAdmin, requestedPrivate, requestedUnlisted bool) (private, unlisted bool) {
+	private = requestedPrivate
+	unlisted = requestedUnlisted
+	if repoIsFork {
+		private = basePrivate
+		unlisted = baseUnlisted
+	}
+	if forcePrivate && !actorIsAdmin {
+		private = true
+	}
+	return private, unlisted
 }
 
 func SettingsAvatar(c *context.Context) {
