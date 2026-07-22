@@ -320,6 +320,7 @@ type RepositoryOpts struct {
 	MaxCreationLimit         int
 	PreferredLicenses        []string
 	DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
+	EnableGitProtocolClone   bool `ini:"ENABLE_GIT_PROTOCOL_CLONE"`
 	EnableLocalPathMigration bool
 	EnableRawFileRenderMode  bool
 	CommitsFetchConcurrency  int

@@ -135,6 +135,8 @@
 						<dd>{{Join .Repository.PreferredLicenses ", "}}</dd>
 						<dt>{{.i18n.Tr "admin.config.repo.disable_http_git"}}</dt>
 						<dd><i class="fa fa{{if .Repository.DisableHTTPGit}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.enable_git_protocol_clone"}}</dt>
+						<dd><i class="fa fa{{if .Repository.EnableGitProtocolClone}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.repo.enable_local_path_migration"}}</dt>
 						<dd><i class="fa fa{{if .Repository.EnableLocalPathMigration}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.repo.enable_raw_file_render_mode"}}</dt>
