@@ -1010,9 +1010,9 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 }
 
 // GetParticipantsByIssueID returns all users who are participated in comments of an issue.
-func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
+func GetParticipantsByIssueID(e Engine, issueID int64) ([]*User, error) {
 	userIDs := make([]int64, 0, 5)
-	if err := x.Table("comment").Cols("poster_id").
+	if err := e.Table("comment").Cols("poster_id").
 		Where("issue_id = ?", issueID).
 		Distinct("poster_id").
 		Find(&userIDs); err != nil {
@@ -1023,7 +1023,7 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 	}
 
 	users := make([]*User, 0, len(userIDs))
-	return users, x.In("id", userIDs).Find(&users)
+	return users, e.In("id", userIDs).Find(&users)
 }
 
 // .___                             ____ ___
