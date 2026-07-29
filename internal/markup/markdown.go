@@ -100,6 +100,98 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 	r.Renderer.AutoLink(out, link, kind)
 }
 
+// markdownAlerts maps the type of a GitHub-style alert (e.g., "> [!NOTE]") to
+// the title and the octicon that identify it in the rendered output.
+var markdownAlerts = map[string]struct {
+	title string
+	icon  string
+}{
+	"note":      {title: "Note", icon: "octicon-info"},
+	"tip":       {title: "Tip", icon: "octicon-light-bulb"},
+	"important": {title: "Important", icon: "octicon-megaphone"},
+	"warning":   {title: "Warning", icon: "octicon-alert"},
+	"caution":   {title: "Caution", icon: "octicon-stop"},
+}
+
+// markdownAlertPattern matches the alert marker at the very beginning of a
+// rendered paragraph, e.g., "<p>[!NOTE]". The marker only counts when it takes
+// up the entire first line, so the second submatch tells whether the paragraph
+// continues after the marker or ends right there.
+var markdownAlertPattern = lazyregexp.New(`(?i)\A<p>\[!(note|tip|important|warning|caution)\][ \t]*(?:<br\s*/?>)?(\n|</p>)`)
+
+// paragraphBoundary is what the underlying renderer emits between two adjacent
+// paragraphs.
+var paragraphBoundary = []byte("</p>\n\n")
+
+// splitParagraphs breaks rendered HTML right after every paragraph that is
+// immediately followed by another one, so that each returned chunk starts with a
+// paragraph. Concatenating the chunks reproduces the input.
+func splitParagraphs(rawHTML []byte) [][]byte {
+	var chunks [][]byte
+	for {
+		i := bytes.Index(rawHTML, paragraphBoundary)
+		if i < 0 {
+			return append(chunks, rawHTML)
+		}
+		end := i + len(paragraphBoundary)
+		chunks = append(chunks, rawHTML[:end])
+		rawHTML = rawHTML[end:]
+	}
+}
+
+// BlockQuote defines how block quotes should be processed to produce
+// corresponding HTML elements. Block quotes that begin with an alert marker,
+// e.g., "> [!NOTE]", are turned into alert boxes instead.
+//
+// The underlying parser merges block quotes that are only separated by a blank
+// line into a single one, so every paragraph is examined for a marker, not just
+// the first.
+func (r *MarkdownRenderer) BlockQuote(out *bytes.Buffer, text []byte) {
+	quoted := bytes.NewBuffer(nil) // Content that belongs to a plain block quote
+	inAlert := false
+	closeCurrent := func() {
+		if inAlert {
+			out.WriteString("</div>\n")
+			inAlert = false
+			return
+		}
+		if quoted.Len() > 0 {
+			r.Renderer.BlockQuote(out, quoted.Bytes())
+			quoted.Reset()
+		}
+	}
+
+	for _, chunk := range splitParagraphs(text) {
+		m := markdownAlertPattern.FindSubmatch(chunk)
+		if m == nil {
+			if inAlert {
+				out.Write(chunk)
+			} else {
+				quoted.Write(chunk)
+			}
+			continue
+		}
+
+		closeCurrent()
+		inAlert = true
+
+		typ := strings.ToLower(string(m[1]))
+		alert := markdownAlerts[typ]
+		_, _ = fmt.Fprintf(out,
+			"<div class=\"markdown-alert markdown-alert-%s\">\n<p class=\"markdown-alert-title\"><span class=\"octicon %s\" aria-hidden=\"true\"></span>%s</p>\n",
+			typ, alert.icon, alert.title,
+		)
+
+		// A marker that took up the whole paragraph leaves the paragraph closed
+		// already, so only reopen one when there is content left on it.
+		if string(m[2]) != "</p>" {
+			out.WriteString("<p>")
+		}
+		out.Write(chunk[len(m[0]):])
+	}
+	closeCurrent()
+}
+
 // ListItem defines how list items should be processed to produce corresponding HTML elements.
 func (r *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	// Detect procedures to draw checkboxes.
