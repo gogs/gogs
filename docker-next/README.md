@@ -151,7 +151,7 @@ Open `https://gogs.example.com/` and sign up. Whoever signs up while there are n
 Alternatively, the admin user can be created from the command line. The command runs inside the container so it reaches the database through the same configuration:
 
 ```zsh
-$ docker exec -it gogs gogs admin create-user \
+$ docker exec -it gogs /app/gogs/gogs admin create-user \
     --name admin \
     --password ${PASSWORD} \
     --email admin@example.com \
