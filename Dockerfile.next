@@ -41,11 +41,15 @@ RUN apk --no-cache --no-progress add \
   "zlib>1.3.2"
 
 ENV GOGS_CUSTOM=/data/gogs
+# Pin the work directory so `gogs` resolves the same paths no matter which path it
+# is invoked through, e.g., the /usr/local/bin/gogs symlink used by `docker exec`.
+ENV GOGS_WORK_DIR=/app/gogs
 
 WORKDIR /app/gogs
 COPY --from=binarybuilder /gogs.io/gogs/.bin/gogs .
 COPY docker-next/start.sh .
 RUN chmod +x start.sh && \
+    ln -s /app/gogs/gogs /usr/local/bin/gogs && \
     mkdir -p /data && \
     ln -s /data/git /home/git && \
     chown -R git:git /app/gogs /data

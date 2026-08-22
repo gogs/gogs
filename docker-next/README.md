@@ -152,11 +152,10 @@ Alternatively, the admin user can be created from the command line. The command 
 
 ```zsh
 $ docker exec -it gogs gogs admin create-user \
-    --name admin \
+    --name gogsadmin \
     --password ${PASSWORD} \
     --email admin@example.com \
-    --admin \
-    --config /data/gogs/conf/app.ini
+    --admin
 ```
 
 Once Gogs is running, use `docker start gogs` / `docker stop gogs` for subsequent restarts.
