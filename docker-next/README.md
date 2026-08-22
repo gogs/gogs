@@ -152,7 +152,7 @@ Alternatively, the admin user can be created from the command line. The command 
 
 ```zsh
 $ docker exec -it gogs gogs admin create-user \
-    --name admin \
+    --name gogsadmin \
     --password ${PASSWORD} \
     --email admin@example.com \
     --admin
