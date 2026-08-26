@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 
 # This is very simple, yet effective backup rotation script.
-# Using find command, all files that are older than BACKUP_RETENTION_DAYS are accumulated and deleted using rm.
+# All files that are older than the latest RETENTION_NUM backup files are accumulated and deleted using rm.
 main() {
 	BACKUP_PATH="${1:-}"
-	FIND_EXPRESSION="${2:-mtime +7}"
+	RETENTION_NUM="${2:-1}"
 
 	if [ -z "${BACKUP_PATH}" ]; then
 		echo "Error: Required argument missing BACKUP_PATH" 1>&2
@@ -21,8 +21,8 @@ main() {
 		exit 1
 	fi
 
-	# shellcheck disable=SC2086
-	find "${BACKUP_PATH}/" -type f -name "gogs-backup-*.zip" -${FIND_EXPRESSION} -print -exec rm "{}" +
+	# shellcheck disable=SC2012  # File name is expected
+	ls -1t "${BACKUP_PATH}/"gogs-backup-*.zip | tail -n +"$(( RETENTION_NUM + 1 ))" | xargs -n10 --no-run-if-empty rm
 }
 
 main "$@"
