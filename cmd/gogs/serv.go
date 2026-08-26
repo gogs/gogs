@@ -15,6 +15,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/lfs/transfer"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 const (
@@ -99,6 +101,22 @@ func parseSSHCmd(cmd string) (string, string) {
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
 }
 
+// parseLFSTransferArgs splits LFS transfer arguments into a repository path
+// and an operation. The input is expected to be in the form
+// "'owner/repo.git' upload" or "owner/repo.git download".
+func parseLFSTransferArgs(args string) (repoPath, operation string, ok bool) {
+	idx := strings.LastIndex(args, " ")
+	if idx < 0 {
+		return "", "", false
+	}
+	repoPath = strings.Trim(args[:idx], "'/ ")
+	operation = args[idx+1:]
+	if operation != "upload" && operation != "download" {
+		return "", "", false
+	}
+	return repoPath, operation, true
+}
+
 func checkDeployKey(key *database.PublicKey, repo *database.Repository) {
 	// Check if this deploy key belongs to current repository.
 	if !database.HasDeployKey(key.ID, repo.ID) {
@@ -143,7 +161,26 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	verb, args := parseSSHCmd(sshCmd)
-	repoFullName := strings.ToLower(strings.Trim(args, "'"))
+
+	if verb == "git-lfs-authenticate" {
+		fail("This server uses git-lfs-transfer for LFS over SSH", "")
+	}
+
+	var repoFullName string
+	var lfsOperation string
+	isLFSTransfer := verb == "git-lfs-transfer"
+
+	if isLFSTransfer {
+		var ok bool
+		repoFullName, lfsOperation, ok = parseLFSTransferArgs(args)
+		if !ok {
+			fail("Invalid LFS transfer command", "Invalid LFS transfer arguments: %v", args)
+		}
+		repoFullName = strings.ToLower(repoFullName)
+	} else {
+		repoFullName = strings.ToLower(strings.Trim(args, "'"))
+	}
+
 	repoFields := strings.SplitN(repoFullName, "/", 2)
 	if len(repoFields) != 2 {
 		fail("Invalid repository path", "Invalid repository path: %v", args)
@@ -169,9 +206,20 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	}
 	repo.Owner = owner
 
-	requestMode, ok := allowedCommands[verb]
-	if !ok {
-		fail("Unknown git command", "Unknown git command '%s'", verb)
+	// Determine the required access mode for this command.
+	var requestMode database.AccessMode
+	if isLFSTransfer {
+		if lfsOperation == "upload" {
+			requestMode = database.AccessModeWrite
+		} else {
+			requestMode = database.AccessModeRead
+		}
+	} else {
+		var ok bool
+		requestMode, ok = allowedCommands[verb]
+		if !ok {
+			fail("Unknown git command", "Unknown git command '%s'", verb)
+		}
 	}
 
 	// Prohibit push to mirror repositories.
@@ -238,6 +286,20 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 		if err = database.UpdatePublicKey(key); err != nil {
 			fail("Internal error", "UpdatePublicKey: %v", err)
 		}
+	}
+
+	// Handle LFS SSH transfer protocol.
+	if isLFSTransfer {
+		storagers := map[lfsx.Storage]lfsx.Storager{
+			lfsx.StorageLocal: &lfsx.LocalStorage{
+				Root:    conf.LFS.ObjectsPath,
+				TempDir: conf.LFS.ObjectsTempPath,
+			},
+		}
+		if err := transfer.Serve(ctx, os.Stdin, os.Stdout, lfsOperation, repo, transfer.NewStore(), lfsx.Storage(conf.LFS.Storage), storagers); err != nil {
+			fail("Internal error", "Failed to serve LFS transfer: %v", err)
+		}
+		return nil
 	}
 
 	// Special handle for Windows.
