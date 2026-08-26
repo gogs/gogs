@@ -30,12 +30,28 @@ func TestInferSubmoduleURL(t *testing.T) {
 			expURL: "http://github.com/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
 		},
 		{
+			name: "same instance SSH URL with port",
+			submodule: &git.Submodule{
+				URL:    "ssh://git@gogs.example.com:2222/owner/other.git",
+				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
+			},
+			expURL: "https://gogs.example.com/owner/other/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
+		},
+		{
 			name: "SSH URL in SCP syntax",
 			submodule: &git.Submodule{
 				URL:    "git@github.com:gogs/docs-api.git",
 				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
 			},
 			expURL: "http://github.com/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
+		},
+		{
+			name: "same instance SSH URL in SCP syntax",
+			submodule: &git.Submodule{
+				URL:    "git@gogs.example.com:owner/other.git",
+				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
+			},
+			expURL: "https://gogs.example.com/owner/other/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
 		},
 		{
 			name: "relative path",
