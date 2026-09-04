@@ -2,6 +2,7 @@ package context
 
 import (
 	stdctx "context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -127,6 +128,30 @@ func (c *Context) Success(name string) {
 // JSONSuccess responses JSON with status http.StatusOK.
 func (c *Context) JSONSuccess(data any) {
 	c.JSON(http.StatusOK, data)
+}
+
+// JSON responses data in JSON with the given status code. It shadows the JSON
+// method of the embedded macaron.Context to omit the "charset" parameter from
+// the Content-Type. The "charset" parameter is not defined for the
+// "application/json" media type and adding one makes the media type invalid
+// (RFC 8259, IANA Media Types registry).
+func (c *Context) JSON(status int, data any) {
+	var (
+		result []byte
+		err    error
+	)
+	if macaron.Env != macaron.PROD {
+		result, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		result, err = json.Marshal(data)
+	}
+	if err != nil {
+		http.Error(c.Resp, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	c.Resp.Header().Set("Content-Type", "application/json")
+	c.Resp.WriteHeader(status)
+	_, _ = c.Resp.Write(result)
 }
 
 // RawRedirect simply calls underlying Redirect method with no escape.
