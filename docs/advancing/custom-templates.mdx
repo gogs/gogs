@@ -109,6 +109,6 @@ The following example shows how to include a custom CSS file in your Gogs instan
     ```
   </Step>
   <Step title="Restart Gogs">
-    Restart Gogs to load the new `head.tmpl` injection template. After the initial restart, future edits to the custom CSS file **do not** require restarting Gogs.
+    Restart Gogs to load the new `head.tmpl` injection template. A production server reads the injection templates once at startup, so later edits to `head.tmpl` or `footer.tmpl` require another restart. Edits to the custom CSS file it links do not require a restart.
   </Step>
 </Steps>

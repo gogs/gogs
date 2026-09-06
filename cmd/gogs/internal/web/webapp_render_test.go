@@ -20,8 +20,11 @@ func TestRenderIndex_injection(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(injectDir, "footer.tmpl"), []byte(`<script>footerMarker()</script>`), 0600))
 	t.Setenv("GOGS_CUSTOM", customDir)
 
+	inject, err := readInjectContent()
+	require.NoError(t, err)
+
 	shell := `<html><head>{{.WebContext}}</head><body><div id="root"></div></body></html>`
-	got, err := renderIndex([]byte(shell), context.WebContext{Lang: "en-US"})
+	got, err := renderIndex([]byte(shell), context.WebContext{Lang: "en-US"}, inject)
 	require.NoError(t, err)
 
 	out := string(got)
