@@ -186,6 +186,14 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	if r.Branch == "" {
 		r.Branch = c.Repo.Repository.DefaultBranch
 	}
+	oldBranch, newBranch := putContentsBranches(
+		c.Repo.Repository.DefaultBranch,
+		r.Branch,
+		func(branch string) bool {
+			_, err := c.Repo.Repository.GetBranch(branch)
+			return err == nil
+		},
+	)
 
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Params("*"))
@@ -193,8 +201,8 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.User,
 		database.UpdateRepoFileOptions{
-			OldBranch:   c.Repo.Repository.DefaultBranch,
-			NewBranch:   r.Branch,
+			OldBranch:   oldBranch,
+			NewBranch:   newBranch,
 			OldTreeName: treePath,
 			NewTreeName: treePath,
 			Message:     r.Message,
@@ -244,4 +252,16 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 			"commit":  apiCommit,
 		},
 	)
+}
+
+func putContentsBranches(defaultBranch, targetBranch string, branchExists func(string) bool) (oldBranch, newBranch string) {
+	if targetBranch == "" {
+		targetBranch = defaultBranch
+	}
+
+	oldBranch = defaultBranch
+	if branchExists(targetBranch) {
+		oldBranch = targetBranch
+	}
+	return oldBranch, targetBranch
 }
