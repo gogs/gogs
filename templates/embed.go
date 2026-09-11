@@ -71,11 +71,7 @@ func ReadMailFile(name string) ([]byte, error) {
 	return files.ReadFile(path.Join("mail", name))
 }
 
-// ReadInjectFile returns the content of an injection template (e.g.,
-// "head.tmpl" or "footer.tmpl") from the "inject" directory. A file placed
-// under customDir on disk takes precedence over the embedded default, which is
-// empty. Both the embedded default and a missing custom file yield empty
-// content with no error, so an instance that injects nothing renders normally.
+// ReadInjectFile returns the content of the named injection template.
 func ReadInjectFile(customDir, name string) ([]byte, error) {
 	fpath := path.Join(customDir, "inject", name)
 	if osx.IsFile(fpath) {

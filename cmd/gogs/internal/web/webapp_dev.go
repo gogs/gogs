@@ -34,8 +34,6 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		}
 		_ = resp.Body.Close()
 		wc := context.WebContextFrom(resp.Request)
-		// Read the injection content per request so edits reload without a
-		// restart during development.
 		var body []byte
 		inject, err := readInjectContent()
 		if err == nil {

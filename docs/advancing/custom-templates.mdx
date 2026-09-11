@@ -20,10 +20,6 @@ Gogs allows you to customize the appearance and behavior of your instance by ove
 
 You can replace any HTML template (including email templates) by placing a customized version under the `custom/templates/` directory.
 
-<Warning>
-  Overriding page templates such as `home.tmpl` is deprecated and stops working once the React web interface migration is complete (see the notice at the top of this page). Email template overrides are not affected, because emails are still rendered on the server.
-</Warning>
-
 <Steps>
   <Step title="Find the original template">
     Locate the template file you want to customize in the `templates/` directory of the Gogs source code. For example, to customize the home page, find `templates/home.tmpl`.
@@ -71,9 +67,9 @@ The injection points are:
 | `custom/templates/inject/head.tmpl` | Inside `<head>` | Add stylesheets, meta tags, analytics scripts |
 | `custom/templates/inject/footer.tmpl` | Before `</body>` | Add scripts, tracking code, custom footer content |
 
-<Note>
-  The contents of these files are inserted into every page verbatim, so use plain HTML. Go template directives such as `{{.User}}` are not evaluated.
-</Note>
+<Warning>
+  With the React web interface, injection files no longer evaluate Go template expressions such as `{{.User}}`. Their contents are inserted into every page verbatim. If your existing `head.tmpl` or `footer.tmpl` uses Go template expressions, replace them with plain HTML when migrating to the React web interface.
+</Warning>
 
 ### Example: custom CSS file
 

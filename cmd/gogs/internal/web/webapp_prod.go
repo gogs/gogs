@@ -33,9 +33,6 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		return errors.Wrap(err, `read "dist/index.html"`)
 	}
 
-	// Read the injection content once at startup. Editing the inject templates
-	// requires a restart in production, unlike development where they reload
-	// on the next request.
 	inject, err := readInjectContent()
 	if err != nil {
 		return errors.Wrap(err, "read inject content")
