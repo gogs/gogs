@@ -230,7 +230,7 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 	baseRepoPath := database.RepoPath(repo.Owner.Name, repo.Name)
 	prMeta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
-		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
+		if isGitNotValidObjectNameError(err) {
 			c.Data["IsPullReuqestBroken"] = true
 			c.Data["BaseTarget"] = "deleted"
 			c.Data["NumCommits"] = 0
@@ -244,6 +244,13 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 	c.Data["NumCommits"] = len(prMeta.Commits)
 	c.Data["NumFiles"] = prMeta.NumFiles
 	return prMeta
+}
+
+func isGitNotValidObjectNameError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "not a valid object name")
 }
 
 func ViewPullCommits(c *context.Context) {
