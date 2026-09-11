@@ -1,4 +1,4 @@
-import { type FileDiffMetadata, hydratePartialDiff, parsePatchFiles } from "@pierre/diffs";
+import { type FileDiffContentsLoader, parsePatchFiles } from "@pierre/diffs";
 import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useLoaderData, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -11,7 +11,6 @@ import {
   Copy,
   FileCode2,
   FolderTree,
-  Loader2,
   Search,
   UnfoldVertical,
   X,
@@ -294,15 +293,6 @@ export function RepoCommit() {
   // keyed by item id (which contains the file's position in the patch),
   // so serializing it would bloat the URL and not be portably shareable.
   const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
-  // Per-file expansion state. "loading" while the raw file contents are
-  // being fetched, "done" once Pierre has been handed the full file (after
-  // which the item is `isPartial: false` and native expansion controls
-  // render). Missing key = not yet expanded.
-  const [expandedById, setExpandedById] = useState<Record<string, "loading" | "done">>({});
-  // Upgraded (non-partial) `FileDiffMetadata` per item id. When set, the
-  // `items` useMemo swaps in the upgraded fileDiff so Pierre's controlled
-  // CodeView re-renders the file with full file contents.
-  const [upgradedById, setUpgradedById] = useState<Record<string, FileDiffMetadata>>({});
   // Per-file "copied path" feedback. Drives the transient check-mark swap on
   // the "Copy file path" icon button in the file header's metadata row. The
   // flag clears 1.2s after the copy.
@@ -364,19 +354,16 @@ export function RepoCommit() {
   // Stamp each item with its current collapse state. Pierre's CodeView caches
   // item records by id and only re-reads their payload (including `collapsed`)
   // when `version` increases, so we encode the collapsed state into the
-  // version too.
+  // version too. Line expansion (whole-file or per-hunk) is owned by Pierre
+  // once `loadDiffFiles` hydrates a partial diff, so it does not feed the
+  // controlled item payload here.
   const items = useMemo<CodeViewItem<undefined>[]>(() => {
     return allItems.map((item) => {
       const collapsed = collapsedById[item.id] ?? false;
-      const upgraded = item.type === "diff" ? upgradedById[item.id] : undefined;
-      const next: CodeViewItem<undefined> =
-        upgraded != null && item.type === "diff" ? { ...item, fileDiff: upgraded } : item;
-      // Bump version when collapsed state OR upgrade state changes so Pierre
-      // re-reads the item payload.
-      const version = (collapsed ? 1 : 0) + (upgraded != null ? 2 : 0);
-      return { ...next, collapsed, version };
+      const version = collapsed ? 1 : 0;
+      return { ...item, collapsed, version };
     });
-  }, [allItems, collapsedById, upgradedById]);
+  }, [allItems, collapsedById]);
 
   const stats = useMemo(() => {
     let additions = 0;
@@ -514,66 +501,63 @@ export function RepoCommit() {
     [t],
   );
 
-  // Mirror `expandedById` into a ref so the in-flight guard below can read
-  // the latest state without making `expandAllLinesFor` churn on every
-  // expand. Otherwise the callback's identity changes per expand, cascading
-  // to `renderHeaderMetadata` and re-rendering every file header in the
-  // diff.
-  const expandedByIdRef = useRef(expandedById);
-  useEffect(() => {
-    expandedByIdRef.current = expandedById;
-  }, [expandedById]);
+  // Fetch the full contents of one side of a file from the raw endpoint. The
+  // ref must exist (an added file has no pre-image, a deleted file no
+  // post-image), and the caller only asks for a side that does.
+  const fetchRawFile = useCallback(
+    async (ref: string | undefined, filePath: string) => {
+      if (!ref) throw new Error("raw fetch: missing ref");
+      const url = subUrl(`/${owner}/${repo}/raw/${ref}/${filePath}`);
+      const res = await fetch(url, { credentials: "same-origin" });
+      if (!res.ok) throw new Error(`raw fetch ${res.status}`);
+      const contents = await res.text();
+      return { name: filePath, contents };
+    },
+    [owner, repo],
+  );
 
-  const expandAllLinesFor = useCallback(
-    async (item: CodeViewItem<undefined>) => {
-      if (item.type !== "diff") return;
-      if (expandedByIdRef.current[item.id]) return;
-      const fileDiff = item.fileDiff;
-      // `hydratePartialDiff` only upgrades diffs that carry unchanged context
-      // to reveal: `change`, `rename-changed`, and `rename-pure`. Added and
-      // deleted files already show their whole content in the patch, so there
-      // is nothing more to expand. The UI normally hides or disables the
-      // control for them, but the file-header menu can still reach a `new`
-      // file, so guard here too rather than letting the library throw.
-      if (fileDiff.type === "new" || fileDiff.type === "deleted") return;
+  // Pierre calls this once per file the first time a reader expands any of its
+  // collapsed context, whether through a per-hunk chevron or the "Expand all
+  // lines" button. It hydrates the partial patch-parsed diff with full file
+  // contents, after which Pierre reveals lines from that in-memory content
+  // without further fetches. Only `change` and `rename-changed` diffs reach
+  // here: added, deleted, and pure-rename diffs already carry their full
+  // renderable content, so Pierre never requests them.
+  const loadDiffFiles = useCallback<FileDiffContentsLoader>(
+    async (fileDiff) => {
       const parent = parents[0];
       // Renames carry the pre-image at `prevName`.
       const prevPath = fileDiff.prevName ?? fileDiff.name;
-      const fetchSide = async (sha: string | undefined, p: string) => {
-        if (!sha) throw new Error("raw fetch: missing ref");
-        const url = subUrl(`/${owner}/${repo}/raw/${sha}/${p}`);
-        const res = await fetch(url, { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`raw fetch ${res.status}`);
-        return res.text();
-      };
-      setExpandedById((prev) => ({ ...prev, [item.id]: "loading" }));
-      try {
-        // A pure rename has identical content on both sides, so it has no
-        // old-file image to diff against: pass `oldFile: null` and fetch only
-        // the post-image.
-        const newContents = await fetchSide(sha, fileDiff.name);
-        const newFile = { name: fileDiff.name, contents: newContents };
-        const files =
-          fileDiff.type === "rename-pure"
-            ? { oldFile: null, newFile }
-            : { oldFile: { name: prevPath, contents: await fetchSide(parent, prevPath) }, newFile };
-        // Hydrate the existing partial diff in place of re-parsing from full
-        // contents. This preserves the patch's original hunk identity so
-        // Pierre keeps stable scroll anchors while expanding.
-        const upgraded = hydratePartialDiff("clone", fileDiff, files);
-        setUpgradedById((prev) => ({ ...prev, [item.id]: upgraded }));
-        setExpandedById((prev) => ({ ...prev, [item.id]: "done" }));
-      } catch (err) {
-        console.error("expandAllLinesFor: failed", err);
-        setExpandedById((prev) => {
-          const next = { ...prev };
-          delete next[item.id];
-          return next;
-        });
-      }
+      const [oldFile, newFile] = await Promise.all([fetchRawFile(parent, prevPath), fetchRawFile(sha, fileDiff.name)]);
+      return { oldFile, newFile };
     },
-    [parents, sha, owner, repo],
+    [parents, sha, fetchRawFile],
   );
+
+  // "Expand all lines" for one file. Drives Pierre's native per-hunk expansion
+  // to its limit in both directions, which reveals every collapsed context
+  // line. Pierre hydrates the file via `loadDiffFiles` on the first expand, so
+  // this works whether or not the file has been touched yet. `Number.POSITIVE_
+  // INFINITY` is the same "expand all" value Pierre's own shift-click path
+  // uses, and re-expanding an already-expanded hunk is a no-op.
+  const expandAllLinesFor = useCallback((item: CodeViewItem<undefined>) => {
+    if (item.type !== "diff") return;
+    // Added and deleted files already show their whole content, so there is
+    // nothing to expand. The UI hides or disables the control for them, but
+    // the file-header menu can still reach a `new` file, so guard here too.
+    if (item.fileDiff.type === "new" || item.fileDiff.type === "deleted") return;
+    const instance = viewRef.current
+      ?.getInstance()
+      ?.getRenderedItems()
+      .find((rendered) => rendered.id === item.id);
+    // The file must be rendered for its instance to exist. The button lives in
+    // that file's header, so the header (and thus the instance) is mounted
+    // whenever the button is clickable.
+    if (instance?.type !== "diff") return;
+    for (let hunkIndex = 0; hunkIndex < item.fileDiff.hunks.length; hunkIndex++) {
+      instance.instance.expandHunk(hunkIndex, "both", Number.POSITIVE_INFINITY);
+    }
+  }, []);
 
   // Pierre renders our callback's output into a `<slot name="header-prefix">`
   // on the left of each file header (before its file-type icon and name).
@@ -627,7 +611,6 @@ export function RepoCommit() {
       // Edit/Delete are omitted on the commit page: gogs' editor needs a
       // branch ref, and the commit SHA produces 404. The PR diff view (when
       // it lands here) is the right home for those.
-      const rawExpandState = expandedById[item.id];
       // Added files already show every line in the diff, so there's nothing
       // more to expand. Render the button disabled (rather than hiding it) so
       // the per-file action row stays the same width across the diff list.
@@ -635,11 +618,14 @@ export function RepoCommit() {
       // still hide their button: the file body is the full historical content
       // and the action would be no-op without the symmetric "all expanded"
       // affordance making sense to the reader.
-      const isAddedFile = item.fileDiff.type === "new";
-      const expandState = isAddedFile ? "done" : rawExpandState;
+      //
+      // We only mark "all lines expanded" for added files, where it is
+      // knowable up front. After a click we cannot tell whether Pierre's
+      // background hydration succeeded (it exposes no completion signal), so
+      // the button stays actionable: re-clicking simply re-expands, which is a
+      // harmless no-op when already expanded and a retry if the load failed.
+      const expandDone = item.fileDiff.type === "new";
       const supportsExpand = item.fileDiff.type !== "deleted";
-      const expandDone = expandState === "done";
-      const expandLoading = expandState === "loading";
       const justCopied = copiedPathById[item.id] === true;
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-(--color-muted-foreground)";
@@ -674,21 +660,17 @@ export function RepoCommit() {
                 <button
                   type="button"
                   aria-label={expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}
-                  disabled={expandLoading || expandDone}
+                  disabled={expandDone}
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    void expandAllLinesFor(item);
+                    expandAllLinesFor(item);
                   }}
                   className={`${buttonClass} hidden lg:grid`}
                   data-no-collapse-on-click
                 >
-                  {expandLoading ? (
-                    <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                  ) : (
-                    <UnfoldVertical className="size-3.5" aria-hidden />
-                  )}
+                  <UnfoldVertical className="size-3.5" aria-hidden />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -702,13 +684,13 @@ export function RepoCommit() {
             viewFileHref={viewFileHref}
             rawFileHref={rawFileHref}
             historyHref={historyHref}
-            onExpandAllLines={supportsExpand ? () => void expandAllLinesFor(item) : undefined}
-            expandAllLinesState={expandState}
+            onExpandAllLines={supportsExpand ? () => expandAllLinesFor(item) : undefined}
+            expandAllLinesDone={expandDone}
           />
         </span>
       );
     },
-    [sha, copiedPathById, copyFilePath, expandAllLinesFor, expandedById, repoLink, t],
+    [sha, copiedPathById, copyFilePath, expandAllLinesFor, repoLink, t],
   );
 
   const copySha = useCallback(() => {
@@ -1029,10 +1011,14 @@ export function RepoCommit() {
                 diffStyle: settings.diffStyle,
                 overflow: settings.wrapLines ? "wrap" : "scroll",
                 stickyHeaders: true,
-                // No-op for partial files (the patch is all the data we have).
-                // Once a file is upgraded via "Expand all lines", Pierre uses
-                // this flag to render every context line from the full file.
-                expandUnchanged: true,
+                // Render clickable chevrons at each hunk boundary so readers
+                // can reveal collapsed context a slice at a time (GitHub-style),
+                // in addition to the whole-file "Expand all lines" button.
+                hunkSeparators: "line-info",
+                // Lazily fetch full file contents the first time any context is
+                // expanded. Pierre hydrates the partial diff with the result
+                // and drives all further expansion from that in-memory content.
+                loadDiffFiles,
                 unsafeCSS: DIFF_UNSAFE_CSS,
               }}
             />
