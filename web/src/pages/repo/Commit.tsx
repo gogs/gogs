@@ -1,4 +1,4 @@
-import { type FileDiffMetadata, parseDiffFromFile, parsePatchFiles } from "@pierre/diffs";
+import { type FileDiffMetadata, hydratePartialDiff, parsePatchFiles } from "@pierre/diffs";
 import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useLoaderData, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -194,7 +194,7 @@ export function RepoCommit() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const resolvedTheme = resolveTheme(theme);
-  const viewRef = useRef<CodeViewHandle<undefined> | null>(null);
+  const viewRef = useRef<CodeViewHandle<undefined, undefined> | null>(null);
   const treeRef = useRef<DiffFileTreeHandle | null>(null);
   const mobileTreeRef = useRef<DiffFileTreeHandle | null>(null);
   const stickyWorkspaceRef = useRef<HTMLDivElement | null>(null);
@@ -349,10 +349,10 @@ export function RepoCommit() {
     [navigate],
   );
 
-  const allItems = useMemo<CodeViewItem[]>(
+  const allItems = useMemo<CodeViewItem<undefined>[]>(
     () =>
       parsePatchFiles(patch).flatMap((parsed, patchIndex) =>
-        parsed.files.map<CodeViewItem>((fileDiff, fileIndex) => ({
+        parsed.files.map<CodeViewItem<undefined>>((fileDiff, fileIndex) => ({
           id: `${patchIndex}:${fileIndex}:${fileDiff.name}`,
           type: "diff",
           fileDiff,
@@ -365,11 +365,12 @@ export function RepoCommit() {
   // item records by id and only re-reads their payload (including `collapsed`)
   // when `version` increases, so we encode the collapsed state into the
   // version too.
-  const items = useMemo<CodeViewItem[]>(() => {
+  const items = useMemo<CodeViewItem<undefined>[]>(() => {
     return allItems.map((item) => {
       const collapsed = collapsedById[item.id] ?? false;
       const upgraded = item.type === "diff" ? upgradedById[item.id] : undefined;
-      const next: CodeViewItem = upgraded != null && item.type === "diff" ? { ...item, fileDiff: upgraded } : item;
+      const next: CodeViewItem<undefined> =
+        upgraded != null && item.type === "diff" ? { ...item, fileDiff: upgraded } : item;
       // Bump version when collapsed state OR upgrade state changes so Pierre
       // re-reads the item payload.
       const version = (collapsed ? 1 : 0) + (upgraded != null ? 2 : 0);
@@ -524,16 +525,22 @@ export function RepoCommit() {
   }, [expandedById]);
 
   const expandAllLinesFor = useCallback(
-    async (item: CodeViewItem) => {
+    async (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return;
       if (expandedByIdRef.current[item.id]) return;
       const fileDiff = item.fileDiff;
+      // `hydratePartialDiff` only upgrades diffs that carry unchanged context
+      // to reveal: `change`, `rename-changed`, and `rename-pure`. Added and
+      // deleted files already show their whole content in the patch, so there
+      // is nothing more to expand. The UI normally hides or disables the
+      // control for them, but the file-header menu can still reach a `new`
+      // file, so guard here too rather than letting the library throw.
+      if (fileDiff.type === "new" || fileDiff.type === "deleted") return;
       const parent = parents[0];
-      // Added files have no pre-image; deleted files have no post-image.
       // Renames carry the pre-image at `prevName`.
       const prevPath = fileDiff.prevName ?? fileDiff.name;
       const fetchSide = async (sha: string | undefined, p: string) => {
-        if (!sha) return "";
+        if (!sha) throw new Error("raw fetch: missing ref");
         const url = subUrl(`/${owner}/${repo}/raw/${sha}/${p}`);
         const res = await fetch(url, { credentials: "same-origin" });
         if (!res.ok) throw new Error(`raw fetch ${res.status}`);
@@ -541,14 +548,19 @@ export function RepoCommit() {
       };
       setExpandedById((prev) => ({ ...prev, [item.id]: "loading" }));
       try {
-        const [oldContents, newContents] = await Promise.all([
-          fileDiff.type === "new" ? Promise.resolve("") : fetchSide(parent, prevPath),
-          fileDiff.type === "deleted" ? Promise.resolve("") : fetchSide(sha, fileDiff.name),
-        ]);
-        const upgraded = parseDiffFromFile(
-          { name: prevPath, contents: oldContents },
-          { name: fileDiff.name, contents: newContents },
-        );
+        // A pure rename has identical content on both sides, so it has no
+        // old-file image to diff against: pass `oldFile: null` and fetch only
+        // the post-image.
+        const newContents = await fetchSide(sha, fileDiff.name);
+        const newFile = { name: fileDiff.name, contents: newContents };
+        const files =
+          fileDiff.type === "rename-pure"
+            ? { oldFile: null, newFile }
+            : { oldFile: { name: prevPath, contents: await fetchSide(parent, prevPath) }, newFile };
+        // Hydrate the existing partial diff in place of re-parsing from full
+        // contents. This preserves the patch's original hunk identity so
+        // Pierre keeps stable scroll anchors while expanding.
+        const upgraded = hydratePartialDiff("clone", fileDiff, files);
         setUpgradedById((prev) => ({ ...prev, [item.id]: upgraded }));
         setExpandedById((prev) => ({ ...prev, [item.id]: "done" }));
       } catch (err) {
@@ -569,7 +581,7 @@ export function RepoCommit() {
   // slot on the right (next to "Expand all lines"); "Copy file link" lives in
   // the three-dot menu.
   const renderHeaderPrefix = useCallback(
-    (item: CodeViewItem) => {
+    (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return null;
       const collapsed = collapsedById[item.id] ?? false;
       const Icon = collapsed ? ChevronRight : ChevronDown;
@@ -602,7 +614,7 @@ export function RepoCommit() {
   );
 
   const renderHeaderMetadata = useCallback(
-    (item: CodeViewItem) => {
+    (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const prev = item.fileDiff.prevName;
