@@ -31,7 +31,7 @@ type MarkdownRenderer struct {
 	urlPrefix string
 }
 
-var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
+var validLinksPattern = lazyregexp.New(`^[a-z][a-z\-\+.]+:(?:\/\/)?`)
 
 // isLink reports whether link fits valid format.
 func isLink(link []byte) bool {

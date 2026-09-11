@@ -9,10 +9,23 @@ node_modules/
 log/
 custom/
 data/
+public/img/avatar/
+*.exe
+*.exe~
+/gogs
+profile/
+*.pem
+output*
+/release
+.task
+.envrc
 
 # Configuration and application files
 .idea/
 .envrc
+
+# Irrelevant editor configuration for macOS Nova editor
+.nova
 
 # System junk
 .DS_Store
