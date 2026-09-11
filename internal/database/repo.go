@@ -746,20 +746,8 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 
 // Deprecated: Use repox.NewCloneLink instead.
 func (r *Repository) cloneLink(isWiki bool) *repox.CloneLink {
-	repoName := r.Name
-	if isWiki {
-		repoName += ".wiki"
-	}
-
 	r.Owner = r.MustOwner()
-	cl := new(repox.CloneLink)
-	if conf.SSH.Port != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", conf.App.RunUser, conf.SSH.Domain, conf.SSH.Port, r.Owner.Name, repoName)
-	} else {
-		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.App.RunUser, conf.SSH.Domain, r.Owner.Name, repoName)
-	}
-	cl.HTTPS = repox.HTTPSCloneURL(r.Owner.Name, repoName)
-	return cl
+	return repox.NewCloneLink(r.Owner.Name, r.Name, isWiki)
 }
 
 // CloneLink returns clone URLs of repository.
