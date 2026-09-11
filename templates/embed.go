@@ -71,6 +71,15 @@ func ReadMailFile(name string) ([]byte, error) {
 	return files.ReadFile(path.Join("mail", name))
 }
 
+// ReadInjectFile returns the content of the named injection template.
+func ReadInjectFile(customDir, name string) ([]byte, error) {
+	fpath := path.Join(customDir, "inject", name)
+	if osx.IsFile(fpath) {
+		return os.ReadFile(fpath)
+	}
+	return files.ReadFile(path.Join("inject", name))
+}
+
 // NewTemplateFileSystem returns a macaron.TemplateFileSystem instance for embedded assets.
 // The argument "dir" can be used to serve subset of embedded assets. Template file
 // found under the "customDir" on disk has higher precedence over embedded assets.

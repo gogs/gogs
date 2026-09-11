@@ -33,9 +33,14 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		return errors.Wrap(err, `read "dist/index.html"`)
 	}
 
+	inject, err := readInjectContent()
+	if err != nil {
+		return errors.Wrap(err, "read inject content")
+	}
+
 	f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
 		wc := context.WebContextFrom(r)
-		body, err := renderIndex(index, wc)
+		body, err := renderIndex(index, wc, inject)
 		if err != nil {
 			log.Error("Failed to render index: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

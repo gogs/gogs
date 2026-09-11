@@ -44,6 +44,8 @@ Gogs maintains backwards compatibility across **one minor version** at a time. P
 
 ## Source build update frequency
 
-<Tip>
-  If you run Gogs from a source build rather than an official binary, update **at least once per week**. This prevents you from falling behind and potentially missing incremental database migrations that cannot be applied out of order.
-</Tip>
+<Warning>
+  Running Gogs from a source build is no longer recommended. If you want to stay current with the latest commit, use the per-commit binary release instead: every push to `main` publishes updated binaries to the [`latest-commit-build`](https://github.com/gogs/gogs/releases/tag/latest-commit-build) release on GitHub.
+</Warning>
+
+If you still run Gogs from a source build, update **at least once per week**. This prevents you from falling behind and potentially missing incremental database migrations that cannot be applied out of order.

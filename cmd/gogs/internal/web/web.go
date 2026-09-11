@@ -842,9 +842,31 @@ func newMacaron() (*macaron.Macaron, error) {
 	return m, nil
 }
 
+// injectContent holds the custom content spliced into the React shell.
+type injectContent struct {
+	head   string
+	footer string
+}
+
+// readInjectContent reads the head and footer injection templates from the
+// custom directory, falling back to the empty embedded defaults.
+func readInjectContent() (injectContent, error) {
+	customDir := filepath.Join(conf.CustomDir(), "templates")
+	head, err := templates.ReadInjectFile(customDir, "head.tmpl")
+	if err != nil {
+		return injectContent{}, errors.Wrap(err, "read head injection")
+	}
+	footer, err := templates.ReadInjectFile(customDir, "footer.tmpl")
+	if err != nil {
+		return injectContent{}, errors.Wrap(err, "read footer injection")
+	}
+	return injectContent{head: string(head), footer: string(footer)}, nil
+}
+
 // renderIndex returns the index.html shell with per-request substitutions
-// applied for the given WebContext.
-func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
+// applied for the given WebContext. The inject argument supplies the custom
+// head and footer content to splice into the shell.
+func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
 		Lang   string `json:"lang"`
@@ -860,7 +882,11 @@ func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
 
 	pairs := []string{
-		"{{.WebContext}}", script,
+		// Append the head injection after the web context script so custom
+		// tags land inside <head>. The footer injection replaces the closing
+		// body tag to land just before </body>.
+		"{{.WebContext}}", script + inject.head,
+		"</body>", inject.footer + "</body>",
 	}
 	if wc.SubURL != "" {
 		// Prefix entrypoint paths with the subpath for non-root mounts. Other
