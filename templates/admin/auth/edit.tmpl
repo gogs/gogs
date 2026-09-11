@@ -176,6 +176,49 @@
 							</div>
 						{{end}}
 
+						<!-- SAML -->
+						{{if .Source.IsSAML}}
+							{{ $cfg:=.Source.SAML }}
+							<div class="field">
+								<label>{{.i18n.Tr "admin.auths.saml_service_provider_metadata"}}</label>
+								<a href="{{AppSubURL}}/api/web/user/saml/{{.Source.ID}}/metadata" target="_blank" rel="noopener noreferrer">{{AppSubURL}}/api/web/user/saml/{{.Source.ID}}/metadata</a>
+							</div>
+							<div class="required field">
+								<label for="saml_idp_metadata_url">{{.i18n.Tr "admin.auths.saml_idp_metadata_url"}}</label>
+								<input id="saml_idp_metadata_url" name="saml_idp_metadata_url" value="{{$cfg.IDPMetadataURL}}" required>
+							</div>
+							<div class="field">
+								<label for="saml_service_provider_issuer">{{.i18n.Tr "admin.auths.saml_service_provider_issuer"}}</label>
+								<input id="saml_service_provider_issuer" name="saml_service_provider_issuer" value="{{$cfg.ServiceProviderIssuer}}">
+								<p class="help">{{.i18n.Tr "admin.auths.saml_service_provider_issuer_helper"}}</p>
+							</div>
+							<div class="required field">
+								<label for="saml_service_provider_certificate">{{.i18n.Tr "admin.auths.saml_service_provider_certificate"}}</label>
+								<input id="saml_service_provider_certificate" name="saml_service_provider_certificate" value="{{$cfg.ServiceProviderCertificate}}" required>
+							</div>
+							<div class="required field">
+								<label for="saml_service_provider_private_key">{{.i18n.Tr "admin.auths.saml_service_provider_private_key"}}</label>
+								<input id="saml_service_provider_private_key" name="saml_service_provider_private_key" value="{{$cfg.ServiceProviderPrivateKey}}" required>
+							</div>
+							<div class="required field">
+								<label for="saml_login_attribute">{{.i18n.Tr "admin.auths.saml_login_attribute"}}</label>
+								<input id="saml_login_attribute" name="saml_login_attribute" value="{{$cfg.LoginAttribute}}" required>
+								<p class="help">{{.i18n.Tr "admin.auths.saml_login_attribute_helper"}}</p>
+							</div>
+							<div class="required field">
+								<label for="saml_username_attribute">{{.i18n.Tr "admin.auths.attribute_username"}}</label>
+								<input id="saml_username_attribute" name="saml_username_attribute" value="{{$cfg.UsernameAttribute}}" required>
+							</div>
+							<div class="required field">
+								<label for="saml_email_attribute">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
+								<input id="saml_email_attribute" name="saml_email_attribute" value="{{$cfg.EmailAttribute}}" required>
+							</div>
+							<div class="field">
+								<label for="saml_full_name_attribute">{{.i18n.Tr "admin.auths.saml_full_name_attribute"}}</label>
+								<input id="saml_full_name_attribute" name="saml_full_name_attribute" value="{{$cfg.FullNameAttribute}}">
+							</div>
+						{{end}}
+
 						<div class="inline field {{if not .Source.IsSMTP}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>

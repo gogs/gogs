@@ -163,6 +163,44 @@
 							<input id="github_api_endpoint" name="github_api_endpoint" value="{{.github_api_endpoint}}" placeholder="e.g. https://api.github.com/" />
 						</div>
 
+						<!-- SAML -->
+						<div class="saml field {{if not (eq .type 7)}}hide{{end}}">
+							<div class="required field">
+								<label for="saml_idp_metadata_url">{{.i18n.Tr "admin.auths.saml_idp_metadata_url"}}</label>
+								<input id="saml_idp_metadata_url" name="saml_idp_metadata_url" value="{{.saml_idp_metadata_url}}" placeholder="e.g., https://idp.example.com/metadata">
+							</div>
+							<div class="field">
+								<label for="saml_service_provider_issuer">{{.i18n.Tr "admin.auths.saml_service_provider_issuer"}}</label>
+								<input id="saml_service_provider_issuer" name="saml_service_provider_issuer" value="{{.saml_service_provider_issuer}}">
+								<p class="help">{{.i18n.Tr "admin.auths.saml_service_provider_issuer_helper"}}</p>
+							</div>
+							<div class="required field">
+								<label for="saml_service_provider_certificate">{{.i18n.Tr "admin.auths.saml_service_provider_certificate"}}</label>
+								<input id="saml_service_provider_certificate" name="saml_service_provider_certificate" value="{{.saml_service_provider_certificate}}" placeholder="e.g., /etc/gogs/saml.crt">
+							</div>
+							<div class="required field">
+								<label for="saml_service_provider_private_key">{{.i18n.Tr "admin.auths.saml_service_provider_private_key"}}</label>
+								<input id="saml_service_provider_private_key" name="saml_service_provider_private_key" value="{{.saml_service_provider_private_key}}" placeholder="e.g., /etc/gogs/saml.key">
+							</div>
+							<div class="required field">
+								<label for="saml_login_attribute">{{.i18n.Tr "admin.auths.saml_login_attribute"}}</label>
+								<input id="saml_login_attribute" name="saml_login_attribute" value="{{.saml_login_attribute}}">
+								<p class="help">{{.i18n.Tr "admin.auths.saml_login_attribute_helper"}}</p>
+							</div>
+							<div class="required field">
+								<label for="saml_username_attribute">{{.i18n.Tr "admin.auths.attribute_username"}}</label>
+								<input id="saml_username_attribute" name="saml_username_attribute" value="{{.saml_username_attribute}}">
+							</div>
+							<div class="required field">
+								<label for="saml_email_attribute">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
+								<input id="saml_email_attribute" name="saml_email_attribute" value="{{.saml_email_attribute}}">
+							</div>
+							<div class="field">
+								<label for="saml_full_name_attribute">{{.i18n.Tr "admin.auths.saml_full_name_attribute"}}</label>
+								<input id="saml_full_name_attribute" name="saml_full_name_attribute" value="{{.saml_full_name_attribute}}">
+							</div>
+						</div>
+
 						<div class="ldap field">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.attributes_in_bind"}}</strong></label>

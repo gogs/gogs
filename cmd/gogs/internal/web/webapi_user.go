@@ -59,7 +59,8 @@ type loginSource struct {
 }
 
 type getUserSignInResponse struct {
-	LoginSources []loginSource `json:"loginSources"`
+	LoginSources     []loginSource `json:"loginSources"`
+	SAMLLoginSources []loginSource `json:"samlLoginSources"`
 }
 
 type getUserSignUpResponse struct {
@@ -163,11 +164,19 @@ func getUserSignIn(r *http.Request) (statusCode int, resp *getUserSignInResponse
 		log.Error("getUserSignIn: list activated login sources: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list activated login sources")
 	}
-	loginSources := make([]loginSource, 0, len(sources))
-	for _, s := range sources {
+	passwordSources, samlSources := partitionLoginSources(sources)
+	loginSources := make([]loginSource, 0, len(passwordSources))
+	for _, s := range passwordSources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &getUserSignInResponse{LoginSources: loginSources}, nil
+	samlLoginSources := make([]loginSource, 0, len(samlSources))
+	for _, s := range samlSources {
+		samlLoginSources = append(samlLoginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
+	}
+	return http.StatusOK, &getUserSignInResponse{
+		LoginSources:     loginSources,
+		SAMLLoginSources: samlLoginSources,
+	}, nil
 }
 
 type userSignInRequest struct {
