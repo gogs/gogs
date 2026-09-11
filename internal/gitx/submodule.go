@@ -3,6 +3,7 @@ package gitx
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/gogs/git-module"
@@ -11,6 +12,7 @@ import (
 )
 
 var scpSyntax = lazyregexp.New(`^([a-zA-Z0-9_]+@)?([a-zA-Z0-9._-]+):(.*)$`)
+var scpPortPath = lazyregexp.New(`^([0-9]{1,5})/([^/]+)/(.+)$`)
 
 // InferSubmoduleURL returns the inferred external URL of the submodule at best effort.
 // The `baseURL` should be the URL of the current repository. If the submodule URL looks
@@ -20,6 +22,7 @@ func InferSubmoduleURL(baseURL string, mod *git.Submodule) string {
 	if !strings.HasSuffix(baseURL, "/") {
 		baseURL += "/"
 	}
+	parsedBase, _ := url.Parse(baseURL)
 
 	raw := strings.TrimSuffix(mod.URL, "/")
 	raw = strings.TrimSuffix(raw, ".git")
@@ -36,9 +39,9 @@ func InferSubmoduleURL(baseURL string, mod *git.Submodule) string {
 			return mod.URL
 		}
 		parsed = &url.URL{
-			Scheme: "http",
+			Scheme: "ssh",
 			Host:   match[0][2],
-			Path:   match[0][3],
+			Path:   inferSCPSubmodulePath(parsedBase, match[0][2], match[0][3]),
 		}
 	}
 
@@ -46,10 +49,37 @@ func InferSubmoduleURL(baseURL string, mod *git.Submodule) string {
 	case "http", "https":
 		raw = parsed.String()
 	case "ssh":
-		raw = fmt.Sprintf("http://%s%s", parsed.Hostname(), parsed.Path)
+		raw = inferWebURLForSSHSubmodule(parsedBase, parsed)
 	default:
 		return raw
 	}
 
 	return fmt.Sprintf("%s/commit/%s", raw, mod.Commit)
+}
+
+func inferSCPSubmodulePath(base *url.URL, host, path string) string {
+	if base == nil || !strings.EqualFold(base.Hostname(), host) {
+		return path
+	}
+
+	match := scpPortPath.FindStringSubmatch(path)
+	if len(match) == 0 {
+		return path
+	}
+	port, err := strconv.Atoi(match[1])
+	if err != nil || port < 1 || port > 65535 {
+		return path
+	}
+	return fmt.Sprintf("%s/%s", match[2], match[3])
+}
+
+func inferWebURLForSSHSubmodule(base, submodule *url.URL) string {
+	path := submodule.Path
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	if base != nil && base.Scheme != "" && base.Host != "" && strings.EqualFold(base.Hostname(), submodule.Hostname()) {
+		return fmt.Sprintf("%s://%s%s", base.Scheme, base.Host, path)
+	}
+	return fmt.Sprintf("http://%s%s", submodule.Hostname(), path)
 }
