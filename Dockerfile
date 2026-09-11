@@ -35,7 +35,8 @@ RUN apk --no-cache --no-progress add \
   socat \
   tzdata \
   rsync \
-  "zlib>1.3.2"
+  "zlib>1.3.2" \
+  "openssl>3.5.7-r0"
 
 ENV GOGS_CUSTOM=/data/gogs
 

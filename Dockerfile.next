@@ -38,7 +38,8 @@ RUN apk --no-cache --no-progress add \
   git \
   linux-pam \
   openssh-keygen \
-  "zlib>1.3.2"
+  "zlib>1.3.2" \
+  "openssl>3.5.7-r0"
 
 ENV GOGS_CUSTOM=/data/gogs
 ENV GOGS_WORK_DIR=/app/gogs
