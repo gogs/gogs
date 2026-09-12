@@ -1,4 +1,9 @@
-import { type FileDiffContentsLoader, parsePatchFiles } from "@pierre/diffs";
+import {
+  type CodeViewOptions,
+  type FileDiffContentsLoader,
+  type FileDiffMetadata,
+  parsePatchFiles,
+} from "@pierre/diffs";
 import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useLoaderData, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -117,6 +122,12 @@ const DIFF_UNSAFE_CSS = `
   [data-separator=line-info],
   [data-separator=line-info-basic] {
     background-color: var(--diffs-bg-separator) !important;
+  }
+  /* Pierre handles context expansion on this span, so an empty label must
+     still fill the separator's clickable content area. */
+  [data-unmodified-lines]:empty {
+    flex: 1;
+    align-self: stretch;
   }
   /* GitHub-style yellow highlight for the in-page search match. Pierre
      reaches into these custom properties when computing the selected-line
@@ -297,10 +308,28 @@ export function RepoCommit() {
   // the "Copy file path" icon button in the file header's metadata row. The
   // flag clears 1.2s after the copy.
   const [copiedPathById, setCopiedPathById] = useState<Record<string, boolean>>({});
-  // Files whose lines have been fully expanded via the "Expand all lines"
-  // button. Once set, the button is hidden since there is nothing left to
-  // expand.
-  const [fullyExpandedById, setFullyExpandedById] = useState<Record<string, boolean>>({});
+  // Track metadata identity so a replacement patch starts with expansion
+  // actions available, even when it reuses the same file IDs.
+  const [fullyExpandedDiffs, setFullyExpandedDiffs] = useState<Set<FileDiffMetadata>>(() => new Set());
+  const expansionCheckLine = useRef(new WeakMap<FileDiffMetadata, number>());
+  const onDiffPostRender = useCallback<NonNullable<CodeViewOptions<undefined, undefined>["onPostRender"]>>(
+    (_node, _instance, _phase, context) => {
+      if (context.type !== "diff" || context.item.collapsed) return;
+      const { fileDiff } = context.item;
+      if (fileDiff.isPartial) return;
+      const checkedLine = expansionCheckLine.current.get(fileDiff);
+      if (checkedLine != null && checkedLine > fileDiff.additionLines.length) return;
+      let line = checkedLine ?? 1;
+      // Context only expands within a patch. Resume at the first hidden line
+      // rather than rescanning already verified lines on every virtual render.
+      while (line <= fileDiff.additionLines.length && context.instance.isLineRenderable(line)) line++;
+      expansionCheckLine.current.set(fileDiff, line);
+      if (line > fileDiff.additionLines.length) {
+        setFullyExpandedDiffs((prev) => new Set(prev).add(fileDiff));
+      }
+    },
+    [],
+  );
 
   // Derive the in-memory settings from the URL. Missing search fields fall
   // back to defaults, so the URL only carries non-default values.
@@ -382,13 +411,6 @@ export function RepoCommit() {
     return { fileCount: items.length, additions, deletions };
   }, [items]);
 
-  // Re-fetching the patch (e.g., toggling whitespace) rebuilds the diff from
-  // scratch with every file collapsed again, so drop the per-file "fully
-  // expanded" flags that would otherwise keep the expand button hidden.
-  useEffect(() => {
-    setFullyExpandedById({});
-  }, [patch]);
-
   const expandAllDiff = useCallback(() => {
     setCollapsedById({});
   }, []);
@@ -464,13 +486,9 @@ export function RepoCommit() {
     };
   }, [nameToItemIds]);
 
-  // Localize Pierre's collapsed-context separators. Pierre renders their labels
-  // ("N unmodified lines" and "More unchanged context may be available") as
-  // hardcoded English inside its shadow DOM, and `CodeView` exposes no separator
-  // render slot to override them. So we translate the rendered text in place:
-  // walk the shadow trees, match Pierre's exact strings, and swap in the
-  // localized copy. Re-run on every diff mutation because Pierre rebuilds
-  // separators as files expand.
+  // Pierre hardcodes separator labels inside its shadow DOM without a render
+  // slot. Translate known context counts in place and clear the unknown-context
+  // message. Re-run on diff mutations because expansion rebuilds separators.
   useEffect(() => {
     const found = document.querySelector<HTMLDivElement>(".gogs-diff-scroller");
     if (!found) return;
@@ -491,8 +509,7 @@ export function RepoCommit() {
           const localized = t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count });
           if (span.textContent !== localized) span.textContent = localized;
         } else if (text === moreContextText) {
-          const localized = t("repo.diff.more_context_available");
-          if (span.textContent !== localized) span.textContent = localized;
+          span.textContent = "";
         }
       }
     }
@@ -605,15 +622,17 @@ export function RepoCommit() {
   // collapsed context, whether through a per-hunk chevron or the "Expand all
   // lines" button. It hydrates the partial patch-parsed diff with full file
   // contents, after which Pierre reveals lines from that in-memory content
-  // without further fetches. Only `change` and `rename-changed` diffs reach
-  // here: added, deleted, and pure-rename diffs already carry their full
-  // renderable content, so Pierre never requests them.
+  // without further fetches. Pure renames need only the new file. Added and
+  // deleted files already carry their full renderable content.
   const loadDiffFiles = useCallback<FileDiffContentsLoader>(
     async (fileDiff) => {
       const parent = parents[0];
       // Renames carry the pre-image at `prevName`.
       const prevPath = fileDiff.prevName ?? fileDiff.name;
-      const [oldFile, newFile] = await Promise.all([fetchRawFile(parent, prevPath), fetchRawFile(sha, fileDiff.name)]);
+      const [oldFile, newFile] = await Promise.all([
+        fileDiff.type === "rename-pure" ? Promise.resolve(null) : fetchRawFile(parent, prevPath),
+        fetchRawFile(sha, fileDiff.name),
+      ]);
       return { oldFile, newFile };
     },
     [parents, sha, fetchRawFile],
@@ -678,7 +697,6 @@ export function RepoCommit() {
     for (let i = 0; i <= item.fileDiff.hunks.length; i++) {
       rendered.instance.expandHunk(i, "up", Number.POSITIVE_INFINITY);
     }
-    setFullyExpandedById((prev) => ({ ...prev, [item.id]: true }));
   }, []);
 
   // Copy file path and Expand all lines buttons, rendered into Pierre's
@@ -692,7 +710,8 @@ export function RepoCommit() {
       // Added and deleted files already show their whole content, so there is
       // nothing to expand. Hide the button too once the file has been fully
       // expanded, since re-clicking would be a no-op.
-      const canExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted" && !fullyExpandedById[item.id];
+      const canExpand =
+        item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted" && !fullyExpandedDiffs.has(item.fileDiff);
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)";
       return (
@@ -744,7 +763,7 @@ export function RepoCommit() {
         </span>
       );
     },
-    [copiedPathById, copyFilePath, expandAllLinesFor, fullyExpandedById, t],
+    [copiedPathById, copyFilePath, expandAllLinesFor, fullyExpandedDiffs, t],
   );
 
   const renderHeaderMetadata = useCallback(
@@ -1103,6 +1122,7 @@ export function RepoCommit() {
                 // expanded. Pierre hydrates the partial diff with the result
                 // and drives all further expansion from that in-memory content.
                 loadDiffFiles,
+                onPostRender: onDiffPostRender,
                 unsafeCSS: DIFF_UNSAFE_CSS,
               }}
             />

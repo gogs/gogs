@@ -145,7 +145,6 @@
   "repo.diff.expand_all_lines": "Expand all lines",
   "repo.diff.unmodified_line": "{count} unmodified line",
   "repo.diff.unmodified_lines": "{count} unmodified lines",
-  "repo.diff.more_context_available": "More unchanged context may be available",
   "repo.commit_parent": "parent",
   "repo.commit_label": "commit",
   "repo.view_file": "View file",

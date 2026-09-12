@@ -159,7 +159,6 @@ const KEYS = [
   "repo.diff.expand_all_lines",
   "repo.diff.unmodified_line",
   "repo.diff.unmodified_lines",
-  "repo.diff.more_context_available",
   "repo.commit_parent",
   "repo.commit_label",
   "repo.view_file",
