@@ -12,6 +12,7 @@ import {
   FileCode2,
   FolderTree,
   Search,
+  UnfoldVertical,
   X,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -645,23 +646,42 @@ export function RepoCommit() {
     [collapsedById, t, toggleCollapsed],
   );
 
-  const renderHeaderMetadata = useCallback(
+  // Fully expand one file's collapsed context by driving Pierre's native
+  // per-hunk expansion to its limit. Each collapsed gap is revealed by the
+  // `fromStart` side of an expansion region: the gap before hunk `i` is keyed by
+  // index `i`, and the gap after the last hunk is keyed by index `hunks.length`.
+  // Both are grown by expanding in the `up` direction, which is the side those
+  // regions read. `Number.POSITIVE_INFINITY` is the same "expand all" value
+  // Pierre's own shift-click uses, and re-expanding an already-open gap is a
+  // no-op. Pierre hydrates the file on first expand, so this works whether or not
+  // it has been touched.
+  const expandAllLinesFor = useCallback((item: CodeViewItem<undefined>) => {
+    if (item.type !== "diff") return;
+    const rendered = viewRef.current
+      ?.getInstance()
+      ?.getRenderedItems()
+      .find((r) => r.id === item.id);
+    if (rendered?.type !== "diff") return;
+    // Indices `0..hunks.length` inclusive cover the gap before each hunk plus the
+    // trailing gap after the last one.
+    for (let i = 0; i <= item.fileDiff.hunks.length; i++) {
+      rendered.instance.expandHunk(i, "up", Number.POSITIVE_INFINITY);
+    }
+  }, []);
+
+  // Copy file path and Expand all lines buttons, rendered into Pierre's
+  // `header-filename-suffix` slot so they sit directly after the filename
+  // (GitHub-style) rather than out in the metadata row on the far right.
+  const renderHeaderFilenameSuffix = useCallback(
     (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
-      const prev = item.fileDiff.prevName;
-      const viewFileHref = `${repoLink}/src/${sha}/${path}`;
-      const rawFileHref = `${repoLink}/raw/${sha}/${path}`;
-      // Gogs' file-history view lives at `/commits/{ref}/{path}`. The ref can
-      // be a SHA, so we point at this commit; gogs walks history back from
-      // there.
-      const historyHref = `${repoLink}/commits/${sha}/${path}`;
-      // Edit/Delete are omitted on the commit page: gogs' editor needs a
-      // branch ref, and the commit SHA produces 404. The PR diff view (when
-      // it lands here) is the right home for those.
       const justCopied = copiedPathById[item.id] === true;
+      // Added and deleted files already show their whole content, so there is
+      // nothing to expand.
+      const canExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted";
       const buttonClass =
-        "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-(--color-muted-foreground)";
+        "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)";
       return (
         <span className="inline-flex items-center gap-0.5">
           <Tooltip>
@@ -687,17 +707,58 @@ export function RepoCommit() {
             </TooltipTrigger>
             <TooltipContent>{t("repo.copy_file_path")}</TooltipContent>
           </Tooltip>
-          <FileHeaderMenu
-            filePath={path}
-            prevFilePath={prev}
-            viewFileHref={viewFileHref}
-            rawFileHref={rawFileHref}
-            historyHref={historyHref}
-          />
+          {canExpand ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("repo.diff.expand_all_lines")}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    expandAllLinesFor(item);
+                  }}
+                  className={buttonClass}
+                  data-no-collapse-on-click
+                >
+                  <UnfoldVertical className="size-3.5" aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t("repo.diff.expand_all_lines")}</TooltipContent>
+            </Tooltip>
+          ) : null}
         </span>
       );
     },
-    [copiedPathById, copyFilePath, repoLink, sha, t],
+    [copiedPathById, copyFilePath, expandAllLinesFor, t],
+  );
+
+  const renderHeaderMetadata = useCallback(
+    (item: CodeViewItem<undefined>) => {
+      if (item.type !== "diff") return null;
+      const path = item.fileDiff.name;
+      const prev = item.fileDiff.prevName;
+      const viewFileHref = `${repoLink}/src/${sha}/${path}`;
+      const rawFileHref = `${repoLink}/raw/${sha}/${path}`;
+      // Gogs' file-history view lives at `/commits/{ref}/{path}`. The ref can
+      // be a SHA, so we point at this commit; gogs walks history back from
+      // there.
+      const historyHref = `${repoLink}/commits/${sha}/${path}`;
+      // Edit/Delete are omitted on the commit page: gogs' editor needs a
+      // branch ref, and the commit SHA produces 404. The PR diff view (when
+      // it lands here) is the right home for those.
+      return (
+        <FileHeaderMenu
+          filePath={path}
+          prevFilePath={prev}
+          viewFileHref={viewFileHref}
+          rawFileHref={rawFileHref}
+          historyHref={historyHref}
+        />
+      );
+    },
+    [repoLink, sha],
   );
 
   const copySha = useCallback(() => {
@@ -1011,6 +1072,7 @@ export function RepoCommit() {
               items={items}
               className="gogs-diff-scroller h-full overflow-auto"
               renderHeaderPrefix={renderHeaderPrefix}
+              renderHeaderFilenameSuffix={renderHeaderFilenameSuffix}
               renderHeaderMetadata={renderHeaderMetadata}
               options={{
                 theme: { light: "pierre-light", dark: "pierre-dark" },
