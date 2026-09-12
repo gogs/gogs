@@ -947,11 +947,9 @@ export function RepoCommit() {
                 // Render a clickable separator at each collapsed-context gap
                 // showing how many unmodified lines it hides.
                 hunkSeparators: "line-info",
-                // Reveal the whole gap on a single click. Pierre only "chunks"
-                // a separator into partial expansions when the gap is larger
-                // than this, so a very high value makes every click expand the
-                // entire gap at once instead of a fixed slice.
-                expansionLineCount: Number.MAX_SAFE_INTEGER,
+                // Reveal at most 100 lines per click. Gaps larger than this get
+                // directional (up/down) controls plus an "expand all" button.
+                expansionLineCount: 100,
                 // Lazily fetch full file contents the first time any context is
                 // expanded. Pierre hydrates the partial diff with the result
                 // and drives all further expansion from that in-memory content.
