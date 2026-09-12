@@ -499,6 +499,11 @@ export function RepoCommit() {
     // carries the count, which we parse out and re-interpolate.
     const unmodifiedLinesRe = /^(\d+) unmodified lines?$/;
     const moreContextText = "More unchanged context may be available";
+    const noNewlineText = "No newline at end of file";
+
+    function setText(el: HTMLElement, text: string) {
+      if (el.textContent !== text) el.textContent = text;
+    }
 
     function localizeIn(root: ParentNode) {
       for (const span of root.querySelectorAll<HTMLElement>("[data-unmodified-lines]")) {
@@ -506,11 +511,13 @@ export function RepoCommit() {
         const match = unmodifiedLinesRe.exec(text);
         if (match) {
           const count = Number(match[1]);
-          const localized = t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count });
-          if (span.textContent !== localized) span.textContent = localized;
+          setText(span, t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count }));
         } else if (text === moreContextText) {
-          span.textContent = "";
+          setText(span, "");
         }
+      }
+      for (const span of root.querySelectorAll<HTMLElement>("[data-no-newline] span")) {
+        if ((span.textContent ?? "") === noNewlineText) setText(span, t("repo.diff.no_newline_at_eof"));
       }
     }
 
@@ -609,7 +616,10 @@ export function RepoCommit() {
   const fetchRawFile = useCallback(
     async (ref: string | undefined, filePath: string) => {
       if (!ref) throw new Error("raw fetch: missing ref");
-      const url = subUrl(`/${owner}/${repo}/raw/${ref}/${filePath}`);
+      // Encode each segment so reserved characters in the name (`#`, `?`, ...)
+      // don't truncate or misroute the request, keeping the `/` separators.
+      const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+      const url = subUrl(`/${owner}/${repo}/raw/${ref}/${encodedPath}`);
       const res = await fetch(url, { credentials: "same-origin" });
       if (!res.ok) throw new Error(`raw fetch ${res.status}`);
       const contents = await res.text();
@@ -707,11 +717,13 @@ export function RepoCommit() {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const justCopied = copiedPathById[item.id] === true;
-      // Added and deleted files already show their whole content, so there is
-      // nothing to expand. Hide the button too once the file has been fully
-      // expanded, since re-clicking would be a no-op.
+      // Added, deleted, and pure-rename files have no collapsed context to
+      // reveal, and a fully expanded file has nothing left, so hide the button.
       const canExpand =
-        item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted" && !fullyExpandedDiffs.has(item.fileDiff);
+        item.fileDiff.type !== "new" &&
+        item.fileDiff.type !== "deleted" &&
+        item.fileDiff.type !== "rename-pure" &&
+        !fullyExpandedDiffs.has(item.fileDiff);
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)";
       return (
