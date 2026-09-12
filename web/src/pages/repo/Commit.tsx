@@ -452,6 +452,87 @@ export function RepoCommit() {
     };
   }, [nameToItemIds]);
 
+  // Localize Pierre's collapsed-context separators. Pierre renders their labels
+  // ("N unmodified lines", "More unchanged context may be available", "Expand
+  // all") as hardcoded English inside its shadow DOM, and `CodeView` exposes no
+  // separator render slot to override them. So we translate the rendered text
+  // in place: walk the shadow trees, match Pierre's exact strings, and swap in
+  // the localized copy. Re-run on every diff mutation because Pierre rebuilds
+  // separators as files expand.
+  useEffect(() => {
+    const found = document.querySelector<HTMLDivElement>(".gogs-diff-scroller");
+    if (!found) return;
+    const root: ParentNode = found;
+
+    // Pierre's source strings. Matching the exact English is what lets us map a
+    // rendered separator back to a localized replacement. `unmodified line(s)`
+    // carries the count, which we parse out and re-interpolate.
+    const unmodifiedLinesRe = /^(\d+) unmodified lines?$/;
+    const moreContextText = "More unchanged context may be available";
+    const expandAllText = "Expand all";
+
+    function localizeIn(root: ParentNode) {
+      for (const span of root.querySelectorAll<HTMLElement>("[data-unmodified-lines]")) {
+        const text = span.textContent ?? "";
+        const match = unmodifiedLinesRe.exec(text);
+        if (match) {
+          const count = Number(match[1]);
+          const localized = t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count });
+          if (span.textContent !== localized) span.textContent = localized;
+        } else if (text === moreContextText) {
+          const localized = t("repo.diff.more_context_available");
+          if (span.textContent !== localized) span.textContent = localized;
+        }
+      }
+      for (const button of root.querySelectorAll<HTMLElement>("[data-expand-all-button]")) {
+        const localized = t("repo.diff.expand_all_context");
+        if (button.textContent === expandAllText && button.textContent !== localized) {
+          button.textContent = localized;
+        }
+      }
+    }
+
+    // A MutationObserver does not cross shadow boundaries, so we observe each
+    // shadow root as we discover it. Pierre rebuilds separators inside these
+    // roots when a file expands, so without this the labels would only be
+    // translated on first render, not after expansion.
+    const observed = new WeakSet<ShadowRoot>();
+    const observer = new MutationObserver(schedule);
+
+    // Pierre nests each file's diff body in a shadow root (sometimes deeper), so
+    // a plain querySelectorAll on the light DOM never reaches the separators.
+    // Walk light children and any shadow root we encounter, localizing and
+    // starting to observe each root along the way.
+    function localizeDeep(node: ParentNode) {
+      localizeIn(node);
+      for (const el of node.querySelectorAll<HTMLElement>("*")) {
+        const shadow = el.shadowRoot;
+        if (!shadow) continue;
+        if (!observed.has(shadow)) {
+          observed.add(shadow);
+          observer.observe(shadow, { childList: true, subtree: true, characterData: true });
+        }
+        localizeDeep(shadow);
+      }
+    }
+
+    let frame = 0;
+    function schedule() {
+      if (frame !== 0) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        localizeDeep(root);
+      });
+    }
+
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    schedule();
+    return () => {
+      observer.disconnect();
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
+  }, [t]);
+
   const authorLabel = author.profileURL ? (
     <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
       {author.name}
