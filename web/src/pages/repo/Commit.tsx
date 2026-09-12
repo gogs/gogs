@@ -56,38 +56,28 @@ export interface RepoCommitPage {
   patch: string;
 }
 
-// Page-local override that unconstrains the shared Navbar, Footer, and
-// RepoHeader containers while this page is mounted (see the useEffect that
-// sets `data-fullwidth`). We target the unique max-width utility classes
-// those components use, which is brittle if those classes ever change but
-// keeps the override localized to one file.
+// Page-local override of the unique max-width utilities on Navbar, Footer,
+// and RepoHeader. Brittle if those classes change, but keeps the override
+// in one file.
 const FULLWIDTH_CSS = `
   html[data-fullwidth="commit-diff"] .max-w-6xl,
   html[data-fullwidth="commit-diff"] .max-w-7xl {
     max-width: none;
   }
-  /* Pierre's CodeView inlines an 8px top/bottom margin on its virtual
-     scroll container. We want the diff flush against the toolbar above,
-     so override it. The selector targets the direct child of the
-     overflow-scroller we render around CodeView. */
+  /* Pierre inlines 8px top/bottom margin on the virtual scroll container. */
   html[data-fullwidth="commit-diff"] .gogs-diff-scroller > div {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
-  /* Hide the global site footer on the commit diff page. The page locks the
-     diff workspace to the viewport once the user scrolls past the commit
-     metadata, and a footer flowing below the locked workspace breaks that
-     model by occupying the bottom of the viewport. GitHub does the same. */
+  /* A footer below the locked workspace occupies the bottom of the viewport. */
   html[data-fullwidth="commit-diff"] footer {
     display: none;
   }
 `;
 
 const DIFF_UNSAFE_CSS = `
-  /* Pierre's <diffs-container> draws a 1px border on every side. The top
-     and left ones sit right next to the toolbar's border-b and the
-     sidebar's border-r, which makes those edges look 2px thick. Zero the
-     adjacent sides so the surrounding chrome supplies the only line. */
+  /* Pierre draws a 1px border on every side. Top and left sit against the
+     toolbar and sidebar borders, so those edges look 2px thick. */
   :host {
     border-top: 0 !important;
     border-left: 0 !important;
@@ -96,26 +86,19 @@ const DIFF_UNSAFE_CSS = `
     background: color-mix(in lab, var(--diffs-bg) 96%, var(--diffs-mixer));
     border-bottom: 1px solid color-mix(in lab, var(--diffs-bg) 85%, var(--diffs-mixer));
   }
-  /* Pierre's default 8px gap leaves too much air between the chevron, the
-     file-type icon, and the filename. Tighten to 4px for a denser, GitHub-
-     like layout. */
+  /* Pierre defaults this gap to 8px. */
   [data-header-content] {
     gap: 4px !important;
   }
-  /* Reopen a slightly wider gap between the change-state icon and the
-     filename so the filename doesn't crowd the dot. */
   [data-change-icon] {
     margin-right: 4px;
   }
-  /* The +N / -N counts in Pierre's metadata row inherit a mono font from
-     the diff body styles. They're UI chrome, not code. Pin them to the
-     surrounding sans stack to match the rest of the toolbar text. */
+  /* Pierre inherits a mono font from the diff body. These counts are chrome. */
   [data-additions-count],
   [data-deletions-count] {
     font-family: inherit;
   }
-  /* File-to-file separator. The first header has no top border so it does
-     not double up with the toolbar's bottom border above it. */
+  /* Skip the first header so it does not double the toolbar's bottom border. */
   * + [data-diffs-header] {
     border-top: 1px solid var(--color-border);
   }
@@ -124,15 +107,12 @@ const DIFF_UNSAFE_CSS = `
     background-color: var(--diffs-bg-separator) !important;
   }
   /* Pierre handles context expansion on this span, so an empty label must
-     still fill the separator's clickable content area. */
+     still fill the separator's clickable area. */
   [data-unmodified-lines]:empty {
     flex: 1;
     align-self: stretch;
   }
-  /* GitHub-style yellow highlight for the in-page search match. Pierre
-     reaches into these custom properties when computing the selected-line
-     background and gutter tint; overriding the *-override hook keeps the
-     blending logic intact while swapping the source color. */
+  /* Override Pierre's selected-line hook so blending stays intact. */
   :host {
     --diffs-bg-selection-override: light-dark(#ffe066, #ffd633);
     --diffs-bg-selection-number-override: light-dark(#f5c518, #fff066);
@@ -148,9 +128,7 @@ function resolveTheme(theme: "light" | "dark" | "system"): "light" | "dark" {
   return theme;
 }
 
-// CSS variable bridge: pass our app tokens into the @pierre/trees shadow root
-// so the tree adopts Gogs' light/dark palette without diverging from the
-// surrounding chrome.
+// Bridge app tokens into the @pierre/trees shadow root.
 const TREE_THEME_STYLE: CSSProperties = {
   // @ts-expect-error -- CSS custom properties are valid in style objects.
   "--trees-fg-override": "var(--color-foreground)",
@@ -161,10 +139,8 @@ const TREE_THEME_STYLE: CSSProperties = {
   "--trees-border-color-override": "var(--color-border)",
   "--trees-selected-bg-override": "var(--color-surface)",
   "--trees-focus-ring-color-override": "var(--color-ring)",
-  // The search input's defaults fall through `--trees-input-bg`, which uses
-  // `light-dark()` keyed off the shadow host's own `color-scheme: light dark`.
-  // That resolves to the OS preference, not the app's class-based theme,
-  // so the box stays light when the page is dark. Pin it to our tokens.
+  // `--trees-input-bg` uses `light-dark()` off the shadow host's
+  // `color-scheme`, which follows the OS, not the app's class-based theme.
   "--trees-search-bg-override": "var(--color-surface)",
   "--trees-search-fg-override": "var(--color-foreground)",
 };
@@ -211,19 +187,15 @@ export function RepoCommit() {
   const [copied, setCopied] = useState(false);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
   const [treeSearchOpen, setTreeSearchOpen] = useState(false);
-  // Auto-focus Pierre's search input when the user opens it. The input
-  // lives in the tree's shadow root, so we focus through the imperative
-  // handle the next tick (after the unsafeCSS toggle reveals the row).
+  // The search input lives in the tree's shadow root. Focus it the next
+  // tick, after the unsafeCSS toggle reveals the row.
   useEffect(() => {
     if (!treeSearchOpen) return;
     const id = window.setTimeout(() => treeRef.current?.focusSearch(), 0);
     return () => window.clearTimeout(id);
   }, [treeSearchOpen]);
-  // Desktop tree starts open; the user can collapse it via the sidebar
-  // header. The choice persists across navigations within the session.
-  // Writing happens only inside `toggleDesktopTree` (not in a mount effect)
-  // so the default flowing through `useState` is not baked into localStorage,
-  // and a future default change still applies to users who never toggled.
+  // Persist only on toggle so a future default still applies to users who
+  // never changed it.
   const [desktopTreeOpen, setDesktopTreeOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem("gogs-file-tree-open") !== "false";
@@ -236,12 +208,8 @@ export function RepoCommit() {
     });
   }, []);
 
-  // Pierre's `<diffs-container>` swallows wheel events for its own virtual
-  // scroller, which means scrolling down inside the diff before the page has
-  // reached its locked state leaves the user stuck on the commit metadata.
-  // Forward the wheel delta to the document scroller until the page reaches
-  // its sticky-lock position, then again when scrolling back up from a
-  // diff-top boundary so users can return to the commit metadata.
+  // Pierre's container swallows wheel events for its virtual scroller, which
+  // traps the page on the commit metadata until we forward them.
   useEffect(() => {
     const node = stickyWorkspaceRef.current;
     if (!node) return;
@@ -249,11 +217,8 @@ export function RepoCommit() {
     const desktopMatch = window.matchMedia("(min-width: 1024px)");
 
     function onWheel(event: WheelEvent) {
-      // Desktop-only handler. The lock-and-forward dance was designed for the
-      // two-pane workspace pinned to the viewport on `lg+`. On mobile the
-      // workspace stacks into a single column and Pierre's container handles
-      // wheel events directly. Any redirection here breaks trackpad scrolling
-      // inside the diff body.
+      // On mobile the workspace is a single column and forwarding breaks
+      // trackpad scrolling inside the diff body.
       if (!desktopMatch.matches) return;
       const root = document.scrollingElement ?? document.documentElement;
       const pageMaxScroll = root.scrollHeight - root.clientHeight;
@@ -262,17 +227,12 @@ export function RepoCommit() {
       const dy = event.deltaY;
       if (dy === 0) return;
 
-      // Scrolling down before the page has locked: take over so the page
-      // scrolls into the locked state instead of being trapped by Pierre.
       if (dy > 0 && !atLockedState) {
         event.preventDefault();
         window.scrollBy({ top: dy, behavior: "auto" });
         return;
       }
 
-      // Scrolling up while the page is locked and the diff scroller is
-      // already at its top: forward the upward scroll to the page so the
-      // user can reveal the commit metadata again.
       if (dy < 0 && atLockedState) {
         const diffScroller = workspace.querySelector<HTMLDivElement>(".gogs-diff-scroller");
         if (diffScroller && diffScroller.scrollTop <= 0) {
@@ -282,33 +242,25 @@ export function RepoCommit() {
       }
     }
 
-    // `passive: false` is required so `preventDefault()` actually blocks the
-    // browser's default scroll handling on Pierre's container.
+    // `passive: false` is required for `preventDefault()` to stop Pierre's
+    // default scroll handling.
     node.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       node.removeEventListener("wheel", onWheel);
     };
   }, []);
 
-  // The commit diff page wants edge-to-edge chrome (navbar, repo header,
-  // toolbar, footer) instead of the global max-width container. Flag the
-  // document so a small CSS override (`FULLWIDTH_CSS`, below) unconstrains
-  // the shared containers only while this page is mounted.
   useEffect(() => {
     document.documentElement.setAttribute("data-fullwidth", "commit-diff");
     return () => {
       document.documentElement.removeAttribute("data-fullwidth");
     };
   }, []);
-  // Per-file collapse state lives in component state, not the URL: it's
-  // keyed by item id (which contains the file's position in the patch),
-  // so serializing it would bloat the URL and not be portably shareable.
+  // Collapse is keyed by item id (path plus patch position), so putting it
+  // in the URL would bloat it and would not be portably shareable.
   const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
-  // Per-file "copied path" feedback. Drives the transient check-mark swap on
-  // the "Copy file path" icon button in the file header's metadata row. The
-  // flag clears 1.2s after the copy.
   const [copiedPathById, setCopiedPathById] = useState<Record<string, boolean>>({});
-  // Track metadata identity so a replacement patch starts with expansion
+  // Key by metadata identity so a replacement patch starts with expansion
   // actions available, even when it reuses the same file IDs.
   const [fullyExpandedDiffs, setFullyExpandedDiffs] = useState<Set<FileDiffMetadata>>(() => new Set());
   const expansionCheckLine = useRef(new WeakMap<FileDiffMetadata, number>());
@@ -331,8 +283,7 @@ export function RepoCommit() {
     [],
   );
 
-  // Derive the in-memory settings from the URL. Missing search fields fall
-  // back to defaults, so the URL only carries non-default values.
+  // The URL stores only non-default values.
   const whitespace: WhitespaceMode = search.whitespace ?? "show";
   const settings = useMemo<DiffToolbarSettings>(
     () => ({
@@ -358,9 +309,8 @@ export function RepoCommit() {
 
   const onWhitespaceChange = useCallback(
     (next: WhitespaceMode) => {
-      // Whitespace is special: the loader re-fetches the patch from the
-      // server because `-w` / `-b` happen at `git diff` time. The other
-      // toggles are client-only, but all of them still ride the URL.
+      // Whitespace changes refetch the patch because `-w` / `-b` are applied
+      // at `git diff` time. The other toggles are client-only.
       void navigate({
         search: (prev: RepoCommitSearch) => ({
           ...prev,
@@ -384,12 +334,8 @@ export function RepoCommit() {
     [patch],
   );
 
-  // Stamp each item with its current collapse state. Pierre's CodeView caches
-  // item records by id and only re-reads their payload (including `collapsed`)
-  // when `version` increases, so we encode the collapsed state into the
-  // version too. Line expansion (whole-file or per-hunk) is owned by Pierre
-  // once `loadDiffFiles` hydrates a partial diff, so it does not feed the
-  // controlled item payload here.
+  // Pierre caches items by id and only re-reads `collapsed` when `version`
+  // increases. Line expansion is Pierre-owned after `loadDiffFiles` hydrates.
   const items = useMemo<CodeViewItem<undefined>[]>(() => {
     return allItems.map((item) => {
       const collapsed = collapsedById[item.id] ?? false;
@@ -423,11 +369,8 @@ export function RepoCommit() {
     });
   }, [allItems]);
 
-  // Pierre doesn't expose a file-header click event, so we delegate clicks
-  // ourselves: when a user clicks anywhere on the file header that isn't an
-  // interactive child (the kebab menu, etc.), toggle the matching item's
-  // collapsed state. The header element has no item id, so we look up the
-  // item by file path read from the header's `[data-title] bdi` element.
+  // Pierre has no file-header click event and no item id on the header.
+  // Look up the file by `[data-title] bdi` and toggle it ourselves.
   const nameToItemIds = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const item of allItems) {
@@ -449,16 +392,13 @@ export function RepoCommit() {
     function onClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      // Walk composedPath through any shadow boundaries to find the header.
+      // `composedPath` crosses shadow boundaries.
       const path = event.composedPath();
       const header = path.find(
         (node): node is Element => node instanceof Element && node.matches?.("[data-diffs-header]"),
       );
       if (!header) return;
-      // Bail if the click landed on something interactive inside the header
-      // (a button, link, or any element whose own listener already handled
-      // the click, like our FileHeaderMenu trigger or Pierre's expand
-      // chevron). Those nodes appear earlier in `path` than the header.
+      // Interactive children appear earlier in `path` than the header.
       for (const node of path) {
         if (node === header) break;
         if (node instanceof Element) {
@@ -486,17 +426,14 @@ export function RepoCommit() {
     };
   }, [nameToItemIds]);
 
-  // Pierre hardcodes separator labels inside its shadow DOM without a render
-  // slot. Translate known context counts in place and clear the unknown-context
-  // message. Re-run on diff mutations because expansion rebuilds separators.
+  // Pierre hardcodes separator labels in shadow DOM with no render slot.
+  // Re-run on mutations because expansion rebuilds separators.
   useEffect(() => {
     const found = document.querySelector<HTMLDivElement>(".gogs-diff-scroller");
     if (!found) return;
     const root: ParentNode = found;
 
-    // Pierre's source strings. Matching the exact English is what lets us map a
-    // rendered separator back to a localized replacement. `unmodified line(s)`
-    // carries the count, which we parse out and re-interpolate.
+    // Match Pierre's English source strings, then replace with a localized value.
     const unmodifiedLinesRe = /^(\d+) unmodified lines?$/;
     const moreContextText = "More unchanged context may be available";
     const noNewlineText = "No newline at end of file";
@@ -521,17 +458,12 @@ export function RepoCommit() {
       }
     }
 
-    // A MutationObserver does not cross shadow boundaries, so we observe each
-    // shadow root as we discover it. Pierre rebuilds separators inside these
-    // roots when a file expands, so without this the labels would only be
-    // translated on first render, not after expansion.
+    // MutationObserver does not cross shadow boundaries. Pierre nests each
+    // file's body in a shadow root (sometimes deeper) and rebuilds separators
+    // on expand, so we observe each root as we find it.
     const observed = new WeakSet<ShadowRoot>();
     const observer = new MutationObserver(schedule);
 
-    // Pierre nests each file's diff body in a shadow root (sometimes deeper), so
-    // a plain querySelectorAll on the light DOM never reaches the separators.
-    // Walk light children and any shadow root we encounter, localizing and
-    // starting to observe each root along the way.
     function localizeDeep(node: ParentNode) {
       localizeIn(node);
       for (const el of node.querySelectorAll<HTMLElement>("*")) {
@@ -573,10 +505,8 @@ export function RepoCommit() {
   const repoLink = subUrl(`/${owner}/${repo}`);
   const browseFilesHref = `${repoLink}/src/${sha}`;
 
-  // Snap the document scroller to the position where the sticky workspace
-  // (toolbar + diff body) is locked to the viewport. We call this before
-  // Pierre's scrollTo so the file header's sticky offset math has a stable
-  // viewport to work against.
+  // Lock the page first so Pierre's sticky header offset math has a stable
+  // viewport.
   const scrollPageToLock = useCallback(() => {
     const root = document.scrollingElement ?? document.documentElement;
     const maxScroll = root.scrollHeight - root.clientHeight;
@@ -610,14 +540,11 @@ export function RepoCommit() {
     [t],
   );
 
-  // Fetch the full contents of one side of a file from the raw endpoint. The
-  // ref must exist (an added file has no pre-image, a deleted file no
-  // post-image), and the caller only asks for a side that does.
   const fetchRawFile = useCallback(
     async (ref: string | undefined, filePath: string) => {
       if (!ref) throw new Error("raw fetch: missing ref");
-      // Encode each segment so reserved characters in the name (`#`, `?`, ...)
-      // don't truncate or misroute the request, keeping the `/` separators.
+      // Encode per segment so `#` / `?` in a name do not truncate the URL,
+      // while `/` stays a path separator.
       const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
       const url = subUrl(`/${owner}/${repo}/raw/${ref}/${encodedPath}`);
       const res = await fetch(url, { credentials: "same-origin" });
@@ -628,16 +555,11 @@ export function RepoCommit() {
     [owner, repo],
   );
 
-  // Pierre calls this once per file the first time a reader expands any of its
-  // collapsed context, whether through a per-hunk chevron or the "Expand all
-  // lines" button. It hydrates the partial patch-parsed diff with full file
-  // contents, after which Pierre reveals lines from that in-memory content
-  // without further fetches. Pure renames need only the new file. Added and
-  // deleted files already carry their full renderable content.
+  // Pierre calls this once per file on first context expand, then reveals
+  // further lines from the hydrated in-memory contents.
   const loadDiffFiles = useCallback<FileDiffContentsLoader>(
     async (fileDiff) => {
       const parent = parents[0];
-      // Renames carry the pre-image at `prevName`.
       const prevPath = fileDiff.prevName ?? fileDiff.name;
       const [oldFile, newFile] = await Promise.all([
         fileDiff.type === "rename-pure" ? Promise.resolve(null) : fetchRawFile(parent, prevPath),
@@ -648,11 +570,7 @@ export function RepoCommit() {
     [parents, sha, fetchRawFile],
   );
 
-  // Pierre renders our callback's output into a `<slot name="header-prefix">`
-  // on the left of each file header (before its file-type icon and name).
-  // Only the collapse chevron lives here. Copy file path sits in the metadata
-  // slot on the right (next to "Expand all lines"); "Copy file link" lives in
-  // the three-dot menu.
+  // Pierre slot: `header-prefix`, left of the file-type icon.
   const renderHeaderPrefix = useCallback(
     (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return null;
@@ -686,15 +604,11 @@ export function RepoCommit() {
     [collapsedById, t, toggleCollapsed],
   );
 
-  // Fully expand one file's collapsed context by driving Pierre's native
-  // per-hunk expansion to its limit. Each collapsed gap is revealed by the
-  // `fromStart` side of an expansion region: the gap before hunk `i` is keyed by
-  // index `i`, and the gap after the last hunk is keyed by index `hunks.length`.
-  // Both are grown by expanding in the `up` direction, which is the side those
-  // regions read. `Number.POSITIVE_INFINITY` is the same "expand all" value
-  // Pierre's own shift-click uses, and re-expanding an already-open gap is a
-  // no-op. Pierre hydrates the file on first expand, so this works whether or not
-  // it has been touched.
+  // Each collapsed gap is the `fromStart` side of an expansion region: the
+  // gap before hunk `i` is index `i`, and the gap after the last hunk is
+  // `hunks.length`. Those regions read the `up` direction.
+  // `Number.POSITIVE_INFINITY` is Pierre's "expand all" value. Re-expanding
+  // an open gap is a no-op.
   const expandAllLinesFor = useCallback((item: CodeViewItem<undefined>) => {
     if (item.type !== "diff") return;
     const rendered = viewRef.current
@@ -702,23 +616,18 @@ export function RepoCommit() {
       ?.getRenderedItems()
       .find((r) => r.id === item.id);
     if (rendered?.type !== "diff") return;
-    // Indices `0..hunks.length` inclusive cover the gap before each hunk plus the
-    // trailing gap after the last one.
     for (let i = 0; i <= item.fileDiff.hunks.length; i++) {
       rendered.instance.expandHunk(i, "up", Number.POSITIVE_INFINITY);
     }
   }, []);
 
-  // Copy file path and Expand all lines buttons, rendered into Pierre's
-  // `header-filename-suffix` slot so they sit directly after the filename
-  // (GitHub-style) rather than out in the metadata row on the far right.
+  // Pierre slot: `header-filename-suffix`, immediately after the filename.
   const renderHeaderFilenameSuffix = useCallback(
     (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const justCopied = copiedPathById[item.id] === true;
-      // Added, deleted, and pure-rename files have no collapsed context to
-      // reveal, and a fully expanded file has nothing left, so hide the button.
+      // New, deleted, and pure-rename files have no collapsed context.
       const canExpand =
         item.fileDiff.type !== "new" &&
         item.fileDiff.type !== "deleted" &&
@@ -785,13 +694,9 @@ export function RepoCommit() {
       const prev = item.fileDiff.prevName;
       const viewFileHref = `${repoLink}/src/${sha}/${path}`;
       const rawFileHref = `${repoLink}/raw/${sha}/${path}`;
-      // Gogs' file-history view lives at `/commits/{ref}/{path}`. The ref can
-      // be a SHA, so we point at this commit; gogs walks history back from
-      // there.
+      // File history is `/commits/{ref}/{path}`. A commit SHA is a valid ref.
       const historyHref = `${repoLink}/commits/${sha}/${path}`;
-      // Edit/Delete are omitted on the commit page: gogs' editor needs a
-      // branch ref, and the commit SHA produces 404. The PR diff view (when
-      // it lands here) is the right home for those.
+      // Edit/Delete need a branch ref. A commit SHA 404s in the editor.
       return (
         <FileHeaderMenu
           filePath={path}
@@ -849,9 +754,7 @@ export function RepoCommit() {
               <TooltipContent>{formatAbsoluteTime(author.when)}</TooltipContent>
             </Tooltip>
           </span>
-          {/* TODO: render a "Verified" pill once the backend exposes commit
-              signature verification. Hidden for now to avoid claiming
-              verification we don't actually perform. */}
+          {/* TODO: Verified pill once the backend exposes signature verification. */}
 
           <span aria-hidden className="hidden h-4 w-px bg-(--color-border) sm:inline-block" />
 
@@ -904,14 +807,7 @@ export function RepoCommit() {
         </div>
       </section>
 
-      {/* Once the user scrolls past the commit metadata above, this wrapper
-          pins to the bottom of the sticky navbar (3.5rem). It contains both
-          the toolbar and the tree/diff row, so the entire two-pane workspace
-          locks together at that point, same as GitHub's commit page. The
-          inner row's height = viewport - navbar - toolbar so it fills the
-          remaining space exactly when locked. Constrained to the same
-          `max-w-7xl` + horizontal padding as the rest of the page chrome
-          so the workspace doesn't span edge-to-edge. */}
+      {/* 3.5rem is the sticky navbar height. Toolbar and tree/diff lock as one. */}
       <div
         ref={stickyWorkspaceRef}
         className="sticky top-[calc(3.5rem+1px)] z-10 flex h-[calc(100dvh-3.5rem-1px)] min-w-0 flex-col px-4 sm:px-6"
@@ -991,15 +887,8 @@ export function RepoCommit() {
                 items={items}
                 searchOpen={treeSearchOpen}
                 onSelectItem={(itemId) => {
-                  // Make sure the page is in the locked state before scrolling
-                  // inside Pierre, so the viewport layout matches what Pierre
-                  // assumes when positioning the file's first line under its
-                  // sticky header.
                   scrollPageToLock();
-                  // Pierre's "start" alignment lands the item's top edge flush
-                  // with the viewport top, which clips the file header's bottom
-                  // border and the first line of code by a few pixels. Nudge up
-                  // so the header and first line are fully visible.
+                  // `align: "start"` clips the header border and first line by a few pixels.
                   viewRef.current?.scrollTo({
                     type: "item",
                     id: itemId,
@@ -1014,10 +903,7 @@ export function RepoCommit() {
             </ResizableSidebar>
           ) : null}
 
-          {/* Mobile-only: a Sheet slide-over presents the same file tree.
-              The trigger lives on the toolbar's "Showing N changed files"
-              row (see DiffToolbar). The Sheet has no inline trigger of its
-              own. */}
+          {/* Trigger lives on the toolbar. This Sheet has no inline trigger. */}
           <Sheet open={mobileTreeOpen} onOpenChange={setMobileTreeOpen}>
             <SheetContent
               side="left"
@@ -1025,14 +911,12 @@ export function RepoCommit() {
               hideCloseButton
               style={TREE_THEME_STYLE}
               onOpenAutoFocus={(event) => {
-                // Prevent Radix from auto-focusing the first button (expand
-                // all directories), which would trigger its tooltip on open.
+                // Radix would focus the first button and open its tooltip.
                 event.preventDefault();
               }}
               onCloseAutoFocus={(event) => {
-                // Don't yank focus back to the trigger. The trigger lives
-                // in the diff pane and stealing focus from a just-selected
-                // file would defeat the point of the mobile flow.
+                // The trigger is in the diff pane. Restoring focus would
+                // steal it from the selected file.
                 event.preventDefault();
               }}
             >
@@ -1087,10 +971,7 @@ export function RepoCommit() {
                 searchOpen
                 onSelectItem={(itemId) => {
                   scrollPageToLock();
-                  // Pierre's "start" alignment lands the item's top edge flush
-                  // with the viewport top, which clips the file header's bottom
-                  // border and the first line of code by a few pixels. Nudge up
-                  // so the header and first line are fully visible.
+                  // `align: "start"` clips the header border and first line by a few pixels.
                   viewRef.current?.scrollTo({
                     type: "item",
                     id: itemId,
@@ -1124,15 +1005,9 @@ export function RepoCommit() {
                 diffStyle: settings.diffStyle,
                 overflow: settings.wrapLines ? "wrap" : "scroll",
                 stickyHeaders: true,
-                // Render a clickable separator at each collapsed-context gap
-                // showing how many unmodified lines it hides.
                 hunkSeparators: "line-info",
-                // Reveal at most 100 lines per click. Gaps larger than this get
-                // directional (up/down) controls plus an "expand all" button.
+                // Reveal at most 100 lines per click. Larger gaps get up/down plus expand-all.
                 expansionLineCount: 100,
-                // Lazily fetch full file contents the first time any context is
-                // expanded. Pierre hydrates the partial diff with the result
-                // and drives all further expansion from that in-memory content.
                 loadDiffFiles,
                 onPostRender: onDiffPostRender,
                 unsafeCSS: DIFF_UNSAFE_CSS,
