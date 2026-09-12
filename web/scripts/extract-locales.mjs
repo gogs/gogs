@@ -156,8 +156,6 @@ const KEYS = [
   "repo.search_next_match",
   "repo.diff.expand_file",
   "repo.diff.collapse_file",
-  "repo.diff.expand_all_lines",
-  "repo.diff.all_lines_expanded",
   "repo.commit_parent",
   "repo.commit_label",
   "repo.view_file",

@@ -142,8 +142,6 @@
   "repo.search_next_match": "Next match",
   "repo.diff.expand_file": "Expand file",
   "repo.diff.collapse_file": "Collapse file",
-  "repo.diff.expand_all_lines": "Expand all lines",
-  "repo.diff.all_lines_expanded": "All lines expanded",
   "repo.commit_parent": "parent",
   "repo.commit_label": "commit",
   "repo.view_file": "View file",

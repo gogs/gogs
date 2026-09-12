@@ -12,7 +12,6 @@ import {
   FileCode2,
   FolderTree,
   Search,
-  UnfoldVertical,
   X,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -534,31 +533,6 @@ export function RepoCommit() {
     [parents, sha, fetchRawFile],
   );
 
-  // "Expand all lines" for one file. Drives Pierre's native per-hunk expansion
-  // to its limit in both directions, which reveals every collapsed context
-  // line. Pierre hydrates the file via `loadDiffFiles` on the first expand, so
-  // this works whether or not the file has been touched yet. `Number.POSITIVE_
-  // INFINITY` is the same "expand all" value Pierre's own shift-click path
-  // uses, and re-expanding an already-expanded hunk is a no-op.
-  const expandAllLinesFor = useCallback((item: CodeViewItem<undefined>) => {
-    if (item.type !== "diff") return;
-    // Added and deleted files already show their whole content, so there is
-    // nothing to expand. The UI hides or disables the control for them, but
-    // the file-header menu can still reach a `new` file, so guard here too.
-    if (item.fileDiff.type === "new" || item.fileDiff.type === "deleted") return;
-    const instance = viewRef.current
-      ?.getInstance()
-      ?.getRenderedItems()
-      .find((rendered) => rendered.id === item.id);
-    // The file must be rendered for its instance to exist. The button lives in
-    // that file's header, so the header (and thus the instance) is mounted
-    // whenever the button is clickable.
-    if (instance?.type !== "diff") return;
-    for (let hunkIndex = 0; hunkIndex < item.fileDiff.hunks.length; hunkIndex++) {
-      instance.instance.expandHunk(hunkIndex, "both", Number.POSITIVE_INFINITY);
-    }
-  }, []);
-
   // Pierre renders our callback's output into a `<slot name="header-prefix">`
   // on the left of each file header (before its file-type icon and name).
   // Only the collapse chevron lives here. Copy file path sits in the metadata
@@ -611,21 +585,6 @@ export function RepoCommit() {
       // Edit/Delete are omitted on the commit page: gogs' editor needs a
       // branch ref, and the commit SHA produces 404. The PR diff view (when
       // it lands here) is the right home for those.
-      // Added files already show every line in the diff, so there's nothing
-      // more to expand. Render the button disabled (rather than hiding it) so
-      // the per-file action row stays the same width across the diff list.
-      // Deleted files have no post-image worth showing more of either, but we
-      // still hide their button: the file body is the full historical content
-      // and the action would be no-op without the symmetric "all expanded"
-      // affordance making sense to the reader.
-      //
-      // We only mark "all lines expanded" for added files, where it is
-      // knowable up front. After a click we cannot tell whether Pierre's
-      // background hydration succeeded (it exposes no completion signal), so
-      // the button stays actionable: re-clicking simply re-expands, which is a
-      // harmless no-op when already expanded and a retry if the load failed.
-      const expandDone = item.fileDiff.type === "new";
-      const supportsExpand = item.fileDiff.type !== "deleted";
       const justCopied = copiedPathById[item.id] === true;
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-(--color-muted-foreground)";
@@ -654,43 +613,17 @@ export function RepoCommit() {
             </TooltipTrigger>
             <TooltipContent>{t("repo.copy_file_path")}</TooltipContent>
           </Tooltip>
-          {supportsExpand ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}
-                  disabled={expandDone}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    expandAllLinesFor(item);
-                  }}
-                  className={`${buttonClass} hidden lg:grid`}
-                  data-no-collapse-on-click
-                >
-                  <UnfoldVertical className="size-3.5" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}
-              </TooltipContent>
-            </Tooltip>
-          ) : null}
           <FileHeaderMenu
             filePath={path}
             prevFilePath={prev}
             viewFileHref={viewFileHref}
             rawFileHref={rawFileHref}
             historyHref={historyHref}
-            onExpandAllLines={supportsExpand ? () => expandAllLinesFor(item) : undefined}
-            expandAllLinesDone={expandDone}
           />
         </span>
       );
     },
-    [sha, copiedPathById, copyFilePath, expandAllLinesFor, repoLink, t],
+    [copiedPathById, copyFilePath, repoLink, sha, t],
   );
 
   const copySha = useCallback(() => {
@@ -1011,10 +944,14 @@ export function RepoCommit() {
                 diffStyle: settings.diffStyle,
                 overflow: settings.wrapLines ? "wrap" : "scroll",
                 stickyHeaders: true,
-                // Render clickable chevrons at each hunk boundary so readers
-                // can reveal collapsed context a slice at a time (GitHub-style),
-                // in addition to the whole-file "Expand all lines" button.
+                // Render a clickable separator at each collapsed-context gap
+                // showing how many unmodified lines it hides.
                 hunkSeparators: "line-info",
+                // Reveal the whole gap on a single click. Pierre only "chunks"
+                // a separator into partial expansions when the gap is larger
+                // than this, so a very high value makes every click expand the
+                // entire gap at once instead of a fixed slice.
+                expansionLineCount: Number.MAX_SAFE_INTEGER,
                 // Lazily fetch full file contents the first time any context is
                 // expanded. Pierre hydrates the partial diff with the result
                 // and drives all further expansion from that in-memory content.
