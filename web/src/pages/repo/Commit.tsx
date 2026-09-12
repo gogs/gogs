@@ -453,11 +453,11 @@ export function RepoCommit() {
   }, [nameToItemIds]);
 
   // Localize Pierre's collapsed-context separators. Pierre renders their labels
-  // ("N unmodified lines", "More unchanged context may be available", "Expand
-  // all") as hardcoded English inside its shadow DOM, and `CodeView` exposes no
-  // separator render slot to override them. So we translate the rendered text
-  // in place: walk the shadow trees, match Pierre's exact strings, and swap in
-  // the localized copy. Re-run on every diff mutation because Pierre rebuilds
+  // ("N unmodified lines" and "More unchanged context may be available") as
+  // hardcoded English inside its shadow DOM, and `CodeView` exposes no separator
+  // render slot to override them. So we translate the rendered text in place:
+  // walk the shadow trees, match Pierre's exact strings, and swap in the
+  // localized copy. Re-run on every diff mutation because Pierre rebuilds
   // separators as files expand.
   useEffect(() => {
     const found = document.querySelector<HTMLDivElement>(".gogs-diff-scroller");
@@ -469,7 +469,6 @@ export function RepoCommit() {
     // carries the count, which we parse out and re-interpolate.
     const unmodifiedLinesRe = /^(\d+) unmodified lines?$/;
     const moreContextText = "More unchanged context may be available";
-    const expandAllText = "Expand all";
 
     function localizeIn(root: ParentNode) {
       for (const span of root.querySelectorAll<HTMLElement>("[data-unmodified-lines]")) {
@@ -482,12 +481,6 @@ export function RepoCommit() {
         } else if (text === moreContextText) {
           const localized = t("repo.diff.more_context_available");
           if (span.textContent !== localized) span.textContent = localized;
-        }
-      }
-      for (const button of root.querySelectorAll<HTMLElement>("[data-expand-all-button]")) {
-        const localized = t("repo.diff.expand_all_context");
-        if (button.textContent === expandAllText && button.textContent !== localized) {
-          button.textContent = localized;
         }
       }
     }
