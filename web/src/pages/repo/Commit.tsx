@@ -297,6 +297,10 @@ export function RepoCommit() {
   // the "Copy file path" icon button in the file header's metadata row. The
   // flag clears 1.2s after the copy.
   const [copiedPathById, setCopiedPathById] = useState<Record<string, boolean>>({});
+  // Files whose lines have been fully expanded via the "Expand all lines"
+  // button. Once set, the button is hidden since there is nothing left to
+  // expand.
+  const [fullyExpandedById, setFullyExpandedById] = useState<Record<string, boolean>>({});
 
   // Derive the in-memory settings from the URL. Missing search fields fall
   // back to defaults, so the URL only carries non-default values.
@@ -377,6 +381,13 @@ export function RepoCommit() {
     }
     return { fileCount: items.length, additions, deletions };
   }, [items]);
+
+  // Re-fetching the patch (e.g., toggling whitespace) rebuilds the diff from
+  // scratch with every file collapsed again, so drop the per-file "fully
+  // expanded" flags that would otherwise keep the expand button hidden.
+  useEffect(() => {
+    setFullyExpandedById({});
+  }, [patch]);
 
   const expandAllDiff = useCallback(() => {
     setCollapsedById({});
@@ -667,6 +678,7 @@ export function RepoCommit() {
     for (let i = 0; i <= item.fileDiff.hunks.length; i++) {
       rendered.instance.expandHunk(i, "up", Number.POSITIVE_INFINITY);
     }
+    setFullyExpandedById((prev) => ({ ...prev, [item.id]: true }));
   }, []);
 
   // Copy file path and Expand all lines buttons, rendered into Pierre's
@@ -678,8 +690,9 @@ export function RepoCommit() {
       const path = item.fileDiff.name;
       const justCopied = copiedPathById[item.id] === true;
       // Added and deleted files already show their whole content, so there is
-      // nothing to expand.
-      const canExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted";
+      // nothing to expand. Hide the button too once the file has been fully
+      // expanded, since re-clicking would be a no-op.
+      const canExpand = item.fileDiff.type !== "new" && item.fileDiff.type !== "deleted" && !fullyExpandedById[item.id];
       const buttonClass =
         "grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)";
       return (
@@ -731,7 +744,7 @@ export function RepoCommit() {
         </span>
       );
     },
-    [copiedPathById, copyFilePath, expandAllLinesFor, t],
+    [copiedPathById, copyFilePath, expandAllLinesFor, fullyExpandedById, t],
   );
 
   const renderHeaderMetadata = useCallback(
