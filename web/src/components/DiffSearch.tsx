@@ -14,7 +14,7 @@ interface Match {
 // side they actually appear. Guard every array read because a malformed patch
 // or stale Pierre indices would otherwise crash the whole search panel on
 // `undefined.toLowerCase()`.
-function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
+function buildMatches<L>(items: readonly CodeViewItem<L>[], query: string): Match[] {
   if (!query) return [];
   const needle = query.toLowerCase();
   const out: Match[] = [];
@@ -65,12 +65,12 @@ function buildMatches(items: readonly CodeViewItem[], query: string): Match[] {
   return out;
 }
 
-interface Props<L> {
-  items: readonly CodeViewItem[];
-  viewRef: RefObject<CodeViewHandle<L> | null>;
+interface Props<L, Caret> {
+  items: readonly CodeViewItem<L>[];
+  viewRef: RefObject<CodeViewHandle<L, Caret> | null>;
 }
 
-export function DiffSearch<L>({ items, viewRef }: Props<L>) {
+export function DiffSearch<L, Caret>({ items, viewRef }: Props<L, Caret>) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
