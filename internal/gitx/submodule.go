@@ -11,6 +11,7 @@ import (
 )
 
 var scpSyntax = lazyregexp.New(`^([a-zA-Z0-9_]+@)?([a-zA-Z0-9._-]+):(.*)$`)
+var scpSyntaxWithPort = lazyregexp.New(`^[0-9]{1,5}/([^/]+/.+)$`)
 
 // InferSubmoduleURL returns the inferred external URL of the submodule at best effort.
 // The `baseURL` should be the URL of the current repository. If the submodule URL looks
@@ -35,10 +36,15 @@ func InferSubmoduleURL(baseURL string, mod *git.Submodule) string {
 		if len(match) == 0 {
 			return mod.URL
 		}
+		path := match[0][3]
+		base, _ := url.Parse(baseURL)
+		if portMatch := scpSyntaxWithPort.FindAllStringSubmatch(path, -1); len(portMatch) > 0 && strings.EqualFold(match[0][2], base.Hostname()) {
+			path = portMatch[0][1]
+		}
 		parsed = &url.URL{
 			Scheme: "http",
 			Host:   match[0][2],
-			Path:   match[0][3],
+			Path:   path,
 		}
 	}
 
