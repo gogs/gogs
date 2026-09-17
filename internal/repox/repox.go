@@ -14,6 +14,7 @@ import (
 type CloneLink struct {
 	SSH   string
 	HTTPS string
+	Git   string
 }
 
 // NewCloneLink returns clone URLs using given owner and repository name.
@@ -29,12 +30,19 @@ func NewCloneLink(owner, repo string, isWiki bool) *CloneLink {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.App.RunUser, conf.SSH.Domain, owner, repo)
 	}
 	cl.HTTPS = HTTPSCloneURL(owner, repo)
+	cl.Git = GitCloneURL(owner, repo)
 	return cl
 }
 
 // HTTPSCloneURL returns HTTPS clone URL using given owner and repository name.
 func HTTPSCloneURL(owner, repo string) string {
 	return fmt.Sprintf("%s%s/%s.git", conf.Server.ExternalURL, owner, repo)
+}
+
+// GitCloneURL returns Git protocol clone URL using given owner and repository
+// name.
+func GitCloneURL(owner, repo string) string {
+	return fmt.Sprintf("git://%s/%s/%s.git", conf.Server.Domain, owner, repo)
 }
 
 // HTMLURL returns HTML URL using given owner and repository name.
