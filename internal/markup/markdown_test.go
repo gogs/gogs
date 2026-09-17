@@ -70,3 +70,17 @@ func Test_Markdown(t *testing.T) {
 		})
 	}
 }
+
+func Test_MarkdownRepoSourceWikiLinks(t *testing.T) {
+	metas := map[string]string{"repoLink": "/alice/project"}
+
+	t.Run("wiki link from repository source markdown", func(t *testing.T) {
+		html := Markdown("[Home](wiki/Home)", "/alice/project/src/main", metas)
+		assert.Contains(t, string(html), `href="/alice/project/wiki/Home"`)
+	})
+
+	t.Run("repository source link remains unchanged", func(t *testing.T) {
+		html := Markdown("[Guide](docs/guide.md)", "/alice/project/src/main", metas)
+		assert.Contains(t, string(html), `href="/alice/project/src/main/docs/guide.md"`)
+	})
+}
