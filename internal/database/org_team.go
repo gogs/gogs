@@ -517,6 +517,78 @@ func GetUserTeams(orgID, userID int64) ([]*Team, error) {
 	return getUserTeams(x, orgID, userID)
 }
 
+// grantUserOwnerAccess grants owner-level access to all repositories in the
+// organization to the given user. It is used when adding a user to the owners
+// team and replaces per-repository access recalculation with two bulk SQL
+// statements, which is orders of magnitude faster for organizations with many
+// repositories.
+func grantUserOwnerAccess(e Engine, orgID, userID int64) error {
+	// Upgrade any existing access records to owner level.
+	_, err := e.Exec(
+		"UPDATE access SET mode = ? WHERE user_id = ? AND mode < ? AND repo_id IN (SELECT id FROM repository WHERE owner_id = ?)",
+		AccessModeOwner, userID, AccessModeOwner, orgID,
+	)
+	if err != nil {
+		return errors.Newf("upgrade existing accesses to owner: %v", err)
+	}
+
+	// Insert owner-level access records for repos that have no record for this user.
+	_, err = e.Exec(
+		"INSERT INTO access (user_id, repo_id, mode)"+
+			" SELECT ?, r.id, ?"+
+			" FROM repository r"+
+			" WHERE r.owner_id = ?"+
+			" AND NOT EXISTS (SELECT 1 FROM access a WHERE a.user_id = ? AND a.repo_id = r.id)",
+		userID, int(AccessModeOwner), orgID, userID,
+	)
+	if err != nil {
+		return errors.Newf("insert owner accesses: %v", err)
+	}
+	return nil
+}
+
+// revokeOwnerTeamAccess recalculates repository access for a user who has been
+// removed from the owners team. It replaces per-repository recalculation with
+// two bulk SQL statements: one to clear all former-owner access, and one to
+// reinstate access from any remaining team memberships and direct collaborations.
+func revokeOwnerTeamAccess(e Engine, orgID, userID int64) error {
+	// Delete all access records the user held as an owner of org repos.
+	_, err := e.Exec(
+		"DELETE FROM access WHERE user_id = ? AND repo_id IN (SELECT id FROM repository WHERE owner_id = ?)",
+		userID, orgID,
+	)
+	if err != nil {
+		return errors.Newf("delete owner accesses: %v", err)
+	}
+
+	// Reinsert access records derived from remaining team memberships and
+	// direct collaborations. The sub-select gathers every (repo, mode) pair
+	// still available to the user after the owners-team removal, and MAX picks
+	// the highest mode when multiple sources overlap.
+	_, err = e.Exec(
+		"INSERT INTO access (user_id, repo_id, mode)"+
+			" SELECT ?, repo_id, MAX(mode)"+
+			" FROM ("+
+			"  SELECT tr.repo_id, t.authorize AS mode"+
+			"  FROM team_user tu"+
+			"  JOIN team t ON t.id = tu.team_id"+
+			"  JOIN team_repo tr ON tr.team_id = t.id"+
+			"  WHERE tu.uid = ? AND tu.org_id = ?"+
+			"  UNION ALL"+
+			"  SELECT c.repo_id, c.mode"+
+			"  FROM collaboration c"+
+			"  JOIN repository r ON r.id = c.repo_id"+
+			"  WHERE c.user_id = ? AND r.owner_id = ?"+
+			" ) combined"+
+			" GROUP BY repo_id",
+		userID, userID, orgID, userID, orgID,
+	)
+	if err != nil {
+		return errors.Newf("reinstate remaining accesses: %v", err)
+	}
+	return nil
+}
+
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
 func AddTeamMember(orgID, teamID, userID int64) error {
@@ -535,8 +607,12 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 	}
 	t.NumMembers++
 
-	if err = t.GetRepositories(); err != nil {
-		return err
+	// Only non-owner teams need the repo list for per-repo access recalculation.
+	// The owner team takes the bulk fast-path below.
+	if !t.IsOwnerTeam() {
+		if err = t.GetRepositories(); err != nil {
+			return err
+		}
 	}
 
 	sess := x.NewSession()
@@ -557,9 +633,18 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 	}
 
 	// Give access to team repositories.
-	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
+	if t.IsOwnerTeam() {
+		// The owners team covers every repository in the org. Recalculating
+		// accesses repo-by-repo is O(repos × queries) and times out on large
+		// organizations. Use bulk SQL instead.
+		if err = grantUserOwnerAccess(sess, orgID, userID); err != nil {
 			return err
+		}
+	} else {
+		for _, repo := range t.Repos {
+			if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -597,8 +682,11 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 
 	t.NumMembers--
 
-	if err = t.getRepositories(e); err != nil {
-		return err
+	// Only non-owner teams need the repo list for per-repo access recalculation.
+	if !t.IsOwnerTeam() {
+		if err = t.getRepositories(e); err != nil {
+			return err
+		}
 	}
 
 	// Get organization.
@@ -618,10 +706,20 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 		return err
 	}
 
-	// Delete access to team repositories.
-	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+	// Revoke access to team repositories.
+	if t.IsOwnerTeam() {
+		// Removing from the owners team requires clearing owner-level access from
+		// all org repos and reinstating only what the user retains via other team
+		// memberships or direct collaborations. The TeamUser record has already
+		// been deleted above, so the sub-selects will not see the owners team.
+		if err = revokeOwnerTeamAccess(e, orgID, uid); err != nil {
 			return err
+		}
+	} else {
+		for _, repo := range t.Repos {
+			if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+				return err
+			}
 		}
 	}
 
