@@ -41,12 +41,12 @@ func (q *UniqueQueue) Exist(id any) bool {
 // AddFunc adds new instance to the queue with a custom runnable function,
 // the queue is blocked until the function exits.
 func (q *UniqueQueue) AddFunc(id any, fn func()) {
-	if q.Exist(id) {
-		return
-	}
-
 	idStr := fmt.Sprintf("%v", id)
 	q.table.Lock()
+	if q.table.pool[idStr] {
+		q.table.Unlock()
+		return
+	}
 	q.table.pool[idStr] = true
 	if fn != nil {
 		fn()
