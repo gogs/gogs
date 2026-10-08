@@ -35,6 +35,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/gitdaemon"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
@@ -974,6 +975,11 @@ func initServices(customConf string) error {
 		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
 		log.Trace("SSH server MAC list: %v", conf.SSH.ServerMACs)
 		log.Trace("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
+	}
+
+	if conf.GitProtocol.StartBuiltinServer {
+		gitdaemon.Listen(conf.GitProtocol)
+		log.Info("Git protocol server started on %s:%v", conf.GitProtocol.ListenHost, conf.GitProtocol.ListenPort)
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
