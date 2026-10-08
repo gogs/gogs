@@ -15,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/saml"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/osx"
@@ -198,6 +199,15 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			}
 			loginSource.Type = auth.GitHub
 			loginSource.Provider = github.NewProvider(&cfg)
+
+		case "saml":
+			var cfg saml.Config
+			err = cfgSection.MapTo(&cfg)
+			if err != nil {
+				return errors.Wrap(err, `map "config" section`)
+			}
+			loginSource.Type = auth.SAML
+			loginSource.Provider = saml.NewProvider(&cfg)
 
 		default:
 			return errors.Newf("unknown type %q", authType)

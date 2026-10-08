@@ -1050,6 +1050,7 @@ function initAdmin() {
       $(".smtp").hide();
       $(".pam").hide();
       $(".github").hide();
+      $(".saml").hide();
       $(".has-tls").hide();
 
       var authType = $(this).val();
@@ -1067,8 +1068,12 @@ function initAdmin() {
         case "5": // LDAP
           $(".dldap").show();
           break;
-        case "6": //GITHUB
+        case "6": // GitHub
           $(".github").show();
+          $(".has-tls").show();
+          break;
+        case "7": // SAML
+          $(".saml").show();
           $(".has-tls").show();
           break;
       }
