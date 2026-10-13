@@ -720,6 +720,7 @@ func newRoutingHandler() (http.Handler, error) {
 
 	// The captcha middleware writes the response. This route exists so the request reaches it.
 	f.Get("/captcha/image.jpeg", func() {})
+	mountSAMLRoutes(f)
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/commit/{sha: /[0-9a-f]{7,40}/}.{format: /(diff|patch)/}", getRepoCommitRaw)

@@ -140,6 +140,65 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 	)
 }
 
+// AuthenticateExternalAccount finds or creates a user from an account that has
+// already been authenticated by an external redirect-based provider.
+func (s *UsersStore) AuthenticateExternalAccount(ctx context.Context, account *auth.ExternalAccount, loginSourceID int64) (*User, error) {
+	if loginSourceID <= 0 {
+		return nil, errors.New("external login source ID must be positive")
+	}
+	if account == nil || strings.TrimSpace(account.Login) == "" {
+		return nil, errors.New("external account login is required")
+	}
+
+	source, err := newLoginSourcesStore(s.db, loadedLoginSourceFilesStore).GetByID(ctx, loginSourceID)
+	if err != nil {
+		return nil, errors.Wrap(err, "get login source")
+	}
+	if !source.IsActived {
+		return nil, errors.Errorf("login source %d is not activated", source.ID)
+	}
+
+	findExisting := func() (*User, error) {
+		user := new(User)
+		err := s.db.WithContext(ctx).
+			Where("login_source = ? AND login_name = ?", loginSourceID, account.Login).
+			First(user).
+			Error
+		return user, err
+	}
+	user, err := findExisting()
+	if err == nil {
+		return user, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.Wrap(err, "get external account user")
+	}
+
+	user, err = s.Create(ctx, account.Name, account.Email,
+		CreateUserOptions{
+			FullName:    account.FullName,
+			LoginSource: loginSourceID,
+			LoginName:   account.Login,
+			Location:    account.Location,
+			Website:     account.Website,
+			Activated:   true,
+			Admin:       account.Admin,
+		},
+	)
+	if err == nil {
+		return user, nil
+	}
+
+	// A second assertion for the same external account may race the first user
+	// creation. Only recover by the source-scoped external identifier, never by
+	// username or email, to avoid linking an unrelated local account.
+	existing, findErr := findExisting()
+	if findErr == nil {
+		return existing, nil
+	}
+	return nil, err
+}
+
 // ChangeUsername changes the username of the given user and updates all
 // references to the old username. It returns ErrNameNotAllowed if the given
 // name or pattern of the name is not allowed as a username, or

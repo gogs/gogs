@@ -14,6 +14,7 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/saml"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errx"
 )
@@ -132,6 +133,11 @@ func TestLoginSource_AfterFind(t *testing.T) {
 			name:     "GitHub",
 			authType: auth.GitHub,
 			wantType: &github.Provider{},
+		},
+		{
+			name:     "SAML",
+			authType: auth.SAML,
+			wantType: &saml.Provider{},
 		},
 	}
 	for _, test := range tests {
