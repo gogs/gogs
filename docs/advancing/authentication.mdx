@@ -206,6 +206,10 @@ Gogs supports SP-initiated SAML 2.0 sign-in with the HTTP-Redirect or HTTP-POST 
 - Create a certificate and private key that Gogs can read. Gogs uses this key pair to sign authentication requests with SHA-256 and to protect pending sign-in cookies.
 - Configure your IdP to return stable login, username, and email attributes.
 
+<Warning>
+  For an IdP on a different site, serve Gogs over HTTPS and set `EXTERNAL_URL` to the public `https://` URL, including when a reverse proxy terminates TLS. Gogs derives its ACS URL and pending sign-in cookie settings from this value. An HTTPS ACS uses `SameSite=None; Secure`. An HTTP ACS uses `SameSite=Lax`, which browsers omit from the IdP's cross-site POST, so Gogs cannot recover the pending sign-in request. **Skip TLS Verify** only affects the server's IdP metadata fetch. It does not change this browser-cookie requirement.
+</Warning>
+
 For example, create a five-year self-signed SP certificate:
 
 ```bash
