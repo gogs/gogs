@@ -1120,8 +1120,7 @@ func (s *UsersStore) ListEmails(ctx context.Context, userID int64) ([]*EmailAddr
 // and new rands are generated for the user.
 func (s *UsersStore) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := s.db.WithContext(ctx).
-			Model(&EmailAddress{}).
+		err := tx.Model(&EmailAddress{}).
 			Where("uid = ? AND email = ?", userID, email).
 			Update("is_activated", true).
 			Error
