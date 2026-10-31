@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	"crypto/tls"
 	"strconv"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"gopkg.in/ini.v1"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/strx"
 )
 
 func parseCacheOptions(confOpts conf.CacheOptions) (cache.Options, error) {
@@ -20,7 +20,7 @@ func parseCacheOptions(confOpts conf.CacheOptions) (cache.Options, error) {
 		GCInterval: time.Duration(confOpts.Interval) * time.Second,
 	}
 
-	switch strx.Coalesce(strings.ToLower(confOpts.Adapter), "memory") {
+	switch cmp.Or(strings.ToLower(confOpts.Adapter), "memory") {
 	case "memory":
 		opts.Initer = cache.MemoryIniter()
 	case "file":
