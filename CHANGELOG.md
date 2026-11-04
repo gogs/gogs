@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Added
+
+- A built-in Git protocol (`git://`) server can now be enabled for anonymous cloning of public repositories using the `[server] START_GIT_PROTOCOL_SERVER` option (listening on `GIT_PROTOCOL_LISTEN_HOST:GIT_PROTOCOL_LISTEN_PORT`, default `0.0.0.0:9418`). [#1929](https://github.com/gogs/gogs/issues/1929)
+
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
