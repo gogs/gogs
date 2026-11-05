@@ -105,18 +105,55 @@ func (m *Mirror) readAddress() {
 // It returns original string if protocol is not HTTP/HTTPS.
 // TODO(unknwon): Use url.Parse.
 func HandleMirrorCredentials(url string, mosaics bool) string {
+	message := url
 	i := strings.Index(url, "@")
-	if i == -1 {
-		return url
+	if i != -1 {
+		start := strings.Index(url, "://")
+		if start != -1 {
+			if mosaics {
+				message = url[:start+3] + "<credentials>" + url[i:]
+			} else {
+				message = url[:start+3] + url[i+1:]
+			}
+		}
 	}
-	start := strings.Index(url, "://")
-	if start == -1 {
-		return url
+
+	return AppendMigrationCertificateHint(message)
+}
+
+// AppendMigrationCertificateHint adds actionable guidance for common remote Git
+// server certificate failures.
+func AppendMigrationCertificateHint(message string) string {
+	if !IsMigrationCertificateError(message) {
+		return message
 	}
-	if mosaics {
-		return url[:start+3] + "<credentials>" + url[i:]
+
+	return message + "\n\nThe remote Git server certificate is not trusted. Ask the remote server administrator to install a trusted certificate, or configure the Git CA bundle for the user running Gogs with `git config --global http.sslCAInfo /path/to/certificate.crt` and try again."
+}
+
+// IsMigrationCertificateError returns true for the common Git/libcurl TLS
+// verification errors users hit when migrating from self-signed HTTPS remotes.
+func IsMigrationCertificateError(message string) bool {
+	message = strings.ToLower(message)
+	if !strings.Contains(message, "certificate") {
+		return false
 	}
-	return url[:start+3] + url[i+1:]
+
+	patterns := []string{
+		"issuer is not recognized",
+		"cannot be authenticated",
+		"signed by unknown authority",
+		"self signed certificate",
+		"certificate verify failed",
+		"unable to get local issuer certificate",
+	}
+	for _, pattern := range patterns {
+		if strings.Contains(message, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Address returns mirror address from Git repository config without credentials.
