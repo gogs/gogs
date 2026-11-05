@@ -4,8 +4,8 @@ on:
     branches:
       - main
   schedule:
-    # Weekly rebuild to pick up patched base image packages.
-    - cron: '17 3 * * 1'
+    # Monthly rebuild to pick up patched base image packages.
+    - cron: '17 3 1 * *'
   workflow_dispatch:
 
 jobs:
