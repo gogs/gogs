@@ -39,6 +39,10 @@ type PageMeta struct {
 	Updated time.Time
 }
 
+func wikiMarkdownURLPrefix(repoLink string) string {
+	return repoLink + "/wiki"
+}
+
 func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, string) {
 	wikiPath := c.Repo.Repository.WikiPath()
 	wikiRepo, err := git.Open(wikiPath)
@@ -99,7 +103,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		return nil, ""
 	}
 	if isViewPage {
-		c.Data["content"] = string(markup.Markdown(p, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
+		c.Data["content"] = string(markup.Markdown(p, wikiMarkdownURLPrefix(c.Repo.RepoLink), c.Repo.Repository.ComposeMetas()))
 	} else {
 		c.Data["content"] = string(p)
 	}
