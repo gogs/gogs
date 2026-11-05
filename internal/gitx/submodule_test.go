@@ -10,6 +10,7 @@ import (
 func TestInferSubmoduleURL(t *testing.T) {
 	tests := []struct {
 		name      string
+		baseURL   string
 		submodule *git.Submodule
 		expURL    string
 	}{
@@ -30,12 +31,47 @@ func TestInferSubmoduleURL(t *testing.T) {
 			expURL: "http://github.com/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
 		},
 		{
+			name:    "same instance SSH URL preserves web base",
+			baseURL: "https://gogs.example.com:8080/user/repo",
+			submodule: &git.Submodule{
+				URL:    "ssh://git@gogs.example.com:22/gogs/docs-api.git",
+				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
+			},
+			expURL: "https://gogs.example.com:8080/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
+		},
+		{
 			name: "SSH URL in SCP syntax",
 			submodule: &git.Submodule{
 				URL:    "git@github.com:gogs/docs-api.git",
 				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
 			},
 			expURL: "http://github.com/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
+		},
+		{
+			name:    "same instance SCP URL with SSH port preserves web base",
+			baseURL: "https://gogs.example.com:8080/user/repo",
+			submodule: &git.Submodule{
+				URL:    "git@gogs.example.com:2222/gogs/docs-api.git",
+				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
+			},
+			expURL: "https://gogs.example.com:8080/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
+		},
+		{
+			name:    "same instance SCP URL keeps numeric namespace when port is ambiguous",
+			baseURL: "https://gogs.example.com:8080/user/repo",
+			submodule: &git.Submodule{
+				URL:    "git@gogs.example.com:2222/repo.git",
+				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
+			},
+			expURL: "https://gogs.example.com:8080/2222/repo/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
+		},
+		{
+			name: "external SCP URL keeps numeric namespace",
+			submodule: &git.Submodule{
+				URL:    "git@example.com:2222/gogs/docs-api.git",
+				Commit: "6b08f76a5313fa3d26859515b30aa17a5faa2807",
+			},
+			expURL: "http://example.com/2222/gogs/docs-api/commit/6b08f76a5313fa3d26859515b30aa17a5faa2807",
 		},
 		{
 			name: "relative path",
@@ -56,7 +92,11 @@ func TestInferSubmoduleURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.expURL, InferSubmoduleURL("https://gogs.example.com/user/repo", test.submodule))
+			baseURL := test.baseURL
+			if baseURL == "" {
+				baseURL = "https://gogs.example.com/user/repo"
+			}
+			assert.Equal(t, test.expURL, InferSubmoduleURL(baseURL, test.submodule))
 		})
 	}
 }
