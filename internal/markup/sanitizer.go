@@ -34,6 +34,12 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("type").Matching(lazyregexp.New(`^checkbox$`).Regexp()).OnElements("input")
 		sanitizer.policy.AllowAttrs("checked", "disabled").OnElements("input")
 
+		// Alerts, e.g., "> [!NOTE]"
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert markdown-alert-(note|tip|important|warning|caution)$`).Regexp()).OnElements("div")
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert-title$`).Regexp()).OnElements("p")
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^octicon octicon-(info|light-bulb|megaphone|alert|stop)$`).Regexp()).OnElements("span")
+		sanitizer.policy.AllowAttrs("aria-hidden").Matching(lazyregexp.New(`^true$`).Regexp()).OnElements("span")
+
 		// Only allow data URIs with safe image MIME types to prevent XSS via
 		// "data:text/html" payloads.
 		sanitizer.policy.AllowURLSchemeWithCustomPolicy("data", IsSafeDataURI)

@@ -70,3 +70,89 @@ func Test_Markdown(t *testing.T) {
 		})
 	}
 }
+
+func Test_MarkdownAlert(t *testing.T) {
+	NewSanitizer()
+
+	alertTitle := func(typ, icon, title string) string {
+		return `<div class="markdown-alert markdown-alert-` + typ + `">` + "\n" +
+			`<p class="markdown-alert-title"><span class="octicon octicon-` + icon + `" aria-hidden="true"></span>` + title + `</p>` + "\n"
+	}
+
+	tests := []struct {
+		name   string
+		input  string
+		expVal string
+	}{
+		{
+			name:   "note",
+			input:  "> [!NOTE]\n> Useful information.\n",
+			expVal: alertTitle("note", "info", "Note") + "<p>Useful information.</p>\n</div>\n",
+		},
+		{
+			name:   "tip",
+			input:  "> [!TIP]\n> A helpful suggestion.\n",
+			expVal: alertTitle("tip", "light-bulb", "Tip") + "<p>A helpful suggestion.</p>\n</div>\n",
+		},
+		{
+			name:   "important",
+			input:  "> [!IMPORTANT]\n> Do not miss this.\n",
+			expVal: alertTitle("important", "megaphone", "Important") + "<p>Do not miss this.</p>\n</div>\n",
+		},
+		{
+			name:   "warning",
+			input:  "> [!WARNING]\n> Watch out.\n",
+			expVal: alertTitle("warning", "alert", "Warning") + "<p>Watch out.</p>\n</div>\n",
+		},
+		{
+			name:   "caution",
+			input:  "> [!CAUTION]\n> Potential danger.\n",
+			expVal: alertTitle("caution", "stop", "Caution") + "<p>Potential danger.</p>\n</div>\n",
+		},
+		{
+			name:   "marker is case-insensitive",
+			input:  "> [!tip]\n> A helpful suggestion.\n",
+			expVal: alertTitle("tip", "light-bulb", "Tip") + "<p>A helpful suggestion.</p>\n</div>\n",
+		},
+		{
+			name:   "consecutive alerts",
+			input:  "> [!NOTE]\n> First.\n\n> [!TIP]\n> Second.\n",
+			expVal: alertTitle("note", "info", "Note") + "<p>First.</p>\n\n</div>\n" + alertTitle("tip", "light-bulb", "Tip") + "<p>Second.</p>\n</div>\n",
+		},
+		{
+			name:   "block content",
+			input:  "> [!NOTE]\n> - a\n> - b\n",
+			expVal: alertTitle("note", "info", "Note") + "\n\n<ul>\n<li>a</li>\n<li>b</li>\n</ul>\n</div>\n",
+		},
+		{
+			name:   "marker without content",
+			input:  "> [!NOTE]\n",
+			expVal: alertTitle("note", "info", "Note") + "\n</div>\n",
+		},
+		{
+			name:   "block quote followed by an alert",
+			input:  "> Regular quote.\n\n> [!NOTE]\n> Useful information.\n",
+			expVal: "<blockquote>\n<p>Regular quote.</p>\n\n</blockquote>\n" + alertTitle("note", "info", "Note") + "<p>Useful information.</p>\n</div>\n",
+		},
+		{
+			name:   "marker not on its own line",
+			input:  "> [!NOTE] on the same line\n",
+			expVal: "<blockquote>\n<p>[!NOTE] on the same line</p>\n</blockquote>\n",
+		},
+		{
+			name:   "unknown alert type",
+			input:  "> [!BOGUS]\n> Unknown type.\n",
+			expVal: "<blockquote>\n<p>[!BOGUS]\nUnknown type.</p>\n</blockquote>\n",
+		},
+		{
+			name:   "regular block quote",
+			input:  "> Regular quote.\n",
+			expVal: "<blockquote>\n<p>Regular quote.</p>\n</blockquote>\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expVal, string(Markdown(test.input, "/user/repo", nil)))
+		})
+	}
+}
