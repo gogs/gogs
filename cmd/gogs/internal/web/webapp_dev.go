@@ -34,7 +34,11 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		}
 		_ = resp.Body.Close()
 		wc := context.WebContextFrom(resp.Request)
-		body, err := renderIndex(raw, wc)
+		var body []byte
+		inject, err := readInjectContent()
+		if err == nil {
+			body, err = renderIndex(raw, wc, inject)
+		}
 		if err != nil {
 			log.Error("Failed to render index: %v", err)
 			body = []byte("Internal Server Error\n")

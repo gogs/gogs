@@ -64,7 +64,7 @@ const queryClient = new QueryClient();
 
 // Pierre's worker pool is a process-wide singleton (refcounted by mount). Hold
 // it at the app root so it stays warm across navigations: the diff renderer
-// uses workers to tokenize files via Shiki/Oniguruma off the main thread, and
+// uses workers to tokenize files via Shiki off the main thread, and
 // without a live pool every file falls back to a sync main-thread path that
 // returns `undefined` until highlighting resolves, painting blanks on fast
 // scroll over large diffs.

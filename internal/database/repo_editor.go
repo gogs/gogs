@@ -539,13 +539,15 @@ type UploadRepoFileOptions struct {
 // TODO(unknwon): Move to repox during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
 	path = strings.ToLower(path)
-	return strings.HasSuffix(path, ".git") ||
-		strings.Contains(path, ".git/") ||
-		strings.Contains(path, `.git\`) ||
-		// Windows treats ".git." the same as ".git"
-		strings.HasSuffix(path, ".git.") ||
-		strings.Contains(path, ".git./") ||
-		strings.Contains(path, `.git.\`)
+	// Windows strips trailing dots and spaces from each path component, so
+	// forms like ".git." and ".git " resolve to the real ".git" directory.
+	// Trim them from every component before comparing.
+	for _, component := range strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }) {
+		if strings.TrimRight(component, ". ") == ".git" {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {

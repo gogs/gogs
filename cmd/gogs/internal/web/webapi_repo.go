@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	"context"
 	"net/http"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
-	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -62,7 +62,7 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 		ID:                   repo.ID,
 		Owner:                owner.Name,
 		Name:                 repo.Name,
-		AvatarURL:            strx.Coalesce(repo.AvatarLink(), owner.AvatarURL()),
+		AvatarURL:            cmp.Or(repo.AvatarLink(), owner.AvatarURL()),
 		Visibility:           visibility,
 		WatchCount:           repo.NumWatches,
 		StarCount:            repo.NumStars,

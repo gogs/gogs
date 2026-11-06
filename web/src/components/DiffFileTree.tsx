@@ -20,7 +20,7 @@ import {
 } from "react";
 
 interface Props {
-  items: readonly CodeViewItem[];
+  items: readonly CodeViewItem<undefined>[];
   // Selecting a row in the tree fires this with the CodeViewItem id so the
   // page can drive the diff view's scroll. The callback abstraction lets us
   // avoid plumbing the diff view's `LAnnotation` generic through forwardRef.

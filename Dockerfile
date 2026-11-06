@@ -7,7 +7,7 @@ COPY conf/locale ./conf/locale
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter gogs-web run build
 
-FROM golang:1.26-alpine3.23 AS binarybuilder
+FROM golang:1.27-alpine3.23 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -35,7 +35,8 @@ RUN apk --no-cache --no-progress add \
   socat \
   tzdata \
   rsync \
-  "zlib>1.3.2"
+  "zlib>1.3.2" \
+  "openssl>3.5.7-r0"
 
 ENV GOGS_CUSTOM=/data/gogs
 

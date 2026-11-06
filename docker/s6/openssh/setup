@@ -5,10 +5,6 @@ if ! test -f /data/ssh/ssh_host_rsa_key; then
     ssh-keygen -q -f /data/ssh/ssh_host_rsa_key -N '' -t rsa
 fi
 
-if ! test -f /data/ssh/ssh_host_dsa_key; then
-    ssh-keygen -q -f /data/ssh/ssh_host_dsa_key -N '' -t dsa
-fi
-
 if ! test -f /data/ssh/ssh_host_ecdsa_key; then
     ssh-keygen -q -f /data/ssh/ssh_host_ecdsa_key -N '' -t ecdsa
 fi
