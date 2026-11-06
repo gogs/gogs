@@ -19,6 +19,7 @@ export interface LoginSource {
 
 export interface SignInPage {
   loginSources: LoginSource[];
+  samlLoginSources: LoginSource[];
 }
 
 interface SignInResponse {
@@ -39,7 +40,7 @@ export function SignIn() {
   const { t } = useTranslation();
   usePageTitle(t("sign_in"));
   const navigate = useNavigate();
-  const { loginSources } = route.useLoaderData();
+  const { loginSources, samlLoginSources } = route.useLoaderData();
   const defaultSource = loginSources.find((s) => s.isDefault);
 
   const [username, setUsername] = useState("");
@@ -47,7 +48,12 @@ export function SignIn() {
   const [loginSource, setLoginSource] = useState<number>(defaultSource?.id ?? 0);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(() => {
+    const error = new URLSearchParams(window.location.search).get("saml_error");
+    if (error === "provisioning") return t("auth.saml_provisioning_failed");
+    if (error) return t("auth.saml_sign_in_failed");
+    return null;
+  });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -105,6 +111,14 @@ export function SignIn() {
         setSubmitting(false);
       }
     })();
+  }
+
+  function samlSignInURL(sourceID: number): string {
+    const search = new URLSearchParams();
+    const redirectTo = new URLSearchParams(window.location.search).get("redirect_to");
+    if (redirectTo) search.set("redirect_to", redirectTo);
+    const query = search.toString();
+    return subUrl(`/api/web/user/saml/${sourceID}`) + (query ? `?${query}` : "");
   }
 
   return (
@@ -250,6 +264,15 @@ export function SignIn() {
               </div>
             </fieldset>
           </form>
+          {samlLoginSources.length > 0 && (
+            <div className="mt-5 flex flex-col gap-3 border-t border-(--color-border) pt-5">
+              {samlLoginSources.map((source) => (
+                <Button key={source.id} variant="outline" asChild className="w-full">
+                  <a href={samlSignInURL(source.id)}>{t("auth.saml_sign_in_with", { provider: source.name })}</a>
+                </Button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </main>

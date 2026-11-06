@@ -89,6 +89,7 @@ func TestUsers(t *testing.T) {
 		test func(t *testing.T, ctx context.Context, s *UsersStore)
 	}{
 		{"Authenticate", usersAuthenticate},
+		{"AuthenticateExternalAccount", usersAuthenticateExternalAccount},
 		{"ChangeUsername", usersChangeUsername},
 		{"Count", usersCount},
 		{"Create", usersCreate},
@@ -224,6 +225,66 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 		assert.Equal(t, "cindy@example.com", user.Email)
 	})
+}
+
+func usersAuthenticateExternalAccount(t *testing.T, ctx context.Context, s *UsersStore) {
+	loginSource, err := newLoginSourcesStore(s.db, NewMockLoginSourceFilesStore()).Create(
+		ctx,
+		CreateLoginSourceOptions{
+			Type:      auth.Mock,
+			Name:      "external",
+			Activated: true,
+			Config:    mockProviderConfig{},
+		},
+	)
+	require.NoError(t, err)
+
+	account := &auth.ExternalAccount{
+		Login:    "external-123",
+		Name:     "alice",
+		Email:    "alice@example.com",
+		FullName: "Alice Doe",
+	}
+	user, err := s.AuthenticateExternalAccount(ctx, account, loginSource.ID)
+	require.NoError(t, err)
+	assert.Equal(t, account.Name, user.Name)
+	assert.Equal(t, account.Login, user.LoginName)
+	assert.Equal(t, loginSource.ID, user.LoginSource)
+	assert.True(t, user.IsActive)
+
+	account.Name = "renamed-by-idp"
+	account.Email = "renamed@example.com"
+	returningUser, err := s.AuthenticateExternalAccount(ctx, account, loginSource.ID)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, returningUser.ID)
+	assert.Equal(t, "alice", returningUser.Name)
+	assert.Equal(t, "alice@example.com", returningUser.Email)
+
+	_, err = s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+	_, err = s.AuthenticateExternalAccount(ctx, &auth.ExternalAccount{
+		Login: "external-456",
+		Name:  "bob",
+		Email: "other@example.com",
+	}, loginSource.ID)
+	assert.True(t, IsErrUserAlreadyExist(err))
+
+	inactiveSource, err := newLoginSourcesStore(s.db, NewMockLoginSourceFilesStore()).Create(
+		ctx,
+		CreateLoginSourceOptions{
+			Type:      auth.Mock,
+			Name:      "inactive-external",
+			Activated: false,
+			Config:    mockProviderConfig{},
+		},
+	)
+	require.NoError(t, err)
+	_, err = s.AuthenticateExternalAccount(ctx, &auth.ExternalAccount{
+		Login: "external-789",
+		Name:  "carol",
+		Email: "carol@example.com",
+	}, inactiveSource.ID)
+	assert.ErrorContains(t, err, "is not activated")
 }
 
 func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
