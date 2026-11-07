@@ -17,11 +17,11 @@ importers:
         specifier: ^5.2.8
         version: 5.2.8
       '@pierre/diffs':
-        specifier: 1.6.2
-        version: 1.6.2(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: 1.6.4
+        version: 1.6.4(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@pierre/trees':
-        specifier: 1.0.0-beta.4
-        version: 1.0.0-beta.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: 1.0.0-beta.6
+        version: 1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
       '@radix-ui/react-checkbox':
         specifier: ^1.3.3
         version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -320,8 +320,8 @@ packages:
   '@oxc-project/types@0.139.0':
     resolution: {integrity: sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw==}
 
-  '@pierre/diffs@1.6.2':
-    resolution: {integrity: sha512-Hpk+HjjsJ2IWRZ3ALAa7rdBfhF2Zeyh5Kk7L4riMXRo3eHal9yQR1TgBryp+OzGyxfFfwsnEBOQztoANZIzpMQ==}
+  '@pierre/diffs@1.6.4':
+    resolution: {integrity: sha512-RsKoruCOp50qaDM3a7BQan5K77xMkGWT1NF01fiYP1PfT3v4CvIjwytNk5WjZG0BesBkMOP2UbrBIDigB1k0ug==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
@@ -331,12 +331,32 @@ packages:
       react-dom:
         optional: true
 
-  '@pierre/highlights@0.3.0':
-    resolution: {integrity: sha512-s6xZ/giPPrSeCO2w254GiysUXD4ditKMTOrl1vHynvPqP7VdlujYi01O9joxJ0T16XkoXGQMN6zkRi9+O8NCzg==}
+  '@pierre/highlights@0.4.0':
+    resolution: {integrity: sha512-2a38H7ep3KweGi1fGQpJk+Krod2OMpDIXagKPlqBd1Y9P460T7zQmc66Wm2JAH1SpIG93wCyyhZVrkc5dnAJVQ==}
 
   '@pierre/theme@2.0.0':
     resolution: {integrity: sha512-yNDd9GYLQl1mEUJR8AneJ5e4ohLIHQd/wZLWr4fagt78vS2RwwZNW530vVgHqXFAyFVcFlRmGUD5ramXH46OXw==}
     engines: {vscode: ^1.0.0}
+
+  '@pierre/theming@1.0.0':
+    resolution: {integrity: sha512-WsdrnhKfjeyXGDikZmN9pkpeZ5S/cl6EE72feiSc0tlynT1tMYqXqouhuv/foK+PY9OEnebOAVRQn3+rAstR8g==}
+    peerDependencies:
+      '@pierre/theme': ^1.1.0
+      '@shikijs/themes': ^3.0.0 || ^4.0.0
+      react: ^18.3.1 || ^19.0.0
+      react-dom: ^18.3.1 || ^19.0.0
+      shiki: ^3.0.0 || ^4.0.0
+    peerDependenciesMeta:
+      '@pierre/theme':
+        optional: true
+      '@shikijs/themes':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      shiki:
+        optional: true
 
   '@pierre/theming@1.0.2':
     resolution: {integrity: sha512-RmXLLqtx31UGcR8kZyO5hGAQ1EXz6loT1Cu0BFAGsbnBboIxp2BlomkLfWyvdT4WZXnBGyu25onL1gKpFQuSUw==}
@@ -358,8 +378,8 @@ packages:
       shiki:
         optional: true
 
-  '@pierre/trees@1.0.0-beta.4':
-    resolution: {integrity: sha512-OfT1yk9ne8Te5+GB5zUY8yqE6B8BqjBHQJleH4lu8ltwNpoocZl4vXt1AzlEExpxI/pp+AFX5QG+lR3JjtTEag==}
+  '@pierre/trees@1.0.0-beta.6':
+    resolution: {integrity: sha512-zxeuSFM9TveM7b5XofweJALCtm/tGYV9HZzdbf7Uf+kBxIlUyz24/EHaGRjB0dsmmfDQl2ETz7AWwJ15lhSnpw==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
@@ -2720,9 +2740,9 @@ snapshots:
 
   '@oxc-project/types@0.139.0': {}
 
-  '@pierre/diffs@1.6.2(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@pierre/diffs@1.6.4(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@pierre/highlights': 0.3.0
+      '@pierre/highlights': 0.4.0
       '@pierre/theme': 2.0.0
       '@pierre/theming': 1.0.2(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
       diff: 9.0.0
@@ -2735,9 +2755,17 @@ snapshots:
     transitivePeerDependencies:
       - '@shikijs/themes'
 
-  '@pierre/highlights@0.3.0': {}
+  '@pierre/highlights@0.4.0': {}
 
   '@pierre/theme@2.0.0': {}
+
+  '@pierre/theming@1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)':
+    optionalDependencies:
+      '@pierre/theme': 2.0.0
+      '@shikijs/themes': 3.23.0
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      shiki: 3.23.0
 
   '@pierre/theming@1.0.2(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)':
     optionalDependencies:
@@ -2747,12 +2775,17 @@ snapshots:
       react-dom: 19.2.6(react@19.2.6)
       shiki: 3.23.0
 
-  '@pierre/trees@1.0.0-beta.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@pierre/trees@1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)':
     dependencies:
+      '@pierre/theming': 1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
       preact: 11.0.0-beta.0
       preact-render-to-string: 6.6.5(preact@11.0.0-beta.0)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
+    transitivePeerDependencies:
+      - '@pierre/theme'
+      - '@shikijs/themes'
+      - shiki
 
   '@radix-ui/number@1.1.1': {}
 
