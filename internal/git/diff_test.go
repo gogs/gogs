@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDiffSection_NumLines(t *testing.T) {
@@ -839,4 +840,62 @@ new mode 100755`,
 			assert.Equal(t, test.expDiff, result.Diff)
 		})
 	}
+}
+
+func TestStreamParseDiff_QuotedNames(t *testing.T) {
+	const renameBody = "similarity index 85%\n" +
+		"rename from x\n" +
+		"rename to y\n" +
+		"index abc1234..def5678 100644\n" +
+		"--- x\n" +
+		"+++ y\n" +
+		"@@ -1 +1 @@\n" +
+		"-old\n" +
+		"+new\n"
+	tests := []struct {
+		name       string
+		header     string
+		expOldName string
+		expName    string
+	}{
+		{
+			name:       "only old name quoted",
+			header:     `diff --git "a/say \"hi\".txt" b/hi.txt`,
+			expOldName: `say "hi".txt`,
+			expName:    "hi.txt",
+		},
+		{
+			name:       "only new name quoted",
+			header:     `diff --git a/hi.txt "b/say\thi.txt"`,
+			expOldName: "hi.txt",
+			expName:    "say\thi.txt",
+		},
+		{
+			name:       "both names quoted with separator-like text",
+			header:     `diff --git "a/x \"b/y\".txt" "b/z.txt"`,
+			expOldName: `x "b/y".txt`,
+			expName:    "z.txt",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			done := make(chan SteamParseDiffResult)
+			go StreamParseDiff(strings.NewReader(test.header+"\n"+renameBody), done, 0, 0, 0)
+			result := <-done
+			require.NoError(t, result.Err)
+			require.Len(t, result.Diff.Files, 1)
+
+			file := result.Diff.Files[0]
+			assert.True(t, file.IsRenamed())
+			assert.Equal(t, test.expOldName, file.OldName())
+			assert.Equal(t, test.expName, file.Name)
+		})
+	}
+
+	t.Run("malformed header", func(t *testing.T) {
+		done := make(chan SteamParseDiffResult)
+		go StreamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
+		result := <-done
+		assert.ErrorContains(t, result.Err, "malformed diff header")
+	})
 }

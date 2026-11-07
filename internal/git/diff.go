@@ -255,26 +255,57 @@ func (p *diffParser) readLine() error {
 
 var diffHead = []byte("diff --git ")
 
+// parseDiffHeaderNames returns the old and new file names from the part of a
+// "diff --git" line after the command, e.g. `a/foo.txt b/bar.txt`. Git quotes
+// each name independently when it contains special characters, e.g.
+// `"a/f\303\266o.txt" b/foo.txt`.
+func parseDiffHeaderNames(names string) (a, b string, err error) {
+	middle := -1
+	if strings.HasPrefix(names, `"`) {
+		for i := 1; i < len(names); i++ {
+			if names[i] == '\\' {
+				i++
+			} else if names[i] == '"' {
+				middle = i + 1
+				break
+			}
+		}
+	} else {
+		// An unquoted name never contains a double quote.
+		middle = strings.Index(names, ` "b/`)
+		if middle == -1 {
+			middle = strings.Index(names, ` b/`)
+		}
+	}
+	if middle == -1 || middle >= len(names) || names[middle] != ' ' {
+		return "", "", errors.New("missing separator between file names")
+	}
+
+	a, ok := unquoteDiffName(names[:middle], "a/")
+	if !ok {
+		return "", "", errors.New(`old file name does not start with "a/"`)
+	}
+	b, ok = unquoteDiffName(names[middle+1:], "b/")
+	if !ok {
+		return "", "", errors.New(`new file name does not start with "b/"`)
+	}
+	return a, b, nil
+}
+
+func unquoteDiffName(name, prefix string) (string, bool) {
+	if len(name) >= 2 && name[0] == '"' && name[len(name)-1] == '"' {
+		name = string(UnescapeChars([]byte(name[1 : len(name)-1])))
+	}
+	return strings.CutPrefix(name, prefix)
+}
+
 func (p *diffParser) parseFileHeader() (*DiffFile, error) {
 	line := string(p.buffer)
 	p.buffer = nil
 
-	// NOTE: In case file name is surrounded by double quotes (it happens only in
-	// git-shell). e.g. diff --git "a/xxx" "b/xxx"
-	var middle int
-	hasQuote := line[len(diffHead)] == '"'
-	if hasQuote {
-		middle = strings.Index(line, ` "b/`)
-	} else {
-		middle = strings.Index(line, ` b/`)
-	}
-
-	beg := len(diffHead)
-	a := line[beg+2 : middle]
-	b := line[middle+3:]
-	if hasQuote {
-		a = string(UnescapeChars([]byte(a[1 : len(a)-1])))
-		b = string(UnescapeChars([]byte(b[1 : len(b)-1])))
+	a, b, err := parseDiffHeaderNames(line[len(diffHead):])
+	if err != nil {
+		return nil, fmt.Errorf("malformed diff header %q: %v", line, err)
 	}
 
 	file := &DiffFile{
@@ -284,7 +315,6 @@ func (p *diffParser) parseFileHeader() (*DiffFile, error) {
 	}
 
 	// Check file diff type and submodule
-	var err error
 checkType:
 	for !p.isEOF {
 		if err = p.readLine(); err != nil {
