@@ -10,6 +10,9 @@ log/
 custom/
 data/
 
+# Test fixtures cloned at test time
+/internal/git/testdata/
+
 # Configuration and application files
 .idea/
 .envrc
