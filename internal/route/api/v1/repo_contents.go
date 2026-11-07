@@ -11,7 +11,6 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"
 )
@@ -113,7 +112,7 @@ func getContents(c *context.APIContext) {
 
 	commit, err := gitRepo.CatFileCommit(c.Req.Context(), ref)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get commit")
+		c.NotFoundOrError(git.NewError(err), "get commit")
 		return
 	}
 
@@ -121,7 +120,7 @@ func getContents(c *context.APIContext) {
 	treePath := pathx.Clean(c.Params("*"))
 	entry, err := commit.TreeEntry(c.Req.Context(), treePath)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
+		c.NotFoundOrError(git.NewError(err), "get tree entry")
 		return
 	}
 
@@ -139,13 +138,13 @@ func getContents(c *context.APIContext) {
 	// The entry is a directory
 	dir, err := gitRepo.LsTree(c.Req.Context(), entry.ID().String(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get tree")
+		c.NotFoundOrError(git.NewError(err), "get tree")
 		return
 	}
 
 	entries, err := dir.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "list entries")
+		c.NotFoundOrError(git.NewError(err), "list entries")
 		return
 	}
 

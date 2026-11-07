@@ -6,7 +6,6 @@ import (
 	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/gitx"
 )
 
 func getRepoGitTree(c *context.APIContext) {
@@ -19,7 +18,7 @@ func getRepoGitTree(c *context.APIContext) {
 	sha := c.Params(":sha")
 	tree, err := gitRepo.LsTree(c.Req.Context(), sha, git.LsTreeOptions{Verbatim: true})
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get tree")
+		c.NotFoundOrError(git.NewError(err), "get tree")
 		return
 	}
 

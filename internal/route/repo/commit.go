@@ -10,7 +10,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -147,24 +146,24 @@ func CompareDiff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), afterCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get head commit")
+		c.NotFoundOrError(git.NewError(err), "get head commit")
 		return
 	}
 
 	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
 	defer cancel()
-	diff, err := gitx.RepoDiff(ctx, c.Repo.GitRepo,
+	diff, err := c.Repo.GitRepo.Diff(ctx,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get diff")
+		c.NotFoundOrError(git.NewError(err), "get diff")
 		return
 	}
 
 	commits, err := commit.CommitsAfter(c.Req.Context(), beforeCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get commits after")
+		c.NotFoundOrError(git.NewError(err), "get commits after")
 		return
 	}
 

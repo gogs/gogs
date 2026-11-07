@@ -13,7 +13,6 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -49,7 +48,7 @@ func Releases(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 	c.Data["PageIsReleaseList"] = true
 
-	tagsPage, err := gitx.Module.ListTagsAfter(c.Req.Context(), c.Repo.GitRepo.Path(), c.Query("after"), 10)
+	tagsPage, err := c.Repo.GitRepo.TagsAfter(c.Req.Context(), c.Query("after"), 10)
 	if err != nil {
 		c.Error(err, "get tags")
 		return

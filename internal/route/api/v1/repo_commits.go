@@ -10,7 +10,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -64,7 +63,7 @@ func getSingleCommit(c *context.APIContext) {
 	}
 	commit, err := gitRepo.CatFileCommit(c.Req.Context(), c.Params(":sha"))
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get commit")
+		c.NotFoundOrError(git.NewError(err), "get commit")
 		return
 	}
 
@@ -109,7 +108,7 @@ func getReferenceSHA(c *context.APIContext) {
 		sha, err = gitRepo.TagCommitID(c.Req.Context(), ref)
 	}
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get reference commit ID")
+		c.NotFoundOrError(git.NewError(err), "get reference commit ID")
 		return
 	}
 	c.PlainText(http.StatusOK, sha)

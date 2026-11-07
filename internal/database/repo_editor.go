@@ -20,7 +20,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/iox"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
@@ -264,7 +263,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Diff, error) {
+func (r *Repository) GetDiffPreview(branch, treePath, content string) (*git.Diff, error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
@@ -311,10 +310,13 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Dif
 	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", r.RepoPath()), cmd)
 	defer process.Remove(pid)
 
-	diff, err := gitx.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
-	if err != nil {
-		return nil, errors.Newf("parse diff: %v", err)
+	done := make(chan git.SteamParseDiffResult)
+	go git.StreamParseDiff(stdout, done, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	result := <-done
+	if result.Err != nil {
+		return nil, errors.Newf("parse diff: %v", result.Err)
 	}
+	diff := result.Diff
 	if err = cmd.Wait(); err != nil {
 		return nil, errors.Newf("wait: %v", err)
 	}

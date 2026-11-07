@@ -16,7 +16,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
@@ -33,7 +32,7 @@ const (
 func renderDirectory(c *context.Context, treeLink string) {
 	tree, err := c.Repo.Commit.Subtree(c.Req.Context(), c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get subtree")
+		c.NotFoundOrError(git.NewError(err), "get subtree")
 		return
 	}
 
@@ -217,7 +216,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig()
-	if err != nil && !gitx.IsErrRevisionNotExist(err) {
+	if err != nil && !git.IsErrRevisionNotExist(err) {
 		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
@@ -266,7 +265,7 @@ func Home(c *context.Context) {
 	// Get current entry user currently looking at.
 	entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
+		c.NotFoundOrError(git.NewError(err), "get tree entry")
 		return
 	}
 

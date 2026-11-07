@@ -576,6 +576,9 @@ func StreamParseDiff(r io.Reader, done chan<- SteamParseDiffResult, maxFiles, ma
 		maxLineChars: maxLineChars,
 	}
 	diff, err := p.parse()
+	if err == nil {
+		decodeCharsets(diff)
+	}
 	done <- SteamParseDiffResult{
 		Diff: diff,
 		Err:  err,

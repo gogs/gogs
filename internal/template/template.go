@@ -22,7 +22,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
@@ -129,7 +128,7 @@ func FuncMap() []template.FuncMap {
 				}
 				return "tab-size-8"
 			},
-			"InferSubmoduleURL": gitx.InferSubmoduleURL,
+			"InferSubmoduleURL": git.InferSubmoduleURL,
 		}}
 	})
 	return funcMap

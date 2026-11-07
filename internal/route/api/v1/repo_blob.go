@@ -7,7 +7,6 @@ import (
 	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
 )
 
@@ -21,7 +20,7 @@ func repoGitBlob(c *context.APIContext) {
 	sha := c.Params(":sha")
 	blob, err := gitRepo.CatFileBlob(c.Req.Context(), sha)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get blob")
+		c.NotFoundOrError(git.NewError(err), "get blob")
 		return
 	}
 
@@ -35,7 +34,7 @@ func repoGitBlob(c *context.APIContext) {
 
 	content, err := blob.Blob().Bytes(c.Req.Context())
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get blob content")
+		c.NotFoundOrError(git.NewError(err), "get blob content")
 		return
 	}
 

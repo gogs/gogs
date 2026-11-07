@@ -1,4 +1,4 @@
-package gitx
+package git
 
 import (
 	"html/template"
@@ -6,14 +6,12 @@ import (
 
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
-
-	"gogs.io/gogs/internal/git"
 )
 
 func Test_diffsToHTML(t *testing.T) {
 	tests := []struct {
 		diffs    []dmp.Diff
-		lineType git.DiffLineType
+		lineType DiffLineType
 		expHTML  template.HTML
 	}{
 		{
@@ -23,7 +21,7 @@ func Test_diffsToHTML(t *testing.T) {
 				{Type: dmp.DiffDelete, Text: " baz"},
 				{Type: dmp.DiffEqual, Text: " biz"},
 			},
-			lineType: git.DiffLineAdd,
+			lineType: DiffLineAdd,
 			expHTML:  template.HTML(`+foo <span class="added-code">bar</span> biz`),
 		},
 		{
@@ -33,7 +31,7 @@ func Test_diffsToHTML(t *testing.T) {
 				{Type: dmp.DiffInsert, Text: " baz"},
 				{Type: dmp.DiffEqual, Text: " biz"},
 			},
-			lineType: git.DiffLineDelete,
+			lineType: DiffLineDelete,
 			expHTML:  template.HTML(`-foo <span class="removed-code">bar</span> biz`),
 		},
 	}

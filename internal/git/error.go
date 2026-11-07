@@ -2,6 +2,8 @@ package git
 
 import (
 	"errors"
+
+	"gogs.io/gogs/internal/errx"
 )
 
 var (
@@ -15,3 +17,35 @@ var (
 	ErrNotBlob              = errors.New("the entry is not a blob")
 	ErrNotDeleteNonPushURLs = errors.New("will not delete all non-push URLs")
 )
+
+var _ errx.NotFound = (*Error)(nil)
+
+// Error is a wrapper of a Git error, which handles not found.
+type Error struct {
+	error
+}
+
+func (e Error) NotFound() bool {
+	return IsErrSubmoduleNotExist(e.error) ||
+		IsErrRevisionNotExist(e.error)
+}
+
+// NewError wraps given error.
+func NewError(err error) error {
+	return Error{error: err}
+}
+
+// IsErrSubmoduleNotExist returns true if the error is ErrSubmoduleNotExist.
+func IsErrSubmoduleNotExist(err error) bool {
+	return errors.Is(err, ErrSubmoduleNotExist)
+}
+
+// IsErrRevisionNotExist returns true if the error is ErrRevisionNotExist.
+func IsErrRevisionNotExist(err error) bool {
+	return errors.Is(err, ErrRevisionNotExist)
+}
+
+// IsErrNoMergeBase returns true if the error is ErrNoMergeBase.
+func IsErrNoMergeBase(err error) bool {
+	return errors.Is(err, ErrNoMergeBase)
+}

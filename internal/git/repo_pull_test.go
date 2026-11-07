@@ -2,7 +2,11 @@ package git
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,4 +47,63 @@ func TestRepository_MergeBase(t *testing.T) {
 			assert.Equal(t, test.wantMergeBase, mb)
 		})
 	}
+}
+
+func TestRepository_PullRequestMeta(t *testing.T) {
+	ctx := context.Background()
+
+	base, cleanupBase, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanupBase()
+	head, cleanupHead, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanupHead()
+
+	mergeBase, err := base.RevParse(ctx, "master")
+	require.NoError(t, err)
+
+	// Two commits that change three files on the head branch, plus a commit on
+	// the base branch that must not be counted.
+	require.NoError(t, head.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
+	committer := &Signature{Name: "alice", Email: "alice@example.com", When: time.Now()}
+	for i, files := range [][]string{{"a.txt", "b.txt"}, {"c.txt"}} {
+		for _, f := range files {
+			require.NoError(t, os.WriteFile(filepath.Join(head.Path(), f), []byte(f), 0o644))
+		}
+		require.NoError(t, head.Add(ctx, AddOptions{All: true}))
+		require.NoError(t, head.Commit(ctx, committer, fmt.Sprintf("head %d", i)))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(base.Path(), "base.txt"), []byte("base"), 0o644))
+	require.NoError(t, base.Add(ctx, AddOptions{All: true}))
+	require.NoError(t, base.Commit(ctx, committer, "base"))
+
+	t.Run("fork", func(t *testing.T) {
+		meta, err := head.PullRequestMeta(ctx, base.Path(), "feature", "master")
+		require.NoError(t, err)
+		assert.Equal(t, mergeBase, meta.MergeBase)
+		require.Len(t, meta.Commits, 2)
+		assert.Equal(t, "head 1", meta.Commits[0].Summary())
+		assert.Equal(t, 3, meta.NumFiles)
+
+		remotes, err := head.Remotes(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"origin"}, remotes, "temporary remote should be removed")
+	})
+
+	t.Run("same repository", func(t *testing.T) {
+		meta, err := head.PullRequestMeta(ctx, head.Path(), "feature", "master")
+		require.NoError(t, err)
+		assert.Equal(t, mergeBase, meta.MergeBase)
+		assert.Len(t, meta.Commits, 2)
+		assert.Equal(t, 3, meta.NumFiles)
+	})
+
+	t.Run("no merge base", func(t *testing.T) {
+		_, err := exec(ctx, head.Path(), []string{"checkout", "--orphan", "lonely"}, nil)
+		require.NoError(t, err)
+		require.NoError(t, head.Commit(ctx, committer, "lonely"))
+
+		_, err = head.PullRequestMeta(ctx, base.Path(), "lonely", "master")
+		assert.True(t, IsErrNoMergeBase(err), "got %v", err)
+	})
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/flamego/flamego"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 	log "unknwon.dev/clog/v2"
@@ -65,7 +64,7 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 	}
 
 	if _, err = gitRepo.CatFileCommit(c.Request().Context(), sha); err != nil {
-		if gitx.IsErrRevisionNotExist(err) {
+		if git.IsErrRevisionNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("commit does not exist"))
 			return
 		}
@@ -95,14 +94,14 @@ func resolveRef(ctx context.Context, gitRepo *git.Repository, ref string) (*git.
 	if err == nil {
 		return commit, nil
 	}
-	if !gitx.IsErrRevisionNotExist(err) {
+	if !git.IsErrRevisionNotExist(err) {
 		return nil, errors.Wrap(err, "cat-file commit")
 	}
 	commit, err = gitRepo.BranchCommit(ctx, ref)
 	if err == nil {
 		return commit, nil
 	}
-	if !gitx.IsErrRevisionNotExist(err) {
+	if !git.IsErrRevisionNotExist(err) {
 		return nil, errors.Wrap(err, "get branch commit")
 	}
 	commit, err = gitRepo.TagCommit(ctx, ref)
@@ -139,7 +138,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 
 	commit, err := resolveRef(c.Request().Context(), gitRepo, ref)
 	if err != nil {
-		if gitx.IsErrRevisionNotExist(err) {
+		if git.IsErrRevisionNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("ref does not exist"))
 			return
 		}
@@ -150,7 +149,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 
 	blob, err := commit.Blob(c.Request().Context(), filepath)
 	if err != nil {
-		if gitx.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
+		if git.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("file does not exist"))
 			return
 		}

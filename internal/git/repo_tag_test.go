@@ -157,3 +157,90 @@ func TestRepository_DeleteTag(t *testing.T) {
 
 	assert.False(t, r.HasReference(ctx, RefsTags+"v1.0.0"))
 }
+
+func Test_tagsAfter(t *testing.T) {
+	all := []string{
+		"v2.3.0", "v2.2.1", "v2.1.0",
+		"v1.3.0", "v1.2.0", "v1.1.0",
+		"v0.8.0", "v0.5.0", "v0.1.0",
+	}
+
+	tests := []struct {
+		name        string
+		after       string
+		expTagsPage *TagsPage
+	}{
+		{
+			name: "first page",
+			expTagsPage: &TagsPage{
+				Tags: []string{
+					"v2.3.0", "v2.2.1", "v2.1.0",
+				},
+				HasLatest: true,
+				HasNext:   true,
+			},
+		},
+		{
+			name:  "second page",
+			after: "v2.1.0",
+			expTagsPage: &TagsPage{
+				Tags: []string{
+					"v1.3.0", "v1.2.0", "v1.1.0",
+				},
+				HasLatest: false,
+				HasNext:   true,
+			},
+		},
+		{
+			name:  "last page",
+			after: "v1.1.0",
+			expTagsPage: &TagsPage{
+				Tags: []string{
+					"v0.8.0", "v0.5.0", "v0.1.0",
+				},
+				HasLatest:     false,
+				PreviousAfter: "v2.1.0",
+				HasNext:       false,
+			},
+		},
+
+		{
+			name:  "arbitrary after",
+			after: "v1.2.0",
+			expTagsPage: &TagsPage{
+				Tags: []string{
+					"v1.1.0", "v0.8.0", "v0.5.0",
+				},
+				HasLatest:     false,
+				PreviousAfter: "v2.2.1",
+				HasNext:       true,
+			},
+		},
+		{
+			name:  "after the oldest one",
+			after: "v0.1.0",
+			expTagsPage: &TagsPage{
+				Tags:          []string{},
+				HasLatest:     false,
+				PreviousAfter: "v1.1.0",
+				HasNext:       false,
+			},
+		},
+		{
+			name:  "after does not exist",
+			after: "v2.2.9",
+			expTagsPage: &TagsPage{
+				Tags: []string{
+					"v2.3.0", "v2.2.1", "v2.1.0",
+				},
+				HasLatest: true,
+				HasNext:   true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expTagsPage, tagsAfter(all, test.after, 3))
+		})
+	}
+}

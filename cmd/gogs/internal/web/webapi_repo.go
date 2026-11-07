@@ -13,7 +13,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 )
@@ -124,7 +123,7 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 
 	commit, err := gitRepo.CatFileCommit(ctx, commitID)
 	if err != nil {
-		if gitx.IsErrRevisionNotExist(err) {
+		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
 		log.Error("getRepoCommit: cat-file commit %q in %q/%q: %v", commitID, owner.Name, repo.Name, err)

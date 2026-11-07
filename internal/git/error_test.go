@@ -1,11 +1,10 @@
-package gitx
+package git
 
 import (
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/errx"
 )
@@ -15,9 +14,9 @@ func TestError_NotFound(t *testing.T) {
 		err    error
 		expVal bool
 	}{
-		{err: git.ErrSubmoduleNotExist, expVal: true},
-		{err: git.ErrRevisionNotExist, expVal: true},
-		{err: git.ErrNoMergeBase, expVal: false},
+		{err: ErrSubmoduleNotExist, expVal: true},
+		{err: ErrRevisionNotExist, expVal: true},
+		{err: ErrNoMergeBase, expVal: false},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -27,11 +26,11 @@ func TestError_NotFound(t *testing.T) {
 }
 
 func TestIsErrRevisionNotExist(t *testing.T) {
-	assert.True(t, IsErrRevisionNotExist(git.ErrRevisionNotExist))
+	assert.True(t, IsErrRevisionNotExist(ErrRevisionNotExist))
 	assert.False(t, IsErrRevisionNotExist(os.ErrNotExist))
 }
 
 func TestIsErrNoMergeBase(t *testing.T) {
-	assert.True(t, IsErrNoMergeBase(git.ErrNoMergeBase))
+	assert.True(t, IsErrNoMergeBase(ErrNoMergeBase))
 	assert.False(t, IsErrNoMergeBase(os.ErrNotExist))
 }
