@@ -4,6 +4,7 @@ import type {
   FileTreeDirectoryHandle,
   FileTreeIcons,
   FileTreeItemHandle,
+  FileTreeLabelsOption,
   GitStatus,
   GitStatusEntry,
 } from "@pierre/trees";
@@ -18,6 +19,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   items: readonly CodeViewItem<undefined>[];
@@ -124,6 +126,23 @@ function collectDirectoryPaths(paths: readonly string[]): string[] {
 }
 
 export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, className, style, ref }: Props) {
+  const { t } = useTranslation();
+  // Only the statuses `diffTypeToStatus` produces are translated. The tree
+  // keeps Pierre's defaults for the rest.
+  const labels = useMemo<FileTreeLabelsOption>(
+    () => ({
+      searchPlaceholder: t("repo.search_files"),
+      gitStatusTitles: {
+        added: t("repo.diff.file_added"),
+        deleted: t("repo.diff.file_deleted"),
+        modified: t("repo.diff.file_modified"),
+        renamed: t("repo.diff.file_renamed"),
+      },
+      containsGitStatusTitle: t("repo.diff.contains_changed_files"),
+    }),
+    [t],
+  );
+
   const { paths, gitStatus, pathToItemId } = useMemo(() => {
     const collectedPaths: string[] = [];
     const status: GitStatusEntry[] = [];
@@ -207,6 +226,7 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
     search: true,
     stickyFolders: true,
     gitStatus,
+    labels,
     onSelectionChange,
     unsafeCSS: TREE_UNSAFE_CSS,
   });
@@ -246,10 +266,11 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
   }, [search.value, search.isOpen]);
 
   // When the patch changes (e.g. navigating to a different commit without
-  // unmounting), reset the tree contents and refresh git status without
-  // recreating the model.
+  // unmounting), reset the tree contents and refresh git status and labels
+  // without recreating the model.
   const pathsRef = useRef(paths);
   const statusRef = useRef(gitStatus);
+  const labelsRef = useRef(labels);
   useEffect(() => {
     if (pathsRef.current !== paths) {
       model.resetPaths(paths);
@@ -259,7 +280,11 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
       model.setGitStatus(gitStatus);
       statusRef.current = gitStatus;
     }
-  }, [model, paths, gitStatus]);
+    if (labelsRef.current !== labels) {
+      model.setLabels(labels);
+      labelsRef.current = labels;
+    }
+  }, [model, paths, gitStatus, labels]);
 
   // Wrap the tree so we can reach its host element (and its shadow root) to
   // imperatively focus the search input on demand.

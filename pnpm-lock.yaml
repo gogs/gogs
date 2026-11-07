@@ -4,6 +4,10 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@pierre/diffs@1.6.4': d71bb634e3c26362468f1ec5487db6c92279c66b48392bdd3fd6849021219f64
+  '@pierre/trees@1.0.0-beta.6': 8b08c5815d665fca7a141dbcc312ceed5b5713ed33f2bbf1fbf2e408beab00d3
+
 importers:
 
   .: {}
@@ -18,10 +22,10 @@ importers:
         version: 5.2.8
       '@pierre/diffs':
         specifier: 1.6.4
-        version: 1.6.4(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 1.6.4(patch_hash=d71bb634e3c26362468f1ec5487db6c92279c66b48392bdd3fd6849021219f64)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@pierre/trees':
         specifier: 1.0.0-beta.6
-        version: 1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
+        version: 1.0.0-beta.6(patch_hash=8b08c5815d665fca7a141dbcc312ceed5b5713ed33f2bbf1fbf2e408beab00d3)(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
       '@radix-ui/react-checkbox':
         specifier: ^1.3.3
         version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -2745,7 +2749,7 @@ snapshots:
 
   '@oxc-project/types@0.139.0': {}
 
-  '@pierre/diffs@1.6.4(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@pierre/diffs@1.6.4(patch_hash=d71bb634e3c26362468f1ec5487db6c92279c66b48392bdd3fd6849021219f64)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@pierre/highlights': 0.4.0
       '@pierre/theme': 2.0.0
@@ -2780,7 +2784,7 @@ snapshots:
       react-dom: 19.2.6(react@19.2.6)
       shiki: 3.23.0
 
-  '@pierre/trees@1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)':
+  '@pierre/trees@1.0.0-beta.6(patch_hash=8b08c5815d665fca7a141dbcc312ceed5b5713ed33f2bbf1fbf2e408beab00d3)(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)':
     dependencies:
       '@pierre/theming': 1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
       preact: 11.0.0-beta.0

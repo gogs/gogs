@@ -426,73 +426,20 @@ export function RepoCommit() {
     };
   }, [nameToItemIds]);
 
-  // Pierre hardcodes separator labels in shadow DOM with no render slot.
-  // Re-run on mutations because expansion rebuilds separators.
-  useEffect(() => {
-    const found = document.querySelector<HTMLDivElement>(".gogs-diff-scroller");
-    if (!found) return;
-    const root: ParentNode = found;
-
-    // Match Pierre's English source strings, then replace with a localized value.
-    const unmodifiedLinesRe = /^(\d+) unmodified lines?$/;
-    const moreContextText = "More unchanged context may be available";
-    const noNewlineText = "No newline at end of file";
-
-    function setText(el: HTMLElement, text: string) {
-      if (el.textContent !== text) el.textContent = text;
-    }
-
-    function localizeIn(root: ParentNode) {
-      for (const span of root.querySelectorAll<HTMLElement>("[data-unmodified-lines]")) {
-        const text = span.textContent ?? "";
-        const match = unmodifiedLinesRe.exec(text);
-        if (match) {
-          const count = Number(match[1]);
-          setText(span, t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count }));
-        } else if (text === moreContextText) {
-          setText(span, "");
-        }
-      }
-      for (const span of root.querySelectorAll<HTMLElement>("[data-no-newline] span")) {
-        if ((span.textContent ?? "") === noNewlineText) setText(span, t("repo.diff.no_newline_at_eof"));
-      }
-    }
-
-    // MutationObserver does not cross shadow boundaries. Pierre nests each
-    // file's body in a shadow root (sometimes deeper) and rebuilds separators
-    // on expand, so we observe each root as we find it.
-    const observed = new WeakSet<ShadowRoot>();
-    const observer = new MutationObserver(schedule);
-
-    function localizeDeep(node: ParentNode) {
-      localizeIn(node);
-      for (const el of node.querySelectorAll<HTMLElement>("*")) {
-        const shadow = el.shadowRoot;
-        if (!shadow) continue;
-        if (!observed.has(shadow)) {
-          observed.add(shadow);
-          observer.observe(shadow, { childList: true, subtree: true, characterData: true });
-        }
-        localizeDeep(shadow);
-      }
-    }
-
-    let frame = 0;
-    function schedule() {
-      if (frame !== 0) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        localizeDeep(root);
-      });
-    }
-
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
-    schedule();
-    return () => {
-      observer.disconnect();
-      if (frame !== 0) window.cancelAnimationFrame(frame);
-    };
-  }, [t]);
+  // Pierre re-renders the diff whenever this object's identity changes, so it
+  // must stay stable across renders.
+  const diffLabels = useMemo(
+    () => ({
+      unmodifiedLines: (count: number) =>
+        t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count }),
+      // Intentionally blank. The `[data-unmodified-lines]:empty` rule in
+      // DIFF_UNSAFE_CSS keeps the separator clickable without a label.
+      unknownUnmodifiedLines: "",
+      expandAll: t("repo.diff.expand_all"),
+      noNewlineAtEndOfFile: t("repo.diff.no_newline_at_eof"),
+    }),
+    [t],
+  );
 
   const authorLabel = author.profileURL ? (
     <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
@@ -1008,6 +955,7 @@ export function RepoCommit() {
                 hunkSeparators: "line-info",
                 // Reveal at most 100 lines per click. Larger gaps get up/down plus expand-all.
                 expansionLineCount: 100,
+                labels: diffLabels,
                 loadDiffFiles,
                 onPostRender: onDiffPostRender,
                 unsafeCSS: DIFF_UNSAFE_CSS,
