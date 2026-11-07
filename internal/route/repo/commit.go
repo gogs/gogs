@@ -176,8 +176,12 @@ func CompareDiff(c *context.Context) {
 	c.Data["AfterCommitID"] = afterCommitID
 	c.Data["Username"] = userName
 	c.Data["Reponame"] = repoName
-	c.Data["IsImageFile"] = commit.IsImageFile
-	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
+	c.Data["IsImageFile"] = func(subpath string) (bool, error) {
+		return commit.IsImageFile(c.Req.Context(), subpath)
+	}
+	c.Data["IsImageFileByIndex"] = func(index string) (bool, error) {
+		return commit.IsImageFileByIndex(c.Req.Context(), index)
+	}
 	c.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
 	c.Data["Commit"] = commit
 	c.Data["Diff"] = diff
