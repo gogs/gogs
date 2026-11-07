@@ -25,7 +25,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.100.14",
-    "@tanstack/react-router": "^1.137.0",
+    "@tanstack/react-router": "^1.170.46",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^26.2.0",
