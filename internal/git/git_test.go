@@ -62,16 +62,16 @@ func Test_log(t *testing.T) {
 	}{
 		{
 			format:    "",
-			expOutput: "[git-module] \n",
+			expOutput: "[git] \n",
 		},
 		{
 			format:    "something",
-			expOutput: "[git-module] something\n",
+			expOutput: "[git] something\n",
 		},
 		{
 			format:    "val: %v",
 			args:      []interface{}{123},
-			expOutput: "[git-module] val: 123\n",
+			expOutput: "[git] val: 123\n",
 		},
 	}
 	for _, test := range tests {

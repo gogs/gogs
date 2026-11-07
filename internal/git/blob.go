@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"math"
 )
 
 // Blob is a blob object.
@@ -17,7 +18,7 @@ func (b *Blob) Bytes(ctx context.Context) ([]byte, error) {
 	stdout := new(bytes.Buffer)
 
 	// Preallocate memory to save ~50% memory usage on big files.
-	if size := b.Size(ctx); size > 0 && size < int64(^uint(0)>>1) {
+	if size := b.Size(ctx); size > 0 && size <= math.MaxInt32 {
 		stdout.Grow(int(size))
 	}
 

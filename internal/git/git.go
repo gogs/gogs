@@ -12,7 +12,7 @@ var (
 	// logOutput is the writer to write logs. When not set, no log will be produced.
 	logOutput io.Writer
 	// logPrefix is the prefix prepend to each log entry.
-	logPrefix = "[git-module] "
+	logPrefix = "[git] "
 )
 
 // SetOutput sets the output writer for logs.

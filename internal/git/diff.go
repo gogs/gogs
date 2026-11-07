@@ -334,7 +334,7 @@ checkType:
 			file.isSubmodule = strings.HasSuffix(line, " 160000")
 			fields := strings.Fields(line)
 			if len(fields) > 0 {
-				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 64)
+				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.mode = EntryMode(mode)
 				if file.oldMode == 0 {
 					file.oldMode = file.mode
@@ -345,7 +345,7 @@ checkType:
 			file.isSubmodule = strings.HasSuffix(line, " 160000")
 			fields := strings.Fields(line)
 			if len(fields) > 0 {
-				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 64)
+				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.mode = EntryMode(mode)
 				if file.oldMode == 0 {
 					file.oldMode = file.mode
@@ -361,7 +361,7 @@ checkType:
 			file.OldIndex = shas[0]
 			file.Index = shas[1]
 			if len(fields) > 1 {
-				mode, _ := strconv.ParseUint(fields[1], 8, 64)
+				mode, _ := strconv.ParseUint(fields[1], 8, 16)
 				file.mode = EntryMode(mode)
 				file.oldMode = EntryMode(mode)
 			}
@@ -378,13 +378,13 @@ checkType:
 		case strings.HasPrefix(line, "new mode"):
 			fields := strings.Fields(line)
 			if len(fields) > 0 {
-				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 64)
+				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.mode = EntryMode(mode)
 			}
 		case strings.HasPrefix(line, "old mode"):
 			fields := strings.Fields(line)
 			if len(fields) > 0 {
-				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 64)
+				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.oldMode = EntryMode(mode)
 			}
 		}
