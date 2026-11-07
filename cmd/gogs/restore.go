@@ -104,6 +104,16 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	}
 	conf.InitLogging(true)
 
+	if !cmd.Bool("database-only") {
+		// Moving the current files aside fails when an earlier restore left its backup behind, so check before
+		// anything is imported. Otherwise the restore stops halfway, with the database already replaced.
+		for _, p := range pathsToMoveAside(archivePath, conf.CustomDir(), conf.Server.AppDataPath) {
+			if osx.Exist(p + ".bak") {
+				log.Fatal("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again.", p+".bak")
+			}
+		}
+	}
+
 	conn, err := database.SetEngine()
 	if err != nil {
 		return errors.Wrap(err, "set engine")
@@ -128,7 +138,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 		// Data files
 		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
-		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
+		for _, dir := range restoreDataDirs {
 			// Skip if backup archive does not have corresponding data
 			srcPath := filepath.Join(archivePath, "data", dir)
 			if !osx.IsDir(srcPath) {
@@ -158,4 +168,23 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	log.Info("Restore succeed!")
 	log.Stop()
 	return nil
+}
+
+// restoreDataDirs are the directories under the app data path that are restored from the backup archive.
+var restoreDataDirs = []string{"attachments", "avatars", "repo-avatars"}
+
+// pathsToMoveAside returns the current custom and data directories that restoring the extracted archive at
+// archivePath renames to "<path>.bak".
+func pathsToMoveAside(archivePath, customDir, appDataPath string) []string {
+	var paths []string
+	if osx.IsDir(customDir) {
+		paths = append(paths, customDir)
+	}
+	for _, dir := range restoreDataDirs {
+		dirPath := filepath.Join(appDataPath, dir)
+		if osx.IsDir(filepath.Join(archivePath, "data", dir)) && osx.IsDir(dirPath) {
+			paths = append(paths, dirPath)
+		}
+	}
+	return paths
 }
