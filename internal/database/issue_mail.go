@@ -105,7 +105,7 @@ func NewMailerIssue(issue *Issue) email.Issue {
 // This functions sends two list of emails:
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
-func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string) error {
+func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions []string) error {
 	ctx := context.TODO()
 
 	if !conf.User.EnableEmailNotification {
@@ -116,7 +116,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	if err != nil {
 		return errors.Newf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
 	}
-	participants, err := GetParticipantsByIssueID(issue.ID)
+	participants, err := getParticipantsByIssueID(e, issue.ID)
 	if err != nil {
 		return errors.Newf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
@@ -194,7 +194,7 @@ func (issue *Issue) MailParticipants() (err error) {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
-	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(x, issue, issue.Poster, mentions); err != nil {
 		log.Error("mailIssueCommentToParticipants: %v", err)
 	}
 
