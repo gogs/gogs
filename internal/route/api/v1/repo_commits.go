@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -32,7 +32,7 @@ func getAllCommits(c *context.APIContext) {
 
 	// The response object returned as JSON
 	result := make([]*types.Commit, 0, pageSize)
-	commits, err := gitRepo.Log("HEAD", git.LogOptions{MaxCount: pageSize})
+	commits, err := gitRepo.Log(c.Req.Context(), "HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
 	}
@@ -62,7 +62,7 @@ func getSingleCommit(c *context.APIContext) {
 		c.Error(err, "open repository")
 		return
 	}
-	commit, err := gitRepo.CatFileCommit(c.Params(":sha"))
+	commit, err := gitRepo.CatFileCommit(c.Req.Context(), c.Params(":sha"))
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get commit")
 		return
@@ -91,9 +91,9 @@ func getReferenceSHA(c *context.APIContext) {
 		ref = after
 		refType = 2
 	} else {
-		if gitRepo.HasBranch(ref) {
+		if gitRepo.HasBranch(c.Req.Context(), ref) {
 			refType = 1
-		} else if gitRepo.HasTag(ref) {
+		} else if gitRepo.HasTag(c.Req.Context(), ref) {
 			refType = 2
 		} else {
 			c.NotFound()
@@ -104,9 +104,9 @@ func getReferenceSHA(c *context.APIContext) {
 	var sha string
 	switch refType {
 	case 1:
-		sha, err = gitRepo.BranchCommitID(ref)
+		sha, err = gitRepo.BranchCommitID(c.Req.Context(), ref)
 	case 2:
-		sha, err = gitRepo.TagCommitID(ref)
+		sha, err = gitRepo.TagCommitID(c.Req.Context(), ref)
 	}
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get reference commit ID")

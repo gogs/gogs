@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -46,7 +46,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		c.Error(err, "open repository")
 		return nil, ""
 	}
-	commit, err := wikiRepo.BranchCommit(database.WikiBranch(wikiPath))
+	commit, err := wikiRepo.BranchCommit(c.Req.Context(), database.WikiBranch(wikiPath))
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return nil, ""
@@ -54,7 +54,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 
 	// Get page list.
 	if isViewPage {
-		entries, err := commit.Entries(git.LsTreeOptions{Verbatim: true})
+		entries, err := commit.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
 		if err != nil {
 			c.Error(err, "list entries")
 			return nil, ""
@@ -84,7 +84,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 	c.Data["title"] = pageName
 	c.Data["RequireHighlightJS"] = true
 
-	blob, err := commit.Blob(pageName + ".md")
+	blob, err := commit.Blob(c.Req.Context(), pageName+".md")
 	if err != nil {
 		if gitx.IsErrRevisionNotExist(err) {
 			c.Redirect(c.Repo.RepoLink + "/wiki/_pages")
@@ -93,7 +93,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		}
 		return nil, ""
 	}
-	p, err := blob.Bytes()
+	p, err := blob.Bytes(c.Req.Context())
 	if err != nil {
 		c.Error(err, "read blob")
 		return nil, ""
@@ -123,7 +123,7 @@ func Wiki(c *context.Context) {
 
 	// Get last change information.
 	branch := database.WikiBranch(c.Repo.Repository.WikiPath())
-	commits, err := wikiRepo.Log(git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
+	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
 	if err != nil {
 		c.Error(err, "get commits by path")
 		return
@@ -150,13 +150,13 @@ func WikiPages(c *context.Context) {
 	}
 
 	branch := database.WikiBranch(wikiPath)
-	commit, err := wikiRepo.BranchCommit(branch)
+	commit, err := wikiRepo.BranchCommit(c.Req.Context(), branch)
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return
 	}
 
-	entries, err := commit.Entries(git.LsTreeOptions{Verbatim: true})
+	entries, err := commit.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.Error(err, "list entries")
 		return
@@ -164,7 +164,7 @@ func WikiPages(c *context.Context) {
 	pages := make([]PageMeta, 0, len(entries))
 	for i := range entries {
 		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
-			commits, err := wikiRepo.Log(git.RefsHeads+branch, git.LogOptions{Path: entries[i].Name()})
+			commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: entries[i].Name()})
 			if err != nil {
 				c.Error(err, "get commits by path")
 				return

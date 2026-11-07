@@ -1,8 +1,10 @@
 package database
 
 import (
+	"context"
+
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 )
 
 type Tag struct {
@@ -18,7 +20,7 @@ func (ta *Tag) GetCommit() (*git.Commit, error) {
 	if err != nil {
 		return nil, errors.Newf("open repository: %v", err)
 	}
-	return gitRepo.TagCommit(ta.Name)
+	return gitRepo.TagCommit(context.TODO(), ta.Name)
 }
 
 func GetTagsByPath(path string) ([]*Tag, error) {
@@ -27,7 +29,7 @@ func GetTagsByPath(path string) ([]*Tag, error) {
 		return nil, errors.Newf("open repository: %v", err)
 	}
 
-	names, err := gitRepo.Tags()
+	names, err := gitRepo.Tags(context.TODO())
 	if err != nil {
 		return nil, errors.Newf("list tags: %v", err)
 	}

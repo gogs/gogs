@@ -3,8 +3,8 @@ package gitx
 import (
 	"testing"
 
-	"github.com/gogs/git-module"
 	"github.com/stretchr/testify/assert"
+	"gogs.io/gogs/internal/git"
 )
 
 func TestInferSubmoduleURL(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -47,7 +47,7 @@ func renderCommits(c *context.Context, filename string) {
 		pageSize = conf.UI.User.CommitsPagingNum
 	}
 
-	commits, err := c.Repo.Commit.CommitsByPage(page, pageSize, git.CommitsByPageOptions{Path: filename})
+	commits, err := c.Repo.Commit.CommitsByPage(c.Req.Context(), page, pageSize, git.CommitsByPageOptions{Path: filename})
 	if err != nil {
 		c.Error(err, "paging commits")
 		return
@@ -84,7 +84,7 @@ func SearchCommits(c *context.Context) {
 		return
 	}
 
-	commits, err := c.Repo.Commit.SearchCommits(keyword)
+	commits, err := c.Repo.Commit.SearchCommits(c.Req.Context(), keyword)
 	if err != nil {
 		c.Error(err, "search commits")
 		return
@@ -145,22 +145,24 @@ func CompareDiff(c *context.Context) {
 	beforeCommitID := c.Params(":before")
 	afterCommitID := c.Params(":after")
 
-	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
+	commit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), afterCommitID)
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get head commit")
 		return
 	}
 
-	diff, err := gitx.RepoDiff(c.Repo.GitRepo,
+	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
+	diff, err := gitx.RepoDiff(ctx, c.Repo.GitRepo,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: beforeCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get diff")
 		return
 	}
 
-	commits, err := commit.CommitsAfter(beforeCommitID)
+	commits, err := commit.CommitsAfter(c.Req.Context(), beforeCommitID)
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get commits after")
 		return

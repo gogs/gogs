@@ -1,6 +1,7 @@
 package repo
 
 import (
+	gocontext "context"
 	"net/http"
 	"path"
 	"strconv"
@@ -9,7 +10,7 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -185,13 +186,13 @@ func PrepareMergedViewPullInfo(c *context.Context, issue *database.Issue) {
 	c.Data["BaseTarget"] = c.Repo.Owner.Name + "/" + pull.BaseBranch
 
 	var err error
-	c.Data["NumCommits"], err = c.Repo.GitRepo.RevListCount([]string{pull.MergeBase + "..." + pull.MergedCommitID})
+	c.Data["NumCommits"], err = c.Repo.GitRepo.RevListCount(c.Req.Context(), []string{pull.MergeBase + "..." + pull.MergedCommitID})
 	if err != nil {
 		c.Error(err, "count commits")
 		return
 	}
 
-	names, err := c.Repo.GitRepo.DiffNameOnly(pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+	names, err := c.Repo.GitRepo.DiffNameOnly(c.Req.Context(), pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: true})
 	c.Data["NumFiles"] = len(names)
 	if err != nil {
 		c.Error(err, "get changed files")
@@ -219,7 +220,7 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 		}
 	}
 
-	if pull.HeadRepo == nil || !headGitRepo.HasBranch(pull.HeadBranch) {
+	if pull.HeadRepo == nil || !headGitRepo.HasBranch(c.Req.Context(), pull.HeadBranch) {
 		c.Data["IsPullReuqestBroken"] = true
 		c.Data["HeadTarget"] = "deleted"
 		c.Data["NumCommits"] = 0
@@ -228,7 +229,7 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 	}
 
 	baseRepoPath := database.RepoPath(repo.Owner.Name, repo.Name)
-	prMeta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
+	prMeta, err := gitx.Module.PullRequestMeta(c.Req.Context(), headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
 		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
 			c.Data["IsPullReuqestBroken"] = true
@@ -267,17 +268,17 @@ func ViewPullCommits(c *context.Context) {
 		if c.Written() {
 			return
 		}
-		startCommit, err := c.Repo.GitRepo.CatFileCommit(pull.MergeBase)
+		startCommit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), pull.MergeBase)
 		if err != nil {
 			c.Error(err, "get commit of merge base")
 			return
 		}
-		endCommit, err := c.Repo.GitRepo.CatFileCommit(pull.MergedCommitID)
+		endCommit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), pull.MergedCommitID)
 		if err != nil {
 			c.Error(err, "get merged commit")
 			return
 		}
-		commits, err = c.Repo.GitRepo.RevList([]string{startCommit.ID.String() + "..." + endCommit.ID.String()})
+		commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{startCommit.ID.String() + "..." + endCommit.ID.String()})
 		if err != nil {
 			c.Error(err, "list commits")
 			return
@@ -344,7 +345,7 @@ func ViewPullFiles(c *context.Context) {
 			return
 		}
 
-		headCommitID, err := headGitRepo.BranchCommitID(pull.HeadBranch)
+		headCommitID, err := headGitRepo.BranchCommitID(c.Req.Context(), pull.HeadBranch)
 		if err != nil {
 			c.Error(err, "get head branch commit ID")
 			return
@@ -356,9 +357,11 @@ func ViewPullFiles(c *context.Context) {
 		gitRepo = headGitRepo
 	}
 
-	diff, err := gitx.RepoDiff(diffGitRepo,
+	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
+	diff, err := gitx.RepoDiff(ctx, diffGitRepo,
 		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: startCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: startCommitID},
 	)
 	if err != nil {
 		c.Error(err, "get diff")
@@ -367,7 +370,7 @@ func ViewPullFiles(c *context.Context) {
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
-	commit, err := gitRepo.CatFileCommit(endCommitID)
+	commit, err := gitRepo.CatFileCommit(c.Req.Context(), endCommitID)
 	if err != nil {
 		c.Error(err, "get commit")
 		return
@@ -479,7 +482,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	c.Repo.PullRequest.SameRepo = isSameRepo
 
 	// Check if base ref is valid.
-	if _, err := c.Repo.GitRepo.RevParse(baseRef); err != nil {
+	if _, err := c.Repo.GitRepo.RevParse(c.Req.Context(), baseRef); err != nil {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -529,12 +532,12 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	}
 
 	// Check if head ref is valid.
-	if _, err := headGitRepo.RevParse(headRef); err != nil {
+	if _, err := headGitRepo.RevParse(c.Req.Context(), headRef); err != nil {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
 
-	headBranches, err := headGitRepo.Branches()
+	headBranches, err := headGitRepo.Branches(c.Req.Context())
 	if err != nil {
 		c.Error(err, "get branches")
 		return nil, nil, nil, nil, "", ""
@@ -542,7 +545,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	c.Data["HeadBranches"] = headBranches
 
 	baseRepoPath := database.RepoPath(baseRepo.Owner.Name, baseRepo.Name)
-	meta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headRef, baseRef)
+	meta, err := gitx.Module.PullRequestMeta(c.Req.Context(), headGitRepo.Path(), baseRepoPath, headRef, baseRef)
 	if err != nil {
 		if gitx.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
@@ -573,7 +576,7 @@ func PrepareCompareDiff(
 	// Get diff information.
 	c.Data["CommitRepoLink"] = headRepo.Link()
 
-	headCommitID, err := headGitRepo.RevParse(headRef)
+	headCommitID, err := headGitRepo.RevParse(c.Req.Context(), headRef)
 	if err != nil {
 		c.Error(err, "get head commit ID")
 		return false
@@ -585,9 +588,11 @@ func PrepareCompareDiff(
 		return true
 	}
 
-	diff, err := gitx.RepoDiff(headGitRepo,
+	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
+	diff, err := gitx.RepoDiff(ctx, headGitRepo,
 		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: meta.MergeBase, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: meta.MergeBase},
 	)
 	if err != nil {
 		c.Error(err, "get repository diff")
@@ -596,7 +601,7 @@ func PrepareCompareDiff(
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
-	headCommit, err := headGitRepo.CatFileCommit(headCommitID)
+	headCommit, err := headGitRepo.CatFileCommit(c.Req.Context(), headCommitID)
 	if err != nil {
 		c.Error(err, "get head commit")
 		return false
@@ -713,7 +718,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	patch, err := headGitRepo.DiffBinary(meta.MergeBase, headRef)
+	patch, err := headGitRepo.DiffBinary(c.Req.Context(), meta.MergeBase, headRef)
 	if err != nil {
 		c.Error(err, "get patch")
 		return

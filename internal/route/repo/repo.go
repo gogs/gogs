@@ -9,7 +9,7 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -310,20 +310,20 @@ func Download(c *context.Context) {
 		err    error
 	)
 	gitRepo := c.Repo.GitRepo
-	if gitRepo.HasBranch(refName) {
-		commit, err = gitRepo.BranchCommit(refName)
+	if gitRepo.HasBranch(c.Req.Context(), refName) {
+		commit, err = gitRepo.BranchCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.Error(err, "get branch commit")
 			return
 		}
-	} else if gitRepo.HasTag(refName) {
-		commit, err = gitRepo.TagCommit(refName)
+	} else if gitRepo.HasTag(c.Req.Context(), refName) {
+		commit, err = gitRepo.TagCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.Error(err, "get tag commit")
 			return
 		}
 	} else if len(refName) >= 7 && len(refName) <= 40 {
-		commit, err = gitRepo.CatFileCommit(refName)
+		commit, err = gitRepo.CatFileCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.NotFound()
 			return
@@ -335,7 +335,7 @@ func Download(c *context.Context) {
 
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !osx.IsFile(archivePath) {
-		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
+		if err := commit.Archive(c.Req.Context(), archiveFormat, archivePath); err != nil {
 			c.Error(err, "creates archive")
 			return
 		}

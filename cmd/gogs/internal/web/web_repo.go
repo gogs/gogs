@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -9,8 +10,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/gogs/git-module"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
@@ -63,7 +64,7 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 		return
 	}
 
-	if _, err = gitRepo.CatFileCommit(sha); err != nil {
+	if _, err = gitRepo.CatFileCommit(c.Request().Context(), sha); err != nil {
 		if gitx.IsErrRevisionNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("commit does not exist"))
 			return
@@ -76,35 +77,35 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 	var rawOpts []git.RawDiffOptions
 	if flag := whitespaceFlag(c.Request().URL.Query().Get("whitespace")); flag != "" {
 		rawOpts = append(rawOpts, git.RawDiffOptions{
-			CommandOptions: git.CommandOptions{Args: []string{flag}},
+			Args: []string{flag},
 		})
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	if err = gitRepo.RawDiff(sha, git.RawDiffFormat(format), w, rawOpts...); err != nil {
+	if err = gitRepo.RawDiff(c.Request().Context(), sha, git.RawDiffFormat(format), w, rawOpts...); err != nil {
 		log.Error("getRepoCommitRaw: get raw diff %s: %v", sha, err)
 	}
 }
 
 // resolveRef resolves ref as a commit SHA, then a branch name, then a tag
 // name, in that order. A branch and tag of the same name resolve to the branch.
-func resolveRef(gitRepo *git.Repository, ref string) (*git.Commit, error) {
-	commit, err := gitRepo.CatFileCommit(ref)
+func resolveRef(ctx context.Context, gitRepo *git.Repository, ref string) (*git.Commit, error) {
+	commit, err := gitRepo.CatFileCommit(ctx, ref)
 	if err == nil {
 		return commit, nil
 	}
 	if !gitx.IsErrRevisionNotExist(err) {
 		return nil, errors.Wrap(err, "cat-file commit")
 	}
-	commit, err = gitRepo.BranchCommit(ref)
+	commit, err = gitRepo.BranchCommit(ctx, ref)
 	if err == nil {
 		return commit, nil
 	}
 	if !gitx.IsErrRevisionNotExist(err) {
 		return nil, errors.Wrap(err, "get branch commit")
 	}
-	commit, err = gitRepo.TagCommit(ref)
+	commit, err = gitRepo.TagCommit(ctx, ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "get tag commit")
 	}
@@ -136,7 +137,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 		return
 	}
 
-	commit, err := resolveRef(gitRepo, ref)
+	commit, err := resolveRef(c.Request().Context(), gitRepo, ref)
 	if err != nil {
 		if gitx.IsErrRevisionNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("ref does not exist"))
@@ -147,7 +148,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 		return
 	}
 
-	blob, err := commit.Blob(filepath)
+	blob, err := commit.Blob(c.Request().Context(), filepath)
 	if err != nil {
 		if gitx.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("file does not exist"))
@@ -158,14 +159,14 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 		return
 	}
 
-	data, err := blob.Bytes()
+	data, err := blob.Bytes(c.Request().Context())
 	if err != nil {
 		log.Error("getRepoRawFile: read blob %s:%s: %v", commit.ID, filepath, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "read blob"))
 		return
 	}
 
-	if pathCommit, err := commit.CommitByPath(git.CommitByRevisionOptions{Path: filepath}); err == nil && pathCommit != nil {
+	if pathCommit, err := commit.CommitByPath(c.Request().Context(), git.CommitByRevisionOptions{Path: filepath}); err == nil && pathCommit != nil {
 		w.Header().Set("Last-Modified", pathCommit.Committer.When.Format(http.TimeFormat))
 	}
 

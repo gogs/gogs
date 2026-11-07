@@ -13,7 +13,7 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/netx"
@@ -138,10 +138,13 @@ func (m *Mirror) RawAddress() string {
 }
 
 // SaveAddress writes new address to Git repository config.
-func (m *Mirror) SaveAddress(addr string) error {
-	repoPath := m.Repo.RepoPath()
+func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
+	gitRepo, err := git.Open(m.Repo.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "open repository")
+	}
 
-	err := git.RemoteRemove(repoPath, "origin")
+	err = gitRepo.RemoteRemove(ctx, "origin")
 	if err != nil {
 		return errors.Newf("remove remote 'origin': %v", err)
 	}
@@ -151,7 +154,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 		return err
 	}
 
-	err = git.RemoteAdd(repoPath, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
+	err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
 	if err != nil {
 		return errors.Newf("add remote 'origin': %v", err)
 	}
@@ -452,31 +455,31 @@ func SyncMirrors() {
 			var oldCommitID string
 			var newCommitID string
 			if !isNewRef {
-				oldCommitID, err = gitRepo.RevParse(result.oldCommitID)
+				oldCommitID, err = gitRepo.RevParse(ctx, result.oldCommitID)
 				if err != nil {
 					log.Error("Failed to parse revision [repo_id: %d, old_commit_id: %s]: %v", m.RepoID, result.oldCommitID, err)
 					continue
 				}
-				newCommitID, err = gitRepo.RevParse(result.newCommitID)
+				newCommitID, err = gitRepo.RevParse(ctx, result.newCommitID)
 				if err != nil {
 					log.Error("Failed to parse revision [repo_id: %d, new_commit_id: %s]: %v", m.RepoID, result.newCommitID, err)
 					continue
 				}
-				commits, err = gitRepo.RevList([]string{oldCommitID + "..." + newCommitID})
+				commits, err = gitRepo.RevList(ctx, []string{oldCommitID + "..." + newCommitID})
 				if err != nil {
 					log.Error("Failed to list commits [repo_id: %d, old_commit_id: %s, new_commit_id: %s]: %v", m.RepoID, oldCommitID, newCommitID, err)
 					continue
 				}
 
-			} else if gitRepo.HasBranch(result.refName) {
-				refNewCommit, err := gitRepo.BranchCommit(result.refName)
+			} else if gitRepo.HasBranch(ctx, result.refName) {
+				refNewCommit, err := gitRepo.BranchCommit(ctx, result.refName)
 				if err != nil {
 					log.Error("Failed to get branch commit [repo_id: %d, branch: %s]: %v", m.RepoID, result.refName, err)
 					continue
 				}
 
 				// TODO(unknwon): Get the commits for the new ref until the closest ancestor branch like GitHub does.
-				commits, err = refNewCommit.Ancestors(git.LogOptions{MaxCount: 9})
+				commits, err = refNewCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
 				if err != nil {
 					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
 					continue
@@ -512,7 +515,7 @@ func SyncMirrors() {
 
 		// Get latest commit date and compare to current repository updated time,
 		// update if latest commit date is newer.
-		latestCommitTime, err := gitRepo.LatestCommitTime()
+		latestCommitTime, err := gitRepo.LatestCommitTime(ctx)
 		if err != nil {
 			log.Error("GetLatestCommitDate [%d]: %v", m.RepoID, err)
 			continue

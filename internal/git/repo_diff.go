@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 )
 
 // DiffOptions contains optional arguments for parsing diff.
@@ -70,6 +71,8 @@ const (
 //
 // Docs: https://git-scm.com/docs/git-format-patch
 type RawDiffOptions struct {
+	// Additional arguments to be passed right after the subcommand, e.g., "-w".
+	Args []string
 	CommandOptions
 }
 
@@ -111,6 +114,7 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 	default:
 		return fmt.Errorf("invalid diffType: %s", diffType)
 	}
+	args = slices.Concat(args[:1], opt.Args, args[1:])
 
 	if err = pipe(ctx, r.path, args, opt.Envs, w); err != nil {
 		return err

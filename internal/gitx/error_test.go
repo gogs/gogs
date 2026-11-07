@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gogs/git-module"
 	"github.com/stretchr/testify/assert"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/errx"
 )

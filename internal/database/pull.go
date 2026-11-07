@@ -12,7 +12,7 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
@@ -228,9 +228,10 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	// Clone the base repository to the defined temporary directory,
 	// and checks out to base branch directly.
 	var stderr string
-	if err = git.Clone(baseGitRepo.Path(), tmpBasePath, git.CloneOptions{
-		Branch:  pr.BaseBranch,
-		Timeout: 5 * time.Minute,
+	cloneCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	if err = git.Clone(cloneCtx, baseGitRepo.Path(), tmpBasePath, git.CloneOptions{
+		Branch: pr.BaseBranch,
 	}); err != nil {
 		return errors.Newf("git clone: %v", err)
 	}
@@ -311,11 +312,15 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	}
 
 	// Push changes on base branch to upstream.
-	if err = git.Push(tmpBasePath, baseGitRepo.Path(), pr.BaseBranch); err != nil {
+	tmpBaseGitRepo, err := git.Open(tmpBasePath)
+	if err != nil {
+		return errors.Newf("open temporary repository: %v", err)
+	}
+	if err = tmpBaseGitRepo.Push(ctx, baseGitRepo.Path(), pr.BaseBranch); err != nil {
 		return errors.Newf("git push: %v", err)
 	}
 
-	pr.MergedCommitID, err = headGitRepo.BranchCommitID(pr.HeadBranch)
+	pr.MergedCommitID, err = headGitRepo.BranchCommitID(ctx, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get head branch %q commit ID: %v", pr.HeadBranch, err)
 	}
@@ -351,7 +356,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return nil
 	}
 
-	commits, err := headGitRepo.RevList([]string{pr.MergeBase + "..." + pr.MergedCommitID})
+	commits, err := headGitRepo.RevList(ctx, []string{pr.MergeBase + "..." + pr.MergedCommitID})
 	if err != nil {
 		log.Error("Failed to list commits [merge_base: %s, merged_commit_id: %s]: %v", pr.MergeBase, pr.MergedCommitID, err)
 		return nil
@@ -360,7 +365,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	// NOTE: It is possible that head branch is not fully sync with base branch
 	// for merge commits, so we need to get latest head commit and append merge
 	// commit manually to avoid strange diff commits produced.
-	mergeCommit, err := baseGitRepo.BranchCommit(pr.BaseBranch)
+	mergeCommit, err := baseGitRepo.BranchCommit(ctx, pr.BaseBranch)
 	if err != nil {
 		log.Error("Failed to get base branch %q commit: %v", pr.BaseBranch, err)
 		return nil
@@ -626,25 +631,25 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	// Add a temporary remote.
 	tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
 	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
-	err = headGitRepo.RemoteAdd(tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
+	err = headGitRepo.RemoteAdd(context.TODO(), tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
 	if err != nil {
 		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 	defer func() {
-		if err := headGitRepo.RemoteRemove(tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(context.TODO(), tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
 
 	remoteBranch := "remotes/" + tmpRemote + "/" + pr.BaseBranch
-	pr.MergeBase, err = headGitRepo.MergeBase(remoteBranch, pr.HeadBranch)
+	pr.MergeBase, err = headGitRepo.MergeBase(context.TODO(), remoteBranch, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get merge base: %v", err)
 	} else if err = pr.Update(); err != nil {
 		return errors.Newf("update: %v", err)
 	}
 
-	patch, err := headGitRepo.DiffBinary(pr.MergeBase, pr.HeadBranch)
+	patch, err := headGitRepo.DiffBinary(context.TODO(), pr.MergeBase, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get binary patch: %v", err)
 	}
@@ -670,13 +675,13 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 	}
 
 	tmpRemote := fmt.Sprintf("tmp-pull-%d", pr.ID)
-	if err = headGitRepo.RemoteAdd(tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
+	if err = headGitRepo.RemoteAdd(context.TODO(), tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
 		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 
 	// Make sure to remove the remote even if the push fails
 	defer func() {
-		if err := headGitRepo.RemoteRemove(tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(context.TODO(), tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
@@ -690,7 +695,7 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 		}
 	}
 
-	err = headGitRepo.Push(tmpRemote, fmt.Sprintf("%s:%s", pr.HeadBranch, headRefspec))
+	err = headGitRepo.Push(context.TODO(), tmpRemote, fmt.Sprintf("%s:%s", pr.HeadBranch, headRefspec))
 	if err != nil {
 		return errors.Newf("push: %v", err)
 	}

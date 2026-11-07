@@ -1,6 +1,8 @@
 package gitx
 
 import (
+	"context"
+
 	"github.com/cockroachdb/errors"
 )
 
@@ -16,8 +18,8 @@ type TagsPage struct {
 	HasNext bool
 }
 
-func (module) ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error) {
-	all, err := Module.RepoTags(repoPath)
+func (module) ListTagsAfter(ctx context.Context, repoPath, after string, limit int) (*TagsPage, error) {
+	all, err := Module.RepoTags(ctx, repoPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "get tags")
 	}

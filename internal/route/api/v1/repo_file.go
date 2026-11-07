@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -20,7 +20,7 @@ func getRawFile(c *context.APIContext) {
 		return
 	}
 
-	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
+	blob, err := c.Repo.Commit.Blob(c.Req.Context(), c.Repo.TreePath)
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get blob")
 		return

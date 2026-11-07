@@ -2,7 +2,7 @@ package gitx
 
 import (
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/errx"
 )

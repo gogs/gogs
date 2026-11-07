@@ -5,7 +5,7 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -115,7 +115,7 @@ func DeleteBranchPost(c *context.Context) {
 		c.Redirect(redirectTo)
 	}()
 
-	if !c.Repo.GitRepo.HasBranch(branchName) {
+	if !c.Repo.GitRepo.HasBranch(c.Req.Context(), branchName) {
 		return
 	}
 	if branchName == c.Repo.Repository.DefaultBranch {
@@ -134,7 +134,7 @@ func DeleteBranchPost(c *context.Context) {
 	}
 
 	if len(commitID) > 0 {
-		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(branchName)
+		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(c.Req.Context(), branchName)
 		if err != nil {
 			log.Error("Failed to get commit ID of branch %q: %v", branchName, err)
 			return
@@ -146,7 +146,7 @@ func DeleteBranchPost(c *context.Context) {
 		}
 	}
 
-	if err := c.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
+	if err := c.Repo.GitRepo.DeleteBranch(c.Req.Context(), branchName, git.DeleteBranchOptions{
 		Force: true,
 	}); err != nil {
 		log.Error("Failed to delete branch %q: %v", branchName, err)

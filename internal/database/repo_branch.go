@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/tool"
@@ -27,7 +27,7 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 		return nil, errors.Newf("open repository: %v", err)
 	}
 
-	names, err := gitRepo.Branches()
+	names, err := gitRepo.Branches(context.TODO())
 	if err != nil {
 		return nil, errors.Newf("list branches")
 	}
@@ -62,7 +62,11 @@ func (ErrBranchNotExist) NotFound() bool {
 }
 
 func (r *Repository) GetBranch(name string) (*Branch, error) {
-	if !git.RepoHasBranch(r.RepoPath(), name) {
+	gitRepo, err := git.Open(r.RepoPath())
+	if err != nil {
+		return nil, errors.Newf("open repository: %v", err)
+	}
+	if !gitRepo.HasBranch(context.TODO(), name) {
 		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return &Branch{
@@ -80,7 +84,7 @@ func (br *Branch) GetCommit() (*git.Commit, error) {
 	if err != nil {
 		return nil, errors.Newf("open repository: %v", err)
 	}
-	return gitRepo.BranchCommit(br.Name)
+	return gitRepo.BranchCommit(context.TODO(), br.Name)
 }
 
 type ProtectBranchWhitelist struct {

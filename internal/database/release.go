@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"xorm.io/xorm"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/errx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
@@ -115,28 +116,28 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
 	if !r.IsDraft {
-		if !gitRepo.HasTag(r.TagName) {
-			commit, err := gitRepo.BranchCommit(r.Target)
+		if !gitRepo.HasTag(context.TODO(), r.TagName) {
+			commit, err := gitRepo.BranchCommit(context.TODO(), r.Target)
 			if err != nil {
 				return errors.Newf("get branch commit: %v", err)
 			}
 
 			// 🚨 SECURITY: Trim any leading '-' to prevent command line argument injection.
 			r.TagName = strings.TrimLeft(r.TagName, "-")
-			if err = gitRepo.CreateTag(r.TagName, commit.ID.String()); err != nil {
+			if err = gitRepo.CreateTag(context.TODO(), r.TagName, commit.ID.String()); err != nil {
 				if strings.Contains(err.Error(), "is not a valid tag name") {
 					return ErrInvalidTagName{r.TagName}
 				}
 				return err
 			}
 		} else {
-			commit, err := gitRepo.TagCommit(r.TagName)
+			commit, err := gitRepo.TagCommit(context.TODO(), r.TagName)
 			if err != nil {
 				return errors.Newf("get tag commit: %v", err)
 			}
 
 			r.Sha1 = commit.ID.String()
-			r.NumCommits, err = commit.CommitsCount()
+			r.NumCommits, err = commit.CommitsCount(context.TODO())
 			if err != nil {
 				return errors.Newf("count commits: %v", err)
 			}
@@ -362,7 +363,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 	if err != nil {
 		return errors.Newf("open repository: %v", err)
 	}
-	err = gitRepo.DeleteTag(rel.TagName)
+	err = gitRepo.DeleteTag(context.TODO(), rel.TagName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return errors.Newf("delete tag: %v", err)
 	}

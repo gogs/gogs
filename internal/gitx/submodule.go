@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/lazyregexp"
 )

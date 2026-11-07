@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -103,19 +103,19 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	// Skip read parent commits when delete branch
 	if !isDelRef {
 		// Push new branch
-		newCommit, err := gitRepo.CatFileCommit(opts.NewCommitID)
+		newCommit, err := gitRepo.CatFileCommit(ctx, opts.NewCommitID)
 		if err != nil {
 			return errors.Newf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}
 
 		if isNewRef {
-			commits, err = newCommit.Ancestors(git.LogOptions{MaxCount: 9})
+			commits, err = newCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
 			if err != nil {
 				return errors.Newf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}
 			commits = append([]*git.Commit{newCommit}, commits...)
 		} else {
-			commits, err = newCommit.CommitsAfter(opts.OldCommitID)
+			commits, err = newCommit.CommitsAfter(ctx, opts.OldCommitID)
 			if err != nil {
 				return errors.Newf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
 			}

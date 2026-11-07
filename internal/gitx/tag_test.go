@@ -1,15 +1,16 @@
 package gitx
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gogs/git-module"
 	"github.com/stretchr/testify/assert"
+	"gogs.io/gogs/internal/git"
 )
 
 func TestModuler_ListTagsAfter(t *testing.T) {
 	SetMockModuleStore(t, &MockModuleStore{
-		repoTags: func(string, ...git.TagsOptions) ([]string, error) {
+		repoTags: func(context.Context, string, ...git.TagsOptions) ([]string, error) {
 			return []string{
 				"v2.3.0", "v2.2.1", "v2.1.0",
 				"v1.3.0", "v1.2.0", "v1.1.0",
@@ -95,7 +96,7 @@ func TestModuler_ListTagsAfter(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tagsPage, err := Module.ListTagsAfter("", test.after, 3)
+			tagsPage, err := Module.ListTagsAfter(context.Background(), "", test.after, 3)
 			if err != nil {
 				t.Fatal(err)
 			}

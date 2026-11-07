@@ -7,7 +7,7 @@ import (
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 )
 
 func Test_diffsToHTML(t *testing.T) {

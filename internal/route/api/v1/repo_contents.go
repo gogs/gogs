@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -46,7 +46,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
 
 	content := &repoContent{
-		Size:        entry.Size(),
+		Size:        entry.Size(c.Req.Context()),
 		Name:        entry.Name(),
 		Path:        subpath,
 		Sha:         entry.ID().String(),
@@ -62,7 +62,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 	switch {
 	case entry.IsBlob(), entry.IsExec():
 		content.Type = "file"
-		p, err := entry.Blob().Bytes()
+		p, err := entry.Blob().Bytes(c.Req.Context())
 		if err != nil {
 			return nil, errors.Wrap(err, "get blob content")
 		}
@@ -76,7 +76,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 
 	case entry.IsSymlink():
 		content.Type = "symlink"
-		p, err := entry.Blob().Bytes()
+		p, err := entry.Blob().Bytes(c.Req.Context())
 		if err != nil {
 			return nil, errors.Wrap(err, "get blob content")
 		}
@@ -84,7 +84,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 
 	case entry.IsCommit():
 		content.Type = "submodule"
-		mod, err := commit.Submodule(subpath)
+		mod, err := commit.Submodule(c.Req.Context(), subpath)
 		if err != nil {
 			return nil, errors.Wrap(err, "get submodule")
 		}
@@ -111,7 +111,7 @@ func getContents(c *context.APIContext) {
 		ref = c.Repo.Repository.DefaultBranch
 	}
 
-	commit, err := gitRepo.CatFileCommit(ref)
+	commit, err := gitRepo.CatFileCommit(c.Req.Context(), ref)
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get commit")
 		return
@@ -119,7 +119,7 @@ func getContents(c *context.APIContext) {
 
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Params("*"))
-	entry, err := commit.TreeEntry(treePath)
+	entry, err := commit.TreeEntry(c.Req.Context(), treePath)
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
 		return
@@ -137,13 +137,13 @@ func getContents(c *context.APIContext) {
 	}
 
 	// The entry is a directory
-	dir, err := gitRepo.LsTree(entry.ID().String(), git.LsTreeOptions{Verbatim: true})
+	dir, err := gitRepo.LsTree(c.Req.Context(), entry.ID().String(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get tree")
 		return
 	}
 
-	entries, err := dir.Entries(git.LsTreeOptions{Verbatim: true})
+	entries, err := dir.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "list entries")
 		return
@@ -213,13 +213,13 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 		return
 	}
 
-	commit, err := gitRepo.CatFileCommit(r.Branch)
+	commit, err := gitRepo.CatFileCommit(c.Req.Context(), r.Branch)
 	if err != nil {
 		c.Error(err, "get file commit")
 		return
 	}
 
-	entry, err := commit.TreeEntry(treePath)
+	entry, err := commit.TreeEntry(c.Req.Context(), treePath)
 	if err != nil {
 		c.Error(err, "get tree entry")
 		return

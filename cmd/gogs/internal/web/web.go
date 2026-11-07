@@ -22,8 +22,8 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/gogs/git-module"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gogs.io/gogs/internal/git"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 

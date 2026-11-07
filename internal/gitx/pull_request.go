@@ -1,11 +1,12 @@
 package gitx
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -19,18 +20,18 @@ type PullRequestMeta struct {
 	NumFiles int
 }
 
-func (module) PullRequestMeta(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
+func (module) PullRequestMeta(ctx context.Context, headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
 	tmpRemoteBranch := baseBranch
 
 	// We need to create a temporary remote when the pull request is sent from a forked repository.
 	if headPath != basePath {
 		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
-		err := Module.RemoteAdd(headPath, tmpRemote, basePath, git.RemoteAddOptions{Fetch: true})
+		err := Module.RemoteAdd(ctx, headPath, tmpRemote, basePath, git.RemoteAddOptions{Fetch: true})
 		if err != nil {
 			return nil, errors.Newf("add remote: %v", err)
 		}
 		defer func() {
-			err := Module.RemoteRemove(headPath, tmpRemote)
+			err := Module.RemoteRemove(ctx, headPath, tmpRemote)
 			if err != nil {
 				log.Error("Failed to remove remote %q [path: %s]: %v", tmpRemote, headPath, err)
 				return
@@ -40,18 +41,18 @@ func (module) PullRequestMeta(headPath, basePath, headBranch, baseBranch string)
 		tmpRemoteBranch = "remotes/" + tmpRemote + "/" + baseBranch
 	}
 
-	mergeBase, err := Module.MergeBase(headPath, tmpRemoteBranch, headBranch)
+	mergeBase, err := Module.MergeBase(ctx, headPath, tmpRemoteBranch, headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get merge base")
 	}
 
-	commits, err := Module.Log(headPath, mergeBase+"..."+headBranch)
+	commits, err := Module.Log(ctx, headPath, mergeBase+"..."+headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get commits")
 	}
 
 	// Count number of changed files
-	names, err := Module.DiffNameOnly(headPath, tmpRemoteBranch, headBranch, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+	names, err := Module.DiffNameOnly(ctx, headPath, tmpRemoteBranch, headBranch, git.DiffNameOnlyOptions{NeedsMergeBase: true})
 	if err != nil {
 		return nil, errors.Wrap(err, "get changed files")
 	}

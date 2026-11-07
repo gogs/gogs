@@ -1,11 +1,12 @@
 package gitx
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 	"github.com/stretchr/testify/assert"
+	"gogs.io/gogs/internal/git"
 )
 
 func TestModuler_PullRequestMeta(t *testing.T) {
@@ -20,7 +21,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 	}
 
 	SetMockModuleStore(t, &MockModuleStore{
-		remoteAdd: func(repoPath, name, url string, opts ...git.RemoteAddOptions) error {
+		remoteAdd: func(_ context.Context, repoPath, name, url string, opts ...git.RemoteAddOptions) error {
 			if repoPath != headPath {
 				return errors.Newf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if name == "" {
@@ -37,7 +38,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return nil
 		},
-		mergeBase: func(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error) {
+		mergeBase: func(_ context.Context, repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error) {
 			if repoPath != headPath {
 				return "", errors.Newf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if base == "" {
@@ -48,7 +49,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return mergeBase, nil
 		},
-		log: func(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error) {
+		log: func(_ context.Context, repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error) {
 			if repoPath != headPath {
 				return nil, errors.Newf("repoPath: want %q but got %q", headPath, repoPath)
 			}
@@ -60,7 +61,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return commits, nil
 		},
-		diffNameOnly: func(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error) {
+		diffNameOnly: func(_ context.Context, repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error) {
 			if repoPath != headPath {
 				return nil, errors.Newf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if base == "" {
@@ -77,7 +78,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return changedFiles, nil
 		},
-		remoteRemove: func(repoPath, name string, opts ...git.RemoteRemoveOptions) error {
+		remoteRemove: func(_ context.Context, repoPath, name string, opts ...git.RemoteRemoveOptions) error {
 			if repoPath != headPath {
 				return errors.Newf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if name == "" {
@@ -90,7 +91,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 		pullRequestMeta: Module.PullRequestMeta,
 	})
 
-	meta, err := Module.PullRequestMeta(headPath, basePath, headBranch, baseBranch)
+	meta, err := Module.PullRequestMeta(context.Background(), headPath, basePath, headBranch, baseBranch)
 	if err != nil {
 		t.Fatal(err)
 	}

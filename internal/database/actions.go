@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -890,7 +890,11 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 
 		nameStatus := &git.NameStatus{}
 		if !testx.InTest {
-			nameStatus, err = git.ShowNameStatus(repoPath, commit.Sha1)
+			gitRepo, err := git.Open(repoPath)
+			if err != nil {
+				return nil, errors.Wrap(err, "open repository")
+			}
+			nameStatus, err = gitRepo.ShowNameStatus(ctx, commit.Sha1)
 			if err != nil {
 				return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
 			}

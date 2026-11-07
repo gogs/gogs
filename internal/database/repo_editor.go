@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -15,7 +16,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
@@ -90,13 +91,18 @@ func discardLocalRepoBranchChanges(localPath, branch string) error {
 		return nil
 	}
 
+	localGitRepo, err := git.Open(localPath)
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+
 	// No need to check if nothing in the repository.
-	if !git.RepoHasBranch(localPath, branch) {
+	if !localGitRepo.HasBranch(context.TODO(), branch) {
 		return nil
 	}
 
 	rev := "origin/" + branch
-	if err := git.Reset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
+	if err := localGitRepo.Reset(context.TODO(), rev, git.ResetOptions{Hard: true}); err != nil {
 		return errors.Newf("reset [revision: %s]: %v", rev, err)
 	}
 	return nil
@@ -108,9 +114,15 @@ func (r *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 
 // CheckoutNewBranch checks out to a new branch from the a branch name.
 func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	if err := git.Checkout(r.LocalCopyPath(), newBranch, git.CheckoutOptions{
+	localGitRepo, err := git.Open(r.LocalCopyPath())
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.Pull)*time.Second)
+	defer cancel()
+	if err := localGitRepo.Checkout(ctx, newBranch, git.CheckoutOptions{
 		BaseBranch: oldBranch,
-		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
 		return errors.Newf("checkout [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
@@ -164,16 +176,24 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.New("cannot update file with symbolic link in path")
 	}
 
-	repoPath := r.RepoPath()
+	gitRepo, err := git.Open(r.RepoPath())
+	if err != nil {
+		return errors.Newf("open repository: %v", err)
+	}
+	localGitRepo, err := git.Open(localPath)
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
-		if git.RepoHasBranch(repoPath, opts.NewBranch) {
+		if gitRepo.HasBranch(context.TODO(), opts.NewBranch) {
 			return BranchAlreadyExists{Name: opts.NewBranch}
 		}
 
 		// Otherwise, delete branch from local copy in case out of sync
-		if git.RepoHasBranch(localPath, opts.NewBranch) {
-			if err := git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
+		if localGitRepo.HasBranch(context.TODO(), opts.NewBranch) {
+			if err := localGitRepo.DeleteBranch(context.TODO(), opts.NewBranch, git.DeleteBranchOptions{
 				Force: true,
 			}); err != nil {
 				return errors.Newf("delete branch %q: %v", opts.NewBranch, err)
@@ -198,7 +218,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	}
 
 	if osx.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
-		if err := git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
+		if err := localGitRepo.Move(context.TODO(), opts.OldTreeName, opts.NewTreeName); err != nil {
 			return errors.Wrapf(err, "git mv %q %q", opts.OldTreeName, opts.NewTreeName)
 		}
 	}
@@ -207,11 +227,11 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.Newf("write file: %v", err)
 	}
 
-	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	if err := localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
 		return errors.Newf("git add --all: %v", err)
 	}
-	err := git.CreateCommit(
-		localPath,
+	err = localGitRepo.Commit(
+		context.TODO(),
 		&git.Signature{
 			Name:  doer.DisplayName(),
 			Email: doer.Email,
@@ -223,7 +243,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.Newf("commit changes on %q: %v", localPath, err)
 	}
 
-	err = git.Push(localPath, "origin", opts.NewBranch,
+	err = localGitRepo.Push(context.TODO(), "origin", opts.NewBranch,
 		git.PushOptions{
 			CommandOptions: git.CommandOptions{
 				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
@@ -351,12 +371,16 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		return errors.Newf("remove file %q: %v", opts.TreePath, err)
 	}
 
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	localGitRepo, err := git.Open(localPath)
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+	if err = localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
 		return errors.Newf("git add --all: %v", err)
 	}
 
-	err = git.CreateCommit(
-		localPath,
+	err = localGitRepo.Commit(
+		context.TODO(),
 		&git.Signature{
 			Name:  doer.DisplayName(),
 			Email: doer.Email,
@@ -368,7 +392,7 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 		return errors.Newf("commit changes to %q: %v", localPath, err)
 	}
 
-	err = git.Push(localPath, "origin", opts.NewBranch,
+	err = localGitRepo.Push(context.TODO(), "origin", opts.NewBranch,
 		git.PushOptions{
 			CommandOptions: git.CommandOptions{
 				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
@@ -629,12 +653,16 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		}
 	}
 
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	localGitRepo, err := git.Open(localPath)
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+	if err = localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
 		return errors.Newf("git add --all: %v", err)
 	}
 
-	err = git.CreateCommit(
-		localPath,
+	err = localGitRepo.Commit(
+		context.TODO(),
 		&git.Signature{
 			Name:  doer.DisplayName(),
 			Email: doer.Email,
@@ -646,7 +674,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		return errors.Newf("commit changes on %q: %v", localPath, err)
 	}
 
-	err = git.Push(localPath, "origin", opts.NewBranch,
+	err = localGitRepo.Push(context.TODO(), "origin", opts.NewBranch,
 		git.PushOptions{
 			CommandOptions: git.CommandOptions{
 				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{

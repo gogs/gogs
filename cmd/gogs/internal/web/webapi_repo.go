@@ -8,7 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -122,7 +122,7 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
-	commit, err := gitRepo.CatFileCommit(commitID)
+	commit, err := gitRepo.CatFileCommit(ctx, commitID)
 	if err != nil {
 		if gitx.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil

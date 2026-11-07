@@ -539,6 +539,8 @@ func (r *Repository) CountObjects(ctx context.Context, opts ...CountObjectsOptio
 //
 // Docs: https://git-scm.com/docs/git-fsck
 type FsckOptions struct {
+	// Additional arguments to be passed to "git fsck", e.g., "--strict".
+	Args []string
 	CommandOptions
 }
 
@@ -550,7 +552,9 @@ func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
 		opt = opts[0]
 	}
 
-	args := []string{"fsck", "--end-of-options"}
+	args := []string{"fsck"}
+	args = append(args, opt.Args...)
+	args = append(args, "--end-of-options")
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
 }

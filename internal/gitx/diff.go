@@ -2,6 +2,7 @@ package gitx
 
 import (
 	"bytes"
+	"context"
 	"html"
 	"html/template"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template/highlight"
@@ -182,8 +183,8 @@ func ParseDiff(r io.Reader, maxFiles, maxFileLines, maxLineChars int) (*Diff, er
 }
 
 // RepoDiff parses the diff on given revisions of given repository.
-func RepoDiff(repo *git.Repository, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...git.DiffOptions) (*Diff, error) {
-	diff, err := repo.Diff(rev, maxFiles, maxFileLines, maxLineChars, opts...)
+func RepoDiff(ctx context.Context, repo *git.Repository, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...git.DiffOptions) (*Diff, error) {
+	diff, err := repo.Diff(ctx, rev, maxFiles, maxFileLines, maxLineChars, opts...)
 	if err != nil {
 		return nil, errors.Newf("get diff: %v", err)
 	}

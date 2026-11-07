@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogs/git-module"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gogs.io/gogs/internal/git"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"

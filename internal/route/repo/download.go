@@ -5,7 +5,7 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -13,7 +13,7 @@ import (
 )
 
 func serveData(c *context.Context, name string, data []byte) error {
-	commit, err := c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
+	commit, err := c.Repo.Commit.CommitByPath(c.Req.Context(), git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 	if err != nil {
 		return errors.Newf("get commit by path %q: %v", c.Repo.TreePath, err)
 	}
@@ -35,7 +35,7 @@ func serveData(c *context.Context, name string, data []byte) error {
 }
 
 func ServeBlob(c *context.Context, blob *git.Blob) error {
-	p, err := blob.Bytes()
+	p, err := blob.Bytes(c.Req.Context())
 	if err != nil {
 		return err
 	}

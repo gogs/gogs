@@ -3,7 +3,7 @@ package v1
 import (
 	"fmt"
 
-	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/gitx"
@@ -17,13 +17,13 @@ func getRepoGitTree(c *context.APIContext) {
 	}
 
 	sha := c.Params(":sha")
-	tree, err := gitRepo.LsTree(sha, git.LsTreeOptions{Verbatim: true})
+	tree, err := gitRepo.LsTree(c.Req.Context(), sha, git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.NotFoundOrError(gitx.NewError(err), "get tree")
 		return
 	}
 
-	entries, err := tree.Entries(git.LsTreeOptions{Verbatim: true})
+	entries, err := tree.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.Error(err, "list entries")
 		return
@@ -72,7 +72,7 @@ func getRepoGitTree(c *context.APIContext) {
 			Path: entry.Name(),
 			Mode: mode,
 			Type: string(entry.Type()),
-			Size: entry.Size(),
+			Size: entry.Size(c.Req.Context()),
 			Sha:  entry.ID().String(),
 			URL:  fmt.Sprintf(treesURL+"/%s", entry.ID().String()),
 		})
