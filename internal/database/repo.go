@@ -136,8 +136,8 @@ func NewRepoContext() {
 	}
 
 	log.Trace("Git version: %s", conf.Git.Version)
-	if semverx.Compare(conf.Git.Version, "<", "1.8.3") {
-		log.Fatal("Gogs requires Git version greater or equal to 1.8.3")
+	if semverx.Compare(conf.Git.Version, "<", "2.43.1") {
+		log.Fatal("Gogs requires Git version greater or equal to 2.43.1, but got %s", conf.Git.Version)
 	}
 
 	// Git requires setting user.name and user.email in order to commit changes.

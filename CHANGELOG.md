@@ -7,6 +7,7 @@ All notable changes to Gogs are documented in this file.
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
+- The minimum required Git version on the server is now 2.43.1. Gogs refuses to start with an older Git. [#PRNUM](https://github.com/gogs/gogs/pull/PRNUM)
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 
 ### Fixed
