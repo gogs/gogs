@@ -46,6 +46,17 @@ func TestExec_ContextCancellation(t *testing.T) {
 	assert.NotEqual(t, ErrExecTimeout, err)
 }
 
+func TestExec_BackgroundJobKeepsOutputOpen(t *testing.T) {
+	old := waitDelay
+	waitDelay = 200 * time.Millisecond
+	defer func() { waitDelay = old }()
+
+	start := time.Now()
+	_, err := exec(context.Background(), "", []string{"-c", "alias.bg=!sleep 3 &", "bg"}, nil)
+	assert.NoError(t, err)
+	assert.Less(t, time.Since(start), 5*time.Second)
+}
+
 func TestWithTimeout(t *testing.T) {
 	for _, timeout := range []time.Duration{0, -time.Second} {
 		ctx, cancel := WithTimeout(context.Background(), timeout)

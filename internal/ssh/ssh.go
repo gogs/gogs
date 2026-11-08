@@ -91,6 +91,10 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						input.Close()
 					}()
 					_, _ = io.Copy(ch, stdout)
+					// When the client is gone, the copy stops early. Closing the pipe makes
+					// the next write of the command fail, so that it exits rather than
+					// waiting forever for someone to read its output.
+					_ = stdout.Close()
 					_, _ = io.Copy(ch.Stderr(), stderr)
 
 					if err = cmd.Wait(); err != nil {

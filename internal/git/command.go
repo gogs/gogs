@@ -15,7 +15,7 @@ import (
 
 // waitDelay bounds how long waiting for a command takes after it was killed or
 // exited, e.g., when a process it started still holds its output open.
-const waitDelay = time.Minute
+var waitDelay = time.Minute
 
 // WithTimeout returns a copy of ctx that times out after the given duration. A
 // timeout of zero or less returns ctx unchanged, i.e., no timeout.
@@ -66,7 +66,7 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdout i
 	c := newCommand(ctx, dir, args, envs)
 	c.Stdout = stdout
 	c.Stderr = stderr
-	err := c.Run()
+	err := ignoreWaitDelay(c, c.Run())
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			if errors.Is(ctxErr, context.DeadlineExceeded) {
@@ -82,6 +82,16 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdout i
 		return nil, err
 	}
 	return stderr.Bytes(), nil
+}
+
+// ignoreWaitDelay returns nil instead of err when the command succeeded and
+// only a process it started, e.g., a job in a hook, kept its output open past
+// the wait delay.
+func ignoreWaitDelay(c *osexec.Cmd, err error) error {
+	if errors.Is(err, osexec.ErrWaitDelay) && c.ProcessState != nil && c.ProcessState.Success() {
+		return nil
+	}
+	return err
 }
 
 // exec executes a git command in the given directory and returns stdout as

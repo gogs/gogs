@@ -73,18 +73,19 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 
+	idleTimeout := serviceIdleTimeout
 	var lastActive atomic.Int64
 	touch := func() { lastActive.Store(time.Now().UnixNano()) }
 	touch()
 	go func() {
-		ticker := time.NewTicker(serviceIdleTimeout / 10)
+		ticker := time.NewTicker(idleTimeout / 10)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if time.Since(time.Unix(0, lastActive.Load())) > serviceIdleTimeout {
+				if time.Since(time.Unix(0, lastActive.Load())) > idleTimeout {
 					cancel(ErrExecTimeout)
 					return
 				}
@@ -110,7 +111,7 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	}
 	c.Stdout = activityWriter{w: opt.Stdout, touch: touch}
 	c.Stderr = activityWriter{w: opt.Stderr, touch: touch}
-	err := c.Run()
+	err := ignoreWaitDelay(c, c.Run())
 	if context.Cause(ctx) == ErrExecTimeout {
 		return ErrExecTimeout
 	}
