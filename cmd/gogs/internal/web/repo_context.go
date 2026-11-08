@@ -11,13 +11,13 @@ import (
 	"gogs.io/gogs/internal/ptrx"
 )
 
-// repoContext is the request-scoped viewer of the repository. Viewer can be an
-// authenticated or anonymous user.
+// repoContext is the request-scoped viewer of the repository. Viewer is nil for
+// anonymous users.
 type repoContext struct {
 	Owner *database.User
 	Repo  *database.Repository
 
-	ViewerID     int64
+	Viewer       *database.User
 	viewerAccess database.AccessMode
 }
 
@@ -86,7 +86,7 @@ func withRepoContext(c flamego.Context, user *database.User) {
 	c.Map(&repoContext{
 		Owner:        owner,
 		Repo:         repo,
-		ViewerID:     viewer.ID,
+		Viewer:       user,
 		viewerAccess: viewerAccess,
 	})
 }

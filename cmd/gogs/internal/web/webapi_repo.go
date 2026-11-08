@@ -74,8 +74,10 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 		WikiEnabled:          wikiEnabled,
 
 		ViewerCanAdminister: repoCtx.ViewerCanAdminister(),
-		ViewerIsWatching:    database.IsWatching(repoCtx.ViewerID, repo.ID),
-		ViewerIsStarring:    database.IsStarring(repoCtx.ViewerID, repo.ID),
+	}
+	if repoCtx.Viewer != nil {
+		resp.ViewerIsWatching = database.IsWatching(repoCtx.Viewer.ID, repo.ID)
+		resp.ViewerIsStarring = database.IsStarring(repoCtx.Viewer.ID, repo.ID)
 	}
 
 	if repo.IsMirror {
@@ -177,19 +179,19 @@ func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (
 	if !repoCtx.ViewerCanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	if repoCtx.ViewerID == 0 {
+	if repoCtx.Viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
 
 	repo := repoCtx.Repo
 
 	if watching {
-		err = database.Handle.Repositories().Watch(ctx, repoCtx.ViewerID, repo.ID)
+		err = database.Handle.Repositories().Watch(ctx, repoCtx.Viewer.ID, repo.ID)
 	} else {
-		err = database.WatchRepo(repoCtx.ViewerID, repo.ID, false)
+		err = database.WatchRepo(repoCtx.Viewer.ID, repo.ID, false)
 	}
 	if err != nil {
-		log.Error("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, repoCtx.ViewerID, repo.ID, err)
+		log.Error("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, repoCtx.Viewer.ID, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "watch repo")
 	}
 
@@ -219,19 +221,19 @@ func repoStarAction(ctx context.Context, repoCtx *repoContext, starring bool) (s
 	if !repoCtx.ViewerCanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	if repoCtx.ViewerID == 0 {
+	if repoCtx.Viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
 
 	repo := repoCtx.Repo
 
 	if starring {
-		err = database.Handle.Repositories().Star(ctx, repoCtx.ViewerID, repo.ID)
+		err = database.Handle.Repositories().Star(ctx, repoCtx.Viewer.ID, repo.ID)
 	} else {
-		err = database.StarRepo(repoCtx.ViewerID, repo.ID, false)
+		err = database.StarRepo(repoCtx.Viewer.ID, repo.ID, false)
 	}
 	if err != nil {
-		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starring, repoCtx.ViewerID, repo.ID, err)
+		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starring, repoCtx.Viewer.ID, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "star repo")
 	}
 
