@@ -476,12 +476,9 @@ func (r *Repository) ComposeMetas() map[string]string {
 	return r.ExternalMetas
 }
 
-// DeleteWiki removes the actual and local copy of repository wiki.
+// DeleteWiki removes the repository wiki.
 func (r *Repository) DeleteWiki() {
-	wikiPaths := []string{r.WikiPath(), r.LocalWikiPath()}
-	for _, wikiPath := range wikiPaths {
-		RemoveAllWithNotice("Delete repository wiki", wikiPath)
-	}
+	RemoveAllWithNotice("Delete repository wiki", r.WikiPath())
 }
 
 // getUsersWithAccesMode returns users that have at least given access mode to the repository.
@@ -636,56 +633,6 @@ func (r *Repository) CanEnableEditor() bool {
 // closely enough.
 func (r *Repository) NextIssueIndex() int64 {
 	return int64(r.NumIssues+r.NumPulls) + 1
-}
-
-// UpdateLocalCopy fetches latest changes of given branch from repoPath to localPath.
-// It creates a new clone if local copy does not exist, but does not checks out to a
-// specific branch if the local copy belongs to a wiki.
-// For existing local copy, it checks out to target branch by default, and safe to
-// assume subsequent operations are against target branch when caller has confidence
-// about no race condition.
-func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
-	if !osx.Exist(localPath) {
-		// Checkout to a specific branch fails when wiki is an empty repository.
-		if isWiki {
-			branch = ""
-		}
-		ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.Clone)*time.Second)
-		defer cancel()
-		if err = git.Clone(ctx, repoPath, localPath, git.CloneOptions{
-			Branch: branch,
-		}); err != nil {
-			// A killed clone leaves a partial local copy, which every later update
-			// would fail to fetch into.
-			_ = os.RemoveAll(localPath)
-			return errors.Newf("git clone [branch: %s]: %v", branch, err)
-		}
-		return nil
-	}
-
-	gitRepo, err := git.Open(localPath)
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-
-	if err = gitRepo.Fetch(context.TODO(), git.FetchOptions{
-		Prune: true,
-	}); err != nil {
-		return errors.Newf("fetch: %v", err)
-	}
-
-	if err = gitRepo.Checkout(context.TODO(), branch); err != nil {
-		return errors.Newf("checkout [branch: %s]: %v", branch, err)
-	}
-
-	// Reset to align with remote in case of force push.
-	rev := "origin/" + branch
-	if err = gitRepo.Reset(context.TODO(), rev, git.ResetOptions{
-		Hard: true,
-	}); err != nil {
-		return errors.Newf("reset [revision: %s]: %v", rev, err)
-	}
-	return nil
 }
 
 // PatchPath returns corresponding patch file path of repository by given issue ID.
@@ -989,26 +936,22 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 	return repo, UpdateRepository(repo, false)
 }
 
-// initRepoCommit temporarily changes with work directory.
-func initRepoCommit(tmpPath string, sig *git.Signature) error {
+// initRepoCommit commits the files to the default branch of the empty
+// repository at repoPath.
+func initRepoCommit(repoPath string, files map[string][]byte, author *git.Signature) error {
 	ctx := context.TODO()
-	gitRepo, err := git.Open(tmpPath)
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-
-	if err = gitRepo.Add(ctx, git.AddOptions{All: true}); err != nil {
-		return errors.Newf("git add: %v", err)
-	}
-
-	if err = gitRepo.Commit(ctx, sig, "Initial commit"); err != nil {
-		return errors.Newf("git commit: %v", err)
-	}
-
-	if err = gitRepo.Push(ctx, "origin", "HEAD"); err != nil {
-		return errors.Newf("git push: %v", err)
-	}
-	return nil
+	return commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, nil, nil, func(tmpRepo *git.Repository) error {
+		for name, data := range files {
+			blobID, err := tmpRepo.HashObject(ctx, bytes.NewReader(data), git.HashObjectOptions{Path: name})
+			if err != nil {
+				return errors.Wrapf(err, "write %s", name)
+			}
+			if err = tmpRepo.AddToIndex(ctx, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: name}); err != nil {
+				return errors.Wrapf(err, "add %s", name)
+			}
+		}
+		return nil
+	})
 }
 
 type CreateRepoOptionsLegacy struct {
@@ -1051,17 +994,14 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	return embedConf.Files.ReadFile(relPath)
 }
 
-func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptionsLegacy) error {
-	// Clone to temporary path and do the init commit.
-	err := git.Clone(context.TODO(), repoPath, tmpDir, git.CloneOptions{})
-	if err != nil {
-		return errors.Wrap(err, "clone")
-	}
+// prepareRepoCommit returns the files of the initial commit by their names.
+func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[string][]byte, error) {
+	files := make(map[string][]byte, 3)
 
 	// README
 	data, err := getRepoInitFile("readme", opts.Readme)
 	if err != nil {
-		return errors.Newf("getRepoInitFile[%s]: %v", opts.Readme, err)
+		return nil, errors.Newf("getRepoInitFile[%s]: %v", opts.Readme, err)
 	}
 
 	cloneLink := repo.CloneLink()
@@ -1071,10 +1011,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		"CloneURL.SSH":   cloneLink.SSH,
 		"CloneURL.HTTPS": cloneLink.HTTPS,
 	}
-	if err = os.WriteFile(filepath.Join(tmpDir, "README.md"),
-		[]byte(com.Expand(string(data), match)), 0o644); err != nil {
-		return errors.Newf("write README.md: %v", err)
-	}
+	files["README.md"] = []byte(com.Expand(string(data), match))
 
 	// .gitignore
 	if len(opts.Gitignores) > 0 {
@@ -1083,7 +1020,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		for name := range names {
 			data, err = getRepoInitFile("gitignore", name)
 			if err != nil {
-				return errors.Newf("getRepoInitFile[%s]: %v", name, err)
+				return nil, errors.Newf("getRepoInitFile[%s]: %v", name, err)
 			}
 			buf.WriteString("# ---> " + name + "\n")
 			buf.Write(data)
@@ -1091,9 +1028,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		}
 
 		if buf.Len() > 0 {
-			if err = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0o644); err != nil {
-				return errors.Newf("write .gitignore: %v", err)
-			}
+			files[".gitignore"] = buf.Bytes()
 		}
 	}
 
@@ -1101,15 +1036,12 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 	if len(opts.License) > 0 {
 		data, err = getRepoInitFile("license", opts.License)
 		if err != nil {
-			return errors.Newf("getRepoInitFile[%s]: %v", opts.License, err)
+			return nil, errors.Newf("getRepoInitFile[%s]: %v", opts.License, err)
 		}
-
-		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0o644); err != nil {
-			return errors.Newf("write LICENSE: %v", err)
-		}
+		files["LICENSE"] = data
 	}
 
-	return nil
+	return files, nil
 }
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
@@ -1134,22 +1066,16 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		return errors.Wrap(err, "set default branch")
 	}
 
-	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+strconv.Itoa(time.Now().Nanosecond()))
-
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
-		if err = os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-			return err
-		}
-		defer RemoveAllWithNotice("Delete repository for auto-initialization", tmpDir)
-
-		if err = prepareRepoCommit(repo, tmpDir, repoPath, opts); err != nil {
+		files, err := prepareRepoCommit(repo, opts)
+		if err != nil {
 			return errors.Newf("prepareRepoCommit: %v", err)
 		}
 
-		// Apply changes and commit.
 		err = initRepoCommit(
-			tmpDir,
+			repoPath,
+			files,
 			&git.Signature{
 				Name:  doer.DisplayName(),
 				Email: doer.Email,
@@ -1545,7 +1471,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return errors.Newf("transferRepoAction: %v", err)
 	}
 
-	// Rename remote repository to new path and delete local copy.
+	// Rename remote repository to new path.
 	if err = os.MkdirAll(repox.UserPath(newOwner.Name), os.ModePerm); err != nil {
 		return err
 	}
@@ -1553,24 +1479,15 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return errors.Newf("rename repository directory: %v", err)
 	}
 
-	deleteRepoLocalCopy(repo.ID)
-
-	// Rename remote wiki repository to new path and delete local copy.
+	// Rename remote wiki repository to new path.
 	wikiPath := WikiPath(owner.Name, repo.Name)
 	if osx.Exist(wikiPath) {
-		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
 		}
 	}
 
 	return sess.Commit()
-}
-
-func deleteRepoLocalCopy(repoID int64) {
-	repoWorkingPool.CheckIn(strconv.FormatInt(repoID, 10))
-	defer repoWorkingPool.CheckOut(strconv.FormatInt(repoID, 10))
-	RemoveAllWithNotice(fmt.Sprintf("Delete repository %d local copy", repoID), repox.RepositoryLocalPath(repoID))
 }
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
@@ -1603,10 +1520,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		if err = os.Rename(wikiPath, WikiPath(u.Name, newRepoName)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
 		}
-		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 	}
-
-	deleteRepoLocalCopy(repo.ID)
 	return nil
 }
 

@@ -3,7 +3,6 @@ package repox
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"gogs.io/gogs/internal/conf"
@@ -59,16 +58,4 @@ func UserPath(user string) string {
 func RepositoryPath(owner, repo string) string {
 	// 🚨 SECURITY: Prevent path traversal in repository name.
 	return filepath.Join(UserPath(owner), pathx.Clean(strings.ToLower(repo))+".git")
-}
-
-// RepositoryLocalPath returns the absolute path of the repository local copy
-// with the given ID.
-func RepositoryLocalPath(repoID int64) string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-repo", strconv.FormatInt(repoID, 10))
-}
-
-// RepositoryLocalWikiPath returns the absolute path of the repository local
-// wiki copy with the given ID.
-func RepositoryLocalWikiPath(repoID int64) string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", strconv.FormatInt(repoID, 10))
 }

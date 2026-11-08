@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -27,6 +28,50 @@ func setupBareRepoWithAlternates(t *testing.T) *Repository {
 	return r
 }
 
+// createBranch creates the branch at the commit of the master branch.
+func createBranch(t *testing.T, r *Repository, branch string) {
+	t.Helper()
+	_, err := exec(context.Background(), r.Path(), []string{"branch", "--end-of-options", branch, "master"}, nil)
+	require.NoError(t, err)
+}
+
+// commitFiles commits the files with given contents to the branch, which is
+// created as an orphan if it does not exist, and returns the commit ID.
+func commitFiles(t *testing.T, r *Repository, branch string, files map[string]string) string {
+	t.Helper()
+
+	ctx := context.Background()
+	var parents []string
+	if parent, err := r.BranchCommitID(ctx, branch); err == nil {
+		parents = append(parents, parent)
+		require.NoError(t, r.ReadTree(ctx, parent))
+	} else {
+		require.NoError(t, r.ReadTree(ctx, emptyTreeID))
+	}
+
+	var names []string
+	for name, content := range files {
+		blobID, err := r.HashObject(ctx, strings.NewReader(content))
+		require.NoError(t, err)
+		require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: name}))
+		names = append(names, name)
+	}
+	slices.Sort(names)
+
+	tree, err := r.WriteTree(ctx)
+	require.NoError(t, err)
+	sig := &Signature{Name: "alice", Email: "alice@example.com"}
+	id, err := r.CommitTree(ctx, tree, "Update "+strings.Join(names, ", ")+"\n", CommitTreeOptions{
+		Parents:   parents,
+		Author:    sig,
+		Committer: sig,
+	})
+	require.NoError(t, err)
+	_, err = exec(ctx, r.Path(), []string{"update-ref", "--end-of-options", RefsHeads + branch, id}, nil)
+	require.NoError(t, err)
+	return id
+}
+
 func TestRepository_CommitThroughIndex(t *testing.T) {
 	ctx := context.Background()
 	r := setupBareRepoWithAlternates(t)
@@ -39,6 +84,29 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryExec, ID: blobID, Path: "new/dir/hello.sh"}))
 	require.NoError(t, r.RemoveFromIndex(ctx, "README.txt"))
+
+	t.Run("committer from Git configuration", func(t *testing.T) {
+		tree, err := r.WriteTree(ctx)
+		require.NoError(t, err)
+
+		t.Setenv("GIT_CONFIG_COUNT", "2")
+		t.Setenv("GIT_CONFIG_KEY_0", "user.name")
+		t.Setenv("GIT_CONFIG_VALUE_0", "carol")
+		t.Setenv("GIT_CONFIG_KEY_1", "user.email")
+		t.Setenv("GIT_CONFIG_VALUE_1", "carol@example.com")
+		id, err := r.CommitTree(ctx, tree, "message\n", CommitTreeOptions{
+			Author: &Signature{Name: "bob", Email: "bob@example.com"},
+		})
+		require.NoError(t, err)
+
+		c, err := r.CatFileCommit(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, "carol", c.Committer.Name)
+		assert.Equal(t, "carol@example.com", c.Committer.Email)
+		assert.Equal(t, "bob", c.Author.Name)
+		assert.Equal(t, "bob@example.com", c.Author.Email)
+		assert.Equal(t, 0, c.ParentsCount())
+	})
 
 	t.Run("invalid changes", func(t *testing.T) {
 		// "run.sh" is a file, so nothing can be added under it.
@@ -127,18 +195,11 @@ func TestRepository_MergeTree(t *testing.T) {
 
 	masterID, err := r.BranchCommitID(ctx, "master")
 	require.NoError(t, err)
-	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
-	commitFile(t, r, "FEATURE", "feature")
-	featureID, err := r.BranchCommitID(ctx, "feature")
-	require.NoError(t, err)
-	require.NoError(t, r.Checkout(ctx, "conflict", CheckoutOptions{BaseBranch: "master"}))
-	commitFile(t, r, "README.txt", "conflict")
-	conflictID, err := r.BranchCommitID(ctx, "conflict")
-	require.NoError(t, err)
-	require.NoError(t, r.Checkout(ctx, "master"))
-	commitFile(t, r, "README.txt", "master")
-	newMasterID, err := r.BranchCommitID(ctx, "master")
-	require.NoError(t, err)
+	createBranch(t, r, "feature")
+	featureID := commitFiles(t, r, "feature", map[string]string{"FEATURE": "feature"})
+	createBranch(t, r, "conflict")
+	conflictID := commitFiles(t, r, "conflict", map[string]string{"README.txt": "conflict"})
+	newMasterID := commitFiles(t, r, "master", map[string]string{"README.txt": "master"})
 
 	tree, err := r.MergeTree(ctx, newMasterID, featureID)
 	require.NoError(t, err)

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -12,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/cockroachdb/errors"
 )
 
 // Repository contains information of a Git repository.
@@ -103,8 +100,6 @@ type CloneOptions struct {
 	Bare bool
 	// Indicates whether to suppress the log output.
 	Quiet bool
-	// The branch to checkout for the working tree when Bare=false.
-	Branch string
 	// The additional environment variables to run the command with.
 	Envs []string
 }
@@ -131,37 +126,9 @@ func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
 	if opt.Quiet {
 		args = append(args, "--quiet")
 	}
-	if !opt.Bare && opt.Branch != "" {
-		args = append(args, "-b", opt.Branch)
-	}
 
 	args = append(args, "--end-of-options", url, dst)
 	_, err = exec(ctx, "", args, opt.Envs)
-	return err
-}
-
-// FetchOptions contains optional arguments for fetching repository updates.
-//
-// Docs: https://git-scm.com/docs/git-fetch
-type FetchOptions struct {
-	// Indicates whether to prune during fetching.
-	Prune bool
-}
-
-// Fetch fetches updates for the repository.
-func (r *Repository) Fetch(ctx context.Context, opts ...FetchOptions) error {
-	var opt FetchOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"fetch"}
-	if opt.Prune {
-		args = append(args, "--prune")
-	}
-	args = append(args, "--end-of-options")
-
-	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -193,127 +160,6 @@ func RepoPush(ctx context.Context, repoPath, remote, branch string, opts ...Push
 		return err
 	}
 	return r.Push(ctx, remote, branch, opts...)
-}
-
-// CheckoutOptions contains optional arguments for checking out to a branch.
-//
-// Docs: https://git-scm.com/docs/git-checkout
-type CheckoutOptions struct {
-	// The base branch if checks out to a new branch.
-	BaseBranch string
-}
-
-// Checkout checks out to given branch for the repository.
-func (r *Repository) Checkout(ctx context.Context, branch string, opts ...CheckoutOptions) error {
-	var opt CheckoutOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"checkout"}
-	if opt.BaseBranch != "" {
-		args = append(args, "-b", branch, "--end-of-options", opt.BaseBranch)
-	} else {
-		args = append(args, "--end-of-options", branch)
-	}
-
-	_, err := exec(ctx, r.path, args, nil)
-	return err
-}
-
-// RepoCheckout is like Repository.Checkout for the repository in given path.
-func RepoCheckout(ctx context.Context, repoPath, branch string, opts ...CheckoutOptions) error {
-	r, err := Open(repoPath)
-	if err != nil {
-		return err
-	}
-	return r.Checkout(ctx, branch, opts...)
-}
-
-// ResetOptions contains optional arguments for resetting a branch.
-//
-// Docs: https://git-scm.com/docs/git-reset
-type ResetOptions struct {
-	// Indicates whether to perform a hard reset.
-	Hard bool
-}
-
-// Reset resets working tree to given revision for the repository.
-func (r *Repository) Reset(ctx context.Context, rev string, opts ...ResetOptions) error {
-	var opt ResetOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"reset"}
-	if opt.Hard {
-		args = append(args, "--hard")
-	}
-	args = append(args, "--end-of-options", rev)
-
-	_, err := exec(ctx, r.path, args, nil)
-	return err
-}
-
-// AddOptions contains optional arguments for adding local changes.
-//
-// Docs: https://git-scm.com/docs/git-add
-type AddOptions struct {
-	// Indicates whether to add all changes to index.
-	All bool
-}
-
-// Add adds local changes to index for the repository.
-func (r *Repository) Add(ctx context.Context, opts ...AddOptions) error {
-	var opt AddOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"add"}
-	if opt.All {
-		args = append(args, "--all")
-	}
-	_, err := exec(ctx, r.path, args, nil)
-	return err
-}
-
-// Commit commits local changes with the given message for the repository,
-// recording the committer as both the author and the committer.
-func (r *Repository) Commit(ctx context.Context, committer *Signature, message string) error {
-	if committer == nil {
-		return errors.New("committer is required")
-	}
-
-	envs := committerEnvs(committer)
-	args := []string{
-		"commit",
-		fmt.Sprintf("--author=%s <%s>", committer.Name, committer.Email),
-		"-m", message,
-		"--end-of-options",
-	}
-
-	// Git also exits with status 1 for real failures (e.g., an empty message or a
-	// rejecting hook), so check for staged changes up front instead of guessing
-	// from the exit status.
-	_, err := exec(ctx, r.path, []string{"diff", "--cached", "--quiet"}, nil)
-	if err == nil {
-		// A merge in progress still needs a commit to record the merged parent, even
-		// when the merge result has the same tree as HEAD.
-		// Use "--verify" so that a file named "MERGE_HEAD" in the working tree is not
-		// mistaken for the reference.
-		_, err = exec(ctx, r.path, []string{"rev-parse", "--quiet", "--verify", "MERGE_HEAD"}, nil)
-		if isExitStatus(err, 1) {
-			return nil
-		} else if err != nil {
-			return errors.Wrap(err, "check merge in progress")
-		}
-	} else if !isExitStatus(err, 1) {
-		return errors.Wrap(err, "check staged changes")
-	}
-
-	_, err = exec(ctx, r.path, args, envs)
-	return err
 }
 
 // ApplyCheckOptions contains optional arguments for checking a patch.

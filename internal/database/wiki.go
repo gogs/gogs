@@ -3,16 +3,12 @@ package database
 import (
 	"context"
 	"net/url"
-	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
@@ -81,18 +77,31 @@ func (r *Repository) InitWiki() error {
 	return nil
 }
 
-func (r *Repository) LocalWikiPath() string {
-	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", strconv.FormatInt(r.ID, 10))
-}
-
-// UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
-func (r *Repository) UpdateLocalWiki() error {
+// wikiParent returns the branch that wiki pages are committed to and its
+// latest commit, which is nil when the wiki has no pages yet.
+func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error) {
 	wikiPath := r.WikiPath()
-	return UpdateLocalCopyBranch(wikiPath, r.LocalWikiPath(), WikiBranch(wikiPath), true)
-}
+	wikiRepo, err := git.Open(wikiPath)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "open wiki repository")
+	}
 
-func discardLocalWikiChanges(localPath string) error {
-	return discardLocalRepoBranchChanges(localPath, WikiBranch(localPath))
+	branch := WikiBranch(wikiPath)
+	if wikiRepo.HasBranch(ctx, branch) {
+		parent, err := wikiRepo.BranchCommit(ctx, branch)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "get commit of branch %q", branch)
+		}
+		return branch, parent, nil
+	}
+
+	// The first page goes to the branch that HEAD names, so that cloning the wiki
+	// checks it out.
+	ref, err := wikiRepo.SymbolicRef(ctx)
+	if err == nil && strings.HasPrefix(ref, git.RefsHeads) {
+		branch = strings.TrimPrefix(ref, git.RefsHeads)
+	}
+	return branch, nil, nil
 }
 
 // updateWikiPage adds new page to repository wiki.
@@ -104,64 +113,54 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 		return errors.Newf("InitWiki: %v", err)
 	}
 
-	localPath := r.LocalWikiPath()
-	if err := discardLocalWikiChanges(localPath); err != nil {
-		return errors.Newf("discardLocalWikiChanges: %v", err)
-	} else if err = r.UpdateLocalWiki(); err != nil {
-		return errors.Newf("UpdateLocalWiki: %v", err)
+	ctx := context.TODO()
+	branch, parent, err := r.wikiParent(ctx)
+	if err != nil {
+		return err
 	}
 
 	title = ToWikiPageName(title)
-	filename := path.Join(localPath, title+".md")
-
-	// If not a new file, show perform update not create.
-	if isNew {
-		if osx.Exist(filename) {
-			return ErrWikiAlreadyExist{filename}
-		}
-	} else {
-		oldTitle = ToWikiPageName(oldTitle)
-		_ = os.Remove(path.Join(localPath, oldTitle+".md"))
-	}
-
-	// SECURITY: if new file is a symlink to non-exist critical file,
-	// attack content can be written to the target file (e.g. authorized_keys2)
-	// as a new page operation.
-	// So we want to make sure the symlink is removed before write anything.
-	// The new file we created will be in normal text format.
-	_ = os.Remove(filename)
-
-	if err := os.WriteFile(filename, []byte(content), 0o666); err != nil {
-		return errors.Newf("WriteFile: %v", err)
-	}
-
+	filename := title + ".md"
 	if message == "" {
 		message = "Update page '" + title + "'"
 	}
-	localGitRepo, err := git.Open(localPath)
-	if err != nil {
-		return errors.Newf("open local copy: %v", err)
-	}
-	if err := localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
-		return errors.Newf("add all changes: %v", err)
-	}
+	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
+	return commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, nil, func(tmpRepo *git.Repository) error {
+		attrSource := ""
+		if parent != nil {
+			attrSource = parent.ID.String()
+			if isNew {
+				entry, err := treeEntry(ctx, parent, filename)
+				if err != nil {
+					return err
+				} else if entry != nil {
+					return ErrWikiAlreadyExist{filename}
+				}
+			} else {
+				oldFilename := ToWikiPageName(oldTitle) + ".md"
+				entry, err := treeEntry(ctx, parent, oldFilename)
+				if err != nil {
+					return err
+				} else if entry != nil && !entry.IsTree() {
+					if err = tmpRepo.RemoveFromIndex(ctx, oldFilename); err != nil {
+						return errors.Wrapf(err, "remove %q", oldFilename)
+					}
+				}
+			}
+		}
 
-	err = localGitRepo.Commit(
-		context.TODO(),
-		&git.Signature{
-			Name:  doer.DisplayName(),
-			Email: doer.Email,
-			When:  time.Now(),
-		},
-		message,
-	)
-	if err != nil {
-		return errors.Newf("commit changes: %v", err)
-	} else if err = localGitRepo.Push(context.TODO(), "origin", WikiBranch(localPath)); err != nil {
-		return errors.Newf("push: %v", err)
-	}
-
-	return nil
+		blobID, err := tmpRepo.HashObject(ctx, strings.NewReader(content), git.HashObjectOptions{
+			Path:       filename,
+			AttrSource: attrSource,
+		})
+		if err != nil {
+			return errors.Wrap(err, "write page")
+		}
+		if err = tmpRepo.AddToIndex(ctx, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: filename}); err != nil {
+			return errors.Wrapf(err, "add %q", filename)
+		}
+		return nil
+	})
 }
 
 func (r *Repository) AddWikiPage(doer *User, title, content, message string) error {
@@ -176,40 +175,27 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	localPath := r.LocalWikiPath()
-	if err = discardLocalWikiChanges(localPath); err != nil {
-		return errors.Newf("discardLocalWikiChanges: %v", err)
-	} else if err = r.UpdateLocalWiki(); err != nil {
-		return errors.Newf("UpdateLocalWiki: %v", err)
+	ctx := context.TODO()
+	branch, parent, err := r.wikiParent(ctx)
+	if err != nil {
+		return err
+	} else if parent == nil {
+		return errors.New("wiki has no pages")
 	}
 
 	title = ToWikiPageName(title)
-	_ = os.Remove(path.Join(localPath, title+".md"))
-
-	message := "Delete page '" + title + "'"
-
-	localGitRepo, err := git.Open(localPath)
-	if err != nil {
-		return errors.Newf("open local copy: %v", err)
-	}
-	if err = localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
-		return errors.Newf("add all changes: %v", err)
-	}
-
-	err = localGitRepo.Commit(
-		context.TODO(),
-		&git.Signature{
-			Name:  doer.DisplayName(),
-			Email: doer.Email,
-			When:  time.Now(),
-		},
-		message,
-	)
-	if err != nil {
-		return errors.Newf("commit changes: %v", err)
-	} else if err = localGitRepo.Push(context.TODO(), "origin", WikiBranch(localPath)); err != nil {
-		return errors.Newf("push: %v", err)
-	}
-
-	return nil
+	filename := title + ".md"
+	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
+	return commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, nil, func(tmpRepo *git.Repository) error {
+		entry, err := treeEntry(ctx, parent, filename)
+		if err != nil {
+			return err
+		} else if entry == nil || entry.IsTree() {
+			return nil
+		}
+		if err = tmpRepo.RemoveFromIndex(ctx, filename); err != nil {
+			return errors.Wrapf(err, "remove %q", filename)
+		}
+		return nil
+	})
 }

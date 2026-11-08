@@ -78,30 +78,6 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 // /_______  /\____ | |__||__|    \___  /   |__|____/\___  >
 //         \/      \/                 \/                 \/
 
-// discardLocalRepoBranchChanges discards local commits/changes of
-// given branch to make sure it is even to remote branch.
-func discardLocalRepoBranchChanges(localPath, branch string) error {
-	if !osx.Exist(localPath) {
-		return nil
-	}
-
-	localGitRepo, err := git.Open(localPath)
-	if err != nil {
-		return errors.Newf("open local copy: %v", err)
-	}
-
-	// No need to check if nothing in the repository.
-	if !localGitRepo.HasBranch(context.TODO(), branch) {
-		return nil
-	}
-
-	rev := "origin/" + branch
-	if err := localGitRepo.Reset(context.TODO(), rev, git.ResetOptions{Hard: true}); err != nil {
-		return errors.Newf("reset [revision: %s]: %v", rev, err)
-	}
-	return nil
-}
-
 // newTemporaryRepository creates a bare repository in a temporary directory
 // that reads objects from the repositories at given paths, so that commits can
 // be built on top of theirs through its index without a working tree. The
@@ -146,10 +122,71 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 	return repo, cleanup, nil
 }
 
+// commitAndPush creates a commit on top of the parent, or a root commit when
+// the parent is nil, with the changes that change makes to the index of a
+// temporary repository, and pushes it to the branch of the repository at
+// repoPath with the environment variables. When the changes leave the tree of
+// the parent as it was, it pushes the parent as is. The committer may be nil to
+// use the one from Git configuration.
+func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) error {
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, repoPath)
+	if err != nil {
+		return errors.Wrap(err, "create temporary repository")
+	}
+	defer cleanup()
+
+	var parents []string
+	if parent != nil {
+		parents = []string{parent.ID.String()}
+		if err = tmpRepo.ReadTree(ctx, parents[0]); err != nil {
+			return errors.Wrap(err, "read tree")
+		}
+	}
+	if err = change(tmpRepo); err != nil {
+		return err
+	}
+	tree, err := tmpRepo.WriteTree(ctx)
+	if err != nil {
+		return errors.Wrap(err, "write tree")
+	}
+
+	unchanged := false
+	if parent != nil {
+		parentTree, err := tmpRepo.RevParse(ctx, parents[0]+"^{tree}")
+		if err != nil {
+			return errors.Wrap(err, "get tree of parent")
+		}
+		unchanged = tree == parentTree
+	}
+
+	var commitID string
+	if unchanged {
+		commitID = parents[0]
+	} else {
+		message = git.CleanupMessage(message)
+		if message == "" {
+			return errors.New("empty commit message")
+		}
+		commitID, err = tmpRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
+			Parents:   parents,
+			Author:    author,
+			Committer: committer,
+		})
+		if err != nil {
+			return errors.Wrap(err, "commit tree")
+		}
+	}
+
+	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, git.PushOptions{Envs: envs})
+	if err != nil {
+		return errors.Newf("git push origin %s: %v", branch, err)
+	}
+	return nil
+}
+
 // commitToBranch creates a commit on top of the old branch with the changes
 // that change makes to the index of a temporary repository, and pushes it to
-// the new branch as the doer, which runs the hooks of the repository. When the
-// changes leave the tree as it was, it pushes the old branch as is.
+// the new branch as the doer, which runs the hooks of the repository.
 func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, newBranch, message string, change func(tmpRepo *git.Repository, parent *git.Commit) error) error {
 	gitRepo, err := git.Open(r.RepoPath())
 	if err != nil {
@@ -159,62 +196,19 @@ func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, 
 	if err != nil {
 		return errors.Wrapf(err, "get commit of branch %q", oldBranch)
 	}
-	parentID := parent.ID.String()
 
-	tmpRepo, cleanup, err := newTemporaryRepository(ctx, r.RepoPath())
-	if err != nil {
-		return errors.Wrap(err, "create temporary repository")
-	}
-	defer cleanup()
-
-	if err = tmpRepo.ReadTree(ctx, parentID); err != nil {
-		return errors.Wrap(err, "read tree")
-	}
-	if err = change(tmpRepo, parent); err != nil {
-		return err
-	}
-	tree, err := tmpRepo.WriteTree(ctx)
-	if err != nil {
-		return errors.Wrap(err, "write tree")
-	}
-	parentTree, err := tmpRepo.RevParse(ctx, parentID+"^{tree}")
-	if err != nil {
-		return errors.Wrap(err, "get tree of parent")
-	}
-
-	commitID := parentID
-	if tree != parentTree {
-		message = git.CleanupMessage(message)
-		if message == "" {
-			return errors.New("empty commit message")
-		}
-		sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-		commitID, err = tmpRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
-			Parents:   []string{parentID},
-			Author:    sig,
-			Committer: sig,
-		})
-		if err != nil {
-			return errors.Wrap(err, "commit tree")
-		}
-	}
-
-	err = tmpRepo.Push(ctx, r.RepoPath(), commitID+":"+git.RefsHeads+newBranch,
-		git.PushOptions{
-			Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-				AuthUser:  doer,
-				OwnerName: r.MustOwner().Name,
-				OwnerSalt: r.MustOwner().Salt,
-				RepoID:    r.ID,
-				RepoName:  r.Name,
-				RepoPath:  r.RepoPath(),
-			}),
-		},
-	)
-	if err != nil {
-		return errors.Newf("git push origin %s: %v", newBranch, err)
-	}
-	return nil
+	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
+	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
+		AuthUser:  doer,
+		OwnerName: r.MustOwner().Name,
+		OwnerSalt: r.MustOwner().Salt,
+		RepoID:    r.ID,
+		RepoName:  r.Name,
+		RepoPath:  r.RepoPath(),
+	})
+	return commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, envs, func(tmpRepo *git.Repository) error {
+		return change(tmpRepo, parent)
+	})
 }
 
 // treeEntry returns the entry at the path in the tree of the commit, or nil if

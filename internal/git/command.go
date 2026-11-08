@@ -271,24 +271,6 @@ func pipe(ctx context.Context, dir string, args []string, envs []string, stdout 
 	return err
 }
 
-// authorEnvs returns environment variables that record the signature as the author.
-// Git otherwise falls back to user.name, user.email, or the system account.
-func authorEnvs(author *Signature) []string {
-	return []string{
-		"GIT_AUTHOR_NAME=" + author.Name,
-		"GIT_AUTHOR_EMAIL=" + author.Email,
-	}
-}
-
-// committerEnvs returns environment variables that record the signature as the committer.
-// Git otherwise falls back to user.name, user.email, or the system account.
-func committerEnvs(committer *Signature) []string {
-	return []string{
-		"GIT_COMMITTER_NAME=" + committer.Name,
-		"GIT_COMMITTER_EMAIL=" + committer.Email,
-	}
-}
-
 // log logs a git command execution with its output.
 func log(dir string, args []string, output []byte) {
 	cmdStr := "git"

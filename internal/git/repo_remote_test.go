@@ -68,7 +68,9 @@ func TestRemoteHEAD(t *testing.T) {
 
 		// The clone also has "refs/remotes/origin/HEAD", which must not be mistaken
 		// for HEAD.
-		err = r.Checkout(ctx, "develop", CheckoutOptions{BaseBranch: "master"})
+		_, err = exec(ctx, r.Path(), []string{"branch", "develop", "master"}, nil)
+		require.NoError(t, err)
+		_, err = r.SymbolicRef(ctx, SymbolicRefOptions{Ref: RefsHeads + "develop"})
 		require.NoError(t, err)
 
 		ref, err := RemoteHEAD(ctx, r.Path())
