@@ -256,6 +256,9 @@ func parseDiffHeaderNames(names string) (a, b string, err error) {
 		// An unquoted name never contains a double quote.
 		middle = strings.Index(names, ` "b/`)
 		if middle == -1 {
+			middle = splitSameDiffNames(names)
+		}
+		if middle == -1 {
 			middle = strings.Index(names, ` b/`)
 		}
 	}
@@ -272,6 +275,20 @@ func parseDiffHeaderNames(names string) (a, b string, err error) {
 		return "", "", errors.New(`new file name does not start with "b/"`)
 	}
 	return a, b, nil
+}
+
+// splitSameDiffNames returns the index of the space between two unquoted names
+// that refer to the same file, e.g., `a/foo b/bar.txt b/foo b/bar.txt`, or -1 if
+// the names differ. Only the names of a renamed file differ, and the parser then
+// reads them from the "rename from" and "rename to" lines instead.
+func splitSameDiffNames(names string) int {
+	middle := len(names) / 2
+	if len(names)%2 == 0 || names[middle] != ' ' ||
+		!strings.HasPrefix(names, "a/") || !strings.HasPrefix(names[middle+1:], "b/") ||
+		names[2:middle] != names[middle+3:] {
+		return -1
+	}
+	return middle
 }
 
 func unquoteDiffName(name, prefix string) (string, bool) {
@@ -297,6 +314,7 @@ func (p *diffParser) parseFileHeader() (*DiffFile, error) {
 	}
 
 	// Check file diff type and submodule
+	var pureRename bool
 checkType:
 	for !p.isEOF {
 		if err = p.readLine(); err != nil {
@@ -344,9 +362,15 @@ checkType:
 			file.Type = DiffFileRename
 			file.oldName = a
 			file.Name = b
+			pureRename = strings.HasSuffix(line, "100%")
+		case strings.HasPrefix(line, "rename from "):
+			// The "diff --git" line is ambiguous when an unquoted name contains " b/".
+			file.oldName, _ = unquoteDiffName(strings.TrimPrefix(line, "rename from "), "")
+		case strings.HasPrefix(line, "rename to "):
+			file.Name, _ = unquoteDiffName(strings.TrimPrefix(line, "rename to "), "")
 
 			// No need to look for index if it's a pure rename
-			if strings.HasSuffix(line, "100%") {
+			if pureRename {
 				break checkType
 			}
 		case strings.HasPrefix(line, "new mode"):

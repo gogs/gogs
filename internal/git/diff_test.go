@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -819,9 +820,9 @@ new mode 100755`,
 }
 
 func TestStreamParseDiff_QuotedNames(t *testing.T) {
-	const renameBody = "similarity index 85%\n" +
-		"rename from x\n" +
-		"rename to y\n" +
+	const renameBody = "similarity index 85%%\n" +
+		"rename from %s\n" +
+		"rename to %s\n" +
 		"index abc1234..def5678 100644\n" +
 		"--- x\n" +
 		"+++ y\n" +
@@ -831,24 +832,32 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 	tests := []struct {
 		name       string
 		header     string
+		renameFrom string
+		renameTo   string
 		expOldName string
 		expName    string
 	}{
 		{
 			name:       "only old name quoted",
 			header:     `diff --git "a/say \"hi\".txt" b/hi.txt`,
+			renameFrom: `"say \"hi\".txt"`,
+			renameTo:   "hi.txt",
 			expOldName: `say "hi".txt`,
 			expName:    "hi.txt",
 		},
 		{
 			name:       "only new name quoted",
 			header:     `diff --git a/hi.txt "b/say\thi.txt"`,
+			renameFrom: "hi.txt",
+			renameTo:   `"say\thi.txt"`,
 			expOldName: "hi.txt",
 			expName:    "say\thi.txt",
 		},
 		{
 			name:       "both names quoted with separator-like text",
 			header:     `diff --git "a/x \"b/y\".txt" "b/z.txt"`,
+			renameFrom: `"x \"b/y\".txt"`,
+			renameTo:   "z.txt",
 			expOldName: `x "b/y".txt`,
 			expName:    "z.txt",
 		},
@@ -856,7 +865,7 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			done := make(chan streamParseDiffResult)
-			go streamParseDiff(strings.NewReader(test.header+"\n"+renameBody), done, 0, 0, 0)
+			go streamParseDiff(strings.NewReader(test.header+"\n"+fmt.Sprintf(renameBody, test.renameFrom, test.renameTo)), done, 0, 0, 0)
 			result := <-done
 			require.NoError(t, result.Err)
 			require.Len(t, result.Diff.Files, 1)
@@ -867,6 +876,44 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 			assert.Equal(t, test.expName, file.Name)
 		})
 	}
+
+	t.Run("unquoted names containing the new name prefix", func(t *testing.T) {
+		const diff = "diff --git a/foo b/bar.txt b/foo b/bar.txt\n" +
+			"index abc1234..def5678 100644\n" +
+			"--- a/foo b/bar.txt\n" +
+			"+++ b/foo b/bar.txt\n" +
+			"@@ -1 +1 @@\n" +
+			"-old\n" +
+			"+new\n" +
+			"diff --git a/x b/y b/x b/z\n" +
+			"similarity index 100%\n" +
+			"rename from x b/y\n" +
+			"rename to x b/z\n" +
+			"diff --git a/q b/q\n" +
+			"index abc1234..def5678 100644\n" +
+			"--- a/q\n" +
+			"+++ b/q\n" +
+			"@@ -1 +1 @@\n" +
+			"-old\n" +
+			"+new\n"
+		done := make(chan streamParseDiffResult)
+		go streamParseDiff(strings.NewReader(diff), done, 0, 0, 0)
+		result := <-done
+		require.NoError(t, result.Err)
+		require.Len(t, result.Diff.Files, 3)
+
+		changed := result.Diff.Files[0]
+		assert.Equal(t, DiffFileChange, changed.Type)
+		assert.Equal(t, "foo b/bar.txt", changed.Name)
+		assert.Equal(t, "foo b/bar.txt", changed.OldName())
+
+		renamed := result.Diff.Files[1]
+		assert.True(t, renamed.IsRenamed())
+		assert.Equal(t, "x b/y", renamed.OldName())
+		assert.Equal(t, "x b/z", renamed.Name)
+
+		assert.Equal(t, "q", result.Diff.Files[2].Name)
+	})
 
 	t.Run("malformed header", func(t *testing.T) {
 		done := make(chan streamParseDiffResult)
