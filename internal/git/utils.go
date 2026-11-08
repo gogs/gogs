@@ -53,13 +53,6 @@ func isFile(filePath string) bool {
 	return !f.IsDir()
 }
 
-// isExist checks whether a file or directory exists. It returns false when the
-// file or directory does not exist.
-func isExist(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil || os.IsExist(err)
-}
-
 // bytesToStrings splits given bytes into strings by line separator ("\n"). It
 // returns empty slice if the given bytes only contains line separators.
 func bytesToStrings(in []byte) []string {

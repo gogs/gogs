@@ -97,7 +97,7 @@ func TestRepository_Log(t *testing.T) {
 		{
 			rev: "0eedd79eba4394bbef888c804e899731644367fe",
 			opt: LogOptions{
-				Since: time.Unix(1581250680, 0),
+				MaxCount: 2,
 			},
 			expCommitIDs: []string{
 				"0eedd79eba4394bbef888c804e899731644367fe",
@@ -107,7 +107,7 @@ func TestRepository_Log(t *testing.T) {
 		{
 			rev: "0eedd79eba4394bbef888c804e899731644367fe",
 			opt: LogOptions{
-				Since: time.Now().AddDate(100, 0, 0),
+				Path: "no-such-file",
 			},
 			expCommitIDs: []string{},
 		},
@@ -151,40 +151,6 @@ func TestRepository_CommitByRevision(t *testing.T) {
 			}
 
 			assert.Equal(t, test.expID, c.ID.String())
-		})
-	}
-}
-
-func TestRepository_CommitsSince(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		rev          string
-		since        time.Time
-		opt          CommitsSinceOptions
-		expCommitIDs []string
-	}{
-		{
-			rev:   "0eedd79eba4394bbef888c804e899731644367fe",
-			since: time.Unix(1581250680, 0),
-			expCommitIDs: []string{
-				"0eedd79eba4394bbef888c804e899731644367fe",
-				"4e59b72440188e7c2578299fc28ea425fbe9aece",
-			},
-		},
-		{
-			rev:          "0eedd79eba4394bbef888c804e899731644367fe",
-			since:        time.Now().AddDate(100, 0, 0),
-			expCommitIDs: []string{},
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			commits, err := testrepo.CommitsSince(ctx, test.rev, test.since, test.opt)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.Equal(t, test.expCommitIDs, commitsToIDs(commits))
 		})
 	}
 }

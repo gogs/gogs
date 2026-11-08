@@ -177,8 +177,6 @@ type LogOptions struct {
 	MaxCount int
 	// The number commits skipped before starting to show the commit output.
 	Skip int
-	// To only show commits since the time.
-	Since time.Time
 	// The regular expression to filter commits by their messages.
 	GrepPattern string
 	// Indicates whether to ignore letter case when match the regular expression.
@@ -214,9 +212,6 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([
 	}
 	if opt.Skip > 0 {
 		args = append(args, "--skip="+strconv.Itoa(opt.Skip))
-	}
-	if !opt.Since.IsZero() {
-		args = append(args, "--since="+opt.Since.Format(time.RFC3339))
 	}
 	if opt.GrepPattern != "" {
 		args = append(args, "--grep="+opt.GrepPattern)
@@ -328,31 +323,6 @@ func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string, opt
 		RegexpIgnoreCase: true,
 		Path:             opt.Path,
 		CommandOptions:   opt.CommandOptions,
-	})
-}
-
-// CommitsSinceOptions contains optional arguments for listing commits since a
-// time.
-//
-// Docs: https://git-scm.com/docs/git-log
-type CommitsSinceOptions struct {
-	// The relative path of the repository.
-	Path string
-	CommandOptions
-}
-
-// CommitsSince returns a list of commits since given time. The returned list is
-// in reverse chronological order.
-func (r *Repository) CommitsSince(ctx context.Context, rev string, since time.Time, opts ...CommitsSinceOptions) ([]*Commit, error) {
-	var opt CommitsSinceOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	return r.Log(ctx, rev, LogOptions{
-		Since:          since,
-		Path:           opt.Path,
-		CommandOptions: opt.CommandOptions,
 	})
 }
 

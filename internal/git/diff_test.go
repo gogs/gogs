@@ -115,10 +115,8 @@ func TestDiffFile(t *testing.T) {
 		isIncomplete: true,
 	}
 
-	assert.Equal(t, 1, file.NumSections())
 	assert.Equal(t, 2, file.NumAdditions())
 	assert.Equal(t, 0, file.NumDeletions())
-	assert.True(t, file.IsCreated())
 	assert.False(t, file.IsDeleted())
 	assert.False(t, file.IsRenamed())
 	assert.Empty(t, file.OldName())
@@ -142,7 +140,6 @@ func TestDiff(t *testing.T) {
 				isSubmodule:  false,
 				isIncomplete: false,
 				mode:         100644,
-				oldMode:      100644,
 			},
 		},
 		totalAdditions: 10,
@@ -184,10 +181,9 @@ index 0000000..6b08f76
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     ".gitmodules",
-						Type:     DiffFileAdd,
-						Index:    "6abde17",
-						OldIndex: "0000000",
+						Name:  ".gitmodules",
+						Type:  DiffFileAdd,
+						Index: "6abde17",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -222,13 +218,11 @@ index 0000000..6b08f76
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 					{
-						Name:     "gogs/docs-api",
-						Type:     DiffFileAdd,
-						Index:    "6b08f76",
-						OldIndex: "0000000",
+						Name:  "gogs/docs-api",
+						Type:  DiffFileAdd,
+						Index: "6b08f76",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -253,7 +247,6 @@ index 0000000..6b08f76
 						isSubmodule:  true,
 						isIncomplete: false,
 						mode:         0160000,
-						oldMode:      0160000,
 					},
 				},
 				totalAdditions: 4,
@@ -278,10 +271,9 @@ index ee791be..9997571 100644
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     "pom.xml",
-						Type:     DiffFileChange,
-						Index:    "9997571",
-						OldIndex: "ee791be",
+						Name:  "pom.xml",
+						Type:  DiffFileChange,
+						Index: "9997571",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -340,7 +332,6 @@ index ee791be..9997571 100644
 						isBinary:     false,
 						isSubmodule:  false,
 						isIncomplete: false,
-						oldMode:      0100644,
 						mode:         0100644,
 					},
 				},
@@ -360,7 +351,6 @@ Binary files /dev/null and b/img/sourcegraph.png differ`,
 						Name:         "img/sourcegraph.png",
 						Type:         DiffFileAdd,
 						Index:        "2ce9188",
-						OldIndex:     "0000000",
 						Sections:     nil,
 						numAdditions: 0,
 						numDeletions: 0,
@@ -369,7 +359,6 @@ Binary files /dev/null and b/img/sourcegraph.png differ`,
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -387,7 +376,6 @@ index e69de29..0000000`,
 						Name:         "fix.txt",
 						Type:         DiffFileDelete,
 						Index:        "0000000",
-						OldIndex:     "e69de29",
 						Sections:     nil,
 						numAdditions: 0,
 						numDeletions: 0,
@@ -396,7 +384,6 @@ index e69de29..0000000`,
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -445,10 +432,9 @@ index b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0..ab80bda5dd90d8b42be25ac2c7a071b7
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     "dir/file.txt",
-						Type:     DiffFileChange,
-						Index:    "ab80bda5dd90d8b42be25ac2c7a071b722171f09",
-						OldIndex: "b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0",
+						Name:  "dir/file.txt",
+						Type:  DiffFileChange,
+						Index: "ab80bda5dd90d8b42be25ac2c7a071b722171f09",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -488,7 +474,6 @@ index b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0..ab80bda5dd90d8b42be25ac2c7a071b7
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 3,
@@ -516,10 +501,9 @@ index ce53c7e..56a156b 100644
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     "src/app/tabs/friends/friends.module.ts",
-						Type:     DiffFileRename,
-						Index:    "56a156b",
-						OldIndex: "ce53c7e",
+						Name:  "src/app/tabs/friends/friends.module.ts",
+						Type:  DiffFileRename,
+						Index: "56a156b",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -576,7 +560,6 @@ index ce53c7e..56a156b 100644
 						numDeletions: 2,
 						oldName:      "src/app/tabs/teacher/teacher.module.ts",
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 2,
@@ -610,10 +593,9 @@ index 335db7ea..51d7543e 100644
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     ".travis.yml",
-						Type:     DiffFileChange,
-						Index:    "51d7543e",
-						OldIndex: "335db7ea",
+						Name:  ".travis.yml",
+						Type:  DiffFileChange,
+						Index: "51d7543e",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -678,7 +660,6 @@ index 335db7ea..51d7543e 100644
 						isSubmodule:  false,
 						isIncomplete: true,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -700,10 +681,9 @@ index 0000000..6abde17
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     ".gitmodules",
-						Type:     DiffFileAdd,
-						Index:    "6abde17",
-						OldIndex: "0000000",
+						Name:  ".gitmodules",
+						Type:  DiffFileAdd,
+						Index: "6abde17",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -733,7 +713,6 @@ index 0000000..6abde17
 						isSubmodule:  false,
 						isIncomplete: true,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 2,
@@ -764,10 +743,9 @@ index 0000000..6b08f76
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:     ".gitmodules",
-						Type:     DiffFileAdd,
-						Index:    "6abde17",
-						OldIndex: "0000000",
+						Name:  ".gitmodules",
+						Type:  DiffFileAdd,
+						Index: "6abde17",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -797,7 +775,6 @@ index 0000000..6b08f76
 						isSubmodule:  false,
 						isIncomplete: true,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 2,
@@ -819,7 +796,6 @@ new mode 100755`,
 						oldName: "go.mod",
 						Type:    DiffFileChange,
 						mode:    0100755,
-						oldMode: 0100644,
 					},
 				},
 				totalAdditions: 0,

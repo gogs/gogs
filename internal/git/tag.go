@@ -7,8 +7,6 @@ type Tag struct {
 	typ      ObjectType
 	id       *SHA1
 	commitID *SHA1 // The ID of the underlying commit
-	refspec  string
-	tagger   *Signature
 	message  string
 
 	repo *Repository
@@ -27,16 +25,6 @@ func (t *Tag) ID() *SHA1 {
 // CommitID returns the commit ID of the tag.
 func (t *Tag) CommitID() *SHA1 {
 	return t.commitID
-}
-
-// Refspec returns the refspec of the tag.
-func (t *Tag) Refspec() string {
-	return t.refspec
-}
-
-// Tagger returns the tagger of the tag.
-func (t *Tag) Tagger() *Signature {
-	return t.tagger
 }
 
 // Message returns the message of the tag.

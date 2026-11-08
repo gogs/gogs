@@ -175,59 +175,6 @@ func (r *Repository) Fetch(ctx context.Context, opts ...FetchOptions) error {
 	return err
 }
 
-// PullOptions contains optional arguments for pulling repository updates.
-//
-// Docs: https://git-scm.com/docs/git-pull
-type PullOptions struct {
-	// Indicates whether to rebased during pulling.
-	Rebase bool
-	// Indicates whether to pull from all remotes.
-	All bool
-	// The remote to pull updates from when All=false.
-	Remote string
-	// The branch to pull updates from when All=false and Remote is supplied.
-	Branch string
-	CommandOptions
-}
-
-// Pull pulls updates for the repository. The committer is required and is recorded
-// on any commit this command creates. A rebase keeps the authors of the replayed commits.
-func (r *Repository) Pull(ctx context.Context, committer *Signature, opts ...PullOptions) error {
-	if committer == nil {
-		return errors.New("committer is required")
-	}
-
-	var opt PullOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	// The strategy flags are explicit so pull.rebase and pull.ff in Git
-	// configuration cannot change which commits this command creates.
-	args := []string{"pull"}
-	envs := committerEnvs(committer)
-	if opt.Rebase {
-		args = append(args, "--rebase")
-	} else {
-		args = append(args, "--no-rebase", "--ff")
-		envs = append(envs, authorEnvs(committer)...)
-	}
-	if opt.All {
-		args = append(args, "--all")
-	}
-	args = append(args, "--end-of-options")
-	if !opt.All && opt.Remote != "" {
-		args = append(args, opt.Remote)
-		if opt.Branch != "" {
-			args = append(args, opt.Branch)
-		}
-	}
-	envs = append(envs, opt.Envs...)
-
-	_, err := exec(ctx, r.path, args, envs)
-	return err
-}
-
 // PushOptions contains optional arguments for pushing repository changes.
 //
 // Docs: https://git-scm.com/docs/git-push

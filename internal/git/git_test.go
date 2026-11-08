@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 
 	// Set up the test repository
-	if !isExist(repoPath) {
+	if !isDir(repoPath) {
 		if err := Clone(ctx, "https://github.com/gogs/git-module-testrepo.git", repoPath, CloneOptions{
 			Bare: true,
 		}); err != nil {
@@ -42,15 +42,6 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(m.Run())
-}
-
-func TestSetPrefix(t *testing.T) {
-	old := logPrefix
-	new := "[custom] "
-	SetPrefix(new)
-	defer SetPrefix(old)
-
-	assert.Equal(t, new, logPrefix)
 }
 
 func TestLog(t *testing.T) {

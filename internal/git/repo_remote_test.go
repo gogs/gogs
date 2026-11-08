@@ -66,27 +66,6 @@ func TestLsRemote(t *testing.T) {
 	}
 }
 
-func TestIsURLAccessible(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		url    string
-		expVal bool
-	}{
-		{
-			url:    testrepo.Path(),
-			expVal: true,
-		}, {
-			url:    os.TempDir(),
-			expVal: false,
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, IsURLAccessible(ctx, test.url))
-		})
-	}
-}
-
 func TestRemoteHEAD(t *testing.T) {
 	ctx := context.Background()
 
@@ -174,83 +153,6 @@ func TestRepository_RemoteRemove(t *testing.T) {
 
 	err = r.RemoteRemove(ctx, "origin", RemoteRemoveOptions{})
 	assert.Equal(t, ErrRemoteNotExist, err)
-}
-
-func TestRepository_Remotes(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	// 1 remote
-	remotes, err := r.Remotes(ctx)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"origin"}, remotes)
-
-	// 2 remotes
-	err = r.RemoteAdd(ctx, "t", "t")
-	assert.Nil(t, err)
-
-	remotes, err = r.Remotes(ctx)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"origin", "t"}, remotes)
-	assert.Len(t, remotes, 2)
-
-	// 0 remotes
-	err = r.RemoteRemove(ctx, "t")
-	assert.Nil(t, err)
-	err = r.RemoteRemove(ctx, "origin")
-	assert.Nil(t, err)
-
-	remotes, err = r.Remotes(ctx)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{}, remotes)
-	assert.Len(t, remotes, 0)
-}
-
-func TestRepository_RemoteURLFamily(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	err = r.RemoteSetURLDelete(ctx, "origin", ".*")
-	assert.Equal(t, ErrNotDeleteNonPushURLs, err)
-
-	err = r.RemoteSetURL(ctx, "notexist", "t")
-	assert.Equal(t, ErrRemoteNotExist, err)
-
-	err = r.RemoteSetURL(ctx, "notexist", "t", RemoteSetURLOptions{Regex: "t"})
-	assert.Equal(t, ErrRemoteNotExist, err)
-
-	// Default origin URL is not easily testable
-	err = r.RemoteSetURL(ctx, "origin", "t")
-	assert.Nil(t, err)
-	urls, err := r.RemoteGetURL(ctx, "origin")
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"t"}, urls)
-
-	err = r.RemoteSetURLAdd(ctx, "origin", "e")
-	assert.Nil(t, err)
-	urls, err = r.RemoteGetURL(ctx, "origin", RemoteGetURLOptions{All: true})
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"t", "e"}, urls)
-
-	err = r.RemoteSetURL(ctx, "origin", "s", RemoteSetURLOptions{Regex: "e"})
-	assert.Nil(t, err)
-	urls, err = r.RemoteGetURL(ctx, "origin", RemoteGetURLOptions{All: true})
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"t", "s"}, urls)
-
-	err = r.RemoteSetURLDelete(ctx, "origin", "t")
-	assert.Nil(t, err)
-	urls, err = r.RemoteGetURL(ctx, "origin", RemoteGetURLOptions{All: true})
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"s"}, urls)
 }
 
 func TestRepository_RemoteUpdate(t *testing.T) {

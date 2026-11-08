@@ -156,47 +156,6 @@ func TestRepository_Fetch(t *testing.T) {
 	}
 }
 
-func TestRepository_Pull(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	tests := []struct {
-		opt PullOptions
-	}{
-		{
-			opt: PullOptions{},
-		},
-		{
-			opt: PullOptions{
-				Rebase: true,
-			},
-		},
-		{
-			opt: PullOptions{
-				All: true,
-			},
-		},
-		{
-			opt: PullOptions{
-				Remote: "origin",
-				Branch: "master",
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
-			if err := r.Pull(ctx, &Signature{Name: "alice", Email: "alice@example.com"}, test.opt); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
 func TestRepository_Push(t *testing.T) {
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()

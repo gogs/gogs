@@ -8,15 +8,6 @@ import (
 // DefaultHooksDir is the default directory for Git hooks.
 const DefaultHooksDir = "hooks"
 
-// NewHook creates and returns a new hook with given name. Update method must be
-// called to actually save the hook to disk.
-func (r *Repository) NewHook(dir string, name HookName) *Hook {
-	return &Hook{
-		name: name,
-		path: filepath.Join(r.path, dir, string(name)),
-	}
-}
-
 // Hook returns a Git hook by given name in the repository. Giving empty
 // directory will use the default directory. It returns an os.ErrNotExist if
 // both active and sample hook do not exist.

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRepository_Hooks(t *testing.T) {
@@ -15,12 +16,13 @@ func TestRepository_Hooks(t *testing.T) {
 	})
 
 	// Save "post-receive" hook with some content
-	postReceiveHook := testrepo.NewHook(DefaultHooksDir, HookPostReceive)
+	postReceiveHook, err := testrepo.Hook(DefaultHooksDir, HookPostReceive)
+	require.NoError(t, err)
 	defer func() {
 		_ = os.Remove(postReceiveHook.Path())
 	}()
 
-	err := postReceiveHook.Update("echo $1 $2 $3")
+	err = postReceiveHook.Update("echo $1 $2 $3")
 	if err != nil {
 		t.Fatal(err)
 	}

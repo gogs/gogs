@@ -30,12 +30,6 @@ l:
 				}
 				tag.commitID = id
 			case "type":
-			case "tagger":
-				sig, err := parseSignature(line[spacepos+1:])
-				if err != nil {
-					return nil, err
-				}
-				tag.tagger = sig
 			}
 			nextline += eol + 1
 		case eol == 0:
@@ -128,7 +122,6 @@ func (r *Repository) Tag(ctx context.Context, name string, opts ...TagOptions) (
 	if err != nil {
 		return nil, err
 	}
-	tag.refspec = refspec
 	return tag, nil
 }
 
