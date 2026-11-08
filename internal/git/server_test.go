@@ -1,11 +1,11 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,25 +20,49 @@ func TestUpdateServerInfo(t *testing.T) {
 	assert.True(t, isFile(filepath.Join(repoPath, "info", "refs")))
 }
 
-func TestReceivePack(t *testing.T) {
+func TestRunService(t *testing.T) {
 	ctx := context.Background()
-	got, err := ReceivePack(ctx, repoPath, ReceivePackOptions{HTTPBackendInfoRefs: true})
-	require.NoError(t, err)
-	const contains = "report-status report-status-v2 delete-refs side-band-64k quiet atomic ofs-delta object-format=sha1 agent=git/"
-	assert.Contains(t, string(got), contains)
-}
 
-func TestUploadPack(t *testing.T) {
-	ctx := context.Background()
-	got, err := UploadPack(ctx, repoPath,
-		UploadPackOptions{
-			StatelessRPC:        true,
-			Strict:              true,
-			HTTPBackendInfoRefs: true,
-			InactivityTimeout:   time.Minute,
-		},
-	)
-	require.NoError(t, err)
-	const contains = "multi_ack thin-pack side-band side-band-64k ofs-delta shallow deepen-since deepen-not deepen-relative no-progress include-tag multi_ack_detailed no-done symref=HEAD:refs/heads/master object-format=sha1 agent=git/"
-	assert.Contains(t, string(got), contains)
+	t.Run("advertise refs", func(t *testing.T) {
+		for _, service := range []Service{ServiceUploadPack, ServiceReceivePack} {
+			var stdout bytes.Buffer
+			err := RunService(ctx, service, repoPath,
+				ServiceOptions{
+					StatelessRPC:  true,
+					AdvertiseRefs: true,
+					Stdout:        &stdout,
+				},
+			)
+			require.NoError(t, err)
+			assert.Contains(t, stdout.String(), "refs/heads/master", string(service))
+		}
+	})
+
+	t.Run("environment variables", func(t *testing.T) {
+		var stdout bytes.Buffer
+		err := RunService(ctx, ServiceUploadPack, repoPath,
+			ServiceOptions{
+				StatelessRPC:   true,
+				AdvertiseRefs:  true,
+				Stdout:         &stdout,
+				CommandOptions: CommandOptions{Envs: []string{"GIT_PROTOCOL=version=2"}},
+			},
+		)
+		require.NoError(t, err)
+		assert.Contains(t, stdout.String(), "version 2")
+		assert.NotContains(t, stdout.String(), "refs/heads/master")
+	})
+
+	t.Run("not a repository", func(t *testing.T) {
+		var stderr bytes.Buffer
+		err := RunService(ctx, ServiceUploadPack, filepath.Join(t.TempDir(), "404.git"),
+			ServiceOptions{
+				StatelessRPC:  true,
+				AdvertiseRefs: true,
+				Stderr:        &stderr,
+			},
+		)
+		require.Error(t, err)
+		assert.Contains(t, stderr.String(), "does not appear to be a git repository")
+	})
 }

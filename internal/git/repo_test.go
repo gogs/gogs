@@ -471,6 +471,127 @@ func TestRepository_Commit(t *testing.T) {
 		_, err = empty.RevParse(ctx, "HEAD")
 		assert.NoError(t, err)
 	})
+
+	t.Run("committer from Git configuration", func(t *testing.T) {
+		fpath := filepath.Join(r.Path(), "COMMITTER_FROM_CONFIG")
+		require.NoError(t, os.WriteFile(fpath, []byte("something"), 0600))
+		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+
+		err := r.Commit(ctx, nil, message, CommitOptions{
+			Author: author,
+			CommandOptions: CommandOptions{
+				Envs: []string{
+					"GIT_CONFIG_COUNT=2",
+					"GIT_CONFIG_KEY_0=user.name", "GIT_CONFIG_VALUE_0=carol",
+					"GIT_CONFIG_KEY_1=user.email", "GIT_CONFIG_VALUE_1=carol@example.com",
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		c, err := r.CatFileCommit(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, "carol", c.Committer.Name)
+		assert.Equal(t, "carol@example.com", c.Committer.Email)
+		assert.Equal(t, author.Name, c.Author.Name)
+		assert.Equal(t, author.Email, c.Author.Email)
+	})
+}
+
+// commitFile writes the file with given content and commits it to the current
+// branch of the repository.
+func commitFile(t *testing.T, r *Repository, name, content string) {
+	t.Helper()
+
+	ctx := context.Background()
+	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), name), []byte(content), 0600))
+	require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+	sig := &Signature{Name: "alice", Email: "alice@example.com"}
+	require.NoError(t, r.Commit(ctx, sig, "Update "+name))
+}
+
+func TestRepository_Merge(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
+	commitFile(t, r, "FEATURE", "feature")
+	featureID, err := r.BranchCommitID(ctx, "feature")
+	require.NoError(t, err)
+	require.NoError(t, r.Checkout(ctx, "master"))
+	masterID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+
+	t.Run("no fast-forward without commit", func(t *testing.T) {
+		err := r.Merge(ctx, "feature", MergeOptions{NoFastForward: true, NoCommit: true})
+		require.NoError(t, err)
+
+		gotID, err := r.BranchCommitID(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, masterID, gotID)
+		assert.FileExists(t, filepath.Join(r.Path(), ".git", "MERGE_HEAD"))
+
+		require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true}))
+	})
+
+	t.Run("fast-forward", func(t *testing.T) {
+		require.NoError(t, r.Merge(ctx, "feature"))
+
+		gotID, err := r.BranchCommitID(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, featureID, gotID)
+	})
+}
+
+func TestRepository_Rebase(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
+	commitFile(t, r, "FEATURE", "feature")
+	require.NoError(t, r.Checkout(ctx, "master"))
+	commitFile(t, r, "MASTER", "master")
+	masterID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+
+	require.NoError(t, r.Rebase(ctx, "master", "feature"))
+
+	head, err := r.CatFileCommit(ctx, "HEAD")
+	require.NoError(t, err)
+	assert.Equal(t, "Update FEATURE\n", head.Message)
+	parentID, err := head.ParentID(0)
+	require.NoError(t, err)
+	assert.Equal(t, masterID, parentID.String())
+}
+
+func TestRepository_ApplyCheck(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	commitFile(t, r, "a.txt", "a b\ntwo\nc d\n")
+	baseID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+	commitFile(t, r, "a.txt", "a b\nTWO\nc d\n")
+	headID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+
+	patch, err := r.DiffBinary(ctx, baseID, headID)
+	require.NoError(t, err)
+	patchPath := filepath.Join(t.TempDir(), "a.patch")
+	require.NoError(t, os.WriteFile(patchPath, patch, 0600))
+
+	// The context lines of the patch now only differ in whitespace.
+	require.NoError(t, r.Reset(ctx, baseID, ResetOptions{Hard: true}))
+	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "a.txt"), []byte("a  b\ntwo\nc  d\n"), 0600))
+
+	assert.Error(t, r.ApplyCheck(ctx, patchPath))
+	assert.NoError(t, r.ApplyCheck(ctx, patchPath, ApplyCheckOptions{IgnoreWhitespace: true}))
 }
 
 func TestRepository_RevParse(t *testing.T) {
@@ -550,4 +671,14 @@ func TestRepository_Fsck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestRepository_GC(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, r.GC(ctx, GCOptions{Args: []string{"--quiet"}}))
+	assert.Error(t, r.GC(ctx, GCOptions{Args: []string{"--no-such-option"}}))
 }

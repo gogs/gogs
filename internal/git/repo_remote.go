@@ -133,6 +133,38 @@ func (r *Repository) RemoteRemove(ctx context.Context, name string, opts ...Remo
 	return nil
 }
 
+// RemoteUpdateOptions contains optional arguments for fetching updates from all
+// remotes of the repository.
+//
+// Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-update
+type RemoteUpdateOptions struct {
+	// Indicates whether to remove references that no longer exist on the remotes.
+	Prune bool
+	CommandOptions
+}
+
+// RemoteUpdate fetches updates from all remotes of the repository. It returns
+// the standard error output, which is where Git reports updated references.
+func (r *Repository) RemoteUpdate(ctx context.Context, opts ...RemoteUpdateOptions) (string, error) {
+	var opt RemoteUpdateOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	args := []string{"remote", "update"}
+	if opt.Prune {
+		args = append(args, "--prune")
+	}
+
+	c := cmd(ctx, r.path, args, opt.Envs)
+
+	stderr := new(bytes.Buffer)
+	if err := c.StdErr().Run().Stream(stderr); err != nil {
+		return "", mapContextError(err, ctx)
+	}
+	return stderr.String(), nil
+}
+
 // RemotesOptions contains arguments for listing remotes of the repository.
 // /
 // Docs: https://git-scm.com/docs/git-remote#_commands

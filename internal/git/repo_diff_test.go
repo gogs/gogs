@@ -3,10 +3,13 @@ package git
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRepository_Diff(t *testing.T) {
@@ -517,4 +520,20 @@ index 0000000000000000000000000000000000000000..6b08f76a5313fa3d26859515b30aa17a
 			assert.Equal(t, test.expOutput, string(p))
 		})
 	}
+}
+
+func TestRepository_DiffWorktree(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "README.txt"), []byte("changed\n"), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "pom.xml"), []byte("changed\n"), 0600))
+
+	diff, err := r.DiffWorktree(ctx, "README.txt", 0, 0, 0)
+	require.NoError(t, err)
+	require.Len(t, diff.Files, 1)
+	assert.Equal(t, "README.txt", diff.Files[0].Name)
+	assert.Equal(t, 1, diff.Files[0].NumAdditions())
 }

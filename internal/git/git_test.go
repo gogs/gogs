@@ -6,9 +6,11 @@ import (
 	"flag"
 	stdlog "log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const repoPath = "testdata/testrepo.git"
@@ -83,4 +85,18 @@ func TestLog(t *testing.T) {
 			assert.Equal(t, test.expOutput, buf.String())
 		})
 	}
+}
+
+func TestConfig(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+
+	got, err := ConfigGet(ctx, "gogs.test")
+	require.NoError(t, err)
+	assert.Empty(t, got)
+
+	require.NoError(t, SetGlobalConfig(ctx, "gogs.test", "some value"))
+	got, err = ConfigGet(ctx, "gogs.test")
+	require.NoError(t, err)
+	assert.Equal(t, "some value", got)
 }

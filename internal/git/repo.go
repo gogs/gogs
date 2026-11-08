@@ -373,14 +373,17 @@ type CommitOptions struct {
 }
 
 // Commit commits local changes with given author, committer and message for the
-// repository.
+// repository. The committer may be nil to use the one from Git configuration.
 func (r *Repository) Commit(ctx context.Context, committer *Signature, message string, opts ...CommitOptions) error {
 	var opt CommitOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	envs := committerEnvs(committer)
+	var envs []string
+	if committer != nil {
+		envs = committerEnvs(committer)
+	}
 	envs = append(envs, opt.Envs...)
 
 	if opt.Author == nil {
@@ -388,7 +391,9 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	}
 
 	args := []string{"commit"}
-	args = append(args, fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email))
+	if opt.Author != nil {
+		args = append(args, fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email))
+	}
 	args = append(args, "-m", message)
 	args = append(args, "--end-of-options")
 
@@ -403,6 +408,73 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	}
 
 	_, err = exec(ctx, r.path, args, envs)
+	return err
+}
+
+// MergeOptions contains optional arguments for merging.
+//
+// Docs: https://git-scm.com/docs/git-merge
+type MergeOptions struct {
+	// Indicates whether to create a merge commit even when the merge resolves as a
+	// fast-forward.
+	NoFastForward bool
+	// Indicates whether to stop before creating the merge commit.
+	NoCommit bool
+	CommandOptions
+}
+
+// Merge merges given revision into the current branch of the repository.
+func (r *Repository) Merge(ctx context.Context, rev string, opts ...MergeOptions) error {
+	var opt MergeOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	args := []string{"merge"}
+	if opt.NoFastForward {
+		args = append(args, "--no-ff")
+	}
+	if opt.NoCommit {
+		args = append(args, "--no-commit")
+	}
+	args = append(args, "--end-of-options", rev)
+	_, err := exec(ctx, r.path, args, opt.Envs)
+	return err
+}
+
+// Rebase reapplies commits of the branch on top of the upstream for the
+// repository, leaving the result checked out as a detached HEAD.
+//
+// Docs: https://git-scm.com/docs/git-rebase
+func (r *Repository) Rebase(ctx context.Context, upstream, branch string) error {
+	args := []string{"rebase", "--quiet", "--end-of-options", upstream, branch}
+	_, err := exec(ctx, r.path, args, nil)
+	return err
+}
+
+// ApplyCheckOptions contains optional arguments for checking a patch.
+//
+// Docs: https://git-scm.com/docs/git-apply
+type ApplyCheckOptions struct {
+	// Indicates whether to ignore whitespace differences in context lines.
+	IgnoreWhitespace bool
+	CommandOptions
+}
+
+// ApplyCheck returns an error if the patch file in given path does not apply
+// cleanly to the working tree of the repository.
+func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) error {
+	var opt ApplyCheckOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	args := []string{"apply", "--check"}
+	if opt.IgnoreWhitespace {
+		args = append(args, "--ignore-whitespace")
+	}
+	args = append(args, "--end-of-options", patchPath)
+	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
 }
 
@@ -610,4 +682,27 @@ func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOptions) error {
 		return err
 	}
 	return r.Fsck(ctx, opts...)
+}
+
+// GCOptions contains optional arguments for cleaning up the repository.
+//
+// Docs: https://git-scm.com/docs/git-gc
+type GCOptions struct {
+	// Additional arguments to be passed to "git gc", e.g., "--aggressive".
+	Args []string
+	CommandOptions
+}
+
+// GC cleans up unnecessary files and optimizes the repository.
+func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
+	var opt GCOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	args := []string{"gc"}
+	args = append(args, opt.Args...)
+	args = append(args, "--end-of-options")
+	_, err := exec(ctx, r.path, args, opt.Envs)
+	return err
 }

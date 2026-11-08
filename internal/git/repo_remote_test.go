@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLsRemote(t *testing.T) {
@@ -208,4 +209,36 @@ func TestRepository_RemoteURLFamily(t *testing.T) {
 	urls, err = r.RemoteGetURL(ctx, "origin", RemoteGetURLOptions{All: true})
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"s"}, urls)
+}
+
+func TestRepository_RemoteUpdate(t *testing.T) {
+	ctx := context.Background()
+	upstream := tempPath()
+	defer func() { _ = os.RemoveAll(upstream) }()
+	require.NoError(t, Clone(ctx, testrepo.Path(), upstream, CloneOptions{Bare: true}))
+
+	clone := func() *Repository {
+		path := tempPath()
+		t.Cleanup(func() { _ = os.RemoveAll(path) })
+		require.NoError(t, Clone(ctx, upstream, path))
+		r, err := Open(path)
+		require.NoError(t, err)
+		return r
+	}
+	r := clone()
+	other := clone()
+
+	require.NoError(t, other.Push(ctx, "origin", "master:refs/heads/new-branch"))
+	output, err := r.RemoteUpdate(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, output, "new-branch")
+
+	require.NoError(t, other.Push(ctx, "origin", ":refs/heads/new-branch"))
+	output, err = r.RemoteUpdate(ctx)
+	require.NoError(t, err)
+	assert.NotContains(t, output, "[deleted]")
+
+	output, err = r.RemoteUpdate(ctx, RemoteUpdateOptions{Prune: true})
+	require.NoError(t, err)
+	assert.Contains(t, output, "[deleted]")
 }
