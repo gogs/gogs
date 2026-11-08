@@ -3,9 +3,11 @@ package git
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,4 +67,22 @@ func TestRunService(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, stderr.String(), "does not appear to be a git repository")
 	})
+}
+
+func TestRunService_IdleTimeout(t *testing.T) {
+	old := serviceIdleTimeout
+	serviceIdleTimeout = 200 * time.Millisecond
+	defer func() { serviceIdleTimeout = old }()
+
+	// The client never sends anything after the advertisement.
+	stdin, w := io.Pipe()
+	defer func() { _ = w.Close() }()
+
+	start := time.Now()
+	err := RunService(context.Background(), ServiceUploadPack, repoPath, ServiceOptions{
+		Stdin:  stdin,
+		Stdout: io.Discard,
+	})
+	assert.Equal(t, ErrExecTimeout, err)
+	assert.Less(t, time.Since(start), 5*time.Second)
 }
