@@ -426,21 +426,6 @@ export function RepoCommit() {
     };
   }, [nameToItemIds]);
 
-  // Pierre re-renders the diff whenever this object's identity changes, so it
-  // must stay stable across renders.
-  const diffLabels = useMemo(
-    () => ({
-      unmodifiedLines: (count: number) =>
-        t(count === 1 ? "repo.diff.unmodified_line" : "repo.diff.unmodified_lines", { count }),
-      // Intentionally blank. The `[data-unmodified-lines]:empty` rule in
-      // DIFF_UNSAFE_CSS keeps the separator clickable without a label.
-      unknownUnmodifiedLines: "",
-      expandAll: t("repo.diff.expand_all"),
-      noNewlineAtEndOfFile: t("repo.diff.no_newline_at_eof"),
-    }),
-    [t],
-  );
-
   const authorLabel = author.profileURL ? (
     <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
       {author.name}
@@ -955,7 +940,6 @@ export function RepoCommit() {
                 hunkSeparators: "line-info",
                 // Reveal at most 100 lines per click. Larger gaps get up/down plus expand-all.
                 expansionLineCount: 100,
-                labels: diffLabels,
                 loadDiffFiles,
                 onPostRender: onDiffPostRender,
                 unsafeCSS: DIFF_UNSAFE_CSS,

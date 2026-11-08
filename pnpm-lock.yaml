@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@pierre/diffs@1.6.4': d71bb634e3c26362468f1ec5487db6c92279c66b48392bdd3fd6849021219f64
   '@pierre/trees@1.0.0-beta.6': 8b08c5815d665fca7a141dbcc312ceed5b5713ed33f2bbf1fbf2e408beab00d3
 
 importers:
@@ -21,8 +20,8 @@ importers:
         specifier: ^5.2.8
         version: 5.2.8
       '@pierre/diffs':
-        specifier: 1.6.4
-        version: 1.6.4(patch_hash=d71bb634e3c26362468f1ec5487db6c92279c66b48392bdd3fd6849021219f64)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: 1.7.0-beta.2
+        version: 1.7.0-beta.2(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(patch_hash=8b08c5815d665fca7a141dbcc312ceed5b5713ed33f2bbf1fbf2e408beab00d3)(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
@@ -324,8 +323,8 @@ packages:
   '@oxc-project/types@0.139.0':
     resolution: {integrity: sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw==}
 
-  '@pierre/diffs@1.6.4':
-    resolution: {integrity: sha512-RsKoruCOp50qaDM3a7BQan5K77xMkGWT1NF01fiYP1PfT3v4CvIjwytNk5WjZG0BesBkMOP2UbrBIDigB1k0ug==}
+  '@pierre/diffs@1.7.0-beta.2':
+    resolution: {integrity: sha512-b5eizwYNnQeRD0qmkEtNZKLRhiQYvmTRLrpCvPZDSs8hhfXD1otSP/N8Gl9dfD2wUP8IEfQV6Ot8CK0abNxC0A==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
@@ -337,6 +336,9 @@ packages:
 
   '@pierre/highlights@0.4.0':
     resolution: {integrity: sha512-2a38H7ep3KweGi1fGQpJk+Krod2OMpDIXagKPlqBd1Y9P460T7zQmc66Wm2JAH1SpIG93wCyyhZVrkc5dnAJVQ==}
+
+  '@pierre/patches@0.0.1':
+    resolution: {integrity: sha512-NycJQVQNuqmBdr7u1LsUcmkiIz1fRm9xhWZyRbm21oJYd0MVVCa45t9Lsuj5IKrTMBonxOuh4LMv+R3BpL4bmQ==}
 
   '@pierre/theme@2.0.0':
     resolution: {integrity: sha512-yNDd9GYLQl1mEUJR8AneJ5e4ohLIHQd/wZLWr4fagt78vS2RwwZNW530vVgHqXFAyFVcFlRmGUD5ramXH46OXw==}
@@ -2749,9 +2751,10 @@ snapshots:
 
   '@oxc-project/types@0.139.0': {}
 
-  '@pierre/diffs@1.6.4(patch_hash=d71bb634e3c26362468f1ec5487db6c92279c66b48392bdd3fd6849021219f64)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@pierre/diffs@1.7.0-beta.2(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@pierre/highlights': 0.4.0
+      '@pierre/patches': 0.0.1
       '@pierre/theme': 2.0.0
       '@pierre/theming': 1.0.2(@pierre/theme@2.0.0)(@shikijs/themes@3.23.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@3.23.0)
       diff: 9.0.0
@@ -2765,6 +2768,8 @@ snapshots:
       - '@shikijs/themes'
 
   '@pierre/highlights@0.4.0': {}
+
+  '@pierre/patches@0.0.1': {}
 
   '@pierre/theme@2.0.0': {}
 
