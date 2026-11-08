@@ -111,7 +111,7 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	}
 	c.Stdout = activityWriter{w: opt.Stdout, touch: touch}
 	c.Stderr = activityWriter{w: opt.Stderr, touch: touch}
-	err := ignoreWaitDelay(c, runCommand(c))
+	err := runCommand(c)
 	if context.Cause(ctx) == ErrExecTimeout {
 		return ErrExecTimeout
 	}

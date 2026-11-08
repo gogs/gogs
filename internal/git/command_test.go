@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // slowCommand is a git command whose child process runs for longer than the
@@ -78,6 +79,30 @@ func TestExec_BackgroundJobKeepsOutputOpen(t *testing.T) {
 	_, err := exec(context.Background(), "", []string{"-c", "alias.bg=!sleep 3 &", "bg"}, nil)
 	assert.NoError(t, err)
 	assert.Less(t, time.Since(start), 5*time.Second)
+}
+
+func TestPipe_SlowWriterGetsAllOutput(t *testing.T) {
+	old := waitDelay
+	waitDelay = 200 * time.Millisecond
+	defer func() { waitDelay = old }()
+
+	// Git exits long before the writer takes the rest of its output, and the
+	// output must not be cut off at the wait delay.
+	w := &slowWriter{delay: 300 * time.Millisecond}
+	err := pipe(context.Background(), "", []string{"-c", "alias.big=!head -c 300000 /dev/zero", "big"}, nil, w)
+	require.NoError(t, err)
+	assert.Equal(t, 300000, w.n)
+}
+
+type slowWriter struct {
+	delay time.Duration
+	n     int
+}
+
+func (w *slowWriter) Write(p []byte) (int, error) {
+	time.Sleep(w.delay)
+	w.n += len(p)
+	return len(p), nil
 }
 
 func TestWithTimeout(t *testing.T) {

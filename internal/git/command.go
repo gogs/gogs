@@ -9,13 +9,15 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cockroachdb/errors"
 )
 
 // waitDelay bounds how long waiting for a command takes after it was killed or
-// exited, e.g., when a process it started still holds its output open.
+// exited while its output stays idle, e.g., when a process it started still
+// holds the output open.
 var waitDelay = time.Minute
 
 // WithTimeout returns a copy of ctx that times out after the given duration. A
@@ -45,13 +47,126 @@ var running sync.Map // *osexec.Cmd -> struct{}
 
 // runCommand starts the command and waits for it to complete, keeping track of
 // it so that KillAll can kill it in the meantime.
+//
+// Output is copied through pipes of our own rather than the ones os/exec
+// creates, because os/exec drops what is left in them a fixed delay after the
+// command exited, even while a slow writer, e.g., a client, is still taking it.
 func runCommand(c *osexec.Cmd) error {
+	var copiers []*outputCopier
+	for _, w := range []*io.Writer{&c.Stdout, &c.Stderr} {
+		if *w == nil {
+			continue
+		}
+		if _, ok := (*w).(*os.File); ok {
+			continue
+		}
+		pr, pw, err := os.Pipe()
+		if err != nil {
+			closeReaders(copiers)
+			return errors.Wrap(err, "create pipe")
+		}
+		defer func() { _ = pw.Close() }()
+		copiers = append(copiers, &outputCopier{r: pr, w: *w, done: make(chan struct{})})
+		*w = pw
+	}
+
 	if err := c.Start(); err != nil {
+		closeReaders(copiers)
 		return err
 	}
 	running.Store(c, struct{}{})
 	defer running.Delete(c)
-	return c.Wait()
+
+	// Close our copies of the write ends, so that the copies of the output end
+	// once Git and every process it started closed theirs.
+	for _, w := range []io.Writer{c.Stdout, c.Stderr} {
+		if pw, ok := w.(*os.File); ok {
+			_ = pw.Close()
+		}
+	}
+	for _, o := range copiers {
+		go o.copy()
+	}
+
+	err := c.Wait()
+	for _, o := range copiers {
+		o.wait(waitDelay)
+	}
+	if err != nil {
+		return err
+	}
+	for _, o := range copiers {
+		if o.err != nil {
+			return o.err
+		}
+	}
+	return nil
+}
+
+func closeReaders(copiers []*outputCopier) {
+	for _, o := range copiers {
+		_ = o.r.Close()
+	}
+}
+
+// outputCopier copies the output of a command from a pipe to a writer.
+type outputCopier struct {
+	r    *os.File
+	w    io.Writer
+	done chan struct{}
+	err  error
+
+	writing    atomic.Bool
+	lastActive atomic.Int64 // In Unix nanoseconds.
+}
+
+func (o *outputCopier) copy() {
+	defer close(o.done)
+	defer func() { _ = o.r.Close() }()
+
+	buf := make([]byte, 32*1024)
+	for {
+		n, err := o.r.Read(buf)
+		if n > 0 {
+			o.writing.Store(true)
+			_, o.err = o.w.Write(buf[:n])
+			o.writing.Store(false)
+			o.lastActive.Store(time.Now().UnixNano())
+			if o.err != nil {
+				return
+			}
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
+// wait waits for the copy to end after the command exited. When the output
+// stays idle for the given delay, e.g., because a process the command started
+// holds it open, it stops the copy. It never stops a copy that is writing.
+func (o *outputCopier) wait(delay time.Duration) {
+	o.lastActive.Store(time.Now().UnixNano())
+	for {
+		next := delay
+		if !o.writing.Load() {
+			idle := time.Since(time.Unix(0, o.lastActive.Load()))
+			if idle >= delay {
+				_ = o.r.Close()
+				<-o.done
+				return
+			}
+			next = delay - idle
+		}
+
+		timer := time.NewTimer(next)
+		select {
+		case <-o.done:
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+	}
 }
 
 // KillAll kills every running command along with every process it started.
@@ -91,7 +206,7 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdout i
 	c := newCommand(ctx, dir, args, envs)
 	c.Stdout = stdout
 	c.Stderr = stderr
-	err := ignoreWaitDelay(c, runCommand(c))
+	err := runCommand(c)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			if errors.Is(ctxErr, context.DeadlineExceeded) {
@@ -107,16 +222,6 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdout i
 		return nil, err
 	}
 	return stderr.Bytes(), nil
-}
-
-// ignoreWaitDelay returns nil instead of err when the command succeeded and
-// only a process it started, e.g., a job in a hook, kept its output open past
-// the wait delay.
-func ignoreWaitDelay(c *osexec.Cmd, err error) error {
-	if errors.Is(err, osexec.ErrWaitDelay) && c.ProcessState != nil && c.ProcessState.Success() {
-		return nil
-	}
-	return err
 }
 
 // exec executes a git command in the given directory and returns stdout as
