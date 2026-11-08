@@ -15,6 +15,7 @@ var (
 	ErrNoMergeBase       = errors.New("no merge based was found")
 	ErrNotBlob           = errors.New("the entry is not a blob")
 	ErrNotSymbolicRef    = errors.New("the reference is not a symbolic reference")
+	ErrMergeConflict     = errors.New("merge has conflicts")
 )
 
 var _ errx.NotFound = (*Error)(nil)

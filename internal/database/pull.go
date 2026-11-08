@@ -213,80 +213,59 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return errors.Newf("open repository: %v", err)
 	}
 
-	// Create temporary directory to store temporary copy of the base repository,
-	// and clean it up when operation finished regardless of succeed or not.
-	tmpBasePath := filepath.Join(conf.Server.AppDataPath, "tmp", "repos", strconv.Itoa(time.Now().Nanosecond())+".git")
-	if err = os.MkdirAll(filepath.Dir(tmpBasePath), os.ModePerm); err != nil {
-		return err
-	}
-	defer func() {
-		_ = os.RemoveAll(filepath.Dir(tmpBasePath))
-	}()
-
-	// Clone the base repository to the defined temporary directory,
-	// and checks out to base branch directly.
-	cloneCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	if err = git.Clone(cloneCtx, baseGitRepo.Path(), tmpBasePath, git.CloneOptions{
-		Branch: pr.BaseBranch,
-	}); err != nil {
-		return errors.Newf("git clone: %v", err)
-	}
-	tmpBaseGitRepo, err := git.Open(tmpBasePath)
+	baseCommitID, err := baseGitRepo.BranchCommitID(ctx, pr.BaseBranch)
 	if err != nil {
-		return errors.Newf("open temporary repository: %v", err)
+		return errors.Newf("get base branch %q commit ID: %v", pr.BaseBranch, err)
+	}
+	headCommitID, err := headGitRepo.BranchCommitID(ctx, pr.HeadBranch)
+	if err != nil {
+		return errors.Newf("get head branch %q commit ID: %v", pr.HeadBranch, err)
 	}
 
-	// Add remote which points to the head repository, and fetch information from
-	// it to the temporary copy.
-	if err = tmpBaseGitRepo.RemoteAdd(ctx, "head_repo", headRepoPath, git.RemoteAddOptions{Fetch: true}); err != nil {
-		return errors.Newf("git remote add [%s -> %s]: %v", headRepoPath, tmpBasePath, err)
+	// The temporary repository reads objects of both repositories, so the merge
+	// result can be built from them without cloning either.
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, baseGitRepo.Path(), headRepoPath)
+	if err != nil {
+		return errors.Newf("create temporary repository: %v", err)
 	}
-
-	remoteHeadBranch := "head_repo/" + pr.HeadBranch
+	defer cleanup()
 
 	// Check if merge style is allowed, reset to default style if not
 	if mergeStyle == MergeStyleRebase && !pr.BaseRepo.PullsAllowRebase {
 		mergeStyle = MergeStyleRegular
 	}
 
-	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-
+	var mergedCommitID string
 	switch mergeStyle {
 	case MergeStyleRegular: // Create merge commit
+		// There is nothing to merge when the base branch already has the head branch.
+		merged, err := tmpRepo.IsAncestor(ctx, headCommitID, baseCommitID)
+		if err != nil {
+			return errors.Newf("check if head branch is merged: %v", err)
+		} else if merged {
+			mergedCommitID = baseCommitID
+			break
+		}
 
-		// Merge changes from head branch.
-		if err = tmpBaseGitRepo.Merge(ctx, remoteHeadBranch, committer, git.MergeOptions{NoFastForward: true, NoCommit: true}); err != nil {
-			return errors.Newf("git merge --no-ff --no-commit [%s]: %v", tmpBasePath, err)
+		tree, err := tmpRepo.MergeTree(ctx, baseCommitID, headCommitID)
+		if err != nil {
+			return errors.Newf("merge tree: %v", err)
 		}
 
 		// Create a merge commit for the base branch.
 		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		if err = tmpBaseGitRepo.Commit(ctx, committer, message); err != nil {
-			return errors.Newf("git commit [%s]: %v", tmpBasePath, err)
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+			Parents: []string{baseCommitID, headCommitID},
+			Author:  &git.Signature{Name: doer.DisplayName(), Email: doer.Email},
+		})
+		if err != nil {
+			return errors.Newf("commit tree: %v", err)
 		}
 
 	case MergeStyleRebase: // Rebase before merging
-
-		// Rebase head branch based on base branch, this creates a non-branch commit state.
-		if err = tmpBaseGitRepo.Rebase(ctx, pr.BaseBranch, remoteHeadBranch, committer); err != nil {
-			return errors.Newf("git rebase [%s on %s]: %v", remoteHeadBranch, pr.BaseBranch, err)
-		}
-
-		// Name non-branch commit state to a new temporary branch in order to save changes.
-		tmpBranch := strconv.FormatInt(time.Now().UnixNano(), 10)
-		if err = tmpBaseGitRepo.Checkout(ctx, tmpBranch, git.CheckoutOptions{BaseBranch: "HEAD"}); err != nil {
-			return errors.Newf("git checkout '%s': %v", tmpBranch, err)
-		}
-
-		// Check out the base branch to be operated on.
-		if err = tmpBaseGitRepo.Checkout(ctx, pr.BaseBranch); err != nil {
-			return errors.Newf("git checkout '%s': %v", pr.BaseBranch, err)
-		}
-
-		// Merge changes from temporary branch to the base branch.
-		if err = tmpBaseGitRepo.Merge(ctx, tmpBranch, committer); err != nil {
-			return errors.Newf("git merge [%s]: %v", tmpBasePath, err)
+		mergedCommitID, err = tmpRepo.Rebase(ctx, baseCommitID, headCommitID)
+		if err != nil {
+			return errors.Newf("rebase [%s on %s]: %v", pr.HeadBranch, pr.BaseBranch, err)
 		}
 
 	default:
@@ -294,7 +273,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	}
 
 	// Push changes on base branch to upstream.
-	if err = tmpBaseGitRepo.Push(ctx, baseGitRepo.Path(), pr.BaseBranch); err != nil {
+	if err = tmpRepo.Push(ctx, baseGitRepo.Path(), mergedCommitID+":"+git.RefsHeads+pr.BaseBranch); err != nil {
 		return errors.Newf("git push: %v", err)
 	}
 
@@ -396,22 +375,29 @@ func (pr *PullRequest) testPatch() (err error) {
 		return nil
 	}
 
-	repoWorkingPool.CheckIn(strconv.FormatInt(pr.BaseRepoID, 10))
-	defer repoWorkingPool.CheckOut(strconv.FormatInt(pr.BaseRepoID, 10))
-
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
-	if err := pr.BaseRepo.UpdateLocalCopyBranch(pr.BaseBranch); err != nil {
-		return errors.Newf("UpdateLocalCopy [%d]: %v", pr.BaseRepoID, err)
+	ctx := context.TODO()
+	baseGitRepo, err := git.Open(pr.BaseRepo.RepoPath())
+	if err != nil {
+		return errors.Newf("open repository: %v", err)
+	}
+	baseCommitID, err := baseGitRepo.BranchCommitID(ctx, pr.BaseBranch)
+	if err != nil {
+		return errors.Newf("get base branch %q commit ID: %v", pr.BaseBranch, err)
 	}
 
-	localGitRepo, err := git.Open(pr.BaseRepo.LocalCopyPath())
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, pr.BaseRepo.RepoPath())
 	if err != nil {
-		return errors.Newf("open local copy: %v", err)
+		return errors.Newf("create temporary repository: %v", err)
+	}
+	defer cleanup()
+	if err = tmpRepo.ReadTree(ctx, baseCommitID); err != nil {
+		return errors.Newf("read tree: %v", err)
 	}
 
 	pr.Status = PullRequestStatusChecking
-	err = localGitRepo.ApplyCheck(context.TODO(), patchPath, git.ApplyCheckOptions{
+	err = tmpRepo.ApplyCheck(ctx, patchPath, git.ApplyCheckOptions{
 		IgnoreWhitespace: pr.BaseRepo.PullsIgnoreWhitespace,
 	})
 	if err != nil {

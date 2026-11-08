@@ -255,14 +255,6 @@ func (r *Repository) Reset(ctx context.Context, rev string, opts ...ResetOptions
 	return err
 }
 
-// Move moves a file, a directory, or a symlink file or directory from source to
-// destination for the repository.
-func (r *Repository) Move(ctx context.Context, src, dst string) error {
-	args := []string{"mv", "--end-of-options", src, dst}
-	_, err := exec(ctx, r.path, args, nil)
-	return err
-}
-
 // AddOptions contains optional arguments for adding local changes.
 //
 // Docs: https://git-scm.com/docs/git-add
@@ -324,64 +316,6 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	return err
 }
 
-// MergeOptions contains optional arguments for merging.
-//
-// Docs: https://git-scm.com/docs/git-merge
-type MergeOptions struct {
-	// Indicates whether to create a merge commit even when the merge resolves as a
-	// fast-forward.
-	NoFastForward bool
-	// Indicates whether to stop before creating the merge commit.
-	NoCommit bool
-}
-
-// Merge merges the given revision into the current branch of the repository.
-// The committer is required and is recorded as both the author and the committer
-// of a merge commit.
-func (r *Repository) Merge(ctx context.Context, rev string, committer *Signature, opts ...MergeOptions) error {
-	if committer == nil {
-		return errors.New("committer is required")
-	}
-
-	var opt MergeOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	// Pass "--ff" explicitly so merge.ff in Git configuration cannot turn a
-	// fast-forward into a merge commit.
-	args := []string{"merge"}
-	if opt.NoFastForward {
-		args = append(args, "--no-ff")
-	} else {
-		args = append(args, "--ff")
-	}
-	if opt.NoCommit {
-		args = append(args, "--no-commit")
-	}
-	args = append(args, "--end-of-options", rev)
-
-	envs := append(authorEnvs(committer), committerEnvs(committer)...)
-	_, err := exec(ctx, r.path, args, envs)
-	return err
-}
-
-// Rebase reapplies commits of the branch on top of the upstream for the
-// repository, leaving the result checked out as a detached HEAD. The committer
-// is required and is recorded on the rewritten commits. Authors of those commits
-// stay as they were.
-//
-// Docs: https://git-scm.com/docs/git-rebase
-func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) error {
-	if committer == nil {
-		return errors.New("committer is required")
-	}
-
-	args := []string{"rebase", "--quiet", "--end-of-options", upstream, branch}
-	_, err := exec(ctx, r.path, args, committerEnvs(committer))
-	return err
-}
-
 // ApplyCheckOptions contains optional arguments for checking a patch.
 //
 // Docs: https://git-scm.com/docs/git-apply
@@ -391,14 +325,14 @@ type ApplyCheckOptions struct {
 }
 
 // ApplyCheck returns an error if the patch file in given path does not apply
-// cleanly to the working tree of the repository.
+// cleanly to the index of the repository.
 func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) error {
 	var opt ApplyCheckOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	args := []string{"apply", "--check"}
+	args := []string{"apply", "--check", "--cached"}
 	if opt.IgnoreWhitespace {
 		args = append(args, "--ignore-whitespace")
 	}
