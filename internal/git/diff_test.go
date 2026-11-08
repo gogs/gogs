@@ -182,9 +182,10 @@ index 0000000..6b08f76
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  ".gitmodules",
-						Type:  DiffFileAdd,
-						Index: "6abde17",
+						Name:     ".gitmodules",
+						Type:     DiffFileAdd,
+						Index:    "6abde17",
+						OldIndex: "0000000",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -221,9 +222,10 @@ index 0000000..6b08f76
 						mode:         0100644,
 					},
 					{
-						Name:  "gogs/docs-api",
-						Type:  DiffFileAdd,
-						Index: "6b08f76",
+						Name:     "gogs/docs-api",
+						Type:     DiffFileAdd,
+						Index:    "6b08f76",
+						OldIndex: "0000000",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -272,9 +274,10 @@ index ee791be..9997571 100644
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  "pom.xml",
-						Type:  DiffFileChange,
-						Index: "9997571",
+						Name:     "pom.xml",
+						Type:     DiffFileChange,
+						Index:    "9997571",
+						OldIndex: "ee791be",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -352,6 +355,7 @@ Binary files /dev/null and b/img/sourcegraph.png differ`,
 						Name:         "img/sourcegraph.png",
 						Type:         DiffFileAdd,
 						Index:        "2ce9188",
+						OldIndex:     "0000000",
 						Sections:     nil,
 						numAdditions: 0,
 						numDeletions: 0,
@@ -377,6 +381,7 @@ index e69de29..0000000`,
 						Name:         "fix.txt",
 						Type:         DiffFileDelete,
 						Index:        "0000000",
+						OldIndex:     "e69de29",
 						Sections:     nil,
 						numAdditions: 0,
 						numDeletions: 0,
@@ -433,9 +438,10 @@ index b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0..ab80bda5dd90d8b42be25ac2c7a071b7
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  "dir/file.txt",
-						Type:  DiffFileChange,
-						Index: "ab80bda5dd90d8b42be25ac2c7a071b722171f09",
+						Name:     "dir/file.txt",
+						Type:     DiffFileChange,
+						Index:    "ab80bda5dd90d8b42be25ac2c7a071b722171f09",
+						OldIndex: "b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -502,9 +508,10 @@ index ce53c7e..56a156b 100644
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  "src/app/tabs/friends/friends.module.ts",
-						Type:  DiffFileRename,
-						Index: "56a156b",
+						Name:     "src/app/tabs/friends/friends.module.ts",
+						Type:     DiffFileRename,
+						Index:    "56a156b",
+						OldIndex: "ce53c7e",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -594,9 +601,10 @@ index 335db7ea..51d7543e 100644
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  ".travis.yml",
-						Type:  DiffFileChange,
-						Index: "51d7543e",
+						Name:     ".travis.yml",
+						Type:     DiffFileChange,
+						Index:    "51d7543e",
+						OldIndex: "335db7ea",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -682,9 +690,10 @@ index 0000000..6abde17
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  ".gitmodules",
-						Type:  DiffFileAdd,
-						Index: "6abde17",
+						Name:     ".gitmodules",
+						Type:     DiffFileAdd,
+						Index:    "6abde17",
+						OldIndex: "0000000",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{
@@ -744,9 +753,10 @@ index 0000000..6b08f76
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
-						Name:  ".gitmodules",
-						Type:  DiffFileAdd,
-						Index: "6abde17",
+						Name:     ".gitmodules",
+						Type:     DiffFileAdd,
+						Index:    "6abde17",
+						OldIndex: "0000000",
 						Sections: []*DiffSection{
 							{
 								Lines: []*DiffLine{

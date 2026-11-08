@@ -105,6 +105,8 @@ type DiffFile struct {
 	// The index (SHA1 hash) of the file. For a changed/new file, it is the new SHA,
 	// and for a deleted file it becomes "000000".
 	Index string
+	// OldIndex is the old index (SHA1 hash) of the file.
+	OldIndex string
 	// The sections in the file.
 	Sections []*DiffSection
 
@@ -352,6 +354,7 @@ checkType:
 				return nil, errors.New("malformed index: expect two SHAs in the form of <old>..<new>")
 			}
 
+			file.OldIndex = shas[0]
 			file.Index = shas[1]
 			if len(fields) > 1 {
 				mode, _ := strconv.ParseUint(fields[1], 8, 16)
