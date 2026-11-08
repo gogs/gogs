@@ -7,30 +7,11 @@ import (
 	osexec "os/exec"
 )
 
-// UpdateServerInfoOptions contains optional arguments for updating auxiliary
-// info file on the server side.
-//
-// Docs: https://git-scm.com/docs/git-update-server-info
-type UpdateServerInfoOptions struct {
-	// Indicates whether to overwrite the existing server info.
-	Force bool
-	CommandOptions
-}
-
 // UpdateServerInfo updates the auxiliary info file on the server side for the
 // repository in given path.
-func UpdateServerInfo(ctx context.Context, path string, opts ...UpdateServerInfoOptions) error {
-	var opt UpdateServerInfoOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"update-server-info"}
-	if opt.Force {
-		args = append(args, "--force")
-	}
-	args = append(args, "--end-of-options")
-	_, err := exec(ctx, path, args, opt.Envs)
+func UpdateServerInfo(ctx context.Context, path string) error {
+	args := []string{"update-server-info", "--end-of-options"}
+	_, err := exec(ctx, path, args, nil)
 	return err
 }
 
@@ -58,7 +39,8 @@ type ServiceOptions struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // RunService runs the service for the repository in given path, e.g., "git

@@ -40,9 +40,8 @@ func UnescapeChars(in []byte) []byte {
 }
 
 // parseTree parses tree information from the (uncompressed) raw data of the
-// tree object. The lineTerminator specifies the character used to separate
-// entries ('\n' for normal output, '\x00' for verbatim output).
-func parseTree(t *Tree, data []byte, lineTerminator byte) ([]*TreeEntry, error) {
+// tree object, as printed by "git ls-tree -z".
+func parseTree(t *Tree, data []byte) ([]*TreeEntry, error) {
 	entries := make([]*TreeEntry, 0, 10)
 	l := len(data)
 	pos := 0
@@ -81,12 +80,8 @@ func parseTree(t *Tree, data []byte, lineTerminator byte) ([]*TreeEntry, error) 
 		entry.id = id
 		pos += step + 1 // Skip half of SHA1.
 
-		step = bytes.IndexByte(data[pos:], lineTerminator)
-		if data[pos] == '"' {
-			entry.name = string(UnescapeChars(data[pos+1 : pos+step-1]))
-		} else {
-			entry.name = string(data[pos : pos+step])
-		}
+		step = bytes.IndexByte(data[pos:], 0)
+		entry.name = string(data[pos : pos+step])
 
 		pos += step + 1
 		entries = append(entries, entry)
@@ -94,23 +89,10 @@ func parseTree(t *Tree, data []byte, lineTerminator byte) ([]*TreeEntry, error) 
 	return entries, nil
 }
 
-// LsTreeOptions contains optional arguments for listing trees.
+// LsTree returns the tree object in the repository by given tree ID.
 //
 // Docs: https://git-scm.com/docs/git-ls-tree
-type LsTreeOptions struct {
-	// Verbatim outputs filenames unquoted using the -z flag. This avoids issues
-	// with special characters in filenames that would otherwise be quoted by Git.
-	Verbatim bool
-	CommandOptions
-}
-
-// LsTree returns the tree object in the repository by given tree ID.
-func (r *Repository) LsTree(ctx context.Context, treeID string, opts ...LsTreeOptions) (*Tree, error) {
-	var opt LsTreeOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) LsTree(ctx context.Context, treeID string) (*Tree, error) {
 	cache, ok := r.cachedTrees.Get(treeID)
 	if ok {
 		logf("Cached tree hit: %s", treeID)
@@ -127,22 +109,16 @@ func (r *Repository) LsTree(ctx context.Context, treeID string, opts ...LsTreeOp
 		repo: r,
 	}
 
-	args := []string{"ls-tree"}
-	if opt.Verbatim {
-		args = append(args, "-z")
-	}
-	args = append(args, "--end-of-options", treeID)
+	// Use NUL-terminated output so that file names are printed verbatim rather
+	// than quoted.
+	args := []string{"ls-tree", "-z", "--end-of-options", treeID}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	lineTerminator := byte('\n')
-	if opt.Verbatim {
-		lineTerminator = 0
-	}
-	t.entries, err = parseTree(t, stdout, lineTerminator)
+	t.entries, err = parseTree(t, stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -152,10 +128,10 @@ func (r *Repository) LsTree(ctx context.Context, treeID string, opts ...LsTreeOp
 }
 
 // RepoLsTree is like Repository.LsTree for the repository in given path.
-func RepoLsTree(ctx context.Context, repoPath, treeID string, opts ...LsTreeOptions) (*Tree, error) {
+func RepoLsTree(ctx context.Context, repoPath, treeID string) (*Tree, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.LsTree(ctx, treeID, opts...)
+	return r.LsTree(ctx, treeID)
 }

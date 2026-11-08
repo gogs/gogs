@@ -136,13 +136,13 @@ func getContents(c *context.APIContext) {
 	}
 
 	// The entry is a directory
-	dir, err := gitRepo.LsTree(c.Req.Context(), entry.ID().String(), git.LsTreeOptions{Verbatim: true})
+	dir, err := gitRepo.LsTree(c.Req.Context(), entry.ID().String())
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get tree")
 		return
 	}
 
-	entries, err := dir.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
+	entries, err := dir.Entries(c.Req.Context())
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "list entries")
 		return

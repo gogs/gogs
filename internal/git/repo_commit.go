@@ -63,22 +63,10 @@ loop:
 	return commit, nil
 }
 
-// CatFileCommitOptions contains optional arguments for verifying the objects.
-//
-// Docs: https://git-scm.com/docs/git-cat-file#Documentation/git-cat-file.txt-lttypegt
-type CatFileCommitOptions struct {
-	CommandOptions
-}
-
 // CatFileCommit returns the commit corresponding to the given revision of the
 // repository. The revision could be a commit ID or full refspec (e.g.,
 // "refs/heads/master").
-func (r *Repository) CatFileCommit(ctx context.Context, rev string, opts ...CatFileCommitOptions) (*Commit, error) {
-	var opt CatFileCommitOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) CatFileCommit(ctx context.Context, rev string) (*Commit, error) {
 	cache, ok := r.cachedCommits.Get(rev)
 	if ok {
 		logf("Cached commit hit: %s", rev)
@@ -91,7 +79,7 @@ func (r *Repository) CatFileCommit(ctx context.Context, rev string, opts ...CatF
 	}
 
 	args := []string{"cat-file", "commit", commitID}
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -108,30 +96,18 @@ func (r *Repository) CatFileCommit(ctx context.Context, rev string, opts ...CatF
 }
 
 // RepoCatFileCommit is like Repository.CatFileCommit for the repository in given path.
-func RepoCatFileCommit(ctx context.Context, repoPath, rev string, opts ...CatFileCommitOptions) (*Commit, error) {
+func RepoCatFileCommit(ctx context.Context, repoPath, rev string) (*Commit, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.CatFileCommit(ctx, rev, opts...)
-}
-
-// CatFileTypeOptions contains optional arguments for showing the object type.
-//
-// Docs: https://git-scm.com/docs/git-cat-file#Documentation/git-cat-file.txt--t
-type CatFileTypeOptions struct {
-	CommandOptions
+	return r.CatFileCommit(ctx, rev)
 }
 
 // CatFileType returns the object type of given revision of the repository.
-func (r *Repository) CatFileType(ctx context.Context, rev string, opts ...CatFileTypeOptions) (ObjectType, error) {
-	var opt CatFileTypeOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) CatFileType(ctx context.Context, rev string) (ObjectType, error) {
 	args := []string{"cat-file", "-t", rev}
-	typ, err := exec(ctx, r.path, args, opt.Envs)
+	typ, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return "", err
 	}
@@ -141,32 +117,32 @@ func (r *Repository) CatFileType(ctx context.Context, rev string, opts ...CatFil
 
 // BranchCommit returns the latest commit of given branch of the repository. The
 // branch must be given in short name, e.g., "master".
-func (r *Repository) BranchCommit(ctx context.Context, branch string, opts ...CatFileCommitOptions) (*Commit, error) {
-	return r.CatFileCommit(ctx, RefsHeads+branch, opts...)
+func (r *Repository) BranchCommit(ctx context.Context, branch string) (*Commit, error) {
+	return r.CatFileCommit(ctx, RefsHeads+branch)
 }
 
 // RepoBranchCommit is like Repository.BranchCommit for the repository in given path.
-func RepoBranchCommit(ctx context.Context, repoPath, branch string, opts ...CatFileCommitOptions) (*Commit, error) {
+func RepoBranchCommit(ctx context.Context, repoPath, branch string) (*Commit, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.BranchCommit(ctx, branch, opts...)
+	return r.BranchCommit(ctx, branch)
 }
 
 // TagCommit returns the latest commit of given tag of the repository. The tag
 // must be given in short name, e.g., "v1.0.0".
-func (r *Repository) TagCommit(ctx context.Context, tag string, opts ...CatFileCommitOptions) (*Commit, error) {
-	return r.CatFileCommit(ctx, RefsTags+tag, opts...)
+func (r *Repository) TagCommit(ctx context.Context, tag string) (*Commit, error) {
+	return r.CatFileCommit(ctx, RefsTags+tag)
 }
 
 // RepoTagCommit is like Repository.TagCommit for the repository in given path.
-func RepoTagCommit(ctx context.Context, repoPath, tag string, opts ...CatFileCommitOptions) (*Commit, error) {
+func RepoTagCommit(ctx context.Context, repoPath, tag string) (*Commit, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.TagCommit(ctx, tag, opts...)
+	return r.TagCommit(ctx, tag)
 }
 
 // LogOptions contains optional arguments for listing commits.
@@ -183,7 +159,6 @@ type LogOptions struct {
 	RegexpIgnoreCase bool
 	// The relative path of the repository.
 	Path string
-	CommandOptions
 }
 
 func escapePath(path string) string {
@@ -224,7 +199,7 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([
 		args = append(args, escapePath(opt.Path))
 	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +221,6 @@ func RepoLog(ctx context.Context, repoPath, rev string, opts ...LogOptions) ([]*
 type CommitByRevisionOptions struct {
 	// The relative path of the repository.
 	Path string
-	CommandOptions
 }
 
 // CommitByRevision returns a commit by given revision.
@@ -257,9 +231,8 @@ func (r *Repository) CommitByRevision(ctx context.Context, rev string, opts ...C
 	}
 
 	commits, err := r.Log(ctx, rev, LogOptions{
-		MaxCount:       1,
-		Path:           opt.Path,
-		CommandOptions: opt.CommandOptions,
+		MaxCount: 1,
+		Path:     opt.Path,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "bad revision") {
@@ -279,7 +252,6 @@ func (r *Repository) CommitByRevision(ctx context.Context, rev string, opts ...C
 type CommitsByPageOptions struct {
 	// The relative path of the repository.
 	Path string
-	CommandOptions
 }
 
 // CommitsByPage returns a paginated list of commits in the state of given
@@ -291,38 +263,18 @@ func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size i
 	}
 
 	return r.Log(ctx, rev, LogOptions{
-		MaxCount:       size,
-		Skip:           (page - 1) * size,
-		Path:           opt.Path,
-		CommandOptions: opt.CommandOptions,
+		MaxCount: size,
+		Skip:     (page - 1) * size,
+		Path:     opt.Path,
 	})
-}
-
-// SearchCommitsOptions contains optional arguments for searching commits.
-//
-// Docs: https://git-scm.com/docs/git-log
-type SearchCommitsOptions struct {
-	// The maximum number of commits to output.
-	MaxCount int
-	// The relative path of the repository.
-	Path string
-	CommandOptions
 }
 
 // SearchCommits searches commit message with given pattern in the state of
 // given revision. The returned list is in reverse chronological order.
-func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string, opts ...SearchCommitsOptions) ([]*Commit, error) {
-	var opt SearchCommitsOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string) ([]*Commit, error) {
 	return r.Log(ctx, rev, LogOptions{
-		MaxCount:         opt.MaxCount,
 		GrepPattern:      pattern,
 		RegexpIgnoreCase: true,
-		Path:             opt.Path,
-		CommandOptions:   opt.CommandOptions,
 	})
 }
 
@@ -332,9 +284,6 @@ func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string, opt
 type DiffNameOnlyOptions struct {
 	// Indicates whether two commits should have a merge base.
 	NeedsMergeBase bool
-	// The relative path of the repository.
-	Path string
-	CommandOptions
 }
 
 // DiffNameOnly returns a list of changed files between base and head revisions of the
@@ -352,11 +301,8 @@ func (r *Repository) DiffNameOnly(ctx context.Context, base, head string, opts .
 		args = append(args, base, head)
 	}
 	args = append(args, "--")
-	if opt.Path != "" {
-		args = append(args, escapePath(opt.Path))
-	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -373,23 +319,9 @@ func (r *Repository) DiffNameOnly(ctx context.Context, base, head string, opts .
 	return names, nil
 }
 
-// RevListCountOptions contains optional arguments for counting commits.
-//
-// Docs: https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt---count
-type RevListCountOptions struct {
-	// The relative path of the repository.
-	Path string
-	CommandOptions
-}
-
 // RevListCount returns number of total commits up to given refspec of the
 // repository.
-func (r *Repository) RevListCount(ctx context.Context, refspecs []string, opts ...RevListCountOptions) (int64, error) {
-	var opt RevListCountOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) RevListCount(ctx context.Context, refspecs []string) (int64, error) {
 	if len(refspecs) == 0 {
 		return 0, errors.New("must have at least one refspec")
 	}
@@ -397,11 +329,8 @@ func (r *Repository) RevListCount(ctx context.Context, refspecs []string, opts .
 	args := []string{"rev-list", "--count", "--end-of-options"}
 	args = append(args, refspecs...)
 	args = append(args, "--")
-	if opt.Path != "" {
-		args = append(args, escapePath(opt.Path))
-	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -410,31 +339,17 @@ func (r *Repository) RevListCount(ctx context.Context, refspecs []string, opts .
 }
 
 // RepoRevListCount is like Repository.RevListCount for the repository in given path.
-func RepoRevListCount(ctx context.Context, repoPath string, refspecs []string, opts ...RevListCountOptions) (int64, error) {
+func RepoRevListCount(ctx context.Context, repoPath string, refspecs []string) (int64, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return 0, err
 	}
-	return r.RevListCount(ctx, refspecs, opts...)
-}
-
-// RevListOptions contains optional arguments for listing commits.
-//
-// Docs: https://git-scm.com/docs/git-rev-list
-type RevListOptions struct {
-	// The relative path of the repository.
-	Path string
-	CommandOptions
+	return r.RevListCount(ctx, refspecs)
 }
 
 // RevList returns a list of commits based on given refspecs in reverse
 // chronological order.
-func (r *Repository) RevList(ctx context.Context, refspecs []string, opts ...RevListOptions) ([]*Commit, error) {
-	var opt RevListOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) RevList(ctx context.Context, refspecs []string) ([]*Commit, error) {
 	if len(refspecs) == 0 {
 		return nil, errors.New("must have at least one refspec")
 	}
@@ -442,38 +357,19 @@ func (r *Repository) RevList(ctx context.Context, refspecs []string, opts ...Rev
 	args := []string{"rev-list", "--end-of-options"}
 	args = append(args, refspecs...)
 	args = append(args, "--")
-	if opt.Path != "" {
-		args = append(args, escapePath(opt.Path))
-	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
 	return r.parsePrettyFormatLogToList(ctx, bytes.TrimSpace(stdout))
 }
 
-// LatestCommitTimeOptions contains optional arguments for getting the latest
-// commit time.
-type LatestCommitTimeOptions struct {
-	// To get the latest commit time of the branch. When not set, it checks all branches.
-	Branch string
-	CommandOptions
-}
-
 // LatestCommitTime returns the time of latest commit of the repository.
-func (r *Repository) LatestCommitTime(ctx context.Context, opts ...LatestCommitTimeOptions) (time.Time, error) {
-	var opt LatestCommitTimeOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) LatestCommitTime(ctx context.Context) (time.Time, error) {
 	args := []string{"for-each-ref", "--count=1", "--sort=-committerdate", "--format=%(committerdate:iso8601)", "--end-of-options"}
-	if opt.Branch != "" {
-		args = append(args, RefsHeads+opt.Branch)
-	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return time.Time{}, err
 	}

@@ -33,6 +33,6 @@ func (t *Tag) Message() string {
 }
 
 // Commit returns the underlying commit of the tag.
-func (t *Tag) Commit(ctx context.Context, opts ...CatFileCommitOptions) (*Commit, error) {
-	return t.repo.CatFileCommit(ctx, t.commitID.String(), opts...)
+func (t *Tag) Commit(ctx context.Context) (*Commit, error) {
+	return t.repo.CatFileCommit(ctx, t.commitID.String())
 }

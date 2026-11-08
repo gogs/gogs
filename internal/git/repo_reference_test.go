@@ -90,7 +90,6 @@ func TestRepository_HasReference(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		ref    string
-		opt    ShowRefVerifyOptions
 		expVal bool
 	}{
 		{
@@ -108,7 +107,7 @@ func TestRepository_HasReference(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, testrepo.HasReference(ctx, test.ref, test.opt))
+			assert.Equal(t, test.expVal, testrepo.HasReference(ctx, test.ref))
 		})
 	}
 }
@@ -117,7 +116,6 @@ func TestRepository_HasBranch(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		ref    string
-		opt    ShowRefVerifyOptions
 		expVal bool
 	}{
 		{
@@ -131,7 +129,7 @@ func TestRepository_HasBranch(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, testrepo.HasBranch(ctx, test.ref, test.opt))
+			assert.Equal(t, test.expVal, testrepo.HasBranch(ctx, test.ref))
 		})
 	}
 }
@@ -172,7 +170,6 @@ func TestRepository_HasTag(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		ref    string
-		opt    ShowRefVerifyOptions
 		expVal bool
 	}{
 		{
@@ -186,7 +183,7 @@ func TestRepository_HasTag(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, testrepo.HasTag(ctx, test.ref, test.opt))
+			assert.Equal(t, test.expVal, testrepo.HasTag(ctx, test.ref))
 		})
 	}
 }

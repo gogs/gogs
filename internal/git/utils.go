@@ -2,7 +2,6 @@ package git
 
 import (
 	"os"
-	"strings"
 	"sync"
 )
 
@@ -51,14 +50,4 @@ func isFile(filePath string) bool {
 		return false
 	}
 	return !f.IsDir()
-}
-
-// bytesToStrings splits given bytes into strings by line separator ("\n"). It
-// returns empty slice if the given bytes only contains line separators.
-func bytesToStrings(in []byte) []string {
-	s := strings.TrimRight(string(in), "\n")
-	if s == "" { // empty (not {""}, len=1)
-		return []string{}
-	}
-	return strings.Split(s, "\n")
 }

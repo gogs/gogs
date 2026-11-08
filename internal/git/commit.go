@@ -50,13 +50,13 @@ func (c *Commit) ParentID(n int) (*SHA1, error) {
 
 // Parent returns the n-th parent commit (0-based) of this commit. It returns
 // ErrRevisionNotExist if no such parent exists.
-func (c *Commit) Parent(ctx context.Context, n int, opts ...CatFileCommitOptions) (*Commit, error) {
+func (c *Commit) Parent(ctx context.Context, n int) (*Commit, error) {
 	id, err := c.ParentID(n)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.repo.CatFileCommit(ctx, id.String(), opts...)
+	return c.repo.CatFileCommit(ctx, id.String())
 }
 
 // CommitByPath returns the commit of the path in the state of this commit.
@@ -72,29 +72,29 @@ func (c *Commit) CommitsByPage(ctx context.Context, page, size int, opts ...Comm
 
 // SearchCommits searches commit message with given pattern. The returned list
 // is in reverse chronological order.
-func (c *Commit) SearchCommits(ctx context.Context, pattern string, opts ...SearchCommitsOptions) ([]*Commit, error) {
-	return c.repo.SearchCommits(ctx, c.ID.String(), pattern, opts...)
+func (c *Commit) SearchCommits(ctx context.Context, pattern string) ([]*Commit, error) {
+	return c.repo.SearchCommits(ctx, c.ID.String(), pattern)
 }
 
 // ShowNameStatus returns name status of the commit.
-func (c *Commit) ShowNameStatus(ctx context.Context, opts ...ShowNameStatusOptions) (*NameStatus, error) {
-	return c.repo.ShowNameStatus(ctx, c.ID.String(), opts...)
+func (c *Commit) ShowNameStatus(ctx context.Context) (*NameStatus, error) {
+	return c.repo.ShowNameStatus(ctx, c.ID.String())
 }
 
 // CommitsCount returns number of total commits up to this commit.
-func (c *Commit) CommitsCount(ctx context.Context, opts ...RevListCountOptions) (int64, error) {
-	return c.repo.RevListCount(ctx, []string{c.ID.String()}, opts...)
+func (c *Commit) CommitsCount(ctx context.Context) (int64, error) {
+	return c.repo.RevListCount(ctx, []string{c.ID.String()})
 }
 
 // FilesChangedAfter returns a list of files changed after given commit ID.
-func (c *Commit) FilesChangedAfter(ctx context.Context, after string, opts ...DiffNameOnlyOptions) ([]string, error) {
-	return c.repo.DiffNameOnly(ctx, after, c.ID.String(), opts...)
+func (c *Commit) FilesChangedAfter(ctx context.Context, after string) ([]string, error) {
+	return c.repo.DiffNameOnly(ctx, after, c.ID.String())
 }
 
 // CommitsAfter returns a list of commits after given commit ID up to this
 // commit. The returned list is in reverse chronological order.
-func (c *Commit) CommitsAfter(ctx context.Context, after string, opts ...RevListOptions) ([]*Commit, error) {
-	return c.repo.RevList(ctx, []string{after + "..." + c.ID.String()}, opts...)
+func (c *Commit) CommitsAfter(ctx context.Context, after string) ([]*Commit, error) {
+	return c.repo.RevList(ctx, []string{after + "..." + c.ID.String()})
 }
 
 // Ancestors returns a list of ancestors of this commit in reverse chronological

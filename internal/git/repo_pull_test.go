@@ -27,7 +27,6 @@ func TestRepository_MergeBase(t *testing.T) {
 	tests := []struct {
 		base          string
 		head          string
-		opt           MergeBaseOptions
 		wantMergeBase string
 	}{
 		{
@@ -43,7 +42,7 @@ func TestRepository_MergeBase(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			mb, err := testrepo.MergeBase(ctx, test.base, test.head, test.opt)
+			mb, err := testrepo.MergeBase(ctx, test.base, test.head)
 			require.NoError(t, err)
 			assert.Equal(t, test.wantMergeBase, mb)
 		})

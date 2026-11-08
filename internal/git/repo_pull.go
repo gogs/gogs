@@ -7,23 +7,16 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
-// MergeBaseOptions contains optional arguments for getting merge base.
-//
-// Docs: https://git-scm.com/docs/git-merge-base
-type MergeBaseOptions struct {
-	CommandOptions
-}
-
 // MergeBase returns merge base between base and head revisions of the
 // repository.
-func (r *Repository) MergeBase(ctx context.Context, base, head string, opts ...MergeBaseOptions) (string, error) {
-	var opt MergeBaseOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
+func (r *Repository) MergeBase(ctx context.Context, base, head string) (string, error) {
+	return r.mergeBase(ctx, base, head, nil)
+}
 
+// mergeBase is like MergeBase but runs Git with given environment variables.
+func (r *Repository) mergeBase(ctx context.Context, base, head string, envs []string) (string, error) {
 	args := []string{"merge-base", "--end-of-options", base, head}
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, envs)
 	if err != nil {
 		if isExitStatus(err, 1) {
 			return "", ErrNoMergeBase
@@ -73,17 +66,17 @@ func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, 
 		envs = []string{"GIT_ALTERNATE_OBJECT_DIRECTORIES=" + quoteAlternatePath(objectsDir)}
 	}
 
-	mergeBase, err := r.MergeBase(ctx, base, headBranch, MergeBaseOptions{CommandOptions: CommandOptions{Envs: envs}})
+	mergeBase, err := r.mergeBase(ctx, base, headBranch, envs)
 	if err != nil {
 		return nil, errors.Wrap(err, "get merge base")
 	}
 
-	commits, err := r.Log(ctx, mergeBase+"..."+headBranch, LogOptions{CommandOptions: CommandOptions{Envs: envs}})
+	commits, err := r.Log(ctx, mergeBase+"..."+headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get commits")
 	}
 
-	names, err := r.DiffNameOnly(ctx, base, headBranch, DiffNameOnlyOptions{NeedsMergeBase: true, CommandOptions: CommandOptions{Envs: envs}})
+	names, err := r.DiffNameOnly(ctx, mergeBase, headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get changed files")
 	}

@@ -63,9 +63,12 @@ func TestRepository_LsTree(t *testing.T) {
 	err := Init(ctx, path)
 	require.NoError(t, err)
 
-	specialName := `Test "Wiki" Page.md`
-	err = os.WriteFile(filepath.Join(path, specialName), []byte("content"), 0o644)
-	require.NoError(t, err)
+	// Names that "git ls-tree" would quote without the -z flag.
+	specialNames := []string{`"Leading" quote.md`, `Test "Wiki" Page.md`}
+	for _, name := range specialNames {
+		err = os.WriteFile(filepath.Join(path, name), []byte("content"), 0o644)
+		require.NoError(t, err)
+	}
 
 	repo, err := Open(path)
 	require.NoError(t, err)
@@ -79,15 +82,11 @@ func TestRepository_LsTree(t *testing.T) {
 	commit, err := repo.CatFileCommit(ctx, "HEAD")
 	require.NoError(t, err)
 
-	// Without Verbatim, Git quotes and escapes the filename.
 	entries, err := commit.Entries(ctx)
 	require.NoError(t, err)
-	require.Len(t, entries, 1)
-	assert.Equal(t, specialName, entries[0].Name())
-
-	// With Verbatim, Git outputs the filename as-is.
-	entries, err = commit.Entries(ctx, LsTreeOptions{Verbatim: true})
-	require.NoError(t, err)
-	require.Len(t, entries, 1)
-	assert.Equal(t, specialName, entries[0].Name())
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	assert.Equal(t, specialNames, names)
 }

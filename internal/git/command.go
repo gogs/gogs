@@ -12,11 +12,6 @@ import (
 	"github.com/sourcegraph/run"
 )
 
-// CommandOptions contains additional options for running a Git command.
-type CommandOptions struct {
-	Envs []string
-}
-
 // cmd builds a *run.Command for git with the given arguments, environment
 // variables and working directory. The command is bound only by the deadline
 // and cancellation of the context.

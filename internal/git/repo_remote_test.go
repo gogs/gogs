@@ -19,7 +19,6 @@ func TestLsRemote(t *testing.T) {
 		{
 			url: testrepo.Path(),
 			opt: LsRemoteOptions{
-				Heads:    true,
 				Patterns: []string{"release-1.0"},
 			},
 			expRefs: []*Reference{
@@ -31,19 +30,6 @@ func TestLsRemote(t *testing.T) {
 		}, {
 			url: testrepo.Path(),
 			opt: LsRemoteOptions{
-				Tags:     true,
-				Patterns: []string{"v1.0.0"},
-			},
-			expRefs: []*Reference{
-				{
-					ID:      "0eedd79eba4394bbef888c804e899731644367fe",
-					Refspec: "refs/tags/v1.0.0",
-				},
-			},
-		}, {
-			url: testrepo.Path(),
-			opt: LsRemoteOptions{
-				Refs:     true,
 				Patterns: []string{"v1.0.0"},
 			},
 			expRefs: []*Reference{
@@ -148,10 +134,10 @@ func TestRepository_RemoteRemove(t *testing.T) {
 	}
 	defer cleanup()
 
-	err = r.RemoteRemove(ctx, "origin", RemoteRemoveOptions{})
+	err = r.RemoteRemove(ctx, "origin")
 	assert.Nil(t, err)
 
-	err = r.RemoteRemove(ctx, "origin", RemoteRemoveOptions{})
+	err = r.RemoteRemove(ctx, "origin")
 	assert.Equal(t, ErrRemoteNotExist, err)
 }
 

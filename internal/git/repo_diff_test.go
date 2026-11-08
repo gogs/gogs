@@ -475,7 +475,6 @@ func TestRepository_DiffBinary(t *testing.T) {
 	tests := []struct {
 		base      string
 		head      string
-		opt       DiffBinaryOptions
 		expOutput string
 	}{
 		{
@@ -502,7 +501,7 @@ index 0000000000000000000000000000000000000000..6b08f76a5313fa3d26859515b30aa17a
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			p, err := testrepo.DiffBinary(ctx, test.base, test.head, test.opt)
+			p, err := testrepo.DiffBinary(ctx, test.base, test.head)
 			if err != nil {
 				t.Fatal(err)
 			}

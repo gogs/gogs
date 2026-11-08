@@ -823,9 +823,9 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		ctx, cancel := context.WithTimeout(context.TODO(), migrateTimeout)
 		defer cancel()
 		return git.Clone(ctx, url, dst, git.CloneOptions{
-			Mirror:         true,
-			Quiet:          true,
-			CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+			Mirror: true,
+			Quiet:  true,
+			Envs:   mirrorGitEnv(),
 		})
 	}
 

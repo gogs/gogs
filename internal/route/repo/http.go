@@ -295,11 +295,11 @@ func serviceRPC(h serviceHandler, service string) {
 	// A client disconnecting must not kill Git midway, e.g., while running hooks
 	// after a push.
 	err = git.RunService(gocontext.Background(), git.Service(service), h.dir, git.ServiceOptions{
-		StatelessRPC:   true,
-		Stdin:          reqBody,
-		Stdout:         h.w,
-		Stderr:         &stderr,
-		CommandOptions: git.CommandOptions{Envs: envs},
+		StatelessRPC: true,
+		Stdin:        reqBody,
+		Stdout:       h.w,
+		Stderr:       &stderr,
+		Envs:         envs,
 	})
 	if err != nil {
 		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())

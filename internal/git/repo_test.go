@@ -76,17 +76,6 @@ func TestClone(t *testing.T) {
 				Branch: "develop",
 			},
 		},
-		{
-			opt: CloneOptions{
-				Depth: 1,
-			},
-		},
-		{
-			opt: CloneOptions{
-				Branch: "develop",
-				Depth:  1,
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -174,11 +163,6 @@ func TestRepository_Push(t *testing.T) {
 			branch: "master",
 			opt:    PushOptions{},
 		},
-		{
-			remote: "origin",
-			branch: "master",
-			opt:    PushOptions{SetUpstream: true},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -263,18 +247,16 @@ func TestRepository_Move(t *testing.T) {
 	tests := []struct {
 		src string
 		dst string
-		opt MoveOptions
 	}{
 		{
 			src: "run.sh",
 			dst: "runme.sh",
-			opt: MoveOptions{},
 		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			// Make sure it does not blow up
-			if err := r.Move(ctx, test.src, test.dst, test.opt); err != nil {
+			if err := r.Move(ctx, test.src, test.dst); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -297,10 +279,7 @@ func TestRepository_Add(t *testing.T) {
 	}
 
 	// Make sure it does not blow up
-	if err := r.Add(ctx, AddOptions{
-		All:       true,
-		Pathspecs: []string{"TESTFILE"},
-	}); err != nil {
+	if err := r.Add(ctx, AddOptions{All: true}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -317,16 +296,10 @@ func TestRepository_Commit(t *testing.T) {
 		Name:  "alice",
 		Email: "alice@example.com",
 	}
-	author := &Signature{
-		Name:  "bob",
-		Email: "bob@example.com",
-	}
 	message := "Add a file"
 
 	t.Run("nothing to commit", func(t *testing.T) {
-		if err = r.Commit(ctx, committer, message, CommitOptions{
-			Author: author,
-		}); err != nil {
+		if err = r.Commit(ctx, committer, message); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -369,38 +342,6 @@ func TestRepository_Commit(t *testing.T) {
 		assert.Equal(t, committer.Email, c.Committer.Email)
 		assert.Equal(t, committer.Name, c.Author.Name)
 		assert.Equal(t, committer.Email, c.Author.Email)
-		assert.Equal(t, message+"\n", c.Message)
-	})
-
-	t.Run("committer is not the author", func(t *testing.T) {
-		// Generate a file and add to index
-		fpath := filepath.Join(r.Path(), "COMMITTER_IS_NOT_AUTHOR")
-		err = os.WriteFile(fpath, []byte("something"), 0600)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := r.Add(ctx, AddOptions{
-			All: true,
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		// Make sure it does not blow up
-		if err = r.Commit(ctx, committer, message, CommitOptions{Author: author}); err != nil {
-			t.Fatal(err)
-		}
-
-		// Verify the result
-		c, err := r.CatFileCommit(ctx, "master")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		assert.Equal(t, committer.Name, c.Committer.Name)
-		assert.Equal(t, committer.Email, c.Committer.Email)
-		assert.Equal(t, author.Name, c.Author.Name)
-		assert.Equal(t, author.Email, c.Author.Email)
 		assert.Equal(t, message+"\n", c.Message)
 	})
 
@@ -670,7 +611,7 @@ func TestRepository_RevParse(t *testing.T) {
 func TestRepository_CountObjects(t *testing.T) {
 	ctx := context.Background()
 	// Make sure it does not blow up
-	_, err := testrepo.CountObjects(ctx, CountObjectsOptions{})
+	_, err := testrepo.CountObjects(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

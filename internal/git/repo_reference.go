@@ -31,25 +31,13 @@ type Reference struct {
 	Refspec string
 }
 
-// ShowRefVerifyOptions contains optional arguments for verifying a reference.
-//
-// Docs: https://git-scm.com/docs/git-show-ref#Documentation/git-show-ref.txt---verify
-type ShowRefVerifyOptions struct {
-	CommandOptions
-}
-
 var ErrReferenceNotExist = errors.New("reference does not exist")
 
 // ShowRefVerify returns the commit ID of given reference (e.g.,
 // "refs/heads/master") if it exists in the repository.
-func (r *Repository) ShowRefVerify(ctx context.Context, ref string, opts ...ShowRefVerifyOptions) (string, error) {
-	var opt ShowRefVerifyOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) ShowRefVerify(ctx context.Context, ref string) (string, error) {
 	args := []string{"show-ref", "--verify", "--end-of-options", ref}
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "not a valid ref") {
 			return "", ErrReferenceNotExist
@@ -61,36 +49,36 @@ func (r *Repository) ShowRefVerify(ctx context.Context, ref string, opts ...Show
 
 // BranchCommitID returns the commit ID of given branch if it exists in the
 // repository. The branch must be given in short name, e.g., "master".
-func (r *Repository) BranchCommitID(ctx context.Context, branch string, opts ...ShowRefVerifyOptions) (string, error) {
-	return r.ShowRefVerify(ctx, RefsHeads+branch, opts...)
+func (r *Repository) BranchCommitID(ctx context.Context, branch string) (string, error) {
+	return r.ShowRefVerify(ctx, RefsHeads+branch)
 }
 
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
-func (r *Repository) TagCommitID(ctx context.Context, tag string, opts ...ShowRefVerifyOptions) (string, error) {
-	return r.ShowRefVerify(ctx, RefsTags+tag, opts...)
+func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {
+	return r.ShowRefVerify(ctx, RefsTags+tag)
 }
 
 // HasReference returns true if given reference exists in the repository. The
 // reference must be given in full refspec, e.g., "refs/heads/master".
-func (r *Repository) HasReference(ctx context.Context, ref string, opts ...ShowRefVerifyOptions) bool {
-	_, err := r.ShowRefVerify(ctx, ref, opts...)
+func (r *Repository) HasReference(ctx context.Context, ref string) bool {
+	_, err := r.ShowRefVerify(ctx, ref)
 	return err == nil
 }
 
 // HasBranch returns true if given branch exists in the repository. The branch
 // must be given in short name, e.g., "master".
-func (r *Repository) HasBranch(ctx context.Context, branch string, opts ...ShowRefVerifyOptions) bool {
-	return r.HasReference(ctx, RefsHeads+branch, opts...)
+func (r *Repository) HasBranch(ctx context.Context, branch string) bool {
+	return r.HasReference(ctx, RefsHeads+branch)
 }
 
 // RepoHasBranch returns true if the branch exists in the repository in given path.
-func RepoHasBranch(ctx context.Context, repoPath, branch string, opts ...ShowRefVerifyOptions) bool {
+func RepoHasBranch(ctx context.Context, repoPath, branch string) bool {
 	r, err := Open(repoPath)
 	if err != nil {
 		return false
 	}
-	return r.HasBranch(ctx, branch, opts...)
+	return r.HasBranch(ctx, branch)
 }
 
 // HasBranches returns true if the repository has at least one branch, even when
@@ -115,8 +103,8 @@ func RepoHasBranches(ctx context.Context, repoPath string) (bool, error) {
 
 // HasTag returns true if given tag exists in the repository. The tag must be
 // given in short name, e.g., "v1.0.0".
-func (r *Repository) HasTag(ctx context.Context, tag string, opts ...ShowRefVerifyOptions) bool {
-	return r.HasReference(ctx, RefsTags+tag, opts...)
+func (r *Repository) HasTag(ctx context.Context, tag string) bool {
+	return r.HasReference(ctx, RefsTags+tag)
 }
 
 // SymbolicRefOptions contains optional arguments for get and set symbolic ref.
@@ -126,7 +114,6 @@ type SymbolicRefOptions struct {
 	// The name of the reference, e.g., "refs/heads/master". When set, it will be
 	// used to update the symbolic ref.
 	Ref string
-	CommandOptions
 }
 
 // SymbolicRef returns the reference name (e.g., "refs/heads/master") pointed by
@@ -147,7 +134,7 @@ func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions
 		args = append(args, opt.Ref)
 	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return "", err
 	}
@@ -173,7 +160,6 @@ type ShowRefOptions struct {
 	Tags bool
 	// The list of patterns to filter results.
 	Patterns []string
-	CommandOptions
 }
 
 // ShowRef returns a list of references in the repository.
@@ -195,7 +181,7 @@ func (r *Repository) ShowRef(ctx context.Context, opts ...ShowRefOptions) ([]*Re
 		args = append(args, opt.Patterns...)
 	}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +230,6 @@ func RepoBranches(ctx context.Context, repoPath string) ([]string, error) {
 type DeleteBranchOptions struct {
 	// Indicates whether to force delete the branch.
 	Force bool
-	CommandOptions
 }
 
 // DeleteBranch deletes the branch from the repository.
@@ -261,6 +246,6 @@ func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...Dele
 		args = append(args, "-d")
 	}
 	args = append(args, "--end-of-options", name)
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }

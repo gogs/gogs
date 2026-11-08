@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +11,6 @@ func TestRepository_Tag(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name   string
-		opt    TagOptions
 		expTag *Tag
 	}{
 		{
@@ -33,7 +31,7 @@ func TestRepository_Tag(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			tag, err := testrepo.Tag(ctx, test.name, test.opt)
+			tag, err := testrepo.Tag(ctx, test.name)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -48,43 +46,11 @@ func TestRepository_Tag(t *testing.T) {
 func TestRepository_Tags(t *testing.T) {
 	ctx := context.Background()
 	// Make sure it does not blow up
-	tags, err := testrepo.Tags(ctx, TagsOptions{})
+	tags, err := testrepo.Tags(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.NotEmpty(t, tags)
-}
-
-func TestRepository_Tags_VersionSort(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	err = r.CreateTag(ctx, "v3.0.0", "master")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = r.CreateTag(ctx, "v2.999.0", "master")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tags, err := r.Tags(ctx, TagsOptions{
-		SortKey: "-version:refname",
-		Pattern: "v*",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(tags) < 2 {
-		t.Fatalf("Should have at least two tags but got %d", len(tags))
-	}
-	assert.Equal(t, "v3.0.0", tags[0])
-	assert.Equal(t, "v2.999.0", tags[1])
 }
 
 func TestRepository_CreateTag(t *testing.T) {
@@ -97,54 +63,12 @@ func TestRepository_CreateTag(t *testing.T) {
 
 	assert.False(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
 
-	err = r.CreateTag(ctx, "v2.0.0", "master", CreateTagOptions{})
+	err = r.CreateTag(ctx, "v2.0.0", "master")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert.True(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
-}
-
-func TestRepository_CreateAnnotatedTag(t *testing.T) {
-	// Ambient identity must not leak into the tagger.
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
-	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
-	t.Setenv("GIT_AUTHOR_NAME", "ambient")
-	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "ambient")
-	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
-
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	err = r.CreateTag(ctx, "v2.0.0", "master", CreateTagOptions{Annotated: true})
-	assert.EqualError(t, err, "author is required")
-
-	assert.False(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
-
-	err = r.CreateTag(ctx, "v2.0.0", "master", CreateTagOptions{
-		Annotated: true,
-		Author: &Signature{
-			Name:  "alice",
-			Email: "alice@example.com",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.True(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
-
-	tag, err := r.Tag(ctx, "v2.0.0")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Equal(t, ObjectTag, tag.Type())
 }
 
 func TestRepository_DeleteTag(t *testing.T) {
@@ -157,7 +81,7 @@ func TestRepository_DeleteTag(t *testing.T) {
 
 	assert.True(t, r.HasReference(ctx, RefsTags+"v1.0.0"))
 
-	err = r.DeleteTag(ctx, "v1.0.0", DeleteTagOptions{})
+	err = r.DeleteTag(ctx, "v1.0.0")
 	if err != nil {
 		t.Fatal(err)
 	}

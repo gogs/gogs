@@ -87,25 +87,12 @@ func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
 	return tag, nil
 }
 
-// TagOptions contains optional arguments for getting a tag.
-//
-// Docs: https://git-scm.com/docs/git-cat-file
-type TagOptions struct {
-	CommandOptions
-}
-
 // Tag returns a Git tag by given name, e.g., "v1.0.0".
-func (r *Repository) Tag(ctx context.Context, name string, opts ...TagOptions) (*Tag, error) {
-	var opt TagOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
 	refspec := RefsTags + name
 	refs, err := r.ShowRef(ctx, ShowRefOptions{
-		Tags:           true,
-		Patterns:       []string{refspec},
-		CommandOptions: opt.CommandOptions,
+		Tags:     true,
+		Patterns: []string{refspec},
 	})
 	if err != nil {
 		return nil, err
@@ -125,36 +112,11 @@ func (r *Repository) Tag(ctx context.Context, name string, opts ...TagOptions) (
 	return tag, nil
 }
 
-// TagsOptions contains optional arguments for listing tags.
-//
-// Docs: https://git-scm.com/docs/git-tag#Documentation/git-tag.txt---list
-type TagsOptions struct {
-	// SortKey sorts tags with provided tag key, optionally prefixed with '-' to sort tags in descending order.
-	SortKey string
-	// Pattern filters tags matching the specified pattern.
-	Pattern string
-	CommandOptions
-}
-
 // Tags returns a list of tags of the repository.
-func (r *Repository) Tags(ctx context.Context, opts ...TagsOptions) ([]string, error) {
-	var opt TagsOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
+func (r *Repository) Tags(ctx context.Context) ([]string, error) {
+	args := []string{"tag", "--list", "--sort=-creatordate", "--end-of-options"}
 
-	args := []string{"tag", "--list"}
-	if opt.SortKey != "" {
-		args = append(args, "--sort="+opt.SortKey)
-	} else {
-		args = append(args, "--sort=-creatordate")
-	}
-	args = append(args, "--end-of-options")
-	if opt.Pattern != "" {
-		args = append(args, opt.Pattern)
-	}
-
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -166,80 +128,35 @@ func (r *Repository) Tags(ctx context.Context, opts ...TagsOptions) ([]string, e
 }
 
 // RepoTags is like Repository.Tags for the repository in given path.
-func RepoTags(ctx context.Context, repoPath string, opts ...TagsOptions) ([]string, error) {
+func RepoTags(ctx context.Context, repoPath string) ([]string, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.Tags(ctx, opts...)
+	return r.Tags(ctx)
 }
 
-// CreateTagOptions contains optional arguments for creating a tag.
-//
-// Docs: https://git-scm.com/docs/git-tag
-type CreateTagOptions struct {
-	// Annotated marks a tag as annotated rather than lightweight.
-	Annotated bool
-	// Message specifies a tagging message for the annotated tag. It is ignored when tag is not annotated.
-	Message string
-	// Author is the tagger of an annotated tag. It is required when the tag is
-	// annotated and ignored for a lightweight tag.
-	Author *Signature
-	CommandOptions
-}
-
-// CreateTag creates a new tag on given revision.
-func (r *Repository) CreateTag(ctx context.Context, name, rev string, opts ...CreateTagOptions) error {
-	var opt CreateTagOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"tag"}
-	var envs []string
-	if opt.Annotated {
-		if opt.Author == nil {
-			return errors.New("author is required")
-		}
-		args = append(args, "-a", name)
-		args = append(args, "--message", opt.Message)
-		envs = committerEnvs(opt.Author)
-		args = append(args, "--end-of-options")
-	} else {
-		args = append(args, "--end-of-options", name)
-	}
-	args = append(args, rev)
-	envs = append(envs, opt.Envs...)
-	_, err := exec(ctx, r.path, args, envs)
+// CreateTag creates a new lightweight tag on given revision.
+func (r *Repository) CreateTag(ctx context.Context, name, rev string) error {
+	args := []string{"tag", "--end-of-options", name, rev}
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
-// DeleteTagOptions contains optional arguments for deleting a tag.
-//
-// Docs: https://git-scm.com/docs/git-tag#Documentation/git-tag.txt---delete
-type DeleteTagOptions struct {
-	CommandOptions
-}
-
 // DeleteTag deletes a tag from the repository.
-func (r *Repository) DeleteTag(ctx context.Context, name string, opts ...DeleteTagOptions) error {
-	var opt DeleteTagOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) DeleteTag(ctx context.Context, name string) error {
 	args := []string{"tag", "--delete", "--end-of-options", name}
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
 // RepoDeleteTag is like Repository.DeleteTag for the repository in given path.
-func RepoDeleteTag(ctx context.Context, repoPath, name string, opts ...DeleteTagOptions) error {
+func RepoDeleteTag(ctx context.Context, repoPath, name string) error {
 	r, err := Open(repoPath)
 	if err != nil {
 		return err
 	}
-	return r.DeleteTag(ctx, name, opts...)
+	return r.DeleteTag(ctx, name)
 }
 
 // TagsPage contains a list of tags and pagination information.

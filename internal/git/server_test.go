@@ -15,7 +15,7 @@ func TestUpdateServerInfo(t *testing.T) {
 	ctx := context.Background()
 	err := os.RemoveAll(filepath.Join(repoPath, "info"))
 	require.NoError(t, err)
-	err = UpdateServerInfo(ctx, repoPath, UpdateServerInfoOptions{Force: true})
+	err = UpdateServerInfo(ctx, repoPath)
 	require.NoError(t, err)
 	assert.True(t, isFile(filepath.Join(repoPath, "info", "refs")))
 }
@@ -42,10 +42,10 @@ func TestRunService(t *testing.T) {
 		var stdout bytes.Buffer
 		err := RunService(ctx, ServiceUploadPack, repoPath,
 			ServiceOptions{
-				StatelessRPC:   true,
-				AdvertiseRefs:  true,
-				Stdout:         &stdout,
-				CommandOptions: CommandOptions{Envs: []string{"GIT_PROTOCOL=version=2"}},
+				StatelessRPC:  true,
+				AdvertiseRefs: true,
+				Stdout:        &stdout,
+				Envs:          []string{"GIT_PROTOCOL=version=2"},
 			},
 		)
 		require.NoError(t, err)
