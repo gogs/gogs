@@ -6,7 +6,6 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -22,7 +21,6 @@ import (
 	"gogs.io/gogs/internal/iox"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
-	"gogs.io/gogs/internal/process"
 )
 
 // BranchAlreadyExists represents an error when branch already exists.
@@ -288,32 +286,14 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*git.Diff
 		return nil, errors.Newf("write file: %v", err)
 	}
 
-	// 🚨 SECURITY: Prevent including unintended options in the path to the Git command.
-	cmd := exec.Command("git", "diff", "--end-of-options", treePath)
-	cmd.Dir = localPath
-	cmd.Stderr = os.Stderr
-
-	stdout, err := cmd.StdoutPipe()
+	localGitRepo, err := git.Open(localPath)
 	if err != nil {
-		return nil, errors.Newf("get stdout pipe: %v", err)
+		return nil, errors.Newf("open local copy: %v", err)
 	}
 
-	if err = cmd.Start(); err != nil {
-		return nil, errors.Newf("start: %v", err)
-	}
-
-	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", r.RepoPath()), cmd)
-	defer process.Remove(pid)
-
-	done := make(chan git.SteamParseDiffResult)
-	go git.StreamParseDiff(stdout, done, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
-	result := <-done
-	if result.Err != nil {
-		return nil, errors.Newf("parse diff: %v", result.Err)
-	}
-	diff := result.Diff
-	if err = cmd.Wait(); err != nil {
-		return nil, errors.Newf("wait: %v", err)
+	diff, err := localGitRepo.DiffWorktree(context.TODO(), treePath, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	if err != nil {
+		return nil, errors.Newf("get diff: %v", err)
 	}
 	return diff, nil
 }
