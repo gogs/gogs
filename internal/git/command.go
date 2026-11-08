@@ -5,12 +5,12 @@ import (
 	"context"
 	"io"
 	"os"
+	osexec "os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/sourcegraph/run"
 )
 
 // WithTimeout returns a copy of ctx that times out after the given duration. A
@@ -22,66 +22,73 @@ func WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, c
 	return context.WithTimeout(ctx, timeout)
 }
 
-// cmd builds a *run.Command for git with the given arguments, environment
-// variables and working directory. The command is bound only by the deadline
-// and cancellation of the context.
-func cmd(ctx context.Context, dir string, args []string, envs []string) *run.Command {
-	// run.Cmd joins all parts into a single string and then shell-parses it. We must
-	// quote each argument so that special characters (spaces, quotes, angle
-	// brackets, etc.) are preserved correctly.
-	parts := make([]string, 0, 1+len(args))
-	parts = append(parts, "git")
-	for _, arg := range args {
-		parts = append(parts, run.Arg(arg))
-	}
+// exitError is returned when Git exits with a non-zero status. Its message
+// includes what Git printed to stderr, if anything.
+type exitError struct {
+	*osexec.ExitError
+	stderr []byte
+}
 
-	c := run.Cmd(ctx, parts...)
-	if dir != "" {
-		c = c.Dir(dir)
+func (e *exitError) Error() string {
+	if len(e.stderr) == 0 {
+		return e.ExitError.Error()
 	}
+	return e.ExitError.Error() + ": " + string(e.stderr)
+}
+
+func (e *exitError) Unwrap() error {
+	return e.ExitError
+}
+
+// run executes a git command in the given directory, writing stdout to the
+// given io.Writer, and returns what the command printed to stderr. The command
+// is bound only by the deadline and cancellation of the context. It returns
+// ErrExecTimeout if the execution was timed out.
+func run(ctx context.Context, dir string, args []string, envs []string, stdout io.Writer) ([]byte, error) {
+	stderr := new(bytes.Buffer)
+	c := osexec.CommandContext(ctx, "git", args...)
+	c.Dir = dir
 	if len(envs) > 0 {
-		c = c.Environ(append(os.Environ(), envs...))
+		c.Env = append(os.Environ(), envs...)
 	}
-	return c
+	c.Stdout = stdout
+	c.Stderr = stderr
+	err := c.Run()
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			if errors.Is(ctxErr, context.DeadlineExceeded) {
+				return nil, ErrExecTimeout
+			}
+			return nil, ctxErr
+		}
+
+		var exitErr *osexec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, &exitError{ExitError: exitErr, stderr: bytes.TrimSpace(stderr.Bytes())}
+		}
+		return nil, err
+	}
+	return stderr.Bytes(), nil
 }
 
 // exec executes a git command in the given directory and returns stdout as
-// bytes. Stderr is included in the error message on failure. It returns
-// ErrExecTimeout if the execution was timed out.
+// bytes. Stderr is included in the error message on failure.
 func exec(ctx context.Context, dir string, args []string, envs []string) ([]byte, error) {
-	c := cmd(ctx, dir, args, envs)
-
-	var logBuf *bytes.Buffer
-	if logOutput != nil {
-		logBuf = new(bytes.Buffer)
-		logBuf.Grow(512)
-		defer func() {
-			log(dir, args, logBuf.Bytes())
-		}()
-	}
-
-	// Use Stream to a buffer to preserve raw bytes (including NUL bytes from
-	// commands like "ls-tree -z"). The String/Lines methods process output
-	// line-by-line which corrupts binary-ish output.
 	stdout := new(bytes.Buffer)
-	err := c.StdOut().Run().Stream(stdout)
+	_, err := run(ctx, dir, args, envs, stdout)
 
-	// Capture (partial) stdout for logging even on error, so failed commands produce
-	// a useful log entry rather than an empty one.
+	// Log (partial) stdout even on error, so failed commands produce a useful log
+	// entry rather than an empty one.
 	if logOutput != nil {
 		data := stdout.Bytes()
-		limit := len(data)
-		if limit > 512 {
-			limit = 512
-		}
-		logBuf.Write(data[:limit])
 		if len(data) > 512 {
-			logBuf.WriteString("... (more omitted)")
+			data = append(data[:512:512], "... (more omitted)"...)
 		}
+		log(dir, args, data)
 	}
 
 	if err != nil {
-		return nil, mapContextError(err, ctx)
+		return nil, err
 	}
 	return stdout.Bytes(), nil
 }
@@ -89,12 +96,9 @@ func exec(ctx context.Context, dir string, args []string, envs []string) ([]byte
 // pipe executes a git command in the given directory, streaming stdout to the
 // given io.Writer.
 func pipe(ctx context.Context, dir string, args []string, envs []string, stdout io.Writer) error {
-	c := cmd(ctx, dir, args, envs)
-
-	var buf *bytes.Buffer
 	w := stdout
 	if logOutput != nil {
-		buf = new(bytes.Buffer)
+		buf := new(bytes.Buffer)
 		buf.Grow(512)
 		w = &limitDualWriter{
 			W: buf,
@@ -107,11 +111,8 @@ func pipe(ctx context.Context, dir string, args []string, envs []string, stdout 
 		}()
 	}
 
-	streamErr := c.StdOut().Run().Stream(w)
-	if streamErr != nil {
-		return mapContextError(streamErr, ctx)
-	}
-	return nil
+	_, err := run(ctx, dir, args, envs, w)
+	return err
 }
 
 // authorEnvs returns environment variables that record the signature as the author.
@@ -181,25 +182,9 @@ func (w *limitDualWriter) Write(p []byte) (int, error) {
 	return w.w.Write(p)
 }
 
-// mapContextError maps context errors to the appropriate sentinel errors used
-// by this package.
-func mapContextError(err error, ctx context.Context) error {
-	if ctx == nil {
-		return err
-	}
-	if ctxErr := ctx.Err(); ctxErr != nil {
-		if errors.Is(ctxErr, context.DeadlineExceeded) {
-			return ErrExecTimeout
-		}
-		return ctxErr
-	}
-	return err
-}
-
 // isExitStatus reports whether err represents a specific process exit status
-// code, using the run.ExitCoder interface provided by sourcegraph/run.
+// code.
 func isExitStatus(err error, code int) bool {
-	var exitCoder run.ExitCoder
-	ok := errors.As(err, &exitCoder)
-	return ok && exitCoder.ExitCode() == code
+	var exitErr *osexec.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
 }

@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 )
 
@@ -156,13 +157,11 @@ func (r *Repository) RemoteUpdate(ctx context.Context, opts ...RemoteUpdateOptio
 		args = append(args, "--prune")
 	}
 
-	c := cmd(ctx, r.path, args, opt.Envs)
-
-	stderr := new(bytes.Buffer)
-	if err := c.StdErr().Run().Stream(stderr); err != nil {
-		return "", mapContextError(err, ctx)
+	stderr, err := run(ctx, r.path, args, opt.Envs, io.Discard)
+	if err != nil {
+		return "", err
 	}
-	return stderr.String(), nil
+	return string(stderr), nil
 }
 
 // RepoRemoteUpdate is like Repository.RemoteUpdate for the repository in given path.
