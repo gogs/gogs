@@ -186,12 +186,3 @@ func (r *Repository) RemoteSetURL(ctx context.Context, name, newurl string) erro
 	}
 	return nil
 }
-
-// RepoRemoteSetURL is like Repository.RemoteSetURL for the repository in given path.
-func RepoRemoteSetURL(ctx context.Context, repoPath, name, newurl string) error {
-	r, err := Open(repoPath)
-	if err != nil {
-		return err
-	}
-	return r.RemoteSetURL(ctx, name, newurl)
-}

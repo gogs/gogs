@@ -659,6 +659,9 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err
 		if err = git.Clone(ctx, repoPath, localPath, git.CloneOptions{
 			Branch: branch,
 		}); err != nil {
+			// A killed clone leaves a partial local copy, which every later update
+			// would fail to fetch into.
+			_ = os.RemoveAll(localPath)
 			return errors.Newf("git clone [branch: %s]: %v", branch, err)
 		}
 		return nil
@@ -2642,6 +2645,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	cloneCtx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
 	defer cancel()
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
+		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
 	}
 

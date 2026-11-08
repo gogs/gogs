@@ -138,6 +138,11 @@ func (m *Mirror) RawAddress() string {
 
 // SaveAddress writes new address to Git repository config.
 func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
+	gitRepo, err := git.Open(m.Repo.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "open repository")
+	}
+
 	addrURL, err := url.Parse(addr)
 	if err != nil {
 		return err
@@ -145,7 +150,11 @@ func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
 
 	// Replace the URL in a single config write, so an interrupted request can never
 	// leave the mirror without an "origin" remote.
-	err = git.RepoRemoteSetURL(ctx, m.Repo.RepoPath(), "origin", addrURL.String())
+	err = gitRepo.RemoteSetURL(ctx, "origin", addrURL.String())
+	if errors.Is(err, git.ErrRemoteNotExist) {
+		// Add a missing "origin" back, so that a mirror that lost it can be repaired.
+		err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
+	}
 	if err != nil {
 		return errors.Wrap(err, "set URL of remote 'origin'")
 	}
