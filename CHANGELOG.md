@@ -19,6 +19,7 @@ All notable changes to Gogs are documented in this file.
 - Files whose names start with a double quote are no longer listed with a wrong name. [#8441](https://github.com/gogs/gogs/pull/8441)
 - Diffs no longer show a wrong name for files whose path contains " b/", e.g., `foo b/bar.txt`. [#8441](https://github.com/gogs/gogs/pull/8441)
 - Downloading a repository archive that times out no longer leaves a broken archive that later downloads receive. [#8437](https://github.com/gogs/gogs/pull/8437)
+- A file whose only change is its mode (e.g., made executable) no longer hides the next file in a diff. [#8441](https://github.com/gogs/gogs/pull/8441)
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
