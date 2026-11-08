@@ -1416,7 +1416,7 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 //
 // Deprecated: Use repox.RepositoryPath instead.
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(repox.UserPath(userName), strings.ToLower(repoName)+".git")
+	return repox.RepositoryPath(userName, repoName)
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
