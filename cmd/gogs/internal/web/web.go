@@ -95,9 +95,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Get("", func(c *context.Context) {
 				c.Redirect(conf.Server.Subpath + "/explore/repos")
 			})
-			m.Get("/repos", route.ExploreRepos)
-			m.Get("/users", route.ExploreUsers)
-			m.Get("/organizations", route.ExploreOrganizations)
+			m.Get("/^:type(repos|users|organizations)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn)
 		m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
@@ -145,6 +143,10 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("/user", func() {
 			m.Any("/activate_email", user.ActivateEmail)
 			m.Get("/email2user", user.Email2User)
+			// The pages for signing in stay reachable when the site requires signing in to
+			// view content. Without this route they would match "/:username/:reponame" and
+			// its sign-in toggle.
+			m.Get("/^:page(sign-in|sign-up|mfa|reset-password|activate)$", func(c *context.Context) { c.ServeWeb() })
 		})
 		// ***** END: User *****
 
@@ -760,7 +762,7 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
-	}, withRepoContext)
+	}, requireViewAccess, withRepoContext)
 
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)

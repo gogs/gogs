@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"xorm.io/builder"
@@ -120,6 +121,9 @@ func CreateOrganization(org, owner *User) (err error) {
 	org.MaxRepoCreation = -1
 	org.NumTeams = 1
 	org.NumMembers = 1
+	// The GORM create hook that stamps the creation time does not run for xorm inserts.
+	org.CreatedUnix = time.Now().Unix()
+	org.UpdatedUnix = org.CreatedUnix
 
 	sess := x.NewSession()
 	defer sess.Close()

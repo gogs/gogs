@@ -27,6 +27,17 @@ type ToggleOptions struct {
 
 func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(c *Context) {
+		// Frontend assets match the "/:username/:reponame" routes. Serve them to the
+		// viewers this toggle turns away too, because the pages they are sent to
+		// (sign-in, account activation) are built from them. Dev server paths can
+		// also be a real repository, so they are only served to viewers who could
+		// not see it anyway.
+		p := c.Req.URL.Path
+		if isWebAssetPath(p) || (isDevServerPath(p) && turnsAway(c, options)) {
+			c.ServeWeb()
+			return
+		}
+
 		// Check prohibit login users.
 		if c.IsLogged && c.User.ProhibitLogin {
 			c.Data["Title"] = c.Tr("auth.prohibit_login")
@@ -41,10 +52,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				c.JSON(http.StatusForbidden, map[string]string{
 					"message": "User account is not activated.",
 				})
-				return
-			}
-			if isWebPath(c.Req.URL.Path) {
-				c.ServeWeb()
 				return
 			}
 			c.RedirectSubpath("/user/activate")
@@ -73,13 +80,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 					return
 				}
 
-				if isWebPath(c.Req.URL.Path) {
-					c.ServeWeb()
-					return
-				}
-
-				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-				c.RedirectSubpath("/user/sign-in")
+				c.RawRedirect(conf.Server.Subpath + "/user/sign-in?redirect_to=" + url.QueryEscape(conf.Server.Subpath+c.Req.URL.RequestURI()))
 				return
 			}
 		}
@@ -98,20 +99,25 @@ func isAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
 }
 
-func isWebPath(p string) bool {
-	p = strings.TrimPrefix(p, conf.Server.Subpath)
-	switch {
-	case p == "/user/sign-in",
-		p == "/user/mfa",
-		p == "/user/activate",
-		strings.HasPrefix(p, "/assets/"),
-		strings.HasPrefix(p, "/src/"),
-		strings.HasPrefix(p, "/node_modules/"),
-		strings.HasPrefix(p, "/@"),
-		strings.HasPrefix(p, "/img/"):
-		return true
+// isWebAssetPath returns true for the paths of frontend assets, which cannot be
+// a repository because their first segment is a reserved or invalid username.
+func isWebAssetPath(p string) bool {
+	return strings.HasPrefix(p, "/assets/") ||
+		strings.HasPrefix(p, "/img/") ||
+		strings.HasPrefix(p, "/@")
+}
+
+// isDevServerPath returns true for the module paths of the Vite dev server.
+func isDevServerPath(p string) bool {
+	return strings.HasPrefix(p, "/src/") || strings.HasPrefix(p, "/node_modules/")
+}
+
+// turnsAway returns true if the toggle denies the viewer the requested page.
+func turnsAway(c *Context, options *ToggleOptions) bool {
+	if c.IsLogged {
+		return c.User.IsDisabled()
 	}
-	return false
+	return options.SignInRequired
 }
 
 type AuthStore interface {
