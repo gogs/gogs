@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 
 	"gogs.io/gogs/internal/lazyregexp"
 )
@@ -23,7 +24,7 @@ type Submodule struct {
 
 // loadSubmodules returns submodules found in this commit. Successful results are
 // cached. Failed attempts are not cached, allowing retries with a fresh context.
-func (c *Commit) loadSubmodules(ctx context.Context) (*objectCache, error) {
+func (c *Commit) loadSubmodules(ctx context.Context) (*sync.Map, error) {
 	c.submodulesMu.Lock()
 	defer c.submodulesMu.Unlock()
 
@@ -42,7 +43,7 @@ func (c *Commit) loadSubmodules(ctx context.Context) (*objectCache, error) {
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(p))
-	submodules := newObjectCache()
+	submodules := new(sync.Map)
 	var inSection bool
 	var path string
 	var url string
@@ -79,7 +80,7 @@ func (c *Commit) loadSubmodules(ctx context.Context) (*objectCache, error) {
 				return nil, err
 			}
 
-			submodules.Set(path, mod)
+			submodules.Store(path, mod)
 			inSection = false
 		}
 	}
@@ -101,7 +102,7 @@ func (c *Commit) Submodule(ctx context.Context, path string) (*Submodule, error)
 		return nil, err
 	}
 
-	m, has := mods.Get(path)
+	m, has := mods.Load(path)
 	if has {
 		return m.(*Submodule), nil
 	}

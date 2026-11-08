@@ -10,13 +10,13 @@ import (
 
 func TestRepository_Hooks(t *testing.T) {
 	t.Run("invalid hook", func(t *testing.T) {
-		h, err := testrepo.Hook("", "bad_hook")
+		h, err := testrepo.Hook("hooks", "bad_hook")
 		assert.Equal(t, os.ErrNotExist, err)
 		assert.Nil(t, h)
 	})
 
 	// Save "post-receive" hook with some content
-	postReceiveHook, err := testrepo.Hook(DefaultHooksDir, HookPostReceive)
+	postReceiveHook, err := testrepo.Hook("hooks", HookPostReceive)
 	require.NoError(t, err)
 	defer func() {
 		_ = os.Remove(postReceiveHook.Path())
@@ -27,7 +27,7 @@ func TestRepository_Hooks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hooks, err := testrepo.Hooks("")
+	hooks, err := testrepo.Hooks("hooks")
 	if err != nil {
 		t.Fatal(err)
 	}

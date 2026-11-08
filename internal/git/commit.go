@@ -23,7 +23,7 @@ type Commit struct {
 	parents []*SHA1
 	*Tree
 
-	submodules    *objectCache
+	submodules    *sync.Map
 	submodulesMu  sync.Mutex
 	submodulesSet bool
 }

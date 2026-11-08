@@ -44,7 +44,7 @@ l:
 
 // getTag returns a tag by given SHA1 hash.
 func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
-	t, ok := r.cachedTags.Get(id.String())
+	t, ok := r.cachedTags.Load(id.String())
 	if ok {
 		logf("Cached tag hit: %s", id)
 		return t.(*Tag), nil
@@ -83,7 +83,7 @@ func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
 		return nil, errors.Newf("unsupported tag type: %s", typ)
 	}
 
-	r.cachedTags.Set(id.String(), tag)
+	r.cachedTags.Store(id.String(), tag)
 	return tag, nil
 }
 

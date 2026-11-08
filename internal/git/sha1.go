@@ -19,20 +19,6 @@ type SHA1 struct {
 	strOnce sync.Once
 }
 
-// Equal returns true if s2 has the same SHA1 as s. It supports
-// 40-length-string, []byte, and SHA1.
-func (s *SHA1) Equal(s2 interface{}) bool {
-	switch v := s2.(type) {
-	case string:
-		return v == s.String()
-	case [20]byte:
-		return v == s.bytes
-	case *SHA1:
-		return v.bytes == s.bytes
-	}
-	return false
-}
-
 // String returns string (hex) representation of the SHA1.
 func (s *SHA1) String() string {
 	s.strOnce.Do(func() {

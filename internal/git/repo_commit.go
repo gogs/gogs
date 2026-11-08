@@ -67,7 +67,7 @@ loop:
 // repository. The revision could be a commit ID or full refspec (e.g.,
 // "refs/heads/master").
 func (r *Repository) CatFileCommit(ctx context.Context, rev string) (*Commit, error) {
-	cache, ok := r.cachedCommits.Get(rev)
+	cache, ok := r.cachedCommits.Load(rev)
 	if ok {
 		logf("Cached commit hit: %s", rev)
 		return cache.(*Commit), nil
@@ -91,7 +91,7 @@ func (r *Repository) CatFileCommit(ctx context.Context, rev string) (*Commit, er
 	c.repo = r
 	c.ID = MustIDFromString(commitID)
 
-	r.cachedCommits.Set(commitID, c)
+	r.cachedCommits.Store(commitID, c)
 	return c, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cockroachdb/errors"
 )
@@ -19,9 +20,9 @@ import (
 type Repository struct {
 	path string
 
-	cachedCommits *objectCache
-	cachedTags    *objectCache
-	cachedTrees   *objectCache
+	cachedCommits sync.Map
+	cachedTags    sync.Map
+	cachedTrees   sync.Map
 }
 
 // Path returns the path of the repository.
@@ -89,12 +90,7 @@ func Open(repoPath string) (*Repository, error) {
 		return nil, os.ErrNotExist
 	}
 
-	return &Repository{
-		path:          repoPath,
-		cachedCommits: newObjectCache(),
-		cachedTags:    newObjectCache(),
-		cachedTrees:   newObjectCache(),
-	}, nil
+	return &Repository{path: repoPath}, nil
 }
 
 // CloneOptions contains optional arguments for cloning a repository.
