@@ -34,6 +34,19 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
+		// Inactive users get bounced to the React activation page, which is
+		// responsible for offering a resend and showing status.
+		if c.IsLogged && !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
+			if isAPIPath(c.Req.URL.Path) {
+				c.JSON(http.StatusForbidden, map[string]string{
+					"message": "User account is not activated.",
+				})
+				return
+			}
+			c.RedirectSubpath("/user/activate")
+			return
+		}
+
 		// Check non-logged users landing page.
 		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
 			c.RedirectSubpath(conf.Server.LandingURL)
@@ -63,11 +76,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 				c.RedirectSubpath("/user/sign-in")
-				return
-			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-				// Inactive users get bounced to the React activation page, which
-				// is responsible for offering a resend and showing status.
-				c.RedirectSubpath("/user/activate")
 				return
 			}
 		}
