@@ -73,6 +73,46 @@ func TestUser_AfterFind(t *testing.T) {
 	assert.Equal(t, user.UpdatedUnix, user.Updated.Unix())
 }
 
+func TestUser_IsDisabled(t *testing.T) {
+	before := conf.Auth.RequireEmailConfirmation
+	t.Cleanup(func() { conf.Auth.RequireEmailConfirmation = before })
+
+	tests := []struct {
+		name                     string
+		user                     *User
+		requireEmailConfirmation bool
+		want                     bool
+	}{
+		{
+			name: "active",
+			user: &User{IsActive: true},
+			want: false,
+		},
+		{
+			name: "prohibit login",
+			user: &User{IsActive: true, ProhibitLogin: true},
+			want: true,
+		},
+		{
+			name: "not activated without email confirmation",
+			user: &User{IsActive: false},
+			want: false,
+		},
+		{
+			name:                     "not activated with email confirmation",
+			user:                     &User{IsActive: false},
+			requireEmailConfirmation: true,
+			want:                     true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			conf.Auth.RequireEmailConfirmation = test.requireEmailConfirmation
+			assert.Equal(t, test.want, test.user.IsDisabled())
+		})
+	}
+}
+
 func TestUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()

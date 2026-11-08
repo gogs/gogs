@@ -1320,6 +1320,13 @@ func (u *User) CanCreateOrganization() bool {
 	return !conf.Admin.DisableRegularOrgCreation || u.IsAdmin
 }
 
+// IsDisabled returns true if the user is not allowed to sign in or access
+// anything with their credentials, either because an admin prohibited login or
+// because the account is not activated while email confirmation is required.
+func (u *User) IsDisabled() bool {
+	return u.ProhibitLogin || (!u.IsActive && conf.Auth.RequireEmailConfirmation)
+}
+
 // CanEditGitHook returns true if user can edit Git hooks.
 func (u *User) CanEditGitHook() bool {
 	return u.IsAdmin || u.AllowGitHook

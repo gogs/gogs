@@ -233,6 +233,9 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 					}
 					return nil, false, false
 				}
+				if u.IsDisabled() {
+					return nil, false, false
+				}
 
 				return u, true, false
 			}
@@ -243,6 +246,11 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 	u, err := store.GetUserByID(ctx.Req.Context(), uid)
 	if err != nil {
 		log.Error("GetUserByID: %v", err)
+		return nil, false, false
+	}
+	// Session users are let through so that the web UI can render the prohibited
+	// login and account activation pages for them.
+	if isTokenAuth && u.IsDisabled() {
 		return nil, false, false
 	}
 	return u, false, isTokenAuth

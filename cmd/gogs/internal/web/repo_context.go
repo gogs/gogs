@@ -63,6 +63,9 @@ func withRepoContext(c flamego.Context, user *database.User) {
 		return
 	}
 
+	if user != nil && user.IsDisabled() {
+		user = nil
+	}
 	viewer := ptrx.Deref(user, database.User{})
 	var viewerAccess database.AccessMode
 	if viewer.IsAdmin {
