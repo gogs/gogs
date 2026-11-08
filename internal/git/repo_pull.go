@@ -8,6 +8,8 @@ import (
 )
 
 // MergeBase returns merge base between base and head revisions of the
+// repository. It returns ErrNoMergeBase when there is none, including when a
+// revision does not name a commit, e.g., a branch that only exists in another
 // repository.
 func (r *Repository) MergeBase(ctx context.Context, base, head string) (string, error) {
 	return r.mergeBase(ctx, base, head, nil)
@@ -18,7 +20,7 @@ func (r *Repository) mergeBase(ctx context.Context, base, head string, envs []st
 	args := []string{"merge-base", "--end-of-options", base, head}
 	stdout, err := exec(ctx, r.path, args, envs)
 	if err != nil {
-		if isExitStatus(err, 1) {
+		if isExitStatus(err, 1) || isExitStatus(err, 128) {
 			return "", ErrNoMergeBase
 		}
 		return "", err

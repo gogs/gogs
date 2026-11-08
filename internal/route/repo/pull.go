@@ -549,9 +549,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	baseRepoPath := database.RepoPath(baseRepo.Owner.Name, baseRepo.Name)
 	meta, err := headGitRepo.PullRequestMeta(c.Req.Context(), baseRepoPath, headRef, baseRef)
 	if err != nil {
-		// Only branches of the base repository are fetched into a fork, so a tag or
-		// commit as the base has no merge base there either.
-		if git.IsErrNoMergeBase(err) || strings.Contains(err.Error(), "fatal: Not a valid object name") {
+		if git.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
 			c.Success(tmplRepoPullsCompare)
 		} else {
