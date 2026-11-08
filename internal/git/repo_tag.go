@@ -24,7 +24,7 @@ l:
 			reftype := line[:spacepos]
 			switch string(reftype) {
 			case "object":
-				id, err := NewIDFromString(string(line[spacepos+1:]))
+				id, err := newIDFromString(string(line[spacepos+1:]))
 				if err != nil {
 					return nil, err
 				}
@@ -51,7 +51,7 @@ func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
 	}
 
 	// Check tag type
-	typ, err := r.CatFileType(ctx, id.String())
+	typ, err := r.catFileType(ctx, id.String())
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
 // Tag returns a Git tag by given name, e.g., "v1.0.0".
 func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
 	refspec := RefsTags + name
-	refs, err := r.ShowRef(ctx, ShowRefOptions{
+	refs, err := r.showRef(ctx, showRefOptions{
 		Tags:     true,
 		Patterns: []string{refspec},
 	})
@@ -100,7 +100,7 @@ func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
 		return nil, ErrReferenceNotExist
 	}
 
-	id, err := NewIDFromString(refs[0].ID)
+	id, err := newIDFromString(refs[0].ID)
 	if err != nil {
 		return nil, err
 	}

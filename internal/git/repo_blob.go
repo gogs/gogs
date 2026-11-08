@@ -9,7 +9,7 @@ func (r *Repository) CatFileBlob(ctx context.Context, rev string) (*Blob, error)
 		return nil, err
 	}
 
-	typ, err := r.CatFileType(ctx, rev)
+	typ, err := r.catFileType(ctx, rev)
 	if err != nil {
 		return nil, err
 	}

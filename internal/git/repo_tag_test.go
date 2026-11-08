@@ -61,14 +61,14 @@ func TestRepository_CreateTag(t *testing.T) {
 	}
 	defer cleanup()
 
-	assert.False(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
+	assert.False(t, r.hasReference(ctx, RefsTags+"v2.0.0"))
 
 	err = r.CreateTag(ctx, "v2.0.0", "master")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.True(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
+	assert.True(t, r.hasReference(ctx, RefsTags+"v2.0.0"))
 }
 
 func TestRepository_DeleteTag(t *testing.T) {
@@ -79,14 +79,14 @@ func TestRepository_DeleteTag(t *testing.T) {
 	}
 	defer cleanup()
 
-	assert.True(t, r.HasReference(ctx, RefsTags+"v1.0.0"))
+	assert.True(t, r.hasReference(ctx, RefsTags+"v1.0.0"))
 
 	err = r.DeleteTag(ctx, "v1.0.0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.False(t, r.HasReference(ctx, RefsTags+"v1.0.0"))
+	assert.False(t, r.hasReference(ctx, RefsTags+"v1.0.0"))
 }
 
 func TestTagsAfter(t *testing.T) {

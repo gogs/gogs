@@ -7,8 +7,8 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
-// UnescapeChars reverses escaped characters in quoted output from Git.
-func UnescapeChars(in []byte) []byte {
+// unescapeChars reverses escaped characters in quoted output from Git.
+func unescapeChars(in []byte) []byte {
 	if !bytes.ContainsRune(in, '\\') {
 		return in
 	}
@@ -73,7 +73,7 @@ func parseTree(t *Tree, data []byte) ([]*TreeEntry, error) {
 		pos += step + 6 // Skip string type of entry type.
 
 		step = 40
-		id, err := NewIDFromString(string(data[pos : pos+step]))
+		id, err := newIDFromString(string(data[pos : pos+step]))
 		if err != nil {
 			return nil, err
 		}

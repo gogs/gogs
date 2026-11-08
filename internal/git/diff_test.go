@@ -20,7 +20,7 @@ func TestDiffSection_NumLines(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, 1, section.NumLines())
+	assert.Equal(t, 1, section.numLines())
 }
 
 func TestDiffSection_Line(t *testing.T) {
@@ -806,8 +806,8 @@ new mode 100755`,
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			done := make(chan SteamParseDiffResult)
-			go StreamParseDiff(strings.NewReader(test.input), done, test.maxFiles, test.maxFileLines, test.maxLineChars)
+			done := make(chan streamParseDiffResult)
+			go streamParseDiff(strings.NewReader(test.input), done, test.maxFiles, test.maxFileLines, test.maxLineChars)
 			result := <-done
 			if result.Err != nil {
 				t.Fatal(result.Err)
@@ -855,8 +855,8 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			done := make(chan SteamParseDiffResult)
-			go StreamParseDiff(strings.NewReader(test.header+"\n"+renameBody), done, 0, 0, 0)
+			done := make(chan streamParseDiffResult)
+			go streamParseDiff(strings.NewReader(test.header+"\n"+renameBody), done, 0, 0, 0)
 			result := <-done
 			require.NoError(t, result.Err)
 			require.Len(t, result.Diff.Files, 1)
@@ -869,8 +869,8 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 	}
 
 	t.Run("malformed header", func(t *testing.T) {
-		done := make(chan SteamParseDiffResult)
-		go StreamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
+		done := make(chan streamParseDiffResult)
+		go streamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
 		result := <-done
 		assert.ErrorContains(t, result.Err, "malformed diff header")
 	})

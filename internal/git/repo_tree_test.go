@@ -45,7 +45,7 @@ func TestUnescapeChars(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := UnescapeChars([]byte(tt.in))
+			got := unescapeChars([]byte(tt.in))
 			assert.Equal(t, tt.want, string(got))
 		})
 	}

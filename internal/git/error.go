@@ -25,18 +25,13 @@ type Error struct {
 }
 
 func (e Error) NotFound() bool {
-	return IsErrSubmoduleNotExist(e.error) ||
+	return errors.Is(e.error, ErrSubmoduleNotExist) ||
 		IsErrRevisionNotExist(e.error)
 }
 
 // NewError wraps given error.
 func NewError(err error) error {
 	return Error{error: err}
-}
-
-// IsErrSubmoduleNotExist returns true if the error is ErrSubmoduleNotExist.
-func IsErrSubmoduleNotExist(err error) bool {
-	return errors.Is(err, ErrSubmoduleNotExist)
 }
 
 // IsErrRevisionNotExist returns true if the error is ErrRevisionNotExist.

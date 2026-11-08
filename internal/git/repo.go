@@ -29,7 +29,7 @@ func (r *Repository) Path() string {
 	return r.path
 }
 
-const LogFormatHashOnly = `format:%H`
+const logFormatHashOnly = `format:%H`
 
 // parsePrettyFormatLogToList returns a list of commits parsed from given logs
 // that are formatted in LogFormatHashOnly.

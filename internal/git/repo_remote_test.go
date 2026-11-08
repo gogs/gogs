@@ -123,7 +123,7 @@ func TestRepository_RemoteAdd(t *testing.T) {
 	}
 
 	// Check a non-default branch: release-1.0
-	assert.True(t, r.HasReference(ctx, RefsHeads+"release-1.0"))
+	assert.True(t, r.hasReference(ctx, RefsHeads+"release-1.0"))
 }
 
 func TestRepository_RemoteRemove(t *testing.T) {

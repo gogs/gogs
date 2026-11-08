@@ -128,7 +128,7 @@ func TestRepository_CommitByRevision(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("invalid revision", func(t *testing.T) {
-		c, err := testrepo.CommitByRevision(ctx, "bad_revision")
+		c, err := testrepo.commitByRevision(ctx, "bad_revision")
 		assert.Equal(t, ErrRevisionNotExist, err)
 		assert.Nil(t, c)
 	})
@@ -145,7 +145,7 @@ func TestRepository_CommitByRevision(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			c, err := testrepo.CommitByRevision(ctx, test.rev, test.opt)
+			c, err := testrepo.commitByRevision(ctx, test.rev, test.opt)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -21,12 +21,9 @@ type Submodule struct {
 	Commit string
 }
 
-// Submodules contains information of submodules.
-type Submodules = *objectCache
-
-// Submodules returns submodules found in this commit. Successful results are
+// loadSubmodules returns submodules found in this commit. Successful results are
 // cached. Failed attempts are not cached, allowing retries with a fresh context.
-func (c *Commit) Submodules(ctx context.Context) (Submodules, error) {
+func (c *Commit) loadSubmodules(ctx context.Context) (*objectCache, error) {
 	c.submodulesMu.Lock()
 	defer c.submodulesMu.Unlock()
 
@@ -99,7 +96,7 @@ func (c *Commit) Submodules(ctx context.Context) (Submodules, error) {
 // Submodule returns submodule by given name. It returns an ErrSubmoduleNotExist
 // if the path does not exist as a submodule.
 func (c *Commit) Submodule(ctx context.Context, path string) (*Submodule, error) {
-	mods, err := c.Submodules(ctx)
+	mods, err := c.loadSubmodules(ctx)
 	if err != nil {
 		return nil, err
 	}

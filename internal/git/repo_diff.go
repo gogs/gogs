@@ -56,8 +56,8 @@ func (r *Repository) DiffWorktree(ctx context.Context, path string, maxFiles, ma
 
 func (r *Repository) parseDiff(ctx context.Context, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
 	stdout, w := io.Pipe()
-	done := make(chan SteamParseDiffResult)
-	go StreamParseDiff(stdout, done, maxFiles, maxFileLines, maxLineChars)
+	done := make(chan streamParseDiffResult)
+	go streamParseDiff(stdout, done, maxFiles, maxFileLines, maxLineChars)
 
 	err := pipe(ctx, r.path, args, envs, w)
 	_ = w.Close() // Close writer to exit parsing goroutine

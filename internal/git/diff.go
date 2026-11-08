@@ -48,8 +48,8 @@ type DiffSection struct {
 	numDeletions int
 }
 
-// NumLines returns the number of lines in the section.
-func (s *DiffSection) NumLines() int {
+// numLines returns the number of lines in the section.
+func (s *DiffSection) numLines() int {
 	return len(s.Lines)
 }
 
@@ -195,8 +195,8 @@ func (d *Diff) IsIncomplete() bool {
 	return d.isIncomplete
 }
 
-// SteamParseDiffResult contains results of streaming parsing a diff.
-type SteamParseDiffResult struct {
+// streamParseDiffResult contains results of streaming parsing a diff.
+type streamParseDiffResult struct {
 	Diff *Diff
 	Err  error
 }
@@ -276,7 +276,7 @@ func parseDiffHeaderNames(names string) (a, b string, err error) {
 
 func unquoteDiffName(name, prefix string) (string, bool) {
 	if len(name) >= 2 && name[0] == '"' && name[len(name)-1] == '"' {
-		name = string(UnescapeChars([]byte(name[1 : len(name)-1])))
+		name = string(unescapeChars([]byte(name[1 : len(name)-1])))
 	}
 	return strings.CutPrefix(name, prefix)
 }
@@ -522,7 +522,7 @@ func (p *diffParser) parse() (*Diff, error) {
 		file.numDeletions += section.numDeletions
 		diff.totalAdditions += section.numAdditions
 		diff.totalDeletions += section.numDeletions
-		currentFileLines += section.NumLines()
+		currentFileLines += section.numLines()
 		if isIncomplete {
 			file.isIncomplete = true
 			diff.isIncomplete = true
@@ -532,11 +532,11 @@ func (p *diffParser) parse() (*Diff, error) {
 	return diff, nil
 }
 
-// StreamParseDiff parses the diff read from the given io.Reader. It does
+// streamParseDiff parses the diff read from the given io.Reader. It does
 // parse-on-read to minimize the time spent on huge diffs. It accepts a channel
 // to notify and send error (if any) to the caller when the process is done.
 // Therefore, this method should be called in a goroutine asynchronously.
-func StreamParseDiff(r io.Reader, done chan<- SteamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
+func streamParseDiff(r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
 	p := &diffParser{
 		Reader:       bufio.NewReader(r),
 		maxFiles:     maxFiles,
@@ -547,7 +547,7 @@ func StreamParseDiff(r io.Reader, done chan<- SteamParseDiffResult, maxFiles, ma
 	if err == nil {
 		decodeCharsets(diff)
 	}
-	done <- SteamParseDiffResult{
+	done <- streamParseDiffResult{
 		Diff: diff,
 		Err:  err,
 	}

@@ -27,14 +27,14 @@ loop:
 			reftype := line[:spacepos]
 			switch string(reftype) {
 			case "tree", "object":
-				id, err := NewIDFromString(string(line[spacepos+1:]))
+				id, err := newIDFromString(string(line[spacepos+1:]))
 				if err != nil {
 					return nil, err
 				}
 				commit.Tree = &Tree{id: id}
 			case "parent":
 				// A commit can have one or more parents
-				id, err := NewIDFromString(string(line[spacepos+1:]))
+				id, err := newIDFromString(string(line[spacepos+1:]))
 				if err != nil {
 					return nil, err
 				}
@@ -104,8 +104,8 @@ func RepoCatFileCommit(ctx context.Context, repoPath, rev string) (*Commit, erro
 	return r.CatFileCommit(ctx, rev)
 }
 
-// CatFileType returns the object type of given revision of the repository.
-func (r *Repository) CatFileType(ctx context.Context, rev string) (ObjectType, error) {
+// catFileType returns the object type of given revision of the repository.
+func (r *Repository) catFileType(ctx context.Context, rev string) (ObjectType, error) {
 	args := []string{"cat-file", "-t", rev}
 	typ, err := exec(ctx, r.path, args, nil)
 	if err != nil {
@@ -181,7 +181,7 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([
 		opt = opts[0]
 	}
 
-	args := []string{"log", "--pretty=" + LogFormatHashOnly}
+	args := []string{"log", "--pretty=" + logFormatHashOnly}
 	if opt.MaxCount > 0 {
 		args = append(args, "--max-count="+strconv.Itoa(opt.MaxCount))
 	}
@@ -223,8 +223,8 @@ type CommitByRevisionOptions struct {
 	Path string
 }
 
-// CommitByRevision returns a commit by given revision.
-func (r *Repository) CommitByRevision(ctx context.Context, rev string, opts ...CommitByRevisionOptions) (*Commit, error) {
+// commitByRevision returns a commit by given revision.
+func (r *Repository) commitByRevision(ctx context.Context, rev string, opts ...CommitByRevisionOptions) (*Commit, error) {
 	var opt CommitByRevisionOptions
 	if len(opts) > 0 {
 		opt = opts[0]

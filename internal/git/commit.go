@@ -23,7 +23,7 @@ type Commit struct {
 	parents []*SHA1
 	*Tree
 
-	submodules    Submodules
+	submodules    *objectCache
 	submodulesMu  sync.Mutex
 	submodulesSet bool
 }
@@ -61,7 +61,7 @@ func (c *Commit) Parent(ctx context.Context, n int) (*Commit, error) {
 
 // CommitByPath returns the commit of the path in the state of this commit.
 func (c *Commit) CommitByPath(ctx context.Context, opts ...CommitByRevisionOptions) (*Commit, error) {
-	return c.repo.CommitByRevision(ctx, c.ID.String(), opts...)
+	return c.repo.commitByRevision(ctx, c.ID.String(), opts...)
 }
 
 // CommitsByPage returns a paginated list of commits in the state of this
@@ -167,6 +167,6 @@ func (c *Commit) IsImageFile(ctx context.Context, subpath string) (bool, error) 
 // IsImageFileByIndex returns true if the blob of the commit is an image by
 // index.
 func (c *Commit) IsImageFileByIndex(ctx context.Context, index string) (bool, error) {
-	blob, err := c.BlobByIndex(ctx, index)
+	blob, err := c.blobByIndex(ctx, index)
 	return c.isImageFile(ctx, blob, err)
 }

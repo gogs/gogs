@@ -30,7 +30,7 @@ func (r *Repository) Hook(dir string, name HookName) (*Hook, error) {
 	}
 
 	// 2. Check if sample content exists.
-	sample := ServerSideHookSamples[name]
+	sample := serverSideHookSamples[name]
 	if sample != "" {
 		return &Hook{
 			name:     name,

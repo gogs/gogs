@@ -33,9 +33,9 @@ type Reference struct {
 
 var ErrReferenceNotExist = errors.New("reference does not exist")
 
-// ShowRefVerify returns the commit ID of given reference (e.g.,
+// showRefVerify returns the commit ID of given reference (e.g.,
 // "refs/heads/master") if it exists in the repository.
-func (r *Repository) ShowRefVerify(ctx context.Context, ref string) (string, error) {
+func (r *Repository) showRefVerify(ctx context.Context, ref string) (string, error) {
 	args := []string{"show-ref", "--verify", "--end-of-options", ref}
 	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
@@ -50,26 +50,26 @@ func (r *Repository) ShowRefVerify(ctx context.Context, ref string) (string, err
 // BranchCommitID returns the commit ID of given branch if it exists in the
 // repository. The branch must be given in short name, e.g., "master".
 func (r *Repository) BranchCommitID(ctx context.Context, branch string) (string, error) {
-	return r.ShowRefVerify(ctx, RefsHeads+branch)
+	return r.showRefVerify(ctx, RefsHeads+branch)
 }
 
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {
-	return r.ShowRefVerify(ctx, RefsTags+tag)
+	return r.showRefVerify(ctx, RefsTags+tag)
 }
 
-// HasReference returns true if given reference exists in the repository. The
+// hasReference returns true if given reference exists in the repository. The
 // reference must be given in full refspec, e.g., "refs/heads/master".
-func (r *Repository) HasReference(ctx context.Context, ref string) bool {
-	_, err := r.ShowRefVerify(ctx, ref)
+func (r *Repository) hasReference(ctx context.Context, ref string) bool {
+	_, err := r.showRefVerify(ctx, ref)
 	return err == nil
 }
 
 // HasBranch returns true if given branch exists in the repository. The branch
 // must be given in short name, e.g., "master".
 func (r *Repository) HasBranch(ctx context.Context, branch string) bool {
-	return r.HasReference(ctx, RefsHeads+branch)
+	return r.hasReference(ctx, RefsHeads+branch)
 }
 
 // RepoHasBranch returns true if the branch exists in the repository in given path.
@@ -104,7 +104,7 @@ func RepoHasBranches(ctx context.Context, repoPath string) (bool, error) {
 // HasTag returns true if given tag exists in the repository. The tag must be
 // given in short name, e.g., "v1.0.0".
 func (r *Repository) HasTag(ctx context.Context, tag string) bool {
-	return r.HasReference(ctx, RefsTags+tag)
+	return r.hasReference(ctx, RefsTags+tag)
 }
 
 // SymbolicRefOptions contains optional arguments for get and set symbolic ref.
@@ -150,10 +150,10 @@ func RepoSymbolicRef(ctx context.Context, repoPath string, opts ...SymbolicRefOp
 	return r.SymbolicRef(ctx, opts...)
 }
 
-// ShowRefOptions contains optional arguments for listing references.
+// showRefOptions contains optional arguments for listing references.
 //
 // Docs: https://git-scm.com/docs/git-show-ref
-type ShowRefOptions struct {
+type showRefOptions struct {
 	// Indicates whether to include heads.
 	Heads bool
 	// Indicates whether to include tags.
@@ -162,9 +162,9 @@ type ShowRefOptions struct {
 	Patterns []string
 }
 
-// ShowRef returns a list of references in the repository.
-func (r *Repository) ShowRef(ctx context.Context, opts ...ShowRefOptions) ([]*Reference, error) {
-	var opt ShowRefOptions
+// showRef returns a list of references in the repository.
+func (r *Repository) showRef(ctx context.Context, opts ...showRefOptions) ([]*Reference, error) {
+	var opt showRefOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
@@ -203,7 +203,7 @@ func (r *Repository) ShowRef(ctx context.Context, opts ...ShowRefOptions) ([]*Re
 
 // Branches returns a list of all branches in the repository.
 func (r *Repository) Branches(ctx context.Context) ([]string, error) {
-	heads, err := r.ShowRef(ctx, ShowRefOptions{Heads: true})
+	heads, err := r.showRef(ctx, showRefOptions{Heads: true})
 	if err != nil {
 		return nil, err
 	}

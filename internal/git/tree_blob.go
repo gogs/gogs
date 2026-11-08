@@ -57,9 +57,9 @@ func (t *Tree) Blob(ctx context.Context, subpath string) (*Blob, error) {
 	return nil, ErrNotBlob
 }
 
-// BlobByIndex returns blob object by given index.
-func (t *Tree) BlobByIndex(ctx context.Context, index string) (*Blob, error) {
-	typ, err := t.repo.CatFileType(ctx, index)
+// blobByIndex returns blob object by given index.
+func (t *Tree) blobByIndex(ctx context.Context, index string) (*Blob, error) {
+	typ, err := t.repo.catFileType(ctx, index)
 	if err != nil {
 		return nil, err
 	}
