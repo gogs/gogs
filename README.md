@@ -60,13 +60,6 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
 
-## 📦 Software, service and product support
-
-- [Jenkins](https://plugins.jenkins.io/gogs-webhook/) (CI)
-- [Puppet](https://forge.puppet.com/modules/Siteminds/gogs) (IT)
-- [Synology](https://www.synology.com) (Docker)
-- [Syncloud](https://syncloud.org/) (App Store)
-
 ## 🙇‍♂️ Acknowledgments
 
 <p>This project is proudly supported by:</p>
