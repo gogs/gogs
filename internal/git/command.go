@@ -8,6 +8,7 @@ import (
 	osexec "os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -39,6 +40,30 @@ func newCommand(ctx context.Context, dir string, args []string, envs []string) *
 	return c
 }
 
+// running holds the commands that have started and not yet been waited for.
+var running sync.Map // *osexec.Cmd -> struct{}
+
+// runCommand starts the command and waits for it to complete, keeping track of
+// it so that KillAll can kill it in the meantime.
+func runCommand(c *osexec.Cmd) error {
+	if err := c.Start(); err != nil {
+		return err
+	}
+	running.Store(c, struct{}{})
+	defer running.Delete(c)
+	return c.Wait()
+}
+
+// KillAll kills every running command along with every process it started.
+// It is meant to be called when Gogs is about to exit, because commands run in
+// their own process groups and do not receive signals sent to Gogs's.
+func KillAll() {
+	running.Range(func(c, _ any) bool {
+		_ = c.(*osexec.Cmd).Cancel()
+		return true
+	})
+}
+
 // exitError is returned when Git exits with a non-zero status. Its message
 // includes what Git printed to stderr, if anything.
 type exitError struct {
@@ -66,7 +91,7 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdout i
 	c := newCommand(ctx, dir, args, envs)
 	c.Stdout = stdout
 	c.Stderr = stderr
-	err := ignoreWaitDelay(c, c.Run())
+	err := ignoreWaitDelay(c, runCommand(c))
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			if errors.Is(ctxErr, context.DeadlineExceeded) {

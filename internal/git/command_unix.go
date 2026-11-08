@@ -13,6 +13,7 @@ import (
 // "git fetch" started by "git remote add -f" or hooks, do not outlive it.
 func killProcessGroup(c *osexec.Cmd) {
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setParentDeathSignal(c.SysProcAttr)
 	c.Cancel = func() error {
 		err := syscall.Kill(-c.Process.Pid, syscall.SIGKILL)
 		if err == syscall.ESRCH {
