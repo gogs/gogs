@@ -60,12 +60,6 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
 
-### Deploy to cloud
-
-- [Cloudron](https://www.cloudron.io/store/gogs.html)
-- [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
-- [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
-
 ### Tutorials
 
 - [Private Git Web Portal in Raspberry PI With Gogs](https://peppe8o.com/private-git-web-portal-in-raspberry-pi-with-gogs/)
