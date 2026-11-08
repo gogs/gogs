@@ -50,7 +50,7 @@ type ServiceOptions struct {
 // writing to the client before it is killed. Git sends keepalive packets while
 // it prepares a pack or runs hooks, so a transfer that makes progress never
 // stays idle that long.
-var serviceIdleTimeout = 10 * time.Minute
+var serviceIdleTimeout = 30 * time.Minute
 
 // RunService runs the service for the repository in given path, e.g., "git
 // upload-pack <path>". Instead of a fixed timeout, which would cut off a large
