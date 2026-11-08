@@ -63,6 +63,7 @@ func withRepoContext(c flamego.Context, user *database.User) {
 		return
 	}
 
+	// Disabled users are effectively visiting as anonymous users.
 	if user != nil && user.IsDisabled() {
 		user = nil
 	}

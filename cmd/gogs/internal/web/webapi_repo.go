@@ -174,11 +174,11 @@ type repoWatchResponse struct {
 }
 
 func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (statusCode int, resp *repoWatchResponse, err error) {
-	if repoCtx.ViewerID == 0 {
-		return http.StatusUnauthorized, nil, errors.New("authentication required")
-	}
 	if !repoCtx.ViewerCanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
+	}
+	if repoCtx.ViewerID == 0 {
+		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
 
 	repo := repoCtx.Repo
@@ -216,11 +216,11 @@ type repoStarResponse struct {
 }
 
 func repoStarAction(ctx context.Context, repoCtx *repoContext, starring bool) (statusCode int, resp *repoStarResponse, err error) {
-	if repoCtx.ViewerID == 0 {
-		return http.StatusUnauthorized, nil, errors.New("authentication required")
-	}
 	if !repoCtx.ViewerCanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
+	}
+	if repoCtx.ViewerID == 0 {
+		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
 
 	repo := repoCtx.Repo
