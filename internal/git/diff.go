@@ -281,8 +281,9 @@ func parseDiffHeaderNames(names string) (a, b string, err error) {
 
 // splitSameDiffNames returns the index of the space between two unquoted names
 // that refer to the same file, e.g., `a/foo b/bar.txt b/foo b/bar.txt`, or -1 if
-// the names differ. Only the names of a renamed file differ, and the parser then
-// reads them from the "rename from" and "rename to" lines instead.
+// the names differ. Only the names of a renamed or copied file differ, and the
+// parser then reads them from the "rename from" and "rename to" lines, or the
+// "copy from" and "copy to" lines, instead.
 func splitSameDiffNames(names string) int {
 	middle := len(names) / 2
 	if len(names)%2 == 0 || names[middle] != ' ' ||
@@ -316,11 +317,17 @@ func (p *diffParser) parseFileHeader() (*DiffFile, error) {
 	}
 
 	// Check file diff type and submodule
-	var pureRename bool
 checkType:
 	for !p.isEOF {
 		if err = p.readLine(); err != nil {
 			return nil, err
+		}
+
+		// Files without content changes, e.g., a pure rename or a mode change, have
+		// no index line, so the next file starts right after the extended headers.
+		// Leave its header line for the caller.
+		if bytes.HasPrefix(p.buffer, diffHead) {
+			break
 		}
 
 		line := string(p.buffer)
@@ -365,17 +372,13 @@ checkType:
 			file.Type = DiffFileRename
 			file.oldName = a
 			file.Name = b
-			pureRename = strings.HasSuffix(line, "100%")
-		case strings.HasPrefix(line, "rename from "):
+		case strings.HasPrefix(line, "rename from "), strings.HasPrefix(line, "copy from "):
 			// The "diff --git" line is ambiguous when an unquoted name contains " b/".
-			file.oldName, _ = unquoteDiffName(strings.TrimPrefix(line, "rename from "), "")
-		case strings.HasPrefix(line, "rename to "):
-			file.Name, _ = unquoteDiffName(strings.TrimPrefix(line, "rename to "), "")
-
-			// No need to look for index if it's a pure rename
-			if pureRename {
-				break checkType
-			}
+			_, name, _ := strings.Cut(line, " from ")
+			file.oldName, _ = unquoteDiffName(name, "")
+		case strings.HasPrefix(line, "rename to "), strings.HasPrefix(line, "copy to "):
+			_, name, _ := strings.Cut(line, " to ")
+			file.Name, _ = unquoteDiffName(name, "")
 		case strings.HasPrefix(line, "new mode"):
 			fields := strings.Fields(line)
 			if len(fields) > 0 {

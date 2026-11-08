@@ -925,6 +925,45 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 		assert.Equal(t, "q", result.Diff.Files[2].Name)
 	})
 
+	t.Run("files without an index line", func(t *testing.T) {
+		const diff = "diff --git a/src b/copy\n" +
+			"similarity index 100%\n" +
+			"copy from src\n" +
+			"copy to copy\n" +
+			"diff --git a/del b/del\n" +
+			"deleted file mode 100644\n" +
+			"index 4bcfe98e640c8284511312660fb8709b0afa888e..0000000000000000000000000000000000000000\n" +
+			"--- a/del\n" +
+			"+++ /dev/null\n" +
+			"@@ -1 +0,0 @@\n" +
+			"-d\n" +
+			"diff --git a/m b/m\n" +
+			"old mode 100644\n" +
+			"new mode 100755\n" +
+			"diff --git a/old b/new\n" +
+			"old mode 100644\n" +
+			"new mode 100755\n" +
+			"similarity index 100%\n" +
+			"rename from old\n" +
+			"rename to new\n"
+		done := make(chan streamParseDiffResult)
+		go streamParseDiff(strings.NewReader(diff), done, 0, 0, 0)
+		result := <-done
+		require.NoError(t, result.Err)
+
+		var got []string
+		for _, f := range result.Diff.Files {
+			got = append(got, fmt.Sprintf("%d %s -> %s %o", f.Type, f.OldName(), f.Name, f.Mode()))
+		}
+		assert.Equal(t, []string{
+			fmt.Sprintf("%d src -> copy 0", DiffFileRename),
+			fmt.Sprintf("%d del -> del 100644", DiffFileDelete),
+			fmt.Sprintf("%d m -> m 100755", DiffFileChange),
+			fmt.Sprintf("%d old -> new 100755", DiffFileRename),
+		}, got)
+		assert.Equal(t, 1, result.Diff.Files[1].NumDeletions())
+	})
+
 	t.Run("malformed header", func(t *testing.T) {
 		done := make(chan streamParseDiffResult)
 		go streamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
