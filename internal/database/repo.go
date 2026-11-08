@@ -857,6 +857,20 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 	repo.IsEmpty = !hasBranches
 
+	// HEAD may point to a branch that does not exist while other branches do, in
+	// which case any existing branch becomes the default branch.
+	if !repo.IsEmpty && !gitRepo.HasBranch(context.TODO(), repo.DefaultBranch) {
+		branches, err := gitRepo.Branches(context.TODO())
+		if err != nil {
+			return repo, errors.Wrap(err, "list branches")
+		}
+		repo.DefaultBranch = branches[0]
+		_, err = gitRepo.SymbolicRef(context.TODO(), git.SymbolicRefOptions{Ref: git.RefsHeads + repo.DefaultBranch})
+		if err != nil {
+			return repo, errors.Wrap(err, "set HEAD branch")
+		}
+	}
+
 	if !repo.IsEmpty {
 		if err = repo.UpdateSize(); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
