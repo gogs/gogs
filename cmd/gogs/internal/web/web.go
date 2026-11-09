@@ -453,10 +453,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// **********************
 
 		// TODO: Without session
-		m.Group("/api", func() {
-			apiv1.RegisterRoutes(m)
-		}, ignSignIn)
-
+		m.Any("/api/v1/*", ignSignIn, apiV1Bridger(webHandler))
 		m.Any("/api/web/*", flamegoBridger(webHandler))
 		m.Get("/redirect", flamegoBridger(webHandler))
 		m.Get("/captcha/*", flamegoBridger(webHandler))
@@ -665,6 +662,7 @@ func newRoutingHandler() (http.Handler, error) {
 	}, requireViewAccess, withRepoContext)
 
 	mountWebLocaleRoutes(f)
+	apiv1.RegisterRoutes(f)
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
 	if err != nil {
@@ -740,8 +738,9 @@ func newMacaron() (*macaron.Macaron, error) {
 		},
 	))
 
-	// API v1, Git HTTP and LFS still write JSON and plain text through
-	// Macaron's renderer, which no page template is rendered with anymore.
+	// The sign-in checks, the go-get page and the public SSH keys still write
+	// JSON and plain text through Macaron's renderer, which no page template is
+	// rendered with anymore.
 	m.Use(macaron.Renderer(macaron.RenderOptions{TemplateFileSystem: noTemplates{}}))
 
 	localeNames, err := embedconf.FileNames("locale")

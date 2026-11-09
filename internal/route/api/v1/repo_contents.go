@@ -8,7 +8,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/pathx"
@@ -38,14 +37,14 @@ type repoContent struct {
 	Links           links  `json:"_links"`
 }
 
-func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commit, entry *git.TreeEntry) (*repoContent, error) {
-	repoURL := fmt.Sprintf("%s/repos/%s/%s", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+func toRepoContent(c *apiContext, ref, subpath string, commit *git.Commit, entry *git.TreeEntry) (*repoContent, error) {
+	repoURL := fmt.Sprintf("%s/repos/%s/%s", c.BaseURL, c.Param("username"), c.Param("reponame"))
 	selfURL := fmt.Sprintf("%s/contents/%s", repoURL, subpath)
 	htmlURL := fmt.Sprintf("%s/src/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
 	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
 
 	content := &repoContent{
-		Size:        entry.Size(c.Req.Context()),
+		Size:        entry.Size(c.Request().Context()),
 		Name:        entry.Name(),
 		Path:        subpath,
 		Sha:         entry.ID().String(),
@@ -61,7 +60,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 	switch {
 	case entry.IsBlob(), entry.IsExec():
 		content.Type = "file"
-		p, err := entry.Blob().Bytes(c.Req.Context())
+		p, err := entry.Blob().Bytes(c.Request().Context())
 		if err != nil {
 			return nil, errors.Wrap(err, "get blob content")
 		}
@@ -75,7 +74,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 
 	case entry.IsSymlink():
 		content.Type = "symlink"
-		p, err := entry.Blob().Bytes(c.Req.Context())
+		p, err := entry.Blob().Bytes(c.Request().Context())
 		if err != nil {
 			return nil, errors.Wrap(err, "get blob content")
 		}
@@ -83,7 +82,7 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 
 	case entry.IsCommit():
 		content.Type = "submodule"
-		mod, err := commit.Submodule(c.Req.Context(), subpath)
+		mod, err := commit.Submodule(c.Request().Context(), subpath)
 		if err != nil {
 			return nil, errors.Wrap(err, "get submodule")
 		}
@@ -97,8 +96,8 @@ func toRepoContent(c *context.APIContext, ref, subpath string, commit *git.Commi
 	return content, nil
 }
 
-func getContents(c *context.APIContext) {
-	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+func getContents(c *apiContext) {
+	repoPath := repox.RepositoryPath(c.Param("username"), c.Param("reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
@@ -110,15 +109,15 @@ func getContents(c *context.APIContext) {
 		ref = c.Repo.Repository.DefaultBranch
 	}
 
-	commit, err := gitRepo.CatFileCommit(c.Req.Context(), ref)
+	commit, err := gitRepo.CatFileCommit(c.Request().Context(), ref)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get commit")
 		return
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathx.Clean(c.Params("*"))
-	entry, err := commit.TreeEntry(c.Req.Context(), treePath)
+	treePath := pathx.Clean(c.Param("**"))
+	entry, err := commit.TreeEntry(c.Request().Context(), treePath)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get tree entry")
 		return
@@ -136,13 +135,13 @@ func getContents(c *context.APIContext) {
 	}
 
 	// The entry is a directory
-	dir, err := gitRepo.LsTree(c.Req.Context(), entry.ID().String())
+	dir, err := gitRepo.LsTree(c.Request().Context(), entry.ID().String())
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get tree")
 		return
 	}
 
-	entries, err := dir.Entries(c.Req.Context())
+	entries, err := dir.Entries(c.Request().Context())
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "list entries")
 		return
@@ -169,13 +168,13 @@ func getContents(c *context.APIContext) {
 
 // putContentsRequest is the API message for creating or updating a file.
 type putContentsRequest struct {
-	Message string `json:"message" binding:"Required"`
-	Content string `json:"content" binding:"Required"`
+	Message string `json:"message" validate:"required"`
+	Content string `json:"content" validate:"required"`
 	Branch  string `json:"branch"`
 }
 
 // PUT /repos/:username/:reponame/contents/*
-func putContents(c *context.APIContext, r putContentsRequest) {
+func putContents(c *apiContext, r putContentsRequest) {
 	content, err := base64.StdEncoding.DecodeString(r.Content)
 	if err != nil {
 		c.Error(err, "decoding base64")
@@ -187,10 +186,10 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	}
 
 	// 🚨 SECURITY: Prevent path traversal.
-	treePath := pathx.Clean(c.Params("*"))
+	treePath := pathx.Clean(c.Param("**"))
 
 	err = c.Repo.Repository.UpdateRepoFile(
-		c.Req.Context(),
+		c.Request().Context(),
 		c.User,
 		database.UpdateRepoFileOptions{
 			OldBranch:   c.Repo.Repository.DefaultBranch,
@@ -206,14 +205,14 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 		return
 	}
 
-	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
-	commit, err := git.RepoCatFileCommit(c.Req.Context(), repoPath, r.Branch)
+	repoPath := repox.RepositoryPath(c.Param("username"), c.Param("reponame"))
+	commit, err := git.RepoCatFileCommit(c.Request().Context(), repoPath, r.Branch)
 	if err != nil {
 		c.Error(err, "get file commit")
 		return
 	}
 
-	entry, err := commit.TreeEntry(c.Req.Context(), treePath)
+	entry, err := commit.TreeEntry(c.Request().Context(), treePath)
 	if err != nil {
 		c.Error(err, "get tree entry")
 		return

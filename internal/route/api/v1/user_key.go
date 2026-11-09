@@ -6,13 +6,12 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func getUserByParamsName(c *context.APIContext, name string) *database.User {
-	user, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(name))
+func getUserByParamsName(c *apiContext, name string) *database.User {
+	user, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param(name))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return nil
@@ -20,15 +19,15 @@ func getUserByParamsName(c *context.APIContext, name string) *database.User {
 	return user
 }
 
-func getUserByParams(c *context.APIContext) *database.User {
-	return getUserByParamsName(c, ":username")
+func getUserByParams(c *apiContext) *database.User {
+	return getUserByParamsName(c, "username")
 }
 
 func composePublicKeysAPILink() string {
 	return conf.Server.ExternalURL + "api/v1/user/keys/"
 }
 
-func listPublicKeysOfUser(c *context.APIContext, uid int64) {
+func listPublicKeysOfUser(c *apiContext, uid int64) {
 	keys, err := database.ListPublicKeys(uid)
 	if err != nil {
 		c.Error(err, "list public keys")
@@ -44,11 +43,11 @@ func listPublicKeysOfUser(c *context.APIContext, uid int64) {
 	c.JSONSuccess(&apiKeys)
 }
 
-func listMyPublicKeys(c *context.APIContext) {
+func listMyPublicKeys(c *apiContext) {
 	listPublicKeysOfUser(c, c.User.ID)
 }
 
-func listPublicKeys(c *context.APIContext) {
+func listPublicKeys(c *apiContext) {
 	user := getUserByParams(c)
 	if c.Written() {
 		return
@@ -56,8 +55,8 @@ func listPublicKeys(c *context.APIContext) {
 	listPublicKeysOfUser(c, user.ID)
 }
 
-func getPublicKey(c *context.APIContext) {
-	key, err := database.GetPublicKeyByID(c.ParamsInt64(":id"))
+func getPublicKey(c *apiContext) {
+	key, err := database.GetPublicKeyByID(c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get public key by ID")
 		return
@@ -68,11 +67,11 @@ func getPublicKey(c *context.APIContext) {
 }
 
 type createPublicKeyRequest struct {
-	Title string `json:"title" binding:"Required"`
-	Key   string `json:"key" binding:"Required"`
+	Title string `json:"title" validate:"required"`
+	Key   string `json:"key" validate:"required"`
 }
 
-func createUserPublicKey(c *context.APIContext, form createPublicKeyRequest, uid int64) {
+func createUserPublicKey(c *apiContext, form createPublicKeyRequest, uid int64) {
 	content, err := database.CheckPublicKeyString(form.Key)
 	if err != nil {
 		handleCheckKeyStringError(c, err)
@@ -88,12 +87,12 @@ func createUserPublicKey(c *context.APIContext, form createPublicKeyRequest, uid
 	c.JSON(http.StatusCreated, toUserPublicKey(apiLink, key))
 }
 
-func createPublicKey(c *context.APIContext, form createPublicKeyRequest) {
+func createPublicKey(c *apiContext, form createPublicKeyRequest) {
 	createUserPublicKey(c, form, c.User.ID)
 }
 
-func deletePublicKey(c *context.APIContext) {
-	if err := database.DeletePublicKey(c.User, c.ParamsInt64(":id")); err != nil {
+func deletePublicKey(c *apiContext) {
+	if err := database.DeletePublicKey(c.User, c.ParamInt64("id")); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key."))
 		} else {

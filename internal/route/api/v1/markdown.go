@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -11,20 +10,20 @@ type markdownRequest struct {
 	Context string
 }
 
-func markdown(c *context.APIContext, form markdownRequest) {
+func markdown(c *apiContext, form markdownRequest) {
 	if form.Text == "" {
-		_, _ = c.Write([]byte(""))
+		_, _ = c.ResponseWriter().Write([]byte(""))
 		return
 	}
 
-	_, _ = c.Write(markup.Markdown([]byte(form.Text), form.Context, nil))
+	_, _ = c.ResponseWriter().Write(markup.Markdown([]byte(form.Text), form.Context, nil))
 }
 
-func markdownRaw(c *context.APIContext) {
-	body, err := c.Req.Body().Bytes()
+func markdownRaw(c *apiContext) {
+	body, err := c.Request().Body().Bytes()
 	if err != nil {
 		c.Error(err, "read body")
 		return
 	}
-	_, _ = c.Write(markup.SanitizeBytes(markup.RawMarkdown(body, "")))
+	_, _ = c.ResponseWriter().Write(markup.SanitizeBytes(markup.RawMarkdown(body, "")))
 }

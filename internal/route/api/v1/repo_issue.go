@@ -7,12 +7,11 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func queryIssues(c *context.APIContext, opts *database.IssuesOptions) {
+func queryIssues(c *apiContext, opts *database.IssuesOptions) {
 	issues, err := database.Issues(opts)
 	if err != nil {
 		c.Error(err, "list issues")
@@ -39,7 +38,7 @@ func queryIssues(c *context.APIContext, opts *database.IssuesOptions) {
 	c.JSONSuccess(&apiIssues)
 }
 
-func listUserIssues(c *context.APIContext) {
+func listUserIssues(c *apiContext) {
 	opts := database.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
@@ -49,7 +48,7 @@ func listUserIssues(c *context.APIContext) {
 	queryIssues(c, &opts)
 }
 
-func listIssues(c *context.APIContext) {
+func listIssues(c *apiContext) {
 	opts := database.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
 		Page:     c.QueryInt("page"),
@@ -59,8 +58,8 @@ func listIssues(c *context.APIContext) {
 	queryIssues(c, &opts)
 }
 
-func getIssue(c *context.APIContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func getIssue(c *apiContext) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -69,7 +68,7 @@ func getIssue(c *context.APIContext) {
 }
 
 type createIssueRequest struct {
-	Title     string  `json:"title" binding:"Required"`
+	Title     string  `json:"title" validate:"required"`
 	Body      string  `json:"body"`
 	Assignee  string  `json:"assignee"`
 	Milestone int64   `json:"milestone"`
@@ -77,7 +76,7 @@ type createIssueRequest struct {
 	Closed    bool    `json:"closed"`
 }
 
-func createIssue(c *context.APIContext, form createIssueRequest) {
+func createIssue(c *apiContext, form createIssueRequest) {
 	issue := &database.Issue{
 		RepoID:   c.Repo.Repository.ID,
 		Title:    form.Title,
@@ -88,7 +87,7 @@ func createIssue(c *context.APIContext, form createIssueRequest) {
 
 	if c.Repo.IsWriter() {
 		if len(form.Assignee) > 0 {
-			assignee, err := database.Handle.Users().GetByUsername(c.Req.Context(), form.Assignee)
+			assignee, err := database.Handle.Users().GetByUsername(c.Request().Context(), form.Assignee)
 			if err != nil {
 				if database.IsErrUserNotExist(err) {
 					c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee does not exist: [name: %s]", form.Assignee))
@@ -134,8 +133,8 @@ type editIssueRequest struct {
 	State     *string `json:"state"`
 }
 
-func editIssue(c *context.APIContext, form editIssueRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func editIssue(c *apiContext, form editIssueRequest) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -158,7 +157,7 @@ func editIssue(c *context.APIContext, form editIssueRequest) {
 		if *form.Assignee == "" {
 			issue.AssigneeID = 0
 		} else {
-			assignee, err := database.Handle.Users().GetByUsername(c.Req.Context(), *form.Assignee)
+			assignee, err := database.Handle.Users().GetByUsername(c.Request().Context(), *form.Assignee)
 			if err != nil {
 				if database.IsErrUserNotExist(err) {
 					c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee does not exist: [name: %s]", *form.Assignee))
