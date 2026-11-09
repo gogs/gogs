@@ -225,6 +225,14 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		}
 		f.Group("/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
+		f.Group("/admin", func() {
+			f.Get("/users", getAdminUsers)
+			f.Get("/orgs", getAdminOrgs)
+			f.Get("/repos", getAdminRepos)
+			f.Delete("/repos/{id}", deleteAdminRepo)
+			f.Combo("/notices").Get(getAdminNotices).Delete(bindJSON(adminNoticesDeleteRequest{}), deleteAdminNotices)
+			f.Delete("/notices/all", deleteAllAdminNotices)
+		}, requireAuthenticated, requireAdmin)
 		f.Post("/orgs", requireAuthenticated, bindJSON(orgCreateRequest{}), postOrg)
 		f.Group("/orgs/{org}", func() {
 			f.Delete("", bindJSON(orgDeleteRequest{}), deleteOrg)
