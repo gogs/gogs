@@ -109,16 +109,12 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		return errors.Wrap(err, "set engine")
 	}
 
-	// Database
-	dbDir := path.Join(archivePath, "db")
-	if err = database.ImportDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
-		log.Fatal("Failed to import database: %v", err)
-	}
-
+	// Files are restored before the database because the current ones are kept as "<path>.bak" and can be moved
+	// back by hand, whereas a failed database import cannot be undone.
 	if !cmd.Bool("database-only") {
 		// Custom files
 		if osx.IsDir(conf.CustomDir()) {
-			if err = os.Rename(conf.CustomDir(), conf.CustomDir()+".bak"); err != nil {
+			if err = moveAside(conf.CustomDir()); err != nil {
 				log.Fatal("Failed to backup current 'custom': %v", err)
 			}
 		}
@@ -128,7 +124,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 		// Data files
 		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
-		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
+		for _, dir := range backupDataDirs {
 			// Skip if backup archive does not have corresponding data
 			srcPath := filepath.Join(archivePath, "data", dir)
 			if !osx.IsDir(srcPath) {
@@ -137,7 +133,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if osx.IsDir(dirPath) {
-				if err = os.Rename(dirPath, dirPath+".bak"); err != nil {
+				if err = moveAside(dirPath); err != nil {
 					log.Fatal("Failed to backup current 'data': %v", err)
 				}
 			}
@@ -145,6 +141,12 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 				log.Fatal("Failed to import 'data': %v", err)
 			}
 		}
+	}
+
+	// Database
+	dbDir := path.Join(archivePath, "db")
+	if err = database.ImportDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
+		log.Fatal("Failed to import database: %v", err)
 	}
 
 	// Repositories
@@ -158,4 +160,15 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	log.Info("Restore succeed!")
 	log.Stop()
 	return nil
+}
+
+// moveAside renames the path to "<path>.bak" to make room for the restored copy.
+func moveAside(path string) error {
+	// Renaming onto a leftover from an earlier restore fails with an unhelpful error, e.g., "Access is denied" on
+	// Windows. The path is quoted with '%s' rather than %q because %q escapes every backslash in a Windows path,
+	// which makes the path harder to read and copy from the message.
+	if osx.Exist(path + ".bak") {
+		return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
+	}
+	return os.Rename(path, path+".bak")
 }
