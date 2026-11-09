@@ -17,6 +17,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Argument injection through a crafted branch name when creating a pull request allowed an authenticated user with write access to write files to arbitrary paths on the server. [#8390](https://github.com/gogs/gogs/pull/8390) - [GHSA-2grc-qr7q-6m36](https://github.com/gogs/gogs/security/advisories/GHSA-2grc-qr7q-6m36)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
+- `gogs restore` now restores the built-in SSH server's host keys included in the backup, so clients no longer see a changed host key after restoring to a new server. [#8453](https://github.com/gogs/gogs/pull/8453)
 
 ### Removed
 

@@ -44,6 +44,9 @@ const (
 	archiveRootDir             = "gogs-backup"
 )
 
+// backupDataDirs are the directories under the app data path that are included in a backup and restored from it.
+var backupDataDirs = []string{"ssh", "attachments", "avatars", "repo-avatars"}
+
 func runBackup(ctx context.Context, cmd *cli.Command) error {
 	zip.Verbose = cmd.Bool("verbose")
 
@@ -106,7 +109,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		// Data files
-		for _, dir := range []string{"ssh", "attachments", "avatars", "repo-avatars"} {
+		for _, dir := range backupDataDirs {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if !osx.IsDir(dirPath) {
 				continue
