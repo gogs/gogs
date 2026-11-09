@@ -3,19 +3,18 @@ package v1
 import (
 	"fmt"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/git"
 )
 
-func getRepoGitTree(c *context.APIContext) {
-	sha := c.Params(":sha")
-	tree, err := git.RepoLsTree(c.Req.Context(), c.Repo.Repository.RepoPath(), sha)
+func getRepoGitTree(c *apiContext) {
+	sha := c.Param("sha")
+	tree, err := git.RepoLsTree(c.Request().Context(), c.Repo.Repository.RepoPath(), sha)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get tree")
 		return
 	}
 
-	entries, err := tree.Entries(c.Req.Context())
+	entries, err := tree.Entries(c.Request().Context())
 	if err != nil {
 		c.Error(err, "list entries")
 		return
@@ -35,7 +34,7 @@ func getRepoGitTree(c *context.APIContext) {
 		Tree []*repoGitTreeEntry `json:"tree"`
 	}
 
-	treesURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+	treesURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Param("username"), c.Param("reponame"))
 
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{
@@ -64,13 +63,13 @@ func getRepoGitTree(c *context.APIContext) {
 			Path: entry.Name(),
 			Mode: mode,
 			Type: string(entry.Type()),
-			Size: entry.Size(c.Req.Context()),
+			Size: entry.Size(c.Request().Context()),
 			Sha:  entry.ID().String(),
 			URL:  fmt.Sprintf(treesURL+"/%s", entry.ID().String()),
 		})
 	}
 	c.JSONSuccess(&repoGitTree{
-		Sha:  c.Params(":sha"),
+		Sha:  c.Param("sha"),
 		URL:  fmt.Sprintf(treesURL+"/%s", sha),
 		Tree: children,
 	})

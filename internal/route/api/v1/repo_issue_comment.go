@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listIssueComments(c *context.APIContext) {
+func listIssueComments(c *apiContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
 		var err error
@@ -21,7 +20,7 @@ func listIssueComments(c *context.APIContext) {
 	}
 
 	// comments,err:=db.GetCommentsByIssueIDSince(, since)
-	issue, err := database.GetRawIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+	issue, err := database.GetRawIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.Error(err, "get raw issue by index")
 		return
@@ -40,7 +39,7 @@ func listIssueComments(c *context.APIContext) {
 	c.JSONSuccess(&apiComments)
 }
 
-func listRepoIssueComments(c *context.APIContext) {
+func listRepoIssueComments(c *apiContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
 		var err error
@@ -65,11 +64,11 @@ func listRepoIssueComments(c *context.APIContext) {
 }
 
 type createIssueCommentRequest struct {
-	Body string `json:"body" binding:"Required"`
+	Body string `json:"body" validate:"required"`
 }
 
-func createIssueComment(c *context.APIContext, form createIssueCommentRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func createIssueComment(c *apiContext, form createIssueCommentRequest) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.Error(err, "get issue by index")
 		return
@@ -85,11 +84,11 @@ func createIssueComment(c *context.APIContext, form createIssueCommentRequest) {
 }
 
 type editIssueCommentRequest struct {
-	Body string `json:"body" binding:"Required"`
+	Body string `json:"body" validate:"required"`
 }
 
-func editIssueComment(c *context.APIContext, form editIssueCommentRequest) {
-	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
+func editIssueComment(c *apiContext, form editIssueCommentRequest) {
+	comment, err := database.GetCommentByID(c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
 		return
@@ -123,8 +122,8 @@ func editIssueComment(c *context.APIContext, form editIssueCommentRequest) {
 	c.JSONSuccess(toIssueComment(comment))
 }
 
-func deleteIssueComment(c *context.APIContext) {
-	comment, err := database.GetCommentByID(c.ParamsInt64(":id"))
+func deleteIssueComment(c *apiContext) {
+	comment, err := database.GetCommentByID(c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
 		return

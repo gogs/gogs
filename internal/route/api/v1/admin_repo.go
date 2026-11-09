@@ -1,10 +1,6 @@
 package v1
 
-import (
-	"gogs.io/gogs/internal/context"
-)
-
-func adminCreateRepo(c *context.APIContext, form createRepoRequest) {
+func adminCreateRepo(c *apiContext, form createRepoRequest) {
 	owner := getUserByParams(c)
 	if c.Written() {
 		return
