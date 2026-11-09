@@ -35,8 +35,9 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
     const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
     throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {});
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // Some changes answer without a body, e.g., 201 Created for a new SSH key.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 // uploadAvatar uploads an avatar image as a form.

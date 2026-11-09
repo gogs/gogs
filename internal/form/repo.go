@@ -80,37 +80,6 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 	return remoteAddr, nil
 }
 
-type RepoSetting struct {
-	RepoName      string `binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Description   string `binding:"MaxSize(512)"`
-	Website       string `binding:"Url;MaxSize(100)"`
-	Branch        string
-	Interval      int
-	MirrorAddress string
-	Private       bool
-	Unlisted      bool
-	EnablePrune   bool
-
-	// Advanced settings
-	EnableWiki            bool
-	AllowPublicWiki       bool
-	EnableExternalWiki    bool
-	ExternalWikiURL       string
-	EnableIssues          bool
-	AllowPublicIssues     bool
-	EnableExternalTracker bool
-	ExternalTrackerURL    string
-	TrackerURLFormat      string
-	TrackerIssueStyle     string
-	EnablePulls           bool
-	PullsIgnoreWhitespace bool
-	PullsAllowRebase      bool
-}
-
-func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 // __________                             .__
 // \______   \____________    ____   ____ |  |__
 //  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \

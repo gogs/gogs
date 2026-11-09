@@ -2,7 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { UserListPage } from "@/components/UserListItem";
 import { loaderResponseError } from "@/lib/loader-error";
-import { fetchJSON, submit } from "@/lib/queries/request";
+import { fetchJSON, send, submit, uploadAvatar } from "@/lib/queries/request";
+import type { SSHKey } from "@/lib/queries/settings";
 import { subUrl } from "@/lib/url";
 
 export interface RepoHeaderData {
@@ -167,4 +168,153 @@ export interface RepoForkForm {
 // forkRepo forks a repository, or finds the owner's existing fork of it.
 export function forkRepo(id: number, form: RepoForkForm) {
   return submit<{ owner: string; name: string }>("POST", subUrl(`/api/web/repo/fork/${id}`), form);
+}
+
+export interface RepoAdvancedSettings {
+  enableWiki: boolean;
+  allowPublicWiki: boolean;
+  enableExternalWiki: boolean;
+  externalWikiURL: string;
+  enableIssues: boolean;
+  allowPublicIssues: boolean;
+  enableExternalTracker: boolean;
+  externalTrackerURL: string;
+  externalTrackerFormat: string;
+  externalTrackerStyle: string;
+  enablePulls: boolean;
+  pullsIgnoreWhitespace: boolean;
+  pullsAllowRebase: boolean;
+}
+
+export interface RepoMirrorSettings {
+  address: string;
+  interval: number;
+  enablePrune: boolean;
+  // Only sent for mirrors that synced since they were created.
+  lastSyncedAt?: string;
+}
+
+export interface RepoSettingsData {
+  name: string;
+  description: string;
+  website: string;
+  private: boolean;
+  unlisted: boolean;
+  // Forks keep the visibility of their base repository.
+  isFork: boolean;
+  forkCount: number;
+  avatarURL: string;
+  hasCustomAvatar: boolean;
+  advanced: RepoAdvancedSettings;
+  canEnablePulls: boolean;
+  // Only sent for mirrors.
+  mirror?: RepoMirrorSettings;
+  ownerIsOrganization: boolean;
+  // The owners of the repository see its danger zone.
+  viewerIsOwner: boolean;
+  viewerCanEditGitHooks: boolean;
+}
+
+function repoSettingsURL(owner: string, name: string, path = "") {
+  return subUrl(`/api/web/${owner}/${name}/settings${path}`);
+}
+
+// repoSettingsQuery fetches the settings of a repository, which only its
+// admins can see.
+export function repoSettingsQuery(owner: string, name: string) {
+  return queryOptions({
+    queryKey: ["repo", owner, name, "settings"] as const,
+    queryFn: () => fetchJSON<RepoSettingsData>(repoSettingsURL(owner, name)),
+  });
+}
+
+export interface RepoSettingsForm {
+  name: string;
+  description: string;
+  website: string;
+  private: boolean;
+  unlisted: boolean;
+}
+
+export function updateRepoSettings(owner: string, name: string, form: RepoSettingsForm) {
+  return submit<{ owner: string; name: string }>("PATCH", repoSettingsURL(owner, name), form);
+}
+
+export function uploadRepoAvatar(owner: string, name: string, file: File) {
+  return uploadAvatar(repoSettingsURL(owner, name, "/avatar"), file);
+}
+
+export function deleteRepoAvatar(owner: string, name: string) {
+  return send("DELETE", repoSettingsURL(owner, name, "/avatar"));
+}
+
+export function updateRepoMirror(
+  owner: string,
+  name: string,
+  form: { address: string; interval: number; enablePrune: boolean },
+) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, "/mirror"), form);
+}
+
+export function syncRepoMirror(owner: string, name: string) {
+  return submit<void>("POST", repoSettingsURL(owner, name, "/mirror/sync"), {});
+}
+
+export function updateRepoAdvanced(owner: string, name: string, form: RepoAdvancedSettings) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, "/advanced"), form);
+}
+
+export function convertRepo(owner: string, name: string, repoName: string) {
+  return submit<void>("POST", repoSettingsURL(owner, name, "/convert"), { repoName });
+}
+
+export function transferRepo(owner: string, name: string, form: { repoName: string; newOwner: string }) {
+  return submit<{ owner: string; name: string }>("POST", repoSettingsURL(owner, name, "/transfer"), form);
+}
+
+export function deleteRepoWiki(owner: string, name: string, repoName: string) {
+  return submit<void>("DELETE", repoSettingsURL(owner, name, "/wiki"), { repoName });
+}
+
+export function deleteRepo(owner: string, name: string, repoName: string) {
+  return submit<void>("DELETE", subUrl(`/api/web/${owner}/${name}`), { repoName });
+}
+
+export type RepoCollaboratorMode = "read" | "write" | "admin";
+
+export interface RepoCollaborator {
+  name: string;
+  fullName: string;
+  avatarURL: string;
+  mode: RepoCollaboratorMode;
+}
+
+export async function fetchRepoCollaborators(owner: string, name: string) {
+  return (await fetchJSON<{ items: RepoCollaborator[] }>(repoSettingsURL(owner, name, "/collaborators"))).items;
+}
+
+export function addRepoCollaborator(owner: string, name: string, username: string) {
+  return submit<void>("POST", repoSettingsURL(owner, name, "/collaborators"), { username });
+}
+
+export function changeRepoCollaborator(owner: string, name: string, username: string, mode: RepoCollaboratorMode) {
+  return submit<void>("PATCH", repoSettingsURL(owner, name, `/collaborators/${encodeURIComponent(username)}`), {
+    mode,
+  });
+}
+
+export function removeRepoCollaborator(owner: string, name: string, username: string) {
+  return send("DELETE", repoSettingsURL(owner, name, `/collaborators/${encodeURIComponent(username)}`));
+}
+
+export async function fetchRepoDeployKeys(owner: string, name: string) {
+  return (await fetchJSON<{ items: SSHKey[] }>(repoSettingsURL(owner, name, "/keys"))).items;
+}
+
+export function addRepoDeployKey(owner: string, name: string, form: { title: string; content: string }) {
+  return submit<void>("POST", repoSettingsURL(owner, name, "/keys"), form);
+}
+
+export function deleteRepoDeployKey(owner: string, name: string, id: number) {
+  return send("DELETE", repoSettingsURL(owner, name, `/keys/${id}`));
 }

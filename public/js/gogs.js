@@ -315,27 +315,6 @@ function initRepository() {
     initFilterSearchDropdown(".choose.page .dropdown");
   }
 
-  // Options
-  if ($(".repository.settings.options").length > 0) {
-    $("#repo_name").keyup(function() {
-      var $prompt = $("#repo-name-change-prompt");
-      if (
-        $(this)
-          .val()
-          .toString()
-          .toLowerCase() !=
-        $(this)
-          .data("repo-name")
-          .toString()
-          .toLowerCase()
-      ) {
-        $prompt.show();
-      } else {
-        $prompt.hide();
-      }
-    });
-  }
-
   // Branches
   if ($(".repository.settings.branches").length > 0) {
     initFilterSearchDropdown(".protected-branches .dropdown");
@@ -997,67 +976,6 @@ function hideWhenLostFocus(body, parent) {
   });
 }
 
-function searchUsers() {
-  if (!$("#search-user-box .results").length) {
-    return;
-  }
-
-  var $searchUserBox = $("#search-user-box");
-  var $results = $searchUserBox.find(".results");
-  $searchUserBox.keyup(function() {
-    var $this = $(this);
-    var keyword = $this.find("input").val();
-    if (keyword.length < 2) {
-      $results.hide();
-      return;
-    }
-
-    $.ajax({
-      url: suburl + "/api/v1/users/search?q=" + keyword,
-      dataType: "json",
-      success: function(response) {
-        var notEmpty = function(str) {
-          return str && str.length > 0;
-        };
-
-        $results.html("");
-
-        if (response.ok && response.data.length) {
-          var html = "";
-          $.each(response.data, function(i, item) {
-            html +=
-              '<div class="item"><img class="ui avatar image" src="' +
-              item.avatar_url +
-              '"><span class="username">' +
-              item.username +
-              "</span>";
-            if (notEmpty(item.full_name)) {
-              html += " (" + item.full_name + ")";
-            }
-            html += "</div>";
-          });
-          $results.html(html);
-          $this.find(".results .item").click(function() {
-            $this.find("input").val(
-              $(this)
-                .find(".username")
-                .text()
-            );
-            $results.hide();
-          });
-          $results.show();
-        } else {
-          $results.hide();
-        }
-      }
-    });
-  });
-  $searchUserBox.find("input").focus(function() {
-    $searchUserBox.keyup();
-  });
-  hideWhenLostFocus("#search-user-box .results", "#search-user-box");
-}
-
 // FIXME: merge common parts in two functions
 function searchRepositories() {
   if (!$("#search-repo-box .results").length) {
@@ -1156,19 +1074,6 @@ function initCodeView() {
       })
       .trigger("hashchange");
   }
-}
-
-function initRepositoryCollaboration() {
-  console.log("initRepositoryCollaboration");
-
-  // Change collaborator access mode
-  $(".access-mode.menu .item").click(function() {
-    var $menu = $(this).parent();
-    $.post($menu.data("url"), {
-      uid: $menu.data("uid"),
-      mode: $(this).data("value")
-    });
-  });
 }
 
 function initWebhookSettings() {
@@ -1338,12 +1243,6 @@ $(document).ready(function() {
     );
   });
 
-  // Autosize
-  if ($("#description.autosize").length > 0) {
-    autosize($("#description"));
-    showMessageMaxLength(512, "description", "descLength");
-  }
-
   // Helpers
   $(".delete-button").click(function() {
     var $this = $(this);
@@ -1366,18 +1265,8 @@ $(document).ready(function() {
       .modal("show");
     return false;
   });
-  $(".show-panel.button").click(function() {
-    $($(this).data("panel")).show();
-  });
   $(".show-modal.button").click(function() {
     $($(this).data("modal")).modal("show");
-  });
-  $(".delete-post.button").click(function() {
-    var $this = $(this);
-    $.post($this.data("request-url"), {
-    }).done(function() {
-      window.location.href = $this.data("done-url");
-    });
   });
   // To make arbitrary form element to behave like a submit button
   $(".submit-button").click(function() {
@@ -1399,21 +1288,6 @@ $(document).ready(function() {
     }).fail(function() {
       window.location.assign(doneUrl);
     });
-  });
-
-  // Check or select on option to enable/disable target region
-  $(".enable-system").change(function() {
-    if (this.checked) {
-      $($(this).data("target")).removeClass("disabled");
-    } else {
-      $($(this).data("target")).addClass("disabled");
-      $($(this).data("uncheck")).prop("checked", false);
-    }
-  });
-  $(".enable-system-radio").change(function() {
-    $($(this).data("enable")).removeClass("disabled");
-    $($(this).data("disable")).addClass("disabled");
-    $($(this).data("uncheck")).prop("checked", false);
   });
 
   // Set anchor.
@@ -1466,7 +1340,6 @@ $(document).ready(function() {
   });
 
   buttonsClickOnEnter();
-  searchUsers();
   searchRepositories();
 
   initCommentForm();
@@ -1491,7 +1364,6 @@ $(document).ready(function() {
   }
 
   var routes = {
-    "div.repository.settings.collaboration": initRepositoryCollaboration,
     "div.webhook.settings": initWebhookSettings
   };
 
@@ -1549,50 +1421,3 @@ $(function() {
   if ($(".user.signin").length > 0) return;
   $("form").areYouSure();
 });
-
-// getByteLen counts bytes in a string's UTF-8 representation.
-function getByteLen(normalVal) {
-  // Force string type
-  normalVal = String(normalVal);
-
-  var byteLen = 0;
-  for (var i = 0; i < normalVal.length; i++) {
-    var c = normalVal.charCodeAt(i);
-    byteLen +=
-      c < 1 << 7
-        ? 1
-        : c < 1 << 11
-        ? 2
-        : c < 1 << 16
-        ? 3
-        : c < 1 << 21
-        ? 4
-        : c < 1 << 26
-        ? 5
-        : c < 1 << 31
-        ? 6
-        : Number.NaN;
-  }
-  return byteLen;
-}
-
-function showMessageMaxLength(maxLen, textElemId, counterId) {
-  var $msg = $("#" + textElemId);
-  $("#" + counterId).html(maxLen - getByteLen($msg.val()));
-
-  var onMessageKey = function(e) {
-    var $msg = $(this);
-    var text = $msg.val();
-    var len = getByteLen(text);
-    var remainder = maxLen - len;
-
-    if (len >= maxLen) {
-      $msg.val($msg.val().substr(0, maxLen));
-      remainder = 0;
-    }
-
-    $("#" + counterId).html(remainder);
-  };
-
-  $msg.keyup(onMessageKey).keydown(onMessageKey);
-}
