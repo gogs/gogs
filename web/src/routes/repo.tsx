@@ -3,11 +3,11 @@ import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-
 
 import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
 import { type PageSearch, validatePageSearch } from "@/lib/page-search";
-import { fetchRepoNewOptions, fetchRepoPeople, repoHeaderQuery } from "@/lib/queries/repo";
+import { fetchRepoForkOptions, fetchRepoNewOptions, fetchRepoPeople, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
-import { RepoCreate, RepoMigrate } from "@/pages/repo/New";
+import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
 import { RepoPeople } from "@/pages/repo/People";
 
 // Match the legacy server-side route constraint (see `web.go` near the
@@ -188,5 +188,37 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [repoCommitRoute, repoStargazersRoute, repoWatchersRoute, repoCreateRoute, repoMigrateRoute];
+  const repoForkRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/repo/fork/$id",
+    loader: async ({ params }) => {
+      const id = Number(params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      try {
+        return { id, options: await fetchRepoForkOptions(id) };
+      } catch (err) {
+        if (err instanceof LoaderResponseError && err.status === 404) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+          throw notFound();
+        }
+        if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
+          // The viewer is signed out, has not confirmed their email, or is
+          // prohibited from signing in. Reload the page so the server sends them to
+          // sign in, account activation, or the login prohibited page.
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw redirect({ href: window.location.href, reloadDocument: true });
+        }
+        throw err;
+      }
+    },
+    component: function Fork() {
+      const { id, options } = repoForkRoute.useLoaderData();
+      return <RepoFork key={id} id={id} options={options} />;
+    },
+  });
+
+  return [repoCommitRoute, repoStargazersRoute, repoWatchersRoute, repoCreateRoute, repoMigrateRoute, repoForkRoute];
 }

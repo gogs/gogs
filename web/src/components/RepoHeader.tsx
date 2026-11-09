@@ -172,9 +172,8 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             />
             <SplitActionButton
               countHref={`${repoLink}/forks`}
-              // Fork still goes through the legacy "choose where to fork to"
-              // page (not yet migrated). Treat it as a navigation link, not a
-              // one-click action.
+              // Fork opens the page that chooses where to fork to, so it is a
+              // link rather than a one-click action.
               actionHref={authenticated ? subUrl(`/repo/fork/${repo.id}`) : undefined}
               signInHref={signInHref}
               authenticated={authenticated}

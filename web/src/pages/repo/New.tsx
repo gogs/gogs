@@ -13,9 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoCreateForm,
+  type RepoForkForm,
+  type RepoForkOptions,
   type RepoMigrateForm,
   type RepoNewOptions,
+  type RepoNewOwner,
   createRepo,
+  forkRepo,
   migrateRepo,
 } from "@/lib/queries/repo";
 import { FormError, formErrors } from "@/lib/queries/request";
@@ -49,6 +53,74 @@ function useNewRepoMutation(
   });
 }
 
+function OwnerField({
+  owners,
+  value,
+  onChange,
+  error,
+  invalid,
+}: {
+  owners: RepoNewOwner[];
+  value: number;
+  onChange: (ownerID: number) => void;
+  error?: string | null;
+  invalid: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <FormField id="ownerID" label={t("repo.owner")} error={error} invalid={invalid}>
+      <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+        <SelectTrigger id="ownerID" className="sm:max-w-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {owners.map((owner) => (
+            <SelectItem key={owner.id} value={String(owner.id)}>
+              <span className="flex min-w-0 items-center gap-2">
+                <img src={owner.avatarURL} alt="" className="size-5 shrink-0 rounded-sm" />
+                <span className="truncate">{owner.name}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </FormField>
+  );
+}
+
+function DescriptionField({
+  value,
+  onChange,
+  error,
+  invalid,
+}: {
+  value: string;
+  onChange: (description: string) => void;
+  error?: string | null;
+  invalid: boolean;
+}) {
+  const { t } = useTranslation();
+  const remaining = DESCRIPTION_MAX - Array.from(value).length;
+  return (
+    <FormField
+      id="description"
+      label={t("repo.repo_desc")}
+      helper={`${t("repo.repo_description_helper")} ${t("repo.repo_description_length")}: ${remaining}`}
+      error={error}
+      invalid={invalid}
+    >
+      <textarea
+        id="description"
+        name="description"
+        rows={3}
+        className={TEXTAREA_CLASS}
+        value={value}
+        onChange={(e) => onChange(Array.from(e.target.value).slice(0, DESCRIPTION_MAX).join(""))}
+      />
+    </FormField>
+  );
+}
+
 // SharedFields are the owner, name, visibility and description of a new
 // repository, which creating and migrating both ask for.
 function SharedFields({
@@ -68,26 +140,15 @@ function SharedFields({
   children?: ReactNode;
 }) {
   const { t } = useTranslation();
-  const remaining = DESCRIPTION_MAX - Array.from(form.description).length;
   return (
     <>
-      <FormField id="ownerID" label={t("repo.owner")} error={fields.ownerID} invalid={"ownerID" in fields}>
-        <Select value={String(form.ownerID)} onValueChange={(v) => setForm({ ...form, ownerID: Number(v) })}>
-          <SelectTrigger id="ownerID" className="sm:max-w-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {options.owners.map((owner) => (
-              <SelectItem key={owner.id} value={String(owner.id)}>
-                <span className="flex min-w-0 items-center gap-2">
-                  <img src={owner.avatarURL} alt="" className="size-5 shrink-0 rounded-sm" />
-                  <span className="truncate">{owner.name}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FormField>
+      <OwnerField
+        owners={options.owners}
+        value={form.ownerID}
+        onChange={(ownerID) => setForm({ ...form, ownerID })}
+        error={fields.ownerID}
+        invalid={"ownerID" in fields}
+      />
       <FormField
         id="name"
         label={t("repo.repo_name")}
@@ -130,24 +191,12 @@ function SharedFields({
         />
       </fieldset>
       {children}
-      <FormField
-        id="description"
-        label={t("repo.repo_desc")}
-        helper={`${t("repo.repo_description_helper")} ${t("repo.repo_description_length")}: ${remaining}`}
+      <DescriptionField
+        value={form.description}
+        onChange={(description) => setForm({ ...form, description })}
         error={fields.description}
         invalid={"description" in fields}
-      >
-        <textarea
-          id="description"
-          name="description"
-          rows={3}
-          className={TEXTAREA_CLASS}
-          value={form.description}
-          onChange={(e) =>
-            setForm({ ...form, description: Array.from(e.target.value).slice(0, DESCRIPTION_MAX).join("") })
-          }
-        />
-      </FormField>
+      />
     </>
   );
 }
@@ -485,6 +534,88 @@ export function RepoMigrate({ options, mirror }: { options: RepoNewOptions; mirr
           </fieldset>
         </SharedFields>
       </div>
+    </NewRepoPage>
+  );
+}
+
+const FORK_FIELDS = ["ownerID", "name", "description"];
+
+// RepoFork forks a repository to the viewer or an organization they own. The
+// fork keeps the visibility of the repository, and forking again opens the
+// existing fork.
+export function RepoFork({ id, options }: { id: number; options: RepoForkOptions }) {
+  const { t } = useTranslation();
+  const { base } = options;
+  const [form, setForm] = useState<RepoForkForm>(() => ({
+    ownerID: options.owners[0]?.id ?? 0,
+    name: base.name,
+    description: base.description,
+  }));
+  const save = useNewRepoMutation(() => forkRepo(id, form), FORK_FIELDS);
+  const { fields, formError } = formErrors(save.error);
+  const pending = save.isPending || save.isSuccess;
+  const baseName = `${base.owner}/${base.name}`;
+
+  return (
+    <NewRepoPage
+      title={t("new_fork")}
+      onSubmit={() => save.mutate()}
+      pending={pending}
+      formError={formError}
+      submitLabel={pending ? t("repo.fork_repo_submitting") : t("repo.fork_repo")}
+    >
+      <div className="flex flex-col gap-1.5 text-sm">
+        <span className="font-medium">{t("repo.fork_from")}</span>
+        <a
+          href={subUrl(`/${baseName}`)}
+          className="w-fit text-(--color-primary) underline underline-offset-2 wrap-anywhere"
+        >
+          {baseName}
+        </a>
+      </div>
+      <OwnerField
+        owners={options.owners}
+        value={form.ownerID}
+        onChange={(ownerID) => setForm({ ...form, ownerID })}
+        error={fields.ownerID}
+        invalid={"ownerID" in fields}
+      />
+      <FormField id="name" label={t("repo.repo_name")} error={fields.name} invalid={"name" in fields}>
+        <Input
+          id="name"
+          name="name"
+          autoComplete="off"
+          required
+          maxLength={100}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+      </FormField>
+      {/* The boxes stay at full contrast, since they show what the fork gets. */}
+      <fieldset className="flex flex-col gap-3" aria-describedby="fork-visibility-helper">
+        <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
+        <label htmlFor="private" className="flex items-start gap-2.5 text-sm">
+          <Checkbox id="private" className="mt-0.5 disabled:opacity-100" checked={base.isPrivate} disabled />
+          <span>
+            <RichText text={t("repo.visiblity_helper")} />
+          </span>
+        </label>
+        <label htmlFor="unlisted" className="flex items-start gap-2.5 text-sm">
+          <Checkbox id="unlisted" className="mt-0.5 disabled:opacity-100" checked={base.isUnlisted} disabled />
+          <span>
+            <RichText text={t("repo.unlisted_helper")} />
+          </span>
+        </label>
+        <p id="fork-visibility-helper" className="text-sm text-(--color-muted-foreground)">
+          {t("repo.fork_visiblity_helper")}
+        </p>
+      </fieldset>
+      <DescriptionField
+        value={form.description}
+        onChange={(description) => setForm({ ...form, description })}
+        error={fields.description}
+        invalid={"description" in fields}
+      />
     </NewRepoPage>
   );
 }

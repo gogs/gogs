@@ -308,8 +308,17 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				}
 				c.ServeWeb()
 			})
-			m.Combo("/fork/:repoid").Get(repo.Fork).
-				Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
+			m.Get("/fork/:repoid", func(c *context.Context) {
+				_, err := forkBaseRepo(c.User, c.ParamsInt64(":repoid"))
+				if errors.Is(err, errForkBaseNotFound) {
+					c.NotFound()
+					return
+				} else if err != nil {
+					c.Error(err, "get repository to fork")
+					return
+				}
+				c.ServeWeb()
+			})
 		}, reqSignIn)
 
 		m.Group("/:username/:reponame", func() {
