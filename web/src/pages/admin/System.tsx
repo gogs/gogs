@@ -56,7 +56,13 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
     case "code":
-      return row.value ? <code className="align-top font-mono text-[0.8125rem]">{row.value}</code> : null;
+      return row.value ? (
+        // Cloned decoration keeps the chip's padding and corners on every line
+        // a long value wraps to.
+        <code className="rounded box-decoration-clone bg-(--color-surface) px-1 align-top font-mono text-[0.8125rem] text-(--color-foreground)">
+          {row.value}
+        </code>
+      ) : null;
     case "block":
       return (
         // Focusable so keyboard users can scroll a long line into view.
@@ -294,7 +300,7 @@ export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
               <li key={task.description} className={ROW_CLASS}>
                 <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-semibold wrap-anywhere">{task.description}</span>
-                  <code className="font-mono text-xs text-(--color-muted-foreground)">{task.schedule}</code>
+                  <code className="rounded bg-(--color-surface) px-1 font-mono text-xs">{task.schedule}</code>
                 </p>
                 <Meta>
                   <span>
