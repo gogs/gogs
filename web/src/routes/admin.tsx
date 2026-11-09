@@ -3,6 +3,8 @@ import { type AnyRoute, createRoute } from "@tanstack/react-router";
 import { loadSignedInPage } from "@/lib/loader-error";
 import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
+  fetchAdminAuthSource,
+  fetchAdminAuthSources,
   fetchAdminConfig,
   fetchAdminDashboard,
   fetchAdminMonitor,
@@ -13,7 +15,8 @@ import {
   fetchAdminUserOptions,
   fetchAdminUsers,
 } from "@/lib/queries/admin";
-import { AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
+import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
+import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminConfig, AdminDashboard, AdminMonitor, AdminOperations } from "@/pages/admin/System";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
@@ -108,6 +111,32 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const authsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/auths",
+    loader: () => loadSignedInPage(fetchAdminAuthSources),
+    component: function Auths() {
+      return <AdminAuthSources sources={authsRoute.useLoaderData()} />;
+    },
+  });
+
+  const authNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/auths/new",
+    component: AdminAuthSourceNew,
+  });
+
+  const authEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/auths/$id",
+    loader: ({ params }) => loadSignedInPage(() => fetchAdminAuthSource(Number(params.id))),
+    component: function AuthEdit() {
+      const source = authEditRoute.useLoaderData();
+      // Remount for another source so the form starts from its values.
+      return <AdminAuthSourceEdit key={source.id} source={source} />;
+    },
+  });
+
   const noticesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin/notices",
@@ -129,6 +158,9 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     userEditRoute,
     orgsRoute,
     reposRoute,
+    authsRoute,
+    authNewRoute,
+    authEditRoute,
     noticesRoute,
   ];
 }

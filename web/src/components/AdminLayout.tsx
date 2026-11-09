@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
 import { usePageTitle } from "@/lib/page-title";
-import { subUrl } from "@/lib/url";
 
 export type AdminPage =
   | "dashboard"
@@ -17,18 +16,17 @@ export type AdminPage =
   | "notices"
   | "monitor";
 
-// NAV lists the pages of the admin panel in the order of the server-rendered
-// menu. Pages without `spa` are still served by the server.
-const NAV: { page: AdminPage; path: string; label: string; spa?: true }[] = [
-  { page: "dashboard", path: "", label: "admin.dashboard", spa: true },
-  { page: "operations", path: "/operations", label: "admin.dashboard.operations", spa: true },
-  { page: "users", path: "/users", label: "admin.users", spa: true },
-  { page: "orgs", path: "/orgs", label: "admin.organizations", spa: true },
-  { page: "repos", path: "/repos", label: "admin.repositories", spa: true },
+// NAV lists the pages of the admin panel.
+const NAV: { page: AdminPage; path: string; label: string }[] = [
+  { page: "dashboard", path: "", label: "admin.dashboard" },
+  { page: "operations", path: "/operations", label: "admin.dashboard.operations" },
+  { page: "users", path: "/users", label: "admin.users" },
+  { page: "orgs", path: "/orgs", label: "admin.organizations" },
+  { page: "repos", path: "/repos", label: "admin.repositories" },
   { page: "auths", path: "/auths", label: "admin.authentication" },
-  { page: "config", path: "/config", label: "admin.config", spa: true },
-  { page: "notices", path: "/notices", label: "admin.notices", spa: true },
-  { page: "monitor", path: "/monitor", label: "admin.monitor", spa: true },
+  { page: "config", path: "/config", label: "admin.config" },
+  { page: "notices", path: "/notices", label: "admin.notices" },
+  { page: "monitor", path: "/monitor", label: "admin.monitor" },
 ];
 
 // AdminLayout heads the pages of the admin panel, with links between them.
@@ -53,13 +51,9 @@ export function AdminLayout({
         wide={wide}
         nav={NAV.map((item) => (
           <SettingsNavItem key={item.page} active={item.page === active}>
-            {item.spa ? (
-              <Link to={`/admin${item.path}`} activeOptions={{ exact: true }}>
-                {t(item.label)}
-              </Link>
-            ) : (
-              <a href={subUrl(`/admin${item.path}`)}>{t(item.label)}</a>
-            )}
+            <Link to={`/admin${item.path}`} activeOptions={{ exact: true }}>
+              {t(item.label)}
+            </Link>
           </SettingsNavItem>
         ))}
       >
