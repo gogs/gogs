@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listLabels(c *context.APIContext) {
+func listLabels(c *apiContext) {
 	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get labels by repository ID")
@@ -23,10 +22,10 @@ func listLabels(c *context.APIContext) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func getLabel(c *context.APIContext) {
+func getLabel(c *apiContext) {
 	var label *database.Label
 	var err error
-	idStr := c.Params(":id")
+	idStr := c.Param("id")
 	if id, _ := strconv.ParseInt(idStr, 10, 64); id > 0 {
 		label, err = database.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
 	} else {
@@ -41,11 +40,11 @@ func getLabel(c *context.APIContext) {
 }
 
 type createLabelRequest struct {
-	Name  string `json:"name" binding:"Required"`
-	Color string `json:"color" binding:"Required;Size(7)"`
+	Name  string `json:"name" validate:"required"`
+	Color string `json:"color" validate:"required,len=7"`
 }
 
-func createLabel(c *context.APIContext, form createLabelRequest) {
+func createLabel(c *apiContext, form createLabelRequest) {
 	label := &database.Label{
 		Name:   form.Name,
 		Color:  form.Color,
@@ -63,8 +62,8 @@ type editLabelRequest struct {
 	Color *string `json:"color"`
 }
 
-func editLabel(c *context.APIContext, form editLabelRequest) {
-	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+func editLabel(c *apiContext, form editLabelRequest) {
+	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get label of repository by ID")
 		return
@@ -83,8 +82,8 @@ func editLabel(c *context.APIContext, form editLabelRequest) {
 	c.JSONSuccess(toIssueLabel(label))
 }
 
-func deleteLabel(c *context.APIContext) {
-	if err := database.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+func deleteLabel(c *apiContext) {
+	if err := database.DeleteLabel(c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
 		c.Error(err, "delete label")
 		return
 	}

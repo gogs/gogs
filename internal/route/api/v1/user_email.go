@@ -6,13 +6,12 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listEmails(c *context.APIContext) {
-	emails, err := database.Handle.Users().ListEmails(c.Req.Context(), c.User.ID)
+func listEmails(c *apiContext) {
+	emails, err := database.Handle.Users().ListEmails(c.Request().Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "get email addresses")
 		return
@@ -28,7 +27,7 @@ type createEmailRequest struct {
 	Emails []string `json:"emails"`
 }
 
-func addEmail(c *context.APIContext, form createEmailRequest) {
+func addEmail(c *apiContext, form createEmailRequest) {
 	if len(form.Emails) == 0 {
 		c.Status(http.StatusUnprocessableEntity)
 		return
@@ -36,7 +35,7 @@ func addEmail(c *context.APIContext, form createEmailRequest) {
 
 	apiEmails := make([]*types.UserEmail, 0, len(form.Emails))
 	for _, email := range form.Emails {
-		err := database.Handle.Users().AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
+		err := database.Handle.Users().AddEmail(c.Request().Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
 		if err != nil {
 			if database.IsErrEmailAlreadyUsed(err) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Errorf("email address has been used: %s", err.(database.ErrEmailAlreadyUsed).Email()))
@@ -54,14 +53,14 @@ func addEmail(c *context.APIContext, form createEmailRequest) {
 	c.JSON(http.StatusCreated, &apiEmails)
 }
 
-func deleteEmail(c *context.APIContext, form createEmailRequest) {
+func deleteEmail(c *apiContext, form createEmailRequest) {
 	for _, email := range form.Emails {
 		if email == c.User.Email {
 			c.ErrorStatus(http.StatusBadRequest, errors.Errorf("cannot delete primary email %q", email))
 			return
 		}
 
-		err := database.Handle.Users().DeleteEmail(c.Req.Context(), c.User.ID, email)
+		err := database.Handle.Users().DeleteEmail(c.Request().Context(), c.User.ID, email)
 		if err != nil {
 			c.Error(err, "delete email addresses")
 			return
