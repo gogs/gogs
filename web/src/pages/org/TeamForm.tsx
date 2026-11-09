@@ -189,6 +189,7 @@ function TeamSettingsLayout({
   return (
     <SettingsLayout
       label={t("org.teams.settings")}
+      current={titles[active]}
       nav={
         <>
           <SettingsNavItem active={active === "options"}>

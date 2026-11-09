@@ -57,12 +57,13 @@ const ALERT_CLASS =
 // between them.
 function UserSettingsLayout({ active, children }: { active: SettingsPage; children: ReactNode }) {
   const { t } = useTranslation();
-  const current = NAV.find((item) => item.page === active);
-  usePageTitle(current ? t(current.label) : t("settings"));
+  const current = t(NAV.find((item) => item.page === active)?.label ?? "settings");
+  usePageTitle(current);
   return (
     <main className="flex-1">
       <SettingsLayout
         label={t("settings")}
+        current={current}
         nav={NAV.map((item) => (
           <SettingsNavItem key={item.path} active={item.page === active} destructive={item.page === "delete"}>
             {item.page ? (
