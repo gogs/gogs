@@ -18,7 +18,7 @@ func TestBind(t *testing.T) {
 	f := flamego.New()
 	f.Map(logx.NewNoopLogger())
 	f.Use(func(c flamego.Context) {
-		c.Map((*database.User)(nil), Authentication{})
+		c.Map((*database.User)(nil), RequestInfo{Path: "/"})
 	})
 	f.Use(apiContexter)
 	f.Post("/", bind(createRepoRequest{}), func(c *apiContext, form createRepoRequest) {
