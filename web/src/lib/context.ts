@@ -6,6 +6,12 @@ export interface WebContext {
   subURL: string;
   // localeURL is where the translations of the active locale are served.
   localeURL: string;
+  // The page the server chose to show in place of the one at the path.
+  page?: "serverError" | "prohibitLogin";
+  // The reason of a server error, for viewers allowed to see it.
+  error?: string;
+  // The version of Gogs, for site admins on a server error.
+  version?: string;
 }
 
 declare global {
@@ -23,6 +29,9 @@ function read(): WebContext {
     lang: ctx.lang || "en-US",
     subURL: ctx.subURL ?? "",
     localeURL: ctx.localeURL ?? "",
+    page: ctx.page,
+    error: ctx.error,
+    version: ctx.version,
   };
 }
 
