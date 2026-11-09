@@ -131,13 +131,17 @@ export interface DashboardRepo {
   starCount: number;
 }
 
-export interface DashboardData {
+// The owner of a dashboard page, and the organizations of the signed-in user to
+// switch to, whichever dashboard this is.
+export interface DashboardContextData {
   kind: "user" | "organization";
   id: number;
   name: string;
   avatarURL: string;
-  // The organizations of the signed-in user, whichever dashboard this is.
   organizations: { name: string; avatarURL: string; repoCount: number }[];
+}
+
+export interface DashboardData extends DashboardContextData {
   repos: DashboardRepo[];
   repoCount: number;
   hasMoreRepos: boolean;
@@ -168,4 +172,43 @@ export function dashboardActivityQuery(org?: string) {
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextAfterID,
   });
+}
+
+export interface DashboardIssue {
+  // The full name of the repository, e.g., "owner/name".
+  repo: string;
+  index: number;
+  title: string;
+  isClosed: boolean;
+  commentCount: number;
+  labels: { name: string; color: string; textColor: string }[];
+  poster: { name: string; avatarURL: string };
+  assignee?: { name: string; avatarURL: string };
+  createdAt: string;
+}
+
+export interface DashboardIssuesData extends DashboardContextData {
+  items: DashboardIssue[];
+  page: number;
+  totalPages: number;
+  // The filter in effect. Organizations only have "your_repositories".
+  type: "your_repositories" | "assigned" | "created_by";
+  counts: { yourRepos: number; assigned: number; created: number; open: number; closed: number };
+  // Only listed for the "your_repositories" filter.
+  repos: { id: number; fullName: string; count: number }[];
+}
+
+// fetchDashboardIssues lists the issues or pull requests of a dashboard, with
+// the query parameters of the server-rendered page, e.g., `state=closed`.
+export function fetchDashboardIssues(
+  org: string | undefined,
+  kind: "issues" | "pulls",
+  query: Record<string, string | number | undefined>,
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  const qs = params.toString();
+  return fetchJSON<DashboardIssuesData>(`${dashboardURL(org)}/${kind}${qs ? `?${qs}` : ""}`);
 }

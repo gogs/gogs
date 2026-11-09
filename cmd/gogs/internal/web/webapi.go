@@ -183,6 +183,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		dashboardRoutes := func() {
 			f.Get("", getDashboard)
 			f.Get("/activity", getDashboardActivity)
+			f.Get("/issues", getDashboardIssues)
+			f.Get("/pulls", getDashboardPulls)
 		}
 		f.Group("/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)

@@ -98,8 +98,12 @@ func TestRequireSignIn(t *testing.T) {
 	paths := []string{
 		"/api/web/dashboard",
 		"/api/web/dashboard/activity",
+		"/api/web/dashboard/issues",
+		"/api/web/dashboard/pulls",
 		"/api/web/orgs/acme/dashboard",
 		"/api/web/orgs/acme/dashboard/activity",
+		"/api/web/orgs/acme/dashboard/issues",
+		"/api/web/orgs/acme/dashboard/pulls",
 	}
 	tests := []struct {
 		name                     string
