@@ -4,6 +4,8 @@ import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { AvatarForm } from "@/components/AvatarForm";
+import { DeleteForm } from "@/components/DeleteForm";
 import { FormField } from "@/components/FormField";
 import { OrgHeader } from "@/components/OrgHeader";
 import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
@@ -11,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/lib/page-title";
 import {
-  FormError,
   type OrgSettingsData,
   type OrgSettingsForm,
   deleteOrg,
@@ -19,6 +20,7 @@ import {
   updateOrgSettings,
   uploadOrgAvatar,
 } from "@/lib/queries/org";
+import { FormError } from "@/lib/queries/request";
 import { userProfileQuery } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 
@@ -76,7 +78,7 @@ export function OrgSettings({ org, settings }: { org: string; settings: OrgSetti
   return (
     <OrgSettingsLayout org={org} active="options">
       <OptionsForm org={org} settings={settings} />
-      <AvatarForm org={org} settings={settings} />
+      <OrgAvatarForm org={org} settings={settings} />
     </OrgSettingsLayout>
   );
 }
@@ -251,85 +253,24 @@ function OptionsForm({ org, settings }: { org: string; settings: OrgSettingsData
   );
 }
 
-function AvatarForm({ org, settings }: { org: string; settings: OrgSettingsData }) {
+function OrgAvatarForm({ org, settings }: { org: string; settings: OrgSettingsData }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  // The avatar keeps its URL when it changes, so refetch it after a change.
-  const [version, setVersion] = useState(0);
-  const onChanged = async () => {
-    setFile(null);
-    if (inputRef.current) inputRef.current.value = "";
-    setVersion((v) => v + 1);
-    await queryClient.invalidateQueries({ queryKey: userProfileQuery(org).queryKey });
-    await router.invalidate();
-  };
-  const upload = useMutation({
-    mutationFn: () => uploadOrgAvatar(org, file as File),
-    onSuccess: async () => {
-      toast.success(t("org.settings.update_avatar_success"));
-      await onChanged();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-  const remove = useMutation({
-    mutationFn: () => deleteOrgAvatar(org),
-    onSuccess: onChanged,
-    onError: (err) => toast.error(err.message),
-  });
-  const pending = upload.isPending || remove.isPending;
-  const avatarURL = version
-    ? `${settings.avatarURL}${settings.avatarURL.includes("?") ? "&" : "?"}v=${version}`
-    : settings.avatarURL;
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (file) upload.mutate();
-  };
-
   return (
-    <form onSubmit={onSubmit} className="mt-8 border-t border-(--color-border) pt-6">
-      <fieldset disabled={pending} className="contents">
-        <div className="flex flex-wrap items-start gap-4">
-          <img
-            src={avatarURL}
-            alt=""
-            className="size-20 shrink-0 rounded-md border border-(--color-border) object-cover"
-          />
-          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
-            <FormField id="avatar" label={t("settings.choose_new_avatar")} invalid={false}>
-              <input
-                ref={inputRef}
-                id="avatar"
-                name="avatar"
-                type="file"
-                accept="image/png,image/jpeg,image/gif"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full min-w-0 text-sm text-(--color-muted-foreground) file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-(--color-input) file:bg-(--color-background) file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-(--color-foreground) hover:file:bg-(--color-surface)"
-              />
-            </FormField>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" variant="outline" size="sm" disabled={!file || pending}>
-                {t("settings.update_avatar")}
-              </Button>
-              {settings.hasCustomAvatar ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-(--color-destructive)"
-                  onClick={() => remove.mutate()}
-                >
-                  {t("settings.delete_current_avatar")}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </fieldset>
-    </form>
+    <div className="mt-8 border-t border-(--color-border) pt-6">
+      <AvatarForm
+        avatarURL={settings.avatarURL}
+        hasCustomAvatar={settings.hasCustomAvatar}
+        upload={(file) => uploadOrgAvatar(org, file)}
+        remove={() => deleteOrgAvatar(org)}
+        onChanged={async (uploaded) => {
+          if (uploaded) toast.success(t("org.settings.update_avatar_success"));
+          await queryClient.invalidateQueries({ queryKey: userProfileQuery(org).queryKey });
+          await router.invalidate();
+        }}
+      />
+    </div>
   );
 }
 
@@ -338,65 +279,18 @@ export function OrgDelete({ org }: { org: string }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const mutation = useMutation({
-    mutationFn: () => deleteOrg(org, password),
-    onSuccess: async () => {
-      queryClient.clear();
-      await navigate({ to: "/" });
-    },
-    onError: () => requestAnimationFrame(() => inputRef.current?.focus()),
-  });
-  const fields = mutation.error instanceof FormError ? mutation.error.fields : {};
-  const formError = mutation.error && Object.keys(fields).length === 0 ? mutation.error.message : null;
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    mutation.mutate();
-  };
-
   return (
     <OrgSettingsLayout org={org} active="delete">
-      <form onSubmit={onSubmit} noValidate>
-        <fieldset disabled={mutation.isPending} className="contents">
-          <h2 className="mb-4 text-xl font-semibold">{t("org.settings.delete_account")}</h2>
-          <p
-            role="note"
-            className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
-          >
-            <Trans i18nKey="org.settings.delete_prompt" />
-          </p>
-          {formError ? (
-            <div
-              role="alert"
-              className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
-            >
-              {formError}
-            </div>
-          ) : null}
-          <div className="flex flex-col gap-5">
-            <FormField id="password" label={t("password")} error={fields.password} invalid={"password" in fields}>
-              <Input
-                ref={inputRef}
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                autoFocus
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </FormField>
-            <div className="border-t border-(--color-border) pt-5">
-              <Button type="submit" variant="destructive">
-                {t("org.settings.confirm_delete_account")}
-              </Button>
-            </div>
-          </div>
-        </fieldset>
-      </form>
+      <h2 className="mb-4 text-xl font-semibold">{t("org.settings.delete_account")}</h2>
+      <DeleteForm
+        prompt={<Trans i18nKey="org.settings.delete_prompt" />}
+        confirmLabel={t("org.settings.confirm_delete_account")}
+        remove={(password) => deleteOrg(org, password)}
+        onDeleted={async () => {
+          queryClient.clear();
+          await navigate({ to: "/" });
+        }}
+      />
     </OrgSettingsLayout>
   );
 }

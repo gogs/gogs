@@ -101,16 +101,11 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		// ***** START: User *****
 		m.Group("/user/settings", func() {
-			m.Get("", user.Settings)
-			m.Post("", bindIgnErr(form.UpdateProfile{}), user.SettingsPost)
-			m.Combo("/avatar").Get(user.SettingsAvatar).
-				Post(binding.MultipartForm(form.Avatar{}), user.SettingsAvatarPost)
-			m.Post("/avatar/delete", user.SettingsDeleteAvatar)
+			m.Get("", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(avatar|password|repositories|organizations|delete)$", func(c *context.Context) { c.ServeWeb() })
 			m.Combo("/email").Get(user.SettingsEmails).
 				Post(bindIgnErr(form.AddEmail{}), user.SettingsEmailPost)
 			m.Post("/email/delete", user.DeleteEmail)
-			m.Get("/password", user.SettingsPassword)
-			m.Post("/password", bindIgnErr(form.ChangePassword{}), user.SettingsPasswordPost)
 			m.Combo("/ssh").Get(user.SettingsSSHKeys).
 				Post(bindIgnErr(form.AddSSHKey{}), user.SettingsSSHKeysPost)
 			m.Post("/ssh/delete", user.DeleteSSHKey)
@@ -122,20 +117,11 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					Post(user.SettingsTwoFactorRecoveryCodesPost)
 				m.Post("/two_factor_disable", user.SettingsTwoFactorDisable)
 			})
-			m.Group("/repositories", func() {
-				m.Get("", user.SettingsRepos)
-				m.Post("/leave", user.SettingsLeaveRepo)
-			})
-			m.Group("/organizations", func() {
-				m.Get("", user.SettingsOrganizations)
-				m.Post("/leave", user.SettingsLeaveOrganization)
-			})
 
 			settingsHandler := user.NewSettingsHandler(user.NewSettingsStore())
 			m.Combo("/applications").Get(settingsHandler.Applications()).
 				Post(bindIgnErr(form.NewAccessToken{}), settingsHandler.ApplicationsPost())
 			m.Post("/applications/delete", settingsHandler.DeleteApplication())
-			m.Route("/delete", "GET,POST", user.SettingsDelete)
 		}, reqSignIn, func(c *context.Context) {
 			c.Data["PageIsUserSettings"] = true
 		})
