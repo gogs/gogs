@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
-import { Check, ExternalLink, Minus } from "lucide-react";
+import { Check, ExternalLink, LoaderCircle, Minus, Play } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -10,7 +9,6 @@ import { FormAlert, FormField } from "@/components/FormField";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
@@ -119,53 +117,8 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
   "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
 };
 
-// Operations runs a maintenance task picked from the list.
-function Operations() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const [op, setOp] = useState<AdminOperation | "">("");
-  const run = useMutation({
-    mutationFn: (picked: AdminOperation) => runAdminOperation(picked),
-    onSuccess: async (message) => {
-      toast.success(message);
-      // A task may change the statistics, e.g., by deleting users.
-      await router.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (op) run.mutate(op);
-  };
-
-  return (
-    <Section id="operations" title={t("admin.dashboard.operations")}>
-      <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1 basis-64">
-          <Select value={op} onValueChange={(v) => setOp(v as AdminOperation)} disabled={run.isPending}>
-            <SelectTrigger aria-label={t("admin.dashboard.operations")}>
-              <SelectValue placeholder={t("admin.dashboard.select_operation_to_run")} />
-            </SelectTrigger>
-            <SelectContent>
-              {ADMIN_OPERATIONS.map((o) => (
-                <SelectItem key={o} value={o}>
-                  {t(OPERATION_LABELS[o])}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button type="submit" variant="outline" disabled={!op || run.isPending}>
-          {t("admin.dashboard.operation_run")}
-        </Button>
-      </form>
-    </Section>
-  );
-}
-
 // AdminDashboard shows how the site was built, what its database holds and how
-// the server is doing, and runs maintenance tasks.
+// the server is doing.
 export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData }) {
   const { t } = useTranslation();
   return (
@@ -199,7 +152,6 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
           <RichText text={dashboard.statistics} />
         </p>
       </Section>
-      <Operations />
       <Report section={dashboard.systemStatus} />
     </AdminLayout>
   );
@@ -250,6 +202,50 @@ function TestMailForm() {
         </div>
       </fieldset>
     </form>
+  );
+}
+
+// AdminOperations lists the maintenance tasks of the site, each run with its
+// own button. One task runs at a time, since each works through every
+// repository or user.
+export function AdminOperations() {
+  const { t } = useTranslation();
+  const run = useMutation({
+    mutationFn: (op: AdminOperation) => runAdminOperation(op),
+    onSuccess: (message) => toast.success(message),
+    onError: (err) => toast.error(err.message),
+  });
+  return (
+    <AdminLayout active="operations" wide>
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard.operations")}</h1>
+      <ul className="border-t border-(--color-border)">
+        {ADMIN_OPERATIONS.map((op) => {
+          const label = t(OPERATION_LABELS[op]);
+          const running = run.isPending && run.variables === op;
+          return (
+            <li key={op} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) py-3">
+              <span className="min-w-0 flex-1 basis-56 text-sm wrap-anywhere">{label}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
+                disabled={run.isPending}
+                onClick={() => run.mutate(op)}
+              >
+                {running ? (
+                  <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Play className="size-3.5" aria-hidden />
+                )}
+                {t("admin.dashboard.operation_run")}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </AdminLayout>
   );
 }
 

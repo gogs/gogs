@@ -14,7 +14,7 @@ import {
   fetchAdminUsers,
 } from "@/lib/queries/admin";
 import { AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
-import { AdminConfig, AdminDashboard, AdminMonitor } from "@/pages/admin/System";
+import { AdminConfig, AdminDashboard, AdminMonitor, AdminOperations } from "@/pages/admin/System";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
@@ -25,6 +25,12 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     component: function Dashboard() {
       return <AdminDashboard dashboard={dashboardRoute.useLoaderData()} />;
     },
+  });
+
+  const operationsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/operations",
+    component: AdminOperations,
   });
 
   const configRoute = createRoute({
@@ -115,6 +121,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   return [
     dashboardRoute,
+    operationsRoute,
     configRoute,
     monitorRoute,
     usersRoute,

@@ -138,7 +138,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Admin *****
 		m.Group("/admin", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(users|orgs|repos|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(operations|users|orgs|repos|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/:userid", func(c *context.Context) {
 				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
