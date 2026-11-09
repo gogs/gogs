@@ -4,19 +4,24 @@ import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-
 import { LoaderResponseError } from "@/lib/loader-error";
 import {
   fetchOrgMembers,
+  fetchOrgSettings,
   fetchOrgTeam,
   fetchOrgTeamMembers,
   fetchOrgTeamRepos,
   fetchOrgTeams,
 } from "@/lib/queries/org";
 import { userProfileQuery } from "@/lib/queries/user";
+import type { UserInfo } from "@/lib/user-info";
+import { OrgCreate } from "@/pages/org/Create";
 import { OrgInvite } from "@/pages/org/Invite";
 import { OrgMembers } from "@/pages/org/Members";
+import { OrgDelete, OrgSettings } from "@/pages/org/Settings";
 import { OrgTeam, type TeamPageData } from "@/pages/org/Team";
 import { TeamForm } from "@/pages/org/TeamForm";
 import { OrgTeams } from "@/pages/org/Teams";
 
 interface RouterContext {
+  user: UserInfo | null;
   queryClient: QueryClient;
 }
 
@@ -157,5 +162,61 @@ export function createOrgRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [membersRoute, teamsRoute, teamRoute, teamReposRoute, inviteRoute, newTeamRoute, editTeamRoute];
+  const orgCreateRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/create",
+    loader: ({ context }) => {
+      // Like the server-rendered page, only users allowed to create
+      // organizations get here.
+      if (!(context as RouterContext).user?.canCreateOrganization) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+    },
+    component: OrgCreate,
+  });
+
+  const settingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/settings",
+    loader: ({ params, context }) => {
+      const { queryClient } = context as RouterContext;
+      return loadOrgPage(queryClient, params.org, async () => {
+        const [, settings] = await Promise.all([requireOwner(queryClient, params.org), fetchOrgSettings(params.org)]);
+        return settings;
+      });
+    },
+    component: function Settings() {
+      const { org } = settingsRoute.useParams();
+      const settings = settingsRoute.useLoaderData();
+      // Start over when the organization changes, e.g., after renaming it.
+      return <OrgSettings key={settings.name} org={org} settings={settings} />;
+    },
+  });
+
+  const deleteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/settings/delete",
+    loader: ({ params, context }) =>
+      loadOrgPage((context as RouterContext).queryClient, params.org, () =>
+        requireOwner((context as RouterContext).queryClient, params.org),
+      ),
+    component: function Delete() {
+      const { org } = deleteRoute.useParams();
+      return <OrgDelete org={org} />;
+    },
+  });
+
+  return [
+    orgCreateRoute,
+    membersRoute,
+    teamsRoute,
+    teamRoute,
+    teamReposRoute,
+    inviteRoute,
+    newTeamRoute,
+    editTeamRoute,
+    settingsRoute,
+    deleteRoute,
+  ];
 }
