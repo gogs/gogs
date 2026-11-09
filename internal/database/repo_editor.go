@@ -98,7 +98,17 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 		}
 	}()
 
-	if err = git.Init(ctx, dir, git.InitOptions{Bare: true}); err != nil {
+	// The object format must match for the objects of the repositories to be
+	// readable.
+	sourceRepo, err := git.Open(repoPaths[0])
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "open repository")
+	}
+	objectFormat, err := sourceRepo.ObjectFormat(ctx)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "get object format")
+	}
+	if err = git.Init(ctx, dir, git.InitOptions{Bare: true, ObjectFormat: objectFormat}); err != nil {
 		return nil, nil, errors.Wrap(err, "init")
 	}
 

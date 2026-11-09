@@ -84,6 +84,9 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryExec, ID: blobID, Path: "new/dir/hello.sh"}))
 	require.NoError(t, r.RemoveFromIndex(ctx, "README.txt"))
+	// A path that also exists in the Git directory of the bare repository.
+	require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "config"}))
+	require.NoError(t, r.RemoveFromIndex(ctx, "config"))
 
 	t.Run("committer from Git configuration", func(t *testing.T) {
 		tree, err := r.WriteTree(ctx)
@@ -136,9 +139,7 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, parent.ID.String(), raw.parent)
 	assert.Equal(t, "Add hello\n", raw.message)
-	assert.Equal(t, "alice", raw.author.Name)
-	assert.Equal(t, "alice@example.com", raw.author.Email)
-	assert.Equal(t, "2024-01-02T03:04:05+05:30", raw.author.When.Format(time.RFC3339))
+	assert.Equal(t, "alice <alice@example.com> 1704144845 +0530", raw.authorLine)
 
 	commit, err := r.CatFileCommit(ctx, commitID)
 	require.NoError(t, err)
@@ -169,6 +170,23 @@ func TestRepository_DiffCached(t *testing.T) {
 	require.Len(t, diff.Files, 1)
 	assert.Equal(t, "README.txt", diff.Files[0].Name)
 	assert.Equal(t, 1, diff.Files[0].NumAdditions())
+
+	t.Run("follows .gitattributes of the revision", func(t *testing.T) {
+		r, cleanup, err := setupTempRepo()
+		require.NoError(t, err)
+		defer cleanup()
+
+		rev := commitFiles(t, r, "attributes", map[string]string{".gitattributes": "*.dat -diff\n", "a.dat": "a\n"})
+		require.NoError(t, r.ReadTree(ctx, rev))
+		blobID, err := r.HashObject(ctx, strings.NewReader("b\n"))
+		require.NoError(t, err)
+		require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "a.dat"}))
+
+		diff, err := r.DiffCached(ctx, rev, "a.dat", 0, 0, 0)
+		require.NoError(t, err)
+		require.Len(t, diff.Files, 1)
+		assert.True(t, diff.Files[0].IsBinary())
+	})
 }
 
 func TestCleanupMessage(t *testing.T) {
@@ -212,6 +230,18 @@ func TestRepository_MergeTree(t *testing.T) {
 
 	_, err = r.MergeTree(ctx, newMasterID, conflictID)
 	assert.ErrorIs(t, err, ErrMergeConflict)
+
+	t.Run("follows .gitattributes of ours", func(t *testing.T) {
+		lines := "1\n2\n3\n4\n5\n6\n7\n8\n9\n"
+		base := commitFiles(t, r, "attributes", map[string]string{".gitattributes": "data.txt -merge\n", "data.txt": lines})
+		_, err := exec(ctx, r.Path(), []string{"update-ref", RefsHeads + "attributes-theirs", base}, nil)
+		require.NoError(t, err)
+		ours := commitFiles(t, r, "attributes", map[string]string{"data.txt": strings.Replace(lines, "2", "X", 1)})
+		theirs := commitFiles(t, r, "attributes-theirs", map[string]string{"data.txt": strings.Replace(lines, "8", "Y", 1)})
+
+		_, err = r.MergeTree(ctx, ours, theirs)
+		assert.ErrorIs(t, err, ErrMergeConflict)
+	})
 
 	ok, err := r.IsAncestor(ctx, masterID, featureID)
 	require.NoError(t, err)
@@ -263,7 +293,7 @@ func TestRepository_Rebase(t *testing.T) {
 		rebasedSecond, err := r.rawCommit(ctx, got)
 		require.NoError(t, err)
 		assert.Equal(t, "Add B", rebasedSecond.message)
-		assert.Equal(t, "2024-01-02T03:04:05-07:00", rebasedSecond.author.When.Format(time.RFC3339))
+		assert.Equal(t, "bob <bob@example.com> 1704189845 -0700", rebasedSecond.authorLine)
 		rebasedFirst, err := r.rawCommit(ctx, rebasedSecond.parent)
 		require.NoError(t, err)
 		assert.Equal(t, "Add A\n\nWith a body.\n", rebasedFirst.message)
@@ -291,6 +321,27 @@ func TestRepository_Rebase(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "Add D\n", rebased.message)
 		assert.Equal(t, upstream, rebased.parent)
+	})
+
+	t.Run("keeps authors as they are and re-encodes in UTF-8", func(t *testing.T) {
+		first := commitOnto(base, "E", "e\n", "Add E\n")
+		tree, err := r.RevParse(ctx, first+"^{tree}")
+		require.NoError(t, err)
+
+		// "张三" and "中文" in GBK.
+		object := "tree " + tree + "\nparent " + base + "\n" +
+			"author \"\xd5\xc5\xc8\xfd\" <z@example.com> 1600000000 +0800\n" +
+			"committer c <c@example.com> 1600000000 +0000\nencoding GBK\n\n\xd6\xd0\xce\xc4\n"
+		stdout, err := execInput(ctx, r.Path(), []string{"hash-object", "-t", "commit", "-w", "--stdin"}, nil, strings.NewReader(object))
+		require.NoError(t, err)
+
+		got, err := r.Rebase(ctx, upstream, strings.TrimSpace(string(stdout)))
+		require.NoError(t, err)
+		raw, err := exec(ctx, r.Path(), []string{"cat-file", "commit", got}, nil)
+		require.NoError(t, err)
+		assert.Contains(t, string(raw), "\nauthor \"张三\" <z@example.com> 1600000000 +0800\n")
+		assert.NotContains(t, string(raw), "\nencoding ")
+		assert.True(t, strings.HasSuffix(string(raw), "\n\n中文\n"), "got %q", raw)
 	})
 
 	t.Run("conflict", func(t *testing.T) {

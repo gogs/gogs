@@ -6,7 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
+	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
 )
@@ -14,6 +14,15 @@ import (
 // The functions in this file build commits through the index of the
 // repository, so they also work in a bare repository, which has no working
 // tree to check files out to.
+
+// ObjectFormat returns the hash algorithm of the repository, e.g., "sha1".
+func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
+	stdout, err := exec(ctx, r.path, []string{"rev-parse", "--show-object-format"}, nil)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(stdout)), nil
+}
 
 // ReadTree replaces the index of the repository with the tree of given
 // tree-ish.
@@ -80,7 +89,10 @@ func (r *Repository) AddToIndex(ctx context.Context, entries ...IndexEntry) erro
 // RemoveFromIndex removes the files at given paths from the index of the
 // repository. It fails when a path does not exist or is a directory.
 func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) error {
-	args := []string{"--literal-pathspecs", "rm", "--cached", "--quiet", "--"}
+	// The check for local changes is forced off, because a bare repository has
+	// no working tree to compare with and it would otherwise compare with files
+	// of the Git directory, e.g., "config".
+	args := []string{"--literal-pathspecs", "rm", "--cached", "--force", "--quiet", "--"}
 	args = append(args, paths...)
 	_, err := exec(ctx, r.path, args, nil)
 	return err
@@ -183,7 +195,8 @@ type MergeTreeOptions struct {
 }
 
 // MergeTree merges the two commits the same way "git merge" does but only
-// writes the tree of the result, whose ID it returns. It returns
+// writes the tree of the result, whose ID it returns. Like "git merge" on a
+// checkout of ours, it follows the ".gitattributes" of ours. It returns
 // ErrMergeConflict when the merge has conflicts.
 func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ...MergeTreeOptions) (string, error) {
 	var opt MergeTreeOptions
@@ -191,7 +204,7 @@ func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ..
 		opt = opts[0]
 	}
 
-	args := []string{"merge-tree", "--write-tree", "--no-messages", "--name-only"}
+	args := []string{"--attr-source=" + ours, "merge-tree", "--write-tree", "--no-messages", "--name-only"}
 	if opt.MergeBase != "" {
 		args = append(args, "--merge-base="+opt.MergeBase)
 	}
@@ -227,7 +240,8 @@ const emptyTreeID = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 // top of the upstream, the same way "git rebase <upstream> <branch>" does, and
 // returns the ID of the resulting commit. Like "git rebase", it keeps commits
 // that are already based on the upstream, drops merge commits and commits whose
-// changes are already in the upstream, and takes the committer from Git
+// changes are already in the upstream, keeps the author lines of the commits as
+// they are, re-encodes them in UTF-8, and takes the committer from Git
 // configuration. It returns ErrMergeConflict when a commit does not apply.
 func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (string, error) {
 	head, err := r.RevParse(ctx, upstream)
@@ -240,9 +254,19 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 	if err != nil {
 		return "", errors.Wrap(err, "list commits")
 	}
+	ids := strings.Fields(string(stdout))
+	if len(ids) == 0 {
+		return head, nil
+	}
+
+	stdout, err = exec(ctx, r.path, []string{"var", "GIT_COMMITTER_IDENT"}, nil)
+	if err != nil {
+		return "", errors.Wrap(err, "get committer")
+	}
+	committer := strings.TrimSpace(string(stdout))
 
 	var emptyCommit string
-	for _, id := range strings.Fields(string(stdout)) {
+	for _, id := range ids {
 		c, err := r.rawCommit(ctx, id)
 		if err != nil {
 			return "", errors.Wrapf(err, "read commit %s", id)
@@ -290,15 +314,39 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 			}
 		}
 
-		head, err = r.CommitTree(ctx, tree, skipBlankLines(c.message), CommitTreeOptions{
-			Parents: []string{head},
-			Author:  c.author,
-		})
+		// The commit object is written as is, because passing the author to Git
+		// through environment variables would drop characters Git does not allow
+		// at the ends of names, e.g., quotes, and reject malformed author lines that
+		// "git rebase" copies.
+		object := "tree " + tree + "\nparent " + head + "\nauthor " + c.authorLine + "\ncommitter " + committer + "\n\n" + skipBlankLines(c.message)
+		args := []string{"hash-object", "-t", "commit", "-w", "--stdin", "--literally"}
+		stdout, err := execInput(ctx, r.path, args, nil, strings.NewReader(fixUTF8(object)))
 		if err != nil {
 			return "", errors.Wrapf(err, "commit %s", id)
 		}
+		head = strings.TrimSpace(string(stdout))
 	}
 	return head, nil
+}
+
+// fixUTF8 returns s with every byte that is not part of valid UTF-8 taken as a
+// Latin-1 character, the same way Git fixes commits it creates.
+func fixUTF8(s string) string {
+	var b strings.Builder
+	for len(s) > 0 {
+		r, size := utf8.DecodeRuneInString(s)
+		// Git also does not accept noncharacters.
+		invalid := (r == utf8.RuneError && size == 1) ||
+			r&0xfffe == 0xfffe || (r >= 0xfdd0 && r <= 0xfdef)
+		if invalid {
+			b.WriteRune(rune(s[0]))
+			s = s[1:]
+			continue
+		}
+		b.WriteString(s[:size])
+		s = s[size:]
+	}
+	return b.String()
 }
 
 // skipBlankLines returns the message without its leading lines that are empty
@@ -314,23 +362,24 @@ func skipBlankLines(message string) string {
 	return message
 }
 
-// rawCommitInfo is what Rebase needs to know about a commit, with the author's
-// time in the time zone it was recorded in.
+// rawCommitInfo is what Rebase needs to know about a commit, re-encoded in
+// UTF-8.
 type rawCommitInfo struct {
-	tree    string
-	parent  string // The first parent.
-	author  *Signature
-	message string
+	tree       string
+	parent     string // The first parent.
+	authorLine string // Everything after "author ".
+	message    string
 }
 
 func (r *Repository) rawCommit(ctx context.Context, id string) (*rawCommitInfo, error) {
-	stdout, err := exec(ctx, r.path, []string{"cat-file", "commit", id}, nil)
+	args := []string{"log", "-1", "--no-walk", "--encoding=UTF-8", "--pretty=raw", "--end-of-options", id, "--"}
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	header, message, _ := strings.Cut(string(stdout), "\n\n")
-	c := &rawCommitInfo{message: message}
+	header, _, _ := strings.Cut(string(stdout), "\n\n")
+	c := new(rawCommitInfo)
 	for line := range strings.SplitSeq(header, "\n") {
 		key, value, _ := strings.Cut(line, " ")
 		switch key {
@@ -341,40 +390,16 @@ func (r *Repository) rawCommit(ctx context.Context, id string) (*rawCommitInfo, 
 				c.parent = value
 			}
 		case "author":
-			c.author, err = parseRawSignature(value)
-			if err != nil {
-				return nil, errors.Wrap(err, "parse author")
-			}
+			c.authorLine = value
 		}
 	}
+
+	// The message is read separately, because the raw format indents it.
+	args = []string{"log", "-1", "--no-walk", "--encoding=UTF-8", "--format=format:%B", "--end-of-options", id, "--"}
+	stdout, err = exec(ctx, r.path, args, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.message = string(stdout)
 	return c, nil
-}
-
-// parseRawSignature parses a signature in the "Name <email> 1700000000 +0100"
-// format of commit objects, keeping its time zone.
-func parseRawSignature(s string) (*Signature, error) {
-	emailEnd := strings.LastIndexByte(s, '>')
-	emailStart := strings.LastIndexByte(s[:max(emailEnd, 0)], '<')
-	if emailStart < 0 || emailEnd < 0 {
-		return nil, errors.Errorf("malformed signature %q", s)
-	}
-
-	fields := strings.Fields(s[emailEnd+1:])
-	if len(fields) != 2 || len(fields[1]) != 5 {
-		return nil, errors.Errorf("malformed signature time %q", s)
-	}
-	seconds, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse time")
-	}
-	zone, err := time.Parse("-0700", fields[1])
-	if err != nil {
-		return nil, errors.Wrap(err, "parse time zone")
-	}
-
-	return &Signature{
-		Name:  strings.TrimSuffix(s[:emailStart], " "),
-		Email: s[emailStart+1 : emailEnd],
-		When:  time.Unix(seconds, 0).In(zone.Location()),
-	}, nil
 }

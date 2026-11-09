@@ -48,9 +48,9 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 }
 
 // DiffCached returns a parsed diff of given path between the revision and the
-// index of the repository.
+// index of the repository, following the ".gitattributes" of the revision.
 func (r *Repository) DiffCached(ctx context.Context, rev, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
-	args := []string{"diff", "--cached", "--end-of-options", rev, "--", path}
+	args := []string{"--attr-source=" + rev, "diff", "--cached", "--end-of-options", rev, "--", path}
 	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 

@@ -54,6 +54,9 @@ func (r *Repository) parsePrettyFormatLogToList(ctx context.Context, logs []byte
 type InitOptions struct {
 	// Indicates whether the repository should be initialized in bare format.
 	Bare bool
+	// The hash algorithm of the repository, e.g., "sha1", or empty to use the
+	// default.
+	ObjectFormat string
 }
 
 // Init initializes a new Git repository.
@@ -71,6 +74,9 @@ func Init(ctx context.Context, path string, opts ...InitOptions) error {
 	args := []string{"init"}
 	if opt.Bare {
 		args = append(args, "--bare")
+	}
+	if opt.ObjectFormat != "" {
+		args = append(args, "--object-format="+opt.ObjectFormat)
 	}
 	args = append(args, "--end-of-options")
 	_, err = exec(ctx, path, args, nil)
