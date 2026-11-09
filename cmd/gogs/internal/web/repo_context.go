@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/cockroachdb/errors"
@@ -8,7 +9,6 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/ptrx"
 )
 
 // repoContext is the request-scoped viewer of the repository. Viewer is nil for
@@ -35,7 +35,7 @@ func (c *repoContext) ViewerCanAdminister() bool {
 
 // withRepoContext injects the repoContext of the repository derived from the
 // route.
-func withRepoContext(c flamego.Context, user *database.User) {
+func withRepoContext(c flamego.Context, viewer *database.User) {
 	ctx := c.Request().Context()
 	w := c.ResponseWriter()
 	ownerName := c.Param("owner")
@@ -64,29 +64,30 @@ func withRepoContext(c flamego.Context, user *database.User) {
 	}
 
 	// Disabled users are effectively visiting as anonymous users.
-	if user != nil && user.IsDisabled() {
-		user = nil
-	}
-	viewer := ptrx.Deref(user, database.User{})
-	var viewerAccess database.AccessMode
-	if viewer.IsAdmin {
-		viewerAccess = database.AccessModeOwner
-	} else {
-		viewerAccess = database.Handle.Permissions().AccessMode(
-			ctx,
-			viewer.ID,
-			repo.ID,
-			database.AccessModeOptions{
-				OwnerID: owner.ID,
-				Private: repo.IsPrivate,
-			},
-		)
+	if viewer != nil && viewer.IsDisabled() {
+		viewer = nil
 	}
 
 	c.Map(&repoContext{
 		Owner:        owner,
 		Repo:         repo,
-		Viewer:       user,
-		viewerAccess: viewerAccess,
+		Viewer:       viewer,
+		viewerAccess: viewerAccessMode(ctx, viewer, owner, repo),
 	})
+}
+
+// viewerAccessMode returns the access mode of the viewer to the repository. A
+// nil viewer is an anonymous user.
+func viewerAccessMode(ctx context.Context, viewer *database.User, owner *database.User, repo *database.Repository) database.AccessMode {
+	opts := database.AccessModeOptions{
+		OwnerID: owner.ID,
+		Private: repo.IsPrivate,
+	}
+	if viewer == nil {
+		return database.Handle.Permissions().AccessMode(ctx, 0, repo.ID, opts)
+	}
+	if viewer.IsAdmin {
+		return database.AccessModeOwner
+	}
+	return database.Handle.Permissions().AccessMode(ctx, viewer.ID, repo.ID, opts)
 }
