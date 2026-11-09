@@ -5,22 +5,17 @@ import (
 	gocontext "context"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"html/template"
 	"image/png"
-	"io"
 	"net/http"
 
-	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
@@ -41,191 +36,14 @@ func NewSettingsHandler(s SettingsStore) *SettingsHandler {
 }
 
 const (
-	tmplUserSettingsProfile                = "user/settings/profile"
-	tmplUserSettingsAvatar                 = "user/settings/avatar"
-	tmplUserSettingsPassword               = "user/settings/password"
 	tmplUserSettingsEmail                  = "user/settings/email"
 	tmplUserSettingsSSHKeys                = "user/settings/sshkeys"
 	tmplUserSettingsSecurity               = "user/settings/security"
 	tmplUserSettingsTwoFactorEnable        = "user/settings/two_factor_enable"
 	tmplUserSettingsTwoFactorRecoveryCodes = "user/settings/two_factor_recovery_codes"
-	tmplUserSettingsRepositories           = "user/settings/repositories"
-	tmplUserSettingsOrganizations          = "user/settings/organizations"
 	tmplUserSettingsApplications           = "user/settings/applications"
-	tmplUserSettingsDelete                 = "user/settings/delete"
 	tmplUserNotification                   = "user/notification"
 )
-
-func Settings(c *context.Context) {
-	c.Title("settings.profile")
-	c.PageIs("SettingsProfile")
-	c.Data["origin_name"] = c.User.Name
-	c.Data["name"] = c.User.Name
-	c.Data["full_name"] = c.User.FullName
-	c.Data["email"] = c.User.Email
-	c.Data["website"] = c.User.Website
-	c.Data["location"] = c.User.Location
-	c.Success(tmplUserSettingsProfile)
-}
-
-func SettingsPost(c *context.Context, f form.UpdateProfile) {
-	c.Title("settings.profile")
-	c.PageIs("SettingsProfile")
-	c.Data["origin_name"] = c.User.Name
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplUserSettingsProfile)
-		return
-	}
-
-	// Non-local users are not allowed to change their username
-	if c.User.IsLocal() {
-		// Check if the username (including cases) had been changed
-		if c.User.Name != f.Name {
-			err := database.Handle.Users().ChangeUsername(c.Req.Context(), c.User.ID, f.Name)
-			if err != nil {
-				c.FormErr("Name")
-				switch {
-				case database.IsErrUserAlreadyExist(errors.Cause(err)):
-					c.RenderWithErr(c.Tr("form.username_been_taken"), http.StatusUnprocessableEntity, tmplUserSettingsProfile, &f)
-				case database.IsErrNameNotAllowed(errors.Cause(err)):
-					c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()), http.StatusBadRequest, tmplUserSettingsProfile, &f)
-				default:
-					c.Error(err, "change user name")
-				}
-				return
-			}
-
-			log.Trace("Username changed: %s -> %s", c.User.Name, f.Name)
-		}
-	}
-
-	err := database.Handle.Users().Update(
-		c.Req.Context(),
-		c.User.ID,
-		database.UpdateUserOptions{
-			FullName: &f.FullName,
-			Website:  &f.Website,
-			Location: &f.Location,
-		},
-	)
-	if err != nil {
-		c.Error(err, "update user")
-		return
-	}
-
-	c.Flash.Success(c.Tr("settings.update_profile_success"))
-	c.RedirectSubpath("/user/settings")
-}
-
-// FIXME: limit upload size
-func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *database.User) error {
-	if f.Source == form.AvatarLookup && f.Gravatar != "" {
-		avatar := cryptox.MD5(f.Gravatar)
-		err := database.Handle.Users().Update(
-			c.Req.Context(),
-			ctxUser.ID,
-			database.UpdateUserOptions{
-				Avatar:      &avatar,
-				AvatarEmail: &f.Gravatar,
-			},
-		)
-		if err != nil {
-			return errors.Wrap(err, "update user")
-		}
-
-		err = database.Handle.Users().DeleteCustomAvatar(c.Req.Context(), c.User.ID)
-		if err != nil {
-			return errors.Wrap(err, "delete custom avatar")
-		}
-		return nil
-	}
-
-	if f.Avatar != nil && f.Avatar.Filename != "" {
-		r, err := f.Avatar.Open()
-		if err != nil {
-			return errors.Newf("open avatar reader: %v", err)
-		}
-		defer func() { _ = r.Close() }()
-
-		data, err := io.ReadAll(r)
-		if err != nil {
-			return errors.Newf("read avatar content: %v", err)
-		}
-		if !tool.IsImageFile(data) {
-			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
-		}
-
-		err = database.Handle.Users().UseCustomAvatar(c.Req.Context(), ctxUser.ID, data)
-		if err != nil {
-			return errors.Wrap(err, "save avatar")
-		}
-		return nil
-	}
-	return nil
-}
-
-func SettingsAvatar(c *context.Context) {
-	c.Title("settings.avatar")
-	c.PageIs("SettingsAvatar")
-	c.Success(tmplUserSettingsAvatar)
-}
-
-func SettingsAvatarPost(c *context.Context, f form.Avatar) {
-	if err := UpdateAvatarSetting(c, f, c.User); err != nil {
-		c.Flash.Error(err.Error())
-	} else {
-		c.Flash.Success(c.Tr("settings.update_avatar_success"))
-	}
-
-	c.RedirectSubpath("/user/settings/avatar")
-}
-
-func SettingsDeleteAvatar(c *context.Context) {
-	err := database.Handle.Users().DeleteCustomAvatar(c.Req.Context(), c.User.ID)
-	if err != nil {
-		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
-	}
-
-	c.RedirectSubpath("/user/settings/avatar")
-}
-
-func SettingsPassword(c *context.Context) {
-	c.Title("settings.password")
-	c.PageIs("SettingsPassword")
-	c.Success(tmplUserSettingsPassword)
-}
-
-func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
-	c.Title("settings.password")
-	c.PageIs("SettingsPassword")
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplUserSettingsPassword)
-		return
-	}
-
-	if !userx.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
-		c.Flash.Error(c.Tr("settings.password_incorrect"))
-	} else if f.Password != f.Retype {
-		c.Flash.Error(c.Tr("form.password_not_match"))
-	} else {
-		err := database.Handle.Users().Update(
-			c.Req.Context(),
-			c.User.ID,
-			database.UpdateUserOptions{
-				Password: &f.Password,
-			},
-		)
-		if err != nil {
-			c.Errorf(err, "update user")
-			return
-		}
-		c.Flash.Success(c.Tr("settings.change_password_success"))
-	}
-
-	c.RedirectSubpath("/user/settings/password")
-}
 
 func SettingsEmails(c *context.Context) {
 	c.Title("settings.emails")
@@ -571,71 +389,6 @@ func SettingsTwoFactorDisable(c *context.Context) {
 	})
 }
 
-func SettingsRepos(c *context.Context) {
-	c.Title("settings.repos")
-	c.PageIs("SettingsRepositories")
-
-	repos, err := database.GetUserAndCollaborativeRepositories(c.User.ID)
-	if err != nil {
-		c.Errorf(err, "get user and collaborative repositories")
-		return
-	}
-	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
-		c.Errorf(err, "load attributes")
-		return
-	}
-	c.Data["Repos"] = repos
-
-	c.Success(tmplUserSettingsRepositories)
-}
-
-func SettingsLeaveRepo(c *context.Context) {
-	repo, err := database.GetRepositoryByID(c.QueryInt64("id"))
-	if err != nil {
-		c.NotFoundOrError(err, "get repository by ID")
-		return
-	}
-
-	if err = repo.DeleteCollaboration(c.User.ID); err != nil {
-		c.Errorf(err, "delete collaboration")
-		return
-	}
-
-	c.Flash.Success(c.Tr("settings.repos.leave_success", repo.FullName()))
-	c.JSONSuccess(map[string]any{
-		"redirect": conf.Server.Subpath + "/user/settings/repositories",
-	})
-}
-
-func SettingsOrganizations(c *context.Context) {
-	c.Title("settings.orgs")
-	c.PageIs("SettingsOrganizations")
-
-	orgs, err := database.GetOrgsByUserID(c.User.ID, true)
-	if err != nil {
-		c.Errorf(err, "get organizations by user ID")
-		return
-	}
-	c.Data["Orgs"] = orgs
-
-	c.Success(tmplUserSettingsOrganizations)
-}
-
-func SettingsLeaveOrganization(c *context.Context) {
-	if err := database.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
-		if database.IsErrLastOrgOwner(err) {
-			c.Flash.Error(c.Tr("form.last_org_owner"))
-		} else {
-			c.Errorf(err, "remove organization user")
-			return
-		}
-	}
-
-	c.JSONSuccess(map[string]any{
-		"redirect": conf.Server.Subpath + "/user/settings/organizations",
-	})
-}
-
 func (h *SettingsHandler) Applications() macaron.Handler {
 	return func(c *context.Context) {
 		c.Title("settings.applications")
@@ -698,41 +451,6 @@ func (h *SettingsHandler) DeleteApplication() macaron.Handler {
 			"redirect": conf.Server.Subpath + "/user/settings/applications",
 		})
 	}
-}
-
-func SettingsDelete(c *context.Context) {
-	c.Title("settings.delete")
-	c.PageIs("SettingsDelete")
-
-	if c.Req.Method == "POST" {
-		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
-			if auth.IsErrBadCredentials(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), http.StatusUnauthorized, tmplUserSettingsDelete, nil)
-			} else {
-				c.Errorf(err, "authenticate user")
-			}
-			return
-		}
-
-		if err := database.Handle.Users().DeleteByID(c.Req.Context(), c.User.ID, false); err != nil {
-			switch {
-			case database.IsErrUserOwnRepos(err):
-				c.Flash.Error(c.Tr("form.still_own_repo"))
-				c.Redirect(conf.Server.Subpath + "/user/settings/delete")
-			case database.IsErrUserHasOrgs(err):
-				c.Flash.Error(c.Tr("form.still_has_org"))
-				c.Redirect(conf.Server.Subpath + "/user/settings/delete")
-			default:
-				c.Errorf(err, "delete user")
-			}
-		} else {
-			log.Trace("Account deleted: %s", c.User.Name)
-			c.Redirect(conf.Server.Subpath + "/")
-		}
-		return
-	}
-
-	c.Success(tmplUserSettingsDelete)
 }
 
 // SettingsStore is the data layer carrier for user settings endpoints. This

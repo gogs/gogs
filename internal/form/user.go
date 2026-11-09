@@ -14,17 +14,6 @@ import (
 // /_______  //_______  /  |____|     |____|   |___\____|__  /\______  /_______  /
 //         \/         \/                                   \/        \/        \/
 
-type UpdateProfile struct {
-	Name     string `binding:"Required;AlphaDashDot;MaxSize(35)"`
-	FullName string `binding:"MaxSize(100)"`
-	Website  string `binding:"Url;MaxSize(100)"`
-	Location string `binding:"MaxSize(50)"`
-}
-
-func (f *UpdateProfile) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 const (
 	AvatarLocal  string = "local"
 	AvatarLookup string = "lookup"
@@ -46,16 +35,6 @@ type AddEmail struct {
 }
 
 func (f *AddEmail) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-type ChangePassword struct {
-	OldPassword string `binding:"Required;MinSize(1);MaxSize(255)"`
-	Password    string `binding:"Required;MaxSize(255)"`
-	Retype      string
-}
-
-func (f *ChangePassword) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 

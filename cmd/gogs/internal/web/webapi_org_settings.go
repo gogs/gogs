@@ -135,15 +135,41 @@ func patchOrgSettings(c flamego.Context, l i18n.Locale, user *database.User, m *
 	return http.StatusOK, &orgNameResponse{Name: req.OrgName}, nil
 }
 
-// orgAvatarMaxSize is the largest avatar image owners can upload. The image is
-// resized once saved.
-const orgAvatarMaxSize = 5 << 20 // 5 MiB
+// avatarMaxSize is the largest avatar image users and organization owners can
+// upload. The image is resized once saved.
+const avatarMaxSize = 5 << 20 // 5 MiB
 
 // limitAvatarUpload replaces the size limit of other requests, which is too
 // small for an image.
 func limitAvatarUpload(c flamego.Context) {
 	r := c.Request().Request
-	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, orgAvatarMaxSize+64<<10) // Room for the multipart framing.
+	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, avatarMaxSize+64<<10) // Room for the multipart framing.
+}
+
+// readAvatarUpload returns the image uploaded as the "avatar" form field, or
+// the status code and the error to answer with.
+func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode int, err error) {
+	file, _, err := r.FormFile("avatar")
+	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", avatarMaxSize>>20))
+		}
+		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
+	}
+	defer func() { _ = file.Close() }()
+
+	data, err = io.ReadAll(io.LimitReader(file, avatarMaxSize+1))
+	if err != nil {
+		return nil, http.StatusInternalServerError, errors.Wrap(err, "read avatar")
+	}
+	if len(data) > avatarMaxSize {
+		return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", avatarMaxSize>>20))
+	}
+	if !tool.IsImageFile(data) {
+		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
+	}
+	return data, http.StatusOK, nil
 }
 
 func putOrgAvatar(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
@@ -151,26 +177,12 @@ func putOrgAvatar(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCod
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
 	r := c.Request().Request
-	file, _, err := r.FormFile("avatar")
+	data, code, err := readAvatarUpload(r, l)
 	if err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			return http.StatusRequestEntityTooLarge, nil, errors.New(l.Tr("settings.uploaded_avatar_too_large", orgAvatarMaxSize>>20))
+		if code == http.StatusInternalServerError {
+			log.Error("putOrgAvatar: organization %d: %v", m.Org.ID, err)
 		}
-		return http.StatusBadRequest, nil, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
-	}
-	defer func() { _ = file.Close() }()
-
-	data, err := io.ReadAll(io.LimitReader(file, orgAvatarMaxSize+1))
-	if err != nil {
-		log.Error("putOrgAvatar: read avatar of organization %d: %v", m.Org.ID, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "read avatar")
-	}
-	if len(data) > orgAvatarMaxSize {
-		return http.StatusRequestEntityTooLarge, nil, errors.New(l.Tr("settings.uploaded_avatar_too_large", orgAvatarMaxSize>>20))
-	}
-	if !tool.IsImageFile(data) {
-		return http.StatusBadRequest, nil, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
+		return code, nil, err
 	}
 	if err = database.Handle.Users().UseCustomAvatar(r.Context(), m.Org.ID, data); err != nil {
 		log.Error("putOrgAvatar: save avatar of organization %d: %v", m.Org.ID, err)

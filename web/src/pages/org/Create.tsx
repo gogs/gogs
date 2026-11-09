@@ -7,7 +7,8 @@ import { FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/lib/page-title";
-import { FormError, createOrg } from "@/lib/queries/org";
+import { createOrg } from "@/lib/queries/org";
+import { FormError } from "@/lib/queries/request";
 
 // OrgCreate creates an organization owned by the viewer.
 export function OrgCreate() {

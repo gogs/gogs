@@ -1287,31 +1287,6 @@ function initCodeView() {
   }
 }
 
-function initUserSettings() {
-  console.log("initUserSettings");
-
-  // Options
-  if ($(".user.settings.profile").length > 0) {
-    $("#username").keyup(function() {
-      var $prompt = $("#name-change-prompt");
-      if (
-        $(this)
-          .val()
-          .toString()
-          .toLowerCase() !=
-        $(this)
-          .data("name")
-          .toString()
-          .toLowerCase()
-      ) {
-        $prompt.show();
-      } else {
-        $prompt.hide();
-      }
-    });
-  }
-}
-
 function initRepositoryCollaboration() {
   console.log("initRepositoryCollaboration");
 
@@ -1646,7 +1621,6 @@ $(document).ready(function() {
   }
 
   var routes = {
-    "div.user.settings": initUserSettings,
     "div.repository.settings.collaboration": initRepositoryCollaboration,
     "div.webhook.settings": initWebhookSettings
   };

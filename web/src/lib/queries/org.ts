@@ -1,4 +1,4 @@
-import { loaderResponseError } from "@/lib/loader-error";
+import { fetchJSON, send, submit, uploadAvatar } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
 export interface OrgMember {
@@ -54,18 +54,6 @@ function teamURL(org: string, team: string, path = "") {
   return orgURL(org, `/teams/${encodeURIComponent(team)}${path}`);
 }
 
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "same-origin" });
-  if (!res.ok) throw await loaderResponseError(res);
-  return (await res.json()) as T;
-}
-
-// send makes a change that answers with no content.
-async function send(method: "PUT" | "DELETE", url: string) {
-  const res = await fetch(url, { method, credentials: "same-origin" });
-  if (!res.ok) throw await loaderResponseError(res);
-}
-
 export async function fetchOrgMembers(org: string) {
   return (await fetchJSON<{ items: OrgMember[] }>(orgURL(org, "/members"))).items;
 }
@@ -105,33 +93,6 @@ export interface OrgTeamForm {
   teamName: string;
   description: string;
   permission: TeamPermission;
-}
-
-// FormError is a failed form submission, with the message for the whole form
-// or the messages for its fields.
-export class FormError extends Error {
-  fields: Record<string, string | null>;
-
-  constructor(message: string, fields: Record<string, string | null>) {
-    super(message);
-    this.name = "FormError";
-    this.fields = fields;
-  }
-}
-
-async function submit<T>(method: "POST" | "PATCH" | "DELETE", url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
-    throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {});
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
 }
 
 // createOrgTeam creates a team and returns the name of its page.
@@ -203,11 +164,8 @@ export async function updateOrgSettings(org: string, form: OrgSettingsForm) {
   return (await submit<{ name: string }>("PATCH", orgURL(org, "/settings"), form)).name;
 }
 
-export async function uploadOrgAvatar(org: string, file: File) {
-  const body = new FormData();
-  body.append("avatar", file);
-  const res = await fetch(orgURL(org, "/settings/avatar"), { method: "PUT", credentials: "same-origin", body });
-  if (!res.ok) throw await loaderResponseError(res);
+export function uploadOrgAvatar(org: string, file: File) {
+  return uploadAvatar(orgURL(org, "/settings/avatar"), file);
 }
 
 export function deleteOrgAvatar(org: string) {

@@ -4,14 +4,13 @@ import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { FormField } from "@/components/FormField";
 import { OrgHeader } from "@/components/OrgHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePageTitle } from "@/lib/page-title";
 import {
-  FormError,
   type OrgTeamDetail,
   type OrgTeamForm,
   type TeamPermission,
@@ -19,6 +18,7 @@ import {
   deleteOrgTeam,
   updateOrgTeam,
 } from "@/lib/queries/org";
+import { FormError } from "@/lib/queries/request";
 import { userProfileQuery } from "@/lib/queries/user";
 
 const PERMISSIONS: TeamPermission[] = ["read", "write", "admin"];
@@ -183,41 +183,18 @@ function DeleteTeamButton({ org, team }: { org: string; team: OrgTeamDetail }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const mutation = useMutation({
-    mutationFn: () => deleteOrgTeam(org, team.lowerName),
-    onSuccess: async () => {
-      toast.success(t("org.teams.delete_team_success"));
-      await queryClient.invalidateQueries({ queryKey: userProfileQuery(org).queryKey });
-      await navigate({ to: "/org/$org/teams", params: { org } });
-    },
-    onError: (err) => toast.error(err.message),
-  });
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="text-(--color-destructive)">
-          {t("org.teams.delete_team")}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-4">
-        <p className="font-semibold">{t("org.teams.delete_team_title")}</p>
-        <p className="mt-1 text-sm text-(--color-muted-foreground)">{t("org.teams.delete_team_desc")}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
-            {t("cancel")}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
-          >
-            {t("org.teams.delete_team_title")}
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <ConfirmButton
+      label={t("org.teams.delete_team")}
+      title={t("org.teams.delete_team_title")}
+      description={t("org.teams.delete_team_desc")}
+      align="start"
+      action={() => deleteOrgTeam(org, team.lowerName)}
+      onDone={async () => {
+        toast.success(t("org.teams.delete_team_success"));
+        await queryClient.invalidateQueries({ queryKey: userProfileQuery(org).queryKey });
+        await navigate({ to: "/org/$org/teams", params: { org } });
+      }}
+    />
   );
 }
