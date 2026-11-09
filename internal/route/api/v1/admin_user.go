@@ -3,20 +3,20 @@ package v1
 import (
 	"net/http"
 
+	"github.com/go-macaron/i18n"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 )
 
-func parseLoginSource(c *context.APIContext, sourceID int64) {
+func parseLoginSource(c *apiContext, sourceID int64) {
 	if sourceID == 0 {
 		return
 	}
 
-	_, err := database.Handle.LoginSources().GetByID(c.Req.Context(), sourceID)
+	_, err := database.Handle.LoginSources().GetByID(c.Request().Context(), sourceID)
 	if err != nil {
 		if database.IsErrLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -30,21 +30,21 @@ func parseLoginSource(c *context.APIContext, sourceID int64) {
 type adminCreateUserRequest struct {
 	SourceID   int64  `json:"source_id"`
 	LoginName  string `json:"login_name"`
-	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
-	FullName   string `json:"full_name" binding:"MaxSize(100)"`
-	Email      string `json:"email" binding:"Required;Email;MaxSize(254)"`
-	Password   string `json:"password" binding:"MaxSize(255)"`
+	Username   string `json:"username" validate:"required,alphadashdot,max=35"`
+	FullName   string `json:"full_name" validate:"max=100"`
+	Email      string `json:"email" validate:"required,email,max=254"`
+	Password   string `json:"password" validate:"max=255"`
 	SendNotify bool   `json:"send_notify"`
 }
 
-func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
+func adminCreateUser(c *apiContext, l i18n.Locale, form adminCreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
 	}
 
 	u, err := database.Handle.Users().Create(
-		c.Req.Context(),
+		c.Request().Context(),
 		form.Username,
 		form.Email,
 		database.CreateUserOptions{
@@ -69,7 +69,7 @@ func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		if err := email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u)); err != nil {
+		if err := email.SendRegisterNotifyMail(l, database.NewMailerUser(u)); err != nil {
 			log.Error("Failed to send register notify mail: %v", err)
 		}
 	}
@@ -80,11 +80,11 @@ func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 type adminEditUserRequest struct {
 	SourceID         int64  `json:"source_id"`
 	LoginName        string `json:"login_name"`
-	FullName         string `json:"full_name" binding:"MaxSize(100)"`
-	Email            string `json:"email" binding:"Required;Email;MaxSize(254)"`
-	Password         string `json:"password" binding:"MaxSize(255)"`
-	Website          string `json:"website" binding:"MaxSize(50)"`
-	Location         string `json:"location" binding:"MaxSize(50)"`
+	FullName         string `json:"full_name" validate:"max=100"`
+	Email            string `json:"email" validate:"required,email,max=254"`
+	Password         string `json:"password" validate:"max=255"`
+	Website          string `json:"website" validate:"max=50"`
+	Location         string `json:"location" validate:"max=50"`
 	Active           *bool  `json:"active"`
 	Admin            *bool  `json:"admin"`
 	AllowGitHook     *bool  `json:"allow_git_hook"`
@@ -92,7 +92,7 @@ type adminEditUserRequest struct {
 	MaxRepoCreation  *int   `json:"max_repo_creation"`
 }
 
-func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
+func adminEditUser(c *apiContext, form adminEditUserRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
@@ -125,7 +125,7 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 		opts.Email = &form.Email
 	}
 
-	err := database.Handle.Users().Update(c.Req.Context(), u.ID, opts)
+	err := database.Handle.Users().Update(c.Request().Context(), u.ID, opts)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -136,7 +136,7 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 	}
 	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
-	u, err = database.Handle.Users().GetByID(c.Req.Context(), u.ID)
+	u, err = database.Handle.Users().GetByID(c.Request().Context(), u.ID)
 	if err != nil {
 		c.Error(err, "get user")
 		return
@@ -144,13 +144,13 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 	c.JSONSuccess(toUser(u))
 }
 
-func adminDeleteUser(c *context.APIContext) {
+func adminDeleteUser(c *apiContext) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
 
-	if err := database.Handle.Users().DeleteByID(c.Req.Context(), u.ID, false); err != nil {
+	if err := database.Handle.Users().DeleteByID(c.Request().Context(), u.ID, false); err != nil {
 		if database.IsErrUserOwnRepos(err) ||
 			database.IsErrUserHasOrgs(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -164,7 +164,7 @@ func adminDeleteUser(c *context.APIContext) {
 	c.NoContent()
 }
 
-func adminCreatePublicKey(c *context.APIContext, form createPublicKeyRequest) {
+func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return

@@ -3,17 +3,16 @@ package v1
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func searchUsers(c *context.APIContext) {
+func searchUsers(c *apiContext) {
 	pageSize := c.QueryInt("limit")
 	if pageSize <= 0 {
 		pageSize = 10
 	}
-	users, _, err := database.Handle.Users().SearchByName(c.Req.Context(), c.Query("q"), 1, pageSize, "")
+	users, _, err := database.Handle.Users().SearchByName(c.Request().Context(), c.Query("q"), 1, pageSize, "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
@@ -36,8 +35,8 @@ func searchUsers(c *context.APIContext) {
 	})
 }
 
-func getUserProfile(c *context.APIContext) {
-	u, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":username"))
+func getUserProfile(c *apiContext) {
+	u, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return
@@ -50,6 +49,6 @@ func getUserProfile(c *context.APIContext) {
 	c.JSONSuccess(toUser(u))
 }
 
-func getAuthenticatedUser(c *context.APIContext) {
+func getAuthenticatedUser(c *apiContext) {
 	c.JSONSuccess(toUser(c.User))
 }

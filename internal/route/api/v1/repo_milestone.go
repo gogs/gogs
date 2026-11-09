@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listMilestones(c *context.APIContext) {
+func listMilestones(c *apiContext) {
 	milestones, err := database.GetMilestonesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get milestones by repository ID")
@@ -23,8 +22,8 @@ func listMilestones(c *context.APIContext) {
 	c.JSONSuccess(&apiMilestones)
 }
 
-func getMilestone(c *context.APIContext) {
-	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+func getMilestone(c *apiContext) {
+	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
@@ -38,7 +37,7 @@ type createMilestoneRequest struct {
 	Deadline    *time.Time `json:"due_on"`
 }
 
-func createMilestone(c *context.APIContext, form createMilestoneRequest) {
+func createMilestone(c *apiContext, form createMilestoneRequest) {
 	if form.Deadline == nil {
 		defaultDeadline, _ := time.ParseInLocation("2006-01-02", "9999-12-31", time.Local)
 		form.Deadline = &defaultDeadline
@@ -65,8 +64,8 @@ type editMilestoneRequest struct {
 	Deadline    *time.Time `json:"due_on"`
 }
 
-func editMilestone(c *context.APIContext, form editMilestoneRequest) {
-	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+func editMilestone(c *apiContext, form editMilestoneRequest) {
+	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
@@ -95,8 +94,8 @@ func editMilestone(c *context.APIContext, form editMilestoneRequest) {
 	c.JSONSuccess(toIssueMilestone(milestone))
 }
 
-func deleteMilestone(c *context.APIContext) {
-	if err := database.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+func deleteMilestone(c *apiContext) {
+	if err := database.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
 		c.Error(err, "delete milestone of repository by ID")
 		return
 	}

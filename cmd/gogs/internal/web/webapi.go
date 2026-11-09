@@ -20,9 +20,11 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	apiv1 "gogs.io/gogs/internal/route/api/v1"
 )
 
 type (
+	webAPIAuthKey    struct{}
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
@@ -32,6 +34,7 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
 		ctx = stdctx.WithValue(ctx, context.UserKey{}, c.User)
+		ctx = stdctx.WithValue(ctx, webAPIAuthKey{}, apiv1.Authentication{IsBasicAuth: c.IsBasicAuth, IsTokenAuth: c.IsTokenAuth})
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
@@ -47,13 +50,29 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 	}
 }
 
+// apiV1Bridger bridges API v1 requests to Flamego. Macaron trims the trailing
+// slash and splits the escaped path into segments before matching, so an
+// encoded slash (%2F) stays within its segment. Flamego does neither, so the
+// path is normalized here to keep routing unchanged.
+func apiV1Bridger(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
+	bridge := flamegoBridger(webHandler)
+	return func(c *context.Context, l i18n.Locale) {
+		u := *c.Req.URL
+		u.Path = strings.TrimSuffix(u.EscapedPath(), "/")
+		u.RawPath = ""
+		c.Req.URL = &u
+		bridge(c, l)
+	}
+}
+
 func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
 	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
+	auth, _ := ctx.Value(webAPIAuthKey{}).(apiv1.Authentication)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(viewer, sess, mc, l)
+	c.Map(viewer, auth, sess, mc, l)
 	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 

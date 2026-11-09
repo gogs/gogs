@@ -7,13 +7,12 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
-func listHooks(c *context.APIContext) {
+func listHooks(c *apiContext) {
 	hooks, err := database.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Errorf(err, "get webhooks by repository ID")
@@ -22,20 +21,20 @@ func listHooks(c *context.APIContext) {
 
 	apiHooks := make([]*types.RepositoryHook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = toRepositoryHook(c.Repo.RepoLink, hooks[i])
+		apiHooks[i] = toRepositoryHook(hooks[i])
 	}
 	c.JSONSuccess(&apiHooks)
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
 type createHookRequest struct {
-	Type   string            `json:"type" binding:"Required"`
-	Config map[string]string `json:"config" binding:"Required"`
+	Type   string            `json:"type" validate:"required"`
+	Config map[string]string `json:"config" validate:"required"`
 	Events []string          `json:"events"`
 	Active bool              `json:"active"`
 }
 
-func createHook(c *context.APIContext, form createHookRequest) {
+func createHook(c *apiContext, form createHookRequest) {
 	if !database.IsValidHookTaskType(form.Type) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid hook type."))
 		return
@@ -100,7 +99,7 @@ func createHook(c *context.APIContext, form createHookRequest) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, toRepositoryHook(c.Repo.RepoLink, w))
+	c.JSON(http.StatusCreated, toRepositoryHook(w))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
@@ -110,8 +109,8 @@ type editHookRequest struct {
 	Active *bool             `json:"active"`
 }
 
-func editHook(c *context.APIContext, form editHookRequest) {
-	w, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+func editHook(c *apiContext, form editHookRequest) {
+	w, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook of repository by ID")
 		return
@@ -175,11 +174,11 @@ func editHook(c *context.APIContext, form editHookRequest) {
 		return
 	}
 
-	c.JSONSuccess(toRepositoryHook(c.Repo.RepoLink, w))
+	c.JSONSuccess(toRepositoryHook(w))
 }
 
-func deleteHook(c *context.APIContext) {
-	if err := database.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+func deleteHook(c *apiContext) {
+	if err := database.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
 		c.Errorf(err, "delete webhook of repository by ID")
 		return
 	}
