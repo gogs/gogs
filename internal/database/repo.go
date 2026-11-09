@@ -2597,30 +2597,6 @@ func (r *Repository) GetForks() ([]*Repository, error) {
 	return forks, nil
 }
 
-// __________                             .__
-// \______   \____________    ____   ____ |  |__
-//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
-//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
-//  |______  / |__|  (____  /___|  /\___  >___|  /
-//         \/             \/     \/     \/     \/
-//
-
-func (r *Repository) CreateNewBranch(oldBranch, newBranch string) (err error) {
-	ctx := context.TODO()
-	gitRepo, err := git.Open(r.RepoPath())
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-	commitID, err := gitRepo.BranchCommitID(ctx, oldBranch)
-	if err != nil {
-		return errors.Newf("get commit of branch %q: %v", oldBranch, err)
-	}
-	if err = gitRepo.Push(ctx, r.RepoPath(), commitID+":"+git.RefsHeads+newBranch); err != nil {
-		return errors.Newf("push [branch: %s]: %v", newBranch, err)
-	}
-	return nil
-}
-
 // Deprecated: Use Perms.SetRepoPerms instead.
 func (r *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
 	newAccesses := make([]Access, 0, len(accessMap))
