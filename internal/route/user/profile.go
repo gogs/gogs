@@ -3,9 +3,6 @@ package user
 import (
 	"strings"
 
-	"github.com/unknwon/paginater"
-
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/repo"
@@ -29,49 +26,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 		return
 	}
 
-	c.Title(puser.DisplayName())
-	c.PageIs("UserProfile")
-	c.Data["Owner"] = puser
-
-	orgs, err := database.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
-	if err != nil {
-		c.Error(err, "get organizations by user ID")
-		return
-	}
-
-	c.Data["Orgs"] = orgs
-
-	tab := c.Query("tab")
-	c.Data["TabName"] = tab
-	switch tab {
-	case "activity":
-		retrieveFeeds(c, puser.User, c.UserID(), true)
-		if c.Written() {
-			return
-		}
-	default:
-		page := c.QueryInt("page")
-		if page <= 0 {
-			page = 1
-		}
-
-		showPrivate := c.IsLogged && (puser.ID == c.User.ID || c.User.IsAdmin)
-		c.Data["Repos"], err = database.GetUserRepositories(&database.UserRepoOptions{
-			UserID:   puser.ID,
-			Private:  showPrivate,
-			Page:     page,
-			PageSize: conf.UI.User.RepoPagingNum,
-		})
-		if err != nil {
-			c.Error(err, "get user repositories")
-			return
-		}
-
-		count := database.CountUserRepositories(puser.ID, showPrivate)
-		c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
-	}
-
-	c.Success(tmplUserProfile)
+	c.ServeWeb()
 }
 
 func Followers(c *context.Context, puser *context.ParamsUser) {

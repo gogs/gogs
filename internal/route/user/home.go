@@ -17,7 +17,6 @@ const (
 	tmplUserDashboard       = "user/dashboard/dashboard"
 	tmplUserDashboardFeeds  = "user/dashboard/feeds"
 	tmplUserDashboardIssues = "user/dashboard/issues"
-	tmplUserProfile         = "user/profile"
 	tmplOrgHome             = "org/home"
 )
 
@@ -55,7 +54,7 @@ func getDashboardContextUser(c *context.Context) *database.User {
 // retrieveFeeds loads feeds from database by given context user.
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(c *context.Context, ctxUser *database.User, userID int64, isProfile bool) {
+func retrieveFeeds(c *context.Context, ctxUser *database.User, userID int64) {
 	afterID := c.QueryInt64("after_id")
 
 	var err error
@@ -63,7 +62,7 @@ func retrieveFeeds(c *context.Context, ctxUser *database.User, userID int64, isP
 	if ctxUser.IsOrganization() {
 		actions, err = database.Handle.Actions().ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
 	} else {
-		actions, err = database.Handle.Actions().ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
+		actions, err = database.Handle.Actions().ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, false)
 	}
 	if err != nil {
 		c.Error(err, "list actions")
@@ -105,7 +104,7 @@ func Dashboard(c *context.Context) {
 		return
 	}
 
-	retrieveFeeds(c, ctxUser, c.User.ID, false)
+	retrieveFeeds(c, ctxUser, c.User.ID)
 	if c.Written() {
 		return
 	}
