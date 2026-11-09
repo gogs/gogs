@@ -6,17 +6,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 // SettingsLayout puts the links between the settings pages of a user or an
-// organization beside the page. On narrow screens they move into a dropdown
-// above the page, named after the current page.
+// organization, or the pages of the admin panel, beside the page. On narrow
+// screens they move into a dropdown above the page, named after the current
+// page.
 export function SettingsLayout({
   label,
   current,
   nav,
+  wide = false,
   children,
 }: {
   label: string;
   current: string;
   nav: ReactNode;
+  // wide lets the page use the full width, e.g., for a list, instead of the
+  // width of a form.
+  wide?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -47,7 +52,7 @@ export function SettingsLayout({
       <nav aria-label={label} className="hidden flex-col gap-1 md:flex">
         {nav}
       </nav>
-      <section className="min-w-0 max-w-xl">{children}</section>
+      <section className={cn("min-w-0", !wide && "max-w-xl")}>{children}</section>
     </div>
   );
 }

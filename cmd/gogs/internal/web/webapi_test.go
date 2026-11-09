@@ -4,6 +4,7 @@ import (
 	stdctx "context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,8 +93,8 @@ func TestRequireSignIn(t *testing.T) {
 	t.Cleanup(func() {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
-	// Dashboards, user settings, and the people and teams of organizations need
-	// a signed-in user even on sites that do not require signing in to view
+	// Dashboards, user settings, the people and teams of organizations, and the
+	// admin panel need a signed-in user even on sites that do not require signing in to view
 	// content.
 	conf.Auth.RequireSigninView = false
 
@@ -122,6 +123,10 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/orgs/acme/teams/owners",
 		"/api/web/orgs/acme/teams/owners/members",
 		"/api/web/orgs/acme/teams/owners/repos",
+		"/api/web/admin/users",
+		"/api/web/admin/orgs",
+		"/api/web/admin/repos",
+		"/api/web/admin/notices",
 	}
 	tests := []struct {
 		name                     string
@@ -163,5 +168,34 @@ func TestRequireSignIn(t *testing.T) {
 				assert.JSONEq(t, test.wantBody, resp.Body.String(), path)
 			}
 		})
+	}
+}
+
+func TestRequireAdmin(t *testing.T) {
+	handler, err := newRoutingHandler()
+	require.NoError(t, err)
+
+	// A signed-in user who is not a site admin reaches none of the admin panel,
+	// including the actions that delete data.
+	requests := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/web/admin/users"},
+		{http.MethodGet, "/api/web/admin/orgs"},
+		{http.MethodGet, "/api/web/admin/repos"},
+		{http.MethodDelete, "/api/web/admin/repos/1"},
+		{http.MethodGet, "/api/web/admin/notices"},
+		{http.MethodDelete, "/api/web/admin/notices"},
+		{http.MethodDelete, "/api/web/admin/notices/all"},
+	}
+	user := &database.User{ID: 2, IsActive: true}
+	for _, r := range requests {
+		req := httptest.NewRequest(r.method, r.path, strings.NewReader(`{"ids":[1]}`))
+		req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, user))
+		resp := httptest.NewRecorder()
+		handler.ServeHTTP(resp, req)
+		assert.Equal(t, http.StatusForbidden, resp.Code, r.method+" "+r.path)
+		assert.JSONEq(t, `{"error":"admin required"}`, resp.Body.String(), r.method+" "+r.path)
 	}
 }
