@@ -1525,30 +1525,6 @@ $(document).ready(function() {
     showMessageMaxLength(512, "description", "descLength");
   }
 
-  // AJAX load buttons
-  $(".ajax-load-button").click(function() {
-    var $this = $(this);
-    $this.addClass("disabled");
-
-    $.ajax({
-      url: $this.data("url"),
-      headers: {
-        "X-AJAX": "true"
-      }
-    }).done(function(data, status, request) {
-      $(data).insertBefore($this);
-
-      // Update new URL or remove self if no more feeds
-      var url = request.getResponseHeader("X-AJAX-URL");
-      if (url) {
-        $this.data("url", url);
-        $this.removeClass("disabled");
-      } else {
-        $this.remove();
-      }
-    });
-  });
-
   // Helpers
   $(".delete-button").click(function() {
     var $this = $(this);
