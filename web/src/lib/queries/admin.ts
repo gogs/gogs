@@ -150,3 +150,94 @@ export function updateAdminUser(id: number, form: AdminUserForm) {
 export function deleteAdminUser(id: number) {
   return send("DELETE", adminURL(`/users/${id}`));
 }
+
+// AdminReportRow is one setting or measurement of a report, with its label
+// translated by the server.
+export interface AdminReportRow {
+  label: string;
+  // "block" is multi-line code, and "unset" a setting with no value.
+  kind: "text" | "code" | "block" | "bool" | "unset";
+  value?: string;
+  on?: boolean;
+}
+
+export interface AdminReportSection {
+  id: string;
+  title: string;
+  // Groups are shown with a divider between them.
+  groups: AdminReportRow[][];
+}
+
+export interface AdminDashboard {
+  appVersion: string;
+  gitVersion: string;
+  goVersion: string;
+  buildTime: string;
+  buildCommit: string;
+  // A translated sentence that marks each count with <b>.
+  statistics: string;
+  systemStatus: AdminReportSection;
+}
+
+export function fetchAdminDashboard() {
+  return fetchJSON<AdminDashboard>(adminURL("/dashboard"));
+}
+
+export const ADMIN_OPERATIONS = [
+  "delete-inactive-users",
+  "delete-repo-archives",
+  "delete-missing-repos",
+  "git-gc-repos",
+  "resync-ssh-keys",
+  "resync-repo-hooks",
+  "reinit-missing-repos",
+] as const;
+
+export type AdminOperation = (typeof ADMIN_OPERATIONS)[number];
+
+// runAdminOperation runs a maintenance task and returns the message telling
+// it succeeded.
+export async function runAdminOperation(op: AdminOperation) {
+  const { message } = await submit<{ message: string }>("POST", adminURL(`/operations/${op}`), {});
+  return message;
+}
+
+export interface AdminConfig {
+  sections: AdminReportSection[];
+  // True when the site can send a test email.
+  emailEnabled: boolean;
+}
+
+export function fetchAdminConfig() {
+  return fetchJSON<AdminConfig>(adminURL("/config"));
+}
+
+export async function sendAdminTestMail(email: string) {
+  const { message } = await submit<{ message: string }>("POST", adminURL("/config/test-mail"), { email });
+  return message;
+}
+
+export interface AdminCronTask {
+  description: string;
+  schedule: string;
+  // Null when the task never runs.
+  next: string | null;
+  // Null when the task has not run yet.
+  prev: string | null;
+  execTimes: number;
+}
+
+export interface AdminProcess {
+  pid: number;
+  description: string;
+  start: string;
+}
+
+export interface AdminMonitor {
+  cronTasks: AdminCronTask[];
+  processes: AdminProcess[];
+}
+
+export function fetchAdminMonitor() {
+  return fetchJSON<AdminMonitor>(adminURL("/monitor"));
+}

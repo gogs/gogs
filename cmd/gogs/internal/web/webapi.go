@@ -215,6 +215,11 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Group("/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
 		f.Group("/admin", func() {
+			f.Get("/dashboard", getAdminDashboard)
+			f.Post("/operations/{name}", postAdminOperation)
+			f.Get("/config", getAdminConfig)
+			f.Post("/config/test-mail", bindJSON(adminTestMailRequest{}), postAdminTestMail)
+			f.Get("/monitor", getAdminMonitor)
 			f.Combo("/users").Get(getAdminUsers).Post(bindJSON(adminUserCreateRequest{}), postAdminUser)
 			f.Get("/user-options", getAdminUserOptions)
 			f.Combo("/users/{id}", withAdminTargetUser).
