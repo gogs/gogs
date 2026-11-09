@@ -93,9 +93,9 @@ func TestRequireSignIn(t *testing.T) {
 	t.Cleanup(func() {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
-	// Dashboards, user settings, the people and teams of organizations, and the
-	// admin panel need a signed-in user even on sites that do not require signing in to view
-	// content.
+	// Dashboards, user settings, the people and teams of organizations, the
+	// settings of repositories, and the admin panel need a signed-in user even on
+	// sites that do not require signing in to view content.
 	conf.Auth.RequireSigninView = false
 
 	handler, err := newRoutingHandler()
@@ -136,6 +136,9 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/admin/notices",
 		"/api/web/repo/new",
 		"/api/web/repo/fork/1",
+		"/api/web/acme/widgets/settings",
+		"/api/web/acme/widgets/settings/collaborators",
+		"/api/web/acme/widgets/settings/keys",
 	}
 	tests := []struct {
 		name                     string

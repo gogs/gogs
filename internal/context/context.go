@@ -68,10 +68,6 @@ func (c *Context) RequireSimpleMDE() {
 	c.Require("SimpleMDE")
 }
 
-func (c *Context) RequireAutosize() {
-	c.Require("Autosize")
-}
-
 func (c *Context) RequireDropzone() {
 	c.Require("Dropzone")
 }

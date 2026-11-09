@@ -245,6 +245,27 @@ type repoMigrateRequest struct {
 	Description  string `json:"description" validate:"max=512"`
 }
 
+// cloneAddrError returns the status code and the message for an address to
+// clone from that cannot be used, or false when err is about something else.
+// label names the field of the address.
+func cloneAddrError(l i18n.Locale, label string, err error) (statusCode int, msg string, ok bool) {
+	var addrErr database.ErrInvalidCloneAddr
+	if !errors.As(err, &addrErr) {
+		return 0, "", false
+	}
+	switch {
+	case addrErr.IsURLError:
+		return http.StatusBadRequest, label + l.Tr("form.url_error"), true
+	case addrErr.IsPermissionDenied:
+		return http.StatusForbidden, l.Tr("repo.migrate.permission_denied"), true
+	case addrErr.IsInvalidPath:
+		return http.StatusBadRequest, l.Tr("repo.migrate.invalid_local_path"), true
+	case addrErr.IsBlockedLocalAddress:
+		return http.StatusForbidden, l.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address"), true
+	}
+	return 0, "", false
+}
+
 func postRepoMigrate(c flamego.Context, l i18n.Locale, user *database.User, req repoMigrateRequest) (statusCode int, resp any, err error) {
 	owner, err := repoOwner(c.Request().Context(), user, req.OwnerID)
 	if errors.Is(err, errRepoOwnerNotAllowed) {
@@ -264,22 +285,8 @@ func postRepoMigrate(c flamego.Context, l i18n.Locale, user *database.User, req 
 		AuthPassword: req.AuthPassword,
 	})
 	if err != nil {
-		var addrErr database.ErrInvalidCloneAddr
-		if !errors.As(err, &addrErr) {
-			log.Error("postRepoMigrate: parse remote address: %v", err)
-			return http.StatusInternalServerError, nil, errors.Wrap(err, "parse remote address")
-		}
-		code, msg := http.StatusBadRequest, ""
-		switch {
-		case addrErr.IsURLError:
-			msg = l.Tr("form.CloneAddr") + l.Tr("form.url_error")
-		case addrErr.IsPermissionDenied:
-			code, msg = http.StatusForbidden, l.Tr("repo.migrate.permission_denied")
-		case addrErr.IsInvalidPath:
-			msg = l.Tr("repo.migrate.invalid_local_path")
-		case addrErr.IsBlockedLocalAddress:
-			code, msg = http.StatusForbidden, l.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address")
-		default:
+		code, msg, ok := cloneAddrError(l, l.Tr("form.CloneAddr"), err)
+		if !ok {
 			log.Error("postRepoMigrate: parse remote address: %v", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "parse remote address")
 		}

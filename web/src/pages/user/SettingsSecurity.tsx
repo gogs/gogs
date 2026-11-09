@@ -1,18 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Check, Copy, KeyRound, X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { CredentialRow, ROW_CLASS } from "@/components/CredentialRow";
 import { FormAlert, FormField } from "@/components/FormField";
 import { RichText } from "@/components/RichText";
 import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { webContext } from "@/lib/context";
 import { formErrors } from "@/lib/queries/request";
 import {
   type Credential,
@@ -34,9 +33,6 @@ import {
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 
-const DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", month: "short", day: "2-digit" });
-
-const ROW_CLASS = "flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) py-3";
 const TEXTAREA_CLASS =
   "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 
@@ -179,70 +175,6 @@ function EmailRow({ item }: { item: UserEmail }) {
           />
         </span>
       )}
-    </li>
-  );
-}
-
-// CredentialRow shows an SSH key or an access token with when it was added
-// and last used, and deletes it.
-function CredentialRow({
-  item,
-  detail,
-  recentLabel,
-  deletion,
-}: {
-  item: Credential;
-  detail?: string;
-  recentLabel: string;
-  deletion: { label: string; title: string; description: string; success: string; action: () => Promise<void> };
-}) {
-  const { t } = useTranslation();
-  const router = useRouter();
-  return (
-    <li className={ROW_CLASS}>
-      <span className="flex min-w-0 flex-1 basis-56 items-start gap-3">
-        <KeyRound className="mt-0.5 size-5 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-        <span className="min-w-0">
-          <span className="flex items-center gap-2">
-            <span className="min-w-0 font-semibold wrap-anywhere">{item.name}</span>
-            {item.isRecentlyUsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    role="img"
-                    aria-label={recentLabel}
-                    tabIndex={0}
-                    className="size-2.5 shrink-0 rounded-full bg-(--color-success)"
-                  />
-                </TooltipTrigger>
-                <TooltipContent>{recentLabel}</TooltipContent>
-              </Tooltip>
-            ) : null}
-          </span>
-          {detail ? (
-            <span className="block font-mono text-xs wrap-anywhere text-(--color-muted-foreground)">{detail}</span>
-          ) : null}
-          <span className="mt-1 block text-xs text-(--color-muted-foreground)">
-            {t("settings.add_on")} {DATE_FMT.format(new Date(item.createdAt))}
-            {" · "}
-            {item.lastUsedAt
-              ? `${t("settings.last_used")} ${DATE_FMT.format(new Date(item.lastUsedAt))}`
-              : t("settings.no_activity")}
-          </span>
-        </span>
-      </span>
-      <ConfirmButton
-        label={deletion.label}
-        ariaLabel={`${deletion.label} ${item.name}`}
-        title={deletion.title}
-        description={deletion.description}
-        size="sm"
-        action={deletion.action}
-        onDone={async () => {
-          toast.success(deletion.success);
-          await router.invalidate();
-        }}
-      />
     </li>
   );
 }

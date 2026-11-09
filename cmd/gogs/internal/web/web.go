@@ -323,16 +323,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("/settings", func() {
-				m.Combo("").Get(repo.Settings).
-					Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
-				m.Combo("/avatar").Get(repo.SettingsAvatar).
-					Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)
-				m.Post("/avatar/delete", repo.SettingsDeleteAvatar)
-				m.Group("/collaboration", func() {
-					m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
-					m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
-					m.Post("/delete", repo.DeleteCollaboration)
-				})
+				m.Get("", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/collaboration", func(c *context.Context) { c.ServeWeb() })
 				m.Group("/branches", func() {
 					m.Get("", repo.SettingsBranches)
 					m.Post("/default_branch", repo.UpdateDefaultBranch)
@@ -360,11 +352,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					}, context.GitHookService())
 				})
 
-				m.Group("/keys", func() {
-					m.Combo("").Get(repo.SettingsDeployKeys).
-						Post(bindIgnErr(form.AddSSHKey{}), repo.SettingsDeployKeysPost)
-					m.Post("/delete", repo.DeleteDeployKey)
-				})
+				m.Get("/keys", func(c *context.Context) { c.ServeWeb() })
 			}, func(c *context.Context) {
 				c.Data["PageIsSettings"] = true
 			})

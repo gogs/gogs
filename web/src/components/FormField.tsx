@@ -15,7 +15,7 @@ export function FormField({
 }: {
   id: string;
   label: ReactNode;
-  helper?: string;
+  helper?: ReactNode;
   error?: string | null;
   invalid: boolean;
   children: ReactElement<AriaAttributes>;

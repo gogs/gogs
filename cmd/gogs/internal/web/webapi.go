@@ -193,6 +193,24 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/watchers", getRepoWatchers)
 			f.Delete("/watchers/{username}", deleteRepoWatcher)
 		}, requireViewAccess, withRepoContext)
+		f.Group("/{owner}/{repo}", func() {
+			f.Delete("", bindJSON(repoConfirmRequest{}), deleteRepo)
+			f.Group("/settings", func() {
+				f.Combo("").Get(getRepoSettings).Patch(bindJSON(repoSettingsRequest{}), patchRepoSettings)
+				f.Put("/mirror", bindJSON(repoMirrorRequest{}), putRepoMirror)
+				f.Post("/mirror/sync", postRepoMirrorSync)
+				f.Put("/advanced", bindJSON(repoAdvancedSettings{}), putRepoAdvanced)
+				f.Post("/convert", bindJSON(repoConfirmRequest{}), postRepoConvert)
+				f.Post("/transfer", bindJSON(repoTransferRequest{}), postRepoTransfer)
+				f.Delete("/wiki", bindJSON(repoConfirmRequest{}), deleteRepoWiki)
+				f.Combo("/collaborators").Get(getRepoCollaborators).Post(bindJSON(repoCollaboratorRequest{}), postRepoCollaborator)
+				f.Combo("/collaborators/{username}").
+					Patch(bindJSON(repoCollaboratorModeRequest{}), patchRepoCollaborator).
+					Delete(deleteRepoCollaborator)
+				f.Combo("/keys").Get(getRepoDeployKeys).Post(bindJSON(userSSHKeyRequest{}), postRepoDeployKey)
+				f.Delete("/keys/{id}", deleteRepoDeployKey)
+			})
+		}, requireSignIn, withRepoContext, withRepoAdmin)
 		f.Group("/explore", func() {
 			f.Get("/repos", getExploreRepos)
 			f.Get("/users", getExploreUsers)
@@ -269,6 +287,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	f.Combo("/api/web/orgs/{org}/settings/avatar", limitAvatarUpload, requireSignIn, withOrgMembership).
 		Put(putOrgAvatar).
 		Delete(deleteOrgAvatar)
+	f.Combo("/api/web/{owner}/{repo}/settings/avatar", limitAvatarUpload, requireSignIn, withRepoContext, withRepoAdmin).
+		Put(putRepoAvatar).
+		Delete(deleteRepoAvatar)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
