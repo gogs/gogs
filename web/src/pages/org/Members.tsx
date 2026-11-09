@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/lib/page-title";
 import { type OrgMember, removeOrgMember, setOrgMemberPublic } from "@/lib/queries/org";
 import { userProfileQuery } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 import { useOrgChange } from "@/lib/use-org-change";
 import { useUserInfo } from "@/lib/use-user-info";
 
@@ -27,10 +26,10 @@ export function OrgMembers({ org: orgName, members }: { org: string; members: Or
         {org.viewerIsOwner ? (
           <div className="mb-4 flex justify-end">
             <Button asChild variant="outline" size="sm">
-              <a href={subUrl(`/org/${org.name}/invitations/new`)}>
+              <Link to="/org/$org/invitations/new" params={{ org: org.name }}>
                 <Plus className="size-4" aria-hidden />
                 {t("org.invite_someone")}
-              </a>
+              </Link>
             </Button>
           </div>
         ) : null}

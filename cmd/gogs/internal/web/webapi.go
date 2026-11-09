@@ -195,11 +195,14 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
 		f.Group("/orgs/{org}", func() {
 			f.Get("/members", getOrgMembers)
-			f.Delete("/members/{username}", deleteOrgMember)
+			f.Combo("/members/{username}").Put(putOrgMember).Delete(deleteOrgMember)
 			f.Combo("/members/{username}/public").Put(putOrgMemberPublic).Delete(deleteOrgMemberPublic)
-			f.Get("/teams", getOrgTeams)
+			f.Combo("/teams").Get(getOrgTeams).Post(bindJSON(orgTeamRequest{}), postOrgTeam)
 			f.Group("/teams/{team}", func() {
-				f.Get("", getOrgTeam)
+				f.Combo("").
+					Get(getOrgTeam).
+					Patch(bindJSON(orgTeamRequest{}), patchOrgTeam).
+					Delete(deleteOrgTeam)
 				f.Get("/members", getOrgTeamMembers)
 				f.Combo("/members/{username}").Put(putOrgTeamMember).Delete(deleteOrgTeamMember)
 				f.Get("/repos", getOrgTeamRepos)
