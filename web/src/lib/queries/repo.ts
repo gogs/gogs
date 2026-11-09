@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
+import type { UserListPage } from "@/components/UserListItem";
 import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
 
@@ -68,4 +69,22 @@ export function starRepo(owner: string, name: string) {
 
 export function unstarRepo(owner: string, name: string) {
   return repoAction<RepoStarResult>("DELETE", owner, name, "star");
+}
+
+export async function fetchRepoPeople(owner: string, name: string, list: "stargazers" | "watchers", page?: number) {
+  const url = subUrl(`/api/web/${owner}/${name}/${list}`);
+  const res = await fetch(page ? `${url}?page=${page}` : url, { credentials: "same-origin" });
+  if (!res.ok) throw await loaderResponseError(res);
+  return (await res.json()) as UserListPage;
+}
+
+// removeRepoWatcher makes another user stop watching the repository. Only site
+// admins may do so.
+export async function removeRepoWatcher(owner: string, name: string, username: string) {
+  const res = await fetch(subUrl(`/api/web/${owner}/${name}/watchers/${encodeURIComponent(username)}`), {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw await loaderResponseError(res);
+  return (await res.json()) as RepoWatchResult;
 }
