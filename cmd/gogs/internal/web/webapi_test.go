@@ -116,6 +116,7 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/orgs/acme/dashboard/activity",
 		"/api/web/orgs/acme/dashboard/issues",
 		"/api/web/orgs/acme/dashboard/pulls",
+		"/api/web/orgs/acme/settings",
 		"/api/web/orgs/acme/members",
 		"/api/web/orgs/acme/teams",
 		"/api/web/orgs/acme/teams/owners",
