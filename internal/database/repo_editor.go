@@ -651,6 +651,12 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 			if err := checkNoSymlinkInPaths(ctx, parent, targetPath); err != nil {
 				return err
 			}
+			entry, err := treeEntry(ctx, parent, targetPath)
+			if err != nil {
+				return err
+			} else if entry != nil && !entry.IsBlob() && !entry.IsExec() {
+				return errors.Newf("not a file: %s", targetPath)
+			}
 
 			f, err := os.Open(tmpPath)
 			if err != nil {
