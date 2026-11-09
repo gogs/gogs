@@ -47,6 +47,7 @@ function OrgSettingsLayout({
       <OrgHeader org={org} activeTab="settings" />
       <SettingsLayout
         label={t("org.settings")}
+        current={active === "options" ? t("org.settings.options") : t("org.settings.delete")}
         nav={
           <>
             <SettingsNavItem active={active === "options"}>
