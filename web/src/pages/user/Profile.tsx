@@ -144,7 +144,9 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
           {profile.fullName ? (
             <span className="block text-2xl/[30px] font-semibold break-words">{profile.fullName}</span>
           ) : null}
-          <span className="block text-xl/6 font-light break-all text-(--color-muted-foreground)">{profile.name}</span>
+          <span className="block text-xl/6 font-light wrap-anywhere text-(--color-muted-foreground)">
+            {profile.name}
+          </span>
         </h1>
       </div>
 
@@ -292,7 +294,7 @@ function Fact({
     <li className="flex min-w-0 items-start gap-2">
       <Icon className="mt-0.5 size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
       {label ? <span className="sr-only">{label}</span> : null}
-      <span className="min-w-0 break-all">{children}</span>
+      <span className="min-w-0 wrap-anywhere">{children}</span>
     </li>
   );
 }
