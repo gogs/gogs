@@ -35,6 +35,7 @@ All notable changes to Gogs are documented in this file.
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Logs are written through the standard logger. Logs are JSON in production and in the Docker images, and `[log] FORMAT` can choose text or JSON instead. JSON puts the subsystem of a message, such as `gorm`, in its `component` field. Database logs no longer have their own files. `[log] LEVEL` now applies to a mode that does not set its own level. The default `[log] LEVEL` is now `Debug`, and `Trace` is the same as `Debug`. Errors that happen before the configuration is loaded are printed to standard error. [#8529](https://github.com/gogs/gogs/pull/8529)
+- API v1 request validation errors now respond with the same `{"message", "url"}` body as other API errors, keeping the same status codes. [#8454](https://github.com/gogs/gogs/pull/8454)
 
 ### Fixed
 
@@ -71,6 +72,7 @@ All notable changes to Gogs are documented in this file.
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - With `[log] MODE` set to console only, Gogs no longer creates the log directory, and starts when `[log] ROOT_PATH` is not writable. [#8596](https://github.com/gogs/gogs/pull/8596)
 - Gogs commands, including Git over SSH, no longer fail to start when another process holds or rotates the same log file. [#8616](https://github.com/gogs/gogs/pull/8616)
+- Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 
 ### Removed
 
