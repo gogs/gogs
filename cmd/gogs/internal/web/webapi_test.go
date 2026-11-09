@@ -132,6 +132,8 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/orgs/acme/teams/owners/members",
 		"/api/web/orgs/acme/teams/owners/repos",
 		"/api/web/admin/users",
+		"/api/web/admin/users/1",
+		"/api/web/admin/user-options",
 		"/api/web/admin/orgs",
 		"/api/web/admin/repos",
 		"/api/web/admin/notices",
@@ -154,6 +156,11 @@ func TestRequireAdmin(t *testing.T) {
 		path   string
 	}{
 		{http.MethodGet, "/api/web/admin/users"},
+		{http.MethodPost, "/api/web/admin/users"},
+		{http.MethodGet, "/api/web/admin/users/1"},
+		{http.MethodPatch, "/api/web/admin/users/1"},
+		{http.MethodDelete, "/api/web/admin/users/1"},
+		{http.MethodGet, "/api/web/admin/user-options"},
 		{http.MethodGet, "/api/web/admin/orgs"},
 		{http.MethodGet, "/api/web/admin/repos"},
 		{http.MethodDelete, "/api/web/admin/repos/1"},
