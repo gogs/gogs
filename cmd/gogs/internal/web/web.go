@@ -43,7 +43,6 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
-	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/repo"
@@ -138,7 +137,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Admin *****
 		m.Group("/admin", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(operations|users|orgs|repos|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/:userid", func(c *context.Context) {
 				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
@@ -154,12 +153,13 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				c.ServeWeb()
 			})
 
-			m.Group("/auths", func() {
-				m.Get("", admin.Authentications)
-				m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(form.Authentication{}), admin.NewAuthSourcePost)
-				m.Combo("/:authid").Get(admin.EditAuthSource).
-					Post(bindIgnErr(form.Authentication{}), admin.EditAuthSourcePost)
-				m.Post("/:authid/delete", admin.DeleteAuthSource)
+			m.Get("/auths/new", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/auths/:authid", func(c *context.Context) {
+				if _, err := database.Handle.LoginSources().GetByID(c.Req.Context(), c.ParamsInt64(":authid")); err != nil {
+					c.NotFoundOrError(err, "get login source by ID")
+					return
+				}
+				c.ServeWeb()
 			})
 		}, reqAdmin)
 		// ***** END: Admin *****
