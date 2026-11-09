@@ -5,6 +5,7 @@ import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
 
 export interface UserProfileData {
+  kind: "user";
   name: string;
   fullName?: string;
   avatarURL: string;
@@ -19,6 +20,27 @@ export interface UserProfileData {
   viewerIsFollowing: boolean;
 }
 
+export interface OrgProfileData {
+  kind: "organization";
+  id: number;
+  name: string;
+  fullName?: string;
+  avatarURL: string;
+  description?: string;
+  location?: string;
+  website?: string;
+  members: { name: string; fullName?: string; avatarURL: string }[];
+  // The counts and the teams are only sent to members.
+  memberCount?: number;
+  teamCount?: number;
+  teams?: { name: string; lowerName: string; memberCount: number; repoCount: number }[];
+  viewerIsMember: boolean;
+  viewerIsOwner: boolean;
+}
+
+// The profile route serves both individual users and organizations.
+export type OwnerProfileData = UserProfileData | OrgProfileData;
+
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { credentials: "same-origin", ...init });
   if (!res.ok) throw await loaderResponseError(res);
@@ -29,7 +51,7 @@ export function userProfileQuery(username: string) {
   return queryOptions({
     queryKey: ["user", username, "profile"] as const,
     queryFn: ({ signal }) =>
-      fetchJSON<UserProfileData>(subUrl(`/api/web/users/${encodeURIComponent(username)}`), { signal }),
+      fetchJSON<OwnerProfileData>(subUrl(`/api/web/users/${encodeURIComponent(username)}`), { signal }),
   });
 }
 
@@ -89,7 +111,7 @@ export function unfollowUser(username: string) {
   });
 }
 
-export interface UserReposPage {
+export interface OwnerReposPage {
   items: RepoListItemData[];
   page: number;
   totalPages: number;
@@ -97,5 +119,5 @@ export interface UserReposPage {
 
 export function fetchUserRepos(username: string, page?: number) {
   const url = subUrl(`/api/web/users/${encodeURIComponent(username)}/repos`);
-  return fetchJSON<UserReposPage>(page ? `${url}?page=${page}` : url);
+  return fetchJSON<OwnerReposPage>(page ? `${url}?page=${page}` : url);
 }
