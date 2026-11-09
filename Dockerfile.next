@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM node:24-alpine AS webbuilder
+FROM --platform=$BUILDPLATFORM node:24-alpine3.24 AS webbuilder
 RUN corepack enable
 WORKDIR /src
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -7,7 +7,7 @@ COPY conf/locale ./conf/locale
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter gogs-web run build
 
-FROM golang:1.27-alpine3.23 AS binarybuilder
+FROM golang:1.27-alpine3.24 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -22,7 +22,7 @@ RUN go build -v -trimpath -tags "pam prod" \
   -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
   -o .bin/gogs ./cmd/gogs
 
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Create git user and group with fixed UID/GID at build time for better K8s security context support.
 # Using 1000:1000 as it's a common non-root UID/GID that works well with most volume permission setups.
