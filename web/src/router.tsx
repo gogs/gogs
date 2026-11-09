@@ -20,6 +20,7 @@ import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
 import { createDashboardRoutes } from "@/routes/dashboard";
 import { createExploreRoutes } from "@/routes/explore";
+import { createOrgRoutes } from "@/routes/org";
 import { createProfileRoutes } from "@/routes/profile";
 import { createRepoRoutes } from "@/routes/repo";
 import { createUserRoutes } from "@/routes/user";
@@ -48,6 +49,7 @@ const routeTree = rootRoute.addChildren([
   ...createDashboardRoutes(rootRoute),
   ...createUserRoutes(rootRoute),
   ...createExploreRoutes(rootRoute),
+  ...createOrgRoutes(rootRoute),
   ...createRepoRoutes(rootRoute),
   ...createProfileRoutes(rootRoute),
 ]);

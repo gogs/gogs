@@ -258,7 +258,7 @@ function RepoRow({ repo, showOwner = false }: { repo: DashboardRepo; showOwner?:
 }
 
 // RepoIcon marks private repositories, forks and mirrors, in that precedence.
-function RepoIcon({ repo }: { repo: Pick<DashboardRepo, "isPrivate" | "isFork" | "isMirror"> }) {
+export function RepoIcon({ repo }: { repo: Pick<DashboardRepo, "isPrivate" | "isFork" | "isMirror"> }) {
   const { t } = useTranslation();
   const className = "size-4 shrink-0 text-(--color-muted-foreground)";
   if (repo.isPrivate) return <Lock className={className} role="img" aria-label={t("repo.visibility_private")} />;
