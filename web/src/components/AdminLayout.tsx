@@ -22,7 +22,16 @@ const NAV: { page: AdminPage; path: string; label: string; spa?: true }[] = [
 ];
 
 // AdminLayout heads the pages of the admin panel, with links between them.
-export function AdminLayout({ active, children }: { active: AdminPage; children: ReactNode }) {
+// Lists are wide, forms are not.
+export function AdminLayout({
+  active,
+  wide = false,
+  children,
+}: {
+  active: AdminPage;
+  wide?: boolean;
+  children: ReactNode;
+}) {
   const { t } = useTranslation();
   const current = t(NAV.find((item) => item.page === active)?.label ?? "admin_panel");
   usePageTitle(current);
@@ -31,7 +40,7 @@ export function AdminLayout({ active, children }: { active: AdminPage; children:
       <SettingsLayout
         label={t("admin_panel")}
         current={current}
-        wide
+        wide={wide}
         nav={NAV.map((item) => (
           <SettingsNavItem key={item.page} active={item.page === active}>
             {item.spa ? (
