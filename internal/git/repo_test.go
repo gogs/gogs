@@ -156,9 +156,7 @@ func TestRepository_ApplyCheck(t *testing.T) {
 
 	// The context lines of the patch now only differ in whitespace.
 	require.NoError(t, r.ReadTree(ctx, baseID))
-	blobID, err := r.HashObject(ctx, strings.NewReader("a  b\ntwo\nc  d\n"))
-	require.NoError(t, err)
-	require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "a.txt"}))
+	require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "a.txt", Content: strings.NewReader("a  b\ntwo\nc  d\n")}))
 
 	assert.Error(t, r.ApplyCheck(ctx, patchPath))
 	assert.NoError(t, r.ApplyCheck(ctx, patchPath, ApplyCheckOptions{IgnoreWhitespace: true}))

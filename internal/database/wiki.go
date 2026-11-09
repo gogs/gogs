@@ -126,9 +126,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	}
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	return commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, nil, func(tmpRepo *git.Repository) error {
-		attrSource := ""
 		if parent != nil {
-			attrSource = parent.ID.String()
 			if isNew {
 				entry, err := treeEntry(ctx, parent, filename)
 				if err != nil {
@@ -149,17 +147,8 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 			}
 		}
 
-		blobID, err := tmpRepo.HashObject(ctx, strings.NewReader(content), git.HashObjectOptions{
-			Path:       filename,
-			AttrSource: attrSource,
-		})
-		if err != nil {
-			return errors.Wrap(err, "write page")
-		}
-		if err = tmpRepo.AddToIndex(ctx, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: filename}); err != nil {
-			return errors.Wrapf(err, "add %q", filename)
-		}
-		return nil
+		err := tmpRepo.AddToIndex(ctx, git.IndexFile{Path: filename, Content: strings.NewReader(content)})
+		return errors.Wrapf(err, "add %q", filename)
 	})
 }
 

@@ -336,17 +336,12 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 			mode = newEntry.Mode()
 		}
 
-		blobID, err := tmpRepo.HashObject(ctx, strings.NewReader(opts.Content), git.HashObjectOptions{
+		err = tmpRepo.AddToIndex(ctx, git.IndexFile{
 			Path:       opts.NewTreeName,
-			AttrSource: parent.ID.String(),
+			Content:    strings.NewReader(opts.Content),
+			Executable: mode == git.EntryExec,
 		})
-		if err != nil {
-			return errors.Wrap(err, "write file")
-		}
-		if err = tmpRepo.AddToIndex(ctx, git.IndexEntry{Mode: mode, ID: blobID, Path: opts.NewTreeName}); err != nil {
-			return errors.Wrapf(err, "add %q", opts.NewTreeName)
-		}
-		return nil
+		return errors.Wrapf(err, "add %q", opts.NewTreeName)
 	})
 }
 
@@ -387,14 +382,12 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*git.Diff
 	if err = tmpRepo.ReadTree(ctx, commit.ID.String()); err != nil {
 		return nil, errors.Wrap(err, "read tree")
 	}
-	blobID, err := tmpRepo.HashObject(ctx, strings.NewReader(content), git.HashObjectOptions{
+	err = tmpRepo.AddToIndex(ctx, git.IndexFile{
 		Path:       treePath,
-		AttrSource: commit.ID.String(),
+		Content:    strings.NewReader(content),
+		Executable: mode == git.EntryExec,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "write file")
-	}
-	if err = tmpRepo.AddToIndex(ctx, git.IndexEntry{Mode: mode, ID: blobID, Path: treePath}); err != nil {
 		return nil, errors.Wrapf(err, "add %q", treePath)
 	}
 
@@ -639,8 +632,7 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 	ctx := context.TODO()
 	err = r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
-		type file struct{ localPath, treePath string }
-		var attributes, others []file
+		var files []git.IndexFile
 		for _, upload := range uploads {
 			tmpPath := upload.LocalPath()
 			if !osx.IsFile(tmpPath) {
@@ -659,57 +651,22 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 			if err := checkNoSymlinkInPaths(ctx, parent, targetPath); err != nil {
 				return err
 			}
-			if path.Base(targetPath) == ".gitattributes" {
-				attributes = append(attributes, file{tmpPath, targetPath})
-			} else {
-				others = append(others, file{tmpPath, targetPath})
-			}
-		}
 
-		add := func(files []file, attrSource string) error {
-			entries := make([]git.IndexEntry, 0, len(files))
-			for _, f := range files {
-				blobID, err := hashFile(ctx, tmpRepo, f.localPath, f.treePath, attrSource)
-				if err != nil {
-					return errors.Wrapf(err, "write file %q", f.treePath)
-				}
-				entries = append(entries, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: f.treePath})
-			}
-			if len(entries) == 0 {
-				return nil
-			}
-			return errors.Wrap(tmpRepo.AddToIndex(ctx, entries...), "add files")
-		}
-
-		// Uploaded ".gitattributes" files apply to the other uploaded files, as they
-		// did when the files were added together in a checkout.
-		attrSource := parent.ID.String()
-		if len(attributes) > 0 {
-			if err := add(attributes, attrSource); err != nil {
-				return err
-			}
-			tree, err := tmpRepo.WriteTree(ctx)
+			f, err := os.Open(tmpPath)
 			if err != nil {
-				return errors.Wrap(err, "write tree")
+				return errors.Wrapf(err, "open %q", upload.Name)
 			}
-			attrSource = tree
+			defer func() { _ = f.Close() }()
+			files = append(files, git.IndexFile{Path: targetPath, Content: f})
 		}
-		return add(others, attrSource)
+		if len(files) == 0 {
+			return nil
+		}
+		return errors.Wrap(tmpRepo.AddToIndex(ctx, files...), "add files")
 	})
 	if err != nil {
 		return err
 	}
 
 	return DeleteUploads(uploads...)
-}
-
-// hashFile writes the content of the file at the local path as a blob object
-// for the tree path to the repository.
-func hashFile(ctx context.Context, repo *git.Repository, localPath, treePath, attrSource string) (string, error) {
-	f, err := os.Open(localPath)
-	if err != nil {
-		return "", errors.Wrap(err, "open")
-	}
-	defer func() { _ = f.Close() }()
-	return repo.HashObject(ctx, f, git.HashObjectOptions{Path: treePath, AttrSource: attrSource})
 }

@@ -941,16 +941,11 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 func initRepoCommit(repoPath string, files map[string][]byte, author *git.Signature) error {
 	ctx := context.TODO()
 	return commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, nil, nil, func(tmpRepo *git.Repository) error {
+		indexFiles := make([]git.IndexFile, 0, len(files))
 		for name, data := range files {
-			blobID, err := tmpRepo.HashObject(ctx, bytes.NewReader(data), git.HashObjectOptions{Path: name})
-			if err != nil {
-				return errors.Wrapf(err, "write %s", name)
-			}
-			if err = tmpRepo.AddToIndex(ctx, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: name}); err != nil {
-				return errors.Wrapf(err, "add %s", name)
-			}
+			indexFiles = append(indexFiles, git.IndexFile{Path: name, Content: bytes.NewReader(data)})
 		}
-		return nil
+		return errors.Wrap(tmpRepo.AddToIndex(ctx, indexFiles...), "add files")
 	})
 }
 

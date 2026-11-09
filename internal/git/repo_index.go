@@ -1,9 +1,12 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -32,58 +35,73 @@ func (r *Repository) ReadTree(ctx context.Context, treeish string) error {
 	return err
 }
 
-// HashObjectOptions contains optional arguments for writing a blob object.
-//
-// Docs: https://git-scm.com/docs/git-hash-object
-type HashObjectOptions struct {
-	// The path the content is stored at, which decides the filters and
-	// end-of-line conversions applied to it.
-	Path string
-	// The tree-ish to read ".gitattributes" files from, e.g., the commit the
-	// content is added on top of.
-	AttrSource string
+// IndexFile is a file to add to the index.
+type IndexFile struct {
+	// The path of the file in the tree.
+	Path       string
+	Content    io.Reader
+	Executable bool
 }
 
-// HashObject writes the content as a blob object to the repository and
-// returns its ID.
-func (r *Repository) HashObject(ctx context.Context, content io.Reader, opts ...HashObjectOptions) (string, error) {
-	var opt HashObjectOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	var args []string
-	if opt.AttrSource != "" {
-		args = append(args, "--attr-source="+opt.AttrSource)
-	}
-	args = append(args, "hash-object", "-w", "--stdin")
-	if opt.Path != "" {
-		args = append(args, "--path="+opt.Path)
-	}
-	stdout, err := execInput(ctx, r.path, args, nil, content)
+// AddToIndex adds the files to the index of the repository, replacing the ones
+// at the same paths. It applies the filters and end-of-line conversions that
+// "git add" does in a working tree with these files on top of the index: the
+// ".gitattributes" files among them take effect for all of them, and a file
+// with CRLF line endings in the index keeps them. It fails when a path is
+// invalid, e.g., inside ".git", or when a path or its parent directory already
+// exists in the index as the other kind of a file and a directory.
+func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
+	workTree, err := os.MkdirTemp(r.path, "worktree-")
 	if err != nil {
-		return "", err
+		return errors.Wrap(err, "create working tree")
 	}
-	return strings.TrimSpace(string(stdout)), nil
+	defer func() { _ = os.RemoveAll(workTree) }()
+
+	var regularPaths, execPaths []byte
+	for _, f := range files {
+		localPath := filepath.FromSlash(f.Path)
+		// 🚨 SECURITY: Prevent writing outside of the working tree.
+		if !filepath.IsLocal(localPath) {
+			return errors.Newf("bad path %q", f.Path)
+		}
+		localPath = filepath.Join(workTree, localPath)
+		if err = os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+			return errors.Wrapf(err, "create directory of %q", f.Path)
+		}
+		if err = writeFile(localPath, f.Content); err != nil {
+			return errors.Wrapf(err, "write %q", f.Path)
+		}
+
+		if f.Executable {
+			execPaths = append(execPaths, f.Path+"\x00"...)
+		} else {
+			regularPaths = append(regularPaths, f.Path+"\x00"...)
+		}
+	}
+
+	// The modes are set explicitly, because the file modes in the working tree
+	// are ignored where the file system does not support them, e.g., on Windows.
+	for chmod, paths := range map[string][]byte{"-x": regularPaths, "+x": execPaths} {
+		if len(paths) == 0 {
+			continue
+		}
+		args := []string{"--work-tree=" + workTree, "update-index", "--add", "--chmod=" + chmod, "-z", "--stdin"}
+		if _, err = execInput(ctx, r.path, args, nil, bytes.NewReader(paths)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// IndexEntry is an entry of the index.
-type IndexEntry struct {
-	Mode EntryMode
-	ID   string
-	Path string
-}
-
-// AddToIndex adds the entries to the index of the repository, replacing the
-// ones at the same paths. It fails when a path is invalid, e.g., inside ".git",
-// or when a path or its parent directory already exists in the index as the
-// other kind of a file and a directory.
-func (r *Repository) AddToIndex(ctx context.Context, entries ...IndexEntry) error {
-	args := []string{"update-index", "--add"}
-	for _, e := range entries {
-		args = append(args, "--cacheinfo", strconv.FormatInt(int64(e.Mode), 8), e.ID, e.Path)
+func writeFile(path string, content io.Reader) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
 	}
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = io.Copy(f, content)
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
 	return err
 }
 

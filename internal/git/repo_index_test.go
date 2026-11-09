@@ -52,9 +52,7 @@ func commitFiles(t *testing.T, r *Repository, branch string, files map[string]st
 
 	var names []string
 	for name, content := range files {
-		blobID, err := r.HashObject(ctx, strings.NewReader(content))
-		require.NoError(t, err)
-		require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: name}))
+		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: name, Content: strings.NewReader(content)}))
 		names = append(names, name)
 	}
 	slices.Sort(names)
@@ -81,12 +79,10 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.ReadTree(ctx, parent.ID.String()))
 
-	blobID, err := r.HashObject(ctx, strings.NewReader("hello\n"), HashObjectOptions{Path: "new/dir/hello.sh"})
-	require.NoError(t, err)
-	require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryExec, ID: blobID, Path: "new/dir/hello.sh"}))
+	require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "new/dir/hello.sh", Content: strings.NewReader("hello\n"), Executable: true}))
 	require.NoError(t, r.RemoveFromIndex(ctx, "README.txt"))
 	// A path that also exists in the Git directory of the bare repository.
-	require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "config"}))
+	require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "config", Content: strings.NewReader("hello\n")}))
 	require.NoError(t, r.RemoveFromIndex(ctx, "config"))
 
 	t.Run("committer from Git configuration", func(t *testing.T) {
@@ -127,8 +123,9 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 
 	t.Run("invalid changes", func(t *testing.T) {
 		// "run.sh" is a file, so nothing can be added under it.
-		assert.Error(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "run.sh/x"}))
-		assert.Error(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: ".git/config"}))
+		for _, path := range []string{"run.sh/x", ".git/config", "../x"} {
+			assert.Error(t, r.AddToIndex(ctx, IndexFile{Path: path, Content: strings.NewReader("x\n")}), path)
+		}
 		assert.Error(t, r.RemoveFromIndex(ctx, "does-not-exist"))
 		// Paths are taken literally, not as patterns.
 		assert.Error(t, r.RemoveFromIndex(ctx, "*.sh"))
@@ -166,6 +163,42 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRepository_AddToIndex(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	commitFiles(t, r, "crlf", map[string]string{"a.txt": "one\r\ntwo\r\n"})
+	parent := commitFiles(t, r, "crlf", map[string]string{".gitattributes": "*.txt text=auto\n"})
+
+	require.NoError(t, r.ReadTree(ctx, parent))
+	require.NoError(t, r.AddToIndex(ctx,
+		IndexFile{Path: "a.txt", Content: strings.NewReader("one\r\nTWO\r\n")},
+		IndexFile{Path: "new.txt", Content: strings.NewReader("new\r\n")},
+		IndexFile{Path: "up/.gitattributes", Content: strings.NewReader("* text\r\n")},
+		IndexFile{Path: "up/b.dat", Content: strings.NewReader("b\r\n")},
+		IndexFile{Path: "c.dat", Content: strings.NewReader("c\r\n"), Executable: true},
+	))
+
+	for path, want := range map[string]string{
+		// A file with CRLF line endings in the index keeps them.
+		"a.txt":   "one\r\nTWO\r\n",
+		"new.txt": "new\n",
+		// Added ".gitattributes" files apply to all added files, themselves included.
+		"up/.gitattributes": "* text\n",
+		"up/b.dat":          "b\n",
+		"c.dat":             "c\r\n",
+	} {
+		got, err := exec(ctx, r.Path(), []string{"cat-file", "blob", ":" + path}, nil)
+		require.NoError(t, err)
+		assert.Equal(t, want, string(got), path)
+	}
+	stage, err := exec(ctx, r.Path(), []string{"ls-files", "--stage", "--", "c.dat", "up/b.dat"}, nil)
+	require.NoError(t, err)
+	assert.Regexp(t, `^100755 \S+ 0\tc.dat\n100644 \S+ 0\tup/b.dat\n$`, string(stage))
+}
+
 func TestRepository_DiffCached(t *testing.T) {
 	ctx := context.Background()
 	r := setupBareRepoWithAlternates(t)
@@ -174,9 +207,7 @@ func TestRepository_DiffCached(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.ReadTree(ctx, parent.ID.String()))
 	for _, path := range []string{"README.txt", "pom.xml"} {
-		blobID, err := r.HashObject(ctx, strings.NewReader("changed\n"))
-		require.NoError(t, err)
-		require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: path}))
+		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: path, Content: strings.NewReader("changed\n")}))
 	}
 
 	diff, err := r.DiffCached(ctx, parent.ID.String(), "README.txt", 0, 0, 0)
@@ -192,9 +223,7 @@ func TestRepository_DiffCached(t *testing.T) {
 
 		rev := commitFiles(t, r, "attributes", map[string]string{".gitattributes": "*.dat -diff\n", "a.dat": "a\n"})
 		require.NoError(t, r.ReadTree(ctx, rev))
-		blobID, err := r.HashObject(ctx, strings.NewReader("b\n"))
-		require.NoError(t, err)
-		require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "a.dat"}))
+		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "a.dat", Content: strings.NewReader("b\n")}))
 
 		diff, err := r.DiffCached(ctx, rev, "a.dat", 0, 0, 0)
 		require.NoError(t, err)
@@ -313,9 +342,7 @@ func TestRepository_Rebase(t *testing.T) {
 	commitOnto := func(parent, name, content, message string) string {
 		t.Helper()
 		require.NoError(t, r.ReadTree(ctx, parent))
-		blobID, err := r.HashObject(ctx, strings.NewReader(content))
-		require.NoError(t, err)
-		require.NoError(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: name}))
+		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: name, Content: strings.NewReader(content)}))
 		tree, err := r.WriteTree(ctx)
 		require.NoError(t, err)
 		id, err := r.CommitTree(ctx, tree, message, CommitTreeOptions{
