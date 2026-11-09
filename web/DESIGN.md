@@ -15,6 +15,8 @@ Use mono only for content that **is** code, not for UI chrome (navbars, buttons,
 
 Don't mix sans and mono within the same UI surface for arbitrary reasons. If a component is showing code, all of it goes mono.
 
+Inline code within text is a chip, `rounded bg-(--color-surface) px-1 font-mono`, so it reads as code without relying on the font alone. Give it `text-(--color-foreground)` when it sits in muted text, and `box-decoration-clone` when a long value may wrap.
+
 ## Color hierarchy
 
 Palettes are adapted from [Pierre Theme](https://github.com/pierrecomputer/theme)'s "Light" and "Dark" (non-soft) variants. Text, link, border, and input tokens are darkened in light mode and lightened in dark mode from Pierre's values, so every text pair meets 4.5:1 and input edges meet 3:1 against the page background. Check a changed token against both floors before landing it. Dark mode is opt-in via the `.dark` class on `:root` (see `lib/theme.ts`), not media-query driven, so the user's stored preference always wins. The `@custom-variant dark` rule in `index.css` lets utilities like `dark:...` target the same class.
