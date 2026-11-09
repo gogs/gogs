@@ -46,3 +46,11 @@ export async function uploadAvatar(url: string, file: File) {
   const res = await fetch(url, { method: "PUT", credentials: "same-origin", body });
   if (!res.ok) throw await loaderResponseError(res);
 }
+
+// formErrors returns the messages for the fields of a failed form, and the
+// message for the whole form when no field is to blame.
+export function formErrors(error: Error | null) {
+  const fields = error instanceof FormError ? error.fields : {};
+  const formError = error && Object.keys(fields).length === 0 ? error.message : null;
+  return { fields, formError };
+}

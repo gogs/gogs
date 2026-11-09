@@ -95,3 +95,110 @@ export async function fetchSettingsOrgs() {
 export function deleteAccount(password: string) {
   return submit<void>("DELETE", subUrl("/api/web/user"), { password });
 }
+
+export interface UserEmail {
+  email: string;
+  isPrimary: boolean;
+  isActivated: boolean;
+}
+
+export async function fetchUserEmails() {
+  return (await fetchJSON<{ items: UserEmail[] }>(settingsURL("/emails"))).items;
+}
+
+export interface EmailAdded {
+  // True when the site requires confirming the address through the link sent
+  // to it.
+  confirmationSent: boolean;
+  codeLifetimeHours?: number;
+}
+
+export function addUserEmail(email: string) {
+  return submit<EmailAdded>("POST", settingsURL("/emails"), { email });
+}
+
+export function setPrimaryEmail(email: string) {
+  return send("PUT", settingsURL(`/emails/${encodeURIComponent(email)}/primary`));
+}
+
+export function deleteUserEmail(email: string) {
+  return send("DELETE", settingsURL(`/emails/${encodeURIComponent(email)}`));
+}
+
+// Credential is an SSH key or an access token.
+export interface Credential {
+  id: number;
+  name: string;
+  createdAt: string;
+  // Only sent for credentials that were used.
+  lastUsedAt?: string;
+  isRecentlyUsed: boolean;
+}
+
+export interface SSHKey extends Credential {
+  fingerprint: string;
+}
+
+export async function fetchSSHKeys() {
+  return (await fetchJSON<{ items: SSHKey[] }>(settingsURL("/ssh-keys"))).items;
+}
+
+export function addSSHKey(form: { title: string; content: string }) {
+  return submit<void>("POST", settingsURL("/ssh-keys"), form);
+}
+
+export function deleteSSHKey(id: number) {
+  return send("DELETE", settingsURL(`/ssh-keys/${id}`));
+}
+
+export async function fetchTwoFactorEnabled() {
+  return (await fetchJSON<{ enabled: boolean }>(settingsURL("/two-factor"))).enabled;
+}
+
+export interface TwoFactorEnrollment {
+  secret: string;
+  // A data URL of the QR code image of the secret.
+  qrCodeURL: string;
+}
+
+export function fetchTwoFactorEnrollment() {
+  return fetchJSON<TwoFactorEnrollment>(settingsURL("/two-factor/enrollment"));
+}
+
+// enableTwoFactor confirms the secret being enrolled with a passcode from the
+// authentication app.
+export function enableTwoFactor(passcode: string) {
+  return submit<void>("POST", settingsURL("/two-factor"), { passcode });
+}
+
+export function disableTwoFactor() {
+  return send("DELETE", settingsURL("/two-factor"));
+}
+
+export interface RecoveryCode {
+  code: string;
+  isUsed: boolean;
+}
+
+export async function fetchRecoveryCodes() {
+  return (await fetchJSON<{ items: RecoveryCode[] }>(settingsURL("/two-factor/recovery-codes"))).items;
+}
+
+// regenerateRecoveryCodes replaces the recovery codes with new ones and
+// returns them.
+export async function regenerateRecoveryCodes() {
+  return (await submit<{ items: RecoveryCode[] }>("POST", settingsURL("/two-factor/recovery-codes"), {})).items;
+}
+
+export async function fetchAccessTokens() {
+  return (await fetchJSON<{ items: Credential[] }>(settingsURL("/tokens"))).items;
+}
+
+// createAccessToken returns the new token, which is never shown again.
+export async function createAccessToken(name: string) {
+  return (await submit<{ token: string }>("POST", settingsURL("/tokens"), { name })).token;
+}
+
+export function deleteAccessToken(id: number) {
+  return send("DELETE", settingsURL(`/tokens/${id}`));
+}

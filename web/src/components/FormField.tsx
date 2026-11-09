@@ -36,3 +36,16 @@ export function FormField({
     </div>
   );
 }
+
+// FormAlert shows the message for a whole form above its fields.
+export function FormAlert({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div
+      role="alert"
+      className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
+    >
+      {message}
+    </div>
+  );
+}
