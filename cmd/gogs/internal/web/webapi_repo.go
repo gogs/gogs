@@ -45,7 +45,7 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 
 	issuesEnabled := repo.EnableIssues
 	wikiEnabled := repo.EnableWiki
-	if !repoCtx.ViewerCanRead() {
+	if !repoCtx.Viewer.CanRead() {
 		if !repo.IsPartialPublic() {
 			return http.StatusNotFound, nil, errors.New("repository does not exist")
 		}
@@ -73,11 +73,11 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 		OpenPullRequestCount: repo.NumPulls - repo.NumClosedPulls,
 		WikiEnabled:          wikiEnabled,
 
-		ViewerCanAdminister: repoCtx.ViewerCanAdminister(),
+		ViewerCanAdminister: repoCtx.Viewer.CanAdminister(),
 	}
-	if repoCtx.Viewer != nil {
-		resp.ViewerIsWatching = database.IsWatching(repoCtx.Viewer.ID, repo.ID)
-		resp.ViewerIsStarring = database.IsStarring(repoCtx.Viewer.ID, repo.ID)
+	if repoCtx.Viewer.Authenticated() {
+		resp.ViewerIsWatching = database.IsWatching(repoCtx.Viewer.ID(), repo.ID)
+		resp.ViewerIsStarring = database.IsStarring(repoCtx.Viewer.ID(), repo.ID)
 	}
 
 	if repo.IsMirror {
@@ -109,7 +109,7 @@ type repoCommit struct {
 }
 
 func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCommit, err error) {
-	if !repoCtx.ViewerCanRead() {
+	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 
@@ -176,22 +176,22 @@ type repoWatchResponse struct {
 }
 
 func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (statusCode int, resp *repoWatchResponse, err error) {
-	if !repoCtx.ViewerCanRead() {
+	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	if repoCtx.Viewer == nil {
+	if !repoCtx.Viewer.Authenticated() {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
 
 	repo := repoCtx.Repo
 
 	if watching {
-		err = database.Handle.Repositories().Watch(ctx, repoCtx.Viewer.ID, repo.ID)
+		err = database.Handle.Repositories().Watch(ctx, repoCtx.Viewer.ID(), repo.ID)
 	} else {
-		err = database.WatchRepo(repoCtx.Viewer.ID, repo.ID, false)
+		err = database.WatchRepo(repoCtx.Viewer.ID(), repo.ID, false)
 	}
 	if err != nil {
-		log.Error("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, repoCtx.Viewer.ID, repo.ID, err)
+		log.Error("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, repoCtx.Viewer.ID(), repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "watch repo")
 	}
 
@@ -218,22 +218,22 @@ type repoStarResponse struct {
 }
 
 func repoStarAction(ctx context.Context, repoCtx *repoContext, starring bool) (statusCode int, resp *repoStarResponse, err error) {
-	if !repoCtx.ViewerCanRead() {
+	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	if repoCtx.Viewer == nil {
+	if !repoCtx.Viewer.Authenticated() {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
 
 	repo := repoCtx.Repo
 
 	if starring {
-		err = database.Handle.Repositories().Star(ctx, repoCtx.Viewer.ID, repo.ID)
+		err = database.Handle.Repositories().Star(ctx, repoCtx.Viewer.ID(), repo.ID)
 	} else {
-		err = database.StarRepo(repoCtx.Viewer.ID, repo.ID, false)
+		err = database.StarRepo(repoCtx.Viewer.ID(), repo.ID, false)
 	}
 	if err != nil {
-		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starring, repoCtx.Viewer.ID, repo.ID, err)
+		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starring, repoCtx.Viewer.ID(), repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "star repo")
 	}
 
