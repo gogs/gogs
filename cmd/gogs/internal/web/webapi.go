@@ -237,6 +237,11 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Combo("/notices").Get(getAdminNotices).Delete(bindJSON(adminNoticesDeleteRequest{}), deleteAdminNotices)
 			f.Delete("/notices/all", deleteAllAdminNotices)
 		}, requireSignIn, requireAdmin)
+		f.Group("/repo", func() {
+			f.Get("/new", getRepoNew)
+			f.Post("/create", bindJSON(repoCreateRequest{}), postRepoCreate)
+			f.Post("/migrate", bindJSON(repoMigrateRequest{}), postRepoMigrate)
+		}, requireSignIn)
 		f.Post("/orgs", requireSignIn, bindJSON(orgCreateRequest{}), postOrg)
 		f.Group("/orgs/{org}", func() {
 			f.Delete("", bindJSON(orgDeleteRequest{}), deleteOrg)

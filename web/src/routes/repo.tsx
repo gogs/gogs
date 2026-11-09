@@ -3,10 +3,11 @@ import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-
 
 import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
 import { type PageSearch, validatePageSearch } from "@/lib/page-search";
-import { fetchRepoPeople, repoHeaderQuery } from "@/lib/queries/repo";
+import { fetchRepoNewOptions, fetchRepoPeople, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoCreate, RepoMigrate } from "@/pages/repo/New";
 import { RepoPeople } from "@/pages/repo/People";
 
 // Match the legacy server-side route constraint (see `web.go` near the
@@ -126,5 +127,66 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [repoCommitRoute, repoStargazersRoute, repoWatchersRoute];
+  interface RepoNewSearch {
+    // The organization to create the repository for.
+    org?: number;
+    // Whether a migration starts out as a mirror.
+    mirror?: boolean;
+  }
+
+  function validateRepoNewSearch(search: Record<string, unknown>): RepoNewSearch {
+    const org = Number(search.org);
+    return {
+      org: Number.isInteger(org) && org > 0 ? org : undefined,
+      mirror: String(search.mirror) === "1" || search.mirror === true ? true : undefined,
+    };
+  }
+
+  async function loadRepoNewOptions(org: number | undefined) {
+    try {
+      return await fetchRepoNewOptions(org);
+    } catch (err) {
+      // An organization the viewer cannot create repositories for is not
+      // found.
+      if (err instanceof LoaderResponseError && err.status === 404) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
+        // The viewer is signed out, has not confirmed their email, or is
+        // prohibited from signing in. Reload the page so the server sends them to
+        // sign in, account activation, or the login prohibited page.
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ href: window.location.href, reloadDocument: true });
+      }
+      throw err;
+    }
+  }
+
+  const repoCreateRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/repo/create",
+    validateSearch: validateRepoNewSearch,
+    loaderDeps: ({ search }: { search: RepoNewSearch }) => ({ org: search.org }),
+    loader: ({ deps }) => loadRepoNewOptions(deps.org),
+    component: function Create() {
+      const options = repoCreateRoute.useLoaderData();
+      // Start over when the owner asked for changes.
+      return <RepoCreate key={options.ownerID} options={options} />;
+    },
+  });
+
+  const repoMigrateRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/repo/migrate",
+    validateSearch: validateRepoNewSearch,
+    loaderDeps: ({ search }: { search: RepoNewSearch }) => ({ org: search.org, mirror: search.mirror ?? false }),
+    loader: async ({ deps }) => ({ options: await loadRepoNewOptions(deps.org), mirror: deps.mirror }),
+    component: function Migrate() {
+      const { options, mirror } = repoMigrateRoute.useLoaderData();
+      return <RepoMigrate key={`${options.ownerID}-${mirror}`} options={options} mirror={mirror} />;
+    },
+  });
+
+  return [repoCommitRoute, repoStargazersRoute, repoWatchersRoute, repoCreateRoute, repoMigrateRoute];
 }

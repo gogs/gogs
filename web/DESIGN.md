@@ -95,7 +95,7 @@ Pages that show settings or measurements, e.g., the admin dashboard and configur
 
 ## Translated markup
 
-Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>` and `<strong>`. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.
+Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.
 
 ## Interactive affordances
 

@@ -297,10 +297,17 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		// ***** START: Repository *****
 		m.Group("/repo", func() {
-			m.Get("/create", repo.Create)
-			m.Post("/create", bindIgnErr(form.CreateRepo{}), repo.CreatePost)
-			m.Get("/migrate", repo.Migrate)
-			m.Post("/migrate", bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
+			m.Get("/^:page(create|migrate)$", func(c *context.Context) {
+				_, err := repoOwner(c.Req.Context(), c.User, c.QueryInt64("org"))
+				if errors.Is(err, errRepoOwnerNotAllowed) {
+					c.NotFound()
+					return
+				} else if err != nil {
+					c.Error(err, "get repository owner")
+					return
+				}
+				c.ServeWeb()
+			})
 			m.Combo("/fork/:repoid").Get(repo.Fork).
 				Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
 		}, reqSignIn)

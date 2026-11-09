@@ -59,14 +59,14 @@ export function CheckboxField({
   onChange,
 }: {
   id: string;
-  label: string;
+  label: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
       <Checkbox id={id} className="mt-0.5" checked={checked} onCheckedChange={(c) => onChange(c === true)} />
-      {label}
+      <span>{label}</span>
     </label>
   );
 }
