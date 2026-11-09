@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -111,6 +112,19 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 		assert.Equal(t, 0, c.ParentsCount())
 	})
 
+	t.Run("signs when commit.gpgSign is set", func(t *testing.T) {
+		tree, err := r.WriteTree(ctx)
+		require.NoError(t, err)
+		signature := setFakeGPG(t)
+
+		id, err := r.CommitTree(ctx, tree, "message\n")
+		require.NoError(t, err)
+		raw, err := exec(ctx, r.Path(), []string{"cat-file", "commit", id}, nil)
+		require.NoError(t, err)
+		assert.Contains(t, string(raw), "\ngpgsig ")
+		assert.Contains(t, string(raw), signature)
+	})
+
 	t.Run("invalid changes", func(t *testing.T) {
 		// "run.sh" is a file, so nothing can be added under it.
 		assert.Error(t, r.AddToIndex(ctx, IndexEntry{Mode: EntryBlob, ID: blobID, Path: "run.sh/x"}))
@@ -187,6 +201,43 @@ func TestRepository_DiffCached(t *testing.T) {
 		require.Len(t, diff.Files, 1)
 		assert.True(t, diff.Files[0].IsBinary())
 	})
+}
+
+func TestRepository_IsValidBranchName(t *testing.T) {
+	ctx := context.Background()
+	for _, name := range []string{"feature", "feature/a", "v1.0"} {
+		assert.True(t, testrepo.IsValidBranchName(ctx, name), name)
+	}
+	for _, name := range []string{"HEAD", "-x", "a..b", "@{-1}", "x.lock", ""} {
+		assert.False(t, testrepo.IsValidBranchName(ctx, name), name)
+	}
+}
+
+// setFakeGPG makes Git sign commits with a fake signature, and returns the
+// signature.
+func setFakeGPG(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("The fake GPG program is a shell script")
+	}
+
+	program := filepath.Join(t.TempDir(), "gpg")
+	script := `#!/bin/sh
+cat >/dev/null
+echo "[GNUPG:] SIG_CREATED D 1 8 00 1600000000 FAKE" >&2
+printf -- "-----BEGIN PGP SIGNATURE-----\n\nfake\n-----END PGP SIGNATURE-----\n"
+`
+	require.NoError(t, os.WriteFile(program, []byte(script), 0o700))
+	t.Setenv("GIT_CONFIG_COUNT", "4")
+	t.Setenv("GIT_CONFIG_KEY_0", "commit.gpgSign")
+	t.Setenv("GIT_CONFIG_VALUE_0", "true")
+	t.Setenv("GIT_CONFIG_KEY_1", "gpg.format")
+	t.Setenv("GIT_CONFIG_VALUE_1", "openpgp")
+	t.Setenv("GIT_CONFIG_KEY_2", "gpg.program")
+	t.Setenv("GIT_CONFIG_VALUE_2", program)
+	t.Setenv("GIT_CONFIG_KEY_3", "user.signingKey")
+	t.Setenv("GIT_CONFIG_VALUE_3", "FAKE")
+	return "fake"
 }
 
 func TestCleanupMessage(t *testing.T) {
@@ -342,6 +393,59 @@ func TestRepository_Rebase(t *testing.T) {
 		assert.Contains(t, string(raw), "\nauthor \"张三\" <z@example.com> 1600000000 +0800\n")
 		assert.NotContains(t, string(raw), "\nencoding ")
 		assert.True(t, strings.HasSuffix(string(raw), "\n\n中文\n"), "got %q", raw)
+	})
+
+	// writeRaw writes the commit object as is.
+	writeRaw := func(header, message string) string {
+		t.Helper()
+		first := commitOnto(base, "F", "f\n", "Add F\n")
+		tree, err := r.RevParse(ctx, first+"^{tree}")
+		require.NoError(t, err)
+		object := "tree " + tree + "\nparent " + base + "\n" + header + "\n" + message
+		stdout, err := execInput(ctx, r.Path(), []string{"hash-object", "-t", "commit", "-w", "--stdin", "--literally"}, nil, strings.NewReader(object))
+		require.NoError(t, err)
+		return strings.TrimSpace(string(stdout))
+	}
+
+	t.Run("uses the first author line", func(t *testing.T) {
+		head := writeRaw("author first <f@example.com> 1 +0000\nauthor second <s@example.com> 2 +0000\ncommitter c <c@example.com> 1 +0000\n", "m\n")
+		got, err := r.Rebase(ctx, upstream, head)
+		require.NoError(t, err)
+		rebased, err := r.rawCommit(ctx, got)
+		require.NoError(t, err)
+		assert.Equal(t, "first <f@example.com> 1 +0000", rebased.authorLine)
+	})
+
+	t.Run("refuses commits without author", func(t *testing.T) {
+		head := writeRaw("committer c <c@example.com> 1 +0000\n", "m\n")
+		_, err := r.Rebase(ctx, upstream, head)
+		assert.ErrorContains(t, err, "no author")
+	})
+
+	t.Run("ignores log.showSignature", func(t *testing.T) {
+		head := writeRaw("author a <a@example.com> 1 +0000\ncommitter c <c@example.com> 1 +0000\ngpgsig -----BEGIN PGP SIGNATURE-----\n \n bad\n -----END PGP SIGNATURE-----\n", "signed\n")
+		t.Setenv("GIT_CONFIG_COUNT", "1")
+		t.Setenv("GIT_CONFIG_KEY_0", "log.showSignature")
+		t.Setenv("GIT_CONFIG_VALUE_0", "true")
+
+		got, err := r.Rebase(ctx, upstream, head)
+		require.NoError(t, err)
+		rebased, err := r.rawCommit(ctx, got)
+		require.NoError(t, err)
+		assert.Equal(t, "signed\n", rebased.message)
+	})
+
+	t.Run("signs when commit.gpgSign is set", func(t *testing.T) {
+		head := commitOnto(base, "G", "g\n", "Add G\n")
+		signature := setFakeGPG(t)
+
+		got, err := r.Rebase(ctx, upstream, head)
+		require.NoError(t, err)
+		raw, err := exec(ctx, r.Path(), []string{"cat-file", "commit", got}, nil)
+		require.NoError(t, err)
+		assert.Contains(t, string(raw), "\ngpgsig ")
+		assert.Contains(t, string(raw), signature)
+		assert.Contains(t, string(raw), "\nauthor bob <bob@example.com> 1704189845 -0700\n")
 	})
 
 	t.Run("conflict", func(t *testing.T) {

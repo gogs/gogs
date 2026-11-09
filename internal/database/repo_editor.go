@@ -82,7 +82,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 // that reads objects from the repositories at given paths, so that commits can
 // be built on top of theirs through its index without a working tree. The
 // returned function removes the temporary repository.
-func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Repository, cleanup func(), err error) {
+func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Repository, _ func(), err error) {
 	parent := filepath.Join(conf.Server.AppDataPath, "tmp", "repos")
 	if err = os.MkdirAll(parent, os.ModePerm); err != nil {
 		return nil, nil, errors.Wrap(err, "create parent directory")
@@ -91,7 +91,7 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "create temporary directory")
 	}
-	cleanup = func() { _ = os.RemoveAll(dir) }
+	cleanup := func() { _ = os.RemoveAll(dir) }
 	defer func() {
 		if err != nil {
 			cleanup()
@@ -205,6 +205,9 @@ func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, 
 	parent, err := gitRepo.BranchCommit(ctx, oldBranch)
 	if err != nil {
 		return errors.Wrapf(err, "get commit of branch %q", oldBranch)
+	}
+	if newBranch != oldBranch && !gitRepo.IsValidBranchName(ctx, newBranch) {
+		return errors.Newf("invalid branch name %q", newBranch)
 	}
 
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
@@ -636,7 +639,8 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 	ctx := context.TODO()
 	err = r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
-		var entries []git.IndexEntry
+		type file struct{ localPath, treePath string }
+		var attributes, others []file
 		for _, upload := range uploads {
 			tmpPath := upload.LocalPath()
 			if !osx.IsFile(tmpPath) {
@@ -655,20 +659,42 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 			if err := checkNoSymlinkInPaths(ctx, parent, targetPath); err != nil {
 				return err
 			}
-
-			blobID, err := hashFile(ctx, tmpRepo, tmpPath, targetPath, parent.ID.String())
-			if err != nil {
-				return errors.Wrapf(err, "write file %q", upload.Name)
+			if path.Base(targetPath) == ".gitattributes" {
+				attributes = append(attributes, file{tmpPath, targetPath})
+			} else {
+				others = append(others, file{tmpPath, targetPath})
 			}
-			entries = append(entries, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: targetPath})
 		}
-		if len(entries) == 0 {
-			return nil
+
+		add := func(files []file, attrSource string) error {
+			entries := make([]git.IndexEntry, 0, len(files))
+			for _, f := range files {
+				blobID, err := hashFile(ctx, tmpRepo, f.localPath, f.treePath, attrSource)
+				if err != nil {
+					return errors.Wrapf(err, "write file %q", f.treePath)
+				}
+				entries = append(entries, git.IndexEntry{Mode: git.EntryBlob, ID: blobID, Path: f.treePath})
+			}
+			if len(entries) == 0 {
+				return nil
+			}
+			return errors.Wrap(tmpRepo.AddToIndex(ctx, entries...), "add files")
 		}
-		if err := tmpRepo.AddToIndex(ctx, entries...); err != nil {
-			return errors.Wrap(err, "add files")
+
+		// Uploaded ".gitattributes" files apply to the other uploaded files, as they
+		// did when the files were added together in a checkout.
+		attrSource := parent.ID.String()
+		if len(attributes) > 0 {
+			if err := add(attributes, attrSource); err != nil {
+				return err
+			}
+			tree, err := tmpRepo.WriteTree(ctx)
+			if err != nil {
+				return errors.Wrap(err, "write tree")
+			}
+			attrSource = tree
 		}
-		return nil
+		return add(others, attrSource)
 	})
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
@@ -123,7 +124,8 @@ type CommitTreeOptions struct {
 }
 
 // CommitTree creates a commit object of the tree with given message as is, and
-// returns its ID.
+// returns its ID. Like "git commit", it signs the commit when the
+// "commit.gpgSign" Git configuration is set.
 func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOptions) (string, error) {
 	var opt CommitTreeOptions
 	if len(opts) > 0 {
@@ -131,6 +133,13 @@ func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts 
 	}
 
 	args := []string{"commit-tree", "-F", "-"}
+	sign, err := r.signsCommits(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "get commit.gpgSign")
+	}
+	if sign {
+		args = append(args, "-S")
+	}
 	for _, parent := range opt.Parents {
 		args = append(args, "-p", parent)
 	}
@@ -145,6 +154,25 @@ func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts 
 		return "", err
 	}
 	return strings.TrimSpace(string(stdout)), nil
+}
+
+// signsCommits returns true if the "commit.gpgSign" Git configuration is set,
+// which "git commit-tree" does not follow by itself.
+func (r *Repository) signsCommits(ctx context.Context) (bool, error) {
+	stdout, err := exec(ctx, r.path, []string{"config", "--type=bool", "--get", "commit.gpgSign"}, nil)
+	if err != nil {
+		if isExitStatus(err, 1) {
+			return false, nil
+		}
+		return false, err
+	}
+	return strings.TrimSpace(string(stdout)) == "true", nil
+}
+
+// IsValidBranchName returns true if the name is allowed for a new branch.
+func (r *Repository) IsValidBranchName(ctx context.Context, name string) bool {
+	_, err := exec(ctx, r.path, []string{"check-ref-format", "--branch", name}, nil)
+	return err == nil
 }
 
 // signatureEnvs returns the environment variables that make Git use the
@@ -264,6 +292,10 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 		return "", errors.Wrap(err, "get committer")
 	}
 	committer := strings.TrimSpace(string(stdout))
+	sign, err := r.signsCommits(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "get commit.gpgSign")
+	}
 
 	var emptyCommit string
 	for _, id := range ids {
@@ -282,7 +314,7 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 		mergeBase := c.parent
 		if mergeBase == "" {
 			if emptyCommit == "" {
-				emptyCommit, err = r.CommitTree(ctx, emptyTreeID, "")
+				emptyCommit, err = r.writeCommit(ctx, "tree "+emptyTreeID+"\nauthor "+committer+"\ncommitter "+committer+"\n\n")
 				if err != nil {
 					return "", errors.Wrap(err, "create empty commit")
 				}
@@ -314,19 +346,66 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 			}
 		}
 
-		// The commit object is written as is, because passing the author to Git
-		// through environment variables would drop characters Git does not allow
-		// at the ends of names, e.g., quotes, and reject malformed author lines that
-		// "git rebase" copies.
-		object := "tree " + tree + "\nparent " + head + "\nauthor " + c.authorLine + "\ncommitter " + committer + "\n\n" + skipBlankLines(c.message)
-		args := []string{"hash-object", "-t", "commit", "-w", "--stdin", "--literally"}
-		stdout, err := execInput(ctx, r.path, args, nil, strings.NewReader(fixUTF8(object)))
+		message := skipBlankLines(c.message)
+		if sign {
+			// Only "git commit-tree" signs commits, and it takes the author from
+			// environment variables.
+			var author *Signature
+			author, err = parseAuthorLine(c.authorLine)
+			if err != nil {
+				return "", errors.Wrapf(err, "parse author of commit %s", id)
+			}
+			head, err = r.CommitTree(ctx, tree, message, CommitTreeOptions{Parents: []string{head}, Author: author})
+		} else {
+			// The commit object is written as is, because passing the author to Git
+			// through environment variables would drop characters Git does not allow
+			// at the ends of names, e.g., quotes, and reject malformed author lines
+			// that "git rebase" copies.
+			head, err = r.writeCommit(ctx, "tree "+tree+"\nparent "+head+"\nauthor "+c.authorLine+"\ncommitter "+committer+"\n\n"+message)
+		}
 		if err != nil {
 			return "", errors.Wrapf(err, "commit %s", id)
 		}
-		head = strings.TrimSpace(string(stdout))
 	}
 	return head, nil
+}
+
+// writeCommit writes the commit object with its bytes not part of valid UTF-8
+// fixed the same way Git does, and returns its ID.
+func (r *Repository) writeCommit(ctx context.Context, object string) (string, error) {
+	args := []string{"hash-object", "-t", "commit", "-w", "--stdin", "--literally"}
+	stdout, err := execInput(ctx, r.path, args, nil, strings.NewReader(fixUTF8(object)))
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+// parseAuthorLine parses the author line of a commit object, i.e.,
+// "Name <email> 1700000000 +0100".
+func parseAuthorLine(line string) (*Signature, error) {
+	emailEnd := strings.LastIndexByte(line, '>')
+	emailStart := strings.LastIndexByte(line[:max(emailEnd, 0)], '<')
+	if emailStart < 0 || emailEnd < 0 {
+		return nil, errors.Errorf("malformed author %q", line)
+	}
+	fields := strings.Fields(line[emailEnd+1:])
+	if len(fields) != 2 {
+		return nil, errors.Errorf("malformed author time %q", line)
+	}
+	seconds, err := strconv.ParseInt(fields[0], 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse time")
+	}
+	zone, err := time.Parse("-0700", fields[1])
+	if err != nil {
+		return nil, errors.Wrap(err, "parse time zone")
+	}
+	return &Signature{
+		Name:  strings.TrimSpace(line[:emailStart]),
+		Email: line[emailStart+1 : emailEnd],
+		When:  time.Unix(seconds, 0).In(zone.Location()),
+	}, nil
 }
 
 // fixUTF8 returns s with every byte that is not part of valid UTF-8 taken as a
@@ -372,7 +451,7 @@ type rawCommitInfo struct {
 }
 
 func (r *Repository) rawCommit(ctx context.Context, id string) (*rawCommitInfo, error) {
-	args := []string{"log", "-1", "--no-walk", "--encoding=UTF-8", "--pretty=raw", "--end-of-options", id, "--"}
+	args := []string{"log", "-1", "--no-walk", "--no-show-signature", "--encoding=UTF-8", "--pretty=raw", "--end-of-options", id, "--"}
 	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
@@ -380,6 +459,7 @@ func (r *Repository) rawCommit(ctx context.Context, id string) (*rawCommitInfo, 
 
 	header, _, _ := strings.Cut(string(stdout), "\n\n")
 	c := new(rawCommitInfo)
+	hasAuthor := false
 	for line := range strings.SplitSeq(header, "\n") {
 		key, value, _ := strings.Cut(line, " ")
 		switch key {
@@ -390,12 +470,18 @@ func (r *Repository) rawCommit(ctx context.Context, id string) (*rawCommitInfo, 
 				c.parent = value
 			}
 		case "author":
-			c.authorLine = value
+			if !hasAuthor {
+				c.authorLine = value
+				hasAuthor = true
+			}
 		}
+	}
+	if !hasAuthor {
+		return nil, errors.New("no author")
 	}
 
 	// The message is read separately, because the raw format indents it.
-	args = []string{"log", "-1", "--no-walk", "--encoding=UTF-8", "--format=format:%B", "--end-of-options", id, "--"}
+	args = []string{"log", "-1", "--no-walk", "--no-show-signature", "--encoding=UTF-8", "--format=format:%B", "--end-of-options", id, "--"}
 	stdout, err = exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
