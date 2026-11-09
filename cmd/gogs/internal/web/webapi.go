@@ -180,6 +180,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/activity", requireIndividualUser, getUserProfileActivity)
 			f.Combo("/follow", requireIndividualUser).Post(postUserFollow).Delete(deleteUserFollow)
 		}, requireViewAccess, withProfileUser)
+		dashboardRoutes := func() {
+			f.Get("", getDashboard)
+			f.Get("/activity", getDashboardActivity)
+		}
+		f.Group("/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
+		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
 	}, enforceWebAPIMaxBodySize)
 }
 
