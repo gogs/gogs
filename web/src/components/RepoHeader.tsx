@@ -15,7 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -248,6 +248,16 @@ function RepoTabs({
   // swap it into the last inline slot so the indicator stays visible without
   // opening the menu.
   const activeIndex = tabs.findIndex((t) => t.key === activeTab);
+  // Scroll the inline tabs so the active one is fully visible, since it can
+  // sit in the last inline slot past the edge of narrow screens.
+  const inlineRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const scroller = inlineRef.current;
+    const active = scroller?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!scroller || !active) return;
+    const overflow = active.offsetLeft + active.offsetWidth - scroller.clientWidth;
+    if (overflow > 0) scroller.scrollLeft = overflow;
+  }, [activeTab]);
   let mobileInline = tabs.slice(0, MOBILE_INLINE_LIMIT);
   let mobileOverflow = tabs.slice(MOBILE_INLINE_LIMIT);
   if (activeIndex >= MOBILE_INLINE_LIMIT) {
@@ -258,13 +268,16 @@ function RepoTabs({
 
   return (
     <>
-      {/* Mobile: first 3 inline + hamburger overflow for the rest. */}
+      {/* Mobile: first 3 inline + hamburger overflow for the rest. The inline
+          tabs scroll when they do not fit, keeping the overflow menu in view. */}
       <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label={t("repository")}>
-        {mobileInline.map((tab) => (
-          <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
-            {tab.label}
-          </TabLink>
-        ))}
+        <div ref={inlineRef} className="relative flex min-w-0 flex-1 overflow-x-auto">
+          {mobileInline.map((tab) => (
+            <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
+              {tab.label}
+            </TabLink>
+          ))}
+        </div>
         {mobileOverflow.length > 0 ? <OverflowMenu tabs={mobileOverflow} activeTab={activeTab} t={t} /> : null}
       </nav>
 
@@ -288,7 +301,7 @@ function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab
         <button
           type="button"
           aria-label={t("more_tabs")}
-          className="flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
+          className="flex shrink-0 cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
         >
           <Menu className="size-4" aria-hidden />
           <span>{t("more")}</span>

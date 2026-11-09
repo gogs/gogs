@@ -28,7 +28,8 @@ export function Landing() {
               height="378"
               className="mx-auto block h-auto w-full max-w-[450px] [image-rendering:pixelated]"
             />
-            <span className="-mt-1 block text-center text-base text-(--color-foreground) sm:text-lg">
+            {/* The tagline is prose, so it wraps between words unlike the terminal output around it. */}
+            <span className="-mt-1 block text-center text-base wrap-anywhere text-(--color-foreground) [word-break:normal] sm:text-lg">
               {t("app_desc")}
             </span>
             {"\n"}

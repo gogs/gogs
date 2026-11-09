@@ -690,7 +690,8 @@ export function RepoCommit() {
 
           <span aria-hidden className="hidden h-4 w-px bg-(--color-border) sm:inline-block" />
 
-          <span className="inline-flex items-center gap-1 font-mono text-xs">
+          {/* Wraps between groups on narrow screens, keeping each label with its value. */}
+          <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1.5 font-mono text-xs">
             <a href={subUrl(`/${owner}/${repo}/commit/${sha}.patch`)} className="hover:underline">
               {t("repo.patch_label")}
             </a>
@@ -701,40 +702,44 @@ export function RepoCommit() {
             {parents.length > 0 ? (
               <>
                 <span aria-hidden>·</span>
-                <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
-                {parents.map((p) => (
-                  <a
-                    key={p}
-                    href={`${repoLink}/commit/${p}`}
-                    className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground) hover:underline"
-                  >
-                    {p.slice(0, 7)}
-                  </a>
-                ))}
+                <span className="inline-flex items-center gap-1">
+                  <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
+                  {parents.map((p) => (
+                    <a
+                      key={p}
+                      href={`${repoLink}/commit/${p}`}
+                      className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground) hover:underline"
+                    >
+                      {p.slice(0, 7)}
+                    </a>
+                  ))}
+                </span>
               </>
             ) : null}
             <span aria-hidden>·</span>
-            <span>{t("repo.commit_label")}</span>
-            <code className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground)">
-              {sha.slice(0, 10)}
-            </code>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={copySha}
-                  aria-label={t("repo.copy_full_sha")}
-                  className="grid size-6 cursor-pointer place-items-center rounded hover:bg-(--color-surface)"
-                >
-                  {copied ? (
-                    <Check className="size-3.5 text-(--color-success)" aria-hidden />
-                  ) : (
-                    <Copy className="size-3.5" aria-hidden />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t("repo.copy_full_sha")}</TooltipContent>
-            </Tooltip>
+            <span className="inline-flex items-center gap-1">
+              <span>{t("repo.commit_label")}</span>
+              <code className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground)">
+                {sha.slice(0, 10)}
+              </code>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={copySha}
+                    aria-label={t("repo.copy_full_sha")}
+                    className="grid size-6 cursor-pointer place-items-center rounded hover:bg-(--color-surface)"
+                  >
+                    {copied ? (
+                      <Check className="size-3.5 text-(--color-success)" aria-hidden />
+                    ) : (
+                      <Copy className="size-3.5" aria-hidden />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t("repo.copy_full_sha")}</TooltipContent>
+              </Tooltip>
+            </span>
           </span>
         </div>
       </section>

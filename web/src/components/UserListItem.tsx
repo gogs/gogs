@@ -118,10 +118,11 @@ function Meta({
   children: ReactNode;
 }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1 break-all">
-      <Icon className="size-3.5 shrink-0" aria-hidden />
+    <span className="inline-flex min-w-0 items-start gap-1">
+      <Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       {label ? <span className="sr-only">{label}</span> : null}
-      {children}
+      {/* One box, so text and a date wrap together as a sentence. */}
+      <span className="min-w-0 wrap-anywhere">{children}</span>
     </span>
   );
 }
