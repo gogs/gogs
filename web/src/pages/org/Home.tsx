@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { ChevronRight, Link as LinkIcon, MapPin, Plus, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -105,7 +106,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               <SectionHeader
                 title={t("org.people")}
                 count={org.memberCount}
-                countHref={`${orgLink}/members`}
+                countLink={{ to: "/org/$org/members", params: { org: org.name } }}
                 countLabel={`${org.memberCount} ${t("org.lower_members")}`}
               />
               <ul className="flex flex-wrap gap-1.5">
@@ -141,18 +142,19 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               <SectionHeader
                 title={t("org.teams")}
                 count={org.teamCount}
-                countHref={`${orgLink}/teams`}
+                countLink={{ to: "/org/$org/teams", params: { org: org.name } }}
                 countLabel={`${org.teamCount} ${t("org.teams")}`}
               />
               <ul className="grid gap-3">
                 {org.teams.map((team) => (
                   <li key={team.lowerName} className="text-sm">
-                    <a
-                      href={`${orgLink}/teams/${team.lowerName}`}
+                    <Link
+                      to="/org/$org/teams/$team"
+                      params={{ org: org.name, team: team.lowerName }}
                       className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
                     >
                       {team.name}
-                    </a>
+                    </Link>
                     <p className="text-(--color-muted-foreground)">
                       {team.memberCount} {t("org.lower_members")} · {team.repoCount} {t("org.lower_repositories")}
                     </p>
@@ -177,26 +179,26 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
 function SectionHeader({
   title,
   count,
-  countHref,
+  countLink,
   countLabel,
 }: {
   title: string;
   count?: number;
-  countHref: string;
+  countLink: { to: "/org/$org/members" | "/org/$org/teams"; params: { org: string } };
   countLabel: string;
 }) {
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
       <h2 className="text-sm font-semibold">{title}</h2>
       {count !== undefined ? (
-        <a
-          href={countHref}
+        <Link
+          {...countLink}
           aria-label={countLabel}
           className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-sm tabular-nums text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
         >
           {count}
           <ChevronRight className="size-4" aria-hidden />
-        </a>
+        </Link>
       ) : null}
     </div>
   );

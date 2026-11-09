@@ -90,6 +90,17 @@ func requireViewAccess(c flamego.Context, viewer *database.User) {
 	}
 }
 
+// requireAuthenticated is requireViewAccess for routes that also turn away
+// unauthenticated viewers on sites that do not require signing in to view
+// content.
+func requireAuthenticated(c flamego.Context, viewer *database.User) {
+	if viewer == nil {
+		writeErrorResponse(c.ResponseWriter(), http.StatusUnauthorized, errors.New("authentication required"))
+		return
+	}
+	requireViewAccess(c, viewer)
+}
+
 func enforceWebAPIMaxBodySize(c flamego.Context) {
 	r := c.Request().Request
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, 4*1024) // 4 KiB
@@ -193,6 +204,19 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		}
 		f.Group("/dashboard", dashboardRoutes, requireViewAccess, withDashboardOwner)
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireViewAccess, withDashboardOwner)
+		f.Group("/orgs/{org}", func() {
+			f.Get("/members", getOrgMembers)
+			f.Delete("/members/{username}", deleteOrgMember)
+			f.Combo("/members/{username}/public").Put(putOrgMemberPublic).Delete(deleteOrgMemberPublic)
+			f.Get("/teams", getOrgTeams)
+			f.Group("/teams/{team}", func() {
+				f.Get("", getOrgTeam)
+				f.Get("/members", getOrgTeamMembers)
+				f.Combo("/members/{username}").Put(putOrgTeamMember).Delete(deleteOrgTeamMember)
+				f.Get("/repos", getOrgTeamRepos)
+				f.Combo("/repos/{repo}").Put(putOrgTeamRepo).Delete(deleteOrgTeamRepo)
+			}, withOrgTeam)
+		}, requireAuthenticated, withOrgMembership)
 	}, enforceWebAPIMaxBodySize)
 }
 
