@@ -10,8 +10,10 @@ import {
   fetchOrgTeams,
 } from "@/lib/queries/org";
 import { userProfileQuery } from "@/lib/queries/user";
+import { OrgInvite } from "@/pages/org/Invite";
 import { OrgMembers } from "@/pages/org/Members";
 import { OrgTeam, type TeamPageData } from "@/pages/org/Team";
+import { TeamForm } from "@/pages/org/TeamForm";
 import { OrgTeams } from "@/pages/org/Teams";
 
 interface RouterContext {
@@ -38,6 +40,16 @@ async function loadOrgPage<T>(queryClient: QueryClient, org: string, load: () =>
       throw redirect({ href: window.location.href, reloadDocument: true });
     }
     throw err;
+  }
+}
+
+// requireOwner turns away members who are not owners, like the
+// server-rendered pages, once the organization is loaded.
+async function requireOwner(queryClient: QueryClient, org: string) {
+  const profile = await queryClient.ensureQueryData(userProfileQuery(org));
+  if (profile.kind !== "organization" || !profile.viewerIsOwner) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+    throw notFound();
   }
 }
 
@@ -98,5 +110,52 @@ export function createOrgRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [membersRoute, teamsRoute, teamRoute, teamReposRoute];
+  const inviteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/invitations/new",
+    loader: ({ params, context }) =>
+      loadOrgPage((context as RouterContext).queryClient, params.org, () =>
+        requireOwner((context as RouterContext).queryClient, params.org),
+      ),
+    component: function Invite() {
+      const { org } = inviteRoute.useParams();
+      return <OrgInvite org={org} />;
+    },
+  });
+
+  const newTeamRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/teams/new",
+    loader: ({ params, context }) =>
+      loadOrgPage((context as RouterContext).queryClient, params.org, () =>
+        requireOwner((context as RouterContext).queryClient, params.org),
+      ),
+    component: function NewTeam() {
+      const { org } = newTeamRoute.useParams();
+      return <TeamForm org={org} />;
+    },
+  });
+
+  const editTeamRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/teams/$team/edit",
+    loader: ({ params, context }) => {
+      const { queryClient } = context as RouterContext;
+      return loadOrgPage(queryClient, params.org, async () => {
+        const [, team] = await Promise.all([
+          requireOwner(queryClient, params.org),
+          fetchOrgTeam(params.org, params.team),
+        ]);
+        return team;
+      });
+    },
+    component: function EditTeam() {
+      const { org } = editTeamRoute.useParams();
+      const team = editTeamRoute.useLoaderData();
+      // Start over when the team changes, e.g., after renaming it.
+      return <TeamForm key={team.lowerName} org={org} team={team} />;
+    },
+  });
+
+  return [membersRoute, teamsRoute, teamRoute, teamReposRoute, inviteRoute, newTeamRoute, editTeamRoute];
 }

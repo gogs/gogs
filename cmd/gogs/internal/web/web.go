@@ -310,11 +310,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			}, context.OrgAssignment(true, false, true))
 
 			m.Group("/:org", func() {
-				m.Get("/teams/new", org.NewTeam)
-				m.Post("/teams/new", bindIgnErr(form.CreateTeam{}), org.NewTeamPost)
-				m.Get("/teams/:team/edit", org.EditTeam)
-				m.Post("/teams/:team/edit", bindIgnErr(form.CreateTeam{}), org.EditTeamPost)
-				m.Post("/teams/:team/delete", org.DeleteTeam)
+				m.Get("/teams/new", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/teams/:team/edit", func(c *context.Context) { c.ServeWeb() })
 
 				m.Group("/settings", func() {
 					m.Combo("").Get(org.Settings).
@@ -325,7 +322,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					m.Route("/delete", "GET,POST", org.SettingsDelete)
 				})
 
-				m.Route("/invitations/new", "GET,POST", org.Invitation)
+				m.Get("/invitations/new", func(c *context.Context) { c.ServeWeb() })
 			}, context.OrgAssignment(true, true))
 		}, reqSignIn)
 		// ***** END: Organization *****
