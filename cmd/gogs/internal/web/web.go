@@ -76,6 +76,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	if err != nil {
 		return errors.Wrap(err, "initialize web handler")
 	}
+	apiV1Handler := newAPIV1Handler()
 
 	// serveWeb hands the request to the web app, after the middleware of its
 	// route checks what the viewer may see.
@@ -453,7 +454,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// **********************
 
 		// TODO: Without session
-		m.Any("/api/v1/*", ignSignIn, apiV1Bridger(webHandler))
+		m.Any("/api/v1/*", ignSignIn, apiV1Bridger(apiV1Handler))
 		m.Any("/api/web/*", flamegoBridger(webHandler))
 		m.Get("/redirect", flamegoBridger(webHandler))
 		m.Get("/captcha/*", flamegoBridger(webHandler))
@@ -662,13 +663,24 @@ func newRoutingHandler() (http.Handler, error) {
 	}, requireViewAccess, withRepoContext)
 
 	mountWebLocaleRoutes(f)
-	apiv1.RegisterRoutes(f)
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
 	return f, nil
+}
+
+// newAPIV1Handler returns the handler of API v1 routes. It is separate from the
+// web handler so that requests the web handler receives, e.g., through
+// Context.ServeWeb, never reach API v1 routes without the sign-in and
+// authentication checks done by Macaron.
+func newAPIV1Handler() http.Handler {
+	f := flamego.New()
+	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
+	f.Use(flamegoInjector)
+	apiv1.RegisterRoutes(f)
+	return f
 }
 
 func getRedirect(c flamego.Context) {

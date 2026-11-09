@@ -4,6 +4,7 @@ import (
 	stdctx "context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
@@ -24,7 +25,7 @@ import (
 )
 
 type (
-	webAPIAuthKey    struct{}
+	apiV1RequestKey  struct{}
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
@@ -34,7 +35,6 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
 		ctx = stdctx.WithValue(ctx, context.UserKey{}, c.User)
-		ctx = stdctx.WithValue(ctx, webAPIAuthKey{}, apiv1.Authentication{IsBasicAuth: c.IsBasicAuth, IsTokenAuth: c.IsTokenAuth})
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
@@ -51,16 +51,33 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 }
 
 // apiV1Bridger bridges API v1 requests to Flamego. Macaron trims the trailing
-// slash and splits the escaped path into segments before matching, so an
-// encoded slash (%2F) stays within its segment. Flamego does neither, so the
-// path is normalized here to keep routing unchanged.
-func apiV1Bridger(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
-	bridge := flamegoBridger(webHandler)
+// slash and unescapes each segment of the escaped path before matching, so an
+// encoded slash (%2F) stays within its segment. Flamego matches against the
+// path as-is, so the path is normalized here to keep routing unchanged.
+func apiV1Bridger(apiHandler http.Handler) func(c *context.Context, l i18n.Locale) {
+	bridge := flamegoBridger(apiHandler)
+	segmentEscaper := strings.NewReplacer("%", "%25", "/", "%2F")
 	return func(c *context.Context, l i18n.Locale) {
+		info := apiv1.RequestInfo{
+			IsBasicAuth: c.IsBasicAuth,
+			IsTokenAuth: c.IsTokenAuth,
+			Path:        c.Req.URL.Path,
+		}
+
 		u := *c.Req.URL
-		u.Path = strings.TrimSuffix(u.EscapedPath(), "/")
+		segments := strings.Split(strings.TrimSuffix(u.EscapedPath(), "/"), "/")
+		for i, segment := range segments {
+			unescaped, err := url.PathUnescape(segment)
+			if err == nil {
+				segments[i] = segmentEscaper.Replace(unescaped)
+			}
+		}
+		u.Path = strings.Join(segments, "/")
 		u.RawPath = ""
-		c.Req.URL = &u
+
+		r := c.Req.WithContext(stdctx.WithValue(c.Req.Context(), apiV1RequestKey{}, info))
+		r.URL = &u
+		c.Req.Request = r
 		bridge(c, l)
 	}
 }
@@ -68,11 +85,11 @@ func apiV1Bridger(webHandler http.Handler) func(c *context.Context, l i18n.Local
 func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
 	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
-	auth, _ := ctx.Value(webAPIAuthKey{}).(apiv1.Authentication)
+	apiV1Request, _ := ctx.Value(apiV1RequestKey{}).(apiv1.RequestInfo)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(viewer, auth, sess, mc, l)
+	c.Map(viewer, apiV1Request, sess, mc, l)
 	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 

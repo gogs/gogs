@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -20,11 +19,13 @@ import (
 // docURL is the API documentation link included in every error response.
 const docURL = "https://github.com/gogs/docs-api"
 
-// Authentication describes how the request has been authenticated by the
-// upstream middleware.
-type Authentication struct {
+// RequestInfo describes the request as received by the upstream middleware,
+// before its path was normalized for routing.
+type RequestInfo struct {
 	IsBasicAuth bool
 	IsTokenAuth bool
+	// Path is the unescaped request path.
+	Path string
 }
 
 type apiRepository struct {
@@ -79,23 +80,16 @@ type apiContext struct {
 	Org  *apiOrganization
 }
 
-func apiContexter(c flamego.Context, user *database.User, auth Authentication) {
-	// The router matches against the escaped path so that an encoded slash stays
-	// within its segment, see the bridge in cmd/gogs/internal/web.
-	path, err := url.PathUnescape(c.Request().URL.Path)
-	if err != nil {
-		path = c.Request().URL.Path
-	}
-
+func apiContexter(c flamego.Context, user *database.User, info RequestInfo) {
 	c.Map(&apiContext{
 		Context:     c,
 		User:        user,
 		IsLogged:    user != nil,
-		IsBasicAuth: auth.IsBasicAuth,
-		IsTokenAuth: auth.IsTokenAuth,
+		IsBasicAuth: info.IsBasicAuth,
+		IsTokenAuth: info.IsTokenAuth,
 		BaseURL:     conf.Server.ExternalURL + "api/v1",
-		Link:        conf.Server.Subpath + strings.TrimSuffix(path, "/"),
-		path:        path,
+		Link:        conf.Server.Subpath + strings.TrimSuffix(info.Path, "/"),
+		path:        info.Path,
 		Repo:        &apiRepository{},
 	})
 }
