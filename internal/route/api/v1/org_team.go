@@ -1,11 +1,10 @@
 package v1
 
 import (
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listTeams(c *context.APIContext) {
+func listTeams(c *apiContext) {
 	org := c.Org.Organization
 	if err := org.GetTeams(); err != nil {
 		c.Error(err, "get teams")
