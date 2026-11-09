@@ -11,8 +11,8 @@ interface RouterContext {
 }
 
 export function createProfileRoutes(rootRoute: AnyRoute) {
-  // The server routes organizations to their legacy home page, so only
-  // individual users reach this route on a full page load.
+  // Serves both individual users and organizations, which the profile tells
+  // apart.
   const profileRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$username",
@@ -22,10 +22,13 @@ export function createProfileRoutes(rootRoute: AnyRoute) {
       const routerContext = context as RouterContext;
       try {
         if (deps.tab === "activity") {
-          await Promise.all([
-            routerContext.queryClient.ensureQueryData(userProfileQuery(params.username)),
-            routerContext.queryClient.ensureInfiniteQueryData(userActivityQuery(params.username)),
-          ]);
+          const profile = await routerContext.queryClient.ensureQueryData(userProfileQuery(params.username));
+          if (profile.kind === "organization") {
+            // Organizations have no activity tab, like the server-rendered page.
+            // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+            throw redirect({ to: "/$username", params: { username: params.username }, search: {}, replace: true });
+          }
+          await routerContext.queryClient.ensureInfiniteQueryData(userActivityQuery(params.username));
           return { tab: "activity" };
         }
         const [, repos] = await Promise.all([

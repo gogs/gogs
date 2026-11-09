@@ -25,8 +25,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import {
+  type OwnerProfileData,
+  type OwnerReposPage,
   type UserProfileData,
-  type UserReposPage,
   followUser,
   unfollowUser,
   userActivityQuery,
@@ -34,8 +35,9 @@ import {
 } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
+import { OrgHome } from "@/pages/org/Home";
 
-export type ProfilePage = { tab: "repos"; repos: UserReposPage } | { tab: "activity" };
+export type ProfilePage = { tab: "repos"; repos: OwnerReposPage } | { tab: "activity" };
 
 const route = getRouteApi("/$username");
 
@@ -47,6 +49,11 @@ export function Profile() {
   const data = route.useLoaderData();
   const { data: profile } = useSuspenseQuery(userProfileQuery(username));
   usePageTitle(profile.fullName || profile.name);
+
+  if (profile.kind === "organization") {
+    // The loader always loads the repositories of organizations.
+    return data.tab === "repos" ? <OrgHome org={profile} repos={data.repos} /> : null;
+  }
 
   const tabs = [
     { key: "repos", label: t("user.repositories"), icon: BookMarked },
@@ -237,8 +244,10 @@ function FollowButton({ profile }: { profile: UserProfileData }) {
     // The outcome is unambiguous (POST always follows, DELETE always unfollows),
     // so merge it into the cached profile instead of refetching.
     onSuccess: ({ result, next }) => {
-      queryClient.setQueryData(userProfileQuery(profile.name).queryKey, (prev) =>
-        prev ? { ...prev, viewerIsFollowing: next, followerCount: result.followerCount } : prev,
+      queryClient.setQueryData(
+        userProfileQuery(profile.name).queryKey,
+        (prev: OwnerProfileData | undefined): OwnerProfileData | undefined =>
+          prev?.kind === "user" ? { ...prev, viewerIsFollowing: next, followerCount: result.followerCount } : prev,
       );
     },
     onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
