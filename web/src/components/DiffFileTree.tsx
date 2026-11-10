@@ -8,7 +8,7 @@ import type {
   GitStatus,
   GitStatusEntry,
 } from "@pierre/trees";
-import { FileTree, useFileTree, useFileTreeSearch } from "@pierre/trees/react";
+import { FileTree, useFileTree } from "@pierre/trees/react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -172,15 +172,11 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
     onSelectItemRef.current = onSelectItem;
   }, [onSelectItem]);
 
-  // Set when a row is clicked, then consumed by the search-restore effect so
-  // we only reopen search on selection (not on blur from clicks outside).
-  const selectionJustFiredRef = useRef(false);
   const onSelectionChange = useCallback((selectedPaths: readonly string[]) => {
     const target = selectedPaths[0];
     if (!target) return;
     const id = pathToItemIdRef.current.get(target);
     if (!id) return;
-    selectionJustFiredRef.current = true;
     onSelectItemRef.current(id);
   }, []);
 
@@ -230,40 +226,6 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
     onSelectionChange,
     unsafeCSS: TREE_UNSAFE_CSS,
   });
-
-  // Pierre closes search on row click. Reopen with the last typed value so
-  // the user does not have to retype after navigating to a matched file.
-  // Blur (clicking outside the tree) is intentionally NOT restored. Only
-  // row-click closures are, gated by `selectionJustFiredRef`.
-  //
-  // `lastQueryRef` tracks the last query the user actually intended. It is
-  // updated to any non-empty `search.value`, and cleared to `""` only when
-  // we observe `search.value === ""` *while search is still open* (that is
-  // the user emptying the box). An empty `search.value` that arrives in the
-  // same tick as `isOpen` flipping to `false` is Pierre's auto-clear on row
-  // click and must not wipe the ref.
-  const search = useFileTreeSearch(model);
-  const lastQueryRef = useRef(search.value);
-  // Track `search.open` via an effect rather than render-body assignment so
-  // discarded renders (Strict Mode, concurrent interruptions) cannot leave
-  // the ref pointing at a function captured from a never-committed render.
-  const searchOpenFnRef = useRef(search.open);
-  useEffect(() => {
-    searchOpenFnRef.current = search.open;
-  }, [search.open]);
-  useEffect(() => {
-    if (search.value !== "") {
-      lastQueryRef.current = search.value;
-    } else if (search.isOpen) {
-      lastQueryRef.current = "";
-    }
-    if (!search.isOpen && selectionJustFiredRef.current && lastQueryRef.current !== "") {
-      searchOpenFnRef.current(lastQueryRef.current);
-    }
-    if (!search.isOpen) {
-      selectionJustFiredRef.current = false;
-    }
-  }, [search.value, search.isOpen]);
 
   // When the patch changes (e.g. navigating to a different commit without
   // unmounting), reset the tree contents and refresh git status and labels

@@ -2,10 +2,7 @@ packages:
   - "web"
 
 minimumReleaseAgeExclude:
-  - '@pierre/diffs@1.7.0-beta.2'
+  - '@pierre/trees@1.0.0'
 
 onlyBuiltDependencies:
   - esbuild
-
-patchedDependencies:
-  '@pierre/trees@1.0.0-beta.6': patches/@pierre__trees@1.0.0-beta.6.patch
