@@ -74,10 +74,8 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 		WikiEnabled:          wikiEnabled,
 
 		ViewerCanAdminister: repoCtx.Viewer.CanAdminister(),
-	}
-	if repoCtx.Viewer.Authenticated() {
-		resp.ViewerIsWatching = database.IsWatching(repoCtx.Viewer.ID(), repo.ID)
-		resp.ViewerIsStarring = database.IsStarring(repoCtx.Viewer.ID(), repo.ID)
+		ViewerIsWatching:    database.IsWatching(repoCtx.Viewer.ID(), repo.ID),
+		ViewerIsStarring:    database.IsStarring(repoCtx.Viewer.ID(), repo.ID),
 	}
 
 	if repo.IsMirror {
