@@ -5,6 +5,7 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { CodeBlock } from "@/components/CodeBlock";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckboxField, FormAlert, FormField, RadioField } from "@/components/FormField";
 import { RichText } from "@/components/RichText";
@@ -36,7 +37,7 @@ import { RepoSettingsLayout } from "@/pages/repo/Settings";
 
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "medium" });
 const PRE_CLASS =
-  "overflow-x-auto rounded-md bg-(--color-surface) p-3 font-mono text-xs whitespace-pre outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)";
+  "rounded-md border border-(--color-border) px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere";
 const FIELD_ORDER = ["url", "channel"] as const;
 
 // WEBHOOK_TYPES are the kinds of webhooks, with their names and logos.
@@ -66,11 +67,11 @@ function TypeLogo({ type, className = "size-4" }: { type: WebhookType; className
 // or the organization.
 function WebhooksLayout({ scope, children }: { scope: WebhookScope; children: ReactNode }) {
   return "org" in scope ? (
-    <OrgSettingsLayout org={scope.org} active="hooks">
+    <OrgSettingsLayout org={scope.org} active="hooks" wide>
       {children}
     </OrgSettingsLayout>
   ) : (
-    <RepoSettingsLayout owner={scope.owner} name={scope.repo} active="hooks">
+    <RepoSettingsLayout owner={scope.owner} name={scope.repo} active="hooks" wide>
       {children}
     </RepoSettingsLayout>
   );
@@ -533,7 +534,7 @@ export function WebhookEdit({ scope, hook }: { scope: WebhookScope; hook: Webhoo
 
 function Headers({ lines }: { lines: [string, string][] }) {
   return (
-    <pre tabIndex={0} className={PRE_CLASS}>
+    <pre className={PRE_CLASS}>
       {lines.map(([key, value]) => (
         <span key={key} className="block">
           <strong>{key}:</strong> {value}
@@ -541,6 +542,16 @@ function Headers({ lines }: { lines: [string, string][] }) {
       ))}
     </pre>
   );
+}
+
+// bodyLanguage returns the language to highlight a response body in, from its
+// content type.
+function bodyLanguage(headers: Record<string, string>) {
+  const type = Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "";
+  if (type.includes("json")) return "json";
+  if (type.includes("html")) return "html";
+  if (type.includes("xml")) return "xml";
+  return "text";
 }
 
 function DeliveryRow({
@@ -616,9 +627,7 @@ function DeliveryRow({
                 <h4 className="text-xs font-semibold text-(--color-muted-foreground)">
                   {t("repo.settings.webhook.payload")}
                 </h4>
-                <pre tabIndex={0} className={PRE_CLASS}>
-                  {delivery.payload}
-                </pre>
+                <CodeBlock code={delivery.payload} lang="json" />
               </>
             ) : (
               <p className="text-sm text-(--color-muted-foreground)">N/A</p>
@@ -648,9 +657,7 @@ function DeliveryRow({
                 <h4 className="text-xs font-semibold text-(--color-muted-foreground)">
                   {t("repo.settings.webhook.body")}
                 </h4>
-                <pre tabIndex={0} className={`${PRE_CLASS} whitespace-pre-wrap wrap-anywhere`}>
-                  {response.body}
-                </pre>
+                <CodeBlock code={response.body} lang={bodyLanguage(response.headers)} />
               </>
             ) : (
               <p className="text-sm text-(--color-muted-foreground)">N/A</p>

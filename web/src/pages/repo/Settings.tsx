@@ -88,11 +88,14 @@ export function RepoSettingsLayout({
   owner,
   name,
   active,
+  wide,
   children,
 }: {
   owner: string;
   name: string;
   active: SettingsPage;
+  // wide lets the page use the full width, e.g., for a list.
+  wide?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -116,6 +119,7 @@ export function RepoSettingsLayout({
           label={t("repo.settings")}
           current={titles[active]}
           className="max-w-7xl"
+          wide={wide}
           nav={
             <>
               <SettingsNavItem active={active === "options"}>

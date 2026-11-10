@@ -30,10 +30,13 @@ const FIELD_ORDER = ["name", "fullName", "description", "website", "location", "
 export function OrgSettingsLayout({
   org: orgName,
   active,
+  wide,
   children,
 }: {
   org: string;
   active: "options" | "hooks" | "delete";
+  // wide lets the page use the full width, e.g., for a list.
+  wide?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -52,6 +55,7 @@ export function OrgSettingsLayout({
       <SettingsLayout
         label={t("org.settings")}
         current={titles[active]}
+        wide={wide}
         nav={
           <>
             <SettingsNavItem active={active === "options"}>
