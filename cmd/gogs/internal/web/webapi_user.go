@@ -216,7 +216,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 	u, err := database.Handle.Users().GetByEmail(ctx, req.Email)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
+			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
 		}
 		log.Error("postUserResetPassword: get user by email %q: %v", req.Email, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
@@ -229,7 +229,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 
 	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
 		return http.StatusOK, &userResetPasswordResponse{
-			Hours:         conf.Auth.ActivateCodeLives / 60,
+			Hours:         conf.Auth.ResetPasswordCodeLives / 60,
 			ResendLimited: true,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -243,7 +243,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 		log.Error("postUserResetPassword: put mail resend cache for user %q: %v", u.Name, err)
 	}
 
-	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ActivateCodeLives / 60}, nil
+	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
 }
 
 func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
@@ -498,6 +498,10 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 	}
 
 	log.Trace("User activated: %s", target.Name)
+
+	if target.ProhibitLogin {
+		return http.StatusNoContent, nil, nil
+	}
 
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.

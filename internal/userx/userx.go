@@ -37,6 +37,7 @@ type codePurpose string
 
 const (
 	codePurposeActivate      codePurpose = "activate"
+	codePurposeActivateEmail codePurpose = "activate_email"
 	codePurposeResetPassword codePurpose = "reset_password"
 )
 
@@ -50,6 +51,18 @@ func GenerateActivateCode(userID int64, email, name, password, rands string) str
 // the given user information and email.
 func VerifyActivateCode(code string, userID int64, email, name, password, rands string) bool {
 	return verifyTimeLimitedUserCode(codePurposeActivate, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+}
+
+// GenerateActivateEmailCode generates a code to confirm the given email address
+// based on user information.
+func GenerateActivateEmailCode(userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(codePurposeActivateEmail, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+}
+
+// VerifyActivateEmailCode returns true if the code is an unexpired code to
+// confirm the given email address for the given user information.
+func VerifyActivateEmailCode(code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(codePurposeActivateEmail, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
 }
 
 // GenerateResetPasswordCode generates a password-reset code based on user

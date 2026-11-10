@@ -122,4 +122,5 @@ func (testDoer) ID() int64                                    { return 1 }
 func (testDoer) DisplayName() string                          { return "alice" }
 func (testDoer) Email() string                                { return "alice@example.test" }
 func (testDoer) GenerateEmailActivateCode(string) string      { return "abc" }
+func (testDoer) GenerateActivateEmailCode(string) string      { return "abc" }
 func (testDoer) GenerateEmailResetPasswordCode(string) string { return "abc" }
