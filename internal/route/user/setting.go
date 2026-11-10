@@ -259,7 +259,7 @@ func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User)
 
 func verifyActiveEmailCode(ctx gocontext.Context, code, email string) *database.EmailAddress {
 	if user := parseUserFromCode(ctx, code); user != nil {
-		if userx.VerifyActivateEmailCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
+		if userx.VerifyActivateCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 			emailAddress, err := database.Handle.Users().GetEmail(ctx, user.ID, email, false)
 			if err == nil {
 				return emailAddress

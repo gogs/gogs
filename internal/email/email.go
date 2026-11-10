@@ -184,7 +184,6 @@ type User interface {
 	DisplayName() string
 	Email() string
 	GenerateEmailActivateCode(string) string
-	GenerateActivateEmailCode(string) string
 	GenerateEmailResetPasswordCode(string) string
 }
 
@@ -234,7 +233,7 @@ func SendActivateEmailMail(t Translator, u User, email string) error {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
-		"Code":            u.GenerateActivateEmailCode(email),
+		"Code":            u.GenerateEmailActivateCode(email),
 		"Email":           email,
 	}
 	body, err := render(tmplAuthActivateEmail, data)

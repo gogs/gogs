@@ -501,7 +501,7 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
-	if !target.ProhibitLogin && !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
 		completeSignIn(sess, mc, target)
 	}
 	return http.StatusNoContent, nil, nil
