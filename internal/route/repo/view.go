@@ -23,7 +23,6 @@ import (
 const (
 	EMPTY = "repo/empty"
 	HOME  = "repo/home"
-	FORKS = "repo/forks"
 )
 
 func renderDirectory(c *context.Context, treeLink string) {
@@ -299,24 +298,4 @@ func Home(c *context.Context) {
 	c.Data["TreeNames"] = treeNames
 	c.Data["BranchLink"] = branchLink
 	c.Success(HOME)
-}
-
-func Forks(c *context.Context) {
-	c.Data["Title"] = c.Tr("repos.forks")
-
-	forks, err := c.Repo.Repository.GetForks()
-	if err != nil {
-		c.Error(err, "get forks")
-		return
-	}
-
-	for _, fork := range forks {
-		if err = fork.GetOwner(); err != nil {
-			c.Error(err, "get owner")
-			return
-		}
-	}
-	c.Data["Forks"] = forks
-
-	c.Success(FORKS)
 }
