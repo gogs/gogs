@@ -180,6 +180,11 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
+		if authUser.IsDisabled() {
+			askCredentials(c, http.StatusForbidden, "User account is disabled")
+			return
+		}
+
 		log.Trace("[Git] Authenticated user: %s", authUser.Name)
 
 		mode := database.AccessModeWrite

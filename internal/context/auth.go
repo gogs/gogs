@@ -42,6 +42,19 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
+		// Check inactive users.
+		if c.IsLogged && !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
+			if isAPIPath(c.Req.URL.Path) {
+				c.JSON(http.StatusForbidden, map[string]string{
+					"message": "User account is not activated.",
+				})
+				return
+			}
+			c.Title("auth.active_your_account")
+			c.Success("user/auth/activate")
+			return
+		}
+
 		// Check non-logged users landing page.
 		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
 			c.RedirectSubpath(conf.Server.LandingURL)
@@ -73,10 +86,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 				c.RedirectSubpath("/user/login")
-				return
-			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-				c.Title("auth.active_your_account")
-				c.Success("user/auth/activate")
 				return
 			}
 		}
@@ -243,6 +252,9 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 					}
 					return nil, false, false
 				}
+				if u.IsDisabled() {
+					return nil, false, false
+				}
 
 				return u, true, false
 			}
@@ -253,6 +265,9 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 	u, err := store.GetUserByID(ctx.Req.Context(), uid)
 	if err != nil {
 		log.Error("GetUserByID: %v", err)
+		return nil, false, false
+	}
+	if isTokenAuth && u.IsDisabled() {
 		return nil, false, false
 	}
 	return u, false, isTokenAuth

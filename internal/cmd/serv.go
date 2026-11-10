@@ -205,6 +205,9 @@ func runServ(c *cli.Context) error {
 			if err != nil {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
+			if user.IsDisabled() {
+				fail(accessDeniedMessage, "User '%s' is disabled", user.Name)
+			}
 
 			mode := database.Handle.Permissions().AccessMode(ctx, user.ID, repo.ID,
 				database.AccessModeOptions{
@@ -227,8 +230,18 @@ func runServ(c *cli.Context) error {
 		// A deploy key doesn't represent a signed in user, so in a site with Auth.RequireSignInView enabled,
 		// we should give read access only in repositories where this deploy key is in use. In other cases,
 		// a server or system using an active deploy key can get read access to all repositories on a Gogs instance.
-		if key.IsDeployKey() && conf.Auth.RequireSigninView {
-			checkDeployKey(key, repo)
+		if conf.Auth.RequireSigninView {
+			if key.IsDeployKey() {
+				checkDeployKey(key, repo)
+			} else {
+				keyOwner, err := database.Handle.Users().GetByKeyID(ctx, key.ID)
+				if err != nil {
+					fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
+				}
+				if keyOwner.IsDisabled() {
+					fail(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
+				}
+			}
 		}
 	}
 
