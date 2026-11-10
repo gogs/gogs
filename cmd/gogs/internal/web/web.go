@@ -373,8 +373,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("/:username/:reponame", func() {
 			m.Get("/issues", repo.RetrieveLabels, repo.Issues)
 			m.Get("/issues/:index", repo.ViewIssue)
-			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-			m.Get("/milestones", repo.Milestones)
+			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
 			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
@@ -411,20 +410,22 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					m.Post("/assignee", repo.UpdateIssueAssignee)
 				}, reqRepoWriter)
 			})
-			m.Group("/labels", func() {
-				m.Post("/new", bindIgnErr(form.CreateLabel{}), repo.NewLabel)
-				m.Post("/edit", bindIgnErr(form.CreateLabel{}), repo.UpdateLabel)
-				m.Post("/delete", repo.DeleteLabel)
-				m.Post("/initialize", bindIgnErr(form.InitializeLabels{}), repo.InitializeLabels)
-			}, reqRepoWriter, context.RepoRef())
 			m.Group("/milestones", func() {
-				m.Combo("/new").Get(repo.NewMilestone).
-					Post(bindIgnErr(form.CreateMilestone{}), repo.NewMilestonePost)
-				m.Get("/:id/edit", repo.EditMilestone)
-				m.Post("/:id/edit", bindIgnErr(form.CreateMilestone{}), repo.EditMilestonePost)
-				m.Get("/:id/:action", repo.ChangeMilestonStatus)
-				m.Post("/delete", repo.DeleteMilestone)
-			}, reqRepoWriter, context.RepoRef())
+				m.Get("/new", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/:id/edit", func(c *context.Context) {
+					// An ID of 0 would match any milestone of the repository.
+					id := c.ParamsInt64(":id")
+					if id <= 0 {
+						c.NotFound()
+						return
+					}
+					if _, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, id); err != nil {
+						c.NotFoundOrError(err, "get milestone")
+						return
+					}
+					c.ServeWeb()
+				})
+			}, reqRepoWriter)
 
 			m.Group("/releases", func() {
 				m.Get("/new", repo.NewRelease)

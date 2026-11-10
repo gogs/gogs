@@ -7,6 +7,9 @@ import {
   fetchRepoCollaborators,
   fetchRepoDeployKeys,
   fetchRepoForkOptions,
+  fetchRepoLabels,
+  fetchRepoMilestone,
+  fetchRepoMilestones,
   fetchRepoNewOptions,
   fetchRepoPeople,
   repoHeaderQuery,
@@ -17,6 +20,8 @@ import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoLabels } from "@/pages/repo/Labels";
+import { RepoMilestoneEditor, RepoMilestones, type RepoMilestonesSearch } from "@/pages/repo/Milestones";
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
 import { RepoPeople } from "@/pages/repo/People";
 import { RepoCollaboration, RepoDeployKeys, RepoOptions } from "@/pages/repo/Settings";
@@ -83,18 +88,11 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     component: RepoCommit,
   });
 
-  async function loadPeople(
-    queryClient: QueryClient,
-    owner: string,
-    repo: string,
-    list: "stargazers" | "watchers",
-    page: number | undefined,
-  ) {
+  // loadRepoPage loads the header of a repository along with the data of the
+  // page.
+  async function loadRepoPage<T>(queryClient: QueryClient, owner: string, repo: string, load: () => Promise<T>) {
     try {
-      const [, data] = await Promise.all([
-        queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
-        fetchRepoPeople(owner, repo, list, page),
-      ]);
+      const [, data] = await Promise.all([queryClient.ensureQueryData(repoHeaderQuery(owner, repo)), load()]);
       return data;
     } catch (err) {
       if (err instanceof LoaderResponseError && err.status === 404) {
@@ -118,7 +116,9 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     validateSearch: validatePageSearch,
     loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
     loader: ({ params, deps, context }) =>
-      loadPeople((context as RouterContext).queryClient, params.owner, params.repo, "stargazers", deps.page),
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoPeople(params.owner, params.repo, "stargazers", deps.page),
+      ),
     component: function RepoStargazers() {
       const { owner, repo } = repoStargazersRoute.useParams();
       return <RepoPeople owner={owner} name={repo} list="stargazers" data={repoStargazersRoute.useLoaderData()} />;
@@ -131,7 +131,9 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     validateSearch: validatePageSearch,
     loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
     loader: ({ params, deps, context }) =>
-      loadPeople((context as RouterContext).queryClient, params.owner, params.repo, "watchers", deps.page),
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoPeople(params.owner, params.repo, "watchers", deps.page),
+      ),
     component: function RepoWatchers() {
       const { owner, repo } = repoWatchersRoute.useParams();
       return <RepoPeople owner={owner} name={repo} list="watchers" data={repoWatchersRoute.useLoaderData()} />;
@@ -333,10 +335,91 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const repoLabelsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/labels",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoLabels(params.owner, params.repo),
+      ),
+    component: function Labels() {
+      const { owner, repo } = repoLabelsRoute.useParams();
+      return <RepoLabels key={`${owner}/${repo}`} owner={owner} name={repo} data={repoLabelsRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoMilestonesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/milestones",
+    validateSearch: (search: Record<string, unknown>): RepoMilestonesSearch => ({
+      state: search.state === "closed" ? "closed" : undefined,
+      ...validatePageSearch(search),
+    }),
+    loaderDeps: ({ search }: { search: RepoMilestonesSearch }) => ({ state: search.state, page: search.page }),
+    loader: ({ params, deps, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoMilestones(params.owner, params.repo, deps.state === "closed", deps.page),
+      ),
+    component: function Milestones() {
+      const { owner, repo } = repoMilestonesRoute.useParams();
+      return (
+        <RepoMilestones
+          owner={owner}
+          name={repo}
+          data={repoMilestonesRoute.useLoaderData()}
+          search={repoMilestonesRoute.useSearch()}
+        />
+      );
+    },
+  });
+
+  const repoMilestoneNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/milestones/new",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
+        // Like the server-rendered page, only writers find it.
+        const { viewerCanWrite } = await fetchRepoMilestones(params.owner, params.repo, false);
+        if (!viewerCanWrite) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+          throw notFound();
+        }
+      }),
+    component: function MilestoneNew() {
+      const { owner, repo } = repoMilestoneNewRoute.useParams();
+      return <RepoMilestoneEditor key={`${owner}/${repo}`} owner={owner} name={repo} />;
+    },
+  });
+
+  const repoMilestoneEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/milestones/$id/edit",
+    loader: async ({ params, context }) => {
+      const id = Number(params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      const milestone = await loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoMilestone(params.owner, params.repo, id),
+      );
+      return { id, milestone };
+    },
+    component: function MilestoneEdit() {
+      const { owner, repo } = repoMilestoneEditRoute.useParams();
+      const { id, milestone } = repoMilestoneEditRoute.useLoaderData();
+      return <RepoMilestoneEditor key={id} owner={owner} name={repo} id={id} initial={milestone} />;
+    },
+  });
+
   return [
     repoCommitRoute,
     repoStargazersRoute,
     repoWatchersRoute,
+    repoLabelsRoute,
+    repoMilestonesRoute,
+    repoMilestoneNewRoute,
+    repoMilestoneEditRoute,
     repoCreateRoute,
     repoMigrateRoute,
     repoForkRoute,
