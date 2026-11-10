@@ -557,7 +557,7 @@ func ForgotPasswdPost(c *context.Context) {
 	u, err := database.Handle.Users().GetByEmail(c.Req.Context(), emailAddr)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
+			c.Data["Hours"] = conf.Auth.ResetPasswordCodeLives / 60
 			c.Data["IsResetSent"] = true
 			c.Success(tmplUserAuthForgotPassword)
 			return
@@ -584,7 +584,7 @@ func ForgotPasswdPost(c *context.Context) {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 
-	c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
+	c.Data["Hours"] = conf.Auth.ResetPasswordCodeLives / 60
 	c.Data["IsResetSent"] = true
 	c.Success(tmplUserAuthForgotPassword)
 }
