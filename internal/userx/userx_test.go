@@ -28,16 +28,34 @@ func TestDashboardURLPath(t *testing.T) {
 	})
 }
 
-func TestGenerateActivateCode(t *testing.T) {
+func TestTimeLimitedUserCode(t *testing.T) {
 	conf.SetMockAuth(t,
 		conf.AuthOpts{
-			ActivateCodeLives: 10,
+			ActivateCodeLives:      10,
+			ResetPasswordCodeLives: 10,
 		},
 	)
 
-	code := GenerateActivateCode(1, "alice@example.com", "Alice", "123456", "rands")
-	got := tool.VerifyTimeLimitCode("1alice@example.comalice123456rands", conf.Auth.ActivateCodeLives, code[:tool.TimeLimitCodeLength])
-	assert.True(t, got)
+	activateCode := GenerateActivateCode(1, "alice@example.com", "Alice", "123456", "rands")
+	resetPasswordCode := GenerateResetPasswordCode(1, "alice@example.com", "Alice", "123456", "rands")
+
+	assert.True(t, VerifyActivateCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+	assert.True(t, VerifyResetPasswordCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+
+	t.Run("codes are not interchangeable", func(t *testing.T) {
+		assert.False(t, VerifyActivateCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+		assert.False(t, VerifyResetPasswordCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+	})
+
+	t.Run("user information changed", func(t *testing.T) {
+		assert.False(t, VerifyActivateCode(activateCode, 1, "alice@example.com", "Alice", "123456", "new-rands"))
+		assert.False(t, VerifyResetPasswordCode(resetPasswordCode, 1, "alice@example.com", "Alice", "654321", "rands"))
+	})
+
+	t.Run("malformed code", func(t *testing.T) {
+		assert.False(t, VerifyActivateCode("", 1, "alice@example.com", "Alice", "123456", "rands"))
+		assert.False(t, VerifyActivateCode(activateCode[:tool.TimeLimitCodeLength], 1, "alice@example.com", "Alice", "123456", "rands"))
+	})
 }
 
 func TestCustomAvatarPath(t *testing.T) {

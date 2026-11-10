@@ -31,22 +31,47 @@ func DashboardURLPath(name string, isOrganization bool) string {
 	return conf.Server.Subpath + "/"
 }
 
+// codePurpose is signed into every time-limited user code so that a code issued
+// for one purpose cannot be redeemed for another.
+type codePurpose string
+
+const (
+	codePurposeActivate      codePurpose = "activate"
+	codePurposeResetPassword codePurpose = "reset_password"
+)
+
 // GenerateActivateCode generates an activate code based on user information and
 // the given email.
 func GenerateActivateCode(userID int64, email, name, password, rands string) string {
-	return generateTimeLimitedUserCode(userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+	return generateTimeLimitedUserCode(codePurposeActivate, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+}
+
+// VerifyActivateCode returns true if the code is an unexpired activate code for
+// the given user information and email.
+func VerifyActivateCode(code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(codePurposeActivate, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
 }
 
 // GenerateResetPasswordCode generates a password-reset code based on user
 // information and the given email. The token's lifetime is bound to
 // [conf.AuthOpts.ResetPasswordCodeLives].
 func GenerateResetPasswordCode(userID int64, email, name, password, rands string) string {
-	return generateTimeLimitedUserCode(userID, email, name, password, rands, conf.Auth.ResetPasswordCodeLives)
+	return generateTimeLimitedUserCode(codePurposeResetPassword, userID, email, name, password, rands, conf.Auth.ResetPasswordCodeLives)
 }
 
-func generateTimeLimitedUserCode(userID int64, email, name, password, rands string, minutes int) string {
+// VerifyResetPasswordCode returns true if the code is an unexpired
+// password-reset code for the given user information and email.
+func VerifyResetPasswordCode(code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(codePurposeResetPassword, code, userID, email, name, password, rands, conf.Auth.ResetPasswordCodeLives)
+}
+
+func timeLimitedUserCodeData(purpose codePurpose, userID int64, email, name, password, rands string) string {
+	return fmt.Sprintf("%s:%d%s%s%s%s", purpose, userID, email, strings.ToLower(name), password, rands)
+}
+
+func generateTimeLimitedUserCode(purpose codePurpose, userID int64, email, name, password, rands string, minutes int) string {
 	code := tool.CreateTimeLimitCode(
-		fmt.Sprintf("%d%s%s%s%s", userID, email, strings.ToLower(name), password, rands),
+		timeLimitedUserCodeData(purpose, userID, email, name, password, rands),
 		minutes,
 		nil,
 	)
@@ -54,6 +79,17 @@ func generateTimeLimitedUserCode(userID int64, email, name, password, rands stri
 	// Add tailing hex username
 	code += hex.EncodeToString([]byte(strings.ToLower(name)))
 	return code
+}
+
+func verifyTimeLimitedUserCode(purpose codePurpose, code string, userID int64, email, name, password, rands string, minutes int) bool {
+	if len(code) <= tool.TimeLimitCodeLength {
+		return false
+	}
+	return tool.VerifyTimeLimitCode(
+		timeLimitedUserCodeData(purpose, userID, email, name, password, rands),
+		minutes,
+		code[:tool.TimeLimitCodeLength],
+	)
 }
 
 // CustomAvatarPath returns the absolute path of the user custom avatar file.
