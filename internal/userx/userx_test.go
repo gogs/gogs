@@ -39,8 +39,8 @@ func TestTimeLimitedUserCode(t *testing.T) {
 	activateCode := GenerateActivateCode(1, "alice@example.com", "Alice", "123456", "rands")
 	resetPasswordCode := GenerateResetPasswordCode(1, "alice@example.com", "Alice", "123456", "rands")
 
-	assert.True(t, VerifyActivateCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
-	assert.True(t, VerifyResetPasswordCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+	require.True(t, VerifyActivateCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+	require.True(t, VerifyResetPasswordCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
 
 	t.Run("codes are not interchangeable", func(t *testing.T) {
 		assert.False(t, VerifyActivateCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
