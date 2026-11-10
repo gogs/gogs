@@ -5,11 +5,9 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -21,7 +19,6 @@ import (
 )
 
 const (
-	tmplRepoIssueList = "repo/issue/list"
 	tmplRepoIssueNew  = "repo/issue/new"
 	tmplRepoIssueView = "repo/issue/view"
 
@@ -64,179 +61,15 @@ func MustAllowPulls(c *context.Context) {
 	}
 }
 
-func RetrieveLabels(c *context.Context) {
-	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
-	if err != nil {
-		c.Error(err, "get labels by repository ID")
-		return
-	}
-	for _, l := range labels {
-		l.CalOpenIssues()
-	}
-	c.Data["Labels"] = labels
-	c.Data["NumLabels"] = len(labels)
-}
-
-func issues(c *context.Context, isPullList bool) {
-	if isPullList {
-		MustAllowPulls(c)
-		if c.Written() {
-			return
-		}
-		c.Data["Title"] = c.Tr("repo.pulls")
-		c.Data["PageIsPullList"] = true
-
-	} else {
-		MustEnableIssues(c)
-		if c.Written() {
-			return
-		}
-		c.Data["Title"] = c.Tr("repo.issues")
-		c.Data["PageIsIssueList"] = true
-	}
-
-	viewType := c.Query("type")
-	sortType := c.Query("sort")
-	types := []string{"assigned", "created_by", "mentioned"}
-	if !slices.Contains(types, viewType) {
-		viewType = "all"
-	}
-
-	// Must sign in to see issues about you.
-	if viewType != "all" && !c.IsLogged {
+// ServeIssueList serves the issue or pull request list of a repository. Like
+// the server-rendered page did, it sends signed-out visitors to sign in for the
+// lists about the viewer.
+func ServeIssueList(c *context.Context) {
+	if slices.Contains([]string{"assigned", "created_by", "mentioned"}, c.Query("type")) && !c.IsLogged {
 		c.RawRedirect(conf.Server.Subpath + "/user/sign-in?redirect_to=" + url.QueryEscape(conf.Server.Subpath+c.Req.URL.RequestURI()))
 		return
 	}
-
-	var (
-		assigneeID = c.QueryInt64("assignee")
-		posterID   int64
-	)
-	filterMode := database.FilterModeYourRepos
-	switch viewType {
-	case "assigned":
-		filterMode = database.FilterModeAssign
-		assigneeID = c.User.ID
-	case "created_by":
-		filterMode = database.FilterModeCreate
-		posterID = c.User.ID
-	case "mentioned":
-		filterMode = database.FilterModeMention
-	}
-
-	var uid int64 = -1
-	if c.IsLogged {
-		uid = c.User.ID
-	}
-
-	repo := c.Repo.Repository
-	selectLabels := c.Query("labels")
-	milestoneID := c.QueryInt64("milestone")
-	isShowClosed := c.Query("state") == "closed"
-	issueStats := database.GetIssueStats(&database.IssueStatsOptions{
-		RepoID:      repo.ID,
-		UserID:      uid,
-		Labels:      selectLabels,
-		MilestoneID: milestoneID,
-		AssigneeID:  assigneeID,
-		FilterMode:  filterMode,
-		IsPull:      isPullList,
-	})
-
-	page := max(c.QueryInt("page"), 1)
-
-	var total int
-	if !isShowClosed {
-		total = int(issueStats.OpenCount)
-	} else {
-		total = int(issueStats.ClosedCount)
-	}
-	pager := paginater.New(total, conf.UI.IssuePagingNum, page, 5)
-	c.Data["Page"] = pager
-
-	issues, err := database.Issues(&database.IssuesOptions{
-		UserID:      uid,
-		AssigneeID:  assigneeID,
-		RepoID:      repo.ID,
-		PosterID:    posterID,
-		MilestoneID: milestoneID,
-		Page:        pager.Current(),
-		IsClosed:    isShowClosed,
-		IsMention:   filterMode == database.FilterModeMention,
-		IsPull:      isPullList,
-		Labels:      selectLabels,
-		SortType:    sortType,
-	})
-	if err != nil {
-		c.Error(err, "list issues")
-		return
-	}
-
-	// Get issue-user relations.
-	pairs, err := database.GetIssueUsers(repo.ID, posterID, isShowClosed)
-	if err != nil {
-		c.Error(err, "get issue-user relations")
-		return
-	}
-
-	// Get posters.
-	for i := range issues {
-		if !c.IsLogged {
-			issues[i].IsRead = true
-			continue
-		}
-
-		// Check read status.
-		idx := database.PairsContains(pairs, issues[i].ID, c.User.ID)
-		if idx > -1 {
-			issues[i].IsRead = pairs[idx].IsRead
-		} else {
-			issues[i].IsRead = true
-		}
-	}
-	c.Data["Issues"] = issues
-
-	// Get milestones.
-	c.Data["Milestones"], err = database.GetMilestonesByRepoID(repo.ID)
-	if err != nil {
-		c.Error(err, "get milestone by repository ID")
-		return
-	}
-
-	// Get assignees.
-	c.Data["Assignees"], err = repo.GetAssignees()
-	if err != nil {
-		c.Error(err, "get assignees")
-		return
-	}
-
-	if viewType == "assigned" {
-		assigneeID = 0 // Reset ID to prevent unexpected selection of assignee.
-	}
-
-	c.Data["IssueStats"] = issueStats
-	selectLabelsInt, _ := strconv.ParseInt(selectLabels, 10, 64)
-	c.Data["SelectLabels"] = selectLabelsInt
-	c.Data["ViewType"] = viewType
-	c.Data["SortType"] = sortType
-	c.Data["MilestoneID"] = milestoneID
-	c.Data["AssigneeID"] = assigneeID
-	c.Data["IsShowClosed"] = isShowClosed
-	if isShowClosed {
-		c.Data["State"] = "closed"
-	} else {
-		c.Data["State"] = "open"
-	}
-
-	c.Success(tmplRepoIssueList)
-}
-
-func Issues(c *context.Context) {
-	issues(c, false)
-}
-
-func Pulls(c *context.Context) {
-	issues(c, true)
+	c.ServeWeb()
 }
 
 func renderAttachmentSettings(c *context.Context) {

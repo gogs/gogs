@@ -4,6 +4,7 @@ import type { UserListPage } from "@/components/UserListItem";
 import { loaderResponseError } from "@/lib/loader-error";
 import { fetchJSON, send, submit, uploadAvatar } from "@/lib/queries/request";
 import type { SSHKey } from "@/lib/queries/settings";
+import type { DashboardIssue, IssueLabel } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 
 export interface RepoHeaderData {
@@ -421,4 +422,51 @@ export function setRepoMilestoneClosed(owner: string, name: string, id: number, 
 
 export function deleteRepoMilestone(owner: string, name: string, id: number) {
   return send("DELETE", repoURL(owner, name, `/milestones/${id}`));
+}
+
+export interface RepoIssue extends DashboardIssue {
+  isUnread: boolean;
+  milestone?: { id: number; name: string };
+}
+
+export interface RepoIssuesData {
+  items: RepoIssue[];
+  page: number;
+  totalPages: number;
+  openCount: number;
+  closedCount: number;
+  // labels, milestones and assignees are what the list can be filtered by.
+  labels: IssueLabel[];
+  milestones: { id: number; name: string; isClosed: boolean }[];
+  assignees: { id: number; name: string; avatarURL: string }[];
+  // newPullRequestURL is where the viewer proposes a pull request, and is left
+  // out for viewers who cannot propose one.
+  newPullRequestURL?: string;
+}
+
+// fetchRepoIssues lists the issues or pull requests of a repository, with the
+// query parameters of the server-rendered page, e.g., `state=closed`.
+export function fetchRepoIssues(
+  owner: string,
+  name: string,
+  kind: "issues" | "pulls",
+  query: Record<string, string | number | undefined>,
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  const search = params.toString();
+  return fetchJSON<RepoIssuesData>(repoURL(owner, name, `/${kind}${search ? `?${search}` : ""}`));
+}
+
+export interface RepoFork {
+  owner: string;
+  ownerAvatarURL: string;
+  name: string;
+  isPrivate: boolean;
+}
+
+export async function fetchRepoForks(owner: string, name: string) {
+  return (await fetchJSON<{ items: RepoFork[] }>(repoURL(owner, name, "/forks"))).items;
 }

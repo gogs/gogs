@@ -7,6 +7,8 @@ import {
   fetchRepoCollaborators,
   fetchRepoDeployKeys,
   fetchRepoForkOptions,
+  fetchRepoForks,
+  fetchRepoIssues,
   fetchRepoLabels,
   fetchRepoMilestone,
   fetchRepoMilestones,
@@ -20,6 +22,9 @@ import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoForks } from "@/pages/repo/Forks";
+import { RepoIssues } from "@/pages/repo/Issues";
+import { type RepoIssuesSearch, validateRepoIssuesSearch } from "@/pages/repo/Issues.search";
 import { RepoLabels } from "@/pages/repo/Labels";
 import { RepoMilestoneEditor, RepoMilestones, type RepoMilestonesSearch } from "@/pages/repo/Milestones";
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
@@ -412,10 +417,48 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  function createIssueListRoute(kind: "issues" | "pulls") {
+    const route = createRoute({
+      getParentRoute: () => rootRoute,
+      path: `/$owner/$repo/${kind}`,
+      validateSearch: validateRepoIssuesSearch,
+      loaderDeps: ({ search }: { search: RepoIssuesSearch }) => search,
+      loader: ({ params, deps, context }) =>
+        loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+          fetchRepoIssues(params.owner, params.repo, kind, { ...deps }),
+        ),
+      component: function IssueList() {
+        const { owner, repo } = route.useParams();
+        return (
+          <RepoIssues owner={owner} name={repo} kind={kind} data={route.useLoaderData()} search={route.useSearch()} />
+        );
+      },
+    });
+    return route;
+  }
+  const repoIssuesRoute = createIssueListRoute("issues");
+  const repoPullsRoute = createIssueListRoute("pulls");
+
+  const repoForksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/forks",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoForks(params.owner, params.repo),
+      ),
+    component: function Forks() {
+      const { owner, repo } = repoForksRoute.useParams();
+      return <RepoForks owner={owner} name={repo} forks={repoForksRoute.useLoaderData()} />;
+    },
+  });
+
   return [
     repoCommitRoute,
     repoStargazersRoute,
     repoWatchersRoute,
+    repoIssuesRoute,
+    repoPullsRoute,
+    repoForksRoute,
     repoLabelsRoute,
     repoMilestonesRoute,
     repoMilestoneNewRoute,

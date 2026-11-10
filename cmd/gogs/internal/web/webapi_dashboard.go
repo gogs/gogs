@@ -241,6 +241,7 @@ func getDashboardActivity(c flamego.Context, l i18n.Locale, user *database.User,
 }
 
 type dashboardIssueLabel struct {
+	ID        int64  `json:"id"`
 	Name      string `json:"name"`
 	Color     string `json:"color"`
 	TextColor string `json:"textColor"`
@@ -425,11 +426,7 @@ func listDashboardIssues(c flamego.Context, user *database.User, owner *dashboar
 			CreatedAt:    issue.Created.UTC(),
 		}
 		for _, label := range issue.Labels {
-			item.Labels = append(item.Labels, dashboardIssueLabel{
-				Name:      label.Name,
-				Color:     label.Color,
-				TextColor: string(label.ForegroundColor()),
-			})
+			item.Labels = append(item.Labels, toIssueLabel(label))
 		}
 		if issue.Assignee != nil {
 			item.Assignee = &dashboardIssueUser{Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath()}
