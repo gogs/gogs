@@ -12,7 +12,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Security:_ Any signed-in user who knew the UUID of an attachment in another repository, including a private one, could move it to their own issue, comment, or release to download it, removing it from the original. [#8480](https://github.com/gogs/gogs/pull/8480) - [GHSA-p92p-7887-3g33](https://github.com/gogs/gogs/security/advisories/GHSA-p92p-7887-3g33)
+- _Security:_ Any signed-in user who knew the UUID of an attachment in another repository, including a private one, could move it to their own issue, comment, or release to download it, in some cases removing it from the original. [#8480](https://github.com/gogs/gogs/pull/8480) - [GHSA-p92p-7887-3g33](https://github.com/gogs/gogs/security/advisories/GHSA-p92p-7887-3g33)
 - _Security:_ A password reset link could be used to sign in as the user without their password or two-factor authentication. Activation, email confirmation, and password reset links sent before upgrading no longer work. [#8472](https://github.com/gogs/gogs/pull/8472) - [GHSA-pmfh-wh5m-gmjm](https://github.com/gogs/gogs/security/advisories/GHSA-pmfh-wh5m-gmjm)
 - _Security:_ Accounts with login prohibited or not activated kept repository access through access tokens, passwords, and SSH keys. [#8439](https://github.com/gogs/gogs/pull/8439) - [GHSA-f9cv-gfvg-3464](https://github.com/gogs/gogs/security/advisories/GHSA-f9cv-gfvg-3464)
 - _Security:_ On Windows hosts, an authenticated user with write access could write files into a repository's `.git` directory through a crafted tree path. [#8408](https://github.com/gogs/gogs/pull/8408) - [GHSA-85m5-cfw6-3cx8](https://github.com/gogs/gogs/security/advisories/GHSA-85m5-cfw6-3cx8)
