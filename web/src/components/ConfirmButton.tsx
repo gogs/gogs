@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // ConfirmButton asks in a dialog before an action that cannot be taken back,
@@ -23,6 +25,7 @@ export function ConfirmButton({
   title,
   description,
   size,
+  icon: Icon,
   action,
   onDone,
 }: {
@@ -33,6 +36,9 @@ export function ConfirmButton({
   title: string;
   description: string;
   size?: "sm";
+  // icon shows the button as the icon alone, with the label in a tooltip,
+  // e.g., among the actions in the header of a comment.
+  icon?: LucideIcon;
   action: () => Promise<void>;
   onDone: () => Promise<void> | void;
 }) {
@@ -48,17 +54,36 @@ export function ConfirmButton({
   });
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size={size}
-          aria-label={ariaLabel}
-          className={cn("text-(--color-destructive)", size === "sm" && "shrink-0")}
-        >
-          {label}
-        </Button>
-      </DialogTrigger>
+      {Icon ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={ariaLabel ?? label}
+                className="size-8 text-(--color-muted-foreground) hover:text-(--color-destructive)"
+              >
+                <Icon className="size-4" aria-hidden />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{label}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size={size}
+            aria-label={ariaLabel}
+            className={cn("text-(--color-destructive)", size === "sm" && "shrink-0")}
+          >
+            {label}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader className="pb-3">
           <DialogTitle>{title}</DialogTitle>

@@ -204,6 +204,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/watchers", getRepoWatchers)
 			f.Delete("/watchers/{username}", deleteRepoWatcher)
 			f.Get("/issues", getRepoIssues)
+			f.Get("/issues/{index}", withRepoIssue, getRepoIssue)
 			f.Get("/pulls", getRepoPulls)
 			f.Get("/forks", getRepoForks)
 			f.Group("", func() {
@@ -324,6 +325,23 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
 	}, enforceWebAPIMaxBodySize)
+	f.Group("/api/web/{owner}/{repo}", func() {
+		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
+		f.Group("/issues/{index}", func() {
+			f.Patch("", requireIssueEditor, bindJSON(repoIssueRequest{}), patchRepoIssue)
+			f.Combo("/closed", requireIssueEditor).Put(putRepoIssueClosed).Delete(deleteRepoIssueClosed)
+			f.Post("/comments", bindJSON(repoIssueCommentRequest{}), postRepoIssueComment)
+			f.Combo("/comments/{id}", withIssueComment).
+				Patch(bindJSON(repoIssueCommentRequest{}), patchRepoIssueComment).
+				Delete(deleteRepoIssueComment)
+			f.Group("", func() {
+				f.Put("/labels", bindJSON(repoIssueLabelsRequest{}), putRepoIssueLabels)
+				f.Put("/milestone", bindJSON(repoIssueIDRequest{}), putRepoIssueMilestone)
+				f.Put("/assignee", bindJSON(repoIssueIDRequest{}), putRepoIssueAssignee)
+			}, withRepoWriter)
+		}, withRepoIssue)
+	}, limitIssueContent, requireAuthenticated, withRepoContext)
+	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload, requireAuthenticated, withRepoContext, withIssueTracker, postRepoIssueAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireAuthenticated).
 		Put(putUserAvatar).
 		Delete(deleteUserAvatar)
