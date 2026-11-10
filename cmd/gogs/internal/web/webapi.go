@@ -209,6 +209,14 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Delete(deleteRepoCollaborator)
 				f.Combo("/keys").Get(getRepoDeployKeys).Post(bindJSON(userSSHKeyRequest{}), postRepoDeployKey)
 				f.Delete("/keys/{id}", deleteRepoDeployKey)
+				f.Group("/hooks", func() {
+					f.Combo("").Get(getWebhooks).Post(bindJSON(webhookRequest{}), postWebhook)
+					f.Group("/{id}", func() {
+						f.Combo("").Get(getWebhook).Patch(bindJSON(webhookRequest{}), patchWebhook).Delete(deleteWebhook)
+						f.Post("/test", postRepoWebhookTest)
+						f.Post("/deliveries/{uuid}/redeliver", postRepoWebhookRedelivery)
+					}, withWebhook)
+				}, withRepoWebhooks)
 			})
 		}, requireSignIn, withRepoContext, withRepoAdmin)
 		f.Group("/explore", func() {
@@ -265,6 +273,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Group("/orgs/{org}", func() {
 			f.Delete("", bindJSON(orgDeleteRequest{}), deleteOrg)
 			f.Combo("/settings").Get(getOrgSettings).Patch(bindJSON(orgSettingsRequest{}), patchOrgSettings)
+			f.Group("/settings/hooks", func() {
+				f.Combo("").Get(getWebhooks).Post(bindJSON(webhookRequest{}), postWebhook)
+				f.Combo("/{id}", withWebhook).Get(getWebhook).Patch(bindJSON(webhookRequest{}), patchWebhook).Delete(deleteWebhook)
+			}, withOrgWebhooks)
 			f.Get("/members", getOrgMembers)
 			f.Combo("/members/{username}").Put(putOrgMember).Delete(deleteOrgMember)
 			f.Combo("/members/{username}/public").Put(putOrgMemberPublic).Delete(deleteOrgMemberPublic)

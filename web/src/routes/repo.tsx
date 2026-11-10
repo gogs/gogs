@@ -12,7 +12,9 @@ import {
   repoHeaderQuery,
   repoSettingsQuery,
 } from "@/lib/queries/repo";
+import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/webhooks";
 import { subUrl } from "@/lib/url";
+import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
@@ -281,6 +283,56 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const repoWebhooksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchWebhooks({ owner: params.owner, repo: params.repo }),
+      ),
+    component: function RepoWebhooks() {
+      const { owner, repo } = repoWebhooksRoute.useParams();
+      return <Webhooks scope={{ owner, repo }} list={repoWebhooksRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoWebhookNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks/$type/new",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
+        const { types } = await fetchWebhooks({ owner: params.owner, repo: params.repo });
+        if (!types.includes(params.type as WebhookType)) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+          throw notFound();
+        }
+      }),
+    component: function RepoWebhookNew() {
+      const { owner, repo, type } = repoWebhookNewRoute.useParams();
+      return <WebhookNew key={type} scope={{ owner, repo }} type={type as WebhookType} />;
+    },
+  });
+
+  const repoWebhookRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks/$id",
+    loader: ({ params, context }) => {
+      const id = Number(params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchWebhook({ owner: params.owner, repo: params.repo }, id),
+      );
+    },
+    component: function RepoWebhook() {
+      const { owner, repo } = repoWebhookRoute.useParams();
+      const hook = repoWebhookRoute.useLoaderData();
+      return <WebhookEdit key={hook.id} scope={{ owner, repo }} hook={hook} />;
+    },
+  });
+
   return [
     repoCommitRoute,
     repoStargazersRoute,
@@ -291,5 +343,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoSettingsRoute,
     repoCollaborationRoute,
     repoDeployKeysRoute,
+    repoWebhooksRoute,
+    repoWebhookNewRoute,
+    repoWebhookRoute,
   ];
 }

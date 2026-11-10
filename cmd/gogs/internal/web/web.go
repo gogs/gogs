@@ -12,6 +12,7 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -241,21 +242,30 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		reqRepoAdmin := context.RequireRepoAdmin()
 		reqRepoWriter := context.RequireRepoWriter()
 
-		webhookRoutes := func() {
-			m.Group("", func() {
-				m.Get("", repo.Webhooks)
-				m.Post("/delete", repo.DeleteWebhook)
-				m.Get("/:type/new", repo.WebhooksNew)
-				m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebhooksNewPost)
-				m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackNewPost)
-				m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordNewPost)
-				m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkNewPost)
-				m.Get("/:id", repo.WebhooksEdit)
-				m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebhooksEditPost)
-				m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackEditPost)
-				m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordEditPost)
-				m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkEditPost)
-			}, repo.InjectOrgRepoContext())
+		// webhookPages serves the webhook settings pages of a repository or an
+		// organization. Like the server-rendered pages, only the kinds of webhooks
+		// the site allows can be added, and webhooks of others are not found.
+		webhookPages := func(lookup func(c *context.Context, id int64) (*database.Webhook, error)) {
+			m.Get("", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/:type/new", func(c *context.Context) {
+				if !slices.Contains(conf.Webhook.Types, c.Params(":type")) {
+					c.NotFound()
+					return
+				}
+				c.ServeWeb()
+			})
+			m.Get("/:id", func(c *context.Context) {
+				id := c.ParamsInt64(":id")
+				if id <= 0 {
+					c.NotFound()
+					return
+				}
+				if _, err := lookup(c, id); err != nil {
+					c.NotFoundOrError(err, "get webhook")
+					return
+				}
+				c.ServeWeb()
+			})
 		}
 
 		// ***** START: Organization *****
@@ -286,7 +296,11 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 				m.Group("/settings", func() {
 					m.Get("", func(c *context.Context) { c.ServeWeb() })
-					m.Group("/hooks", webhookRoutes)
+					m.Group("/hooks", func() {
+						webhookPages(func(c *context.Context, id int64) (*database.Webhook, error) {
+							return database.GetWebhookByOrgID(c.Org.Organization.ID, id)
+						})
+					})
 					m.Get("/delete", func(c *context.Context) { c.ServeWeb() })
 				})
 
@@ -338,11 +352,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				})
 
 				m.Group("/hooks", func() {
-					webhookRoutes()
-
-					m.Group("/:id", func() {
-						m.Post("/test", repo.TestWebhook)
-						m.Post("/redelivery", repo.RedeliveryWebhook)
+					webhookPages(func(c *context.Context, id int64) (*database.Webhook, error) {
+						return database.GetWebhookOfRepoByID(c.Repo.Repository.ID, id)
 					})
 
 					m.Group("/git", func() {
