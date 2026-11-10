@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoIssuesData, repoHeaderQuery } from "@/lib/queries/repo";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 import type { RepoIssuesSearch } from "@/pages/repo/Issues.search";
@@ -70,15 +69,15 @@ export function RepoIssues({
               {t("repo.milestones")}
             </Link>
           </nav>
-          {/* Opening an issue and comparing branches are still served by the server-rendered pages. */}
           {kind === "issues" ? (
             <Button asChild variant="outline" size="sm">
-              <a href={subUrl(`/${repo.owner}/${repo.name}/issues/new`)}>
+              <Link to="/$owner/$repo/issues/new" params={params}>
                 <Plus className="size-4" aria-hidden />
                 {t("repo.issues.new")}
-              </a>
+              </Link>
             </Button>
           ) : data.newPullRequestURL ? (
+            // Comparing branches is still served by the server-rendered pages.
             <Button asChild variant="outline" size="sm">
               <a href={data.newPullRequestURL}>
                 <Plus className="size-4" aria-hidden />

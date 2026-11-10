@@ -379,8 +379,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
 			// So they can apply their own enable/disable logic on routers.
 			m.Group("/issues", func() {
-				m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
-					Post(bindIgnErr(form.NewIssue{}), repo.NewIssuePost)
+				m.Get("/new", repo.MustEnableIssues, func(c *context.Context) { c.ServeWeb() })
 
 				m.Group("/:index", func() {
 					m.Post("/title", repo.UpdateIssueTitle)
