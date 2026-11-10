@@ -34,6 +34,23 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
+		// Inactive users get bounced to the React activation page, which is
+		// responsible for offering a resend and showing status.
+		if c.IsLogged && !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
+			if isAPIPath(c.Req.URL.Path) {
+				c.JSON(http.StatusForbidden, map[string]string{
+					"message": "User account is not activated.",
+				})
+				return
+			}
+			if isWebPath(c.Req.URL.Path) {
+				c.ServeWeb()
+				return
+			}
+			c.RedirectSubpath("/user/activate")
+			return
+		}
+
 		// Check non-logged users landing page.
 		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
 			c.RedirectSubpath(conf.Server.LandingURL)
@@ -64,11 +81,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 				c.RedirectSubpath("/user/sign-in")
 				return
-			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-				// Inactive users get bounced to the React activation page, which
-				// is responsible for offering a resend and showing status.
-				c.RedirectSubpath("/user/activate")
-				return
 			}
 		}
 
@@ -91,6 +103,7 @@ func isWebPath(p string) bool {
 	switch {
 	case p == "/user/sign-in",
 		p == "/user/mfa",
+		p == "/user/activate",
 		strings.HasPrefix(p, "/assets/"),
 		strings.HasPrefix(p, "/src/"),
 		strings.HasPrefix(p, "/node_modules/"),
@@ -233,6 +246,9 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 					}
 					return nil, false, false
 				}
+				if u.IsDisabled() {
+					return nil, false, false
+				}
 
 				return u, true, false
 			}
@@ -243,6 +259,9 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 	u, err := store.GetUserByID(ctx.Req.Context(), uid)
 	if err != nil {
 		log.Error("GetUserByID: %v", err)
+		return nil, false, false
+	}
+	if isTokenAuth && u.IsDisabled() {
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
