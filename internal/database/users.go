@@ -1321,8 +1321,7 @@ func (u *User) CanCreateOrganization() bool {
 }
 
 // IsDisabled returns true if the user is not allowed to sign in or access
-// anything with their credentials, either because an admin prohibited login or
-// because the account is not activated while email confirmation is required.
+// anything with their credentials.
 func (u *User) IsDisabled() bool {
 	return u.ProhibitLogin || (!u.IsActive && conf.Auth.RequireEmailConfirmation)
 }

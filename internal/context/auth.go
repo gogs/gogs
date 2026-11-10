@@ -43,6 +43,10 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				})
 				return
 			}
+			if isWebPath(c.Req.URL.Path) {
+				c.ServeWeb()
+				return
+			}
 			c.RedirectSubpath("/user/activate")
 			return
 		}
@@ -99,6 +103,7 @@ func isWebPath(p string) bool {
 	switch {
 	case p == "/user/sign-in",
 		p == "/user/mfa",
+		p == "/user/activate",
 		strings.HasPrefix(p, "/assets/"),
 		strings.HasPrefix(p, "/src/"),
 		strings.HasPrefix(p, "/node_modules/"),
@@ -256,8 +261,6 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 		log.Error("GetUserByID: %v", err)
 		return nil, false, false
 	}
-	// Session users are let through so that the web UI can render the prohibited
-	// login and account activation pages for them.
 	if isTokenAuth && u.IsDisabled() {
 		return nil, false, false
 	}
