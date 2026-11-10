@@ -1,10 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // ConfirmButton asks in a popover before an action that cannot be taken back,
@@ -15,6 +17,7 @@ export function ConfirmButton({
   title,
   description,
   size,
+  icon: Icon,
   align = "end",
   action,
   onDone,
@@ -26,6 +29,9 @@ export function ConfirmButton({
   title: string;
   description: string;
   size?: "sm";
+  // icon shows the button as the icon alone, with the label in a tooltip,
+  // e.g., among the actions in the header of a comment.
+  icon?: LucideIcon;
   // align lines the popover up with the start or the end of the button.
   align?: "start" | "end";
   action: () => Promise<void>;
@@ -43,17 +49,36 @@ export function ConfirmButton({
   });
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size={size}
-          aria-label={ariaLabel}
-          className={cn("text-(--color-destructive)", size === "sm" && "shrink-0")}
-        >
-          {label}
-        </Button>
-      </PopoverTrigger>
+      {Icon ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={ariaLabel ?? label}
+                className="size-8 text-(--color-muted-foreground) hover:text-(--color-destructive)"
+              >
+                <Icon className="size-4" aria-hidden />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{label}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size={size}
+            aria-label={ariaLabel}
+            className={cn("text-(--color-destructive)", size === "sm" && "shrink-0")}
+          >
+            {label}
+          </Button>
+        </PopoverTrigger>
+      )}
       <PopoverContent align={align} collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-4">
         <p className="font-semibold">{title}</p>
         <p className="mt-1 text-sm text-(--color-muted-foreground)">{description}</p>

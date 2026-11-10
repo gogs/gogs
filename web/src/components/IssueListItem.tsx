@@ -32,6 +32,8 @@ export function IssueListItem({
   const OpenIcon = kind === "pulls" ? GitPullRequest : CircleDot;
   const ClosedIcon = kind === "pulls" ? GitPullRequestClosed : CircleCheck;
   const Icon = issue.isClosed ? ClosedIcon : OpenIcon;
+  const [owner, repo] = issue.repo.split("/");
+  const titleClass = "font-semibold text-(--color-foreground) hover:text-(--color-primary)";
   const commentLabel = t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(issue.commentCount));
 
   return (
@@ -66,13 +68,20 @@ export function IssueListItem({
               <TooltipContent>{t("repo.issues.unread")}</TooltipContent>
             </Tooltip>
           ) : null}
-          {/* The issue page is still served by the server-rendered pages. */}
-          <a
-            href={subUrl(`/${issue.repo}/${kind}/${issue.index}`)}
-            className="font-semibold text-(--color-foreground) hover:text-(--color-primary)"
-          >
-            {issue.title}
-          </a>
+          {kind === "issues" ? (
+            <Link
+              to="/$owner/$repo/issues/$index"
+              params={{ owner, repo, index: String(issue.index) }}
+              className={titleClass}
+            >
+              {issue.title}
+            </Link>
+          ) : (
+            // The pull request page is still served by the server-rendered pages.
+            <a href={subUrl(`/${issue.repo}/pulls/${issue.index}`)} className={titleClass}>
+              {issue.title}
+            </a>
+          )}
           {issue.labels.map((label) => {
             const chip = (
               <span
@@ -122,7 +131,7 @@ export function IssueListItem({
 // OpenedBy renders the localized "opened <time> by <poster>" sentence. The
 // translations place the time as `%[1]s` and the poster as a link around
 // `%[3]s`.
-function OpenedBy({ issue }: { issue: DashboardIssue }) {
+export function OpenedBy({ issue }: { issue: Pick<DashboardIssue, "poster" | "createdAt"> }) {
   const { t } = useTranslation();
   const parts = t("repo.issues.opened_by").split(/(<a [^>]*>\s*%\[3\]s<\/a>|%\[3\]s|%\[1\]s?)/);
   return (
