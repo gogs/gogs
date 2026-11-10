@@ -278,7 +278,8 @@ function LabelForm({
     },
   });
   const { fields, formError } = formErrors(mutation.error);
-  const validColor = HEX_COLOR.test(form.color);
+  // While the hex is being typed, show the last color that was valid.
+  const shownColor = HEX_COLOR.test(form.color) ? form.color.toLowerCase() : initial.color;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -290,10 +291,7 @@ function LabelForm({
       <fieldset disabled={mutation.isPending} className="contents">
         <FormAlert message={formError} />
         <div className="mb-3">
-          <LabelChip
-            name={form.name || t("repo.issues.new_label_placeholder")}
-            color={validColor ? form.color : initial.color}
-          />
+          <LabelChip name={form.name || t("repo.issues.new_label_placeholder")} color={shownColor} />
         </div>
         <div className="flex flex-wrap items-start gap-4">
           <Input
@@ -313,7 +311,7 @@ function LabelForm({
             <input
               type="color"
               aria-label={t("repo.issues.label_color")}
-              value={validColor ? form.color.toLowerCase() : "#000000"}
+              value={shownColor}
               onChange={(e) => setForm({ ...form, color: e.target.value })}
               className="size-10 shrink-0 cursor-pointer rounded-md border border-(--color-input) bg-(--color-background) p-1"
             />
