@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -41,13 +40,18 @@ func parseUserFromCode(ctx stdctx.Context, code string) (user *database.User) {
 	return nil
 }
 
-func verifyUserActiveCode(ctx stdctx.Context, code string) (user *database.User) {
-	if user = parseUserFromCode(ctx, code); user != nil {
-		prefix := code[:tool.TimeLimitCodeLength]
-		data := strconv.FormatInt(user.ID, 10) + user.Email + user.LowerName + user.Password + user.Rands
-		if tool.VerifyTimeLimitCode(data, conf.Auth.ActivateCodeLives, prefix) {
-			return user
-		}
+func verifyUserActivateCode(ctx stdctx.Context, code string) *database.User {
+	user := parseUserFromCode(ctx, code)
+	if user != nil && userx.VerifyActivateCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
+		return user
+	}
+	return nil
+}
+
+func verifyUserResetPasswordCode(ctx stdctx.Context, code string) *database.User {
+	user := parseUserFromCode(ctx, code)
+	if user != nil && userx.VerifyResetPasswordCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
+		return user
 	}
 	return nil
 }
@@ -185,7 +189,7 @@ func getUserResetPassword(r *http.Request) (statusCode int, resp *getUserResetPa
 	code := r.URL.Query().Get("code")
 	return http.StatusOK, &getUserResetPasswordResponse{
 		EmailEnabled: conf.Email.Enabled,
-		Valid:        code != "" && verifyUserActiveCode(r.Context(), code) != nil,
+		Valid:        code != "" && verifyUserResetPasswordCode(r.Context(), code) != nil,
 	}, nil
 }
 
@@ -243,7 +247,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 }
 
 func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
-	u := verifyUserActiveCode(r.Context(), req.Code)
+	u := verifyUserResetPasswordCode(r.Context(), req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
 	}
@@ -475,8 +479,8 @@ type userActivateCompleteRequest struct {
 }
 
 func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
-	target := verifyUserActiveCode(r.Context(), req.Code)
-	if target == nil {
+	target := verifyUserActivateCode(r.Context(), req.Code)
+	if target == nil || target.IsActive {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
 	}
 
@@ -494,7 +498,12 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 	}
 
 	log.Trace("User activated: %s", target.Name)
-	completeSignIn(sess, mc, target)
+
+	// Holding the activation code only proves access to the mailbox, which is not
+	// enough to skip the second factor.
+	if !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
+		completeSignIn(sess, mc, target)
+	}
 	return http.StatusNoContent, nil, nil
 }
 
