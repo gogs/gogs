@@ -127,8 +127,6 @@ function collectDirectoryPaths(paths: readonly string[]): string[] {
 
 export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, className, style, ref }: Props) {
   const { t } = useTranslation();
-  // Only the statuses `diffTypeToStatus` produces are translated. The tree
-  // keeps Pierre's defaults for the rest.
   const labels = useMemo<FileTreeLabelsOption>(
     () => ({
       searchPlaceholder: t("repo.search_files"),
