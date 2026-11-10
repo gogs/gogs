@@ -46,7 +46,7 @@ func writeErrorResponse(w http.ResponseWriter, code int, err error) {
 
 func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 	w := c.ResponseWriter()
-	if !repoCtx.ViewerCanRead() {
+	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 		return
 	}
@@ -113,7 +113,7 @@ func resolveRef(gitRepo *git.Repository, ref string) (*git.Commit, error) {
 
 func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 	w := c.ResponseWriter()
-	if !repoCtx.ViewerCanRead() {
+	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 		return
 	}

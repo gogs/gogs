@@ -15,11 +15,13 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Security:_ Accounts with login prohibited or not activated kept repository access through access tokens, passwords, and SSH keys. [#8439](https://github.com/gogs/gogs/pull/8439) - [GHSA-f9cv-gfvg-3464](https://github.com/gogs/gogs/security/advisories/GHSA-f9cv-gfvg-3464)
 - _Security:_ On Windows hosts, an authenticated user with write access could write files into a repository's `.git` directory through a crafted tree path. [#8408](https://github.com/gogs/gogs/pull/8408) - [GHSA-85m5-cfw6-3cx8](https://github.com/gogs/gogs/security/advisories/GHSA-85m5-cfw6-3cx8)
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ Argument injection through a crafted commit or branch reference on several repository API endpoints allowed an authenticated user with read access to leak internal server details to the error logs. [#8393](https://github.com/gogs/gogs/pull/8393) - [GHSA-mxrh-2rxr-6mqc](https://github.com/gogs/gogs/security/advisories/GHSA-mxrh-2rxr-6mqc)
 - _Security:_ Argument injection through a crafted branch name when creating a pull request allowed an authenticated user with write access to write files to arbitrary paths on the server. [#8390](https://github.com/gogs/gogs/pull/8390) - [GHSA-2grc-qr7q-6m36](https://github.com/gogs/gogs/security/advisories/GHSA-2grc-qr7q-6m36)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
+- `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
 
 ### Removed
 

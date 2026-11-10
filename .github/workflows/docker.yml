@@ -5,7 +5,7 @@ on:
       - main
   pull_request:
     paths:
-      - '.trivy.yaml'
+      - 'trivy.yaml'
       - 'Dockerfile'
       - 'Dockerfile.next'
       - 'docker/**'
