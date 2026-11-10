@@ -147,6 +147,10 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/acme/widgets/settings",
 		"/api/web/acme/widgets/settings/collaborators",
 		"/api/web/acme/widgets/settings/keys",
+		"/api/web/acme/widgets/settings/hooks",
+		"/api/web/acme/widgets/settings/hooks/1",
+		"/api/web/orgs/acme/settings/hooks",
+		"/api/web/orgs/acme/settings/hooks/1",
 	} {
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))

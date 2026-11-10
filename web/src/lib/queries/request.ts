@@ -7,7 +7,7 @@ export async function fetchJSON<T>(url: string): Promise<T> {
 }
 
 // send makes a change that answers with no content.
-export async function send(method: "PUT" | "DELETE", url: string) {
+export async function send(method: "POST" | "PUT" | "DELETE", url: string) {
   const res = await fetch(url, { method, credentials: "same-origin" });
   if (!res.ok) throw await loaderResponseError(res);
 }
