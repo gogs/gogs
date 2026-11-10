@@ -8,7 +8,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/go-macaron/captcha"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -420,32 +419,26 @@ func parseUserFromCode(code string) (user *database.User) {
 	return nil
 }
 
-// verify active code when active account
-func verifyUserActiveCode(code string) (user *database.User) {
-	minutes := conf.Auth.ActivateCodeLives
+func verifyUserActivateCode(code string) *database.User {
+	user := parseUserFromCode(code)
+	if user != nil && userutil.VerifyActivateCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
+		return user
+	}
+	return nil
+}
 
-	if user = parseUserFromCode(code); user != nil {
-		// time limit code
-		prefix := code[:tool.TimeLimitCodeLength]
-		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Password + user.Rands
-
-		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			return user
-		}
+func verifyUserResetPasswordCode(code string) *database.User {
+	user := parseUserFromCode(code)
+	if user != nil && userutil.VerifyResetPasswordCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
+		return user
 	}
 	return nil
 }
 
 // verify active code when active account
 func verifyActiveEmailCode(code, email string) *database.EmailAddress {
-	minutes := conf.Auth.ActivateCodeLives
-
 	if user := parseUserFromCode(code); user != nil {
-		// time limit code
-		prefix := code[:tool.TimeLimitCodeLength]
-		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
-
-		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
+		if userutil.VerifyActivateCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 			emailAddress, err := database.Handle.Users().GetEmail(gocontext.TODO(), user.ID, email, false)
 			if err == nil {
 				return emailAddress
@@ -483,7 +476,7 @@ func Activate(c *context.Context) {
 	}
 
 	// Verify code.
-	if user := verifyUserActiveCode(code); user != nil {
+	if user := verifyUserActivateCode(code); user != nil && !user.IsActive {
 		v := true
 		err := database.Handle.Users().Update(
 			c.Req.Context(),
@@ -499,6 +492,13 @@ func Activate(c *context.Context) {
 		}
 
 		log.Trace("User activated: %s", user.Name)
+
+		// Holding the activation code only proves access to the mailbox, which is not
+		// enough to skip the second factor.
+		if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), user.ID) {
+			c.RedirectSubpath("/user/login")
+			return
+		}
 
 		_ = c.Session.Set("uid", user.ID)
 		_ = c.Session.Set("uname", user.Name)
@@ -612,7 +612,7 @@ func ResetPasswdPost(c *context.Context) {
 	}
 	c.Data["Code"] = code
 
-	if u := verifyUserActiveCode(code); u != nil {
+	if u := verifyUserResetPasswordCode(code); u != nil {
 		// Validate password length.
 		password := c.Query("password")
 		if len(password) < 6 {
