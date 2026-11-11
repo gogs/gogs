@@ -59,7 +59,8 @@ func Run(configPath string, portOverride int) error {
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
-	if err = initTracing(gocontext.Background()); err != nil {
+	tracing, err := initTracing(gocontext.Background())
+	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
 	}
 
@@ -619,9 +620,14 @@ func Run(configPath string, portOverride int) error {
 	}
 	log.Info("Available on %s", conf.Server.ExternalURL)
 
+	var handler http.Handler = m
+	if tracing {
+		handler = newTracingHandler(m)
+	}
+
 	switch conf.Server.Protocol {
 	case "http":
-		err = http.ListenAndServe(listenAddr, m)
+		err = http.ListenAndServe(listenAddr, handler)
 
 	case "https":
 		tlsMinVersion := tls.VersionTLS12
@@ -649,12 +655,12 @@ func Run(configPath string, portOverride int) error {
 					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 				},
-			}, Handler: m,
+			}, Handler: handler,
 		}
 		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
 
 	case "fcgi":
-		err = fcgi.Serve(nil, m)
+		err = fcgi.Serve(nil, handler)
 
 	case "unix":
 		if osx.Exist(listenAddr) {
@@ -675,7 +681,7 @@ func Run(configPath string, portOverride int) error {
 		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
 			return errors.Wrap(err, "change permission of Unix domain socket")
 		}
-		err = http.Serve(listener, m)
+		err = http.Serve(listener, handler)
 
 	default:
 		return errors.Newf("unexpected server protocol: %s", conf.Server.Protocol)
