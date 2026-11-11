@@ -10,7 +10,6 @@ import (
 	"image/png"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp"
@@ -260,9 +259,7 @@ func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User)
 
 func verifyActiveEmailCode(ctx gocontext.Context, code, email string) *database.EmailAddress {
 	if user := parseUserFromCode(ctx, code); user != nil {
-		prefix := code[:tool.TimeLimitCodeLength]
-		data := strconv.FormatInt(user.ID, 10) + email + user.LowerName + user.Password + user.Rands
-		if tool.VerifyTimeLimitCode(data, conf.Auth.ActivateCodeLives, prefix) {
+		if userx.VerifyActivateCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 			emailAddress, err := database.Handle.Users().GetEmail(ctx, user.ID, email, false)
 			if err == nil {
 				return emailAddress
