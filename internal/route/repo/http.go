@@ -447,7 +447,7 @@ func HTTP(c *HTTPContext) {
 
 		file := strings.TrimPrefix(reqPath, cleaned)
 		// 🚨 SECURITY: Prevent path traversal, e.g., via backslashes on Windows.
-		if file != "/"+pathx.Clean(file) {
+		if file != "/"+pathutil.Clean(file) {
 			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
 			return
 		}

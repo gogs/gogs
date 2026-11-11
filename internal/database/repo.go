@@ -36,6 +36,7 @@ import (
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -990,7 +991,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	}
 	// 🚨 SECURITY: Only accept names of known templates, so that the name can
 	// never resolve to a file outside of the template directory.
-	if !strx.ContainsFold(names, name) {
+	if !strutil.ContainsFold(names, name) {
 		return nil, errors.Newf("unknown %s template %q", tp, name)
 	}
 
