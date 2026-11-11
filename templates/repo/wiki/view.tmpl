@@ -40,7 +40,12 @@
 							SSH
 						</button>
 					{{end}}
-					<input id="repo-clone-url" value="{{if not $.DisableHTTP}}{{$.CloneLink.HTTPS}}{{else}}{{$.CloneLink.SSH}}{{end}}" readonly>
+					{{if and $.EnableGitProtocolClone (not $.Repository.IsPrivate)}}
+						<button class="ui basic clone button" id="repo-clone-git" data-link="{{.WikiCloneLink.Git}}">
+							GIT
+						</button>
+					{{end}}
+					<input id="repo-clone-url" value="{{if not $.DisableHTTP}}{{$.WikiCloneLink.HTTPS}}{{else if not $.DisableSSH}}{{$.WikiCloneLink.SSH}}{{else if and $.EnableGitProtocolClone (not $.Repository.IsPrivate)}}{{$.WikiCloneLink.Git}}{{end}}" readonly>
 					<button class="ui basic icon button poping up clipboard" id="clipboard-btn" data-original="{{.i18n.Tr "repo.copy_link"}}" data-success="{{.i18n.Tr "repo.copy_link_success"}}" data-error="{{.i18n.Tr "repo.copy_link_error"}}" data-content="{{.i18n.Tr "repo.copy_link"}}" data-variation="inverted tiny" data-clipboard-target="#repo-clone-url">
 						<i class="octicon octicon-clippy"></i>
 					</button>

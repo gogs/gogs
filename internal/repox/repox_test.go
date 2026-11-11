@@ -18,6 +18,7 @@ func TestNewCloneLink(t *testing.T) {
 	conf.SetMockServer(t,
 		conf.ServerOpts{
 			ExternalURL: "https://example.com/",
+			Domain:      "example.com",
 		},
 	)
 
@@ -33,6 +34,7 @@ func TestNewCloneLink(t *testing.T) {
 		want := &CloneLink{
 			SSH:   "git@example.com:alice/example.git",
 			HTTPS: "https://example.com/alice/example.git",
+			Git:   "git://example.com/alice/example.git",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -49,6 +51,7 @@ func TestNewCloneLink(t *testing.T) {
 		want := &CloneLink{
 			SSH:   "ssh://git@example.com:2222/alice/example.git",
 			HTTPS: "https://example.com/alice/example.git",
+			Git:   "git://example.com/alice/example.git",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -65,9 +68,22 @@ func TestNewCloneLink(t *testing.T) {
 		want := &CloneLink{
 			SSH:   "git@example.com:alice/example.wiki.git",
 			HTTPS: "https://example.com/alice/example.wiki.git",
+			Git:   "git://example.com/alice/example.wiki.git",
 		}
 		assert.Equal(t, want, got)
 	})
+}
+
+func TestGitCloneURL(t *testing.T) {
+	conf.SetMockServer(t,
+		conf.ServerOpts{
+			Domain: "example.com",
+		},
+	)
+
+	got := GitCloneURL("alice", "example")
+	want := "git://example.com/alice/example.git"
+	assert.Equal(t, want, got)
 }
 
 func TestHTMLURL(t *testing.T) {
