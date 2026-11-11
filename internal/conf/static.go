@@ -312,6 +312,17 @@ type SSHOpts struct {
 // SSH settings
 var SSH SSHOpts
 
+type GitProtocolOpts struct {
+	StartBuiltinServer    bool   `ini:"START_GIT_PROTOCOL_SERVER"`
+	ListenHost            string `ini:"GIT_PROTOCOL_LISTEN_HOST"`
+	ListenPort            int    `ini:"GIT_PROTOCOL_LISTEN_PORT"`
+	MaxConnections        int    `ini:"GIT_PROTOCOL_MAX_CONNECTIONS"`
+	SessionTimeoutSeconds int    `ini:"GIT_PROTOCOL_SESSION_TIMEOUT_SECONDS"`
+}
+
+// Git protocol settings
+var GitProtocol GitProtocolOpts
+
 type RepositoryOpts struct {
 	Root                     string
 	ScriptType               string
