@@ -22,6 +22,14 @@ func Test_Sanitizer(t *testing.T) {
 		{input: `<code class="language-random ui tab active menu attached animating sidebar following bar center"></code>`, expVal: `<code></code>`},
 		{input: `<code class="language-go"></code>`, expVal: `<code class="language-go"></code>`},
 
+		// Alert classes
+		{input: `<div class="markdown-alert markdown-alert-note"></div>`, expVal: `<div class="markdown-alert markdown-alert-note"></div>`},
+		{input: `<div class="markdown-alert markdown-alert-bogus"></div>`, expVal: `<div></div>`},
+		{input: `<p class="markdown-alert-title"></p>`, expVal: `<p class="markdown-alert-title"></p>`},
+		{input: `<p class="ui negative message"></p>`, expVal: `<p></p>`},
+		{input: `<span class="octicon octicon-info" aria-hidden="true"></span>`, expVal: `<span class="octicon octicon-info" aria-hidden="true"></span>`},
+		{input: `<span class="octicon octicon-mark-github"></span>`, expVal: `<span></span>`},
+
 		// Input checkbox
 		{input: `<input type="hidden">`, expVal: ``},
 		{input: `<input type="checkbox">`, expVal: `<input type="checkbox">`},
