@@ -12,6 +12,9 @@ import (
 // revision does not name a commit, e.g., a branch that only exists in another
 // repository.
 func (r *Repository) MergeBase(ctx context.Context, base, head string) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.MergeBase")
+	defer span.End()
+
 	return r.mergeBase(ctx, base, head, nil)
 }
 
@@ -42,6 +45,9 @@ type PullRequestMeta struct {
 // branch of the repository into the base branch of the repository at the
 // basePath, which may be the same repository.
 func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.PullRequestMeta")
+	defer span.End()
+
 	base := baseBranch
 	var envs []string
 

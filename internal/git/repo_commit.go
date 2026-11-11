@@ -67,6 +67,9 @@ loop:
 // repository. The revision could be a commit ID or full refspec (e.g.,
 // "refs/heads/master").
 func (r *Repository) CatFileCommit(ctx context.Context, rev string) (*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CatFileCommit")
+	defer span.End()
+
 	cache, ok := r.cachedCommits.Load(rev)
 	if ok {
 		logf("Cached commit hit: %s", rev)
@@ -118,6 +121,9 @@ func (r *Repository) catFileType(ctx context.Context, rev string) (ObjectType, e
 // BranchCommit returns the latest commit of given branch of the repository. The
 // branch must be given in short name, e.g., "master".
 func (r *Repository) BranchCommit(ctx context.Context, branch string) (*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchCommit")
+	defer span.End()
+
 	return r.CatFileCommit(ctx, RefsHeads+branch)
 }
 
@@ -133,6 +139,9 @@ func RepoBranchCommit(ctx context.Context, repoPath, branch string) (*Commit, er
 // TagCommit returns the latest commit of given tag of the repository. The tag
 // must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommit(ctx context.Context, tag string) (*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TagCommit")
+	defer span.End()
+
 	return r.CatFileCommit(ctx, RefsTags+tag)
 }
 
@@ -176,6 +185,9 @@ func escapePath(path string) string {
 // Log returns a list of commits in the state of given revision of the repository.
 // The returned list is in reverse chronological order.
 func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([]*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Log")
+	defer span.End()
+
 	var opt LogOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -257,6 +269,9 @@ type CommitsByPageOptions struct {
 // CommitsByPage returns a paginated list of commits in the state of given
 // revision. The pagination starts from the newest to the oldest commit.
 func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size int, opts ...CommitsByPageOptions) ([]*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CommitsByPage")
+	defer span.End()
+
 	var opt CommitsByPageOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -272,6 +287,9 @@ func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size i
 // SearchCommits searches commit message with given pattern in the state of
 // given revision. The returned list is in reverse chronological order.
 func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string) ([]*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.SearchCommits")
+	defer span.End()
+
 	return r.Log(ctx, rev, LogOptions{
 		GrepPattern:      pattern,
 		RegexpIgnoreCase: true,
@@ -289,6 +307,9 @@ type DiffNameOnlyOptions struct {
 // DiffNameOnly returns a list of changed files between base and head revisions of the
 // repository.
 func (r *Repository) DiffNameOnly(ctx context.Context, base, head string, opts ...DiffNameOnlyOptions) ([]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.DiffNameOnly")
+	defer span.End()
+
 	var opt DiffNameOnlyOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -322,6 +343,9 @@ func (r *Repository) DiffNameOnly(ctx context.Context, base, head string, opts .
 // RevListCount returns number of total commits up to given refspec of the
 // repository.
 func (r *Repository) RevListCount(ctx context.Context, refspecs []string) (int64, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RevListCount")
+	defer span.End()
+
 	if len(refspecs) == 0 {
 		return 0, errors.New("must have at least one refspec")
 	}
@@ -350,6 +374,9 @@ func RepoRevListCount(ctx context.Context, repoPath string, refspecs []string) (
 // RevList returns a list of commits based on given refspecs in reverse
 // chronological order.
 func (r *Repository) RevList(ctx context.Context, refspecs []string) ([]*Commit, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RevList")
+	defer span.End()
+
 	if len(refspecs) == 0 {
 		return nil, errors.New("must have at least one refspec")
 	}
@@ -367,6 +394,9 @@ func (r *Repository) RevList(ctx context.Context, refspecs []string) ([]*Commit,
 
 // LatestCommitTime returns the time of latest commit of the repository.
 func (r *Repository) LatestCommitTime(ctx context.Context) (time.Time, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.LatestCommitTime")
+	defer span.End()
+
 	args := []string{"for-each-ref", "--count=1", "--sort=-committerdate", "--format=%(committerdate:iso8601)", "--end-of-options"}
 
 	stdout, err := exec(ctx, r.path, args, nil)

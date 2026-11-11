@@ -89,6 +89,9 @@ func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
 
 // Tag returns a Git tag by given name, e.g., "v1.0.0".
 func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Tag")
+	defer span.End()
+
 	refspec := RefsTags + name
 	refs, err := r.showRef(ctx, showRefOptions{
 		Tags:     true,
@@ -114,6 +117,9 @@ func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
 
 // Tags returns a list of tags of the repository.
 func (r *Repository) Tags(ctx context.Context) ([]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Tags")
+	defer span.End()
+
 	args := []string{"tag", "--list", "--sort=-creatordate", "--end-of-options"}
 
 	stdout, err := exec(ctx, r.path, args, nil)
@@ -138,6 +144,9 @@ func RepoTags(ctx context.Context, repoPath string) ([]string, error) {
 
 // CreateTag creates a new lightweight tag on given revision.
 func (r *Repository) CreateTag(ctx context.Context, name, rev string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.CreateTag")
+	defer span.End()
+
 	args := []string{"tag", "--end-of-options", name, rev}
 	_, err := exec(ctx, r.path, args, nil)
 	return err
@@ -145,6 +154,9 @@ func (r *Repository) CreateTag(ctx context.Context, name, rev string) error {
 
 // DeleteTag deletes a tag from the repository.
 func (r *Repository) DeleteTag(ctx context.Context, name string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.DeleteTag")
+	defer span.End()
+
 	args := []string{"tag", "--delete", "--end-of-options", name}
 	_, err := exec(ctx, r.path, args, nil)
 	return err
@@ -174,6 +186,9 @@ type TagsPage struct {
 // TagsAfter returns a page of at most limit tags "after" (exclusive) the given
 // tag. A limit of 0 means no limit.
 func (r *Repository) TagsAfter(ctx context.Context, after string, limit int) (*TagsPage, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TagsAfter")
+	defer span.End()
+
 	all, err := r.Tags(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "get tags")

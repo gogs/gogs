@@ -1,6 +1,7 @@
 package web
 
 import (
+	gocontext "context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -57,6 +58,9 @@ func Run(configPath string, portOverride int) error {
 	err := initServices(configPath)
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
+	}
+	if err = initTracing(gocontext.Background()); err != nil {
+		return errors.Wrap(err, "initialize tracing")
 	}
 
 	m, err := newMacaron()
