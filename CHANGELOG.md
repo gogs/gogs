@@ -12,6 +12,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Security:_ Viewing an Org-mode file could show the contents of arbitrary files on the server, including the configuration file. [#TBD](https://github.com/gogs/gogs/pull/TBD) - [GHSA-hr26-3fq5-9365](https://github.com/gogs/gogs/security/advisories/GHSA-hr26-3fq5-9365)
 - _Security:_ On Windows hosts, an authenticated user with write access could still write files into a repository's `.git` directory through other names for it, leading to code execution on the server. [#8483](https://github.com/gogs/gogs/pull/8483) - [GHSA-hc35-pcqw-5xjq](https://github.com/gogs/gogs/security/advisories/GHSA-hc35-pcqw-5xjq)
 - _Security:_ A username containing HTML, which could come from an external login source such as LDAP, was rendered as markup on issue and pull request pages and in the dashboard issue and pull request lists. [#8482](https://github.com/gogs/gogs/pull/8482) - [GHSA-vhf5-f34f-vhq9](https://github.com/gogs/gogs/security/advisories/GHSA-vhf5-f34f-vhq9)
 - _Security:_ Webhooks, repository migrations, and mirrors could reach services on the Gogs host through the IPv6 address `[::]`, bypassing the local network restriction. [#8481](https://github.com/gogs/gogs/pull/8481) - [GHSA-799r-mx22-r63q](https://github.com/gogs/gogs/security/advisories/GHSA-799r-mx22-r63q)
