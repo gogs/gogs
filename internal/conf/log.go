@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 )
 
 type loggerConf struct {
