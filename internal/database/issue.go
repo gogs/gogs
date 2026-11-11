@@ -736,9 +736,9 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	}
 
 	if len(opts.Attachments) > 0 {
-		attachments, err := getAttachmentsByUUIDs(e, opts.Attachments)
+		attachments, err := getUnboundAttachmentsByUUIDs(e, opts.Attachments)
 		if err != nil {
-			return errors.Newf("getAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
+			return errors.Newf("getUnboundAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
 
 		for i := 0; i < len(attachments); i++ {

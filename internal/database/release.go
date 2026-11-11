@@ -181,7 +181,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	}
 
 	if len(uuids) > 0 {
-		if _, err = sess.In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
+		if _, err = sess.Where(unboundAttachmentCond).In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
 			return errors.Newf("link attachments: %v", err)
 		}
 	}
@@ -324,7 +324,7 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 	}
 
 	if len(uuids) > 0 {
-		if _, err = sess.In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
+		if _, err = sess.Where(unboundAttachmentCond).In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
 			return errors.Newf("link attachments: %v", err)
 		}
 	}
