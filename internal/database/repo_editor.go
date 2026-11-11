@@ -546,7 +546,7 @@ func isRepositoryGitPath(path string) bool {
 	return false
 }
 
-// isDotGit returns true if given path component refers to ".git" on any file
+// isDotGit returns true if given path component may refer to ".git" on some file
 // system, following is_ntfs_dotgit of Git. Besides case-insensitive matches,
 // NTFS resolves the 8.3 short name "git~1", trailing dots and spaces, and
 // alternate data streams (e.g., ".git::$INDEX_ALLOCATION") to ".git".
