@@ -84,7 +84,7 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	assert.True(t, osx.Exist(canary))
 }
 
-func TestGetRepoInitFile(t *testing.T) {
+func Test_getRepoInitFile(t *testing.T) {
 	before := Readmes
 	t.Cleanup(func() { Readmes = before })
 	Readmes = []string{"Default"}

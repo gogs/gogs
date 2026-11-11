@@ -440,6 +440,12 @@ func HTTP(c *HTTPContext) {
 		}
 
 		file := strings.TrimPrefix(reqPath, cleaned)
+		// 🚨 SECURITY: Prevent path traversal, e.g., via backslashes on Windows.
+		if file != "/"+pathx.Clean(file) {
+			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
+			return
+		}
+
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
