@@ -83,3 +83,31 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))
 }
+
+func TestGetRepoInitFile(t *testing.T) {
+	before := Readmes
+	t.Cleanup(func() { Readmes = before })
+	Readmes = []string{"Default"}
+
+	data, err := getRepoInitFile("readme", "Default")
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+
+	for _, name := range []string{
+		"",
+		"../../app.ini",
+		`..\app.ini`,
+		`Default\..\..\app.ini`,
+		"Default/../../app.ini",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := getRepoInitFile("readme", name)
+			assert.Error(t, err)
+		})
+	}
+
+	// Only names of known templates are accepted, even when the file exists.
+	Readmes = nil
+	_, err = getRepoInitFile("readme", "Default")
+	assert.Error(t, err)
+}
