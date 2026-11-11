@@ -538,16 +538,31 @@ type UploadRepoFileOptions struct {
 //
 // TODO(unknwon): Move to repox during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
-	path = strings.ToLower(path)
-	// Windows strips trailing dots and spaces from each path component, so
-	// forms like ".git." and ".git " resolve to the real ".git" directory.
-	// Trim them from every component before comparing.
 	for _, component := range strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }) {
-		if strings.TrimRight(component, ". ") == ".git" {
+		if isDotGit(component) {
 			return true
 		}
 	}
 	return false
+}
+
+// isDotGit returns true if given path component may refer to ".git" on some file
+// system, following is_ntfs_dotgit of Git. Besides case-insensitive matches,
+// NTFS resolves the 8.3 short name "git~1", trailing dots and spaces, and
+// alternate data streams (e.g., ".git::$INDEX_ALLOCATION") to ".git".
+func isDotGit(component string) bool {
+	component = strings.ToLower(component)
+	var rest string
+	switch {
+	case strings.HasPrefix(component, ".git"):
+		rest = component[len(".git"):]
+	case strings.HasPrefix(component, "git~1"):
+		rest = component[len("git~1"):]
+	default:
+		return false
+	}
+	rest, _, _ = strings.Cut(rest, ":")
+	return strings.TrimRight(rest, ". ") == ""
 }
 
 func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
