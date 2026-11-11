@@ -66,6 +66,8 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          provenance: mode=max
+          sbom: true
           tags: |
             gogs/gogs:edge
             ghcr.io/gogs/gogs:edge
@@ -139,6 +141,8 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
+          provenance: mode=max
+          sbom: true
           tags: |
             ttl.sh/gogs/gogs-${{ steps.short-sha.outputs.sha }}:7d
       - name: Scan for container vulnerabilities
@@ -179,6 +183,8 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64
           push: true
+          provenance: mode=max
+          sbom: true
           tags: |
             ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:7d
       - name: Scan for container vulnerabilities
@@ -270,6 +276,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ${{ env.TAGS }}
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
@@ -367,6 +375,8 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ${{ env.TAGS }}
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
