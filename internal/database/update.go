@@ -71,7 +71,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return errors.Newf("GetRepositoryByName: %v", err)
 	}
 
-	if err = repo.UpdateSize(); err != nil {
+	if err = repo.UpdateSize(context.Background()); err != nil {
 		return errors.Newf("UpdateSize: %v", err)
 	}
 

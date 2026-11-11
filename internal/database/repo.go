@@ -437,8 +437,8 @@ func (r *Repository) mustOwner(e Engine) *User {
 	return r.Owner
 }
 
-func (r *Repository) UpdateSize() error {
-	countObject, err := git.RepoCountObjects(context.TODO(), r.RepoPath())
+func (r *Repository) UpdateSize(ctx context.Context) error {
+	countObject, err := git.RepoCountObjects(ctx, r.RepoPath())
 	if err != nil {
 		return errors.Newf("count repository objects: %v", err)
 	}
@@ -728,8 +728,12 @@ func wikiRemoteURL(remote string) string {
 }
 
 // MigrateRepository migrates a existing repository from other project hosting.
-func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
-	repo, err := CreateRepository(doer, owner, CreateRepoOptionsLegacy{
+func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
+	repo, err := CreateRepository(ctx, doer, owner, CreateRepoOptionsLegacy{
 		Name:        opts.Name,
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
@@ -756,7 +760,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
 	mirrorClone := func(url, dst string) error {
-		ctx, cancel := git.WithTimeout(context.TODO(), migrateTimeout)
+		ctx, cancel := git.WithTimeout(ctx, migrateTimeout)
 		defer cancel()
 		return git.Clone(ctx, url, dst, git.CloneOptions{
 			Mirror: true,
@@ -786,13 +790,13 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	// Set the HEAD branch as default branch, which is also available for empty
 	// repositories.
-	refspec, err := gitRepo.SymbolicRef(context.TODO())
+	refspec, err := gitRepo.SymbolicRef(ctx)
 	if err != nil {
 		return repo, errors.Newf("get HEAD branch: %v", err)
 	}
 	repo.DefaultBranch = git.RefShortName(refspec)
 
-	hasBranches, err := gitRepo.HasBranches(context.TODO())
+	hasBranches, err := gitRepo.HasBranches(ctx)
 	if err != nil {
 		return repo, errors.Wrap(err, "check empty")
 	}
@@ -800,20 +804,20 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	// HEAD may point to a branch that does not exist while other branches do, in
 	// which case any existing branch becomes the default branch.
-	if !repo.IsEmpty && !gitRepo.HasBranch(context.TODO(), repo.DefaultBranch) {
-		branches, err := gitRepo.Branches(context.TODO())
+	if !repo.IsEmpty && !gitRepo.HasBranch(ctx, repo.DefaultBranch) {
+		branches, err := gitRepo.Branches(ctx)
 		if err != nil {
 			return repo, errors.Wrap(err, "list branches")
 		}
 		repo.DefaultBranch = branches[0]
-		_, err = gitRepo.SymbolicRef(context.TODO(), git.SymbolicRefOptions{Ref: git.RefsHeads + repo.DefaultBranch})
+		_, err = gitRepo.SymbolicRef(ctx, git.SymbolicRefOptions{Ref: git.RefsHeads + repo.DefaultBranch})
 		if err != nil {
 			return repo, errors.Wrap(err, "set HEAD branch")
 		}
 	}
 
 	if !repo.IsEmpty {
-		if err = repo.UpdateSize(); err != nil {
+		if err = repo.UpdateSize(ctx); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 		}
 	}
@@ -942,8 +946,7 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 
 // initRepoCommit commits the files to the default branch of the empty
 // repository at repoPath.
-func initRepoCommit(repoPath string, files map[string][]byte, author *git.Signature) error {
-	ctx := context.TODO()
+func initRepoCommit(ctx context.Context, repoPath string, files map[string][]byte, author *git.Signature) error {
 	return commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, nil, func(tmpRepo *git.Repository) error {
 		indexFiles := make([]git.IndexFile, 0, len(files))
 		for name, data := range files {
@@ -1044,9 +1047,9 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 }
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
-func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
+func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Init bare new repository.
-	if err = git.Init(context.TODO(), repoPath, git.InitOptions{Bare: true}); err != nil {
+	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(repoPath); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)
@@ -1054,7 +1057,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 
 	// Set default branch
 	_, err = git.RepoSymbolicRef(
-		context.TODO(),
+		ctx,
 		repoPath,
 		git.SymbolicRefOptions{
 			Name: "HEAD",
@@ -1073,6 +1076,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		}
 
 		err = initRepoCommit(
+			ctx,
 			repoPath,
 			files,
 			&git.Signature{
@@ -1204,7 +1208,11 @@ func (err ErrReachLimitOfRepo) Error() string {
 }
 
 // CreateRepository creates a repository for given user or organization.
-func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
+func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	repoPath := RepoPath(owner.Name, opts.Name)
 	if osx.Exist(repoPath) {
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
@@ -1238,12 +1246,12 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 
 	// No need for init mirror.
 	if !opts.IsMirror {
-		if err = initRepository(sess, repoPath, doer, repo, opts); err != nil {
+		if err = initRepository(ctx, sess, repoPath, doer, repo, opts); err != nil {
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, errors.Newf("initRepository: %v", err)
 		}
 
-		if err = git.UpdateServerInfo(context.TODO(), repoPath); err != nil {
+		if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
 			return nil, errors.Newf("CreateRepository 'git update-server-info': %v", err)
 		}
 	}
@@ -1252,7 +1260,7 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 	}
 
 	// Remember visibility preference
-	err = Handle.Users().Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
+	err = Handle.Users().Update(ctx, owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
 	if err != nil {
 		return nil, errors.Wrap(err, "update user")
 	}
@@ -2513,7 +2521,11 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 }
 
 // ForkRepository creates a fork of target repository under another user domain.
-func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	if !owner.canCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
@@ -2546,14 +2558,14 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	repoPath := repo.repoPath(sess)
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
 
-	cloneCtx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
+	cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
 		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
 	}
 
-	if err = git.UpdateServerInfo(context.TODO(), repoPath); err != nil {
+	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
 		return nil, errors.Newf("git update-server-info: %v", err)
 	}
 
@@ -2566,12 +2578,12 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	// Remember visibility preference
-	err = Handle.Users().Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
+	err = Handle.Users().Update(ctx, owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
 	if err != nil {
 		return nil, errors.Wrap(err, "update user")
 	}
 
-	if err = repo.UpdateSize(); err != nil {
+	if err = repo.UpdateSize(ctx); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 	}
 	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{

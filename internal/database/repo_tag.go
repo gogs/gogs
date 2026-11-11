@@ -16,12 +16,12 @@ type Tag struct {
 	Commit      *git.Commit
 }
 
-func (ta *Tag) GetCommit() (*git.Commit, error) {
-	return git.RepoTagCommit(context.TODO(), ta.RepoPath, ta.Name)
+func (ta *Tag) GetCommit(ctx context.Context) (*git.Commit, error) {
+	return git.RepoTagCommit(ctx, ta.RepoPath, ta.Name)
 }
 
-func GetTagsByPath(path string) ([]*Tag, error) {
-	names, err := git.RepoTags(context.TODO(), path)
+func GetTagsByPath(ctx context.Context, path string) ([]*Tag, error) {
+	names, err := git.RepoTags(ctx, path)
 	if err != nil {
 		return nil, errors.Newf("list tags: %v", err)
 	}
@@ -36,6 +36,6 @@ func GetTagsByPath(path string) ([]*Tag, error) {
 	return tags, nil
 }
 
-func (r *Repository) GetTags() ([]*Tag, error) {
-	return GetTagsByPath(r.RepoPath())
+func (r *Repository) GetTags(ctx context.Context) ([]*Tag, error) {
+	return GetTagsByPath(ctx, r.RepoPath())
 }

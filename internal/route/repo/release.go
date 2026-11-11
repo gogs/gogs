@@ -219,7 +219,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		IsPrerelease: f.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = database.NewRelease(c.Repo.GitRepo, rel, attachments); err != nil {
+	if err = database.NewRelease(c.Req.Context(), c.Repo.GitRepo, rel, attachments); err != nil {
 		c.Data["Err_TagName"] = true
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
@@ -295,7 +295,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	rel.Note = f.Content
 	rel.IsDraft = len(f.Draft) > 0
 	rel.IsPrerelease = f.Prerelease
-	if err = database.UpdateRelease(c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
+	if err = database.UpdateRelease(c.Req.Context(), c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
 		c.Error(err, "update release")
 		return
 	}
@@ -311,7 +311,7 @@ func UploadReleaseAttachment(c *context.Context) {
 }
 
 func DeleteRelease(c *context.Context) {
-	if err := database.DeleteReleaseOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
+	if err := database.DeleteReleaseOfRepoByID(c.Req.Context(), c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteReleaseByID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.release.deletion_success"))

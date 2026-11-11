@@ -135,6 +135,10 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 // the parent as it was, it pushes the parent as is. The committer may be nil to
 // use the one from Git configuration.
 func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) error {
+	// Stopping midway, e.g., when the client disconnects, would leave a partial
+	// change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	tmpRepo, cleanup, err := newTemporaryRepository(ctx, repoPath)
 	if err != nil {
 		return errors.Wrap(err, "create temporary repository")
@@ -277,7 +281,7 @@ type UpdateRepoFileOptions struct {
 }
 
 // UpdateRepoFile adds or updates a file in repository.
-func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) error {
+func (r *Repository) UpdateRepoFile(ctx context.Context, doer *User, opts UpdateRepoFileOptions) error {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.NewTreeName) {
 		return errors.Errorf("bad tree path %q", opts.NewTreeName)
@@ -286,7 +290,6 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	ctx := context.TODO()
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
 		if git.RepoHasBranch(ctx, r.RepoPath(), opts.NewBranch) {
@@ -338,13 +341,12 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (r *Repository) GetDiffPreview(branch, treePath, content string) (*git.Diff, error) {
+func (r *Repository) GetDiffPreview(ctx context.Context, branch, treePath, content string) (*git.Diff, error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
 
-	ctx := context.TODO()
 	commit, err := git.RepoBranchCommit(ctx, r.RepoPath(), branch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "get commit of branch %q", branch)
@@ -402,7 +404,7 @@ type DeleteRepoFileOptions struct {
 	Message      string
 }
 
-func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
+func (r *Repository) DeleteRepoFile(ctx context.Context, doer *User, opts DeleteRepoFileOptions) (err error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
@@ -411,7 +413,6 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	ctx := context.TODO()
 	return r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
 		if err := checkNoSymlinkInPaths(ctx, parent, opts.TreePath); err != nil {
 			return err
@@ -600,7 +601,7 @@ func isDotGit(component string) bool {
 	return strings.TrimRight(rest, ". ") == ""
 }
 
-func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
+func (r *Repository) UploadRepoFiles(ctx context.Context, doer *User, opts UploadRepoFileOptions) error {
 	if len(opts.Files) == 0 {
 		return nil
 	}
@@ -618,7 +619,6 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	ctx := context.TODO()
 	err = r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
 		var files []git.IndexFile
 		for _, upload := range uploads {

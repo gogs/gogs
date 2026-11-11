@@ -24,7 +24,7 @@ type Branch struct {
 }
 
 func loadBranches(c *context.Context) []*Branch {
-	rawBranches, err := c.Repo.Repository.GetBranches()
+	rawBranches, err := c.Repo.Repository.GetBranches(c.Req.Context())
 	if err != nil {
 		c.Error(err, "get branches")
 		return nil
@@ -38,7 +38,7 @@ func loadBranches(c *context.Context) []*Branch {
 
 	branches := make([]*Branch, len(rawBranches))
 	for i := range rawBranches {
-		commit, err := rawBranches[i].GetCommit()
+		commit, err := rawBranches[i].GetCommit(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get commit")
 			return nil

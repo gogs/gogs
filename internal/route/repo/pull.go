@@ -131,7 +131,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err = database.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
+	repo, err = database.ForkRepository(c.Req.Context(), c.User, ctxUser, baseRepo, f.RepoName, f.Description)
 	if err != nil {
 		c.Data["Err_RepoName"] = true
 		switch {
@@ -425,7 +425,7 @@ func MergePullRequest(c *context.Context) {
 
 	pr.Issue = issue
 	pr.Issue.Repo = c.Repo.Repository
-	if err = pr.Merge(c.User, c.Repo.GitRepo, database.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
+	if err = pr.Merge(c.Req.Context(), c.User, c.Repo.GitRepo, database.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
 		c.Error(err, "merge")
 		return
 	}
@@ -753,10 +753,10 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 	}
 	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
 	// instead of 500.
-	if err := database.NewPullRequest(repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
+	if err := database.NewPullRequest(c.Req.Context(), repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
 		c.Error(err, "new pull request")
 		return
-	} else if err := pullRequest.PushToBaseRepo(); err != nil {
+	} else if err := pullRequest.PushToBaseRepo(c.Req.Context()); err != nil {
 		c.Error(err, "push to base repository")
 		return
 	}

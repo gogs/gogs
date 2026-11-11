@@ -327,7 +327,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	if err := m.Repo.UpdateSize(); err != nil {
+	if err := m.Repo.UpdateSize(context.Background()); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", m.Repo.ID, err)
 	}
 

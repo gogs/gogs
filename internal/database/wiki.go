@@ -20,8 +20,8 @@ var wikiWorkingPool = sync.NewExclusivePool()
 
 // WikiBranch returns the branch name used by the wiki repository. It checks if
 // "main" branch exists, otherwise falls back to "master".
-func WikiBranch(repoPath string) string {
-	if git.RepoHasBranch(context.TODO(), repoPath, "main") {
+func WikiBranch(ctx context.Context, repoPath string) string {
+	if git.RepoHasBranch(ctx, repoPath, "main") {
 		return "main"
 	}
 	return "master"
@@ -64,12 +64,16 @@ func (r *Repository) HasWiki() bool {
 
 // InitWiki initializes a wiki for repository,
 // it does nothing when repository already has wiki.
-func (r *Repository) InitWiki() error {
+func (r *Repository) InitWiki(ctx context.Context) error {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	if r.HasWiki() {
 		return nil
 	}
 
-	if err := git.Init(context.TODO(), r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
+	if err := git.Init(ctx, r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)
@@ -86,7 +90,7 @@ func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error
 		return "", nil, errors.Wrap(err, "open wiki repository")
 	}
 
-	branch := WikiBranch(wikiPath)
+	branch := WikiBranch(ctx, wikiPath)
 	if wikiRepo.HasBranch(ctx, branch) {
 		parent, err := wikiRepo.BranchCommit(ctx, branch)
 		if err != nil {
@@ -105,15 +109,14 @@ func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error
 }
 
 // updateWikiPage adds new page to repository wiki.
-func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) error {
+func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, title, content, message string, isNew bool) error {
 	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	if err := r.InitWiki(); err != nil {
+	if err := r.InitWiki(ctx); err != nil {
 		return errors.Newf("InitWiki: %v", err)
 	}
 
-	ctx := context.TODO()
 	branch, parent, err := r.wikiParent(ctx)
 	if err != nil {
 		return err
@@ -152,19 +155,18 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	})
 }
 
-func (r *Repository) AddWikiPage(doer *User, title, content, message string) error {
-	return r.updateWikiPage(doer, "", title, content, message, true)
+func (r *Repository) AddWikiPage(ctx context.Context, doer *User, title, content, message string) error {
+	return r.updateWikiPage(ctx, doer, "", title, content, message, true)
 }
 
-func (r *Repository) EditWikiPage(doer *User, oldTitle, title, content, message string) error {
-	return r.updateWikiPage(doer, oldTitle, title, content, message, false)
+func (r *Repository) EditWikiPage(ctx context.Context, doer *User, oldTitle, title, content, message string) error {
+	return r.updateWikiPage(ctx, doer, oldTitle, title, content, message, false)
 }
 
-func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
+func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title string) (err error) {
 	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	ctx := context.TODO()
 	branch, parent, err := r.wikiParent(ctx)
 	if err != nil {
 		return err

@@ -190,6 +190,7 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	treePath := pathx.Clean(c.Params("*"))
 
 	err = c.Repo.Repository.UpdateRepoFile(
+		c.Req.Context(),
 		c.User,
 		database.UpdateRepoFileOptions{
 			OldBranch:   c.Repo.Repository.DefaultBranch,

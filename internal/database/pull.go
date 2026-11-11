@@ -189,8 +189,10 @@ const (
 
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
-func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
-	ctx := context.TODO()
+func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
 
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
@@ -358,7 +360,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 
 // testPatch checks if patch can be merged to base repository without conflict.
 // FIXME: make a mechanism to clean up stable local copies.
-func (pr *PullRequest) testPatch() (err error) {
+func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
 		if err != nil {
@@ -379,7 +381,6 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
-	ctx := context.TODO()
 	baseCommitID, err := git.RepoBranchCommitID(ctx, pr.BaseRepo.RepoPath(), pr.BaseBranch)
 	if err != nil {
 		return errors.Newf("get base branch %q commit ID: %v", pr.BaseBranch, err)
@@ -407,7 +408,11 @@ func (pr *PullRequest) testPatch() (err error) {
 }
 
 // NewPullRequest creates new pull request with labels for repository.
-func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
+func NewPullRequest(ctx context.Context, repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a partial
+	// change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -430,7 +435,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	}
 
 	pr.BaseRepo = repo
-	if err = pr.testPatch(); err != nil {
+	if err = pr.testPatch(ctx); err != nil {
 		return errors.Newf("testPatch: %v", err)
 	}
 	// No conflict appears after test means mergeable.
@@ -583,7 +588,11 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 }
 
 // UpdatePatch generates and saves a new patch.
-func (pr *PullRequest) UpdatePatch() (err error) {
+func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	headGitRepo, err := git.Open(pr.HeadRepo.RepoPath())
 	if err != nil {
 		return errors.Newf("open repository: %v", err)
@@ -592,25 +601,25 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	// Add a temporary remote.
 	tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
 	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
-	err = headGitRepo.RemoteAdd(context.TODO(), tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
+	err = headGitRepo.RemoteAdd(ctx, tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
 	if err != nil {
 		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 	defer func() {
-		if err := headGitRepo.RemoteRemove(context.TODO(), tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
 
 	remoteBranch := "remotes/" + tmpRemote + "/" + pr.BaseBranch
-	pr.MergeBase, err = headGitRepo.MergeBase(context.TODO(), remoteBranch, pr.HeadBranch)
+	pr.MergeBase, err = headGitRepo.MergeBase(ctx, remoteBranch, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get merge base: %v", err)
 	} else if err = pr.Update(); err != nil {
 		return errors.Newf("update: %v", err)
 	}
 
-	patch, err := headGitRepo.DiffBinary(context.TODO(), pr.MergeBase, pr.HeadBranch)
+	patch, err := headGitRepo.DiffBinary(ctx, pr.MergeBase, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get binary patch: %v", err)
 	}
@@ -626,7 +635,11 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 // PushToBaseRepo pushes commits from branches of head repository to
 // corresponding branches of base repository.
 // FIXME: Only push branches that are actually updates?
-func (pr *PullRequest) PushToBaseRepo() (err error) {
+func (pr *PullRequest) PushToBaseRepo(ctx context.Context) (err error) {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	log.Trace("PushToBaseRepo[%d]: pushing commits to base repo 'refs/pull/%d/head'", pr.BaseRepoID, pr.Index)
 
 	headRepoPath := pr.HeadRepo.RepoPath()
@@ -636,13 +649,13 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 	}
 
 	tmpRemote := fmt.Sprintf("tmp-pull-%d", pr.ID)
-	if err = headGitRepo.RemoteAdd(context.TODO(), tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
+	if err = headGitRepo.RemoteAdd(ctx, tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
 		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 
 	// Make sure to remove the remote even if the push fails
 	defer func() {
-		if err := headGitRepo.RemoteRemove(context.TODO(), tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
@@ -656,7 +669,7 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 		}
 	}
 
-	err = headGitRepo.Push(context.TODO(), tmpRemote, fmt.Sprintf("%s:%s", pr.HeadBranch, headRefspec))
+	err = headGitRepo.Push(ctx, tmpRemote, fmt.Sprintf("%s:%s", pr.HeadBranch, headRefspec))
 	if err != nil {
 		return errors.Newf("push: %v", err)
 	}
@@ -723,10 +736,10 @@ func addHeadRepoTasks(prs []*PullRequest) {
 		}
 
 		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
-		if err := pr.UpdatePatch(); err != nil {
+		if err := pr.UpdatePatch(context.Background()); err != nil {
 			log.Error("UpdatePatch: %v", err)
 			continue
-		} else if err := pr.PushToBaseRepo(); err != nil {
+		} else if err := pr.PushToBaseRepo(context.Background()); err != nil {
 			log.Error("PushToBaseRepo: %v", err)
 			continue
 		}
@@ -815,7 +828,7 @@ func TestPullRequests() {
 				return nil
 			}
 
-			if err := pr.testPatch(); err != nil {
+			if err := pr.testPatch(context.Background()); err != nil {
 				log.Error("testPatch: %v", err)
 				return nil
 			}
@@ -838,7 +851,7 @@ func TestPullRequests() {
 		if err != nil {
 			log.Error("GetPullRequestByID[%s]: %v", prID, err)
 			continue
-		} else if err = pr.testPatch(); err != nil {
+		} else if err = pr.testPatch(context.Background()); err != nil {
 			log.Error("testPatch[%d]: %v", pr.ID, err)
 			continue
 		}

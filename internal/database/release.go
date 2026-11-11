@@ -113,31 +113,35 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 	return x.Get(&Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)})
 }
 
-func createTag(gitRepo *git.Repository, r *Release) error {
+func createTag(ctx context.Context, gitRepo *git.Repository, r *Release) error {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	// Only actual create when publish.
 	if !r.IsDraft {
-		if !gitRepo.HasTag(context.TODO(), r.TagName) {
-			commit, err := gitRepo.BranchCommit(context.TODO(), r.Target)
+		if !gitRepo.HasTag(ctx, r.TagName) {
+			commit, err := gitRepo.BranchCommit(ctx, r.Target)
 			if err != nil {
 				return errors.Newf("get branch commit: %v", err)
 			}
 
 			// 🚨 SECURITY: Trim any leading '-' to prevent command line argument injection.
 			r.TagName = strings.TrimLeft(r.TagName, "-")
-			if err = gitRepo.CreateTag(context.TODO(), r.TagName, commit.ID.String()); err != nil {
+			if err = gitRepo.CreateTag(ctx, r.TagName, commit.ID.String()); err != nil {
 				if strings.Contains(err.Error(), "is not a valid tag name") {
 					return ErrInvalidTagName{r.TagName}
 				}
 				return err
 			}
 		} else {
-			commit, err := gitRepo.TagCommit(context.TODO(), r.TagName)
+			commit, err := gitRepo.TagCommit(ctx, r.TagName)
 			if err != nil {
 				return errors.Newf("get tag commit: %v", err)
 			}
 
 			r.Sha1 = commit.ID.String()
-			r.NumCommits, err = commit.CommitsCount(context.TODO())
+			r.NumCommits, err = commit.CommitsCount(ctx)
 			if err != nil {
 				return errors.Newf("count commits: %v", err)
 			}
@@ -158,7 +162,7 @@ func (r *Release) preparePublishWebhooks() {
 }
 
 // NewRelease creates a new release with attachments for repository.
-func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
+func NewRelease(ctx context.Context, gitRepo *git.Repository, r *Release, uuids []string) error {
 	isExist, err := IsReleaseExist(r.RepoID, r.TagName)
 	if err != nil {
 		return err
@@ -166,7 +170,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 		return ErrReleaseAlreadyExist{r.TagName}
 	}
 
-	if err = createTag(gitRepo, r); err != nil {
+	if err = createTag(ctx, gitRepo, r); err != nil {
 		return err
 	}
 	r.LowerTagName = strings.ToLower(r.TagName)
@@ -303,8 +307,8 @@ func SortReleases(rels []*Release) {
 }
 
 // UpdateRelease updates information of a release.
-func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) (err error) {
-	if err = createTag(gitRepo, r); err != nil {
+func UpdateRelease(ctx context.Context, doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) (err error) {
+	if err = createTag(ctx, gitRepo, r); err != nil {
 		return errors.Newf("createTag: %v", err)
 	}
 
@@ -343,7 +347,11 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 }
 
 // DeleteReleaseOfRepoByID deletes a release and corresponding Git tag by given ID.
-func DeleteReleaseOfRepoByID(repoID, id int64) error {
+func DeleteReleaseOfRepoByID(ctx context.Context, repoID, id int64) error {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind.
+	ctx = context.WithoutCancel(ctx)
+
 	rel, err := GetReleaseByID(id)
 	if err != nil {
 		return errors.Newf("GetReleaseByID: %v", err)
@@ -359,7 +367,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return errors.Newf("GetRepositoryByID: %v", err)
 	}
 
-	err = git.RepoDeleteTag(context.TODO(), repo.RepoPath(), rel.TagName)
+	err = git.RepoDeleteTag(ctx, repo.RepoPath(), rel.TagName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return errors.Newf("delete tag: %v", err)
 	}
