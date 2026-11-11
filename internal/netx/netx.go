@@ -30,9 +30,10 @@ func init() {
 		"10.0.0.0/8", // Private-use networks
 
 		// https://datatracker.ietf.org/doc/html/rfc6890:
+		"::/128",    // Unspecified address, connecting to it reaches the local host
 		"::1/128",   // Loopback
 		"FC00::/7",  // Unique local address
-		"FE80::/10", // Multicast address
+		"FE80::/10", // Link-local unicast
 	}
 	for _, raw := range rawCIDRs {
 		_, cidr, err := net.ParseCIDR(raw)
