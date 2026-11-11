@@ -47,12 +47,23 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 			defer func() {
 				_ = ch.Close()
 			}()
+			// The Git protocol the client asks for, e.g., "version=2".
+			var gitProtocol string
 			for req := range in {
 				payload := cleanCommand(string(req.Payload))
 				switch req.Type {
 				case "env":
-					// We only need to accept the request and do nothing since whatever environment
-					// variables being set here won't be used in subsequent commands anyway.
+					var env struct{ Name, Value string }
+					if err := ssh.Unmarshal(req.Payload, &env); err != nil {
+						log.Error("SSH: Unmarshal env: %v", err)
+						_ = req.Reply(false, nil)
+						continue
+					}
+					// Other environment variables are not passed on to Git.
+					if env.Name == "GIT_PROTOCOL" {
+						gitProtocol = env.Value
+					}
+					_ = req.Reply(env.Name == "GIT_PROTOCOL", nil)
 
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
@@ -62,6 +73,9 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					log.Trace("SSH: Arguments: %v", args)
 					cmd := exec.Command(conf.AppPath(), args...)
 					cmd.Env = append(os.Environ(), "SSH_ORIGINAL_COMMAND="+cmdName)
+					if gitProtocol != "" {
+						cmd.Env = append(cmd.Env, "GIT_PROTOCOL="+gitProtocol)
+					}
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
