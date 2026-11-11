@@ -1,6 +1,8 @@
 package database
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -9,6 +11,37 @@ import (
 
 	"gogs.io/gogs/internal/errx"
 )
+
+func TestLoadLoginSourceFiles_SAML(t *testing.T) {
+	dir := t.TempDir()
+	config := `id           = 106
+type         = saml
+name         = Company SSO
+is_activated = true
+
+[config]
+idp_metadata_url             = https://idp.example.com/metadata
+service_provider_issuer      = https://gogs.example.com/saml
+service_provider_certificate = /etc/gogs/saml.crt
+service_provider_private_key = /etc/gogs/saml.key
+login_attribute              = subject-id
+username_attribute           = uid
+email_attribute              = mail
+full_name_attribute          = cn
+skip_verify                  = true
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "saml.conf"), []byte(config), 0o600))
+
+	store, err := loadLoginSourceFiles(dir, time.Now)
+	require.NoError(t, err)
+	source, err := store.GetByID(106)
+	require.NoError(t, err)
+	assert.True(t, source.IsSAML())
+	assert.Equal(t, "https://idp.example.com/metadata", source.SAML().IDPMetadataURL)
+	assert.Equal(t, "https://gogs.example.com/saml", source.SAML().ServiceProviderIssuer)
+	assert.Equal(t, "subject-id", source.SAML().LoginAttribute)
+	assert.True(t, source.SAML().SkipVerify)
+}
 
 func TestLoginSourceFiles_GetByID(t *testing.T) {
 	store := &loginSourceFiles{

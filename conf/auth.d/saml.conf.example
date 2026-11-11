@@ -1,0 +1,18 @@
+# This is an example of SAML 2.0 authentication.
+#
+id           = 106
+type         = saml
+name         = Company SSO
+is_activated = true
+is_default   = false
+
+[config]
+idp_metadata_url             = https://idp.example.com/metadata
+service_provider_issuer      =
+service_provider_certificate = /etc/gogs/saml.crt
+service_provider_private_key = /etc/gogs/saml.key
+login_attribute              = uid
+username_attribute           = uid
+email_attribute              = mail
+full_name_attribute          = cn
+skip_verify                  = false
