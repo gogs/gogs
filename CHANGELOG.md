@@ -12,6 +12,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Security:_ A username containing HTML, which could come from an external login source such as LDAP, was rendered as markup on issue pages and the dashboard issue list. [#TBD](https://github.com/gogs/gogs/pull/TBD) - [GHSA-vhf5-f34f-vhq9](https://github.com/gogs/gogs/security/advisories/GHSA-vhf5-f34f-vhq9)
 - _Security:_ Webhooks, repository migrations, and mirrors could reach services on the Gogs host through the IPv6 address `[::]`, bypassing the local network restriction. [#8481](https://github.com/gogs/gogs/pull/8481) - [GHSA-799r-mx22-r63q](https://github.com/gogs/gogs/security/advisories/GHSA-799r-mx22-r63q)
 - _Security:_ Any signed-in user who knew the UUID of an attachment in another repository, including a private one, could move it to their own issue, comment, or release to download it, in some cases removing it from the original. [#8480](https://github.com/gogs/gogs/pull/8480) - [GHSA-p92p-7887-3g33](https://github.com/gogs/gogs/security/advisories/GHSA-p92p-7887-3g33)
 - _Security:_ A password reset link could be used to sign in as the user without their password or two-factor authentication. Activation, email confirmation, and password reset links sent before upgrading no longer work. [#8472](https://github.com/gogs/gogs/pull/8472) - [GHSA-pmfh-wh5m-gmjm](https://github.com/gogs/gogs/security/advisories/GHSA-pmfh-wh5m-gmjm)
