@@ -977,7 +977,24 @@ type CreateRepoOptionsLegacy struct {
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
-	relPath := path.Join(tp, strings.TrimLeft(path.Clean("/"+name), "/"))
+	var names []string
+	switch tp {
+	case "gitignore":
+		names = Gitignores
+	case "license":
+		names = Licenses
+	case "readme":
+		names = Readmes
+	case "label":
+		names = LabelTemplates
+	}
+	// 🚨 SECURITY: Only accept names of known templates, so that the name can
+	// never resolve to a file outside of the template directory.
+	if !strx.ContainsFold(names, name) {
+		return nil, errors.Newf("unknown %s template %q", tp, name)
+	}
+
+	relPath := path.Join(tp, name)
 
 	// Use custom file when available.
 	customPath := filepath.Join(conf.CustomDir(), "conf", relPath)
