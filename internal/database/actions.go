@@ -346,6 +346,12 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 				return err
 			}
 
+			// 🚨 SECURITY: Only reference issues of repositories the pusher can read,
+			// otherwise anyone could post comments into private repositories.
+			if issue.RepoID != repo.ID && !issue.Repo.HasAccess(doer.ID) {
+				continue
+			}
+
 			if refMarked[issue.ID] {
 				continue
 			}
