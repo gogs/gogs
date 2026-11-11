@@ -1,8 +1,5 @@
 packages:
   - "web"
 
-minimumReleaseAgeExclude:
-  - '@pierre/trees@1.0.0'
-
 onlyBuiltDependencies:
   - esbuild
