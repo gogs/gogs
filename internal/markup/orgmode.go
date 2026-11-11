@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/niklasfasching/go-org/org"
 )
 
@@ -23,7 +24,13 @@ func IsOrgModeFile(name string) bool {
 
 // RawOrgMode renders content in Org-mode syntax to HTML without handling special links.
 func RawOrgMode(body []byte, urlPrefix string) (result []byte) {
-	html, err := org.New().Silent().Parse(bytes.NewReader(body), urlPrefix).Write(org.NewHTMLWriter())
+	config := org.New().Silent()
+	// 🚨 SECURITY: Never read files from the server, which "#+INCLUDE" and
+	// "#+SETUPFILE" would otherwise do for any path given in the content.
+	config.ReadFile = func(string) ([]byte, error) {
+		return nil, errors.New("reading files is not supported")
+	}
+	html, err := config.Parse(bytes.NewReader(body), urlPrefix).Write(org.NewHTMLWriter())
 	if err != nil {
 		return []byte(err.Error())
 	}
