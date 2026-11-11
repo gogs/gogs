@@ -57,7 +57,7 @@ require (
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.25.12
 	unknwon.dev/clog/v2 v2.2.0
-	unknwon.dev/ini/v2 v2.0.0-beta.2
+	unknwon.dev/ini/v2 v2.0.0-beta.3
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
