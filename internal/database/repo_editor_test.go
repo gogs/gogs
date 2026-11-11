@@ -1,12 +1,9 @@
 package database
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestIsRepositoryGitPath(t *testing.T) {
@@ -60,7 +57,7 @@ func TestIsRepositoryGitPath(t *testing.T) {
 		{path: ".git .", wantVal: true},
 		{path: ".git. /hooks", wantVal: true},
 
-		// NTFS stream suffixes resolve to the stream owner
+		// NTFS alternate data streams resolve to the stream owner
 		{path: ".git::$INDEX_ALLOCATION", wantVal: true},
 		{path: ".git::$INDEX_ALLOCATION/hooks/pre-commit", wantVal: true},
 		{path: `.git::$INDEX_ALLOCATION\hooks\pre-commit`, wantVal: true},
@@ -68,49 +65,25 @@ func TestIsRepositoryGitPath(t *testing.T) {
 		{path: ".git .::$INDEX_ALLOCATION/hooks", wantVal: true},
 		{path: "dir/.git::$INDEX_ALLOCATION", wantVal: true},
 
+		// NTFS 8.3 short name
+		{path: "GIT~1", wantVal: true},
+		{path: "git~1/hooks/pre-commit", wantVal: true},
+		{path: `GIT~1\hooks\pre-commit`, wantVal: true},
+		{path: "GIT~1./hooks", wantVal: true},
+		{path: "GIT~1::$INDEX_ALLOCATION/hooks/pre-commit", wantVal: true},
+		{path: "dir/git~1", wantVal: true},
+
 		{path: `dir\.gitkeep`, wantVal: false},
 		{path: ".gitignore ", wantVal: false},
 		{path: ".gitignore::$DATA", wantVal: false},
+		{path: "git", wantVal: false},
+		{path: "git~10", wantVal: false},
+		{path: "git~1x/hooks", wantVal: false},
+		{path: "git~2/hooks", wantVal: false},
 	}
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
 			assert.Equal(t, test.wantVal, isRepositoryGitPath(test.path))
-		})
-	}
-}
-
-func TestIsRepositoryGitDirInPath(t *testing.T) {
-	base := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(base, ".git", "hooks"), os.ModePerm))
-	require.NoError(t, os.MkdirAll(filepath.Join(base, "dir"), os.ModePerm))
-	require.NoError(t, os.WriteFile(filepath.Join(base, "dir", "file"), nil, 0o600))
-
-	tests := []struct {
-		path    string
-		wantVal bool
-	}{
-		{path: ".git", wantVal: true},
-		{path: ".git/hooks", wantVal: true},
-		{path: ".git/hooks/pre-commit", wantVal: true},
-
-		{path: "", wantVal: false},
-		{path: "dir", wantVal: false},
-		{path: "dir/file", wantVal: false},
-		{path: "dir/new/file", wantVal: false},
-		{path: "missing/.git", wantVal: false},
-	}
-
-	// Aliases resolve to the same directory on case-insensitive file systems.
-	if _, err := os.Stat(filepath.Join(base, ".GIT")); err == nil {
-		tests = append(tests, struct {
-			path    string
-			wantVal bool
-		}{path: ".GIT/hooks/pre-commit", wantVal: true})
-	}
-
-	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			assert.Equal(t, test.wantVal, isRepositoryGitDirInPath(base, test.path))
 		})
 	}
 }

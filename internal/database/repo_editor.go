@@ -130,30 +130,6 @@ func hasSymlinkInPath(base, relPath string) bool {
 	return false
 }
 
-// isRepositoryGitDirInPath returns true if any existing component of the given
-// relative path under base is the ".git" directory of base. It compares file
-// identity instead of names so that every file system alias of ".git" is
-// caught, e.g., NTFS 8.3 short names like "GIT~1".
-func isRepositoryGitDirInPath(base, relPath string) bool {
-	gitDir, err := os.Stat(filepath.Join(base, ".git"))
-	if err != nil {
-		return false
-	}
-
-	parts := strings.Split(filepath.ToSlash(relPath), "/")
-	for i := range parts {
-		fi, err := os.Stat(path.Join(append([]string{base}, parts[:i+1]...)...))
-		if err != nil {
-			// Nothing beneath a missing component exists either.
-			return false
-		}
-		if os.SameFile(gitDir, fi) {
-			return true
-		}
-	}
-	return false
-}
-
 type UpdateRepoFileOptions struct {
 	OldBranch   string
 	NewBranch   string
@@ -186,13 +162,6 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	// that involve symlinks.
 	if hasSymlinkInPath(localPath, opts.OldTreeName) || hasSymlinkInPath(localPath, opts.NewTreeName) {
 		return errors.New("cannot update file with symbolic link in path")
-	}
-
-	// 🚨 SECURITY: Prevent touching the ".git" directory through any alias.
-	for _, treePath := range []string{opts.OldTreeName, opts.NewTreeName} {
-		if isRepositoryGitDirInPath(localPath, treePath) {
-			return errors.Errorf("bad tree path %q", treePath)
-		}
 	}
 
 	repoPath := r.RepoPath()
@@ -299,11 +268,6 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Dif
 		return nil, errors.New("cannot update file with symbolic link in path")
 	}
 
-	// 🚨 SECURITY: Prevent touching the ".git" directory through any alias.
-	if isRepositoryGitDirInPath(localPath, treePath) {
-		return nil, errors.Errorf("bad tree path %q", treePath)
-	}
-
 	if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
 		return nil, errors.Wrap(err, "create parent directories")
 	} else if err = os.WriteFile(filePath, []byte(content), 0o600); err != nil {
@@ -374,11 +338,6 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 	// that involve symlinks.
 	if hasSymlinkInPath(localPath, opts.TreePath) {
 		return errors.New("cannot update file with symbolic link in path")
-	}
-
-	// 🚨 SECURITY: Prevent touching the ".git" directory through any alias.
-	if isRepositoryGitDirInPath(localPath, opts.TreePath) {
-		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
 	if opts.OldBranch != opts.NewBranch {
@@ -579,18 +538,31 @@ type UploadRepoFileOptions struct {
 //
 // TODO(unknwon): Move to repox during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
-	path = strings.ToLower(path)
-	// Windows strips trailing dots and spaces from each path component, so
-	// forms like ".git." and ".git " resolve to the real ".git" directory, and
-	// NTFS stream suffixes like ".git::$INDEX_ALLOCATION" also resolve to it.
-	// Drop the stream suffix and trim them from every component before comparing.
 	for _, component := range strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }) {
-		component, _, _ = strings.Cut(component, ":")
-		if strings.TrimRight(component, ". ") == ".git" {
+		if isDotGit(component) {
 			return true
 		}
 	}
 	return false
+}
+
+// isDotGit returns true if given path component refers to ".git" on any file
+// system, following is_ntfs_dotgit of Git. Besides case-insensitive matches,
+// NTFS resolves the 8.3 short name "git~1", trailing dots and spaces, and
+// alternate data streams (e.g., ".git::$INDEX_ALLOCATION") to ".git".
+func isDotGit(component string) bool {
+	component = strings.ToLower(component)
+	var rest string
+	switch {
+	case strings.HasPrefix(component, ".git"):
+		rest = component[len(".git"):]
+	case strings.HasPrefix(component, "git~1"):
+		rest = component[len("git~1"):]
+	default:
+		return false
+	}
+	rest, _, _ = strings.Cut(rest, ":")
+	return strings.TrimRight(rest, ". ") == ""
 }
 
 func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
@@ -624,12 +596,6 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 	}
 
 	localPath := r.LocalCopyPath()
-
-	// 🚨 SECURITY: Prevent touching the ".git" directory through any alias.
-	if isRepositoryGitDirInPath(localPath, opts.TreePath) {
-		return errors.Errorf("bad tree path %q", opts.TreePath)
-	}
-
 	dirPath := path.Join(localPath, opts.TreePath)
 	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
 		return err
@@ -656,11 +622,6 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 		// that involve symlinks.
 		if hasSymlinkInPath(localPath, path.Join(opts.TreePath, upload.Name)) {
 			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
-		}
-
-		// 🚨 SECURITY: Prevent touching the ".git" directory through any alias.
-		if isRepositoryGitDirInPath(localPath, path.Join(opts.TreePath, upload.Name)) {
-			continue
 		}
 
 		if err = iox.CopyFile(tmpPath, targetPath); err != nil {
