@@ -57,8 +57,29 @@ func TestIsRepositoryGitPath(t *testing.T) {
 		{path: ".git .", wantVal: true},
 		{path: ".git. /hooks", wantVal: true},
 
+		// NTFS alternate data streams resolve to the stream owner
+		{path: ".git::$INDEX_ALLOCATION", wantVal: true},
+		{path: ".git::$INDEX_ALLOCATION/hooks/pre-commit", wantVal: true},
+		{path: `.git::$INDEX_ALLOCATION\hooks\pre-commit`, wantVal: true},
+		{path: ".Git:$I30:$INDEX_ALLOCATION/hooks", wantVal: true},
+		{path: ".git .::$INDEX_ALLOCATION/hooks", wantVal: true},
+		{path: "dir/.git::$INDEX_ALLOCATION", wantVal: true},
+
+		// NTFS 8.3 short name
+		{path: "GIT~1", wantVal: true},
+		{path: "git~1/hooks/pre-commit", wantVal: true},
+		{path: `GIT~1\hooks\pre-commit`, wantVal: true},
+		{path: "GIT~1./hooks", wantVal: true},
+		{path: "GIT~1::$INDEX_ALLOCATION/hooks/pre-commit", wantVal: true},
+		{path: "dir/git~1", wantVal: true},
+
 		{path: `dir\.gitkeep`, wantVal: false},
 		{path: ".gitignore ", wantVal: false},
+		{path: ".gitignore::$DATA", wantVal: false},
+		{path: "git", wantVal: false},
+		{path: "git~10", wantVal: false},
+		{path: "git~1x/hooks", wantVal: false},
+		{path: "git~2/hooks", wantVal: false},
 	}
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
