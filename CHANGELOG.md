@@ -15,6 +15,7 @@ All notable changes to Gogs are documented in this file.
 
 - Viewing a diff that renames a file whose name contains special characters (e.g., a double quote) no longer crashes the server. [#8437](https://github.com/gogs/gogs/pull/8437)
 - Migrating an empty repository no longer fails. [#8440](https://github.com/gogs/gogs/pull/8440)
+- Previewing changes to a file in the web editor no longer fails when a tag has the same name as the file. [#8440](https://github.com/gogs/gogs/pull/8440)
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
