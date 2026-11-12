@@ -50,11 +50,9 @@ func TestRunService(t *testing.T) {
 		for _, service := range []Service{ServiceUploadPack, ServiceReceivePack} {
 			var stdout bytes.Buffer
 			err := RunService(ctx, service, repoPath,
-				ServiceOptions{
-					StatelessRPC:  true,
-					AdvertiseRefs: true,
-					Stdout:        &stdout,
-				},
+				ServiceStatelessRPC(),
+				ServiceAdvertiseRefs(),
+				ServiceStdout(&stdout),
 			)
 			require.NoError(t, err)
 			assert.Contains(t, stdout.String(), "refs/heads/master", string(service))
@@ -64,16 +62,14 @@ func TestRunService(t *testing.T) {
 	t.Run("environment variables", func(t *testing.T) {
 		var stdout bytes.Buffer
 		err := RunService(ctx, ServiceUploadPack, repoPath,
-			ServiceOptions{
-				StatelessRPC:  true,
-				AdvertiseRefs: true,
-				Stdout:        &stdout,
-				Envs: []string{
-					"GIT_CONFIG_COUNT=1",
-					"GIT_CONFIG_KEY_0=uploadpack.allowFilter",
-					"GIT_CONFIG_VALUE_0=true",
-				},
-			},
+			ServiceStatelessRPC(),
+			ServiceAdvertiseRefs(),
+			ServiceStdout(&stdout),
+			ServiceEnvs(
+				"GIT_CONFIG_COUNT=1",
+				"GIT_CONFIG_KEY_0=uploadpack.allowFilter",
+				"GIT_CONFIG_VALUE_0=true",
+			),
 		)
 		require.NoError(t, err)
 		assert.Contains(t, stdout.String(), " filter")
@@ -105,13 +101,11 @@ func TestRunService(t *testing.T) {
 
 				var stdout bytes.Buffer
 				err := RunService(ctx, ServiceUploadPack, repoPath,
-					ServiceOptions{
-						StatelessRPC:  true,
-						AdvertiseRefs: true,
-						Stdout:        &stdout,
-						Protocol:      test.protocol,
-						Envs:          test.envs,
-					},
+					ServiceStatelessRPC(),
+					ServiceAdvertiseRefs(),
+					ServiceStdout(&stdout),
+					ServiceProtocol(test.protocol),
+					ServiceEnvs(test.envs...),
 				)
 				require.NoError(t, err)
 				if test.want != "" {
@@ -127,11 +121,9 @@ func TestRunService(t *testing.T) {
 	t.Run("not a repository", func(t *testing.T) {
 		var stderr bytes.Buffer
 		err := RunService(ctx, ServiceUploadPack, filepath.Join(t.TempDir(), "404.git"),
-			ServiceOptions{
-				StatelessRPC:  true,
-				AdvertiseRefs: true,
-				Stderr:        &stderr,
-			},
+			ServiceStatelessRPC(),
+			ServiceAdvertiseRefs(),
+			ServiceStderr(&stderr),
 		)
 		require.Error(t, err)
 		assert.Contains(t, stderr.String(), "does not appear to be a git repository")
@@ -148,10 +140,7 @@ func TestRunService_IdleTimeout(t *testing.T) {
 	defer func() { _ = w.Close() }()
 
 	start := time.Now()
-	err := RunService(context.Background(), ServiceUploadPack, repoPath, ServiceOptions{
-		Stdin:  stdin,
-		Stdout: io.Discard,
-	})
+	err := RunService(context.Background(), ServiceUploadPack, repoPath, ServiceStdin(stdin), ServiceStdout(io.Discard))
 	assert.Equal(t, ErrExecTimeout, err)
 	assert.Less(t, time.Since(start), 5*time.Second)
 }

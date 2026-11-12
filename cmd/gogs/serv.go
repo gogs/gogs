@@ -264,13 +264,13 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 			RepoPath:  repo.RepoPath(),
 		})
 	}
-	err = git.RunService(ctx, git.Service(strings.TrimPrefix(verb, "git-")), filepath.Join(conf.Repository.Root, repoFullName), git.ServiceOptions{
-		Stdin:    os.Stdin,
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
-		Protocol: os.Getenv("GIT_PROTOCOL"),
-		Envs:     envs,
-	})
+	err = git.RunService(ctx, git.Service(strings.TrimPrefix(verb, "git-")), filepath.Join(conf.Repository.Root, repoFullName),
+		git.ServiceStdin(os.Stdin),
+		git.ServiceStdout(os.Stdout),
+		git.ServiceStderr(os.Stderr),
+		git.ServiceProtocol(os.Getenv("GIT_PROTOCOL")),
+		git.ServiceEnvs(envs...),
+	)
 	if err != nil {
 		fail("Internal error", "Failed to execute git command: %v", err)
 	}

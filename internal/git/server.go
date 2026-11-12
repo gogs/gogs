@@ -31,10 +31,7 @@ const (
 	ServiceReceivePack   Service = "receive-pack"
 )
 
-// ServiceOptions contains optional arguments for running a service.
-//
-// Docs: https://git-scm.com/docs/git-upload-pack
-type ServiceOptions struct {
+type serviceOptions struct {
 	// Indicates whether to quit after a single request/response exchange, as the
 	// smart HTTP protocol requires.
 	StatelessRPC bool
@@ -68,6 +65,50 @@ func protocolEnv(protocol string) string {
 	return "GIT_PROTOCOL=" + protocol
 }
 
+// ServiceOption sets an optional argument for running a service.
+//
+// Docs: https://git-scm.com/docs/git-upload-pack
+type ServiceOption func(*serviceOptions)
+
+// ServiceStatelessRPC quits after a single request/response exchange, as the
+// smart HTTP protocol requires.
+func ServiceStatelessRPC() ServiceOption {
+	return func(opt *serviceOptions) { opt.StatelessRPC = true }
+}
+
+// ServiceAdvertiseRefs only advertises references and exits, as the
+// "info/refs" endpoint of the smart HTTP protocol requires.
+func ServiceAdvertiseRefs() ServiceOption {
+	return func(opt *serviceOptions) { opt.AdvertiseRefs = true }
+}
+
+// ServiceStdin sets the stream to read input from the client.
+func ServiceStdin(r io.Reader) ServiceOption {
+	return func(opt *serviceOptions) { opt.Stdin = r }
+}
+
+// ServiceStdout sets the stream to write output to the client.
+func ServiceStdout(w io.Writer) ServiceOption {
+	return func(opt *serviceOptions) { opt.Stdout = w }
+}
+
+// ServiceStderr sets the stream to write error output to the client.
+func ServiceStderr(w io.Writer) ServiceOption {
+	return func(opt *serviceOptions) { opt.Stderr = w }
+}
+
+// ServiceProtocol sets the protocol the client asks for, e.g., "version=2".
+// Anything other than a protocol version Git supports makes the service use
+// protocol v0.
+func ServiceProtocol(protocol string) ServiceOption {
+	return func(opt *serviceOptions) { opt.Protocol = protocol }
+}
+
+// ServiceEnvs adds environment variables to run the command with.
+func ServiceEnvs(envs ...string) ServiceOption {
+	return func(opt *serviceOptions) { opt.Envs = append(opt.Envs, envs...) }
+}
+
 // serviceIdleTimeout is how long a service may go without reading from or
 // writing to the client before it is killed. Git sends keepalive packets while
 // it prepares or processes a pack, so a transfer that makes progress never stays
@@ -78,13 +119,13 @@ var serviceIdleTimeout = 30 * time.Minute
 // RunService runs the service for the repository in given path, e.g., "git
 // upload-pack <path>". Instead of a fixed timeout, which would cut off a large
 // transfer, the service is killed once it has been idle for too long.
-func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) error {
+func RunService(ctx context.Context, service Service, path string, opts ...ServiceOption) error {
 	ctx, span := tracer.Start(ctx, "git.RunService")
 	defer span.End()
 
-	var opt ServiceOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt serviceOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{string(service)}

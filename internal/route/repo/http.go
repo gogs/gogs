@@ -298,14 +298,14 @@ func serviceRPC(h serviceHandler, service string) {
 		ctx = gocontext.WithoutCancel(ctx)
 	}
 	var stderr bytes.Buffer
-	err = git.RunService(ctx, git.Service(service), h.dir, git.ServiceOptions{
-		StatelessRPC: true,
-		Stdin:        reqBody,
-		Stdout:       h.w,
-		Stderr:       &stderr,
-		Protocol:     h.r.Header.Get("Git-Protocol"),
-		Envs:         envs,
-	})
+	err = git.RunService(ctx, git.Service(service), h.dir,
+		git.ServiceStatelessRPC(),
+		git.ServiceStdin(reqBody),
+		git.ServiceStdout(h.w),
+		git.ServiceStderr(&stderr),
+		git.ServiceProtocol(h.r.Header.Get("Git-Protocol")),
+		git.ServiceEnvs(envs...),
+	)
 	if err != nil {
 		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
@@ -349,13 +349,13 @@ func getInfoRefs(h serviceHandler) {
 	}
 
 	var refs, stderr bytes.Buffer
-	err := git.RunService(h.r.Context(), git.Service(service), h.dir, git.ServiceOptions{
-		StatelessRPC:  true,
-		AdvertiseRefs: true,
-		Stdout:        &refs,
-		Stderr:        &stderr,
-		Protocol:      h.r.Header.Get("Git-Protocol"),
-	})
+	err := git.RunService(h.r.Context(), git.Service(service), h.dir,
+		git.ServiceStatelessRPC(),
+		git.ServiceAdvertiseRefs(),
+		git.ServiceStdout(&refs),
+		git.ServiceStderr(&stderr),
+		git.ServiceProtocol(h.r.Header.Get("Git-Protocol")),
+	)
 	if err != nil {
 		log.Error("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
 	}
