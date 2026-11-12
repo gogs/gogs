@@ -62,8 +62,7 @@ type ServiceOptions struct {
 }
 
 // RunService runs the service for the repository in given path, e.g., "git
-// upload-pack <path>". Unlike other commands, no default timeout is applied
-// because a transfer can take arbitrarily long.
+// upload-pack <path>".
 func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) error {
 	var opt ServiceOptions
 	if len(opts) > 0 {
