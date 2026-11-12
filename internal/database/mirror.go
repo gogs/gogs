@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
@@ -55,28 +55,31 @@ type Mirror struct {
 	address string `xorm:"-"`
 }
 
-func (m *Mirror) BeforeInsert() {
-	m.NextSyncUnix = m.NextSync.Unix()
+// BeforeCreate implements the GORM create hook.
+func (m *Mirror) BeforeCreate(_ *gorm.DB) error {
+	if m.NextSyncUnix == 0 {
+		m.NextSyncUnix = m.NextSync.Unix()
+	}
+	return nil
 }
 
-func (m *Mirror) BeforeUpdate() {
+// BeforeUpdate implements the GORM update hook.
+func (m *Mirror) BeforeUpdate(_ *gorm.DB) error {
 	m.LastSyncUnix = m.LastSync.Unix()
 	m.NextSyncUnix = m.NextSync.Unix()
+	return nil
 }
 
-func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
+// AfterFind implements the GORM query hook.
+func (m *Mirror) AfterFind(tx *gorm.DB) error {
 	var err error
-	switch colName {
-	case "repo_id":
-		m.Repo, err = getRepositoryByID(Handle.db, m.RepoID)
-		if err != nil {
-			handleLogger().Error("Failed to get mirror repository", "mirrorID", m.ID, "error", err)
-		}
-	case "updated_unix":
-		m.LastSync = time.Unix(m.LastSyncUnix, 0).Local()
-	case "next_update_unix":
-		m.NextSync = time.Unix(m.NextSyncUnix, 0).Local()
+	m.Repo, err = getRepositoryByID(tx, m.RepoID)
+	if err != nil {
+		handleLogger().Error("Failed to get mirror repository", "mirrorID", m.ID, "error", err)
 	}
+	m.LastSync = time.Unix(m.LastSyncUnix, 0).Local()
+	m.NextSync = time.Unix(m.NextSyncUnix, 0).Local()
+	return nil
 }
 
 // ScheduleNextSync calculates and sets next sync time based on repository mirror setting.
@@ -348,34 +351,33 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 	return parseRemoteUpdateOutput(logger, output), true
 }
 
-func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
-	m := &Mirror{RepoID: repoID}
-	has, err := e.Get(m)
+func getMirrorByRepoID(tx *gorm.DB, repoID int64) (*Mirror, error) {
+	m := new(Mirror)
+	err := tx.Where(&Mirror{RepoID: repoID}).First(m).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, MirrorNotExist{RepoID: repoID}
+		}
 		return nil, err
-	} else if !has {
-		return nil, MirrorNotExist{RepoID: repoID}
 	}
 	return m, nil
 }
 
 // GetMirrorByRepoID returns mirror information of a repository.
 func GetMirrorByRepoID(repoID int64) (*Mirror, error) {
-	return getMirrorByRepoID(x, repoID)
+	return getMirrorByRepoID(Handle.db, repoID)
 }
 
-func updateMirror(e Engine, m *Mirror) error {
-	_, err := e.ID(m.ID).AllCols().Update(m)
-	return err
+func updateMirror(tx *gorm.DB, m *Mirror) error {
+	return tx.Model(m).Select("*").Updates(m).Error
 }
 
 func UpdateMirror(m *Mirror) error {
-	return updateMirror(x, m)
+	return updateMirror(Handle.db, m)
 }
 
 func DeleteMirrorByRepoID(repoID int64) error {
-	_, err := x.Delete(&Mirror{RepoID: repoID})
-	return err
+	return Handle.db.Where(&Mirror{RepoID: repoID}).Delete(new(Mirror)).Error
 }
 
 // MirrorUpdate checks and updates mirror repositories.
@@ -388,17 +390,17 @@ func MirrorUpdate(logger *logx.Logger) {
 
 	logger.Debug("Queueing mirrors for update")
 
-	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean any) error {
-		m := bean.(*Mirror)
+	var mirrors []*Mirror
+	if err := Handle.db.Where("next_update_unix <= ?", time.Now().Unix()).Find(&mirrors).Error; err != nil {
+		logger.Error("Failed to queue mirrors for update", "error", err)
+	}
+	for _, m := range mirrors {
 		if m.Repo == nil {
 			logger.Error("Disconnected mirror repository found", "mirrorID", m.ID)
-			return nil
+			continue
 		}
 
 		MirrorQueue.Add(m.RepoID)
-		return nil
-	}); err != nil {
-		logger.Error("Failed to queue mirrors for update", "error", err)
 	}
 }
 
@@ -573,7 +575,7 @@ func SyncMirrors(logger *logx.Logger) {
 			}
 		}
 
-		if _, err = x.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID); err != nil {
+		if err = Handle.db.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID).Error; err != nil {
 			logger.Error("Failed to update mirror sync time", "repoID", m.RepoID, "error", err)
 			continue
 		}
@@ -592,7 +594,7 @@ func SyncMirrors(logger *logx.Logger) {
 			continue
 		}
 
-		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", latestCommitTime.Unix(), m.RepoID); err != nil {
+		if err = Handle.db.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", latestCommitTime.Unix(), m.RepoID).Error; err != nil {
 			logger.Error("Failed to update repository updated time", "repoID", m.RepoID, "error", err)
 			continue
 		}
