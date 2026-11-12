@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
@@ -71,25 +71,29 @@ type Comment struct {
 	ShowTag CommentTag `xorm:"-" json:"-" gorm:"-"`
 }
 
-func (c *Comment) BeforeInsert() {
-	c.CreatedUnix = time.Now().Unix()
-	c.UpdatedUnix = c.CreatedUnix
-}
-
-func (c *Comment) BeforeUpdate() {
-	c.UpdatedUnix = time.Now().Unix()
-}
-
-func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		c.Created = time.Unix(c.CreatedUnix, 0).Local()
-	case "updated_unix":
-		c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
+// BeforeCreate implements the GORM create hook.
+func (c *Comment) BeforeCreate(tx *gorm.DB) error {
+	if c.CreatedUnix == 0 {
+		c.CreatedUnix = tx.NowFunc().Unix()
+		c.UpdatedUnix = c.CreatedUnix
 	}
+	return nil
 }
 
-func (c *Comment) loadAttributes(e Engine) (err error) {
+// BeforeUpdate implements the GORM update hook.
+func (c *Comment) BeforeUpdate(tx *gorm.DB) error {
+	c.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (c *Comment) AfterFind(_ *gorm.DB) error {
+	c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
+	return nil
+}
+
+func (c *Comment) loadAttributes(tx *gorm.DB) (err error) {
 	if c.Poster == nil {
 		c.Poster, err = Handle.Users().GetByID(context.TODO(), c.PosterID)
 		if err != nil {
@@ -103,12 +107,12 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	}
 
 	if c.Issue == nil {
-		c.Issue, err = getRawIssueByID(e, c.IssueID)
+		c.Issue, err = getRawIssueByID(tx, c.IssueID)
 		if err != nil {
 			return errors.Newf("getIssueByID [%d]: %v", c.IssueID, err)
 		}
 		if c.Issue.Repo == nil {
-			c.Issue.Repo, err = getRepositoryByID(legacyTx(e), c.Issue.RepoID)
+			c.Issue.Repo, err = getRepositoryByID(tx, c.Issue.RepoID)
 			if err != nil {
 				return errors.Newf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
 			}
@@ -116,7 +120,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	}
 
 	if c.Attachments == nil {
-		c.Attachments, err = newAttachmentsStore(legacyTx(e)).ListByCommentID(context.TODO(), c.ID)
+		c.Attachments, err = newAttachmentsStore(tx).ListByCommentID(context.TODO(), c.ID)
 		if err != nil {
 			return errors.Wrap(err, "list attachments")
 		}
@@ -126,7 +130,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 }
 
 func (c *Comment) LoadAttributes() error {
-	return c.loadAttributes(x)
+	return c.loadAttributes(Handle.db)
 }
 
 func (c *Comment) HTMLURL() string {
@@ -162,9 +166,9 @@ func (c *Comment) EventTag() string {
 
 // mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (c *Comment) mailParticipants(logger *logx.Logger, e Engine, opType ActionType, issue *Issue) (err error) {
+func (c *Comment) mailParticipants(logger *logx.Logger, tx *gorm.DB, opType ActionType, issue *Issue) (err error) {
 	mentions := markup.FindAllMentions(c.Content)
-	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
+	if err = updateIssueMentions(tx, c.IssueID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
@@ -176,14 +180,14 @@ func (c *Comment) mailParticipants(logger *logx.Logger, e Engine, opType ActionT
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(logger, e, issue, c.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(logger, tx, issue, c.Poster, mentions); err != nil {
 		logger.Error("Failed to mail participants", "error", err)
 	}
 
 	return nil
 }
 
-func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
+func createComment(logger *logx.Logger, tx *gorm.DB, opts *CreateCommentOptions) (_ *Comment, err error) {
 	comment := &Comment{
 		Type:      opts.Type,
 		PosterID:  opts.Doer.ID,
@@ -194,7 +198,7 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		Line:      opts.LineNum,
 		Content:   opts.Content,
 	}
-	if _, err = e.Insert(comment); err != nil {
+	if err = tx.Create(comment).Error; err != nil {
 		return nil, err
 	}
 
@@ -215,11 +219,11 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 	case CommentTypeComment:
 		act.OpType = ActionCommentIssue
 
-		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
+		if err = tx.Exec("UPDATE issue SET num_comments = num_comments + 1 WHERE id = ?", opts.Issue.ID).Error; err != nil {
 			return nil, err
 		}
 
-		err = newAttachmentsStore(legacyTx(e)).Bind(context.TODO(), opts.Issue.ID, comment.ID, opts.Attachments)
+		err = newAttachmentsStore(tx).Bind(context.TODO(), opts.Issue.ID, comment.ID, opts.Attachments)
 		if err != nil {
 			return nil, errors.Wrap(err, "attach files")
 		}
@@ -231,9 +235,9 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		}
 
 		if opts.Issue.IsPull {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls-1 WHERE id=?", opts.Repo.ID)
+			err = tx.Exec("UPDATE repository SET num_closed_pulls = num_closed_pulls - 1 WHERE id = ?", opts.Repo.ID).Error
 		} else {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues-1 WHERE id=?", opts.Repo.ID)
+			err = tx.Exec("UPDATE repository SET num_closed_issues = num_closed_issues - 1 WHERE id = ?", opts.Repo.ID).Error
 		}
 		if err != nil {
 			return nil, err
@@ -246,38 +250,38 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		}
 
 		if opts.Issue.IsPull {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls+1 WHERE id=?", opts.Repo.ID)
+			err = tx.Exec("UPDATE repository SET num_closed_pulls = num_closed_pulls + 1 WHERE id = ?", opts.Repo.ID).Error
 		} else {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues+1 WHERE id=?", opts.Repo.ID)
+			err = tx.Exec("UPDATE repository SET num_closed_issues = num_closed_issues + 1 WHERE id = ?", opts.Repo.ID).Error
 		}
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
+	if err = tx.Exec("UPDATE issue SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID).Error; err != nil {
 		return nil, errors.Newf("update issue 'updated_unix': %v", err)
 	}
 
 	// Notify watchers for whatever action comes in, ignore if no action type.
 	if act.OpType > 0 {
-		if err = notifyWatchers(e, act); err != nil {
+		if err = notifyWatchers(tx, act); err != nil {
 			logger.Error("Failed to notify watchers", "error", err)
 		}
-		if err = comment.mailParticipants(logger, e, act.OpType, opts.Issue); err != nil {
+		if err = comment.mailParticipants(logger, tx, act.OpType, opts.Issue); err != nil {
 			logger.Error("Failed to mail participants", "error", err)
 		}
 	}
 
-	return comment, comment.loadAttributes(e)
+	return comment, comment.loadAttributes(tx)
 }
 
-func createStatusComment(logger *logx.Logger, e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
+func createStatusComment(logger *logx.Logger, tx *gorm.DB, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
 	cmtType := CommentTypeClose
 	if !issue.IsClosed {
 		cmtType = CommentTypeReopen
 	}
-	return createComment(logger, e, &CreateCommentOptions{
+	return createComment(logger, tx, &CreateCommentOptions{
 		Type:  cmtType,
 		Doer:  doer,
 		Repo:  repo,
@@ -300,18 +304,14 @@ type CreateCommentOptions struct {
 
 // CreateComment creates comment of issue or commit.
 func CreateComment(logger *logx.Logger, opts *CreateCommentOptions) (comment *Comment, err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return nil, err
-	}
-
-	comment, err = createComment(logger, sess, opts)
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		comment, err = createComment(logger, tx, opts)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	return comment, sess.Commit()
+	return comment, nil
 }
 
 // CreateIssueComment creates a plain issue comment.
@@ -349,14 +349,15 @@ func CreateRefComment(logger *logx.Logger, doer *User, repo *Repository, issue *
 	}
 
 	// Check if same reference from same commit has already existed.
-	has, err := x.Get(&Comment{
+	var count int64
+	err := Handle.db.Model(new(Comment)).Where(&Comment{
 		Type:      CommentTypeCommitRef,
 		IssueID:   issue.ID,
 		CommitSHA: commitSHA,
-	})
+	}).Count(&count).Error
 	if err != nil {
 		return errors.Newf("check reference comment: %v", err)
-	} else if has {
+	} else if count > 0 {
 		return nil
 	}
 
@@ -393,19 +394,20 @@ func (ErrCommentNotExist) NotFound() bool {
 // GetCommentByID returns the comment by given ID.
 func GetCommentByID(id int64) (*Comment, error) {
 	c := new(Comment)
-	has, err := x.Id(id).Get(c)
+	err := Handle.db.Where("id = ?", id).First(c).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrCommentNotExist{args: map[string]any{"commentID": id}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrCommentNotExist{args: map[string]any{"commentID": id}}
 	}
 	return c, c.LoadAttributes()
 }
 
 // FIXME: use CommentList to improve performance.
-func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
+func loadCommentsAttributes(tx *gorm.DB, comments []*Comment) (err error) {
 	for i := range comments {
-		if err = comments[i].loadAttributes(e); err != nil {
+		if err = comments[i].loadAttributes(tx); err != nil {
 			return errors.Newf("loadAttributes [%d]: %v", comments[i].ID, err)
 		}
 	}
@@ -413,53 +415,56 @@ func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
 	return nil
 }
 
-func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
+func getCommentsByIssueIDSince(tx *gorm.DB, issueID, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue_id = ?", issueID).Asc("created_unix")
+	query := tx.Where("issue_id = ?", issueID).Order("created_unix ASC")
 	if since > 0 {
-		sess.And("updated_unix >= ?", since)
+		query = query.Where("updated_unix >= ?", since)
 	}
 
-	if err := sess.Find(&comments); err != nil {
+	if err := query.Find(&comments).Error; err != nil {
 		return nil, err
 	}
-	return comments, loadCommentsAttributes(e, comments)
+	return comments, loadCommentsAttributes(tx, comments)
 }
 
-func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
+func getCommentsByRepoIDSince(tx *gorm.DB, repoID, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id").Asc("comment.created_unix")
+	query := tx.Select("comment.*").
+		Joins("INNER JOIN issue ON issue.id = comment.issue_id").
+		Where("issue.repo_id = ?", repoID).
+		Order("comment.created_unix ASC")
 	if since > 0 {
-		sess.And("comment.updated_unix >= ?", since)
+		query = query.Where("comment.updated_unix >= ?", since)
 	}
-	if err := sess.Find(&comments); err != nil {
+	if err := query.Find(&comments).Error; err != nil {
 		return nil, err
 	}
-	return comments, loadCommentsAttributes(e, comments)
+	return comments, loadCommentsAttributes(tx, comments)
 }
 
-func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueIDSince(e, issueID, -1)
+func getCommentsByIssueID(tx *gorm.DB, issueID int64) ([]*Comment, error) {
+	return getCommentsByIssueIDSince(tx, issueID, -1)
 }
 
 // GetCommentsByIssueID returns all comments of an issue.
 func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueID(x, issueID)
+	return getCommentsByIssueID(Handle.db, issueID)
 }
 
 // GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
 func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
-	return getCommentsByIssueIDSince(x, issueID, since)
+	return getCommentsByIssueIDSince(Handle.db, issueID, since)
 }
 
 // GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
 func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
-	return getCommentsByRepoIDSince(x, repoID, since)
+	return getCommentsByRepoIDSince(Handle.db, repoID, since)
 }
 
 // UpdateComment updates information of comment.
 func UpdateComment(logger *logx.Logger, doer *User, c *Comment, oldContent string) (err error) {
-	if _, err = x.Id(c.ID).AllCols().Update(c); err != nil {
+	if err = Handle.db.Model(c).Select("*").Updates(c).Error; err != nil {
 		return err
 	}
 
@@ -493,24 +498,18 @@ func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
 		return err
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.ID(comment.ID).Delete(new(Comment)); err != nil {
-		return err
-	}
-
-	if comment.Type == CommentTypeComment {
-		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id = ?", comment.ID).Delete(new(Comment)).Error; err != nil {
 			return err
 		}
-	}
 
-	if err = sess.Commit(); err != nil {
-		return errors.Newf("commit: %v", err)
+		if comment.Type == CommentTypeComment {
+			return tx.Exec("UPDATE issue SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID).Error
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	err = Handle.Attachments().DeleteByCommentID(context.TODO(), comment.ID, true)
