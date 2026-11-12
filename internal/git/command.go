@@ -193,13 +193,15 @@ func (e *exitError) Unwrap() error {
 	return e.ExitError
 }
 
-// run executes a git command in the given directory, writing stdout to the
-// given io.Writer, and returns what the command printed to stderr. The command
-// is bound only by the deadline and cancellation of the context. It returns
-// ErrExecTimeout if the execution was timed out.
-func run(ctx context.Context, dir string, args []string, envs []string, stdout io.Writer) ([]byte, error) {
+// run executes a git command in the given directory, reading stdin from the
+// given io.Reader if not nil and writing stdout to the given io.Writer, and
+// returns what the command printed to stderr. The command is bound only by the
+// deadline and cancellation of the context. It returns ErrExecTimeout if the
+// execution was timed out.
+func run(ctx context.Context, dir string, args []string, envs []string, stdin io.Reader, stdout io.Writer) ([]byte, error) {
 	stderr := new(bytes.Buffer)
 	c := newCommand(ctx, dir, args, envs)
+	c.Stdin = stdin
 	c.Stdout = stdout
 	c.Stderr = stderr
 	err := runCommand(c)
@@ -223,8 +225,13 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdout i
 // exec executes a git command in the given directory and returns stdout as
 // bytes. Stderr is included in the error message on failure.
 func exec(ctx context.Context, dir string, args []string, envs []string) ([]byte, error) {
+	return execInput(ctx, dir, args, envs, nil)
+}
+
+// execInput is like exec but feeds stdin to the command.
+func execInput(ctx context.Context, dir string, args []string, envs []string, stdin io.Reader) ([]byte, error) {
 	stdout := new(bytes.Buffer)
-	_, err := run(ctx, dir, args, envs, stdout)
+	_, err := run(ctx, dir, args, envs, stdin, stdout)
 
 	// Log (partial) stdout even on error, so failed commands produce a useful log
 	// entry rather than an empty one.
@@ -260,26 +267,8 @@ func pipe(ctx context.Context, dir string, args []string, envs []string, stdout 
 		}()
 	}
 
-	_, err := run(ctx, dir, args, envs, w)
+	_, err := run(ctx, dir, args, envs, nil, w)
 	return err
-}
-
-// authorEnvs returns environment variables that record the signature as the author.
-// Git otherwise falls back to user.name, user.email, or the system account.
-func authorEnvs(author *Signature) []string {
-	return []string{
-		"GIT_AUTHOR_NAME=" + author.Name,
-		"GIT_AUTHOR_EMAIL=" + author.Email,
-	}
-}
-
-// committerEnvs returns environment variables that record the signature as the committer.
-// Git otherwise falls back to user.name, user.email, or the system account.
-func committerEnvs(committer *Signature) []string {
-	return []string{
-		"GIT_COMMITTER_NAME=" + committer.Name,
-		"GIT_COMMITTER_EMAIL=" + committer.Email,
-	}
 }
 
 // log logs a git command execution with its output.

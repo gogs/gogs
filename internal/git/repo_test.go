@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,11 +72,6 @@ func TestClone(t *testing.T) {
 				Quiet:  true,
 			},
 		},
-		{
-			opt: CloneOptions{
-				Branch: "develop",
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -115,36 +111,6 @@ func setupTempRepo() (_ *Repository, cleanup func(), err error) {
 	return r, cleanup, nil
 }
 
-func TestRepository_Fetch(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	tests := []struct {
-		opt FetchOptions
-	}{
-		{
-			opt: FetchOptions{},
-		},
-		{
-			opt: FetchOptions{
-				Prune: true,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
-			if err := r.Fetch(ctx, test.opt); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
 func TestRepository_Push(t *testing.T) {
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
@@ -174,365 +140,14 @@ func TestRepository_Push(t *testing.T) {
 	}
 }
 
-func TestRepository_Checkout(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	tests := []struct {
-		branch string
-		opt    CheckoutOptions
-	}{
-		{
-			branch: "develop",
-			opt:    CheckoutOptions{},
-		},
-		{
-			branch: "a-new-branch",
-			opt: CheckoutOptions{
-				BaseBranch: "master",
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
-			if err := r.Checkout(ctx, test.branch, test.opt); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestRepository_Reset(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	tests := []struct {
-		rev string
-		opt ResetOptions
-	}{
-		{
-			rev: "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			opt: ResetOptions{
-				Hard: true,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
-			if err := r.Reset(ctx, test.rev, test.opt); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestRepository_Move(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	tests := []struct {
-		src string
-		dst string
-	}{
-		{
-			src: "run.sh",
-			dst: "runme.sh",
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
-			if err := r.Move(ctx, test.src, test.dst); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestRepository_Add(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	// Generate a file
-	fpath := filepath.Join(r.Path(), "TESTFILE")
-	err = os.WriteFile(fpath, []byte("something"), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make sure it does not blow up
-	if err := r.Add(ctx, AddOptions{All: true}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestRepository_Commit(t *testing.T) {
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	committer := &Signature{
-		Name:  "alice",
-		Email: "alice@example.com",
-	}
-	message := "Add a file"
-
-	t.Run("nothing to commit", func(t *testing.T) {
-		if err = r.Commit(ctx, committer, message); err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("nothing to commit with a file named MERGE_HEAD", func(t *testing.T) {
-		fpath := filepath.Join(r.Path(), "MERGE_HEAD")
-		require.NoError(t, os.WriteFile(fpath, []byte("MERGE_HEAD"), 0600))
-		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
-		require.NoError(t, r.Commit(ctx, committer, "Add MERGE_HEAD"))
-
-		assert.NoError(t, r.Commit(ctx, committer, message))
-	})
-
-	t.Run("committer is also the author", func(t *testing.T) {
-		// Generate a file and add to index
-		fpath := filepath.Join(r.Path(), "COMMITTER_IS_AUTHOR")
-		err = os.WriteFile(fpath, []byte("something"), 0600)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := r.Add(ctx, AddOptions{
-			All: true,
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		// Make sure it does not blow up
-		if err = r.Commit(ctx, committer, message); err != nil {
-			t.Fatal(err)
-		}
-
-		// Verify the result
-		c, err := r.CatFileCommit(ctx, "master")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		assert.Equal(t, committer.Name, c.Committer.Name)
-		assert.Equal(t, committer.Email, c.Committer.Email)
-		assert.Equal(t, committer.Name, c.Author.Name)
-		assert.Equal(t, committer.Email, c.Author.Email)
-		assert.Equal(t, message+"\n", c.Message)
-	})
-
-	stageFile := func(t *testing.T, name string) {
-		require.NoError(t, os.WriteFile(filepath.Join(r.Path(), name), []byte(name), 0o600))
-		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
-	}
-
-	t.Run("empty message", func(t *testing.T) {
-		stageFile(t, "EMPTY_MESSAGE")
-		err := r.Commit(ctx, committer, "")
-		assert.ErrorContains(t, err, "empty commit message")
-	})
-
-	t.Run("rejected by hook", func(t *testing.T) {
-		stageFile(t, "REJECTED_BY_HOOK")
-		hookPath := filepath.Join(r.Path(), ".git", "hooks", "pre-commit")
-		require.NoError(t, os.WriteFile(hookPath, []byte("#!/bin/sh\necho rejected >&2\nexit 1\n"), 0o700))
-		defer func() { _ = os.Remove(hookPath) }()
-
-		err := r.Commit(ctx, committer, message)
-		assert.ErrorContains(t, err, "rejected")
-	})
-
-	t.Run("initial commit", func(t *testing.T) {
-		path := tempPath()
-		defer func() { _ = os.RemoveAll(path) }()
-		require.NoError(t, Init(ctx, path))
-		empty, err := Open(path)
-		require.NoError(t, err)
-
-		require.NoError(t, os.WriteFile(filepath.Join(path, "README"), []byte("README"), 0o600))
-		require.NoError(t, empty.Add(ctx, AddOptions{All: true}))
-		require.NoError(t, empty.Commit(ctx, committer, message))
-
-		_, err = empty.RevParse(ctx, "HEAD")
-		assert.NoError(t, err)
-	})
-
-	t.Run("nil committer", func(t *testing.T) {
-		err := r.Commit(ctx, nil, message)
-		assert.EqualError(t, err, "committer is required")
-	})
-}
-
-// commitFile writes the file with given content and commits it to the current
-// branch of the repository.
-func commitFile(t *testing.T, r *Repository, name, content string) {
-	t.Helper()
-
-	ctx := context.Background()
-	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), name), []byte(content), 0600))
-	require.NoError(t, r.Add(ctx, AddOptions{All: true}))
-	sig := &Signature{Name: "alice", Email: "alice@example.com"}
-	require.NoError(t, r.Commit(ctx, sig, "Update "+name))
-}
-
-func TestRepository_Merge(t *testing.T) {
-	// Ambient identity must not leak into commits this package creates.
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
-	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
-	t.Setenv("GIT_AUTHOR_NAME", "ambient")
-	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "ambient")
-	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
-
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	require.NoError(t, err)
-	defer cleanup()
-
-	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
-	commitFile(t, r, "FEATURE", "feature")
-	featureID, err := r.BranchCommitID(ctx, "feature")
-	require.NoError(t, err)
-	require.NoError(t, r.Checkout(ctx, "master"))
-	masterID, err := r.BranchCommitID(ctx, "master")
-	require.NoError(t, err)
-
-	committer := &Signature{Name: "carol", Email: "carol@example.com"}
-
-	t.Run("nil committer", func(t *testing.T) {
-		err := r.Merge(ctx, "feature", nil)
-		assert.EqualError(t, err, "committer is required")
-	})
-
-	t.Run("no fast-forward without commit", func(t *testing.T) {
-		err := r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true, NoCommit: true})
-		require.NoError(t, err)
-
-		gotID, err := r.BranchCommitID(ctx, "master")
-		require.NoError(t, err)
-		assert.Equal(t, masterID, gotID)
-		assert.FileExists(t, filepath.Join(r.Path(), ".git", "MERGE_HEAD"))
-
-		require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true}))
-	})
-
-	t.Run("commit merge with unchanged tree", func(t *testing.T) {
-		// Apply the same change to master in a different commit, so merging feature
-		// leaves the tree as is.
-		sig := &Signature{Name: "alice", Email: "alice@example.com"}
-		require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "FEATURE"), []byte("feature"), 0600))
-		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
-		require.NoError(t, r.Commit(ctx, sig, "Cherry-pick FEATURE"))
-		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
-
-		require.NoError(t, r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true, NoCommit: true}))
-		require.NoError(t, r.Commit(ctx, sig, "Merge feature"))
-
-		c, err := r.CatFileCommit(ctx, "master")
-		require.NoError(t, err)
-		require.Equal(t, 2, c.ParentsCount())
-		parentID, err := c.ParentID(1)
-		require.NoError(t, err)
-		assert.Equal(t, featureID, parentID.String())
-	})
-
-	t.Run("no fast-forward", func(t *testing.T) {
-		require.NoError(t, r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true}))
-		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
-
-		c, err := r.CatFileCommit(ctx, "master")
-		require.NoError(t, err)
-		assert.Equal(t, committer.Name, c.Author.Name)
-		assert.Equal(t, committer.Email, c.Author.Email)
-		assert.Equal(t, committer.Name, c.Committer.Name)
-		assert.Equal(t, committer.Email, c.Committer.Email)
-		require.Equal(t, 2, c.ParentsCount())
-	})
-
-	t.Run("fast-forward", func(t *testing.T) {
-		require.NoError(t, r.Merge(ctx, "feature", committer))
-
-		gotID, err := r.BranchCommitID(ctx, "master")
-		require.NoError(t, err)
-		assert.Equal(t, featureID, gotID)
-	})
-}
-
-func TestRepository_Rebase(t *testing.T) {
-	// Ambient identity must not leak into commits this package creates.
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
-	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
-	t.Setenv("GIT_AUTHOR_NAME", "ambient")
-	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "ambient")
-	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
-
-	ctx := context.Background()
-	r, cleanup, err := setupTempRepo()
-	require.NoError(t, err)
-	defer cleanup()
-
-	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
-	commitFile(t, r, "FEATURE", "feature")
-	require.NoError(t, r.Checkout(ctx, "master"))
-	commitFile(t, r, "MASTER", "master")
-	masterID, err := r.BranchCommitID(ctx, "master")
-	require.NoError(t, err)
-
-	err = r.Rebase(ctx, "master", "feature", nil)
-	assert.EqualError(t, err, "committer is required")
-
-	committer := &Signature{Name: "carol", Email: "carol@example.com"}
-	require.NoError(t, r.Rebase(ctx, "master", "feature", committer))
-
-	head, err := r.CatFileCommit(ctx, "HEAD")
-	require.NoError(t, err)
-	assert.Equal(t, "Update FEATURE\n", head.Message)
-	assert.Equal(t, "alice", head.Author.Name)
-	assert.Equal(t, "alice@example.com", head.Author.Email)
-	assert.Equal(t, committer.Name, head.Committer.Name)
-	assert.Equal(t, committer.Email, head.Committer.Email)
-	parentID, err := head.ParentID(0)
-	require.NoError(t, err)
-	assert.Equal(t, masterID, parentID.String())
-}
-
 func TestRepository_ApplyCheck(t *testing.T) {
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
 	require.NoError(t, err)
 	defer cleanup()
 
-	commitFile(t, r, "a.txt", "a b\ntwo\nc d\n")
-	baseID, err := r.BranchCommitID(ctx, "master")
-	require.NoError(t, err)
-	commitFile(t, r, "a.txt", "a b\nTWO\nc d\n")
-	headID, err := r.BranchCommitID(ctx, "master")
-	require.NoError(t, err)
+	baseID := commitFiles(t, r, "master", map[string]string{"a.txt": "a b\ntwo\nc d\n"})
+	headID := commitFiles(t, r, "master", map[string]string{"a.txt": "a b\nTWO\nc d\n"})
 
 	patch, err := r.DiffBinary(ctx, baseID, headID)
 	require.NoError(t, err)
@@ -540,8 +155,8 @@ func TestRepository_ApplyCheck(t *testing.T) {
 	require.NoError(t, os.WriteFile(patchPath, patch, 0600))
 
 	// The context lines of the patch now only differ in whitespace.
-	require.NoError(t, r.Reset(ctx, baseID, ResetOptions{Hard: true}))
-	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "a.txt"), []byte("a  b\ntwo\nc  d\n"), 0600))
+	require.NoError(t, r.ReadTree(ctx, baseID))
+	require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "a.txt", Content: strings.NewReader("a  b\ntwo\nc  d\n")}))
 
 	assert.Error(t, r.ApplyCheck(ctx, patchPath))
 	assert.NoError(t, r.ApplyCheck(ctx, patchPath, ApplyCheckOptions{IgnoreWhitespace: true}))

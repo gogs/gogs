@@ -53,6 +53,15 @@ func (r *Repository) BranchCommitID(ctx context.Context, branch string) (string,
 	return r.showRefVerify(ctx, RefsHeads+branch)
 }
 
+// RepoBranchCommitID is like Repository.BranchCommitID for the repository in given path.
+func RepoBranchCommitID(ctx context.Context, repoPath, branch string) (string, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return "", err
+	}
+	return r.BranchCommitID(ctx, branch)
+}
+
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {

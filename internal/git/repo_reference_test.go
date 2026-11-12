@@ -309,21 +309,10 @@ func TestRepository_DeleteBranch(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			branch := strconv.Itoa(int(time.Now().UnixNano()))
-			err := r.Checkout(ctx, branch, CheckoutOptions{
-				BaseBranch: "master",
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			createBranch(t, r, branch)
 			assert.True(t, r.hasReference(ctx, RefsHeads+branch))
 
-			err = r.Checkout(ctx, "master")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = r.DeleteBranch(ctx, branch, test.opt)
+			err := r.DeleteBranch(ctx, branch, test.opt)
 			if err != nil {
 				t.Fatal(err)
 			}

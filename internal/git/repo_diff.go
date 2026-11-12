@@ -47,10 +47,10 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 
-// DiffWorktree returns a parsed diff of unstaged changes to given path in the
-// working tree of the repository.
-func (r *Repository) DiffWorktree(ctx context.Context, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
-	args := []string{"diff", "--", path}
+// DiffCached returns a parsed diff of given path between the revision and the
+// index of the repository, following the ".gitattributes" of the revision.
+func (r *Repository) DiffCached(ctx context.Context, rev, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+	args := []string{"--attr-source=" + rev, "diff", "--cached", "--end-of-options", rev, "--", path}
 	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 

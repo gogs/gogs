@@ -3,7 +3,6 @@ package git
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -60,26 +59,20 @@ func TestRepository_LsTree(t *testing.T) {
 	path := tempPath()
 	defer os.RemoveAll(path)
 
-	err := Init(ctx, path)
+	err := Init(ctx, path, InitOptions{Bare: true})
+	require.NoError(t, err)
+	repo, err := Open(path)
 	require.NoError(t, err)
 
 	// Names that "git ls-tree" would quote without the -z flag.
 	specialNames := []string{`"Leading" quote.md`, `Test "Wiki" Page.md`}
+	files := make(map[string]string)
 	for _, name := range specialNames {
-		err = os.WriteFile(filepath.Join(path, name), []byte("content"), 0o644)
-		require.NoError(t, err)
+		files[name] = "content"
 	}
+	commitID := commitFiles(t, repo, "master", files)
 
-	repo, err := Open(path)
-	require.NoError(t, err)
-
-	err = repo.Add(ctx, AddOptions{All: true})
-	require.NoError(t, err)
-
-	err = repo.Commit(ctx, &Signature{Name: "test", Email: "test@test.com"}, "initial commit")
-	require.NoError(t, err)
-
-	commit, err := repo.CatFileCommit(ctx, "HEAD")
+	commit, err := repo.CatFileCommit(ctx, commitID)
 	require.NoError(t, err)
 
 	entries, err := commit.Entries(ctx)

@@ -158,7 +158,7 @@ func (r *Repository) RemoteUpdate(ctx context.Context, opts ...RemoteUpdateOptio
 		args = append(args, "--prune")
 	}
 
-	stderr, err := run(ctx, r.path, args, opt.Envs, io.Discard)
+	stderr, err := run(ctx, r.path, args, opt.Envs, nil, io.Discard)
 	if err != nil {
 		return "", err
 	}
