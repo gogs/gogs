@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -212,13 +213,19 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 // mirrorGitEnv returns the environment variables used by every remote network
 // operation against a mirror source.
 func mirrorGitEnv() []string {
+	// Append to the Git configuration that the server environment may already pass
+	// through GIT_CONFIG_* (e.g., "http.proxy"), instead of replacing it.
+	i := 0
+	if count, err := strconv.Atoi(os.Getenv("GIT_CONFIG_COUNT")); err == nil && count > 0 {
+		i = count
+	}
 	return []string{
 		// Disabling HTTP redirects prevents an attacker-controlled public URL from
 		// redirecting to an internal endpoint that the up-front clone address
 		// validation would otherwise have blocked.
-		"GIT_CONFIG_COUNT=1",
-		"GIT_CONFIG_KEY_0=http.followRedirects",
-		"GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_COUNT=" + strconv.Itoa(i+1),
+		"GIT_CONFIG_KEY_" + strconv.Itoa(i) + "=http.followRedirects",
+		"GIT_CONFIG_VALUE_" + strconv.Itoa(i) + "=false",
 
 		// Keep git non-interactive during mirror operations. Without these, a
 		// network failure or a missing remote endpoint can make git ask for
