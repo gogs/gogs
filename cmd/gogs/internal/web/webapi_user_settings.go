@@ -6,7 +6,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"github.com/flamego/session"
 	"github.com/go-macaron/i18n"
+	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -153,7 +155,9 @@ type userPasswordRequest struct {
 	Retype      string `json:"retype"`
 }
 
-func putUserPassword(c flamego.Context, l i18n.Locale, user *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
+// putUserPassword changes the password of the signed-in user, which signs
+// them out everywhere but in the browser they changed it in.
+func putUserPassword(c flamego.Context, sess session.Session, mc *macaron.Context, l i18n.Locale, user *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
 	if !user.IsLocal() {
 		return http.StatusForbidden, nil, errors.New(l.Tr("settings.password_change_disabled"))
 	}
@@ -169,6 +173,10 @@ func putUserPassword(c flamego.Context, l i18n.Locale, user *database.User, req 
 	if err != nil {
 		log.Error("putUserPassword: update user %d: %v", user.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+	}
+	if err = startLoginSession(sess, mc, user.ID); err != nil {
+		log.Error("putUserPassword: start login session of user %d: %v", user.ID, err)
+		return http.StatusInternalServerError, nil, err
 	}
 	return http.StatusNoContent, nil, nil
 }

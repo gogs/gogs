@@ -156,6 +156,30 @@ export async function fetchTwoFactorEnabled() {
   return (await fetchJSON<{ enabled: boolean }>(settingsURL("/two-factor"))).enabled;
 }
 
+export interface LoginSession {
+  id: number;
+  userAgent: string;
+  ip: string;
+  createdAt: string;
+  lastSeenAt: string;
+  // The browser that asks.
+  isCurrent: boolean;
+}
+
+export async function fetchLoginSessions() {
+  return (await fetchJSON<{ items: LoginSession[] }>(settingsURL("/sessions"))).items;
+}
+
+export function deleteLoginSession(id: number) {
+  return send("DELETE", settingsURL(`/sessions/${id}`));
+}
+
+// deleteOtherLoginSessions signs out every browser of the viewer but the one
+// that asks.
+export function deleteOtherLoginSessions() {
+  return send("DELETE", settingsURL("/sessions"));
+}
+
 export async function fetchPasskeys() {
   return (await fetchJSON<{ items: Credential[] }>(settingsURL("/passkeys"))).items;
 }

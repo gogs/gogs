@@ -3,6 +3,7 @@ import { type AnyRoute, createRoute } from "@tanstack/react-router";
 import { loadSignedInPage } from "@/lib/loader-error";
 import {
   fetchAccessTokens,
+  fetchLoginSessions,
   fetchPasskeys,
   fetchRecoveryCodes,
   fetchSSHKeys,
@@ -13,6 +14,7 @@ import {
   fetchUserEmails,
   fetchUserSettings,
 } from "@/lib/queries/settings";
+import { UserSessionSettings } from "@/pages/user/Sessions";
 import {
   UserAvatarSettings,
   UserDelete,
@@ -112,6 +114,15 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const sessionsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/sessions",
+    loader: () => loadSignedInPage(fetchLoginSessions),
+    component: function Sessions() {
+      return <UserSessionSettings sessions={sessionsRoute.useLoaderData()} />;
+    },
+  });
+
   const applicationsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/applications",
@@ -154,6 +165,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
     securityRoute,
     twoFactorEnableRoute,
     recoveryCodesRoute,
+    sessionsRoute,
     applicationsRoute,
     reposRoute,
     orgsRoute,
