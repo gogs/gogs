@@ -104,7 +104,7 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "get object format")
 	}
-	if err = git.Init(ctx, dir, git.InitOptions{Bare: true, ObjectFormat: objectFormat}); err != nil {
+	if err = git.Init(ctx, dir, git.InitBare(), git.InitObjectFormat(objectFormat)); err != nil {
 		return nil, nil, errors.Wrap(err, "init")
 	}
 
@@ -187,7 +187,7 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 		}
 	}
 
-	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, git.PushOptions{Envs: envs})
+	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, git.PushEnvs(envs...))
 	if err != nil {
 		return errors.Newf("git push origin %s: %v", branch, err)
 	}

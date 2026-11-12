@@ -59,7 +59,7 @@ func TestRepository_LsTree(t *testing.T) {
 	path := tempPath()
 	defer os.RemoveAll(path)
 
-	err := Init(ctx, path, InitOptions{Bare: true})
+	err := Init(ctx, path, InitBare())
 	require.NoError(t, err)
 	repo, err := Open(path)
 	require.NoError(t, err)

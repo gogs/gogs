@@ -73,7 +73,7 @@ func (r *Repository) InitWiki(ctx context.Context) error {
 		return nil
 	}
 
-	if err := git.Init(ctx, r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
+	if err := git.Init(ctx, r.WikiPath(), git.InitBare()); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)

@@ -28,9 +28,7 @@ func TestMain(m *testing.M) {
 
 	// Set up the test repository
 	if !isDir(repoPath) {
-		if err := Clone(ctx, "https://github.com/gogs/git-module-testrepo.git", repoPath, CloneOptions{
-			Bare: true,
-		}); err != nil {
+		if err := Clone(ctx, "https://github.com/gogs/git-module-testrepo.git", repoPath, CloneBare()); err != nil {
 			stdlog.Fatal(err)
 		}
 	}

@@ -108,7 +108,7 @@ func TestRepository_PullRequestMeta(t *testing.T) {
 		root := tempPath()
 		defer func() { _ = os.RemoveAll(root) }()
 		basePath := filepath.Join(root, `repos:root "x"`, "base.git")
-		require.NoError(t, Clone(ctx, base.Path(), basePath, CloneOptions{Bare: true}))
+		require.NoError(t, Clone(ctx, base.Path(), basePath, CloneBare()))
 
 		meta, err := head.PullRequestMeta(ctx, basePath, "feature", "master")
 		require.NoError(t, err)

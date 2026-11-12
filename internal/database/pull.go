@@ -396,9 +396,11 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 	}
 
 	pr.Status = PullRequestStatusChecking
-	err = tmpRepo.ApplyCheck(ctx, patchPath, git.ApplyCheckOptions{
-		IgnoreWhitespace: pr.BaseRepo.PullsIgnoreWhitespace,
-	})
+	var applyOpts []git.ApplyCheckOption
+	if pr.BaseRepo.PullsIgnoreWhitespace {
+		applyOpts = append(applyOpts, git.ApplyCheckIgnoreWhitespace())
+	}
+	err = tmpRepo.ApplyCheck(ctx, patchPath, applyOpts...)
 	if err != nil {
 		log.Trace("PullRequest[%d].testPatch (apply): has conflict\n%v", pr.ID, err)
 		pr.Status = PullRequestStatusConflict

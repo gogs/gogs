@@ -145,7 +145,7 @@ func TestRepository_HasBranches(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		path := t.TempDir()
-		require.NoError(t, Init(ctx, path, InitOptions{Bare: true}))
+		require.NoError(t, Init(ctx, path, InitBare()))
 
 		got, err := RepoHasBranches(ctx, path)
 		require.NoError(t, err)

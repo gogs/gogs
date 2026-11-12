@@ -762,11 +762,7 @@ func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoO
 	mirrorClone := func(url, dst string) error {
 		ctx, cancel := git.WithTimeout(ctx, migrateTimeout)
 		defer cancel()
-		return git.Clone(ctx, url, dst, git.CloneOptions{
-			Mirror: true,
-			Quiet:  true,
-			Envs:   mirrorGitEnv(),
-		})
+		return git.Clone(ctx, url, dst, git.CloneMirror(), git.CloneQuiet(), git.CloneEnvs(mirrorGitEnv()...))
 	}
 
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
@@ -1052,7 +1048,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Init bare new repository.
-	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
+	if err = git.Init(ctx, repoPath, git.InitBare(), git.InitObjectFormat(opts.ObjectFormat)); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(repoPath); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)
@@ -2027,7 +2023,7 @@ func ReinitMissingRepositories() error {
 
 	for _, repo := range repos {
 		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
-		if err := git.Init(context.TODO(), repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
+		if err := git.Init(context.TODO(), repo.RepoPath(), git.InitBare()); err != nil {
 			if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
 				return errors.Newf("create repository notice: %v", err)
 			}
@@ -2078,9 +2074,7 @@ func GitFsck() {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
 			ctx, cancel := git.WithTimeout(context.TODO(), conf.Cron.RepoHealthCheck.Timeout)
-			err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
-				Args: conf.Cron.RepoHealthCheck.Args,
-			})
+			err := git.RepoFsck(ctx, repoPath, git.FsckArgs(conf.Cron.RepoHealthCheck.Args...))
 			cancel()
 			if err != nil {
 				const fmtStr = "Failed to perform health check on repository %q: %v"
@@ -2108,7 +2102,7 @@ func GitGcRepos() error {
 			}
 			ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
 			defer cancel()
-			return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
+			return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCArgs(conf.Git.GCArgs...))
 		})
 }
 
@@ -2563,7 +2557,7 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 
 	cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
-	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
+	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneBare()); err != nil {
 		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
 	}

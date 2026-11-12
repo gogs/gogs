@@ -48,24 +48,37 @@ func (r *Repository) parsePrettyFormatLogToList(ctx context.Context, logs []byte
 	return commits, nil
 }
 
-// InitOptions contains optional arguments for initializing a repository.
-//
-// Docs: https://git-scm.com/docs/git-init
-type InitOptions struct {
+type initOptions struct {
 	// Indicates whether the repository should be initialized in bare format.
 	Bare bool
 	// The hash algorithm of the repository, or empty to use the default.
 	ObjectFormat ObjectFormat
 }
 
+// InitOption sets an optional argument for initializing a repository.
+//
+// Docs: https://git-scm.com/docs/git-init
+type InitOption func(*initOptions)
+
+// InitBare initializes the repository in bare format.
+func InitBare() InitOption {
+	return func(opt *initOptions) { opt.Bare = true }
+}
+
+// InitObjectFormat sets the hash algorithm of the repository, or empty to use
+// the default.
+func InitObjectFormat(format ObjectFormat) InitOption {
+	return func(opt *initOptions) { opt.ObjectFormat = format }
+}
+
 // Init initializes a new Git repository.
-func Init(ctx context.Context, path string, opts ...InitOptions) error {
+func Init(ctx context.Context, path string, opts ...InitOption) error {
 	ctx, span := tracer.Start(ctx, "git.Init")
 	defer span.End()
 
-	var opt InitOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt initOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	err := os.MkdirAll(path, os.ModePerm)
@@ -98,10 +111,7 @@ func Open(repoPath string) (*Repository, error) {
 	return &Repository{path: repoPath}, nil
 }
 
-// CloneOptions contains optional arguments for cloning a repository.
-//
-// Docs: https://git-scm.com/docs/git-clone
-type CloneOptions struct {
+type cloneOptions struct {
 	// Indicates whether the repository should be cloned as a mirror.
 	Mirror bool
 	// Indicates whether the repository should be cloned in bare format.
@@ -112,14 +122,39 @@ type CloneOptions struct {
 	Envs []string
 }
 
+// CloneOption sets an optional argument for cloning a repository.
+//
+// Docs: https://git-scm.com/docs/git-clone
+type CloneOption func(*cloneOptions)
+
+// CloneMirror clones the repository as a mirror.
+func CloneMirror() CloneOption {
+	return func(opt *cloneOptions) { opt.Mirror = true }
+}
+
+// CloneBare clones the repository in bare format.
+func CloneBare() CloneOption {
+	return func(opt *cloneOptions) { opt.Bare = true }
+}
+
+// CloneQuiet suppresses the log output.
+func CloneQuiet() CloneOption {
+	return func(opt *cloneOptions) { opt.Quiet = true }
+}
+
+// CloneEnvs adds environment variables to run the command with.
+func CloneEnvs(envs ...string) CloneOption {
+	return func(opt *cloneOptions) { opt.Envs = append(opt.Envs, envs...) }
+}
+
 // Clone clones the repository from remote URL to the destination.
-func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
+func Clone(ctx context.Context, url, dst string, opts ...CloneOption) error {
 	ctx, span := tracer.Start(ctx, "git.Clone")
 	defer span.End()
 
-	var opt CloneOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt cloneOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	err := os.MkdirAll(path.Dir(dst), os.ModePerm)
@@ -143,22 +178,29 @@ func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
 	return err
 }
 
-// PushOptions contains optional arguments for pushing repository changes.
-//
-// Docs: https://git-scm.com/docs/git-push
-type PushOptions struct {
+type pushOptions struct {
 	// The additional environment variables to run the command with.
 	Envs []string
 }
 
+// PushOption sets an optional argument for pushing repository changes.
+//
+// Docs: https://git-scm.com/docs/git-push
+type PushOption func(*pushOptions)
+
+// PushEnvs adds environment variables to run the command with.
+func PushEnvs(envs ...string) PushOption {
+	return func(opt *pushOptions) { opt.Envs = append(opt.Envs, envs...) }
+}
+
 // Push pushes local changes to given remote and branch for the repository.
-func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...PushOptions) error {
+func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...PushOption) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.Push")
 	defer span.End()
 
-	var opt PushOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt pushOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"push"}
@@ -167,23 +209,30 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 	return err
 }
 
-// ApplyCheckOptions contains optional arguments for checking a patch.
-//
-// Docs: https://git-scm.com/docs/git-apply
-type ApplyCheckOptions struct {
+type applyCheckOptions struct {
 	// Indicates whether to ignore whitespace differences in context lines.
 	IgnoreWhitespace bool
 }
 
+// ApplyCheckOption sets an optional argument for checking a patch.
+//
+// Docs: https://git-scm.com/docs/git-apply
+type ApplyCheckOption func(*applyCheckOptions)
+
+// ApplyCheckIgnoreWhitespace ignores whitespace differences in context lines.
+func ApplyCheckIgnoreWhitespace() ApplyCheckOption {
+	return func(opt *applyCheckOptions) { opt.IgnoreWhitespace = true }
+}
+
 // ApplyCheck returns an error if the patch file in given path does not apply
 // cleanly to the index of the repository.
-func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) error {
+func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOption) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.ApplyCheck")
 	defer span.End()
 
-	var opt ApplyCheckOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt applyCheckOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"apply", "--check", "--cached"}
@@ -341,23 +390,30 @@ func RepoCountObjects(ctx context.Context, repoPath string) (*CountObject, error
 	return r.CountObjects(ctx)
 }
 
-// FsckOptions contains optional arguments for verifying the objects.
-//
-// Docs: https://git-scm.com/docs/git-fsck
-type FsckOptions struct {
+type fsckOptions struct {
 	// Additional arguments to be passed to "git fsck", e.g., "--strict".
 	Args []string
 }
 
+// FsckOption sets an optional argument for verifying the objects.
+//
+// Docs: https://git-scm.com/docs/git-fsck
+type FsckOption func(*fsckOptions)
+
+// FsckArgs adds arguments to be passed to "git fsck", e.g., "--strict".
+func FsckArgs(args ...string) FsckOption {
+	return func(opt *fsckOptions) { opt.Args = append(opt.Args, args...) }
+}
+
 // Fsck verifies the connectivity and validity of the objects in the database
 // for the repository.
-func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
+func (r *Repository) Fsck(ctx context.Context, opts ...FsckOption) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.Fsck")
 	defer span.End()
 
-	var opt FsckOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt fsckOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"fsck"}
@@ -368,7 +424,7 @@ func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
 }
 
 // RepoFsck is like Repository.Fsck for the repository in given path.
-func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOptions) error {
+func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOption) error {
 	r, err := Open(repoPath)
 	if err != nil {
 		return err
@@ -376,22 +432,29 @@ func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOptions) error {
 	return r.Fsck(ctx, opts...)
 }
 
-// GCOptions contains optional arguments for cleaning up the repository.
-//
-// Docs: https://git-scm.com/docs/git-gc
-type GCOptions struct {
+type gcOptions struct {
 	// Additional arguments to be passed to "git gc", e.g., "--aggressive".
 	Args []string
 }
 
+// GCOption sets an optional argument for cleaning up the repository.
+//
+// Docs: https://git-scm.com/docs/git-gc
+type GCOption func(*gcOptions)
+
+// GCArgs adds arguments to be passed to "git gc", e.g., "--aggressive".
+func GCArgs(args ...string) GCOption {
+	return func(opt *gcOptions) { opt.Args = append(opt.Args, args...) }
+}
+
 // GC cleans up unnecessary files and optimizes the repository.
-func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
+func (r *Repository) GC(ctx context.Context, opts ...GCOption) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.GC")
 	defer span.End()
 
-	var opt GCOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt gcOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"gc"}
@@ -402,7 +465,7 @@ func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
 }
 
 // RepoGC is like Repository.GC for the repository in given path.
-func RepoGC(ctx context.Context, repoPath string, opts ...GCOptions) error {
+func RepoGC(ctx context.Context, repoPath string, opts ...GCOption) error {
 	r, err := Open(repoPath)
 	if err != nil {
 		return err

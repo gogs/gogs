@@ -103,9 +103,7 @@ func TestRepository_RemoteAdd(t *testing.T) {
 		_ = os.RemoveAll(path)
 	}()
 
-	err := Init(ctx, path, InitOptions{
-		Bare: true,
-	})
+	err := Init(ctx, path, InitBare())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +145,7 @@ func TestRepository_RemoteUpdate(t *testing.T) {
 	ctx := context.Background()
 	upstream := tempPath()
 	defer func() { _ = os.RemoveAll(upstream) }()
-	require.NoError(t, Clone(ctx, testrepo.Path(), upstream, CloneOptions{Bare: true}))
+	require.NoError(t, Clone(ctx, testrepo.Path(), upstream, CloneBare()))
 
 	clone := func() *Repository {
 		path := tempPath()

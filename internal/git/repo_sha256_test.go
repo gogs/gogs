@@ -20,7 +20,7 @@ func newSHA256TestRepo(t *testing.T) *Repository {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "testrepo-sha256.git")
-	err := Init(ctx, path, InitOptions{Bare: true, ObjectFormat: ObjectFormatSHA256})
+	err := Init(ctx, path, InitBare(), InitObjectFormat(ObjectFormatSHA256))
 	require.NoError(t, err)
 
 	history, err := exec(ctx, testrepo.path, []string{"fast-export", "--all"}, nil)

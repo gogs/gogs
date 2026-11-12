@@ -23,15 +23,13 @@ func TestRepository(t *testing.T) {
 func TestInit(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		opt InitOptions
+		opts []InitOption
 	}{
 		{
-			opt: InitOptions{},
+			opts: nil,
 		},
 		{
-			opt: InitOptions{
-				Bare: true,
-			},
+			opts: []InitOption{InitBare()},
 		},
 	}
 	for _, test := range tests {
@@ -42,7 +40,7 @@ func TestInit(t *testing.T) {
 				_ = os.RemoveAll(path)
 			}()
 
-			if err := Init(ctx, path, test.opt); err != nil {
+			if err := Init(ctx, path, test.opts...); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -60,17 +58,13 @@ func TestOpen(t *testing.T) {
 func TestClone(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		opt CloneOptions
+		opts []CloneOption
 	}{
 		{
-			opt: CloneOptions{},
+			opts: nil,
 		},
 		{
-			opt: CloneOptions{
-				Mirror: true,
-				Bare:   true,
-				Quiet:  true,
-			},
+			opts: []CloneOption{CloneMirror(), CloneBare(), CloneQuiet()},
 		},
 	}
 	for _, test := range tests {
@@ -81,7 +75,7 @@ func TestClone(t *testing.T) {
 				_ = os.RemoveAll(path)
 			}()
 
-			if err := Clone(ctx, testrepo.Path(), path, test.opt); err != nil {
+			if err := Clone(ctx, testrepo.Path(), path, test.opts...); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -122,18 +116,18 @@ func TestRepository_Push(t *testing.T) {
 	tests := []struct {
 		remote string
 		branch string
-		opt    PushOptions
+		opts   []PushOption
 	}{
 		{
 			remote: "origin",
 			branch: "master",
-			opt:    PushOptions{},
+			opts:   nil,
 		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			// Make sure it does not blow up
-			if err := r.Push(ctx, test.remote, test.branch, test.opt); err != nil {
+			if err := r.Push(ctx, test.remote, test.branch, test.opts...); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -159,7 +153,7 @@ func TestRepository_ApplyCheck(t *testing.T) {
 	require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "a.txt", Content: strings.NewReader("a  b\ntwo\nc  d\n")}))
 
 	assert.Error(t, r.ApplyCheck(ctx, patchPath))
-	assert.NoError(t, r.ApplyCheck(ctx, patchPath, ApplyCheckOptions{IgnoreWhitespace: true}))
+	assert.NoError(t, r.ApplyCheck(ctx, patchPath, ApplyCheckIgnoreWhitespace()))
 }
 
 func TestRepository_RevParse(t *testing.T) {
@@ -235,7 +229,7 @@ func TestRepository_CountObjects(t *testing.T) {
 func TestRepository_Fsck(t *testing.T) {
 	ctx := context.Background()
 	// Make sure it does not blow up
-	err := testrepo.Fsck(ctx, FsckOptions{})
+	err := testrepo.Fsck(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,6 +241,6 @@ func TestRepository_GC(t *testing.T) {
 	require.NoError(t, err)
 	defer cleanup()
 
-	require.NoError(t, r.GC(ctx, GCOptions{Args: []string{"--quiet"}}))
-	assert.Error(t, r.GC(ctx, GCOptions{Args: []string{"--no-such-option"}}))
+	require.NoError(t, r.GC(ctx, GCArgs("--quiet")))
+	assert.Error(t, r.GC(ctx, GCArgs("--no-such-option")))
 }

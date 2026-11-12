@@ -19,7 +19,7 @@ func setupBareRepoWithAlternates(t *testing.T) *Repository {
 	t.Helper()
 
 	path := t.TempDir()
-	require.NoError(t, Init(context.Background(), path, InitOptions{Bare: true}))
+	require.NoError(t, Init(context.Background(), path, InitBare()))
 	objects, err := filepath.Abs(filepath.Join(testrepo.Path(), "objects"))
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(path, "objects", "info", "alternates"), []byte(objects+"\n"), 0o600))
