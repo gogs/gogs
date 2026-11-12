@@ -887,7 +887,11 @@ func cleanUpMigrateGitConfig(configPath string) error {
 	if err != nil {
 		return errors.Newf("open config file: %v", err)
 	}
-	cfg.DeleteSection("remote \"origin\"")
+	for sub, sec := range cfg.Subsections("remote") {
+		if sub == "origin" {
+			cfg.DeleteSection(sec.Name())
+		}
+	}
 	if err = cfg.SaveTo(configPath, ini.Indent("\t")); err != nil {
 		return errors.Newf("save config file: %v", err)
 	}

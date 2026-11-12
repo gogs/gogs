@@ -93,7 +93,7 @@ func (m *Mirror) readAddress() {
 		log.Error("load config: %v", err)
 		return
 	}
-	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
+	m.address = cfg.Subsection("remote", "origin").Key("url").Value()
 }
 
 // HandleMirrorCredentials replaces user credentials from HTTP/HTTPS URL
