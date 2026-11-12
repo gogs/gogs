@@ -8,8 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// slowCommand is a git command that runs for longer than the tests wait.
-var slowCommand = []string{"-c", "alias.slow=!sleep 2", "slow"}
+// slowCommand is a git command whose child process runs for longer than the
+// tests wait, so they only pass when the child is killed along with Git.
+var slowCommand = []string{"-c", "alias.slow=!sleep 30", "slow"}
 
 func TestExec_ContextTimeout(t *testing.T) {
 	t.Run("context already expired before start", func(t *testing.T) {
@@ -23,8 +24,10 @@ func TestExec_ContextTimeout(t *testing.T) {
 	t.Run("context deadline fires mid-execution", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
+		start := time.Now()
 		_, err := exec(ctx, "", slowCommand, nil)
 		assert.Equal(t, ErrExecTimeout, err)
+		assert.Less(t, time.Since(start), 5*time.Second)
 	})
 }
 
@@ -35,8 +38,10 @@ func TestExec_ContextCancellation(t *testing.T) {
 		cancel()
 	}()
 
+	start := time.Now()
 	_, err := exec(ctx, "", slowCommand, nil)
 	assert.ErrorIs(t, err, context.Canceled)
+	assert.Less(t, time.Since(start), 5*time.Second)
 	// Must NOT be ErrExecTimeout, cancellation is distinct from deadline.
 	assert.NotEqual(t, ErrExecTimeout, err)
 }

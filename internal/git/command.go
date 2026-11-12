@@ -13,6 +13,10 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
+// waitDelay bounds how long waiting for a command takes after it was killed or
+// exited, e.g., when a process it started still holds its output open.
+const waitDelay = time.Minute
+
 // WithTimeout returns a copy of ctx that times out after the given duration. A
 // timeout of zero or less returns ctx unchanged, i.e., no timeout.
 func WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -20,6 +24,19 @@ func WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, c
 		return ctx, func() {}
 	}
 	return context.WithTimeout(ctx, timeout)
+}
+
+// newCommand returns a git command that is killed along with every process it
+// started when ctx is done.
+func newCommand(ctx context.Context, dir string, args []string, envs []string) *osexec.Cmd {
+	c := osexec.CommandContext(ctx, "git", args...)
+	c.Dir = dir
+	if len(envs) > 0 {
+		c.Env = append(os.Environ(), envs...)
+	}
+	c.WaitDelay = waitDelay
+	killProcessGroup(c)
+	return c
 }
 
 // exitError is returned when Git exits with a non-zero status. Its message
@@ -46,11 +63,7 @@ func (e *exitError) Unwrap() error {
 // ErrExecTimeout if the execution was timed out.
 func run(ctx context.Context, dir string, args []string, envs []string, stdout io.Writer) ([]byte, error) {
 	stderr := new(bytes.Buffer)
-	c := osexec.CommandContext(ctx, "git", args...)
-	c.Dir = dir
-	if len(envs) > 0 {
-		c.Env = append(os.Environ(), envs...)
-	}
+	c := newCommand(ctx, dir, args, envs)
 	c.Stdout = stdout
 	c.Stderr = stderr
 	err := c.Run()
