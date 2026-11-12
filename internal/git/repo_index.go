@@ -273,9 +273,14 @@ const emptyTreeID = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 // returns the ID of the resulting commit. Like "git rebase", it keeps commits
 // that are already based on the upstream, drops merge commits and commits whose
 // changes are already in the upstream, keeps the author lines of the commits as
-// they are, re-encodes them in UTF-8, and takes the committer from Git
-// configuration. It returns ErrMergeConflict when a commit does not apply.
-func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (string, error) {
+// they are, and re-encodes them in UTF-8. The committer is required and is
+// recorded on the rewritten commits. It returns ErrMergeConflict when a commit
+// does not apply.
+func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) (string, error) {
+	if committer == nil {
+		return "", errors.New("committer is required")
+	}
+
 	head, err := r.RevParse(ctx, upstream)
 	if err != nil {
 		return "", errors.Wrap(err, "get upstream commit")
@@ -291,11 +296,11 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 		return head, nil
 	}
 
-	stdout, err = exec(ctx, r.path, []string{"var", "GIT_COMMITTER_IDENT"}, nil)
+	stdout, err = exec(ctx, r.path, []string{"var", "GIT_COMMITTER_IDENT"}, signatureEnvs("COMMITTER", committer))
 	if err != nil {
 		return "", errors.Wrap(err, "get committer")
 	}
-	committer := strings.TrimSpace(string(stdout))
+	committerLine := strings.TrimSpace(string(stdout))
 
 	var emptyCommit string
 	for _, id := range ids {
@@ -314,7 +319,7 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 		mergeBase := c.parent
 		if mergeBase == "" {
 			if emptyCommit == "" {
-				emptyCommit, err = r.writeCommit(ctx, "tree "+emptyTreeID+"\nauthor "+committer+"\ncommitter "+committer+"\n\n")
+				emptyCommit, err = r.writeCommit(ctx, "tree "+emptyTreeID+"\nauthor "+committerLine+"\ncommitter "+committerLine+"\n\n")
 				if err != nil {
 					return "", errors.Wrap(err, "create empty commit")
 				}
@@ -351,7 +356,7 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string) (strin
 		// through environment variables would drop characters Git does not allow
 		// at the ends of names, e.g., quotes, and reject malformed author lines
 		// that "git rebase" copies.
-		head, err = r.writeCommit(ctx, "tree "+tree+"\nparent "+head+"\nauthor "+c.authorLine+"\ncommitter "+committer+"\n\n"+message)
+		head, err = r.writeCommit(ctx, "tree "+tree+"\nparent "+head+"\nauthor "+c.authorLine+"\ncommitter "+committerLine+"\n\n"+message)
 		if err != nil {
 			return "", errors.Wrapf(err, "commit %s", id)
 		}

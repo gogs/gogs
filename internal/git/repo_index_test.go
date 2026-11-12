@@ -319,18 +319,28 @@ func TestRepository_Rebase(t *testing.T) {
 	base, err := r.BranchCommitID(ctx, "master")
 	require.NoError(t, err)
 	upstream := commitOnto(base, "UPSTREAM", "upstream\n", "Add UPSTREAM\n")
+	committer := &Signature{Name: "carol", Email: "carol@example.com"}
+
+	t.Run("requires a committer", func(t *testing.T) {
+		_, err := r.Rebase(ctx, upstream, base, nil)
+		assert.EqualError(t, err, "committer is required")
+	})
 
 	t.Run("replays commits on top of the upstream", func(t *testing.T) {
 		first := commitOnto(base, "A", "a\n", "Add A\n\nWith a body.\n")
 		second := commitOnto(first, "B", "b\n", "Add B")
 
-		got, err := r.Rebase(ctx, upstream, second)
+		got, err := r.Rebase(ctx, upstream, second, committer)
 		require.NoError(t, err)
 
 		rebasedSecond, err := r.rawCommit(ctx, got)
 		require.NoError(t, err)
 		assert.Equal(t, "Add B", rebasedSecond.message)
 		assert.Equal(t, "bob <bob@example.com> 1704189845 -0700", rebasedSecond.authorLine)
+		c, err := r.CatFileCommit(ctx, got)
+		require.NoError(t, err)
+		assert.Equal(t, committer.Name, c.Committer.Name)
+		assert.Equal(t, committer.Email, c.Committer.Email)
 		rebasedFirst, err := r.rawCommit(ctx, rebasedSecond.parent)
 		require.NoError(t, err)
 		assert.Equal(t, "Add A\n\nWith a body.\n", rebasedFirst.message)
@@ -343,7 +353,7 @@ func TestRepository_Rebase(t *testing.T) {
 
 	t.Run("keeps commits already on top of the upstream", func(t *testing.T) {
 		head := commitOnto(upstream, "C", "c\n", "Add C\n")
-		got, err := r.Rebase(ctx, upstream, head)
+		got, err := r.Rebase(ctx, upstream, head, committer)
 		require.NoError(t, err)
 		assert.Equal(t, head, got)
 	})
@@ -352,7 +362,7 @@ func TestRepository_Rebase(t *testing.T) {
 		same := commitOnto(base, "UPSTREAM", "upstream\n", "Add UPSTREAM again\n")
 		head := commitOnto(same, "D", "d\n", "Add D\n")
 
-		got, err := r.Rebase(ctx, upstream, head)
+		got, err := r.Rebase(ctx, upstream, head, committer)
 		require.NoError(t, err)
 		rebased, err := r.rawCommit(ctx, got)
 		require.NoError(t, err)
@@ -372,7 +382,7 @@ func TestRepository_Rebase(t *testing.T) {
 		stdout, err := execInput(ctx, r.Path(), []string{"hash-object", "-t", "commit", "-w", "--stdin"}, nil, strings.NewReader(object))
 		require.NoError(t, err)
 
-		got, err := r.Rebase(ctx, upstream, strings.TrimSpace(string(stdout)))
+		got, err := r.Rebase(ctx, upstream, strings.TrimSpace(string(stdout)), committer)
 		require.NoError(t, err)
 		raw, err := exec(ctx, r.Path(), []string{"cat-file", "commit", got}, nil)
 		require.NoError(t, err)
@@ -395,7 +405,7 @@ func TestRepository_Rebase(t *testing.T) {
 
 	t.Run("uses the first author line", func(t *testing.T) {
 		head := writeRaw("author first <f@example.com> 1 +0000\nauthor second <s@example.com> 2 +0000\ncommitter c <c@example.com> 1 +0000\n", "m\n")
-		got, err := r.Rebase(ctx, upstream, head)
+		got, err := r.Rebase(ctx, upstream, head, committer)
 		require.NoError(t, err)
 		rebased, err := r.rawCommit(ctx, got)
 		require.NoError(t, err)
@@ -404,7 +414,7 @@ func TestRepository_Rebase(t *testing.T) {
 
 	t.Run("refuses commits without author", func(t *testing.T) {
 		head := writeRaw("committer c <c@example.com> 1 +0000\n", "m\n")
-		_, err := r.Rebase(ctx, upstream, head)
+		_, err := r.Rebase(ctx, upstream, head, committer)
 		assert.ErrorContains(t, err, "no author")
 	})
 
@@ -414,7 +424,7 @@ func TestRepository_Rebase(t *testing.T) {
 		t.Setenv("GIT_CONFIG_KEY_0", "log.showSignature")
 		t.Setenv("GIT_CONFIG_VALUE_0", "true")
 
-		got, err := r.Rebase(ctx, upstream, head)
+		got, err := r.Rebase(ctx, upstream, head, committer)
 		require.NoError(t, err)
 		rebased, err := r.rawCommit(ctx, got)
 		require.NoError(t, err)
@@ -423,7 +433,7 @@ func TestRepository_Rebase(t *testing.T) {
 
 	t.Run("conflict", func(t *testing.T) {
 		head := commitOnto(base, "UPSTREAM", "different\n", "Change UPSTREAM\n")
-		_, err := r.Rebase(ctx, upstream, head)
+		_, err := r.Rebase(ctx, upstream, head, committer)
 		assert.ErrorIs(t, err, ErrMergeConflict)
 	})
 }

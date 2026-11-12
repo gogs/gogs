@@ -940,7 +940,7 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 // repository at repoPath.
 func initRepoCommit(repoPath string, files map[string][]byte, author *git.Signature) error {
 	ctx := context.TODO()
-	return commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, nil, nil, func(tmpRepo *git.Repository) error {
+	return commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, nil, func(tmpRepo *git.Repository) error {
 		indexFiles := make([]git.IndexFile, 0, len(files))
 		for name, data := range files {
 			indexFiles = append(indexFiles, git.IndexFile{Path: name, Content: bytes.NewReader(data)})

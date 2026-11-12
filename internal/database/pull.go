@@ -235,6 +235,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		mergeStyle = MergeStyleRegular
 	}
 
+	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
 	switch mergeStyle {
 	case MergeStyleRegular: // Create merge commit
@@ -255,15 +256,16 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		// Create a merge commit for the base branch.
 		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
 		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
-			Parents: []string{baseCommitID, headCommitID},
-			Author:  &git.Signature{Name: doer.DisplayName(), Email: doer.Email},
+			Parents:   []string{baseCommitID, headCommitID},
+			Author:    committer,
+			Committer: committer,
 		})
 		if err != nil {
 			return errors.Newf("commit tree: %v", err)
 		}
 
 	case MergeStyleRebase: // Rebase before merging
-		mergedCommitID, err = tmpRepo.Rebase(ctx, baseCommitID, headCommitID)
+		mergedCommitID, err = tmpRepo.Rebase(ctx, baseCommitID, headCommitID, committer)
 		if err != nil {
 			return errors.Newf("rebase [%s on %s]: %v", pr.HeadBranch, pr.BaseBranch, err)
 		}
