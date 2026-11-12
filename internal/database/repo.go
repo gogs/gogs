@@ -2134,14 +2134,9 @@ func GitGcRepos() error {
 			if err := repo.GetOwner(); err != nil {
 				return err
 			}
-			gitRepo, err := git.Open(RepoPath(repo.Owner.Name, repo.Name))
-			if err != nil {
-				return errors.Newf("open repository: %v", err)
-			}
-
 			ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
 			defer cancel()
-			return gitRepo.GC(ctx, git.GCOptions{Args: conf.Git.GCArgs})
+			return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
 		})
 }
 

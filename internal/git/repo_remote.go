@@ -165,6 +165,15 @@ func (r *Repository) RemoteUpdate(ctx context.Context, opts ...RemoteUpdateOptio
 	return stderr.String(), nil
 }
 
+// RepoRemoteUpdate is like Repository.RemoteUpdate for the repository in given path.
+func RepoRemoteUpdate(ctx context.Context, repoPath string, opts ...RemoteUpdateOptions) (string, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return "", err
+	}
+	return r.RemoteUpdate(ctx, opts...)
+}
+
 // RemotesOptions contains arguments for listing remotes of the repository.
 // /
 // Docs: https://git-scm.com/docs/git-remote#_commands

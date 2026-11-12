@@ -246,14 +246,9 @@ func isMirrorURLAccessible(timeout time.Duration, url string) bool {
 // mirrorRemoteUpdate fetches updates for the mirror repository in given path,
 // and returns the output that reports updated references.
 func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (string, error) {
-	gitRepo, err := git.Open(repoPath)
-	if err != nil {
-		return "", errors.Wrap(err, "open repository")
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return gitRepo.RemoteUpdate(ctx, git.RemoteUpdateOptions{
+	return git.RepoRemoteUpdate(ctx, repoPath, git.RemoteUpdateOptions{
 		Prune:          prune,
 		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
 	})

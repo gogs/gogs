@@ -706,3 +706,12 @@ func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
 }
+
+// RepoGC is like Repository.GC for the repository in given path.
+func RepoGC(ctx context.Context, repoPath string, opts ...GCOptions) error {
+	r, err := Open(repoPath)
+	if err != nil {
+		return err
+	}
+	return r.GC(ctx, opts...)
+}
