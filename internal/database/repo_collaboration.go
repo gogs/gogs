@@ -106,7 +106,7 @@ func (r *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
 
 	collaborators := make([]*Collaborator, len(collaborations))
 	for i, c := range collaborations {
-		user, err := getUserByID(e, c.UserID)
+		user, err := getUserByID(legacyTx(e), c.UserID)
 		if err != nil {
 			return nil, err
 		}

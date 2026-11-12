@@ -108,7 +108,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 			return errors.Newf("getIssueByID [%d]: %v", c.IssueID, err)
 		}
 		if c.Issue.Repo == nil {
-			c.Issue.Repo, err = getRepositoryByID(e, c.Issue.RepoID)
+			c.Issue.Repo, err = getRepositoryByID(legacyTx(e), c.Issue.RepoID)
 			if err != nil {
 				return errors.Newf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
 			}
