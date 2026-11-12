@@ -17,8 +17,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/core"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
@@ -36,11 +34,6 @@ func DumpDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool
 	err := os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		return err
-	}
-
-	err = dumpLegacyTables(ctx, dirPath, verbose)
-	if err != nil {
-		return errors.Wrap(err, "dump legacy tables")
 	}
 
 	for _, table := range Tables {
@@ -108,36 +101,6 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 	return rows.Err()
 }
 
-func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
-	for _, table := range legacyTables {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		tableName := getTableType(table)
-		if verbose {
-			log.Trace("Dumping table %q...", tableName)
-		}
-
-		tableFile := filepath.Join(dirPath, tableName+".json")
-		f, err := os.Create(tableFile)
-		if err != nil {
-			return errors.Newf("create JSON file: %v", err)
-		}
-
-		if err = x.Context(ctx).Asc("id").Iterate(table, func(idx int, bean any) (err error) {
-			return json.NewEncoder(f).Encode(bean)
-		}); err != nil {
-			_ = f.Close()
-			return errors.Newf("dump table '%s': %v", tableName, err)
-		}
-		_ = f.Close()
-	}
-	return nil
-}
-
 // ImportDatabase migrates the database to the current schema version and
 // replaces the rows of each table with those in the backup archive in JSON Lines
 // format.
@@ -145,11 +108,6 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 	err := migrations.Migrate(db.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "migrate")
-	}
-
-	err = importLegacyTables(ctx, dirPath, verbose)
-	if err != nil {
-		return errors.Wrap(err, "import legacy tables")
 	}
 
 	for _, table := range Tables {
@@ -207,13 +165,19 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		// PostgreSQL does not like the null characters (U+0000)
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
 
-		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
-		err = json.Unmarshal(cleaned, elem)
+		elem := reflect.New(reflect.TypeOf(table).Elem())
+		err = json.Unmarshal(cleaned, elem.Interface())
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
 
-		err = db.WithContext(ctx).Create(elem).Error
+		// Insert column values as they are in the archive, so that neither hooks nor
+		// column defaults (e.g., true for "repository.enable_wiki") change them.
+		row := make(map[string]any, len(s.DBNames))
+		for _, name := range s.DBNames {
+			row[name], _ = s.FieldsByDBName[name].ValueOf(ctx, elem.Elem())
+		}
+		err = db.WithContext(ctx).Table(rawTableName).Create(row).Error
 		if err != nil {
 			return errors.Wrap(err, "create row")
 		}
@@ -224,88 +188,6 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		seqName := rawTableName + "_id_seq"
 		if err = db.WithContext(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false)`, seqName, rawTableName)).Error; err != nil {
 			return errors.Wrapf(err, "reset table %q.%q", rawTableName, seqName)
-		}
-	}
-	return nil
-}
-
-func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
-	snakeMapper := core.SnakeMapper{}
-
-	skipInsertProcessors := map[string]bool{
-		"mirror":    true,
-		"milestone": true,
-	}
-
-	for _, table := range legacyTables {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*database.")
-		tableFile := filepath.Join(dirPath, tableName+".json")
-		if !osx.IsFile(tableFile) {
-			continue
-		}
-
-		if verbose {
-			log.Trace("Importing table %q...", tableName)
-		}
-
-		rawTableName := x.TableName(table)
-		if _, err := x.Exec("DELETE FROM `" + rawTableName + "`"); err != nil {
-			return errors.Newf("delete rows of table %q: %v", tableName, err)
-		}
-
-		f, err := os.Open(tableFile)
-		if err != nil {
-			return errors.Newf("open JSON file: %v", err)
-		}
-		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			if err = json.Unmarshal(scanner.Bytes(), table); err != nil {
-				return errors.Newf("unmarshal to struct: %v", err)
-			}
-
-			if _, err = x.Insert(table); err != nil {
-				return errors.Newf("insert strcut: %v", err)
-			}
-
-			var meta struct {
-				ID             int64
-				CreatedUnix    int64
-				DeadlineUnix   int64
-				ClosedDateUnix int64
-			}
-			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
-				log.Error("Failed to unmarshal to map: %v", err)
-			}
-
-			// Reset created_unix back to the date save in archive because Insert method updates its value
-			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
-					log.Error("Failed to reset '%s.created_unix': %v", rawTableName, err)
-				}
-			}
-
-			switch rawTableName {
-			case "milestone":
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
-					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
-				}
-			}
-		}
-
-		// PostgreSQL needs manually reset table sequence for auto increment keys
-		if conf.UsePostgreSQL {
-			rawTableName := snakeMapper.Obj2Table(tableName)
-			seqName := rawTableName + "_id_seq"
-			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
-				return errors.Newf("reset table %q' sequence: %v", rawTableName, err)
-			}
 		}
 	}
 	return nil

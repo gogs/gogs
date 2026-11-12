@@ -1,0 +1,1 @@
+{"ID":1,"Type":0,"Status":2,"IssueID":2,"Index":2,"HeadRepoID":1,"BaseRepoID":1,"HeadUserName":"alice","HeadBranch":"fix","BaseBranch":"main","MergeBase":"a94a8fe5ccb19ba61c4c0873d391e987982fbbd3","HasMerged":true,"MergedCommitID":"f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3","MergerID":1,"MergedUnix":1588572486}

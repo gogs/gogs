@@ -73,8 +73,8 @@ func (t NoticeType) TrStr() string {
 type Notice struct {
 	ID          int64 `gorm:"primaryKey"`
 	Type        NoticeType
-	Description string    `xorm:"TEXT" gorm:"type:TEXT"`
-	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Description string    `gorm:"type:TEXT"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
 }
 

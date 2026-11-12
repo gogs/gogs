@@ -1,0 +1,2 @@
+{"ID":1,"RepoID":1,"Name":"v1.0","Content":"The first release","IsClosed":false,"NumIssues":1,"NumClosedIssues":0,"Completeness":0,"DeadlineUnix":0,"ClosedDateUnix":0}
+{"ID":2,"RepoID":1,"Name":"v0.9","Content":"","IsClosed":true,"NumIssues":3,"NumClosedIssues":3,"Completeness":100,"DeadlineUnix":1588568886,"ClosedDateUnix":1588572486}

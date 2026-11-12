@@ -51,13 +51,13 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 // Label represents a label of repository for issues.
 type Label struct {
 	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
-	Name            string
-	Color           string `xorm:"VARCHAR(7)"`
-	NumIssues       int
-	NumClosedIssues int
-	NumOpenIssues   int  `xorm:"-" json:"-" gorm:"-"`
-	IsChecked       bool `xorm:"-" json:"-" gorm:"-"`
+	RepoID          int64  `gorm:"index:IDX_label_repo_id"`
+	Name            string `gorm:"size:255"`
+	Color           string `gorm:"size:7"`
+	NumIssues       int    `gorm:"size:32"`
+	NumClosedIssues int    `gorm:"size:32"`
+	NumOpenIssues   int    `json:"-" gorm:"-"`
+	IsChecked       bool   `json:"-" gorm:"-"`
 }
 
 func (l *Label) APIFormat() *apiv1types.IssueLabel {
@@ -245,8 +245,8 @@ func DeleteLabel(repoID, labelID int64) error {
 // IssueLabel represents an issue-lable relation.
 type IssueLabel struct {
 	ID      int64
-	IssueID int64 `xorm:"UNIQUE(s)"`
-	LabelID int64 `xorm:"UNIQUE(s)"`
+	IssueID int64 `gorm:"uniqueIndex:UQE_issue_label_s"`
+	LabelID int64 `gorm:"uniqueIndex:UQE_issue_label_s"`
 }
 
 func hasIssueLabel(tx *gorm.DB, issueID, labelID int64) bool {

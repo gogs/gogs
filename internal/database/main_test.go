@@ -61,7 +61,7 @@ func clearTables(t *testing.T, db *gorm.DB) error {
 		return nil
 	}
 
-	for _, t := range append(Tables, legacyTables...) {
+	for _, t := range Tables {
 		err := db.Where("TRUE").Delete(t).Error
 		if err != nil {
 			return err

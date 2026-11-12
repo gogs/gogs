@@ -159,65 +159,65 @@ func NewRepoContext() {
 // Repository contains information of a repository.
 type Repository struct {
 	ID              int64  `gorm:"primaryKey"`
-	OwnerID         int64  `xorm:"UNIQUE(s)" gorm:"uniqueIndex:repo_owner_name_unique"`
-	Owner           *User  `xorm:"-" gorm:"-" json:"-"`
-	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"uniqueIndex:repo_owner_name_unique;index;not null"`
-	Name            string `xorm:"INDEX NOT NULL" gorm:"index;not null"`
-	Description     string `xorm:"VARCHAR(512)" gorm:"type:VARCHAR(512)"`
-	Website         string
-	DefaultBranch   string
-	Size            int64 `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
+	OwnerID         int64  `gorm:"uniqueIndex:UQE_repository_s"`
+	Owner           *User  `gorm:"-" json:"-"`
+	LowerName       string `gorm:"size:255;not null;uniqueIndex:UQE_repository_s;index:IDX_repository_lower_name"`
+	Name            string `gorm:"size:255;not null;index:IDX_repository_name"`
+	Description     string `gorm:"size:512"`
+	Website         string `gorm:"size:255"`
+	DefaultBranch   string `gorm:"size:255"`
+	Size            int64  `gorm:"not null;default:0"`
 	UseCustomAvatar bool
 
 	// Counters
-	NumWatches          int
-	NumStars            int
-	NumForks            int
-	NumIssues           int
-	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-" gorm:"-" json:"-"`
-	NumPulls            int
-	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-" gorm:"-" json:"-"`
-	NumMilestones       int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
-	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
-	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
-	NumTags             int `xorm:"-" gorm:"-" json:"-"`
+	NumWatches          int `gorm:"size:32"`
+	NumStars            int `gorm:"size:32"`
+	NumForks            int `gorm:"size:32"`
+	NumIssues           int `gorm:"size:32"`
+	NumClosedIssues     int `gorm:"size:32"`
+	NumOpenIssues       int `gorm:"-" json:"-"`
+	NumPulls            int `gorm:"size:32"`
+	NumClosedPulls      int `gorm:"size:32"`
+	NumOpenPulls        int `gorm:"-" json:"-"`
+	NumMilestones       int `gorm:"size:32;not null;default:0"`
+	NumClosedMilestones int `gorm:"size:32;not null;default:0"`
+	NumOpenMilestones   int `gorm:"-" json:"-"`
+	NumTags             int `gorm:"-" json:"-"`
 
 	IsPrivate bool
 	// TODO: When migrate to GORM, make sure to do a loose migration with `HasColumn` and `AddColumn`,
 	// see docs in https://gorm.io/docs/migration.html.
-	IsUnlisted bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	IsUnlisted bool `gorm:"not null;default:FALSE"`
 	// Stored as "is_bare" and encoded as "IsBare" to stay compatible with
 	// existing databases and backup archives.
-	IsEmpty bool `xorm:"is_bare" gorm:"column:is_bare" json:"IsBare"`
+	IsEmpty bool `gorm:"column:is_bare" json:"IsBare"`
 
 	IsMirror bool
-	*Mirror  `xorm:"-" gorm:"-" json:"-"`
+	*Mirror  `gorm:"-" json:"-"`
 
 	// Advanced settings
-	EnableWiki            bool `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
+	EnableWiki            bool `gorm:"not null;default:TRUE"`
 	AllowPublicWiki       bool
 	EnableExternalWiki    bool
-	ExternalWikiURL       string
-	EnableIssues          bool `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
+	ExternalWikiURL       string `gorm:"size:255"`
+	EnableIssues          bool   `gorm:"not null;default:TRUE"`
 	AllowPublicIssues     bool
 	EnableExternalTracker bool
-	ExternalTrackerURL    string
-	ExternalTrackerFormat string
-	ExternalTrackerStyle  string
-	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
-	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
-	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
-	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	ExternalTrackerURL    string            `gorm:"size:255"`
+	ExternalTrackerFormat string            `gorm:"size:255"`
+	ExternalTrackerStyle  string            `gorm:"size:255"`
+	ExternalMetas         map[string]string `gorm:"-" json:"-"`
+	EnablePulls           bool              `gorm:"not null;default:TRUE"`
+	PullsIgnoreWhitespace bool              `gorm:"not null;default:FALSE"`
+	PullsAllowRebase      bool              `gorm:"not null;default:FALSE"`
 
-	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	IsFork   bool `gorm:"not null;default:FALSE"`
 	ForkID   int64
-	BaseRepo *Repository `xorm:"-" gorm:"-" json:"-"`
+	BaseRepo *Repository `gorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Updated     time.Time `gorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
@@ -840,7 +840,8 @@ func (r *Repository) setDefaultBranchIfMissing(ctx context.Context, candidate st
 	}
 
 	r.DefaultBranch = branch
-	if _, err = x.Id(r.ID).Cols("default_branch").Update(r); err != nil {
+	err = Handle.db.Model(new(Repository)).Where("id = ?", r.ID).UpdateColumn("default_branch", branch).Error
+	if err != nil {
 		return errors.Wrap(err, "update default branch")
 	}
 	return nil
@@ -2277,8 +2278,8 @@ func (repos MirrorRepositoryList) LoadAttributes() error {
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64 `gorm:"primaryKey"`
-	UserID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
-	RepoID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
+	UserID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
 }
 
 func isWatching(tx *gorm.DB, userID, repoID int64) bool {
@@ -2400,8 +2401,8 @@ func NotifyWatchers(act *Action) error {
 
 type Star struct {
 	ID     int64 `gorm:"primaryKey"`
-	UserID int64 `xorm:"uid UNIQUE(s)" gorm:"column:uid;uniqueIndex:star_user_repo_unique;not null"`
-	RepoID int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:star_user_repo_unique;not null"`
+	UserID int64 `gorm:"column:uid;uniqueIndex:UQE_star_s"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_star_s"`
 }
 
 // Star or unstar repository.
