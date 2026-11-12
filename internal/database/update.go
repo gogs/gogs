@@ -92,6 +92,13 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return nil
 	}
 
+	if !isDelRef && strings.HasPrefix(opts.FullRefspec, git.RefsHeads) {
+		err = repo.setDefaultBranchIfMissing(ctx, git.RefShortName(opts.FullRefspec))
+		if err != nil {
+			return errors.Wrap(err, "set default branch")
+		}
+	}
+
 	var commits []*git.Commit
 	// Skip read parent commits when delete branch
 	if !isDelRef {

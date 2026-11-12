@@ -226,11 +226,6 @@ func (r *Repository) BeforeInsert() {
 
 func (r *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "default_branch":
-		// FIXME: use db migration to solve all at once.
-		if r.DefaultBranch == "" {
-			r.DefaultBranch = conf.Repository.DefaultBranch
-		}
 	case "num_closed_issues":
 		r.NumOpenIssues = r.NumIssues - r.NumClosedIssues
 	case "num_closed_pulls":
@@ -851,17 +846,21 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		return repo, errors.Newf("open repository: %v", err)
 	}
 
+	// Set the HEAD branch as default branch, which is also available for empty
+	// repositories.
 	refspec, err := gitRepo.SymbolicRef(context.TODO())
 	if err != nil {
 		return repo, errors.Newf("get HEAD branch: %v", err)
 	}
-	headBranch := git.RefShortName(refspec)
+	repo.DefaultBranch = git.RefShortName(refspec)
 
-	// The repository is empty when its HEAD branch has no commits.
-	repo.IsBare = !gitRepo.HasBranch(context.TODO(), headBranch)
+	hasBranches, err := gitRepo.HasBranches(context.TODO())
+	if err != nil {
+		return repo, errors.Wrap(err, "check bare")
+	}
+	repo.IsBare = !hasBranches
+
 	if !repo.IsBare {
-		repo.DefaultBranch = headBranch
-
 		if err = repo.UpdateSize(); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 		}
@@ -882,6 +881,51 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 
 	return CleanUpMigrateInfo(repo)
+}
+
+// setDefaultBranchIfMissing replaces the saved default branch when it does not
+// exist, e.g., when the first push to an empty repository uses a different
+// branch name than the one set at creation, or when no default branch was saved.
+// See resolveMissingDefaultBranch for which branch replaces it.
+func (r *Repository) setDefaultBranchIfMissing(ctx context.Context, candidate string) error {
+	branch, err := resolveMissingDefaultBranch(ctx, r.RepoPath(), r.DefaultBranch, candidate)
+	if err != nil || branch == "" || branch == r.DefaultBranch {
+		return err
+	}
+
+	r.DefaultBranch = branch
+	if _, err = x.Id(r.ID).Cols("default_branch").Update(r); err != nil {
+		return errors.Wrap(err, "update default branch")
+	}
+	return nil
+}
+
+// resolveMissingDefaultBranch returns the branch that should replace the saved
+// default branch of the repository in given path, or an empty string when the
+// saved one exists or no replacement exists. HEAD is the source of truth, so the
+// branch it points to is used when it exists. Otherwise, HEAD is pointed to the
+// candidate branch if that exists.
+func resolveMissingDefaultBranch(ctx context.Context, repoPath, savedBranch, candidate string) (string, error) {
+	if savedBranch != "" && git.RepoHasBranch(ctx, repoPath, savedBranch) {
+		return "", nil
+	}
+
+	head, err := git.RepoSymbolicRef(ctx, repoPath)
+	if err != nil {
+		return "", errors.Wrap(err, "get HEAD")
+	}
+	if headBranch := git.RefShortName(head); git.RepoHasBranch(ctx, repoPath, headBranch) {
+		return headBranch, nil
+	}
+
+	if candidate == "" || !git.RepoHasBranch(ctx, repoPath, candidate) {
+		return "", nil
+	}
+	_, err = git.RepoSymbolicRef(ctx, repoPath, git.SymbolicRefOptions{Ref: git.RefsHeads + candidate})
+	if err != nil {
+		return "", errors.Wrap(err, "set HEAD")
+	}
+	return candidate, nil
 }
 
 // cleanUpMigrateGitConfig removes mirror info which prevents "push --all".
@@ -1114,19 +1158,22 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 
 	// Re-fetch the repository from database before updating it (else it would
 	// override changes that were done earlier with sql)
-	if repo, err = getRepositoryByID(e, repo.ID); err != nil {
+	saved, err := getRepositoryByID(e, repo.ID)
+	if err != nil {
 		return errors.Newf("getRepositoryByID: %v", err)
 	}
 
 	if !opts.AutoInit {
-		repo.IsBare = true
+		saved.IsBare = true
 	}
 
-	repo.DefaultBranch = conf.Repository.DefaultBranch
-	if err = updateRepository(e, repo, false); err != nil {
+	saved.DefaultBranch = conf.Repository.DefaultBranch
+	if err = updateRepository(e, saved, false); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 
+	// The caller returns its copy to API clients, which must match what was saved.
+	*repo = *saved
 	return nil
 }
 

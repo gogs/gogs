@@ -74,6 +74,42 @@ func IsURLAccessible(ctx context.Context, url string) bool {
 	return err == nil
 }
 
+// RemoteHEADOptions contains arguments for getting the reference that HEAD of
+// a remote repository points to.
+//
+// Docs: https://git-scm.com/docs/git-ls-remote#Documentation/git-ls-remote.txt---symref
+type RemoteHEADOptions struct {
+	CommandOptions
+}
+
+// RemoteHEAD returns the reference that HEAD of the remote repository points
+// to, e.g., "refs/heads/main".
+func RemoteHEAD(ctx context.Context, url string, opts ...RemoteHEADOptions) (string, error) {
+	var opt RemoteHEADOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	stdout, err := exec(ctx, "", []string{"ls-remote", "--quiet", "--symref", "--end-of-options", url, "HEAD"}, opt.Envs)
+	if err != nil {
+		return "", err
+	}
+
+	for line := range bytes.SplitSeq(stdout, []byte("\n")) {
+		ref, ok := bytes.CutPrefix(line, []byte("ref: "))
+		if !ok {
+			continue
+		}
+		// The "HEAD" pattern also matches references like "refs/remotes/origin/HEAD".
+		target, name, _ := bytes.Cut(ref, []byte("\t"))
+		if string(name) != "HEAD" {
+			continue
+		}
+		return string(target), nil
+	}
+	return "", ErrNotSymbolicRef
+}
+
 // RemoteAddOptions contains options to add a remote address.
 //
 // Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emaddem

@@ -237,6 +237,20 @@ func mirrorGitEnv() []string {
 	}
 }
 
+// remoteDefaultBranch returns the branch that HEAD of the mirror source in
+// given URL points to.
+func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADOptions{
+		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+	})
+	if err != nil {
+		return "", err
+	}
+	return git.RefShortName(ref), nil
+}
+
 // isMirrorURLAccessible reports whether the given remote URL is reachable
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
@@ -411,6 +425,30 @@ func SyncMirrors() {
 			continue
 		}
 
+		// Pushes clear the bare state of a repository, but a mirror of an empty
+		// repository only receives commits through syncs.
+		if m.Repo.IsBare {
+			hasBranches, err := git.RepoHasBranches(ctx, m.Repo.RepoPath())
+			if err != nil {
+				log.Error("Failed to check if repository has branches [repo_id: %d]: %v", m.RepoID, err)
+			} else if hasBranches {
+				if err = Handle.Repositories().Touch(ctx, m.RepoID); err != nil {
+					log.Error("Failed to touch repository [repo_id: %d]: %v", m.RepoID, err)
+				} else {
+					m.Repo.IsBare = false
+				}
+			}
+		}
+
+		if !m.Repo.IsBare && !git.RepoHasBranch(ctx, m.Repo.RepoPath(), m.Repo.DefaultBranch) {
+			branch, err := remoteDefaultBranch(time.Duration(conf.Git.Timeout.Mirror)*time.Second, m.RawAddress())
+			if err != nil {
+				log.Error("Failed to get default branch of mirror source [repo_id: %d]: %v", m.RepoID, err)
+			} else if err = m.Repo.setDefaultBranchIfMissing(ctx, branch); err != nil {
+				log.Error("Failed to set default branch [repo_id: %d]: %v", m.RepoID, err)
+			}
+		}
+
 		// TODO:
 		// - Create "Mirror Sync" webhook event
 		// - Create mirror sync (create, push and delete) events and trigger the "mirror sync" webhooks
@@ -509,6 +547,10 @@ func SyncMirrors() {
 
 		if _, err = x.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID); err != nil {
 			log.Error("Update 'mirror.updated_unix' [%d]: %v", m.RepoID, err)
+			continue
+		}
+
+		if m.Repo.IsBare {
 			continue
 		}
 
