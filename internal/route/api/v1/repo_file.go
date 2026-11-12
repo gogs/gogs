@@ -1,10 +1,9 @@
 package v1
 
 import (
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	routerepo "gogs.io/gogs/internal/route/repo"
 )
 

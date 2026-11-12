@@ -5,10 +5,10 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/tool"
 )
 

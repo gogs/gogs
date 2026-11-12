@@ -7,10 +7,10 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"
 )

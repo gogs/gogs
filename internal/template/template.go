@@ -17,11 +17,10 @@ import (
 	"golang.org/x/text/transform"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"

@@ -3,9 +3,8 @@ package v1
 import (
 	"fmt"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/git"
 )
 
 func getRepoGitTree(c *context.APIContext) {

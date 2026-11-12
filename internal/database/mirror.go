@@ -13,9 +13,8 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"

@@ -4,9 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 )
 

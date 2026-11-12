@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gogs.io/gogs/internal/git"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )

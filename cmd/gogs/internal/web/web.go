@@ -23,7 +23,6 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"gogs.io/gogs/internal/git"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -35,6 +34,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"

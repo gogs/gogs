@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"gogs.io/gogs/internal/git"
 
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/tool"
 )
 

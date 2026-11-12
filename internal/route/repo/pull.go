@@ -11,12 +11,11 @@ import (
 	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 )
 
 const (

@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/unknwon/paginater"
-	"gogs.io/gogs/internal/git"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"

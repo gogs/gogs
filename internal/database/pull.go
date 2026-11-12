@@ -12,10 +12,9 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+
 	"gogs.io/gogs/internal/git"
 )
 

@@ -12,9 +12,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"

@@ -11,10 +11,9 @@ import (
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/git"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 )
 

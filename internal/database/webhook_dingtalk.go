@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"gogs.io/gogs/internal/git"
 
+	"gogs.io/gogs/internal/git"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 

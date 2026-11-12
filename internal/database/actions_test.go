@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gogs.io/gogs/internal/git"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 )
 
 func TestIssueReferencePattern(t *testing.T) {
