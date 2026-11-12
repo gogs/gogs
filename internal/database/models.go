@@ -7,8 +7,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/go-sqlite"
@@ -43,6 +45,36 @@ var (
 	x            *xorm.Engine
 	legacyTables []any
 )
+
+// legacyTx returns a GORM handle that runs in the same database transaction as
+// the given XORM session, or the global GORM handle when the session is not in
+// a transaction. It allows code that still uses XORM sessions to call helpers
+// that have been migrated to GORM without breaking transaction boundaries.
+//
+// TODO: Remove once all legacy code is migrated to GORM.
+func legacyTx(e Engine) *gorm.DB {
+	sess, ok := e.(*xorm.Session)
+	if !ok {
+		return Handle.db
+	}
+
+	// XORM does not expose the underlying transaction of a session.
+	v := reflect.ValueOf(sess).Elem()
+	if v.FieldByName("isAutoCommit").Bool() {
+		return Handle.db
+	}
+	field := v.FieldByName("tx")
+	tx := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().Interface().(*core.Tx)
+	if tx == nil {
+		return Handle.db
+	}
+
+	// Passing a context makes GORM clone the statement, so the global handle is
+	// not modified below.
+	db := Handle.db.Session(&gorm.Session{Context: context.Background()})
+	db.Statement.ConnPool = tx.Tx
+	return db
+}
 
 func init() {
 	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.

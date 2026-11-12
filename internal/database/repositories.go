@@ -9,7 +9,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -30,6 +32,16 @@ func (r *Repository) BeforeUpdate(tx *gorm.DB) error {
 
 // AfterFind implements the GORM query hook.
 func (r *Repository) AfterFind(_ *gorm.DB) error {
+	// FIXME: use db migration to solve all at once.
+	if r.DefaultBranch == "" {
+		r.DefaultBranch = conf.Repository.DefaultBranch
+	}
+	if r.ExternalTrackerStyle == "" {
+		r.ExternalTrackerStyle = markup.IssueNameStyleNumeric
+	}
+	r.NumOpenIssues = r.NumIssues - r.NumClosedIssues
+	r.NumOpenPulls = r.NumPulls - r.NumClosedPulls
+	r.NumOpenMilestones = r.NumMilestones - r.NumClosedMilestones
 	r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
 	return nil
