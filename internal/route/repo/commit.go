@@ -149,6 +149,12 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
+	_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
+	if err != nil {
+		c.NotFoundOrError(git.NewError(err), "get base commit")
+		return
+	}
+
 	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
 	defer cancel()
 	diff, err := c.Repo.GitRepo.Diff(ctx,

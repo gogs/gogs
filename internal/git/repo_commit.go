@@ -84,6 +84,11 @@ func (r *Repository) CatFileCommit(ctx context.Context, rev string) (*Commit, er
 	args := []string{"cat-file", "commit", commitID}
 	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
+		// "git rev-parse" passes a full-length object ID through without checking
+		// that the object exists.
+		if isExitStatus(err, 128) {
+			return nil, ErrRevisionNotExist
+		}
 		return nil, err
 	}
 

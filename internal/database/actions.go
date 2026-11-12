@@ -225,7 +225,13 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+	// A new reference has nothing to compare against.
+	var compareURL string
+	if !git.IsEmptyID(opts.OldCommitID) {
+		opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+		compareURL = conf.Server.ExternalURL + opts.Commits.CompareURL
+	}
+
 	apiPusher := opts.Owner.APIFormat()
 	err = PrepareWebhooks(
 		opts.Repo,
@@ -234,7 +240,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 			Ref:        opts.RefName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
-			CompareURL: conf.Server.ExternalURL + opts.Commits.CompareURL,
+			CompareURL: compareURL,
 			Commits:    apiCommits,
 			Repo:       opts.Repo.APIFormat(opts.Owner),
 			Pusher:     apiPusher,

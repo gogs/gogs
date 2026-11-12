@@ -42,6 +42,17 @@ func TestRepository_CatFileCommit(t *testing.T) {
 		assert.Nil(t, c)
 	})
 
+	t.Run("unknown object ID", func(t *testing.T) {
+		for _, id := range []string{
+			ObjectFormatSHA1.EmptyID(),
+			"0a234863651bc2852b0f4b1e81f18f34e3b01e5c",
+		} {
+			c, err := testrepo.CatFileCommit(ctx, id)
+			assert.Equal(t, ErrRevisionNotExist, err, id)
+			assert.Nil(t, c, id)
+		}
+	})
+
 	c, err := testrepo.CatFileCommit(ctx, "d58e3ef9f123eea6857161c79275ee22b228f659")
 	if err != nil {
 		t.Fatal(err)
