@@ -1,0 +1,14 @@
+{{- /* Generated from web/src/emails/templates/issue/mention.tsx. */ -}}
+{{AppName}}
+
+----------------------------------------
+
+{{Tr `mail.issue.mentioned` .Doer.DisplayName}}
+
+{{Markup .Body}}
+
+----------------------------------------
+
+{{Tr `mail.view_on` AppName}} {{.Link}}
+
+© {{Year}} {{AppName}} {{AppURL}}

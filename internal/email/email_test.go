@@ -7,119 +7,79 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/unknwon/i18n"
 
+	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/conf"
 )
 
-// TestRenderEmbeddedTemplates ensures every builtin mail template parses and
-// executes against the data shape its production caller supplies, so a syntax
-// regression or missing field is caught at build time, not on the first email.
-func TestRenderEmbeddedTemplates(t *testing.T) {
+func setupTemplates(t *testing.T) {
+	t.Helper()
 	conf.SetMockApp(t, conf.AppOpts{BrandName: "Gogs"})
 	conf.SetMockServer(t, conf.ServerOpts{
 		ExternalURL:        "https://example.test/",
 		LoadAssetsFromDisk: false,
 	})
-	resetTemplateCache(t)
-
-	tests := []struct {
-		name string
-		data map[string]any
-	}{
-		{
-			name: tmplAuthActivate,
-			data: map[string]any{
-				"Username":          "alice",
-				"ActiveCodeLives":   1440,
-				"ResetPwdCodeLives": 1440,
-				"Code":              "abc",
-			},
-		},
-		{
-			name: tmplAuthActivateEmail,
-			data: map[string]any{
-				"Username":        "alice",
-				"ActiveCodeLives": 1440,
-				"Code":            "abc",
-				"Email":           "alice@example.test",
-			},
-		},
-		{
-			name: tmplAuthResetPassword,
-			data: map[string]any{
-				"Username":          "alice",
-				"ActiveCodeLives":   1440,
-				"ResetPwdCodeLives": 1440,
-				"Code":              "abc",
-			},
-		},
-		{
-			name: tmplAuthRegisterNotify,
-			data: map[string]any{"Username": "alice"},
-		},
-		{
-			name: tmplNotifyCollaborator,
-			data: map[string]any{
-				"Subject":  "alice added you to bob/repo",
-				"RepoName": "bob/repo",
-				"Link":     "https://example.test/bob/repo",
-			},
-		},
-		{
-			name: tmplIssueComment,
-			data: map[string]any{
-				"Subject": "[bob/repo] Re: Issue title",
-				"Body":    "<p>comment body</p>",
-				"Link":    "https://example.test/bob/repo/issues/1",
-				"Doer":    testDoer{},
-			},
-		},
-		{
-			name: tmplIssueMention,
-			data: map[string]any{
-				"Subject": "[bob/repo] @alice mentioned you",
-				"Body":    "<p>mention body</p>",
-				"Link":    "https://example.test/bob/repo/issues/1",
-				"Doer":    testDoer{},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			body, err := render(tc.name, tc.data)
-			require.NoError(t, err)
-			assert.NotEmpty(t, body)
-			assert.False(t, strings.Contains(body, "<no value>"), "template referenced a missing data key")
-		})
-	}
-}
-
-// TestRenderUnknownTemplate asserts callers get a useful error rather than an
-// empty body when asking for a name that doesn't exist.
-func TestRenderUnknownTemplate(t *testing.T) {
-	conf.SetMockServer(t, conf.ServerOpts{LoadAssetsFromDisk: false})
-	resetTemplateCache(t)
-
-	_, err := render("does/not/exist", nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
-}
-
-// resetTemplateCache forces the next render call to reload templates, so each
-// test starts from a clean state regardless of execution order.
-func resetTemplateCache(t *testing.T) {
-	t.Helper()
 	tplSet = nil
 	tplSetErr = nil
 	tplSetOnce = sync.Once{}
 }
 
-// testDoer satisfies the User interface for fields the issue templates touch.
-type testDoer struct{}
+// TestPreviews composes every email the way the admin panel previews it, so a
+// broken template, a missing data field or a translation with the wrong
+// arguments is caught before the first email goes out.
+func TestPreviews(t *testing.T) {
+	setupTemplates(t)
 
-func (testDoer) ID() int64                                    { return 1 }
-func (testDoer) DisplayName() string                          { return "alice" }
-func (testDoer) Email() string                                { return "alice@example.test" }
-func (testDoer) GenerateEmailActivateCode(string) string      { return "abc" }
-func (testDoer) GenerateEmailResetPasswordCode(string) string { return "abc" }
+	for _, name := range Names() {
+		t.Run(name, func(t *testing.T) {
+			m, err := Preview(name, "en-US")
+			require.NoError(t, err)
+			assert.NotEmpty(t, m.Subject)
+			assert.Contains(t, m.HTML, `lang="en-US"`)
+			for part, body := range map[string]string{"HTML": m.HTML, "text": m.Text} {
+				assert.NotContains(t, body, "<no value>", "%s references a missing data field", part)
+				assert.NotContains(t, body, "%!", "%s has a translation with the wrong arguments", part)
+				assert.NotContains(t, body, "{{", "%s has an action left over", part)
+			}
+			assert.NotContains(t, m.Text, "<p", "text has HTML in it")
+		})
+	}
+
+	_, err := Preview("does/not/exist", "en-US")
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestCompose(t *testing.T) {
+	setupTemplates(t)
+	data := userCodeData{Username: `<b>bob</b>`, ActiveCodeLives: 3, Code: "a&b"}
+
+	t.Run("escapes data in HTML only", func(t *testing.T) {
+		m, err := activateAccountMail.compose("en-US", data)
+		require.NoError(t, err)
+		assert.Contains(t, m.HTML, "Hi &lt;b&gt;bob&lt;/b&gt;,")
+		assert.NotContains(t, m.HTML, "<b>bob</b>")
+		assert.Contains(t, m.HTML, `href="https://example.test/user/activate?code=a%26b"`)
+		assert.Contains(t, m.Text, "Hi <b>bob</b>,")
+		assert.Contains(t, m.Text, "within 3 hours")
+		assert.Contains(t, m.Text, "https://example.test/user/activate?code=a&b")
+	})
+
+	t.Run("in the language of the recipient", func(t *testing.T) {
+		loadLocales()
+		data, err := embedconf.Files.ReadFile("locale/locale_zh-CN.ini")
+		require.NoError(t, err)
+		err = i18n.SetMessage("zh-CN", data)
+		if err != nil {
+			require.ErrorIs(t, err, i18n.ErrLangAlreadyExist)
+		}
+
+		m, err := activateAccountMail.compose("zh-CN", userCodeData{Username: "bob"})
+		require.NoError(t, err)
+		assert.Equal(t, "请激活您的帐户", m.Subject)
+		assert.Contains(t, m.HTML, `lang="zh-CN"`)
+		// Keys missing from a language fall back to English.
+		assert.True(t, strings.HasPrefix(m.Text, "Gogs"), m.Text)
+		assert.Contains(t, m.Text, "Hi bob,")
+	})
+}
