@@ -48,8 +48,9 @@ type ServiceOptions struct {
 
 // serviceIdleTimeout is how long a service may go without reading from or
 // writing to the client before it is killed. Git sends keepalive packets while
-// it prepares a pack or runs hooks, so a transfer that makes progress never
-// stays idle that long.
+// it prepares or processes a pack, so a transfer that makes progress never stays
+// idle that long. Git sends nothing while hooks run, so a hook that prints
+// nothing for this long is killed along with the service.
 var serviceIdleTimeout = 30 * time.Minute
 
 // RunService runs the service for the repository in given path, e.g., "git
