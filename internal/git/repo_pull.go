@@ -2,12 +2,9 @@ package git
 
 import (
 	"context"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
-	clog "unknwon.dev/clog/v2"
 )
 
 // MergeBaseOptions contains optional arguments for getting merge base.
@@ -50,37 +47,39 @@ type PullRequestMeta struct {
 // branch of the repository into the base branch of the repository at the
 // basePath, which may be the same repository.
 func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
-	tmpRemoteBranch := baseBranch
+	base := baseBranch
+	var envs []string
 
-	// We need to create a temporary remote when the pull request is sent from a forked repository.
+	// When the pull request is sent from a forked repository, read objects of the
+	// base repository through an alternate object directory instead of fetching
+	// them, so nothing is ever written to the head repository.
 	if r.path != basePath {
-		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
-		err := r.RemoteAdd(ctx, tmpRemote, basePath, RemoteAddOptions{Fetch: true})
+		baseRepo, err := Open(basePath)
 		if err != nil {
-			return nil, errors.Wrap(err, "add remote")
+			return nil, errors.Wrap(err, "open base repository")
 		}
-		defer func() {
-			err := r.RemoteRemove(ctx, tmpRemote)
-			if err != nil {
-				clog.Error("Failed to remove remote %q [path: %s]: %v", tmpRemote, r.path, err)
-				return
-			}
-		}()
-
-		tmpRemoteBranch = "remotes/" + tmpRemote + "/" + baseBranch
+		base, err = baseRepo.BranchCommitID(ctx, baseBranch)
+		if err != nil {
+			return nil, errors.Wrap(err, "get base branch commit ID")
+		}
+		stdout, err := exec(ctx, baseRepo.path, []string{"rev-parse", "--path-format=absolute", "--git-path", "objects"}, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "get base objects directory")
+		}
+		envs = []string{"GIT_ALTERNATE_OBJECT_DIRECTORIES=" + strings.TrimSpace(string(stdout))}
 	}
 
-	mergeBase, err := r.MergeBase(ctx, tmpRemoteBranch, headBranch)
+	mergeBase, err := r.MergeBase(ctx, base, headBranch, MergeBaseOptions{CommandOptions: CommandOptions{Envs: envs}})
 	if err != nil {
 		return nil, errors.Wrap(err, "get merge base")
 	}
 
-	commits, err := r.Log(ctx, mergeBase+"..."+headBranch)
+	commits, err := r.Log(ctx, mergeBase+"..."+headBranch, LogOptions{CommandOptions: CommandOptions{Envs: envs}})
 	if err != nil {
 		return nil, errors.Wrap(err, "get commits")
 	}
 
-	names, err := r.DiffNameOnly(ctx, tmpRemoteBranch, headBranch, DiffNameOnlyOptions{NeedsMergeBase: true})
+	names, err := r.DiffNameOnly(ctx, base, headBranch, DiffNameOnlyOptions{NeedsMergeBase: true, CommandOptions: CommandOptions{Envs: envs}})
 	if err != nil {
 		return nil, errors.Wrap(err, "get changed files")
 	}

@@ -78,6 +78,15 @@ func TestRepository_PullRequestMeta(t *testing.T) {
 	require.NoError(t, base.Commit(ctx, committer, "base"))
 
 	t.Run("fork", func(t *testing.T) {
+		snapshot := func() string {
+			refs, err := exec(ctx, head.Path(), []string{"for-each-ref"}, nil)
+			require.NoError(t, err)
+			config, err := exec(ctx, head.Path(), []string{"config", "--local", "--list"}, nil)
+			require.NoError(t, err)
+			return string(refs) + string(config)
+		}
+		before := snapshot()
+
 		meta, err := head.PullRequestMeta(ctx, base.Path(), "feature", "master")
 		require.NoError(t, err)
 		assert.Equal(t, mergeBase, meta.MergeBase)
@@ -85,9 +94,16 @@ func TestRepository_PullRequestMeta(t *testing.T) {
 		assert.Equal(t, "head 1", meta.Commits[0].Summary())
 		assert.Equal(t, 3, meta.NumFiles)
 
-		remotes, err := head.Remotes(ctx)
+		assert.Equal(t, before, snapshot(), "refs and config of the head repository should be untouched")
+		baseCommitID, err := base.BranchCommitID(ctx, "master")
 		require.NoError(t, err)
-		assert.Equal(t, []string{"origin"}, remotes, "temporary remote should be removed")
+		_, err = exec(ctx, head.Path(), []string{"cat-file", "-e", baseCommitID}, nil)
+		assert.Error(t, err, "objects of the base repository should not be copied")
+	})
+
+	t.Run("base branch does not exist", func(t *testing.T) {
+		_, err := head.PullRequestMeta(ctx, base.Path(), "feature", "404")
+		assert.ErrorIs(t, err, ErrReferenceNotExist)
 	})
 
 	t.Run("same repository", func(t *testing.T) {
