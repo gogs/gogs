@@ -158,7 +158,7 @@ func TestRepository_DeleteTag(t *testing.T) {
 	assert.False(t, r.HasReference(ctx, RefsTags+"v1.0.0"))
 }
 
-func Test_tagsAfter(t *testing.T) {
+func TestTagsAfter(t *testing.T) {
 	all := []string{
 		"v2.3.0", "v2.2.1", "v2.1.0",
 		"v1.3.0", "v1.2.0", "v1.1.0",

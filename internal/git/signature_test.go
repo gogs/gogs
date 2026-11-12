@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_parseSignature(t *testing.T) {
+func TestParseSignature(t *testing.T) {
 	tests := []struct {
 		line   string
 		expSig *Signature

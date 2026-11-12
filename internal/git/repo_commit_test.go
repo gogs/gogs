@@ -2,14 +2,13 @@ package git
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_escapePath(t *testing.T) {
+func TestEscapePath(t *testing.T) {
 	tests := []struct {
 		path    string
 		expPath string
@@ -246,7 +245,7 @@ func TestRepository_RevListCount(t *testing.T) {
 
 	t.Run("no refspecs", func(t *testing.T) {
 		count, err := testrepo.RevListCount(ctx, []string{})
-		assert.Equal(t, errors.New("must have at least one refspec"), err)
+		assert.EqualError(t, err, "must have at least one refspec")
 		assert.Zero(t, count)
 	})
 
@@ -300,7 +299,7 @@ func TestRepository_RevList(t *testing.T) {
 
 	t.Run("no refspecs", func(t *testing.T) {
 		commits, err := testrepo.RevList(ctx, []string{})
-		assert.Equal(t, errors.New("must have at least one refspec"), err)
+		assert.EqualError(t, err, "must have at least one refspec")
 		assert.Nil(t, commits)
 	})
 

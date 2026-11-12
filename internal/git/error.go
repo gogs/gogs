@@ -1,7 +1,7 @@
 package git
 
 import (
-	"errors"
+	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/errx"
 )

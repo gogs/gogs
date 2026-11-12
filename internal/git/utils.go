@@ -6,8 +6,7 @@ import (
 	"sync"
 )
 
-// objectCache provides thread-safe cache operations. TODO(@unknwon): Use
-// sync.Map once requires Go 1.13.
+// objectCache provides thread-safe cache operations.
 type objectCache struct {
 	lock  sync.RWMutex
 	cache map[string]interface{}

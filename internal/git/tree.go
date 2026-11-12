@@ -47,8 +47,8 @@ func (t *Tree) Subtree(ctx context.Context, subpath string, opts ...LsTreeOption
 	return g, nil
 }
 
-// Entries returns all entries of the tree. Successful results are cached;
-// failed attempts are not cached, allowing retries with a fresh context.
+// Entries returns all entries of the tree. Successful results are cached.
+// Failed attempts are not cached, allowing retries with a fresh context.
 func (t *Tree) Entries(ctx context.Context, opts ...LsTreeOptions) (Entries, error) {
 	t.entriesMu.Lock()
 	defer t.entriesMu.Unlock()

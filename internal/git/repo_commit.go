@@ -3,10 +3,11 @@ package git
 import (
 	"bytes"
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cockroachdb/errors"
 )
 
 // parseCommit parses commit information from the (uncompressed) raw data of the
@@ -70,7 +71,7 @@ type CatFileCommitOptions struct {
 }
 
 // CatFileCommit returns the commit corresponding to the given revision of the
-// repository. The revision could be a commit ID or full refspec (e.g.
+// repository. The revision could be a commit ID or full refspec (e.g.,
 // "refs/heads/master").
 func (r *Repository) CatFileCommit(ctx context.Context, rev string, opts ...CatFileCommitOptions) (*Commit, error) {
 	var opt CatFileCommitOptions
@@ -130,13 +131,13 @@ func (r *Repository) CatFileType(ctx context.Context, rev string, opts ...CatFil
 }
 
 // BranchCommit returns the latest commit of given branch of the repository. The
-// branch must be given in short name e.g. "master".
+// branch must be given in short name, e.g., "master".
 func (r *Repository) BranchCommit(ctx context.Context, branch string, opts ...CatFileCommitOptions) (*Commit, error) {
 	return r.CatFileCommit(ctx, RefsHeads+branch, opts...)
 }
 
 // TagCommit returns the latest commit of given tag of the repository. The tag
-// must be given in short name e.g. "v1.0.0".
+// must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommit(ctx context.Context, tag string, opts ...CatFileCommitOptions) (*Commit, error) {
 	return r.CatFileCommit(ctx, RefsTags+tag, opts...)
 }

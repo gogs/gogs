@@ -25,7 +25,7 @@ type Submodule struct {
 type Submodules = *objectCache
 
 // Submodules returns submodules found in this commit. Successful results are
-// cached; failed attempts are not cached, allowing retries with a fresh context.
+// cached. Failed attempts are not cached, allowing retries with a fresh context.
 func (c *Commit) Submodules(ctx context.Context) (Submodules, error) {
 	c.submodulesMu.Lock()
 	defer c.submodulesMu.Unlock()
@@ -131,7 +131,7 @@ func InferSubmoduleURL(baseURL string, mod *Submodule) string {
 
 	parsed, err := url.Parse(raw)
 	if err != nil {
-		// Try parse as SCP syntax again
+		// Try parsing as SCP syntax.
 		match := scpSyntax.FindAllStringSubmatch(raw, -1)
 		if len(match) == 0 {
 			return mod.URL

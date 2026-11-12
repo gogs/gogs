@@ -51,7 +51,7 @@ func TestSetPrefix(t *testing.T) {
 	assert.Equal(t, new, logPrefix)
 }
 
-func Test_log(t *testing.T) {
+func TestLog(t *testing.T) {
 	old := logOutput
 	defer SetOutput(old)
 

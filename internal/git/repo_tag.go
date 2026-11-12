@@ -3,15 +3,16 @@ package git
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // parseTag parses tag information from the (uncompressed) raw data of the tag
 // object. It assumes "\n\n" separates the header from the rest of the message.
 func parseTag(data []byte) (*Tag, error) {
 	tag := new(Tag)
-	// we now have the contents of the commit object. Let's investigate.
+	// We now have the contents of the tag object. Let's investigate.
 	nextline := 0
 l:
 	for {
@@ -85,7 +86,7 @@ func (r *Repository) getTag(ctx context.Context, id *SHA1) (*Tag, error) {
 		tag.id = id
 		tag.repo = r
 	default:
-		return nil, fmt.Errorf("unsupported tag type: %s", typ)
+		return nil, errors.Newf("unsupported tag type: %s", typ)
 	}
 
 	r.cachedTags.Set(id.String(), tag)
@@ -99,7 +100,7 @@ type TagOptions struct {
 	CommandOptions
 }
 
-// Tag returns a Git tag by given name, e.g. "v1.0.0".
+// Tag returns a Git tag by given name, e.g., "v1.0.0".
 func (r *Repository) Tag(ctx context.Context, name string, opts ...TagOptions) (*Tag, error) {
 	var opt TagOptions
 	if len(opts) > 0 {
@@ -135,7 +136,7 @@ func (r *Repository) Tag(ctx context.Context, name string, opts ...TagOptions) (
 //
 // Docs: https://git-scm.com/docs/git-tag#Documentation/git-tag.txt---list
 type TagsOptions struct {
-	// SortKet sorts tags with provided tag key, optionally prefixed with '-' to sort tags in descending order.
+	// SortKey sorts tags with provided tag key, optionally prefixed with '-' to sort tags in descending order.
 	SortKey string
 	// Pattern filters tags matching the specified pattern.
 	Pattern string
@@ -245,7 +246,7 @@ type TagsPage struct {
 func (r *Repository) TagsAfter(ctx context.Context, after string, limit int) (*TagsPage, error) {
 	all, err := r.Tags(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("get tags: %w", err)
+		return nil, errors.Wrap(err, "get tags")
 	}
 	return tagsAfter(all, after, limit), nil
 }
@@ -257,7 +258,7 @@ func tagsAfter(all []string, after string, limit int) *TagsPage {
 		limit = 0
 	}
 
-	// Returns everything when no filter and no limit
+	// Returns everything when no filter and no limit.
 	if after == "" && limit == 0 {
 		return &TagsPage{
 			Tags:      all,
@@ -265,7 +266,7 @@ func tagsAfter(all []string, after string, limit int) *TagsPage {
 		}
 	}
 
-	// No filter but has a limit, returns first X tags
+	// No filter but has a limit, returns first X tags.
 	if after == "" && limit > 0 {
 		endIdx := min(limit, total)
 		return &TagsPage{
@@ -275,7 +276,6 @@ func tagsAfter(all []string, after string, limit int) *TagsPage {
 		}
 	}
 
-	// Loop over all tags see if we can find the filter
 	previousAfter := ""
 	found := false
 	tags := make([]string, 0, len(all))
@@ -289,7 +289,7 @@ func tagsAfter(all []string, after string, limit int) *TagsPage {
 			previousAfter = all[i-limit]
 		}
 
-		// In case filter is the oldest one
+		// In case filter is the oldest one.
 		if i+1 < total {
 			tags = all[i+1:]
 		}

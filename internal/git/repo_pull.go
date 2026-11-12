@@ -2,11 +2,11 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	clog "unknwon.dev/clog/v2"
 )
 
@@ -57,7 +57,7 @@ func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, 
 		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
 		err := r.RemoteAdd(ctx, tmpRemote, basePath, RemoteAddOptions{Fetch: true})
 		if err != nil {
-			return nil, fmt.Errorf("add remote: %v", err)
+			return nil, errors.Wrap(err, "add remote")
 		}
 		defer func() {
 			err := r.RemoteRemove(ctx, tmpRemote)
@@ -72,18 +72,17 @@ func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, 
 
 	mergeBase, err := r.MergeBase(ctx, tmpRemoteBranch, headBranch)
 	if err != nil {
-		return nil, fmt.Errorf("get merge base: %w", err)
+		return nil, errors.Wrap(err, "get merge base")
 	}
 
 	commits, err := r.Log(ctx, mergeBase+"..."+headBranch)
 	if err != nil {
-		return nil, fmt.Errorf("get commits: %w", err)
+		return nil, errors.Wrap(err, "get commits")
 	}
 
-	// Count number of changed files
 	names, err := r.DiffNameOnly(ctx, tmpRemoteBranch, headBranch, DiffNameOnlyOptions{NeedsMergeBase: true})
 	if err != nil {
-		return nil, fmt.Errorf("get changed files: %w", err)
+		return nil, errors.Wrap(err, "get changed files")
 	}
 
 	return &PullRequestMeta{

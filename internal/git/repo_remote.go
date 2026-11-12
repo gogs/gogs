@@ -197,7 +197,7 @@ func (r *Repository) RemoteGetURL(ctx context.Context, name string, opts ...Remo
 //
 // Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
 type RemoteSetURLOptions struct {
-	// Indicates whether to get push URLs instead of fetch URLs.
+	// Indicates whether to set push URLs instead of fetch URLs.
 	Push bool
 	// The regex to match existing URLs to replace (instead of first).
 	Regex string
@@ -238,7 +238,7 @@ func (r *Repository) RemoteSetURL(ctx context.Context, name, newurl string, opts
 //
 // Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
 type RemoteSetURLAddOptions struct {
-	// Indicates whether to get push URLs instead of fetch URLs.
+	// Indicates whether to add push URLs instead of fetch URLs.
 	Push bool
 	CommandOptions
 }
@@ -269,7 +269,7 @@ func (r *Repository) RemoteSetURLAdd(ctx context.Context, name, newurl string, o
 //
 // Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
 type RemoteSetURLDeleteOptions struct {
-	// Indicates whether to get push URLs instead of fetch URLs.
+	// Indicates whether to delete push URLs instead of fetch URLs.
 	Push bool
 	CommandOptions
 }

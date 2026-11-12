@@ -1,7 +1,6 @@
 package git
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,12 +57,12 @@ func TestSHA1_Equal(t *testing.T) {
 
 func TestNewID(t *testing.T) {
 	sha, err := NewID([]byte("000000"))
-	assert.Equal(t, errors.New("length must be 20"), err)
+	assert.EqualError(t, err, "length must be 20")
 	assert.Nil(t, sha)
 }
 
 func TestNewIDFromString(t *testing.T) {
 	sha, err := NewIDFromString("000000")
-	assert.Equal(t, errors.New("length must be 40"), err)
+	assert.EqualError(t, err, "length must be 40")
 	assert.Nil(t, sha)
 }

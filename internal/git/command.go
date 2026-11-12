@@ -3,13 +3,13 @@ package git
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
 )
 

@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 	"sync"
+
+	"github.com/cockroachdb/errors"
 )
 
 var (
@@ -43,8 +45,8 @@ var (
 	gitVersionSet bool
 )
 
-// BinVersion returns current Git binary version that is used by this module.
-// Successful results are cached; failed attempts are not cached, allowing
+// BinVersion returns current Git binary version that is used by this package.
+// Successful results are cached. Failed attempts are not cached, allowing
 // retries with a fresh context.
 func BinVersion(ctx context.Context) (string, error) {
 	gitVersionMu.Lock()
@@ -61,7 +63,7 @@ func BinVersion(ctx context.Context) (string, error) {
 
 	fields := strings.Fields(string(stdout))
 	if len(fields) < 3 {
-		return "", fmt.Errorf("not enough output: %s", stdout)
+		return "", errors.Newf("not enough output: %s", stdout)
 	}
 
 	// Handle special case on Windows.

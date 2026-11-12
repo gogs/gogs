@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"runtime"
 	"sort"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/cockroachdb/errors"
 )
 
 // EntryMode is the unix file mode of a tree entry.
@@ -43,7 +44,7 @@ func (e *TreeEntry) Mode() EntryMode {
 	return e.mode
 }
 
-// IsTree returns tree if the entry itself is another tree (i.e. a directory).
+// IsTree returns true if the entry itself is another tree (i.e., a directory).
 func (e *TreeEntry) IsTree() bool {
 	return e.mode == EntryTree
 }
@@ -53,7 +54,7 @@ func (e *TreeEntry) IsBlob() bool {
 	return e.mode == EntryBlob
 }
 
-// IsExec returns tree if the entry is an executable.
+// IsExec returns true if the entry is an executable.
 func (e *TreeEntry) IsExec() bool {
 	return e.mode == EntryExec
 }
@@ -63,7 +64,7 @@ func (e *TreeEntry) IsSymlink() bool {
 	return e.mode == EntrySymlink
 }
 
-// IsCommit returns true if the entry is a commit (i.e. a submodule).
+// IsCommit returns true if the entry is a commit (i.e., a submodule).
 func (e *TreeEntry) IsCommit() bool {
 	return e.mode == EntryCommit
 }
@@ -84,7 +85,7 @@ func (e *TreeEntry) Name() string {
 }
 
 // Size returns the size of the entry. It runs a git command to determine the
-// size on first call. Successful results are cached; failed attempts are not
+// size on first call. Successful results are cached. Failed attempts are not
 // cached, allowing retries with a fresh context.
 func (e *TreeEntry) Size(ctx context.Context) int64 {
 	e.sizeMu.Lock()
@@ -157,7 +158,7 @@ type CommitsInfoOptions struct {
 	// The relative path of the repository.
 	Path string
 	// The maximum number of goroutines to be used for getting commits information.
-	// When not set (i.e. <=0), runtime.GOMAXPROCS is used to determine the value.
+	// When not set (i.e., <=0), runtime.GOMAXPROCS is used to determine the value.
 	MaxConcurrency int
 }
 
@@ -233,7 +234,7 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 					Path: epath,
 				})
 				if err != nil {
-					setError(fmt.Errorf("get commit by path %q: %v", epath, err))
+					setError(errors.Wrapf(err, "get commit by path %q", epath))
 					return
 				}
 

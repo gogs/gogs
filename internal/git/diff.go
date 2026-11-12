@@ -3,11 +3,11 @@ package git
 import (
 	"bufio"
 	"bytes"
-	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // DiffLineType is the line type in diff.
@@ -240,7 +240,7 @@ func (p *diffParser) readLine() error {
 	p.buffer, err = p.ReadBytes('\n')
 	if err != nil {
 		if err != io.EOF {
-			return fmt.Errorf("read string: %v", err)
+			return errors.Wrap(err, "read string")
 		}
 
 		p.isEOF = true
@@ -256,8 +256,8 @@ func (p *diffParser) readLine() error {
 var diffHead = []byte("diff --git ")
 
 // parseDiffHeaderNames returns the old and new file names from the part of a
-// "diff --git" line after the command, e.g. `a/foo.txt b/bar.txt`. Git quotes
-// each name independently when it contains special characters, e.g.
+// "diff --git" line after the command, e.g., `a/foo.txt b/bar.txt`. Git quotes
+// each name independently when it contains special characters, e.g.,
 // `"a/f\303\266o.txt" b/foo.txt`.
 func parseDiffHeaderNames(names string) (a, b string, err error) {
 	middle := -1
@@ -305,7 +305,7 @@ func (p *diffParser) parseFileHeader() (*DiffFile, error) {
 
 	a, b, err := parseDiffHeaderNames(line[len(diffHead):])
 	if err != nil {
-		return nil, fmt.Errorf("malformed diff header %q: %v", line, err)
+		return nil, errors.Wrapf(err, "malformed diff header %q", line)
 	}
 
 	file := &DiffFile{
@@ -351,7 +351,7 @@ checkType:
 					file.oldMode = file.mode
 				}
 			}
-		case strings.HasPrefix(line, "index"): // e.g. index ee791be..9997571 100644
+		case strings.HasPrefix(line, "index"): // e.g., index ee791be..9997571 100644
 			fields := strings.Fields(line[6:])
 			shas := strings.Split(fields[0], "..")
 			if len(shas) != 2 {
@@ -406,7 +406,7 @@ func (p *diffParser) parseSection() (_ *DiffSection, isIncomplete bool, _ error)
 		},
 	}
 
-	// Parse line number, e.g. @@ -0,0 +1,3 @@
+	// Parse line number, e.g., @@ -0,0 +1,3 @@
 	var leftLine, rightLine int
 	ss := strings.Split(line, "@@")
 	ranges := strings.Split(ss[1][1:], " ")

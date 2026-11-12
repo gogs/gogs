@@ -2,9 +2,10 @@ package git
 
 import (
 	"encoding/hex"
-	"errors"
 	"strings"
 	"sync"
+
+	"github.com/cockroachdb/errors"
 )
 
 // EmptyID is an ID with empty SHA-1 hash.
@@ -46,8 +47,8 @@ func (s *SHA1) String() string {
 	return s.str
 }
 
-// MustID always returns a new SHA1 from a [20]byte array with no validation of
-// input.
+// MustID always returns a new SHA1 from the first 20 bytes of the slice with no
+// validation of input.
 func MustID(b []byte) *SHA1 {
 	var id SHA1
 	for i := 0; i < 20; i++ {
@@ -56,7 +57,7 @@ func MustID(b []byte) *SHA1 {
 	return &id
 }
 
-// NewID returns a new SHA1 from a [20]byte array.
+// NewID returns a new SHA1 from a 20-byte slice.
 func NewID(b []byte) (*SHA1, error) {
 	if len(b) != 20 {
 		return nil, errors.New("length must be 20")

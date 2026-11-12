@@ -64,7 +64,7 @@ func TestCmd_ContextCancellation(t *testing.T) {
 	err := c.Input(blockingReader{cancel: done}).StdOut().Run().Stream(io.Discard)
 	err = mapContextError(err, ctx)
 	assert.ErrorIs(t, err, context.Canceled)
-	// Must NOT be ErrExecTimeout — cancellation is distinct from deadline.
+	// Must NOT be ErrExecTimeout, cancellation is distinct from deadline.
 	assert.NotEqual(t, ErrExecTimeout, err)
 }
 

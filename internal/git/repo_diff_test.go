@@ -3,7 +3,6 @@ package git
 import (
 	"bytes"
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -307,7 +306,7 @@ func TestRepository_RawDiff(t *testing.T) {
 
 	t.Run("invalid diffType", func(t *testing.T) {
 		err := testrepo.RawDiff(ctx, "978fb7f6388b49b532fbef8b856681cfa6fcaa0a", "bad_diff_type", nil)
-		assert.Equal(t, errors.New("invalid diffType: bad_diff_type"), err)
+		assert.EqualError(t, err, "invalid diffType: bad_diff_type")
 	})
 
 	tests := []struct {

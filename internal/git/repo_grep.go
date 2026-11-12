@@ -2,9 +2,10 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // GrepOptions contains optional arguments for grep search over repository files.
@@ -26,7 +27,7 @@ type GrepOptions struct {
 
 // GrepResult represents a single result from a grep search.
 type GrepResult struct {
-	// The tree of the file that matched, e.g. "HEAD".
+	// The tree of the file that matched, e.g., "HEAD".
 	Tree string
 	// The path of the file that matched.
 	Path string
@@ -51,7 +52,7 @@ func parseGrepLine(line string) (*GrepResult, error) {
 		r.Tree = sp[0]
 		n++
 	default:
-		return nil, fmt.Errorf("invalid grep line: %s", line)
+		return nil, errors.Newf("invalid grep line: %s", line)
 	}
 	r.Path = sp[n]
 	n++

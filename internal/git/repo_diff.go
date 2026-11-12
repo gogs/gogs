@@ -2,9 +2,10 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"slices"
+
+	"github.com/cockroachdb/errors"
 )
 
 // DiffOptions contains optional arguments for parsing diff.
@@ -112,7 +113,7 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 			args = []string{"format-patch", "--full-index", "--no-signoff", "--no-signature", "--stdout", "--end-of-options", rev + "..." + c.ID.String()}
 		}
 	default:
-		return fmt.Errorf("invalid diffType: %s", diffType)
+		return errors.Newf("invalid diffType: %s", diffType)
 	}
 	args = slices.Concat(args[:1], opt.Args, args[1:])
 

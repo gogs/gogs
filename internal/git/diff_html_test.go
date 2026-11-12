@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_diffsToHTML(t *testing.T) {
+func TestDiffsToHTML(t *testing.T) {
 	tests := []struct {
 		diffs    []dmp.Diff
 		lineType DiffLineType
