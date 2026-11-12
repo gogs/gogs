@@ -93,6 +93,9 @@ func parseTree(t *Tree, data []byte) ([]*TreeEntry, error) {
 //
 // Docs: https://git-scm.com/docs/git-ls-tree
 func (r *Repository) LsTree(ctx context.Context, treeID string) (*Tree, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.LsTree")
+	defer span.End()
+
 	cache, ok := r.cachedTrees.Load(treeID)
 	if ok {
 		logf("Cached tree hit: %s", treeID)

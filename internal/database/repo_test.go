@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,7 +81,7 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	canary := filepath.Join(repoPath, "canary.txt")
 	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
-	_, err = CreateRepository(owner, owner, opts)
+	_, err = CreateRepository(context.Background(), owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))

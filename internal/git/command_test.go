@@ -2,11 +2,15 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // slowCommand is a git command whose child process runs for longer than the
@@ -95,4 +99,36 @@ func TestWithTimeout(t *testing.T) {
 	deadline, ok := ctx.Deadline()
 	assert.True(t, ok)
 	assert.WithinDuration(t, time.Now().Add(time.Minute), deadline, 5*time.Second)
+}
+
+func TestTracing(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	old := otel.GetTracerProvider()
+	otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder)))
+	defer otel.SetTracerProvider(old)
+
+	ctx := context.Background()
+	_, err := testrepo.RevParse(ctx, "master")
+	require.NoError(t, err)
+	_, err = LsRemote(ctx, "http://alice:secret@127.0.0.1:1/repo.git")
+	require.Error(t, err)
+
+	spans := recorder.Ended()
+	byName := make(map[string]sdktrace.ReadOnlySpan, len(spans))
+	for _, span := range spans {
+		byName[span.Name()] = span
+	}
+	for _, name := range []string{"git.Repository.RevParse", "git rev-parse", "git.LsRemote", "git ls-remote"} {
+		require.Contains(t, byName, name)
+	}
+
+	// The spans of Git processes are children of the spans of the methods that
+	// run them.
+	assert.Equal(t, byName["git.Repository.RevParse"].SpanContext().SpanID(), byName["git rev-parse"].Parent().SpanID())
+	assert.Equal(t, byName["git.LsRemote"].SpanContext().SpanID(), byName["git ls-remote"].Parent().SpanID())
+
+	// Arguments are left out, because they may contain credentials.
+	lsRemote := byName["git ls-remote"]
+	assert.Equal(t, "Error", lsRemote.Status().Code.String())
+	assert.NotContains(t, fmt.Sprint(lsRemote.Attributes(), lsRemote.Events(), lsRemote.Status()), "secret")
 }

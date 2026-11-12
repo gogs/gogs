@@ -19,6 +19,9 @@ import (
 
 // ObjectFormat returns the hash algorithm of the repository, e.g., "sha1".
 func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.ObjectFormat")
+	defer span.End()
+
 	stdout, err := exec(ctx, r.path, []string{"rev-parse", "--show-object-format"}, nil)
 	if err != nil {
 		return "", err
@@ -38,6 +41,9 @@ func RepoObjectFormat(ctx context.Context, repoPath string) (string, error) {
 // ReadTree replaces the index of the repository with the tree of given
 // tree-ish.
 func (r *Repository) ReadTree(ctx context.Context, treeish string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.ReadTree")
+	defer span.End()
+
 	_, err := exec(ctx, r.path, []string{"read-tree", "--end-of-options", treeish}, nil)
 	return err
 }
@@ -58,6 +64,9 @@ type IndexFile struct {
 // invalid, e.g., inside ".git", or when a path or its parent directory already
 // exists in the index as the other kind of a file and a directory.
 func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.AddToIndex")
+	defer span.End()
+
 	workTree, err := os.MkdirTemp(r.path, "worktree-")
 	if err != nil {
 		return errors.Wrap(err, "create working tree")
@@ -115,6 +124,9 @@ func writeFile(path string, content io.Reader) error {
 // RemoveFromIndex removes the files at given paths from the index of the
 // repository. It fails when a path does not exist or is a directory.
 func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.RemoveFromIndex")
+	defer span.End()
+
 	// The check for local changes is forced off, because a bare repository has
 	// no working tree to compare with and it would otherwise compare with files
 	// of the Git directory, e.g., "config".
@@ -127,6 +139,9 @@ func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) error
 // WriteTree writes the index of the repository as a tree object and returns
 // its ID.
 func (r *Repository) WriteTree(ctx context.Context) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.WriteTree")
+	defer span.End()
+
 	stdout, err := exec(ctx, r.path, []string{"write-tree"}, nil)
 	if err != nil {
 		return "", err
@@ -151,6 +166,9 @@ type CommitTreeOptions struct {
 // CommitTree creates a commit object of the tree with given message as is, and
 // returns its ID.
 func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOptions) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CommitTree")
+	defer span.End()
+
 	var opt CommitTreeOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -175,6 +193,9 @@ func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts 
 
 // IsValidBranchName returns true if the name is allowed for a new branch.
 func (r *Repository) IsValidBranchName(ctx context.Context, name string) bool {
+	ctx, span := tracer.Start(ctx, "git.Repository.IsValidBranchName")
+	defer span.End()
+
 	_, err := exec(ctx, r.path, []string{"check-ref-format", "--branch", name}, nil)
 	return err == nil
 }
@@ -231,6 +252,9 @@ type MergeTreeOptions struct {
 // checkout of ours, it follows the ".gitattributes" of ours. It returns
 // ErrMergeConflict when the merge has conflicts.
 func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ...MergeTreeOptions) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.MergeTree")
+	defer span.End()
+
 	var opt MergeTreeOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -254,6 +278,9 @@ func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ..
 // IsAncestor returns true if the commit is an ancestor of the descendant, or
 // the same commit.
 func (r *Repository) IsAncestor(ctx context.Context, commit, descendant string) (bool, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.IsAncestor")
+	defer span.End()
+
 	args := []string{"merge-base", "--is-ancestor", "--end-of-options", commit, descendant}
 	_, err := exec(ctx, r.path, args, nil)
 	if err != nil {
@@ -277,6 +304,9 @@ const emptyTreeID = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 // recorded on the rewritten commits. It returns ErrMergeConflict when a commit
 // does not apply.
 func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Rebase")
+	defer span.End()
+
 	if committer == nil {
 		return "", errors.New("committer is required")
 	}

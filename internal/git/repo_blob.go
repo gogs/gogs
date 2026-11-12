@@ -4,6 +4,9 @@ import "context"
 
 // CatFileBlob returns the blob corresponding to the given revision of the repository.
 func (r *Repository) CatFileBlob(ctx context.Context, rev string) (*Blob, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CatFileBlob")
+	defer span.End()
+
 	rev, err := r.RevParse(ctx, rev)
 	if err != nil {
 		return nil, err

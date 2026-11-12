@@ -50,6 +50,9 @@ func (r *Repository) showRefVerify(ctx context.Context, ref string) (string, err
 // BranchCommitID returns the commit ID of given branch if it exists in the
 // repository. The branch must be given in short name, e.g., "master".
 func (r *Repository) BranchCommitID(ctx context.Context, branch string) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchCommitID")
+	defer span.End()
+
 	return r.showRefVerify(ctx, RefsHeads+branch)
 }
 
@@ -65,6 +68,9 @@ func RepoBranchCommitID(ctx context.Context, repoPath, branch string) (string, e
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TagCommitID")
+	defer span.End()
+
 	return r.showRefVerify(ctx, RefsTags+tag)
 }
 
@@ -78,6 +84,9 @@ func (r *Repository) hasReference(ctx context.Context, ref string) bool {
 // HasBranch returns true if given branch exists in the repository. The branch
 // must be given in short name, e.g., "master".
 func (r *Repository) HasBranch(ctx context.Context, branch string) bool {
+	ctx, span := tracer.Start(ctx, "git.Repository.HasBranch")
+	defer span.End()
+
 	return r.hasReference(ctx, RefsHeads+branch)
 }
 
@@ -93,6 +102,9 @@ func RepoHasBranch(ctx context.Context, repoPath, branch string) bool {
 // HasBranches returns true if the repository has at least one branch, even when
 // HEAD points to a branch that does not exist.
 func (r *Repository) HasBranches(ctx context.Context) (bool, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.HasBranches")
+	defer span.End()
+
 	stdout, err := exec(ctx, r.path, []string{"for-each-ref", "--count=1", "--format=%(refname)", "--end-of-options", RefsHeads}, nil)
 	if err != nil {
 		return false, err
@@ -113,6 +125,9 @@ func RepoHasBranches(ctx context.Context, repoPath string) (bool, error) {
 // HasTag returns true if given tag exists in the repository. The tag must be
 // given in short name, e.g., "v1.0.0".
 func (r *Repository) HasTag(ctx context.Context, tag string) bool {
+	ctx, span := tracer.Start(ctx, "git.Repository.HasTag")
+	defer span.End()
+
 	return r.hasReference(ctx, RefsTags+tag)
 }
 
@@ -129,6 +144,9 @@ type SymbolicRefOptions struct {
 // the symbolic ref. It returns an empty string and nil error when doing set
 // operation.
 func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.SymbolicRef")
+	defer span.End()
+
 	var opt SymbolicRefOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -212,6 +230,9 @@ func (r *Repository) showRef(ctx context.Context, opts ...showRefOptions) ([]*Re
 
 // Branches returns a list of all branches in the repository.
 func (r *Repository) Branches(ctx context.Context) ([]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Branches")
+	defer span.End()
+
 	heads, err := r.showRef(ctx, showRefOptions{Heads: true})
 	if err != nil {
 		return nil, err
@@ -243,6 +264,9 @@ type DeleteBranchOptions struct {
 
 // DeleteBranch deletes the branch from the repository.
 func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...DeleteBranchOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.DeleteBranch")
+	defer span.End()
+
 	var opt DeleteBranchOptions
 	if len(opts) > 0 {
 		opt = opts[0]

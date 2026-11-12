@@ -20,6 +20,9 @@ type LsRemoteOptions struct {
 
 // LsRemote returns a list of references in the remote repository.
 func LsRemote(ctx context.Context, url string, opts ...LsRemoteOptions) ([]*Reference, error) {
+	ctx, span := tracer.Start(ctx, "git.LsRemote")
+	defer span.End()
+
 	var opt LsRemoteOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -64,6 +67,9 @@ type RemoteHEADOptions struct {
 // RemoteHEAD returns the reference that HEAD of the remote repository points
 // to, e.g., "refs/heads/main".
 func RemoteHEAD(ctx context.Context, url string, opts ...RemoteHEADOptions) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.RemoteHEAD")
+	defer span.End()
+
 	var opt RemoteHEADOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -102,6 +108,9 @@ type RemoteAddOptions struct {
 
 // RemoteAdd adds a new remote to the repository.
 func (r *Repository) RemoteAdd(ctx context.Context, name, url string, opts ...RemoteAddOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.RemoteAdd")
+	defer span.End()
+
 	var opt RemoteAddOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -122,6 +131,9 @@ func (r *Repository) RemoteAdd(ctx context.Context, name, url string, opts ...Re
 
 // RemoteRemove removes a remote from the repository.
 func (r *Repository) RemoteRemove(ctx context.Context, name string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.RemoteRemove")
+	defer span.End()
+
 	args := []string{"remote", "remove", "--end-of-options", name}
 	_, err := exec(ctx, r.path, args, nil)
 	if err != nil {
@@ -148,6 +160,9 @@ type RemoteUpdateOptions struct {
 // RemoteUpdate fetches updates from all remotes of the repository. It returns
 // the standard error output, which is where Git reports updated references.
 func (r *Repository) RemoteUpdate(ctx context.Context, opts ...RemoteUpdateOptions) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RemoteUpdate")
+	defer span.End()
+
 	var opt RemoteUpdateOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -177,6 +192,9 @@ func RepoRemoteUpdate(ctx context.Context, repoPath string, opts ...RemoteUpdate
 // RemoteSetURL sets the first URL of the remote with given name of the
 // repository.
 func (r *Repository) RemoteSetURL(ctx context.Context, name, newurl string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.RemoteSetURL")
+	defer span.End()
+
 	args := []string{"remote", "set-url", "--end-of-options", name, newurl}
 	_, err := exec(ctx, r.path, args, nil)
 	if err != nil {

@@ -861,7 +861,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 
 				// Regenerate patch and test conflict.
 				if pr == nil {
-					if err = issue.PullRequest.UpdatePatch(); err != nil {
+					if err = issue.PullRequest.UpdatePatch(c.Req.Context()); err != nil {
 						c.Error(err, "update patch")
 						return
 					}

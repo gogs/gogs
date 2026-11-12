@@ -8,6 +8,9 @@ import (
 
 // TreeEntry returns the TreeEntry by given subpath of the tree.
 func (t *Tree) TreeEntry(ctx context.Context, subpath string) (*TreeEntry, error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.TreeEntry")
+	defer span.End()
+
 	if len(subpath) == 0 {
 		return &TreeEntry{
 			id:   t.id,
@@ -45,6 +48,9 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string) (*TreeEntry, error
 
 // Blob returns the blob object by given subpath of the tree.
 func (t *Tree) Blob(ctx context.Context, subpath string) (*Blob, error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.Blob")
+	defer span.End()
+
 	e, err := t.TreeEntry(ctx, subpath)
 	if err != nil {
 		return nil, err

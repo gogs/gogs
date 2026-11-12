@@ -165,7 +165,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+		if _, err := c.Repo.Repository.GetBranch(c.Req.Context(), branchName); err == nil {
 			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 			return
@@ -268,7 +268,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UpdateRepoFile(c.User, database.UpdateRepoFileOptions{
+	if err := c.Repo.Repository.UpdateRepoFile(c.Req.Context(), c.User, database.UpdateRepoFileOptions{
 		OldBranch:   oldBranchName,
 		NewBranch:   branchName,
 		OldTreeName: oldTreePath,
@@ -311,7 +311,7 @@ func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 		return
 	}
 
-	diff, err := c.Repo.Repository.GetDiffPreview(c.Repo.BranchName, treePath, f.Content)
+	diff, err := c.Repo.Repository.GetDiffPreview(c.Req.Context(), c.Repo.BranchName, treePath, f.Content)
 	if err != nil {
 		c.Error(err, "get diff preview")
 		return
@@ -362,7 +362,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	}
 
 	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+		if _, err := c.Repo.Repository.GetBranch(c.Req.Context(), branchName); err == nil {
 			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorDelete, &f)
 			return
@@ -379,7 +379,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.DeleteRepoFile(c.User, database.DeleteRepoFileOptions{
+	if err := c.Repo.Repository.DeleteRepoFile(c.Req.Context(), c.User, database.DeleteRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -460,7 +460,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}
 
 	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+		if _, err := c.Repo.Repository.GetBranch(c.Req.Context(), branchName); err == nil {
 			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorUpload, &f)
 			return
@@ -499,7 +499,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UploadRepoFiles(c.User, database.UploadRepoFileOptions{
+	if err := c.Repo.Repository.UploadRepoFiles(c.Req.Context(), c.User, database.UploadRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,

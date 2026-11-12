@@ -13,6 +13,9 @@ import (
 // UpdateServerInfo updates the auxiliary info file on the server side for the
 // repository in given path.
 func UpdateServerInfo(ctx context.Context, path string) error {
+	ctx, span := tracer.Start(ctx, "git.UpdateServerInfo")
+	defer span.End()
+
 	args := []string{"update-server-info", "--end-of-options"}
 	_, err := exec(ctx, path, args, nil)
 	return err
@@ -76,6 +79,9 @@ var serviceIdleTimeout = 30 * time.Minute
 // upload-pack <path>". Instead of a fixed timeout, which would cut off a large
 // transfer, the service is killed once it has been idle for too long.
 func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) error {
+	ctx, span := tracer.Start(ctx, "git.RunService")
+	defer span.End()
+
 	var opt ServiceOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -132,7 +138,7 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	}
 	c.Stdout = activityWriter{w: opt.Stdout, touch: touch}
 	c.Stderr = activityWriter{w: opt.Stderr, touch: touch}
-	err := runCommand(c)
+	err := runCommand(ctx, c)
 	if context.Cause(ctx) == ErrExecTimeout {
 		return ErrExecTimeout
 	}

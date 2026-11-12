@@ -20,6 +20,9 @@ type Tree struct {
 
 // Subtree returns a subtree by given subpath of the tree.
 func (t *Tree) Subtree(ctx context.Context, subpath string) (*Tree, error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.Subtree")
+	defer span.End()
+
 	if len(subpath) == 0 {
 		return t, nil
 	}
@@ -50,6 +53,9 @@ func (t *Tree) Subtree(ctx context.Context, subpath string) (*Tree, error) {
 // Entries returns all entries of the tree. Successful results are cached.
 // Failed attempts are not cached, allowing retries with a fresh context.
 func (t *Tree) Entries(ctx context.Context) (Entries, error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.Entries")
+	defer span.End()
+
 	t.entriesMu.Lock()
 	defer t.entriesMu.Unlock()
 

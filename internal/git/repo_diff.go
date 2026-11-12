@@ -19,6 +19,9 @@ type DiffOptions struct {
 
 // Diff returns a parsed diff object between given commits of the repository.
 func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (*Diff, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Diff")
+	defer span.End()
+
 	var opt DiffOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -50,6 +53,9 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 // DiffCached returns a parsed diff of given path between the revision and the
 // index of the repository, following the ".gitattributes" of the revision.
 func (r *Repository) DiffCached(ctx context.Context, rev, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.DiffCached")
+	defer span.End()
+
 	args := []string{"--attr-source=" + rev, "diff", "--cached", "--end-of-options", rev, "--", path}
 	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
@@ -88,6 +94,9 @@ type RawDiffOptions struct {
 // RawDiff dumps diff of repository in given revision directly to given
 // io.Writer.
 func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFormat, w io.Writer, opts ...RawDiffOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.RawDiff")
+	defer span.End()
+
 	var opt RawDiffOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -134,6 +143,9 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 // DiffBinary returns binary patch between base and head revisions that could be
 // used for git-apply.
 func (r *Repository) DiffBinary(ctx context.Context, base, head string) ([]byte, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.DiffBinary")
+	defer span.End()
+
 	args := []string{"diff", "--full-index", "--binary", "--end-of-options", base, head}
 	return exec(ctx, r.path, args, nil)
 }

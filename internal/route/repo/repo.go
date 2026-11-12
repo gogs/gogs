@@ -115,7 +115,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err := database.CreateRepository(c.User, ctxUser, database.CreateRepoOptionsLegacy{
+	repo, err := database.CreateRepository(c.Req.Context(), c.User, ctxUser, database.CreateRepoOptionsLegacy{
 		Name:        f.RepoName,
 		Description: f.Description,
 		Gitignores:  f.Gitignores,
@@ -197,7 +197,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.User, ctxUser, database.MigrateRepoOptions{
+	repo, err := database.MigrateRepository(c.Req.Context(), c.User, ctxUser, database.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,

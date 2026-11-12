@@ -88,6 +88,9 @@ func (e *TreeEntry) Name() string {
 // size on first call. Successful results are cached. Failed attempts are not
 // cached, allowing retries with a fresh context.
 func (e *TreeEntry) Size(ctx context.Context) int64 {
+	ctx, span := tracer.Start(ctx, "git.TreeEntry.Size")
+	defer span.End()
+
 	e.sizeMu.Lock()
 	defer e.sizeMu.Unlock()
 
@@ -169,6 +172,9 @@ var defaultConcurrency = runtime.GOMAXPROCS(0)
 // speed up the process. The returned list has the same number of items as tree
 // entries, so the caller can access them via slice indices.
 func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...CommitsInfoOptions) ([]*EntryCommitInfo, error) {
+	ctx, span := tracer.Start(ctx, "git.Entries.CommitsInfo")
+	defer span.End()
+
 	if len(es) == 0 {
 		return []*EntryCommitInfo{}, nil
 	}

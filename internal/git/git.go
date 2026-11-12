@@ -8,7 +8,12 @@ import (
 	"sync"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel"
 )
+
+// tracer creates the spans of the functions and methods of the package, and of
+// the Git processes they run.
+var tracer = otel.Tracer("gogs.io/gogs/internal/git")
 
 var (
 	// logOutput is the writer to write logs. When not set, no log will be produced.
@@ -44,6 +49,9 @@ var (
 // Successful results are cached. Failed attempts are not cached, allowing
 // retries with a fresh context.
 func BinVersion(ctx context.Context) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.BinVersion")
+	defer span.End()
+
 	gitVersionMu.Lock()
 	defer gitVersionMu.Unlock()
 
@@ -78,6 +86,9 @@ func BinVersion(ctx context.Context) (string, error) {
 //
 // Docs: https://git-scm.com/docs/git-config
 func ConfigGet(ctx context.Context, key string) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.ConfigGet")
+	defer span.End()
+
 	stdout, err := exec(ctx, "", []string{"config", "--get", "--end-of-options", key}, nil)
 	if err != nil {
 		if isExitStatus(err, 1) {
@@ -93,6 +104,9 @@ func ConfigGet(ctx context.Context, key string) (string, error) {
 //
 // Docs: https://git-scm.com/docs/git-config
 func SetGlobalConfig(ctx context.Context, key, value string) error {
+	ctx, span := tracer.Start(ctx, "git.SetGlobalConfig")
+	defer span.End()
+
 	_, err := exec(ctx, "", []string{"config", "--global", "--end-of-options", key, value}, nil)
 	return err
 }

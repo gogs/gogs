@@ -97,6 +97,9 @@ func (c *Commit) loadSubmodules(ctx context.Context) (*sync.Map, error) {
 // Submodule returns submodule by given name. It returns an ErrSubmoduleNotExist
 // if the path does not exist as a submodule.
 func (c *Commit) Submodule(ctx context.Context, path string) (*Submodule, error) {
+	ctx, span := tracer.Start(ctx, "git.Commit.Submodule")
+	defer span.End()
+
 	mods, err := c.loadSubmodules(ctx)
 	if err != nil {
 		return nil, err

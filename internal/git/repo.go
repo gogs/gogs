@@ -61,6 +61,9 @@ type InitOptions struct {
 
 // Init initializes a new Git repository.
 func Init(ctx context.Context, path string, opts ...InitOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Init")
+	defer span.End()
+
 	var opt InitOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -112,6 +115,9 @@ type CloneOptions struct {
 
 // Clone clones the repository from remote URL to the destination.
 func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Clone")
+	defer span.End()
+
 	var opt CloneOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -148,6 +154,9 @@ type PushOptions struct {
 
 // Push pushes local changes to given remote and branch for the repository.
 func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...PushOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.Push")
+	defer span.End()
+
 	var opt PushOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -170,6 +179,9 @@ type ApplyCheckOptions struct {
 // ApplyCheck returns an error if the patch file in given path does not apply
 // cleanly to the index of the repository.
 func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.ApplyCheck")
+	defer span.End()
+
 	var opt ApplyCheckOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -193,6 +205,9 @@ type NameStatus struct {
 
 // ShowNameStatus returns name status of given revision of the repository.
 func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (*NameStatus, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.ShowNameStatus")
+	defer span.End()
+
 	fileStatus := &NameStatus{}
 	stdout, w := io.Pipe()
 	done := make(chan struct{})
@@ -240,6 +255,9 @@ func RepoShowNameStatus(ctx context.Context, repoPath, rev string) (*NameStatus,
 // RevParse returns full length (40) commit ID by given revision in the
 // repository.
 func (r *Repository) RevParse(ctx context.Context, rev string) (string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RevParse")
+	defer span.End()
+
 	// A revision that starts with a dash is never a valid object and would
 	// instead be interpreted by "git rev-parse" as a command-line option,
 	// allowing argument injection. The "--end-of-options" separator does not
@@ -275,6 +293,9 @@ type CountObject struct {
 
 // CountObjects returns disk usage report of the repository.
 func (r *Repository) CountObjects(ctx context.Context) (*CountObject, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CountObjects")
+	defer span.End()
+
 	args := []string{"count-objects", "-v", "--end-of-options"}
 
 	stdout, err := exec(ctx, r.path, args, nil)
@@ -332,6 +353,9 @@ type FsckOptions struct {
 // Fsck verifies the connectivity and validity of the objects in the database
 // for the repository.
 func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.Fsck")
+	defer span.End()
+
 	var opt FsckOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -363,6 +387,9 @@ type GCOptions struct {
 
 // GC cleans up unnecessary files and optimizes the repository.
 func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.GC")
+	defer span.End()
+
 	var opt GCOptions
 	if len(opts) > 0 {
 		opt = opts[0]

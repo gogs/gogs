@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // waitDelay bounds how long waiting for a command takes after it was killed or
@@ -40,12 +43,26 @@ func newCommand(ctx context.Context, dir string, args []string, envs []string) *
 	return c
 }
 
-// runCommand starts the command and waits for it to complete.
+// runCommand starts the command and waits for it to complete. It records the
+// run as a span named after the Git subcommand, without the other arguments,
+// which may contain credentials, e.g., in a remote URL.
 //
 // Output is copied through pipes of our own rather than the ones os/exec
 // creates, because os/exec drops what is left in them a fixed delay after the
 // command exited, even while a slow writer, e.g., a client, is still taking it.
-func runCommand(c *osexec.Cmd) error {
+func runCommand(ctx context.Context, c *osexec.Cmd) (err error) {
+	_, span := tracer.Start(ctx, "git "+subcommand(c.Args[1:]), trace.WithAttributes(attribute.String("git.dir", c.Dir)))
+	defer func() {
+		if c.ProcessState != nil {
+			span.SetAttributes(attribute.Int("process.exit.code", c.ProcessState.ExitCode()))
+		}
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	var copiers []*outputCopier
 	for _, w := range []*io.Writer{&c.Stdout, &c.Stderr} {
 		if *w == nil {
@@ -107,6 +124,20 @@ func runCommand(c *osexec.Cmd) error {
 		}
 	}
 	return nil
+}
+
+// subcommand returns the Git subcommand in the arguments, e.g., "log".
+func subcommand(args []string) string {
+	for i := 0; i < len(args); i++ {
+		switch {
+		case args[i] == "-c" || args[i] == "-C":
+			// The global option takes the next argument as its value.
+			i++
+		case !strings.HasPrefix(args[i], "-"):
+			return args[i]
+		}
+	}
+	return ""
 }
 
 func closeReaders(copiers []*outputCopier) {
@@ -204,7 +235,7 @@ func run(ctx context.Context, dir string, args []string, envs []string, stdin io
 	c.Stdin = stdin
 	c.Stdout = stdout
 	c.Stderr = stderr
-	err := runCommand(c)
+	err := runCommand(ctx, c)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			if errors.Is(ctxErr, context.DeadlineExceeded) {

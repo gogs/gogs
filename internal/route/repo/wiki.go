@@ -44,7 +44,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		c.Error(err, "open repository")
 		return nil, ""
 	}
-	commit, err := wikiRepo.BranchCommit(c.Req.Context(), database.WikiBranch(wikiPath))
+	commit, err := wikiRepo.BranchCommit(c.Req.Context(), database.WikiBranch(c.Req.Context(), wikiPath))
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return nil, ""
@@ -120,7 +120,7 @@ func Wiki(c *context.Context) {
 	}
 
 	// Get last change information.
-	branch := database.WikiBranch(c.Repo.Repository.WikiPath())
+	branch := database.WikiBranch(c.Req.Context(), c.Repo.Repository.WikiPath())
 	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
 	if err != nil {
 		c.Error(err, "get commits by path")
@@ -147,7 +147,7 @@ func WikiPages(c *context.Context) {
 		return
 	}
 
-	branch := database.WikiBranch(wikiPath)
+	branch := database.WikiBranch(c.Req.Context(), wikiPath)
 	commit, err := wikiRepo.BranchCommit(c.Req.Context(), branch)
 	if err != nil {
 		c.Error(err, "get branch commit")
@@ -202,7 +202,7 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 		return
 	}
 
-	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
+	if err := c.Repo.Repository.AddWikiPage(c.Req.Context(), c.User, f.Title, f.Content, f.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
 			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), http.StatusUnprocessableEntity, tmplRepoWikiNew, &f)
@@ -243,7 +243,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 		return
 	}
 
-	if err := c.Repo.Repository.EditWikiPage(c.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
+	if err := c.Repo.Repository.EditWikiPage(c.Req.Context(), c.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
 		c.Error(err, "edit wiki page")
 		return
 	}
@@ -258,7 +258,7 @@ func DeleteWikiPagePost(c *context.Context) {
 	}
 
 	pageName := database.ToWikiPageName(pageURL)
-	if err := c.Repo.Repository.DeleteWikiPage(c.User, pageName); err != nil {
+	if err := c.Repo.Repository.DeleteWikiPage(c.Req.Context(), c.User, pageName); err != nil {
 		c.Error(err, "delete wiki page")
 		return
 	}

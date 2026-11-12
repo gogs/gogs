@@ -17,6 +17,9 @@ const (
 
 // Archive creates given format of archive to the destination.
 func (c *Commit) Archive(ctx context.Context, format ArchiveFormat, dst string) error {
+	ctx, span := tracer.Start(ctx, "git.Commit.Archive")
+	defer span.End()
+
 	prefix := filepath.Base(strings.TrimSuffix(c.repo.path, ".git")) + "/"
 	_, err := exec(ctx,
 		c.repo.path,
