@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_parseRemoteUpdateOutput(t *testing.T) {
+func TestParseRemoteUpdateOutput(t *testing.T) {
 	tests := []struct {
 		output     string
 		expResults []*mirrorSyncResult
@@ -36,7 +36,7 @@ From https://try.gogs.io/unknwon/upsteam
 	}
 }
 
-func Test_mirrorGitEnv(t *testing.T) {
+func TestMirrorGitEnv(t *testing.T) {
 	gitConfigGet := func(t *testing.T, key string) string {
 		cmd := exec.Command("git", "config", "--get", key)
 		cmd.Env = append(os.Environ(), mirrorGitEnv()...)
