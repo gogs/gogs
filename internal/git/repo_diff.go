@@ -51,7 +51,7 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 // DiffWorktree returns a parsed diff of unstaged changes to given path in the
 // working tree of the repository.
 func (r *Repository) DiffWorktree(ctx context.Context, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
-	args := []string{"diff", "--end-of-options", path}
+	args := []string{"diff", "--", path}
 	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 

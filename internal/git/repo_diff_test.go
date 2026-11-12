@@ -528,6 +528,10 @@ func TestRepository_DiffWorktree(t *testing.T) {
 	require.NoError(t, err)
 	defer cleanup()
 
+	// A branch with the same name as the path must not make the path ambiguous.
+	require.NoError(t, r.Checkout(ctx, "README.txt", CheckoutOptions{BaseBranch: "master"}))
+	require.NoError(t, r.Checkout(ctx, "master"))
+
 	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "README.txt"), []byte("changed\n"), 0600))
 	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "pom.xml"), []byte("changed\n"), 0600))
 
