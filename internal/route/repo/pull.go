@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -227,16 +226,16 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *git.PullReq
 	}
 
 	baseRepoPath := database.RepoPath(repo.Owner.Name, repo.Name)
+	if !git.RepoHasBranch(c.Req.Context(), baseRepoPath, pull.BaseBranch) {
+		c.Data["IsPullReuqestBroken"] = true
+		c.Data["BaseTarget"] = "deleted"
+		c.Data["NumCommits"] = 0
+		c.Data["NumFiles"] = 0
+		return nil
+	}
+
 	prMeta, err := headGitRepo.PullRequestMeta(c.Req.Context(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
-		if errors.Is(err, git.ErrReferenceNotExist) || strings.Contains(err.Error(), "fatal: Not a valid object name") {
-			c.Data["IsPullReuqestBroken"] = true
-			c.Data["BaseTarget"] = "deleted"
-			c.Data["NumCommits"] = 0
-			c.Data["NumFiles"] = 0
-			return nil
-		}
-
 		c.Error(err, "get pull request meta")
 		return nil
 	}
