@@ -256,16 +256,16 @@ func (r *Repository) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (r *Repository) loadAttributes(e Engine) (err error) {
+func (r *Repository) loadAttributes(tx *gorm.DB) (err error) {
 	if r.Owner == nil {
-		r.Owner, err = getUserByID(e, r.OwnerID)
+		r.Owner, err = getUserByID(tx, r.OwnerID)
 		if err != nil {
 			return errors.Newf("getUserByID [%d]: %v", r.OwnerID, err)
 		}
 	}
 
 	if r.IsFork && r.BaseRepo == nil {
-		r.BaseRepo, err = getRepositoryByID(e, r.ForkID)
+		r.BaseRepo, err = getRepositoryByID(tx, r.ForkID)
 		if err != nil {
 			if IsErrRepoNotExist(err) {
 				r.IsFork = false
@@ -280,7 +280,7 @@ func (r *Repository) loadAttributes(e Engine) (err error) {
 }
 
 func (r *Repository) LoadAttributes() error {
-	return r.loadAttributes(x)
+	return r.loadAttributes(Handle.db)
 }
 
 // IsPartialPublic returns true if repository is public or allow public access to wiki or issues.
@@ -299,7 +299,10 @@ func (r *Repository) CanGuestViewIssues() bool {
 // MustOwner always returns a valid *User object to avoid conceptually impossible error handling.
 // It creates a fake object that contains error details when error occurs.
 func (r *Repository) MustOwner() *User {
-	return r.mustOwner(x)
+	if r.Owner != nil {
+		return r.Owner
+	}
+	return r.mustOwner(Handle.db)
 }
 
 func (r *Repository) FullName() string {
@@ -424,21 +427,24 @@ func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *apiv1types
 	return apiRepo
 }
 
-func (r *Repository) getOwner(e Engine) (err error) {
+func (r *Repository) getOwner(tx *gorm.DB) (err error) {
 	if r.Owner != nil {
 		return nil
 	}
 
-	r.Owner, err = getUserByID(e, r.OwnerID)
+	r.Owner, err = getUserByID(tx, r.OwnerID)
 	return err
 }
 
 func (r *Repository) GetOwner() error {
-	return r.getOwner(x)
+	if r.Owner != nil {
+		return nil
+	}
+	return r.getOwner(Handle.db)
 }
 
-func (r *Repository) mustOwner(e Engine) *User {
-	if err := r.getOwner(e); err != nil {
+func (r *Repository) mustOwner(tx *gorm.DB) *User {
+	if err := r.getOwner(tx); err != nil {
 		return &User{
 			Name:     "error",
 			FullName: err.Error(),
@@ -503,7 +509,7 @@ func (r *Repository) DeleteWiki(logger *logx.Logger) {
 
 // getUsersWithAccesMode returns users that have at least given access mode to the repository.
 func (r *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*User, err error) {
-	if err = r.getOwner(e); err != nil {
+	if err = r.getOwner(legacyTx(e)); err != nil {
 		return nil, err
 	}
 
@@ -586,13 +592,13 @@ func (r *Repository) GetMirror() (err error) {
 	return err
 }
 
-func (r *Repository) repoPath(e Engine) string {
-	return RepoPath(r.mustOwner(e).Name, r.Name)
+func (r *Repository) repoPath(tx *gorm.DB) string {
+	return RepoPath(r.mustOwner(tx).Name, r.Name)
 }
 
 // Deprecated: Use repox.RepositoryPath instead.
 func (r *Repository) RepoPath() string {
-	return r.repoPath(x)
+	return RepoPath(r.MustOwner().Name, r.Name)
 }
 
 func (r *Repository) GitConfigPath() string {
@@ -1176,7 +1182,7 @@ func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath
 
 	// Re-fetch the repository from database before updating it (else it would
 	// override changes that were done earlier with sql)
-	saved, err := getRepositoryByID(e, repo.ID)
+	saved, err := getRepositoryByID(legacyTx(e), repo.ID)
 	if err != nil {
 		return errors.Newf("getRepositoryByID: %v", err)
 	}
@@ -1275,7 +1281,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return errors.Newf("newRepoAction: %v", err)
 	}
 
-	return repo.loadAttributes(e)
+	return repo.loadAttributes(legacyTx(e))
 }
 
 type ErrReachLimitOfRepo struct {
@@ -1648,7 +1654,7 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 	}
 
 	if visibilityChanged {
-		if err = repo.getOwner(e); err != nil {
+		if err = repo.getOwner(legacyTx(e)); err != nil {
 			return errors.Newf("getOwner: %v", err)
 		}
 		if repo.Owner.IsOrganization() {
@@ -1846,33 +1852,32 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 // GetRepositoryByName returns the repository by given name under user if exists.
 // Deprecated: Use Repos.GetByName instead.
 func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
-	repo := &Repository{
-		OwnerID:   ownerID,
-		LowerName: strings.ToLower(name),
-	}
-	has, err := x.Get(repo)
+	repo := new(Repository)
+	err := Handle.db.Where("owner_id = ? AND lower_name = ?", ownerID, strings.ToLower(name)).First(repo).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "name": name}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "name": name}}
 	}
 	return repo, repo.LoadAttributes()
 }
 
-func getRepositoryByID(e Engine, id int64) (*Repository, error) {
+func getRepositoryByID(tx *gorm.DB, id int64) (*Repository, error) {
 	repo := new(Repository)
-	has, err := e.ID(id).Get(repo)
+	err := tx.Where("id = ?", id).First(repo).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrRepoNotExist{args: map[string]any{"repoID": id}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrRepoNotExist{args: map[string]any{"repoID": id}}
 	}
-	return repo, repo.loadAttributes(e)
+	return repo, repo.loadAttributes(tx)
 }
 
 // GetRepositoryByID returns the repository by given id if exists.
 func GetRepositoryByID(id int64) (*Repository, error) {
-	return getRepositoryByID(x, id)
+	return getRepositoryByID(Handle.db, id)
 }
 
 type UserRepoOptions struct {
@@ -2298,7 +2303,7 @@ func CheckRepoStats(logger *logx.Logger) {
 
 type RepositoryList []*Repository
 
-func (repos RepositoryList) loadAttributes(e Engine) error {
+func (repos RepositoryList) loadAttributes(tx *gorm.DB) error {
 	if len(repos) == 0 {
 		return nil
 	}
@@ -2313,7 +2318,7 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 		userIDs = append(userIDs, userID)
 	}
 	users := make([]*User, 0, len(userIDs))
-	if err := e.Where("id > 0").In("id", userIDs).Find(&users); err != nil {
+	if err := tx.Where("id > 0 AND id IN ?", userIDs).Find(&users).Error; err != nil {
 		return errors.Newf("find users: %v", err)
 	}
 	for i := range users {
@@ -2335,7 +2340,7 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 		baseIDs = append(baseIDs, baseID)
 	}
 	baseRepos := make([]*Repository, 0, len(baseIDs))
-	if err := e.Where("id > 0").In("id", baseIDs).Find(&baseRepos); err != nil {
+	if err := tx.Where("id > 0 AND id IN ?", baseIDs).Find(&baseRepos).Error; err != nil {
 		return errors.Newf("find base repositories: %v", err)
 	}
 	for i := range baseRepos {
@@ -2351,7 +2356,7 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 }
 
 func (repos RepositoryList) LoadAttributes() error {
-	return repos.loadAttributes(x)
+	return repos.loadAttributes(Handle.db)
 }
 
 type MirrorRepositoryList []*Repository
@@ -2629,7 +2634,7 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 		return nil, err
 	}
 
-	repoPath := repo.repoPath(sess)
+	repoPath := repo.repoPath(legacyTx(sess))
 	RemoveAllWithNotice(logger, "Repository path erase before creation", repoPath)
 
 	cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
@@ -2712,7 +2717,7 @@ func (r *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]A
 func (r *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
 	accessMap := make(map[int64]AccessMode, 20)
 
-	if err = r.getOwner(e); err != nil {
+	if err = r.getOwner(legacyTx(e)); err != nil {
 		return err
 	} else if !r.Owner.IsOrganization() {
 		return errors.Newf("owner is not an organization: %d", r.OwnerID)
