@@ -42,17 +42,17 @@ func (err MirrorNotExist) Error() string {
 type Mirror struct {
 	ID          int64
 	RepoID      int64
-	Repo        *Repository `xorm:"-" json:"-" gorm:"-"`
-	Interval    int         // Hour.
-	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
+	Repo        *Repository `json:"-" gorm:"-"`
+	Interval    int         `gorm:"size:32"` // Hour.
+	EnablePrune bool        `gorm:"not null;default:TRUE"`
 
 	// Last and next sync time of Git data from upstream
-	LastSync     time.Time `xorm:"-" json:"-" gorm:"-"`
-	LastSyncUnix int64     `xorm:"updated_unix" gorm:"column:updated_unix"`
-	NextSync     time.Time `xorm:"-" json:"-" gorm:"-"`
-	NextSyncUnix int64     `xorm:"next_update_unix" gorm:"column:next_update_unix"`
+	LastSync     time.Time `json:"-" gorm:"-"`
+	LastSyncUnix int64     `gorm:"column:updated_unix"`
+	NextSync     time.Time `json:"-" gorm:"-"`
+	NextSyncUnix int64     `gorm:"column:next_update_unix"`
 
-	address string `xorm:"-"`
+	address string
 }
 
 // BeforeCreate implements the GORM create hook.

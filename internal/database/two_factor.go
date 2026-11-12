@@ -15,10 +15,10 @@ import (
 
 // TwoFactor is a 2FA token of a user.
 type TwoFactor struct {
-	ID          int64 `gorm:"primaryKey"`
-	UserID      int64 `xorm:"UNIQUE" gorm:"unique"`
-	Secret      string
-	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	ID          int64     `gorm:"primaryKey"`
+	UserID      int64     `gorm:"uniqueIndex:UQE_two_factor_user_id"`
+	Secret      string    `gorm:"size:255"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
 }
 
@@ -52,7 +52,7 @@ func DeleteTwoFactor(userID int64) error {
 type TwoFactorRecoveryCode struct {
 	ID     int64
 	UserID int64
-	Code   string `xorm:"VARCHAR(11)"`
+	Code   string `gorm:"size:11"`
 	IsUsed bool
 }
 

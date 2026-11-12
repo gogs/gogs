@@ -2,161 +2,29 @@ package database
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	log "unknwon.dev/clog/v2"
-	"xorm.io/core"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
-	"gogs.io/gogs/internal/dbx"
 )
 
-var (
-	x            *xorm.Engine
-	legacyTables []any
-)
-
-func init() {
-	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.
-	sql.Register("sqlite3", &sqlite.Driver{})
-
-	legacyTables = append(legacyTables,
-		new(User), new(PublicKey), new(TwoFactor), new(TwoFactorRecoveryCode),
-		new(Repository), new(DeployKey), new(Collaboration), new(Upload),
-		new(Watch), new(Star),
-		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
-		new(Label), new(IssueLabel), new(Milestone),
-		new(Mirror), new(Release), new(Webhook), new(HookTask),
-		new(ProtectBranch), new(ProtectBranchWhitelist),
-		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
-	)
-
-	gonicNames := []string{"SSL"}
-	for _, name := range gonicNames {
-		core.LintGonicMapper[name] = true
-	}
-}
-
-func getEngine() (*xorm.Engine, error) {
-	Param := "?"
-	if strings.Contains(conf.Database.Name, Param) {
-		Param = "&"
-	}
-
-	driver := conf.Database.Type
-	connStr := ""
-	switch conf.Database.Type {
-	case "mysql":
-		conf.UseMySQL = true
-		if conf.Database.Host[0] == '/' { // looks like a unix socket
-			connStr = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8mb4&parseTime=true",
-				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
-		} else {
-			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
-				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
-		}
-		engineParams := map[string]string{"rowFormat": "DYNAMIC"}
-		return xorm.NewEngineWithParams(conf.Database.Type, connStr, engineParams)
-
-	case "postgres":
-		conf.UsePostgreSQL = true
-		host, port := dbx.ParsePostgreSQLHostPort(conf.Database.Host)
-		connStr = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
-			conf.Database.User, conf.Database.Password, host, port, conf.Database.Name, conf.Database.SSLMode, conf.Database.Schema)
-		driver = "pgx"
-
-	case "sqlite3":
-		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {
-			return nil, errors.Newf("create directories: %v", err)
-		}
-		conf.UseSQLite3 = true
-		connStr = "file:" + conf.Database.Path + "?cache=shared&mode=rwc"
-
-	default:
-		return nil, errors.Newf("unknown database type: %s", conf.Database.Type)
-	}
-	return xorm.NewEngine(driver, connStr)
-}
-
-func NewTestEngine() error {
-	x, err := getEngine()
-	if err != nil {
-		return errors.Newf("connect to database: %v", err)
-	}
-
-	if conf.UsePostgreSQL {
-		x.SetSchema(conf.Database.Schema)
-	}
-
-	x.SetMapper(core.GonicMapper{})
-	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
-}
-
+// SetEngine connects to the database and creates tables that do not exist yet.
 func SetEngine() (*gorm.DB, error) {
-	var err error
-	x, err = getEngine()
-	if err != nil {
-		return nil, errors.Newf("connect to database: %v", err)
-	}
-
-	if conf.UsePostgreSQL {
-		x.SetSchema(conf.Database.Schema)
-	}
-
-	x.SetMapper(core.GonicMapper{})
-
-	var logPath string
-	if conf.HookMode {
-		logPath = filepath.Join(conf.Log.RootPath, "hooks", "xorm.log")
-	} else {
-		logPath = filepath.Join(conf.Log.RootPath, "xorm.log")
-	}
-	sec := conf.File.Section("log.xorm")
-	fileWriter, err := log.NewFileWriter(logPath,
-		log.FileRotationConfig{
-			Rotate:  sec.Key("ROTATE").MustBool(true),
-			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
-			MaxSize: sec.Key("MAX_SIZE").MustInt64(100) * 1024 * 1024,
-			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
-		},
-	)
-	if err != nil {
-		return nil, errors.Newf("create 'xorm.log': %v", err)
-	}
-
-	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
-	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
-	x.SetConnMaxLifetime(time.Second)
-
-	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
-	} else {
-		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
-	}
-	x.ShowSQL(true)
-
-	var gormLogger logger.Writer
-	if conf.HookMode {
-		gormLogger = &dbx.Logger{Writer: fileWriter}
-	} else {
-		gormLogger, err = newLogWriter()
-		if err != nil {
-			return nil, errors.Wrap(err, "new log writer")
+	if conf.Database.Type == "sqlite3" {
+		if err := os.MkdirAll(filepath.Dir(conf.Database.Path), os.ModePerm); err != nil {
+			return nil, errors.Wrap(err, "create directories")
 		}
 	}
-	return NewConnection(gormLogger)
+
+	w, err := newLogWriter()
+	if err != nil {
+		return nil, errors.Wrap(err, "new log writer")
+	}
+	return NewConnection(w)
 }
 
 func NewEngine() error {
@@ -168,11 +36,6 @@ func NewEngine() error {
 	if err = migrations.Migrate(db); err != nil {
 		return errors.Newf("migrate: %v", err)
 	}
-
-	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
-		return errors.Wrap(err, "sync tables")
-	}
-
 	return nil
 }
 

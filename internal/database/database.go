@@ -17,9 +17,13 @@ import (
 )
 
 func newLogWriter() (logger.Writer, error) {
+	logPath := filepath.Join(conf.Log.RootPath, "gorm.log")
+	if conf.HookMode {
+		logPath = filepath.Join(conf.Log.RootPath, "hooks", "gorm.log")
+	}
 	sec := conf.File.Section("log.gorm")
 	w, err := log.NewFileWriter(
-		filepath.Join(conf.Log.RootPath, "gorm.log"),
+		logPath,
 		log.FileRotationConfig{
 			Rotate:  sec.Key("ROTATE").MustBool(true),
 			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
@@ -39,11 +43,23 @@ func newLogWriter() (logger.Writer, error) {
 //
 // ⚠️ WARNING: This list is meant to be read-only.
 var Tables = []any{
-	new(Access), new(AccessToken), new(Action),
+	new(Access), new(AccessToken), new(Action), new(Attachment),
+	new(Collaboration), new(Comment),
+	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
-	new(LFSObject), new(LoginSource),
+	new(HookTask),
+	new(Issue), new(IssueLabel), new(IssueUser),
+	new(Label), new(LFSObject), new(LoginSource),
+	new(Milestone), new(Mirror),
 	new(Notice),
+	new(OrgUser),
+	new(ProtectBranch), new(ProtectBranchWhitelist), new(PublicKey), new(PullRequest),
+	new(Release), new(Repository),
+	new(Star),
+	new(Team), new(TeamRepo), new(TeamUser), new(TwoFactor), new(TwoFactorRecoveryCode),
+	new(Upload), new(User),
+	new(Watch), new(Webhook),
 }
 
 // NewConnection returns a new database connection with the given logger.
@@ -88,7 +104,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 		conf.UsePostgreSQL = true
 	case "mysql":
 		conf.UseMySQL = true
-		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
+		db = db.Set("gorm:table_options", "ENGINE=InnoDB ROW_FORMAT=DYNAMIC").Session(&gorm.Session{})
 	case "sqlite3":
 		conf.UseSQLite3 = true
 	default:

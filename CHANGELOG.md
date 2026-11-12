@@ -14,6 +14,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
+- `gogs restore` no longer resets some timestamps to the time of the restore, such as when issues and comments were last updated and when mirrors next sync. [#8511](https://github.com/gogs/gogs/pull/8511)
 
 ### Removed
 
@@ -26,6 +27,7 @@ All notable changes to Gogs are documented in this file.
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
 - CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 - Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
+- The `[log.xorm]` configuration section and the `xorm.log` file. Database logs are written to `gorm.log`, and to `hooks/gorm.log` for Git hooks. [#8511](https://github.com/gogs/gogs/pull/8511)
 
 ## 0.14.4
 

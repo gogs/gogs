@@ -87,9 +87,9 @@ func (br *Branch) GetCommit() (*git.Commit, error) {
 type ProtectBranchWhitelist struct {
 	ID              int64
 	ProtectBranchID int64
-	RepoID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
-	Name            string `xorm:"UNIQUE(protect_branch_whitelist)"`
-	UserID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
+	RepoID          int64  `gorm:"uniqueIndex:UQE_protect_branch_whitelist_protect_branch_whitelist"`
+	Name            string `gorm:"size:255;uniqueIndex:UQE_protect_branch_whitelist_protect_branch_whitelist"`
+	UserID          int64  `gorm:"uniqueIndex:UQE_protect_branch_whitelist_protect_branch_whitelist"`
 }
 
 // IsUserInProtectBranchWhitelist returns true if given user is in the whitelist of a branch in a repository.
@@ -102,13 +102,13 @@ func IsUserInProtectBranchWhitelist(repoID, userID int64, branch string) bool {
 // ProtectBranch contains options of a protected branch.
 type ProtectBranch struct {
 	ID                 int64
-	RepoID             int64  `xorm:"UNIQUE(protect_branch)"`
-	Name               string `xorm:"UNIQUE(protect_branch)"`
+	RepoID             int64  `gorm:"uniqueIndex:UQE_protect_branch_protect_branch"`
+	Name               string `gorm:"size:255;uniqueIndex:UQE_protect_branch_protect_branch"`
 	Protected          bool
 	RequirePullRequest bool
 	EnableWhitelist    bool
-	WhitelistUserIDs   string `xorm:"TEXT" gorm:"column:whitelist_user_i_ds"`
-	WhitelistTeamIDs   string `xorm:"TEXT" gorm:"column:whitelist_team_i_ds"`
+	WhitelistUserIDs   string `gorm:"column:whitelist_user_i_ds;type:TEXT"`
+	WhitelistTeamIDs   string `gorm:"column:whitelist_team_i_ds;type:TEXT"`
 }
 
 // GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repository.

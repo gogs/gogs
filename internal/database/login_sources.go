@@ -22,18 +22,18 @@ import (
 type LoginSource struct {
 	ID        int64 `gorm:"primaryKey"`
 	Type      auth.Type
-	Name      string        `xorm:"UNIQUE" gorm:"unique"`
-	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"not null"`
-	IsDefault bool          `xorm:"DEFAULT false"`
-	Provider  auth.Provider `xorm:"-" gorm:"-"`
-	Config    string        `xorm:"TEXT cfg" gorm:"column:cfg;type:TEXT" json:"RawConfig"`
+	Name      string `gorm:"unique"`
+	IsActived bool   `gorm:"not null"`
+	IsDefault bool
+	Provider  auth.Provider `gorm:"-"`
+	Config    string        `gorm:"column:cfg;type:TEXT" json:"RawConfig"`
 
-	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Updated     time.Time `gorm:"-" json:"-"`
 	UpdatedUnix int64
 
-	File loginSourceFileStore `xorm:"-" gorm:"-" json:"-"`
+	File loginSourceFileStore `gorm:"-" json:"-"`
 }
 
 // BeforeSave implements the GORM save hook.
