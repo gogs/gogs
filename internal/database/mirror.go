@@ -144,21 +144,17 @@ func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
 		return errors.Wrap(err, "open repository")
 	}
 
-	err = gitRepo.RemoteRemove(ctx, "origin")
-	if err != nil {
-		return errors.Newf("remove remote 'origin': %v", err)
-	}
-
 	addrURL, err := url.Parse(addr)
 	if err != nil {
 		return err
 	}
 
-	err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
+	// Replace the URL in a single config write, so an interrupted request can never
+	// leave the mirror without an "origin" remote.
+	err = gitRepo.RemoteSetURL(ctx, "origin", addrURL.String())
 	if err != nil {
-		return errors.Newf("add remote 'origin': %v", err)
+		return errors.Wrap(err, "set URL of remote 'origin'")
 	}
-
 	return nil
 }
 
