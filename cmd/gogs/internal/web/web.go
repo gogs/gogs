@@ -59,9 +59,12 @@ func Run(configPath string, portOverride int) error {
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
-	tracing, err := initTracing(gocontext.Background())
+	shutdownTracing, err := initTracing(gocontext.Background())
 	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
+	}
+	if shutdownTracing != nil {
+		defer shutdownTracing()
 	}
 
 	m, err := newMacaron()
@@ -621,7 +624,7 @@ func Run(configPath string, portOverride int) error {
 	log.Info("Available on %s", conf.Server.ExternalURL)
 
 	var handler http.Handler = m
-	if tracing {
+	if shutdownTracing != nil {
 		handler = newTracingHandler(m)
 	}
 
