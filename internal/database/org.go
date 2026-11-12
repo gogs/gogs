@@ -45,14 +45,14 @@ func (org *User) GetOwnerTeam() (*Team, error) {
 	return org.getOwnerTeam(x)
 }
 
-func (org *User) getTeams(e Engine) (err error) {
-	org.Teams, err = getTeamsByOrgID(e, org.ID)
+func (org *User) getTeams(tx *gorm.DB) (err error) {
+	org.Teams, err = getTeamsByOrgID(tx, org.ID)
 	return err
 }
 
 // GetTeams returns all teams that belong to organization.
 func (org *User) GetTeams() error {
-	return org.getTeams(x)
+	return org.getTeams(Handle.db)
 }
 
 // TeamsHaveAccessToRepo returns all teams that have given access level to the repository.
@@ -411,7 +411,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	repoIDs := make([]int64, 0, len(repos))
 	for i := range repos {
 		repoIDs = append(repoIDs, repos[i].ID)
-		if err = watchRepo(sess, user.ID, repos[i].ID, false); err != nil {
+		if err = watchRepo(legacyTx(sess), user.ID, repos[i].ID, false); err != nil {
 			return err
 		}
 	}
