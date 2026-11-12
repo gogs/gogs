@@ -145,9 +145,7 @@ func DeleteBranchPost(c *context.Context) {
 		}
 	}
 
-	if err := c.Repo.GitRepo.DeleteBranch(c.Req.Context(), branchName, git.DeleteBranchOptions{
-		Force: true,
-	}); err != nil {
+	if err := c.Repo.GitRepo.DeleteBranch(c.Req.Context(), branchName, git.DeleteBranchForce()); err != nil {
 		log.Error("Failed to delete branch %q: %v", branchName, err)
 		return
 	}

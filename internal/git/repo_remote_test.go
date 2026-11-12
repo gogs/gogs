@@ -13,14 +13,12 @@ func TestLsRemote(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		url     string
-		opt     LsRemoteOptions
+		opts    []LsRemoteOption
 		expRefs []*Reference
 	}{
 		{
-			url: testrepo.Path(),
-			opt: LsRemoteOptions{
-				Patterns: []string{"release-1.0"},
-			},
+			url:  testrepo.Path(),
+			opts: []LsRemoteOption{LsRemotePatterns("release-1.0")},
 			expRefs: []*Reference{
 				{
 					ID:      "0eedd79eba4394bbef888c804e899731644367fe",
@@ -28,10 +26,8 @@ func TestLsRemote(t *testing.T) {
 				},
 			},
 		}, {
-			url: testrepo.Path(),
-			opt: LsRemoteOptions{
-				Patterns: []string{"v1.0.0"},
-			},
+			url:  testrepo.Path(),
+			opts: []LsRemoteOption{LsRemotePatterns("v1.0.0")},
 			expRefs: []*Reference{
 				{
 					ID:      "0eedd79eba4394bbef888c804e899731644367fe",
@@ -42,7 +38,7 @@ func TestLsRemote(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			refs, err := LsRemote(ctx, test.url, test.opt)
+			refs, err := LsRemote(ctx, test.url, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -70,7 +66,7 @@ func TestRemoteHEAD(t *testing.T) {
 		// for HEAD.
 		_, err = exec(ctx, r.Path(), []string{"branch", "develop", "master"}, nil)
 		require.NoError(t, err)
-		_, err = r.SymbolicRef(ctx, SymbolicRefOptions{Ref: RefsHeads + "develop"})
+		_, err = r.SymbolicRef(ctx, SymbolicRefRef(RefsHeads+"develop"))
 		require.NoError(t, err)
 
 		ref, err := RemoteHEAD(ctx, r.Path())
@@ -83,7 +79,7 @@ func TestRemoteHEAD(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanup()
 
-		_, err = r.SymbolicRef(ctx, SymbolicRefOptions{Ref: RefsHeads + "missing"})
+		_, err = r.SymbolicRef(ctx, SymbolicRefRef(RefsHeads+"missing"))
 		require.NoError(t, err)
 
 		_, err = RemoteHEAD(ctx, r.Path())
@@ -114,10 +110,7 @@ func TestRepository_RemoteAdd(t *testing.T) {
 	}
 
 	// Add testrepo as the mirror remote and fetch right away
-	err = r.RemoteAdd(ctx, "origin", testrepo.Path(), RemoteAddOptions{
-		Fetch:       true,
-		MirrorFetch: true,
-	})
+	err = r.RemoteAdd(ctx, "origin", testrepo.Path(), RemoteAddFetch(), RemoteAddMirrorFetch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +161,7 @@ func TestRepository_RemoteUpdate(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, output, "[deleted]")
 
-	output, err = r.RemoteUpdate(ctx, RemoteUpdateOptions{Prune: true})
+	output, err = r.RemoteUpdate(ctx, RemoteUpdatePrune())
 	require.NoError(t, err)
 	assert.Contains(t, output, "[deleted]")
 }

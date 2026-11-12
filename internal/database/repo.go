@@ -806,7 +806,7 @@ func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoO
 			return repo, errors.Wrap(err, "list branches")
 		}
 		repo.DefaultBranch = branches[0]
-		_, err = gitRepo.SymbolicRef(ctx, git.SymbolicRefOptions{Ref: git.RefsHeads + repo.DefaultBranch})
+		_, err = gitRepo.SymbolicRef(ctx, git.SymbolicRefRef(git.RefsHeads+repo.DefaultBranch))
 		if err != nil {
 			return repo, errors.Wrap(err, "set HEAD branch")
 		}
@@ -873,7 +873,7 @@ func resolveMissingDefaultBranch(ctx context.Context, repoPath, savedBranch, can
 	if candidate == "" || !git.RepoHasBranch(ctx, repoPath, candidate) {
 		return "", nil
 	}
-	_, err = git.RepoSymbolicRef(ctx, repoPath, git.SymbolicRefOptions{Ref: git.RefsHeads + candidate})
+	_, err = git.RepoSymbolicRef(ctx, repoPath, git.SymbolicRefRef(git.RefsHeads+candidate))
 	if err != nil {
 		return "", errors.Wrap(err, "set HEAD")
 	}
@@ -1058,10 +1058,8 @@ func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, 
 	_, err = git.RepoSymbolicRef(
 		ctx,
 		repoPath,
-		git.SymbolicRefOptions{
-			Name: "HEAD",
-			Ref:  git.RefsHeads + conf.Repository.DefaultBranch,
-		},
+		git.SymbolicRefName("HEAD"),
+		git.SymbolicRefRef(git.RefsHeads+conf.Repository.DefaultBranch),
 	)
 	if err != nil {
 		return errors.Wrap(err, "set default branch")

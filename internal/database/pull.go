@@ -603,7 +603,7 @@ func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
 	// Add a temporary remote.
 	tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
 	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
-	err = headGitRepo.RemoteAdd(ctx, tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
+	err = headGitRepo.RemoteAdd(ctx, tmpRemote, baseRepoPath, git.RemoteAddFetch())
 	if err != nil {
 		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}

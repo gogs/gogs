@@ -157,7 +157,7 @@ func TestRepository_HasBranches(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanup()
 
-		_, err = r.SymbolicRef(ctx, SymbolicRefOptions{Ref: RefsHeads + "missing"})
+		_, err = r.SymbolicRef(ctx, SymbolicRefRef(RefsHeads+"missing"))
 		require.NoError(t, err)
 
 		got, err := r.HasBranches(ctx)
@@ -204,18 +204,13 @@ func TestRepository_SymbolicRef(t *testing.T) {
 	assert.Equal(t, RefsHeads+"master", ref)
 
 	// Set a symbolic reference
-	_, err = r.SymbolicRef(ctx, SymbolicRefOptions{
-		Name: "TEST_REF",
-		Ref:  RefsHeads + "develop",
-	})
+	_, err = r.SymbolicRef(ctx, SymbolicRefName("TEST_REF"), SymbolicRefRef(RefsHeads+"develop"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get the symbolic reference we just set
-	ref, err = r.SymbolicRef(ctx, SymbolicRefOptions{
-		Name: "TEST_REF",
-	})
+	ref, err = r.SymbolicRef(ctx, SymbolicRefName("TEST_REF"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,17 +288,13 @@ func TestRepository_DeleteBranch(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		opt DeleteBranchOptions
+		opts []DeleteBranchOption
 	}{
 		{
-			opt: DeleteBranchOptions{
-				Force: false,
-			},
+			opts: nil,
 		},
 		{
-			opt: DeleteBranchOptions{
-				Force: true,
-			},
+			opts: []DeleteBranchOption{DeleteBranchForce()},
 		},
 	}
 	for _, test := range tests {
@@ -312,7 +303,7 @@ func TestRepository_DeleteBranch(t *testing.T) {
 			createBranch(t, r, branch)
 			assert.True(t, r.hasReference(ctx, RefsHeads+branch))
 
-			err := r.DeleteBranch(ctx, branch, test.opt)
+			err := r.DeleteBranch(ctx, branch, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}

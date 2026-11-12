@@ -131,8 +131,7 @@ func (r *Repository) HasTag(ctx context.Context, tag string) bool {
 	return r.hasReference(ctx, RefsTags+tag)
 }
 
-// SymbolicRefOptions contains optional arguments for get and set symbolic ref.
-type SymbolicRefOptions struct {
+type symbolicRefOptions struct {
 	// The name of the symbolic ref. When not set, default ref "HEAD" is used.
 	Name string
 	// The name of the reference, e.g., "refs/heads/master". When set, it will be
@@ -140,16 +139,31 @@ type SymbolicRefOptions struct {
 	Ref string
 }
 
+// SymbolicRefOption sets an optional argument for get and set symbolic ref.
+type SymbolicRefOption func(*symbolicRefOptions)
+
+// SymbolicRefName sets the name of the symbolic ref. When not set, default ref
+// "HEAD" is used.
+func SymbolicRefName(name string) SymbolicRefOption {
+	return func(opt *symbolicRefOptions) { opt.Name = name }
+}
+
+// SymbolicRefRef sets the name of the reference, e.g., "refs/heads/master".
+// When set, it will be used to update the symbolic ref.
+func SymbolicRefRef(ref string) SymbolicRefOption {
+	return func(opt *symbolicRefOptions) { opt.Ref = ref }
+}
+
 // SymbolicRef returns the reference name (e.g., "refs/heads/master") pointed by
 // the symbolic ref. It returns an empty string and nil error when doing set
 // operation.
-func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions) (string, error) {
+func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOption) (string, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.SymbolicRef")
 	defer span.End()
 
-	var opt SymbolicRefOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt symbolicRefOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"symbolic-ref"}
@@ -169,7 +183,7 @@ func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions
 }
 
 // RepoSymbolicRef is like Repository.SymbolicRef for the repository in given path.
-func RepoSymbolicRef(ctx context.Context, repoPath string, opts ...SymbolicRefOptions) (string, error) {
+func RepoSymbolicRef(ctx context.Context, repoPath string, opts ...SymbolicRefOption) (string, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return "", err
@@ -190,12 +204,7 @@ type showRefOptions struct {
 }
 
 // showRef returns a list of references in the repository.
-func (r *Repository) showRef(ctx context.Context, opts ...showRefOptions) ([]*Reference, error) {
-	var opt showRefOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) showRef(ctx context.Context, opt showRefOptions) ([]*Reference, error) {
 	args := []string{"show-ref"}
 	if opt.Heads {
 		args = append(args, "--heads")
@@ -254,22 +263,29 @@ func RepoBranches(ctx context.Context, repoPath string) ([]string, error) {
 	return r.Branches(ctx)
 }
 
-// DeleteBranchOptions contains optional arguments for deleting a branch.
-//
-// Docs: https://git-scm.com/docs/git-branch
-type DeleteBranchOptions struct {
+type deleteBranchOptions struct {
 	// Indicates whether to force delete the branch.
 	Force bool
 }
 
+// DeleteBranchOption sets an optional argument for deleting a branch.
+//
+// Docs: https://git-scm.com/docs/git-branch
+type DeleteBranchOption func(*deleteBranchOptions)
+
+// DeleteBranchForce force deletes the branch.
+func DeleteBranchForce() DeleteBranchOption {
+	return func(opt *deleteBranchOptions) { opt.Force = true }
+}
+
 // DeleteBranch deletes the branch from the repository.
-func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...DeleteBranchOptions) error {
+func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...DeleteBranchOption) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.DeleteBranch")
 	defer span.End()
 
-	var opt DeleteBranchOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt deleteBranchOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"branch"}

@@ -494,9 +494,7 @@ func UpdateDefaultBranch(c *context.Context) {
 	if c.Repo.GitRepo.HasBranch(c.Req.Context(), branch) &&
 		c.Repo.Repository.DefaultBranch != branch {
 		c.Repo.Repository.DefaultBranch = branch
-		if _, err := c.Repo.GitRepo.SymbolicRef(c.Req.Context(), git.SymbolicRefOptions{
-			Ref: git.RefsHeads + branch,
-		}); err != nil {
+		if _, err := c.Repo.GitRepo.SymbolicRef(c.Req.Context(), git.SymbolicRefRef(git.RefsHeads+branch)); err != nil {
 			c.Flash.Warning(c.Tr("repo.settings.update_default_branch_unsupported"))
 			c.Redirect(c.Repo.RepoLink + "/settings/branches")
 			return

@@ -150,7 +150,7 @@ func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
 	err = gitRepo.RemoteSetURL(ctx, "origin", addrURL.String())
 	if errors.Is(err, git.ErrRemoteNotExist) {
 		// Add a missing "origin" back, so that a mirror that lost it can be repaired.
-		err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
+		err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddMirrorFetch())
 	}
 	if err != nil {
 		return errors.Wrap(err, "set URL of remote 'origin'")
@@ -248,9 +248,7 @@ func mirrorGitEnv() []string {
 func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
 	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADOptions{
-		Envs: mirrorGitEnv(),
-	})
+	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADEnvs(mirrorGitEnv()...))
 	if err != nil {
 		return "", err
 	}
@@ -263,10 +261,7 @@ func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
 func isMirrorURLAccessible(timeout time.Duration, url string) bool {
 	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	_, err := git.LsRemote(ctx, url, git.LsRemoteOptions{
-		Patterns: []string{"HEAD"},
-		Envs:     mirrorGitEnv(),
-	})
+	_, err := git.LsRemote(ctx, url, git.LsRemotePatterns("HEAD"), git.LsRemoteEnvs(mirrorGitEnv()...))
 	return err == nil
 }
 
@@ -275,10 +270,11 @@ func isMirrorURLAccessible(timeout time.Duration, url string) bool {
 func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (string, error) {
 	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return git.RepoRemoteUpdate(ctx, repoPath, git.RemoteUpdateOptions{
-		Prune: prune,
-		Envs:  mirrorGitEnv(),
-	})
+	opts := []git.RemoteUpdateOption{git.RemoteUpdateEnvs(mirrorGitEnv()...)}
+	if prune {
+		opts = append(opts, git.RemoteUpdatePrune())
+	}
+	return git.RepoRemoteUpdate(ctx, repoPath, opts...)
 }
 
 // runSync returns true if sync finished without error.
