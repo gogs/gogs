@@ -158,7 +158,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		c.Repo.Repository = repo
 		c.Data["RepoName"] = c.Repo.Repository.Name
-		c.Data["IsBareRepo"] = c.Repo.Repository.IsBare
+		c.Data["IsEmptyRepo"] = c.Repo.Repository.IsEmpty
 		c.Repo.RepoLink = repo.Link()
 		c.Data["RepoLink"] = c.Repo.RepoLink
 		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
@@ -264,8 +264,8 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
 		}
 
-		// repo is bare and display enable
-		if c.Repo.Repository.IsBare {
+		// repo is empty and display enable
+		if c.Repo.Repository.IsEmpty {
 			return
 		}
 
@@ -298,7 +298,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 func RepoRef() macaron.Handler {
 	return func(c *Context) {
 		// Empty repository does not have reference information.
-		if c.Repo.Repository.IsBare {
+		if c.Repo.Repository.IsEmpty {
 			return
 		}
 

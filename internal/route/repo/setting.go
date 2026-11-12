@@ -465,7 +465,7 @@ func SettingsBranches(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.branches")
 	c.Data["PageIsSettingsBranches"] = true
 
-	if c.Repo.Repository.IsBare {
+	if c.Repo.Repository.IsEmpty {
 		c.Flash.Info(c.Tr("repo.settings.branches_bare"), true)
 		c.HTML(http.StatusUnprocessableEntity, tmplRepoSettingsBranches)
 		return
