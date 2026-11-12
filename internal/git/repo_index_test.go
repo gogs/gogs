@@ -127,8 +127,9 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 		When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", 5*3600+30*60)),
 	}
 	commitID, err := r.CommitTree(ctx, tree, "Add hello\n", CommitTreeOptions{
-		Parents: []string{parent.ID.String()},
-		Author:  author,
+		Parents:   []string{parent.ID.String()},
+		Author:    author,
+		Committer: author,
 	})
 	require.NoError(t, err)
 
@@ -154,6 +155,12 @@ func TestRepository_AddToIndex(t *testing.T) {
 	r, cleanup, err := setupTempRepo()
 	require.NoError(t, err)
 	defer cleanup()
+
+	// Git for Windows sets core.autocrlf to true in its system configuration,
+	// which would convert the line endings of files without attributes.
+	t.Setenv("GIT_CONFIG_COUNT", "1")
+	t.Setenv("GIT_CONFIG_KEY_0", "core.autocrlf")
+	t.Setenv("GIT_CONFIG_VALUE_0", "false")
 
 	commitFiles(t, r, "crlf", map[string]string{"a.txt": "one\r\ntwo\r\n"})
 	parent := commitFiles(t, r, "crlf", map[string]string{".gitattributes": "*.txt text=auto\n"})
@@ -304,13 +311,15 @@ func TestRepository_Rebase(t *testing.T) {
 		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: name, Content: strings.NewReader(content)}))
 		tree, err := r.WriteTree(ctx)
 		require.NoError(t, err)
+		sig := &Signature{
+			Name:  "bob",
+			Email: "bob@example.com",
+			When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", -7*3600)),
+		}
 		id, err := r.CommitTree(ctx, tree, message, CommitTreeOptions{
-			Parents: []string{parent},
-			Author: &Signature{
-				Name:  "bob",
-				Email: "bob@example.com",
-				When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", -7*3600)),
-			},
+			Parents:   []string{parent},
+			Author:    sig,
+			Committer: sig,
 		})
 		require.NoError(t, err)
 		return id
