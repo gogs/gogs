@@ -226,13 +226,6 @@ func (r *Repository) BeforeInsert() {
 
 func (r *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "default_branch":
-		// FIXME: use db migration to solve all at once.
-		if r.DefaultBranch == "" {
-			// Rows without a default branch predate the configurable default branch,
-			// when every repository was created with "master".
-			r.DefaultBranch = "master"
-		}
 	case "num_closed_issues":
 		r.NumOpenIssues = r.NumIssues - r.NumClosedIssues
 	case "num_closed_pulls":
@@ -853,17 +846,18 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		return repo, errors.Newf("open repository: %v", err)
 	}
 
+	// Set the HEAD branch as default branch, which is also available for empty
+	// repositories.
 	refspec, err := gitRepo.SymbolicRef(context.TODO())
 	if err != nil {
 		return repo, errors.Newf("get HEAD branch: %v", err)
 	}
-	headBranch := git.RefShortName(refspec)
+	repo.DefaultBranch = git.RefShortName(refspec)
 
 	// The repository is empty when its HEAD branch has no commits.
-	repo.IsBare = !gitRepo.HasBranch(context.TODO(), headBranch)
-	if !repo.IsBare {
-		repo.DefaultBranch = headBranch
+	repo.IsBare = !gitRepo.HasBranch(context.TODO(), repo.DefaultBranch)
 
+	if !repo.IsBare {
 		if err = repo.UpdateSize(); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 		}
