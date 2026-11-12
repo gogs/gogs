@@ -150,8 +150,13 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
-	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
-	defer cancel()
+	ctx := c.Req.Context()
+	// A non-positive timeout falls back to git.DefaultTimeout.
+	if conf.Git.Timeout.Diff > 0 {
+		var cancel gocontext.CancelFunc
+		ctx, cancel = gocontext.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Diff)*time.Second)
+		defer cancel()
+	}
 	diff, err := c.Repo.GitRepo.Diff(ctx,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: beforeCommitID},
