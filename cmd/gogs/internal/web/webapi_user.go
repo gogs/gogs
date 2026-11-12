@@ -295,13 +295,14 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 }
 
 // completeSignIn finalizes the sign-in session for u: writes the auth session,
-// clears any in-flight MFA state, and sets the login-status cookie. The
-// caller is responsible for navigating to a post-login destination via
-// /redirect?to=.
+// clears any in-flight MFA state, and sets the login-status cookie. Having just
+// signed in counts as having confirmed who they are. The caller is responsible
+// for navigating to a post-login destination via /redirect?to=.
 func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) {
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
 	sess.Delete("mfaUserID")
+	grantRecentAuth(sess)
 
 	if conf.Security.EnableLoginStatusCookie {
 		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
