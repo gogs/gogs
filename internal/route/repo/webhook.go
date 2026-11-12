@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -505,7 +505,7 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		nameStatus, err = c.Repo.Commit.ShowNameStatus()
+		nameStatus, err = c.Repo.Commit.ShowNameStatus(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get changed files")
 			return

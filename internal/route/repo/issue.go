@@ -296,17 +296,17 @@ func RetrieveRepoMetas(c *context.Context, repo *database.Repository) []*databas
 func getFileContentFromDefaultBranch(c *context.Context, filename string) (string, bool) {
 	if c.Repo.Commit == nil {
 		var err error
-		c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Repo.Repository.DefaultBranch)
+		c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Req.Context(), c.Repo.Repository.DefaultBranch)
 		if err != nil {
 			return "", false
 		}
 	}
 
-	entry, err := c.Repo.Commit.TreeEntry(filename)
+	entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), filename)
 	if err != nil {
 		return "", false
 	}
-	p, err := entry.Blob().Bytes()
+	p, err := entry.Blob().Bytes(c.Req.Context())
 	if err != nil {
 		return "", false
 	}
@@ -643,7 +643,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 		}
 
 		c.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
-			c.Repo.IsWriter() && c.Repo.GitRepo.HasBranch(pull.HeadBranch) &&
+			c.Repo.IsWriter() && c.Repo.GitRepo.HasBranch(c.Req.Context(), pull.HeadBranch) &&
 			!branchProtected
 
 		c.Data["DeleteBranchLink"] = c.Repo.MakeURL(url.URL{

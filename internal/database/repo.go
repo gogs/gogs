@@ -25,13 +25,12 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"github.com/gogs/git-module"
-
 	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
@@ -130,14 +129,14 @@ func NewRepoContext() {
 
 	// Check Git version.
 	var err error
-	conf.Git.Version, err = git.BinVersion()
+	conf.Git.Version, err = git.BinVersion(context.TODO())
 	if err != nil {
 		log.Fatal("Failed to get Git version: %v", err)
 	}
 
 	log.Trace("Git version: %s", conf.Git.Version)
-	if semverx.Compare(conf.Git.Version, "<", "1.8.3") {
-		log.Fatal("Gogs requires Git version greater or equal to 1.8.3")
+	if semverx.Compare(conf.Git.Version, "<", "2.43.1") {
+		log.Fatal("Gogs requires Git version greater or equal to 2.43.1, but got %s", conf.Git.Version)
 	}
 
 	// Git requires setting user.name and user.email in order to commit changes.
@@ -450,7 +449,7 @@ func (r *Repository) mustOwner(e Engine) *User {
 }
 
 func (r *Repository) UpdateSize() error {
-	countObject, err := git.CountObjects(r.RepoPath())
+	countObject, err := git.RepoCountObjects(context.TODO(), r.RepoPath())
 	if err != nil {
 		return errors.Newf("count repository objects: %v", err)
 	}
@@ -666,9 +665,15 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err
 		if isWiki {
 			branch = ""
 		}
-		if err = git.Clone(repoPath, localPath, git.CloneOptions{
-			Branch:  branch,
-			Timeout: time.Duration(conf.Git.Timeout.Clone) * time.Second,
+		ctx := context.TODO()
+		// A non-positive timeout means no timeout.
+		if conf.Git.Timeout.Clone > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Clone)*time.Second)
+			defer cancel()
+		}
+		if err = git.Clone(ctx, repoPath, localPath, git.CloneOptions{
+			Branch: branch,
 		}); err != nil {
 			return errors.Newf("git clone [branch: %s]: %v", branch, err)
 		}
@@ -680,19 +685,19 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err
 		return errors.Newf("open repository: %v", err)
 	}
 
-	if err = gitRepo.Fetch(git.FetchOptions{
+	if err = gitRepo.Fetch(context.TODO(), git.FetchOptions{
 		Prune: true,
 	}); err != nil {
 		return errors.Newf("fetch: %v", err)
 	}
 
-	if err = gitRepo.Checkout(branch); err != nil {
+	if err = gitRepo.Checkout(context.TODO(), branch); err != nil {
 		return errors.Newf("checkout [branch: %s]: %v", branch, err)
 	}
 
 	// Reset to align with remote in case of force push.
 	rev := "origin/" + branch
-	if err = gitRepo.Reset(rev, git.ResetOptions{
+	if err = gitRepo.Reset(context.TODO(), rev, git.ResetOptions{
 		Hard: true,
 	}); err != nil {
 		return errors.Newf("reset [revision: %s]: %v", rev, err)
@@ -859,11 +864,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	if !repo.IsBare {
 		// Try to get HEAD branch and set it as default branch.
-		gitRepo, err := git.Open(repoPath)
-		if err != nil {
-			return repo, errors.Newf("open repository: %v", err)
-		}
-		refspec, err := gitRepo.SymbolicRef()
+		refspec, err := git.RepoSymbolicRef(context.TODO(), repoPath)
 		if err != nil {
 			return repo, errors.Newf("get HEAD branch: %v", err)
 		}
@@ -1013,7 +1014,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 
 func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptionsLegacy) error {
 	// Clone to temporary path and do the init commit.
-	err := git.Clone(repoPath, tmpDir, git.CloneOptions{})
+	err := git.Clone(context.TODO(), repoPath, tmpDir, git.CloneOptions{})
 	if err != nil {
 		return errors.Wrap(err, "clone")
 	}
@@ -1075,14 +1076,15 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Init bare new repository.
-	if err = git.Init(repoPath, git.InitOptions{Bare: true}); err != nil {
+	if err = git.Init(context.TODO(), repoPath, git.InitOptions{Bare: true}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(repoPath); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)
 	}
 
 	// Set default branch
-	_, err = git.SymbolicRef(
+	_, err = git.RepoSymbolicRef(
+		context.TODO(),
 		repoPath,
 		git.SymbolicRefOptions{
 			Name: "HEAD",
@@ -2062,7 +2064,7 @@ func ReinitMissingRepositories() error {
 
 	for _, repo := range repos {
 		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
-		if err := git.Init(repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
+		if err := git.Init(context.TODO(), repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
 			if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
 				return errors.Newf("create repository notice: %v", err)
 			}
@@ -2112,12 +2114,15 @@ func GitFsck() {
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			err := git.Fsck(repoPath, git.FsckOptions{
-				CommandOptions: git.CommandOptions{
-					Args: conf.Cron.RepoHealthCheck.Args,
-				},
-				Timeout: conf.Cron.RepoHealthCheck.Timeout,
+			ctx, cancel := context.TODO(), context.CancelFunc(func() {})
+			// A non-positive timeout means no timeout.
+			if conf.Cron.RepoHealthCheck.Timeout > 0 {
+				ctx, cancel = context.WithTimeout(ctx, conf.Cron.RepoHealthCheck.Timeout)
+			}
+			err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
+				Args: conf.Cron.RepoHealthCheck.Args,
 			})
+			cancel()
 			if err != nil {
 				const fmtStr = "Failed to perform health check on repository %q: %v"
 				log.Warn(fmtStr, repoPath, err)
@@ -2676,7 +2681,7 @@ func (r *Repository) CreateNewBranch(oldBranch, newBranch string) (err error) {
 		return errors.Newf("create new branch [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 
-	if err = git.Push(localPath, "origin", newBranch); err != nil {
+	if err = git.RepoPush(context.TODO(), localPath, "origin", newBranch); err != nil {
 		return errors.Newf("push [branch: %s]: %v", newBranch, err)
 	}
 

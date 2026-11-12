@@ -1,18 +1,18 @@
 package repo
 
 import (
+	gocontext "context"
 	"net/http"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -22,15 +22,15 @@ const (
 )
 
 // calReleaseNumCommitsBehind calculates given release has how many commits behind release target.
-func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *database.Release, countCache map[string]int64) error {
+func calReleaseNumCommitsBehind(ctx gocontext.Context, repoCtx *context.Repository, release *database.Release, countCache map[string]int64) error {
 	// Get count if not exists
 	if _, ok := countCache[release.Target]; !ok {
-		if repoCtx.GitRepo.HasBranch(release.Target) {
-			commit, err := repoCtx.GitRepo.BranchCommit(release.Target)
+		if repoCtx.GitRepo.HasBranch(ctx, release.Target) {
+			commit, err := repoCtx.GitRepo.BranchCommit(ctx, release.Target)
 			if err != nil {
 				return errors.Newf("get branch commit: %v", err)
 			}
-			countCache[release.Target], err = commit.CommitsCount()
+			countCache[release.Target], err = commit.CommitsCount(ctx)
 			if err != nil {
 				return errors.Newf("count commits: %v", err)
 			}
@@ -48,7 +48,7 @@ func Releases(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 	c.Data["PageIsReleaseList"] = true
 
-	tagsPage, err := gitx.Module.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
+	tagsPage, err := c.Repo.GitRepo.TagsAfter(c.Req.Context(), c.Query("after"), 10)
 	if err != nil {
 		c.Error(err, "get tags")
 		return
@@ -76,7 +76,7 @@ func Releases(c *context.Context) {
 				return
 			}
 
-			if err := calReleaseNumCommitsBehind(c.Repo, r, countCache); err != nil {
+			if err := calReleaseNumCommitsBehind(c.Req.Context(), c.Repo, r, countCache); err != nil {
 				c.Error(err, "calculate number of commits after release")
 				return
 			}
@@ -88,7 +88,7 @@ func Releases(c *context.Context) {
 
 		// No published release matches this tag
 		if results[i] == nil {
-			commit, err := c.Repo.GitRepo.TagCommit(rawTag)
+			commit, err := c.Repo.GitRepo.TagCommit(c.Req.Context(), rawTag)
 			if err != nil {
 				c.Error(err, "get tag commit")
 				return
@@ -100,7 +100,7 @@ func Releases(c *context.Context) {
 				Sha1:    commit.ID.String(),
 			}
 
-			results[i].NumCommits, err = commit.CommitsCount()
+			results[i].NumCommits, err = commit.CommitsCount(c.Req.Context())
 			if err != nil {
 				c.Error(err, "count commits")
 				return
@@ -125,7 +125,7 @@ func Releases(c *context.Context) {
 				return
 			}
 
-			if err := calReleaseNumCommitsBehind(c.Repo, r, countCache); err != nil {
+			if err := calReleaseNumCommitsBehind(c.Req.Context(), c.Repo, r, countCache); err != nil {
 				c.Error(err, "calculate number of commits after release")
 				return
 			}
@@ -174,28 +174,28 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		return
 	}
 
-	if !c.Repo.GitRepo.HasBranch(f.Target) {
+	if !c.Repo.GitRepo.HasBranch(c.Req.Context(), f.Target) {
 		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), http.StatusUnprocessableEntity, tmplRepoReleaseNew, &f)
 		return
 	}
 
 	// Use current time if tag not yet exist, otherwise get time from Git
 	var tagCreatedUnix int64
-	tag, err := c.Repo.GitRepo.Tag(git.RefsTags + f.TagName)
+	tag, err := c.Repo.GitRepo.Tag(c.Req.Context(), git.RefsTags+f.TagName)
 	if err == nil {
-		commit, err := tag.Commit()
+		commit, err := tag.Commit(c.Req.Context())
 		if err == nil {
 			tagCreatedUnix = commit.Author.When.Unix()
 		}
 	}
 
-	commit, err := c.Repo.GitRepo.BranchCommit(f.Target)
+	commit, err := c.Repo.GitRepo.BranchCommit(c.Req.Context(), f.Target)
 	if err != nil {
 		c.Error(err, "get branch commit")
 		return
 	}
 
-	commitsCount, err := commit.CommitsCount()
+	commitsCount, err := commit.CommitsCount(c.Req.Context())
 	if err != nil {
 		c.Error(err, "count commits")
 		return

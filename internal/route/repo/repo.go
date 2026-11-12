@@ -9,12 +9,11 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/urlx"
@@ -310,20 +309,20 @@ func Download(c *context.Context) {
 		err    error
 	)
 	gitRepo := c.Repo.GitRepo
-	if gitRepo.HasBranch(refName) {
-		commit, err = gitRepo.BranchCommit(refName)
+	if gitRepo.HasBranch(c.Req.Context(), refName) {
+		commit, err = gitRepo.BranchCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.Error(err, "get branch commit")
 			return
 		}
-	} else if gitRepo.HasTag(refName) {
-		commit, err = gitRepo.TagCommit(refName)
+	} else if gitRepo.HasTag(c.Req.Context(), refName) {
+		commit, err = gitRepo.TagCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.Error(err, "get tag commit")
 			return
 		}
 	} else if len(refName) >= 7 && len(refName) <= 40 {
-		commit, err = gitRepo.CatFileCommit(refName)
+		commit, err = gitRepo.CatFileCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.NotFound()
 			return
@@ -335,8 +334,37 @@ func Download(c *context.Context) {
 
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !osx.IsFile(archivePath) {
-		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
+		// Generate into a temporary file and rename it into place, so an interrupted
+		// or concurrent generation never leaves a partial archive at the path that
+		// gets served for all later requests. Leftovers are removed on startup along
+		// with the rest of the temporary data.
+		tmpDir := filepath.Join(conf.Server.AppDataPath, "tmp", "archives")
+		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+			c.Error(err, "create temporary archive directory")
+			return
+		}
+		tmpFile, err := os.CreateTemp(tmpDir, "archive-*"+ext)
+		if err != nil {
+			c.Error(err, "create temporary archive file")
+			return
+		}
+		tmpPath := tmpFile.Name()
+		_ = tmpFile.Close()
+		defer func() { _ = os.Remove(tmpPath) }()
+
+		// os.CreateTemp creates the file with 0600, keep the permissions Git would
+		// give a newly created archive.
+		if err = os.Chmod(tmpPath, 0o644); err != nil {
+			c.Error(err, "set temporary archive file permissions")
+			return
+		}
+
+		if err = commit.Archive(c.Req.Context(), archiveFormat, tmpPath); err != nil {
 			c.Error(err, "creates archive")
+			return
+		}
+		if err = os.Rename(tmpPath, archivePath); err != nil {
+			c.Error(err, "move archive into place")
 			return
 		}
 	}

@@ -8,12 +8,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 )
@@ -116,15 +115,9 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 	repo := repoCtx.Repo
 	commitID := c.Param("sha")
 
-	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
+	commit, err := git.RepoCatFileCommit(ctx, repox.RepositoryPath(owner.Name, repo.Name), commitID)
 	if err != nil {
-		log.Error("getRepoCommit: open repository %q/%q: %v", owner.Name, repo.Name, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
-	}
-
-	commit, err := gitRepo.CatFileCommit(commitID)
-	if err != nil {
-		if gitx.IsErrRevisionNotExist(err) {
+		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
 		log.Error("getRepoCommit: cat-file commit %q in %q/%q: %v", commitID, owner.Name, repo.Name, err)
