@@ -141,6 +141,16 @@ tasks:
     preset: "server"
     env:
       TTY_FORCE: "1"
+    deps:
+      - "build"
+
+  server-prod:
+    script: "cd .bin && ./gogs web"
+    preset: "server"
+    env:
+      TTY_FORCE: "1"
+    deps:
+      - "build-prod"
 
   dev:
     command: "noop"
@@ -148,7 +158,6 @@ tasks:
       runInCI: false
       persistent: true
     deps:
-      - "build"
       - "server"
       - "web:dev"
       - "portless"
@@ -159,6 +168,5 @@ tasks:
       runInCI: false
       persistent: true
     deps:
-      - "build-prod"
-      - "server"
+      - "server-prod"
       - "portless"
