@@ -2,11 +2,11 @@ package database
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+
+	"gogs.io/gogs/internal/git"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -57,15 +57,8 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
 
-	gitUpdate := exec.Command("git", "update-server-info")
-	gitUpdate.Dir = repoPath
-	if err = gitUpdate.Run(); err != nil {
-		return errors.Newf("run 'git update-server-info': %v", err)
-	}
-
-	gitRepo, err := git.Open(repoPath)
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
+	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
+		return errors.Newf("update server info: %v", err)
 	}
 
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
@@ -99,23 +92,30 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return nil
 	}
 
+	if !isDelRef && strings.HasPrefix(opts.FullRefspec, git.RefsHeads) {
+		err = repo.setDefaultBranchIfMissing(ctx, git.RefShortName(opts.FullRefspec))
+		if err != nil {
+			return errors.Wrap(err, "set default branch")
+		}
+	}
+
 	var commits []*git.Commit
 	// Skip read parent commits when delete branch
 	if !isDelRef {
 		// Push new branch
-		newCommit, err := gitRepo.CatFileCommit(opts.NewCommitID)
+		newCommit, err := git.RepoCatFileCommit(ctx, repoPath, opts.NewCommitID)
 		if err != nil {
 			return errors.Newf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}
 
 		if isNewRef {
-			commits, err = newCommit.Ancestors(git.LogOptions{MaxCount: 9})
+			commits, err = newCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
 			if err != nil {
 				return errors.Newf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}
 			commits = append([]*git.Commit{newCommit}, commits...)
 		} else {
-			commits, err = newCommit.CommitsAfter(opts.OldCommitID)
+			commits, err = newCommit.CommitsAfter(ctx, opts.OldCommitID)
 			if err != nil {
 				return errors.Newf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
 			}

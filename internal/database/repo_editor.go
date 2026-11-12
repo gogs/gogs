@@ -1,29 +1,24 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
-	"gogs.io/gogs/internal/gitx"
-	"gogs.io/gogs/internal/iox"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
-	"gogs.io/gogs/internal/process"
 )
 
 // BranchAlreadyExists represents an error when branch already exists.
@@ -83,51 +78,192 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 // /_______  /\____ | |__||__|    \___  /   |__|____/\___  >
 //         \/      \/                 \/                 \/
 
-// discardLocalRepoBranchChanges discards local commits/changes of
-// given branch to make sure it is even to remote branch.
-func discardLocalRepoBranchChanges(localPath, branch string) error {
-	if !osx.Exist(localPath) {
-		return nil
+// newTemporaryRepository creates a bare repository in a temporary directory
+// that reads objects from the repositories at given paths, so that commits can
+// be built on top of theirs through its index without a working tree. The
+// returned function removes the temporary repository.
+func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Repository, _ func(), err error) {
+	parent := filepath.Join(conf.Server.AppDataPath, "tmp", "repos")
+	if err = os.MkdirAll(parent, os.ModePerm); err != nil {
+		return nil, nil, errors.Wrap(err, "create parent directory")
+	}
+	dir, err := os.MkdirTemp(parent, "*.git")
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "create temporary directory")
+	}
+	cleanup := func() { _ = os.RemoveAll(dir) }
+	defer func() {
+		if err != nil {
+			cleanup()
+		}
+	}()
+
+	// The object format must match for the objects of the repositories to be
+	// readable.
+	objectFormat, err := git.RepoObjectFormat(ctx, repoPaths[0])
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "get object format")
+	}
+	if err = git.Init(ctx, dir, git.InitOptions{Bare: true, ObjectFormat: objectFormat}); err != nil {
+		return nil, nil, errors.Wrap(err, "init")
 	}
 
-	// No need to check if nothing in the repository.
-	if !git.RepoHasBranch(localPath, branch) {
-		return nil
+	alternates := make([]string, 0, len(repoPaths))
+	for _, repoPath := range repoPaths {
+		objectsPath, err := filepath.Abs(filepath.Join(repoPath, "objects"))
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "get absolute path")
+		}
+		alternates = append(alternates, objectsPath+"\n")
+	}
+	err = os.WriteFile(filepath.Join(dir, "objects", "info", "alternates"), []byte(strings.Join(alternates, "")), 0o644)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "write alternates")
 	}
 
-	rev := "origin/" + branch
-	if err := git.Reset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
-		return errors.Newf("reset [revision: %s]: %v", rev, err)
+	repo, err := git.Open(dir)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "open")
 	}
-	return nil
+	return repo, cleanup, nil
 }
 
-func (r *Repository) DiscardLocalRepoBranchChanges(branch string) error {
-	return discardLocalRepoBranchChanges(r.LocalCopyPath(), branch)
-}
-
-// CheckoutNewBranch checks out to a new branch from the a branch name.
-func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	if err := git.Checkout(r.LocalCopyPath(), newBranch, git.CheckoutOptions{
-		BaseBranch: oldBranch,
-		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
-	}); err != nil {
-		return errors.Newf("checkout [base: %s, new: %s]: %v", oldBranch, newBranch, err)
+// commitAndPush creates a commit on top of the parent, or a root commit when
+// the parent is nil, with the changes that change makes to the index of a
+// temporary repository, and pushes it to the branch of the repository at
+// repoPath with the environment variables. When the changes leave the tree of
+// the parent as it was, it pushes the parent as is. The committer may be nil to
+// use the one from Git configuration.
+func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) error {
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, repoPath)
+	if err != nil {
+		return errors.Wrap(err, "create temporary repository")
 	}
-	return nil
-}
+	defer cleanup()
 
-// hasSymlinkInPath returns true if there is any symlink in path hierarchy using
-// the given base and relative path.
-func hasSymlinkInPath(base, relPath string) bool {
-	parts := strings.Split(filepath.ToSlash(relPath), "/")
-	for i := range parts {
-		filePath := path.Join(append([]string{base}, parts[:i+1]...)...)
-		if osx.IsSymlink(filePath) {
-			return true
+	var parents []string
+	if parent != nil {
+		parents = []string{parent.ID.String()}
+		if err = tmpRepo.ReadTree(ctx, parents[0]); err != nil {
+			return errors.Wrap(err, "read tree")
 		}
 	}
-	return false
+	if err = change(tmpRepo); err != nil {
+		return err
+	}
+	tree, err := tmpRepo.WriteTree(ctx)
+	if err != nil {
+		return errors.Wrap(err, "write tree")
+	}
+
+	unchanged := false
+	if parent != nil {
+		parentTree, err := tmpRepo.RevParse(ctx, parents[0]+"^{tree}")
+		if err != nil {
+			return errors.Wrap(err, "get tree of parent")
+		}
+		unchanged = tree == parentTree
+	}
+
+	var commitID string
+	if unchanged {
+		commitID = parents[0]
+	} else {
+		message = git.CleanupMessage(message)
+		if message == "" {
+			return errors.New("empty commit message")
+		}
+		commitID, err = tmpRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
+			Parents:   parents,
+			Author:    author,
+			Committer: committer,
+		})
+		if err != nil {
+			return errors.Wrap(err, "commit tree")
+		}
+	}
+
+	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, git.PushOptions{Envs: envs})
+	if err != nil {
+		return errors.Newf("git push origin %s: %v", branch, err)
+	}
+	return nil
+}
+
+// commitToBranch creates a commit on top of the old branch with the changes
+// that change makes to the index of a temporary repository, and pushes it to
+// the new branch as the doer, which runs the hooks of the repository.
+func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, newBranch, message string, change func(tmpRepo *git.Repository, parent *git.Commit) error) error {
+	gitRepo, err := git.Open(r.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "open repository")
+	}
+	parent, err := gitRepo.BranchCommit(ctx, oldBranch)
+	if err != nil {
+		return errors.Wrapf(err, "get commit of branch %q", oldBranch)
+	}
+	if newBranch != oldBranch && !gitRepo.IsValidBranchName(ctx, newBranch) {
+		return errors.Newf("invalid branch name %q", newBranch)
+	}
+
+	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
+	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
+		AuthUser:  doer,
+		OwnerName: r.MustOwner().Name,
+		OwnerSalt: r.MustOwner().Salt,
+		RepoID:    r.ID,
+		RepoName:  r.Name,
+		RepoPath:  r.RepoPath(),
+	})
+	return commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, envs, func(tmpRepo *git.Repository) error {
+		return change(tmpRepo, parent)
+	})
+}
+
+// treeEntry returns the entry at the path in the tree of the commit, or nil if
+// there is none.
+func treeEntry(ctx context.Context, commit *git.Commit, path string) (*git.TreeEntry, error) {
+	entry, err := commit.TreeEntry(ctx, path)
+	if err != nil {
+		if git.IsErrRevisionNotExist(err) {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "get tree entry %q", path)
+	}
+	return entry, nil
+}
+
+// hasSymlinkInPath returns true if there is any symlink in the path hierarchy
+// in the tree of the commit.
+func hasSymlinkInPath(ctx context.Context, commit *git.Commit, treePath string) (bool, error) {
+	parts := strings.Split(treePath, "/")
+	for i := range parts {
+		entry, err := treeEntry(ctx, commit, path.Join(parts[:i+1]...))
+		if err != nil {
+			return false, err
+		} else if entry == nil {
+			return false, nil
+		} else if entry.IsSymlink() {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// checkNoSymlinkInPaths returns an error if there is any symlink in the path
+// hierarchies in the tree of the commit.
+func checkNoSymlinkInPaths(ctx context.Context, commit *git.Commit, treePaths ...string) error {
+	for _, treePath := range treePaths {
+		// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
+		// that involve symlinks.
+		has, err := hasSymlinkInPath(ctx, commit, treePath)
+		if err != nil {
+			return err
+		} else if has {
+			return errors.Newf("cannot update file with symbolic link in path: %s", treePath)
+		}
+	}
+	return nil
 }
 
 type UpdateRepoFileOptions struct {
@@ -150,153 +286,102 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	if err := r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return errors.Newf("discard local repo branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
-		return errors.Newf("update local copy branch[%s]: %v", opts.OldBranch, err)
-	}
-
-	localPath := r.LocalCopyPath()
-
-	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involve symlinks.
-	if hasSymlinkInPath(localPath, opts.OldTreeName) || hasSymlinkInPath(localPath, opts.NewTreeName) {
-		return errors.New("cannot update file with symbolic link in path")
-	}
-
-	repoPath := r.RepoPath()
+	ctx := context.TODO()
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
-		if git.RepoHasBranch(repoPath, opts.NewBranch) {
+		if git.RepoHasBranch(ctx, r.RepoPath(), opts.NewBranch) {
 			return BranchAlreadyExists{Name: opts.NewBranch}
 		}
+	}
 
-		// Otherwise, delete branch from local copy in case out of sync
-		if git.RepoHasBranch(localPath, opts.NewBranch) {
-			if err := git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
-				Force: true,
-			}); err != nil {
-				return errors.Newf("delete branch %q: %v", opts.NewBranch, err)
+	return r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
+		if err := checkNoSymlinkInPaths(ctx, parent, opts.OldTreeName, opts.NewTreeName); err != nil {
+			return err
+		}
+
+		newEntry, err := treeEntry(ctx, parent, opts.NewTreeName)
+		if err != nil {
+			return err
+		}
+		// Prompt the user if the meant-to-be new file already exists.
+		if newEntry != nil && opts.IsNewFile {
+			return ErrRepoFileAlreadyExist{opts.NewTreeName}
+		}
+
+		mode := git.EntryBlob
+		oldEntry, err := treeEntry(ctx, parent, opts.OldTreeName)
+		if err != nil {
+			return err
+		}
+		if oldEntry != nil && (oldEntry.IsBlob() || oldEntry.IsExec()) && opts.OldTreeName != opts.NewTreeName {
+			if newEntry != nil {
+				return ErrRepoFileAlreadyExist{opts.NewTreeName}
 			}
+			mode = oldEntry.Mode()
+			if err := tmpRepo.RemoveFromIndex(ctx, opts.OldTreeName); err != nil {
+				return errors.Wrapf(err, "remove %q", opts.OldTreeName)
+			}
+		} else if newEntry != nil {
+			if !newEntry.IsBlob() && !newEntry.IsExec() {
+				return errors.Newf("not a file: %s", opts.NewTreeName)
+			}
+			mode = newEntry.Mode()
 		}
 
-		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
-			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
-		}
-	}
-
-	oldFilePath := path.Join(localPath, opts.OldTreeName)
-	newFilePath := path.Join(localPath, opts.NewTreeName)
-
-	// Prompt the user if the meant-to-be new file already exists.
-	if osx.Exist(newFilePath) && opts.IsNewFile {
-		return ErrRepoFileAlreadyExist{newFilePath}
-	}
-
-	if err := os.MkdirAll(path.Dir(newFilePath), os.ModePerm); err != nil {
-		return errors.Wrapf(err, "create parent directories of %q", newFilePath)
-	}
-
-	if osx.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
-		if err := git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
-			return errors.Wrapf(err, "git mv %q %q", opts.OldTreeName, opts.NewTreeName)
-		}
-	}
-
-	if err := os.WriteFile(newFilePath, []byte(opts.Content), 0o600); err != nil {
-		return errors.Newf("write file: %v", err)
-	}
-
-	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return errors.Newf("git add --all: %v", err)
-	}
-	err := git.CreateCommit(
-		localPath,
-		&git.Signature{
-			Name:  doer.DisplayName(),
-			Email: doer.Email,
-			When:  time.Now(),
-		},
-		opts.Message,
-	)
-	if err != nil {
-		return errors.Newf("commit changes on %q: %v", localPath, err)
-	}
-
-	err = git.Push(localPath, "origin", opts.NewBranch,
-		git.PushOptions{
-			CommandOptions: git.CommandOptions{
-				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-					AuthUser:  doer,
-					OwnerName: r.MustOwner().Name,
-					OwnerSalt: r.MustOwner().Salt,
-					RepoID:    r.ID,
-					RepoName:  r.Name,
-					RepoPath:  r.RepoPath(),
-				}),
-			},
-		},
-	)
-	if err != nil {
-		return errors.Newf("git push origin %s: %v", opts.NewBranch, err)
-	}
-	return nil
+		err = tmpRepo.AddToIndex(ctx, git.IndexFile{
+			Path:       opts.NewTreeName,
+			Content:    strings.NewReader(opts.Content),
+			Executable: mode == git.EntryExec,
+		})
+		return errors.Wrapf(err, "add %q", opts.NewTreeName)
+	})
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitx.Diff, error) {
+func (r *Repository) GetDiffPreview(branch, treePath, content string) (*git.Diff, error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
 	}
 
-	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
-	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
-
-	if err := r.DiscardLocalRepoBranchChanges(branch); err != nil {
-		return nil, errors.Newf("discard local repo branch[%s] changes: %v", branch, err)
-	} else if err = r.UpdateLocalCopyBranch(branch); err != nil {
-		return nil, errors.Newf("update local copy branch[%s]: %v", branch, err)
-	}
-
-	localPath := r.LocalCopyPath()
-	filePath := path.Join(localPath, treePath)
-
-	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involve symlinks.
-	if hasSymlinkInPath(localPath, treePath) {
-		return nil, errors.New("cannot update file with symbolic link in path")
-	}
-
-	if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
-		return nil, errors.Wrap(err, "create parent directories")
-	} else if err = os.WriteFile(filePath, []byte(content), 0o600); err != nil {
-		return nil, errors.Newf("write file: %v", err)
-	}
-
-	// 🚨 SECURITY: Prevent including unintended options in the path to the Git command.
-	cmd := exec.Command("git", "diff", "--end-of-options", treePath)
-	cmd.Dir = localPath
-	cmd.Stderr = os.Stderr
-
-	stdout, err := cmd.StdoutPipe()
+	ctx := context.TODO()
+	commit, err := git.RepoBranchCommit(ctx, r.RepoPath(), branch)
 	if err != nil {
-		return nil, errors.Newf("get stdout pipe: %v", err)
+		return nil, errors.Wrapf(err, "get commit of branch %q", branch)
+	}
+	if err = checkNoSymlinkInPaths(ctx, commit, treePath); err != nil {
+		return nil, err
 	}
 
-	if err = cmd.Start(); err != nil {
-		return nil, errors.Newf("start: %v", err)
-	}
-
-	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", r.RepoPath()), cmd)
-	defer process.Remove(pid)
-
-	diff, err := gitx.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	mode := git.EntryBlob
+	entry, err := treeEntry(ctx, commit, treePath)
 	if err != nil {
-		return nil, errors.Newf("parse diff: %v", err)
+		return nil, err
+	} else if entry != nil {
+		mode = entry.Mode()
 	}
-	if err = cmd.Wait(); err != nil {
-		return nil, errors.Newf("wait: %v", err)
+
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, r.RepoPath())
+	if err != nil {
+		return nil, errors.Wrap(err, "create temporary repository")
+	}
+	defer cleanup()
+
+	if err = tmpRepo.ReadTree(ctx, commit.ID.String()); err != nil {
+		return nil, errors.Wrap(err, "read tree")
+	}
+	err = tmpRepo.AddToIndex(ctx, git.IndexFile{
+		Path:       treePath,
+		Content:    strings.NewReader(content),
+		Executable: mode == git.EntryExec,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "add %q", treePath)
+	}
+
+	diff, err := tmpRepo.DiffCached(ctx, commit.ID.String(), treePath, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	if err != nil {
+		return nil, errors.Newf("get diff: %v", err)
 	}
 	return diff, nil
 }
@@ -326,66 +411,16 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
-		return errors.Newf("update local copy branch[%s]: %v", opts.OldBranch, err)
-	}
-
-	localPath := r.LocalCopyPath()
-
-	// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-	// that involve symlinks.
-	if hasSymlinkInPath(localPath, opts.TreePath) {
-		return errors.New("cannot update file with symbolic link in path")
-	}
-
-	if opts.OldBranch != opts.NewBranch {
-		if err := r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
-			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
+	ctx := context.TODO()
+	return r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
+		if err := checkNoSymlinkInPaths(ctx, parent, opts.TreePath); err != nil {
+			return err
 		}
-	}
-
-	filePath := path.Join(localPath, opts.TreePath)
-	if err = os.Remove(filePath); err != nil {
-		return errors.Newf("remove file %q: %v", opts.TreePath, err)
-	}
-
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return errors.Newf("git add --all: %v", err)
-	}
-
-	err = git.CreateCommit(
-		localPath,
-		&git.Signature{
-			Name:  doer.DisplayName(),
-			Email: doer.Email,
-			When:  time.Now(),
-		},
-		opts.Message,
-	)
-	if err != nil {
-		return errors.Newf("commit changes to %q: %v", localPath, err)
-	}
-
-	err = git.Push(localPath, "origin", opts.NewBranch,
-		git.PushOptions{
-			CommandOptions: git.CommandOptions{
-				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-					AuthUser:  doer,
-					OwnerName: r.MustOwner().Name,
-					OwnerSalt: r.MustOwner().Salt,
-					RepoID:    r.ID,
-					RepoName:  r.Name,
-					RepoPath:  r.RepoPath(),
-				}),
-			},
-		},
-	)
-	if err != nil {
-		return errors.Newf("git push origin %s: %v", opts.NewBranch, err)
-	}
-	return nil
+		if err := tmpRepo.RemoveFromIndex(ctx, opts.TreePath); err != nil {
+			return errors.Newf("remove file %q: %v", opts.TreePath, err)
+		}
+		return nil
+	})
 }
 
 //  ____ ___        .__                    .___ ___________.___.__
@@ -538,16 +573,31 @@ type UploadRepoFileOptions struct {
 //
 // TODO(unknwon): Move to repox during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
-	path = strings.ToLower(path)
-	// Windows strips trailing dots and spaces from each path component, so
-	// forms like ".git." and ".git " resolve to the real ".git" directory.
-	// Trim them from every component before comparing.
 	for _, component := range strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }) {
-		if strings.TrimRight(component, ". ") == ".git" {
+		if isDotGit(component) {
 			return true
 		}
 	}
 	return false
+}
+
+// isDotGit returns true if given path component may refer to ".git" on some file
+// system, following is_ntfs_dotgit of Git. Besides case-insensitive matches,
+// NTFS resolves the 8.3 short name "git~1", trailing dots and spaces, and
+// alternate data streams (e.g., ".git::$INDEX_ALLOCATION") to ".git".
+func isDotGit(component string) bool {
+	component = strings.ToLower(component)
+	var rest string
+	switch {
+	case strings.HasPrefix(component, ".git"):
+		rest = component[len(".git"):]
+	case strings.HasPrefix(component, "git~1"):
+		rest = component[len("git~1"):]
+	default:
+		return false
+	}
+	rest, _, _ = strings.Cut(rest, ":")
+	return strings.TrimRight(rest, ". ") == ""
 }
 
 func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
@@ -568,85 +618,48 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	if err = r.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
-		return errors.Newf("discard local r branch[%s] changes: %v", opts.OldBranch, err)
-	} else if err = r.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
-		return errors.Newf("update local copy branch[%s]: %v", opts.OldBranch, err)
-	}
+	ctx := context.TODO()
+	err = r.commitToBranch(ctx, doer, opts.OldBranch, opts.NewBranch, opts.Message, func(tmpRepo *git.Repository, parent *git.Commit) error {
+		var files []git.IndexFile
+		for _, upload := range uploads {
+			tmpPath := upload.LocalPath()
+			if !osx.IsFile(tmpPath) {
+				continue
+			}
 
-	if opts.OldBranch != opts.NewBranch {
-		if err = r.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
-			return errors.Newf("checkout new branch[%s] from old branch[%s]: %v", opts.NewBranch, opts.OldBranch, err)
+			// 🚨 SECURITY: Prevent path traversal.
+			upload.Name = pathx.Clean(upload.Name)
+
+			// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
+			if isRepositoryGitPath(upload.Name) {
+				continue
+			}
+
+			targetPath := path.Join(opts.TreePath, upload.Name)
+			if err := checkNoSymlinkInPaths(ctx, parent, targetPath); err != nil {
+				return err
+			}
+			entry, err := treeEntry(ctx, parent, targetPath)
+			if err != nil {
+				return err
+			} else if entry != nil && !entry.IsBlob() && !entry.IsExec() {
+				return errors.Newf("not a file: %s", targetPath)
+			}
+
+			f, err := os.Open(tmpPath)
+			if err != nil {
+				return errors.Wrapf(err, "open %q", upload.Name)
+			}
+			defer func() { _ = f.Close() }()
+			files = append(files, git.IndexFile{Path: targetPath, Content: f})
 		}
-	}
-
-	localPath := r.LocalCopyPath()
-	dirPath := path.Join(localPath, opts.TreePath)
-	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
+		if len(files) == 0 {
+			return nil
+		}
+		return errors.Wrap(tmpRepo.AddToIndex(ctx, files...), "add files")
+	})
+	if err != nil {
 		return err
-	}
-
-	// Copy uploaded files into repository
-	for _, upload := range uploads {
-		tmpPath := upload.LocalPath()
-		if !osx.IsFile(tmpPath) {
-			continue
-		}
-
-		// 🚨 SECURITY: Prevent path traversal.
-		upload.Name = pathx.Clean(upload.Name)
-
-		// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-		if isRepositoryGitPath(upload.Name) {
-			continue
-		}
-
-		targetPath := path.Join(dirPath, upload.Name)
-
-		// 🚨 SECURITY: Prevent touching files in surprising places, reject operations
-		// that involve symlinks.
-		if hasSymlinkInPath(localPath, path.Join(opts.TreePath, upload.Name)) {
-			return errors.Newf("cannot overwrite symbolic link: %s", upload.Name)
-		}
-
-		if err = iox.CopyFile(tmpPath, targetPath); err != nil {
-			return errors.Newf("copy: %v", err)
-		}
-	}
-
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
-		return errors.Newf("git add --all: %v", err)
-	}
-
-	err = git.CreateCommit(
-		localPath,
-		&git.Signature{
-			Name:  doer.DisplayName(),
-			Email: doer.Email,
-			When:  time.Now(),
-		},
-		opts.Message,
-	)
-	if err != nil {
-		return errors.Newf("commit changes on %q: %v", localPath, err)
-	}
-
-	err = git.Push(localPath, "origin", opts.NewBranch,
-		git.PushOptions{
-			CommandOptions: git.CommandOptions{
-				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-					AuthUser:  doer,
-					OwnerName: r.MustOwner().Name,
-					OwnerSalt: r.MustOwner().Salt,
-					RepoID:    r.ID,
-					RepoName:  r.Name,
-					RepoPath:  r.RepoPath(),
-				}),
-			},
-		},
-	)
-	if err != nil {
-		return errors.Newf("git push origin %s: %v", opts.NewBranch, err)
 	}
 
 	return DeleteUploads(uploads...)

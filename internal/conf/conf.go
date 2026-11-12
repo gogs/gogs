@@ -15,8 +15,8 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/osx"
@@ -55,14 +55,15 @@ func Init(customConf string) error {
 		return errors.Wrap(err, `read default "app.ini"`)
 	}
 
-	File, err = ini.LoadSources(ini.LoadOptions{
-		IgnoreInlineComment: true,
-	}, data)
+	File, err = ini.Load(
+		data,
+		ini.IgnoreInlineComment(true),
+		ini.NameMapping(ini.SnakeCase),
+		ini.ValueMapping(os.ExpandEnv),
+	)
 	if err != nil {
 		return errors.Wrap(err, `parse "app.ini"`)
 	}
-	File.NameMapper = ini.SnackCase
-	File.ValueMapper = os.ExpandEnv
 
 	if customConf == "" {
 		customConf = filepath.Join(CustomDir(), "conf", "app.ini")
@@ -380,7 +381,7 @@ func Init(customConf string) error {
 	if err = File.Section("i18n").MapTo(I18n); err != nil {
 		return errors.Wrap(err, "mapping [i18n] section")
 	}
-	I18n.dateLangs = File.Section("i18n.datelang").KeysHash()
+	I18n.dateLangs = File.Section("i18n.datelang").KeyValues()
 
 	// *************************
 	// ----- LFS settings -----

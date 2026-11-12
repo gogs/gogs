@@ -26,7 +26,6 @@ require (
 	github.com/go-macaron/session v1.0.4
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
-	github.com/gogs/git-module v1.8.9
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
 	github.com/google/go-github v17.0.0+incompatible
@@ -53,13 +52,14 @@ require (
 	golang.org/x/crypto v0.52.0
 	golang.org/x/image v0.39.0
 	golang.org/x/net v0.55.0
+	golang.org/x/sys v0.45.0
 	golang.org/x/text v0.37.0
-	gopkg.in/ini.v1 v1.67.2
 	gopkg.in/macaron.v1 v1.5.1
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.25.12
 	unknwon.dev/clog/v2 v2.2.0
+	unknwon.dev/ini/v2 v2.0.0-beta.4
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
@@ -125,7 +125,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mattn/go-sqlite3 v1.14.24 // indirect
-	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
@@ -151,9 +150,9 @@ require (
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/bufio.v1 v1.0.0-20140618132640-567b2bfa514e // indirect
+	gopkg.in/ini.v1 v1.67.2 // indirect
 	gopkg.in/redis.v2 v2.3.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.66.3 // indirect

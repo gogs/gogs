@@ -2,7 +2,9 @@ package database
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +84,136 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))
+}
+
+func TestGetRepoInitFile(t *testing.T) {
+	before := Readmes
+	t.Cleanup(func() { Readmes = before })
+	Readmes = []string{"Default"}
+
+	data, err := getRepoInitFile("readme", "Default")
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+
+	for _, name := range []string{
+		"",
+		"../../app.ini",
+		`..\app.ini`,
+		`Default\..\..\app.ini`,
+		"Default/../../app.ini",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := getRepoInitFile("readme", name)
+			assert.Error(t, err)
+		})
+	}
+
+	// Only names of known templates are accepted, even when the file exists.
+	Readmes = nil
+	_, err = getRepoInitFile("readme", "Default")
+	assert.Error(t, err)
+}
+
+func TestResolveMissingDefaultBranch(t *testing.T) {
+	ctx := t.Context()
+	git := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(output))
+		return strings.TrimSpace(string(output))
+	}
+	// newRepo returns a bare repository with HEAD pointing to the given branch and
+	// having the given branches.
+	newRepo := func(t *testing.T, head string, branches ...string) string {
+		t.Helper()
+		dir := t.TempDir()
+		git(t, dir, "init", "--bare", "--initial-branch="+head)
+		if len(branches) == 0 {
+			return dir
+		}
+
+		work := t.TempDir()
+		git(t, work, "init", "--initial-branch="+branches[0])
+		git(t, work, "-c", "user.name=alice", "-c", "user.email=alice@example.com", "commit", "--allow-empty", "--message=initial")
+		for _, branch := range branches {
+			git(t, work, "push", dir, "HEAD:refs/heads/"+branch)
+		}
+		return dir
+	}
+
+	tests := []struct {
+		name       string
+		head       string
+		branches   []string
+		saved      string
+		candidate  string
+		wantBranch string
+		wantHEAD   string
+	}{
+		{
+			name:       "first push uses a different branch name",
+			head:       "main",
+			branches:   []string{"dev", "master"},
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "master",
+			wantHEAD:   "refs/heads/master",
+		},
+		{
+			name:       "saved default branch exists",
+			head:       "main",
+			branches:   []string{"main", "master"},
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "",
+			wantHEAD:   "refs/heads/main",
+		},
+		{
+			name:       "no default branch saved and HEAD branch exists",
+			head:       "master",
+			branches:   []string{"master", "dev"},
+			saved:      "",
+			candidate:  "dev",
+			wantBranch: "master",
+			wantHEAD:   "refs/heads/master",
+		},
+		{
+			name:       "saved default branch is missing and HEAD branch exists",
+			head:       "trunk",
+			branches:   []string{"trunk", "dev"},
+			saved:      "main",
+			candidate:  "dev",
+			wantBranch: "trunk",
+			wantHEAD:   "refs/heads/trunk",
+		},
+		{
+			name:       "candidate branch is missing",
+			head:       "main",
+			branches:   []string{"dev"},
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "",
+			wantHEAD:   "refs/heads/main",
+		},
+		{
+			name:       "empty repository",
+			head:       "main",
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "",
+			wantHEAD:   "refs/heads/main",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := newRepo(t, test.head, test.branches...)
+
+			got, err := resolveMissingDefaultBranch(ctx, dir, test.saved, test.candidate)
+			require.NoError(t, err)
+			assert.Equal(t, test.wantBranch, got)
+			assert.Equal(t, test.wantHEAD, git(t, dir, "symbolic-ref", "HEAD"))
+		})
+	}
 }

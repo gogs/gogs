@@ -248,29 +248,6 @@ func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUserna
 			return errors.Wrap(err, `update "pull_request.head_user_name"`)
 		}
 
-		// Delete local copies of repositories and their wikis that are owned by the user
-		rows, err := tx.Model(&Repository{}).Where("owner_id = ?", user.ID).Rows()
-		if err != nil {
-			return errors.Wrap(err, "iterate repositories")
-		}
-		defer func() { _ = rows.Close() }()
-
-		for rows.Next() {
-			var repo struct {
-				ID int64
-			}
-			err = tx.ScanRows(rows, &repo)
-			if err != nil {
-				return errors.Wrap(err, "scan rows")
-			}
-
-			deleteRepoLocalCopy(repo.ID)
-			RemoveAllWithNotice(fmt.Sprintf("Delete repository %d wiki local copy", repo.ID), repox.RepositoryLocalWikiPath(repo.ID))
-		}
-		if err = rows.Err(); err != nil {
-			return errors.Wrap(err, "check rows.Err")
-		}
-
 		// Rename user directory if exists
 		userPath := repox.UserPath(user.Name)
 		if osx.Exist(userPath) {
@@ -1377,6 +1354,12 @@ func (u *User) canCreateRepo() bool {
 // CanCreateOrganization returns true if user can create organizations.
 func (u *User) CanCreateOrganization() bool {
 	return !conf.Admin.DisableRegularOrgCreation || u.IsAdmin
+}
+
+// IsDisabled returns true if the user is not allowed to sign in or access
+// anything with their credentials.
+func (u *User) IsDisabled() bool {
+	return u.ProhibitLogin || (!u.IsActive && conf.Auth.RequireEmailConfirmation)
 }
 
 // CanEditGitHook returns true if user can edit Git hooks.

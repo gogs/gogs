@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM node:24-alpine AS webbuilder
+FROM --platform=$BUILDPLATFORM node:24-alpine3.24@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS webbuilder
 RUN corepack enable
 WORKDIR /src
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -7,7 +7,7 @@ COPY conf/locale ./conf/locale
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter gogs-web run build
 
-FROM golang:1.27-alpine3.23 AS binarybuilder
+FROM golang:1.27-alpine3.24@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -22,7 +22,7 @@ RUN go build -v -trimpath -tags "pam prod" \
   -ldflags "-X 'gogs.io/gogs/internal/conf.BuildTime=$(date -u '+%Y-%m-%d %I:%M:%S %Z')' -X 'gogs.io/gogs/internal/conf.BuildCommit=$(git rev-parse HEAD)'" \
   -o .bin/gogs ./cmd/gogs
 
-FROM alpine:3.23
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 RUN apk --no-cache --no-progress add \
   bash \
   ca-certificates \

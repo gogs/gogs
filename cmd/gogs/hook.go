@@ -16,11 +16,10 @@ import (
 	"github.com/urfave/cli/v3"
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/osx"
 )
@@ -60,7 +59,7 @@ var (
 	}
 )
 
-func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
+func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
@@ -123,11 +122,11 @@ func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
 		}
 
 		// Check force push
-		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
-			RunInDir(database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName)))
+		repoPath := database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+		removedCommits, err := git.RepoRevListCount(ctx, repoPath, []string{oldCommitID, "^" + newCommitID})
 		if err != nil {
 			fail("Internal error", "Failed to detect force push: %v", err)
-		} else if len(output) > 0 {
+		} else if removedCommits > 0 {
 			fail(fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
 		}
 	}

@@ -1,0 +1,54 @@
+package git
+
+import (
+	"os"
+	"path/filepath"
+)
+
+// Hook returns a Git hook by given name in the directory of the repository. It
+// returns an os.ErrNotExist if both active and sample hook do not exist.
+func (r *Repository) Hook(dir string, name HookName) (*Hook, error) {
+	// 1. Check if there is an active hook.
+	fpath := filepath.Join(r.path, dir, string(name))
+	if isFile(fpath) {
+		p, err := os.ReadFile(fpath)
+		if err != nil {
+			return nil, err
+		}
+		return &Hook{
+			name:    name,
+			path:    fpath,
+			content: string(p),
+		}, nil
+	}
+
+	// 2. Check if sample content exists.
+	sample := serverSideHookSamples[name]
+	if sample != "" {
+		return &Hook{
+			name:     name,
+			path:     fpath,
+			isSample: true,
+			content:  sample,
+		}, nil
+	}
+
+	return nil, os.ErrNotExist
+}
+
+// Hooks returns a list of Git hooks found in the directory of the repository.
+// It may return an empty slice when no hooks found.
+func (r *Repository) Hooks(dir string) ([]*Hook, error) {
+	hooks := make([]*Hook, 0, len(ServerSideHooks))
+	for _, name := range ServerSideHooks {
+		h, err := r.Hook(dir, name)
+		if err != nil {
+			if err == os.ErrNotExist {
+				continue
+			}
+			return nil, err
+		}
+		hooks = append(hooks, h)
+	}
+	return hooks, nil
+}

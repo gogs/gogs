@@ -4,20 +4,19 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 	"xorm.io/xorm"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
-	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -89,15 +88,12 @@ func (m *Mirror) readAddress() {
 		return
 	}
 
-	cfg, err := ini.LoadSources(
-		ini.LoadOptions{IgnoreInlineComment: true},
-		m.Repo.GitConfigPath(),
-	)
+	cfg, err := ini.Load(m.Repo.GitConfigPath(), ini.IgnoreInlineComment(true))
 	if err != nil {
 		log.Error("load config: %v", err)
 		return
 	}
-	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
+	m.address = cfg.Subsection("remote", "origin").Key("url").Value()
 }
 
 // HandleMirrorCredentials replaces user credentials from HTTP/HTTPS URL
@@ -138,12 +134,10 @@ func (m *Mirror) RawAddress() string {
 }
 
 // SaveAddress writes new address to Git repository config.
-func (m *Mirror) SaveAddress(addr string) error {
-	repoPath := m.Repo.RepoPath()
-
-	err := git.RemoteRemove(repoPath, "origin")
+func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
+	gitRepo, err := git.Open(m.Repo.RepoPath())
 	if err != nil {
-		return errors.Newf("remove remote 'origin': %v", err)
+		return errors.Wrap(err, "open repository")
 	}
 
 	addrURL, err := url.Parse(addr)
@@ -151,11 +145,16 @@ func (m *Mirror) SaveAddress(addr string) error {
 		return err
 	}
 
-	err = git.RemoteAdd(repoPath, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
-	if err != nil {
-		return errors.Newf("add remote 'origin': %v", err)
+	// Replace the URL in a single config write, so an interrupted request can never
+	// leave the mirror without an "origin" remote.
+	err = gitRepo.RemoteSetURL(ctx, "origin", addrURL.String())
+	if errors.Is(err, git.ErrRemoteNotExist) {
+		// Add a missing "origin" back, so that a mirror that lost it can be repaired.
+		err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
 	}
-
+	if err != nil {
+		return errors.Wrap(err, "set URL of remote 'origin'")
+	}
 	return nil
 }
 
@@ -217,36 +216,69 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 	return results
 }
 
-// mirrorGitArgs returns the git-level arguments used by every remote network
-// operation against a mirror source.
-func mirrorGitArgs() []string {
-	// Disabling HTTP redirects prevents an attacker-controlled public URL from
-	// redirecting to an internal endpoint that the up-front clone address
-	// validation would otherwise have blocked.
-	return []string{"-c", "http.followRedirects=false"}
-}
-
-// mirrorGitEnv returns the git-level environment variables used by every remote network
+// mirrorGitEnv returns the environment variables used by every remote network
 // operation against a mirror source.
 func mirrorGitEnv() []string {
-	// Keep git non-interactive during mirror operations. Without these, a
-	// network failure or a missing remote endpoint can make git ask for
-	// credentials and stall the server-side process waiting on a terminal that
-	// never responds.
+	// Append to the Git configuration that the server environment may already pass
+	// through GIT_CONFIG_* (e.g., "http.proxy"), instead of replacing it.
+	existingGitConfigCount := 0
+	if count, err := strconv.Atoi(os.Getenv("GIT_CONFIG_COUNT")); err == nil && count > 0 {
+		existingGitConfigCount = count
+	}
 	return []string{
+		// Disabling HTTP redirects prevents an attacker-controlled public URL from
+		// redirecting to an internal endpoint that the up-front clone address
+		// validation would otherwise have blocked.
+		"GIT_CONFIG_COUNT=" + strconv.Itoa(existingGitConfigCount+1),
+		"GIT_CONFIG_KEY_" + strconv.Itoa(existingGitConfigCount) + "=http.followRedirects",
+		"GIT_CONFIG_VALUE_" + strconv.Itoa(existingGitConfigCount) + "=false",
+
+		// Keep git non-interactive during mirror operations. Without these, a
+		// network failure or a missing remote endpoint can make git ask for
+		// credentials and stall the server-side process waiting on a terminal that
+		// never responds.
 		"GIT_TERMINAL_PROMPT=0",
 		"GIT_ASKPASS=/bin/true",
 		"GCM_INTERACTIVE=Never",
 	}
 }
 
+// remoteDefaultBranch returns the branch that HEAD of the mirror source in
+// given URL points to.
+func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADOptions{
+		Envs: mirrorGitEnv(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return git.RefShortName(ref), nil
+}
+
 // isMirrorURLAccessible reports whether the given remote URL is reachable
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
 func isMirrorURLAccessible(timeout time.Duration, url string) bool {
-	args := append(mirrorGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
-	_, _, err := process.ExecTimeoutEnv(timeout, mirrorGitEnv(), fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	_, err := git.LsRemote(ctx, url, git.LsRemoteOptions{
+		Patterns: []string{"HEAD"},
+		Envs:     mirrorGitEnv(),
+	})
 	return err == nil
+}
+
+// mirrorRemoteUpdate fetches updates for the mirror repository in given path,
+// and returns the output that reports updated references.
+func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (string, error) {
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return git.RepoRemoteUpdate(ctx, repoPath, git.RemoteUpdateOptions{
+		Prune: prune,
+		Envs:  mirrorGitEnv(),
+	})
 }
 
 // runSync returns true if sync finished without error.
@@ -281,43 +313,33 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	gitArgs := append(mirrorGitArgs(), "remote", "update")
-	if m.EnablePrune {
-		gitArgs = append(gitArgs, "--prune")
-	}
-	_, stderr, err := process.ExecDirEnv(
-		timeout, repoPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", repoPath),
-		"git", gitArgs...)
+	output, err := mirrorRemoteUpdate(timeout, repoPath, m.EnablePrune)
 	if err != nil {
-		const fmtStr = "Failed to update mirror repository %q: %s"
-		log.Error(fmtStr, repoPath, stderr)
+		const fmtStr = "Failed to update mirror repository %q: %v"
+		log.Error(fmtStr, repoPath, err)
 		if err = Handle.Notices().Create(
 			context.TODO(),
 			NoticeTypeRepository,
-			fmt.Sprintf(fmtStr, repoPath, stderr),
+			fmt.Sprintf(fmtStr, repoPath, err),
 		); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
 		}
 		return nil, false
 	}
-	output := stderr
 
 	if err := m.Repo.UpdateSize(); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", m.Repo.ID, err)
 	}
 
 	if m.Repo.HasWiki() {
-		wikiArgs := append(mirrorGitArgs(), "remote", "update", "--prune")
 		// Even if wiki sync failed, we still want results from the main repository
-		if _, stderr, err := process.ExecDirEnv(
-			timeout, wikiPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", wikiPath),
-			"git", wikiArgs...); err != nil {
-			const fmtStr = "Failed to update mirror wiki repository %q: %s"
-			log.Error(fmtStr, wikiPath, stderr)
+		if _, err := mirrorRemoteUpdate(timeout, wikiPath, true); err != nil {
+			const fmtStr = "Failed to update mirror wiki repository %q: %v"
+			log.Error(fmtStr, wikiPath, err)
 			if err = Handle.Notices().Create(
 				context.TODO(),
 				NoticeTypeRepository,
-				fmt.Sprintf(fmtStr, wikiPath, stderr),
+				fmt.Sprintf(fmtStr, wikiPath, err),
 			); err != nil {
 				log.Error("CreateRepositoryNotice: %v", err)
 			}
@@ -409,6 +431,30 @@ func SyncMirrors() {
 			continue
 		}
 
+		// Pushes clear the empty state of a repository, but a mirror of an empty
+		// repository only receives commits through syncs.
+		if m.Repo.IsEmpty {
+			hasBranches, err := git.RepoHasBranches(ctx, m.Repo.RepoPath())
+			if err != nil {
+				log.Error("Failed to check if repository has branches [repo_id: %d]: %v", m.RepoID, err)
+			} else if hasBranches {
+				if err = Handle.Repositories().Touch(ctx, m.RepoID); err != nil {
+					log.Error("Failed to touch repository [repo_id: %d]: %v", m.RepoID, err)
+				} else {
+					m.Repo.IsEmpty = false
+				}
+			}
+		}
+
+		if !m.Repo.IsEmpty && !git.RepoHasBranch(ctx, m.Repo.RepoPath(), m.Repo.DefaultBranch) {
+			branch, err := remoteDefaultBranch(time.Duration(conf.Git.Timeout.Mirror)*time.Second, m.RawAddress())
+			if err != nil {
+				log.Error("Failed to get default branch of mirror source [repo_id: %d]: %v", m.RepoID, err)
+			} else if err = m.Repo.setDefaultBranchIfMissing(ctx, branch); err != nil {
+				log.Error("Failed to set default branch [repo_id: %d]: %v", m.RepoID, err)
+			}
+		}
+
 		// TODO:
 		// - Create "Mirror Sync" webhook event
 		// - Create mirror sync (create, push and delete) events and trigger the "mirror sync" webhooks
@@ -452,31 +498,31 @@ func SyncMirrors() {
 			var oldCommitID string
 			var newCommitID string
 			if !isNewRef {
-				oldCommitID, err = gitRepo.RevParse(result.oldCommitID)
+				oldCommitID, err = gitRepo.RevParse(ctx, result.oldCommitID)
 				if err != nil {
 					log.Error("Failed to parse revision [repo_id: %d, old_commit_id: %s]: %v", m.RepoID, result.oldCommitID, err)
 					continue
 				}
-				newCommitID, err = gitRepo.RevParse(result.newCommitID)
+				newCommitID, err = gitRepo.RevParse(ctx, result.newCommitID)
 				if err != nil {
 					log.Error("Failed to parse revision [repo_id: %d, new_commit_id: %s]: %v", m.RepoID, result.newCommitID, err)
 					continue
 				}
-				commits, err = gitRepo.RevList([]string{oldCommitID + "..." + newCommitID})
+				commits, err = gitRepo.RevList(ctx, []string{oldCommitID + "..." + newCommitID})
 				if err != nil {
 					log.Error("Failed to list commits [repo_id: %d, old_commit_id: %s, new_commit_id: %s]: %v", m.RepoID, oldCommitID, newCommitID, err)
 					continue
 				}
 
-			} else if gitRepo.HasBranch(result.refName) {
-				refNewCommit, err := gitRepo.BranchCommit(result.refName)
+			} else if gitRepo.HasBranch(ctx, result.refName) {
+				refNewCommit, err := gitRepo.BranchCommit(ctx, result.refName)
 				if err != nil {
 					log.Error("Failed to get branch commit [repo_id: %d, branch: %s]: %v", m.RepoID, result.refName, err)
 					continue
 				}
 
 				// TODO(unknwon): Get the commits for the new ref until the closest ancestor branch like GitHub does.
-				commits, err = refNewCommit.Ancestors(git.LogOptions{MaxCount: 9})
+				commits, err = refNewCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
 				if err != nil {
 					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
 					continue
@@ -510,9 +556,13 @@ func SyncMirrors() {
 			continue
 		}
 
+		if m.Repo.IsEmpty {
+			continue
+		}
+
 		// Get latest commit date and compare to current repository updated time,
 		// update if latest commit date is newer.
-		latestCommitTime, err := gitRepo.LatestCommitTime()
+		latestCommitTime, err := gitRepo.LatestCommitTime(ctx)
 		if err != nil {
 			log.Error("GetLatestCommitDate [%d]: %v", m.RepoID, err)
 			continue

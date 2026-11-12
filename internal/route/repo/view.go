@@ -2,20 +2,20 @@ package repo
 
 import (
 	"bytes"
+	gocontext "context"
 	"fmt"
 	gotemplate "html/template"
 	"path"
 	"strings"
 	"time"
 
-	"github.com/gogs/git-module"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
@@ -23,30 +23,31 @@ import (
 )
 
 const (
-	BARE     = "repo/bare"
+	EMPTY    = "repo/empty"
 	HOME     = "repo/home"
 	WATCHERS = "repo/watchers"
 	FORKS    = "repo/forks"
 )
 
 func renderDirectory(c *context.Context, treeLink string) {
-	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
+	tree, err := c.Repo.Commit.Subtree(c.Req.Context(), c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get subtree")
+		c.NotFoundOrError(git.NewError(err), "get subtree")
 		return
 	}
 
-	entries, err := tree.Entries(git.LsTreeOptions{Verbatim: true})
+	entries, err := tree.Entries(c.Req.Context())
 	if err != nil {
 		c.Error(err, "list entries")
 		return
 	}
 	entries.Sort()
 
-	c.Data["Files"], err = entries.CommitsInfo(c.Repo.Commit, git.CommitsInfoOptions{
+	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), 5*time.Minute)
+	defer cancel()
+	c.Data["Files"], err = entries.CommitsInfo(ctx, c.Repo.Commit, git.CommitsInfoOptions{
 		Path:           c.Repo.TreePath,
 		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
-		Timeout:        5 * time.Minute,
 	})
 	if err != nil {
 		c.Error(err, "get commits info")
@@ -69,7 +70,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		c.Data["ReadmeInList"] = true
 		c.Data["ReadmeExist"] = true
 
-		p, err := readmeFile.Bytes()
+		p, err := readmeFile.Bytes(c.Req.Context())
 		if err != nil {
 			c.Error(err, "read file")
 			return
@@ -100,7 +101,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	// or of directory if not in root directory.
 	latestCommit := c.Repo.Commit
 	if len(c.Repo.TreePath) > 0 {
-		latestCommit, err = c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
+		latestCommit, err = c.Repo.Commit.CommitByPath(c.Req.Context(), git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 		if err != nil {
 			c.Error(err, "get commit by path")
 			return
@@ -119,14 +120,14 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	c.Data["IsViewFile"] = true
 
 	blob := entry.Blob()
-	p, err := blob.Bytes()
+	p, err := blob.Bytes(c.Req.Context())
 	if err != nil {
 		c.Error(err, "read blob")
 		return
 	}
 
 	c.Data["Title"] = blob.Name() + " - " + c.Data["Title"].(string)
-	c.Data["FileSize"] = blob.Size()
+	c.Data["FileSize"] = blob.Size(c.Req.Context())
 	c.Data["FileName"] = blob.Name()
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
 	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
@@ -142,7 +143,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	canEnableEditor := c.Repo.CanEnableEditor()
 	switch {
 	case isTextFile:
-		if blob.Size() >= conf.UI.MaxDisplayFileSize {
+		if blob.Size(c.Req.Context()) >= conf.UI.MaxDisplayFileSize {
 			c.Data["IsFileTooLarge"] = true
 			break
 		}
@@ -215,7 +216,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig()
-	if err != nil && !gitx.IsErrRevisionNotExist(err) {
+	if err != nil && !git.IsErrRevisionNotExist(err) {
 		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
@@ -225,8 +226,8 @@ func setEditorconfigIfExists(c *context.Context) {
 func Home(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 
-	if c.Repo.Repository.IsBare {
-		c.Success(BARE)
+	if c.Repo.Repository.IsEmpty {
+		c.Success(EMPTY)
 		return
 	}
 
@@ -252,7 +253,7 @@ func Home(c *context.Context) {
 
 		// Only show Git stats panel when view root directory
 		var err error
-		c.Repo.CommitsCount, err = c.Repo.Commit.CommitsCount()
+		c.Repo.CommitsCount, err = c.Repo.Commit.CommitsCount(c.Req.Context())
 		if err != nil {
 			c.Error(err, "count commits")
 			return
@@ -262,9 +263,9 @@ func Home(c *context.Context) {
 	c.Data["PageIsRepoHome"] = isRootDir
 
 	// Get current entry user currently looking at.
-	entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
+	entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
+		c.NotFoundOrError(git.NewError(err), "get tree entry")
 		return
 	}
 

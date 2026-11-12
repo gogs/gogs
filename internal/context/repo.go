@@ -2,6 +2,7 @@ package context
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -10,10 +11,9 @@ import (
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 )
 
@@ -74,17 +74,17 @@ func (r *Repository) CanEnableEditor() bool {
 
 // Editorconfig returns the ".editorconfig" definition if found in the HEAD of the default branch.
 func (r *Repository) Editorconfig() (*editorconfig.Editorconfig, error) {
-	commit, err := r.GitRepo.BranchCommit(r.Repository.DefaultBranch)
+	commit, err := r.GitRepo.BranchCommit(context.TODO(), r.Repository.DefaultBranch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "get commit of branch %q ", r.Repository.DefaultBranch)
 	}
 
-	entry, err := commit.TreeEntry(".editorconfig")
+	entry, err := commit.TreeEntry(context.TODO(), ".editorconfig")
 	if err != nil {
 		return nil, errors.Wrap(err, "get .editorconfig")
 	}
 
-	p, err := entry.Blob().Bytes()
+	p, err := entry.Blob().Bytes(context.TODO())
 	if err != nil {
 		return nil, errors.Wrap(err, "read .editorconfig")
 	}
@@ -158,7 +158,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		c.Repo.Repository = repo
 		c.Data["RepoName"] = c.Repo.Repository.Name
-		c.Data["IsBareRepo"] = c.Repo.Repository.IsBare
 		c.Repo.RepoLink = repo.Link()
 		c.Data["RepoLink"] = c.Repo.RepoLink
 		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
@@ -239,7 +238,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 		c.Repo.GitRepo = gitRepo
 
-		tags, err := c.Repo.GitRepo.Tags()
+		tags, err := c.Repo.GitRepo.Tags(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get tags")
 			return
@@ -264,13 +263,13 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
 		}
 
-		// repo is bare and display enable
-		if c.Repo.Repository.IsBare {
+		// An empty repository has no branches to load.
+		if c.Repo.Repository.IsEmpty {
 			return
 		}
 
 		c.Data["TagName"] = c.Repo.TagName
-		branches, err := c.Repo.GitRepo.Branches()
+		branches, err := c.Repo.GitRepo.Branches(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get branches")
 			return
@@ -281,7 +280,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
 		if c.Repo.BranchName == "" {
-			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
+			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.HasBranch(c.Req.Context(), c.Repo.Repository.DefaultBranch) {
 				c.Repo.BranchName = c.Repo.Repository.DefaultBranch
 			} else if len(branches) > 0 {
 				c.Repo.BranchName = branches[0]
@@ -298,7 +297,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 func RepoRef() macaron.Handler {
 	return func(c *Context) {
 		// Empty repository does not have reference information.
-		if c.Repo.Repository.IsBare {
+		if c.Repo.Repository.IsEmpty {
 			return
 		}
 
@@ -320,15 +319,15 @@ func RepoRef() macaron.Handler {
 		// Get default branch.
 		if c.Params("*") == "" {
 			refName = c.Repo.Repository.DefaultBranch
-			if !c.Repo.GitRepo.HasBranch(refName) {
-				branches, err := c.Repo.GitRepo.Branches()
+			if !c.Repo.GitRepo.HasBranch(c.Req.Context(), refName) {
+				branches, err := c.Repo.GitRepo.Branches(c.Req.Context())
 				if err != nil {
 					c.Error(err, "get branches")
 					return
 				}
 				refName = branches[0]
 			}
-			c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
+			c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Req.Context(), refName)
 			if err != nil {
 				c.Error(err, "get branch commit")
 				return
@@ -342,8 +341,8 @@ func RepoRef() macaron.Handler {
 			for i, part := range parts {
 				refName = strings.TrimPrefix(refName+"/"+part, "/")
 
-				if c.Repo.GitRepo.HasBranch(refName) ||
-					c.Repo.GitRepo.HasTag(refName) {
+				if c.Repo.GitRepo.HasBranch(c.Req.Context(), refName) ||
+					c.Repo.GitRepo.HasTag(c.Req.Context(), refName) {
 					if i < len(parts)-1 {
 						c.Repo.TreePath = strings.Join(parts[i+1:], "/")
 					}
@@ -356,19 +355,19 @@ func RepoRef() macaron.Handler {
 				c.Repo.TreePath = strings.Join(parts[1:], "/")
 			}
 
-			if c.Repo.GitRepo.HasBranch(refName) {
+			if c.Repo.GitRepo.HasBranch(c.Req.Context(), refName) {
 				c.Repo.IsViewBranch = true
 
-				c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Req.Context(), refName)
 				if err != nil {
 					c.Error(err, "get branch commit")
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID.String()
 
-			} else if c.Repo.GitRepo.HasTag(refName) {
+			} else if c.Repo.GitRepo.HasTag(c.Req.Context(), refName) {
 				c.Repo.IsViewTag = true
-				c.Repo.Commit, err = c.Repo.GitRepo.TagCommit(refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.TagCommit(c.Req.Context(), refName)
 				if err != nil {
 					c.Error(err, "get tag commit")
 					return
@@ -378,7 +377,7 @@ func RepoRef() macaron.Handler {
 				c.Repo.IsViewCommit = true
 				c.Repo.CommitID = refName
 
-				c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), refName)
 				if err != nil {
 					c.NotFound()
 					return

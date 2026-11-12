@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 )
 
 func Test_initLogConf(t *testing.T) {

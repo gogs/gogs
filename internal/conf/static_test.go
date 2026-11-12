@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/ini.v1"
+	"unknwon.dev/ini/v2"
 )
 
 func Test_i18n_DateLang(t *testing.T) {

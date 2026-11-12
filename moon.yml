@@ -91,7 +91,12 @@ tasks:
   portless:
     script: |
       portless alias gogs 3000 --force >/dev/null
-      portless proxy start
+      # Port 443 needs sudo, which can fail without a usable terminal. Stop here
+      # instead of letting the rest of the script report success.
+      portless proxy start || {
+        echo "portless proxy failed to start. Run: sudo portless proxy start --https" >&2
+        exit 1
+      }
       mkdir -p .bin/custom/conf
       touch .bin/custom/conf/app.ini
       awk '
@@ -126,6 +131,9 @@ tasks:
       ' .bin/custom/conf/app.ini > .bin/custom/conf/app.ini.tmp \
         && mv .bin/custom/conf/app.ini.tmp .bin/custom/conf/app.ini
     options:
+      # The proxy daemon can stop between runs (e.g., after a reboot), so a
+      # cached success must not skip starting it again.
+      cache: false
       interactive: true
 
   server:

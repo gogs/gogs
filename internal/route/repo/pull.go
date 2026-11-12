@@ -9,13 +9,11 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 )
 
 const (
@@ -185,13 +183,13 @@ func PrepareMergedViewPullInfo(c *context.Context, issue *database.Issue) {
 	c.Data["BaseTarget"] = c.Repo.Owner.Name + "/" + pull.BaseBranch
 
 	var err error
-	c.Data["NumCommits"], err = c.Repo.GitRepo.RevListCount([]string{pull.MergeBase + "..." + pull.MergedCommitID})
+	c.Data["NumCommits"], err = c.Repo.GitRepo.RevListCount(c.Req.Context(), []string{pull.MergeBase + "..." + pull.MergedCommitID})
 	if err != nil {
 		c.Error(err, "count commits")
 		return
 	}
 
-	names, err := c.Repo.GitRepo.DiffNameOnly(pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+	names, err := c.Repo.GitRepo.DiffNameOnly(c.Req.Context(), pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: true})
 	c.Data["NumFiles"] = len(names)
 	if err != nil {
 		c.Error(err, "get changed files")
@@ -199,7 +197,7 @@ func PrepareMergedViewPullInfo(c *context.Context, issue *database.Issue) {
 	}
 }
 
-func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRequestMeta {
+func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *git.PullRequestMeta {
 	repo := c.Repo.Repository
 	pull := issue.PullRequest
 
@@ -219,7 +217,7 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 		}
 	}
 
-	if pull.HeadRepo == nil || !headGitRepo.HasBranch(pull.HeadBranch) {
+	if pull.HeadRepo == nil || !headGitRepo.HasBranch(c.Req.Context(), pull.HeadBranch) {
 		c.Data["IsPullReuqestBroken"] = true
 		c.Data["HeadTarget"] = "deleted"
 		c.Data["NumCommits"] = 0
@@ -228,16 +226,16 @@ func PrepareViewPullInfo(c *context.Context, issue *database.Issue) *gitx.PullRe
 	}
 
 	baseRepoPath := database.RepoPath(repo.Owner.Name, repo.Name)
-	prMeta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
-	if err != nil {
-		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
-			c.Data["IsPullReuqestBroken"] = true
-			c.Data["BaseTarget"] = "deleted"
-			c.Data["NumCommits"] = 0
-			c.Data["NumFiles"] = 0
-			return nil
-		}
+	if !git.RepoHasBranch(c.Req.Context(), baseRepoPath, pull.BaseBranch) {
+		c.Data["IsPullReuqestBroken"] = true
+		c.Data["BaseTarget"] = "deleted"
+		c.Data["NumCommits"] = 0
+		c.Data["NumFiles"] = 0
+		return nil
+	}
 
+	prMeta, err := headGitRepo.PullRequestMeta(c.Req.Context(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
+	if err != nil {
 		c.Error(err, "get pull request meta")
 		return nil
 	}
@@ -267,17 +265,17 @@ func ViewPullCommits(c *context.Context) {
 		if c.Written() {
 			return
 		}
-		startCommit, err := c.Repo.GitRepo.CatFileCommit(pull.MergeBase)
+		startCommit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), pull.MergeBase)
 		if err != nil {
 			c.Error(err, "get commit of merge base")
 			return
 		}
-		endCommit, err := c.Repo.GitRepo.CatFileCommit(pull.MergedCommitID)
+		endCommit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), pull.MergedCommitID)
 		if err != nil {
 			c.Error(err, "get merged commit")
 			return
 		}
-		commits, err = c.Repo.GitRepo.RevList([]string{startCommit.ID.String() + "..." + endCommit.ID.String()})
+		commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{startCommit.ID.String() + "..." + endCommit.ID.String()})
 		if err != nil {
 			c.Error(err, "list commits")
 			return
@@ -344,7 +342,7 @@ func ViewPullFiles(c *context.Context) {
 			return
 		}
 
-		headCommitID, err := headGitRepo.BranchCommitID(pull.HeadBranch)
+		headCommitID, err := headGitRepo.BranchCommitID(c.Req.Context(), pull.HeadBranch)
 		if err != nil {
 			c.Error(err, "get head branch commit ID")
 			return
@@ -356,9 +354,11 @@ func ViewPullFiles(c *context.Context) {
 		gitRepo = headGitRepo
 	}
 
-	diff, err := gitx.RepoDiff(diffGitRepo,
+	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
+	diff, err := diffGitRepo.Diff(ctx,
 		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: startCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: startCommitID},
 	)
 	if err != nil {
 		c.Error(err, "get diff")
@@ -367,7 +367,7 @@ func ViewPullFiles(c *context.Context) {
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
-	commit, err := gitRepo.CatFileCommit(endCommitID)
+	commit, err := gitRepo.CatFileCommit(c.Req.Context(), endCommitID)
 	if err != nil {
 		c.Error(err, "get commit")
 		return
@@ -379,8 +379,12 @@ func ViewPullFiles(c *context.Context) {
 	}
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
-	c.Data["IsImageFile"] = commit.IsImageFile
-	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
+	c.Data["IsImageFile"] = func(subpath string) (bool, error) {
+		return commit.IsImageFile(c.Req.Context(), subpath)
+	}
+	c.Data["IsImageFileByIndex"] = func(index string) (bool, error) {
+		return commit.IsImageFileByIndex(c.Req.Context(), index)
+	}
 
 	// It is possible head repo has been deleted for merged pull requests
 	if pull.HeadRepo != nil {
@@ -430,7 +434,7 @@ func MergePullRequest(c *context.Context) {
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pr.Index, 10))
 }
 
-func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository, *git.Repository, *gitx.PullRequestMeta, string, string) {
+func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository, *git.Repository, *git.PullRequestMeta, string, string) {
 	baseRepo := c.Repo.Repository
 
 	// Get compared refs information
@@ -479,7 +483,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	c.Repo.PullRequest.SameRepo = isSameRepo
 
 	// Check if base ref is valid.
-	if _, err := c.Repo.GitRepo.RevParse(baseRef); err != nil {
+	if _, err := c.Repo.GitRepo.RevParse(c.Req.Context(), baseRef); err != nil {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -529,12 +533,12 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	}
 
 	// Check if head ref is valid.
-	if _, err := headGitRepo.RevParse(headRef); err != nil {
+	if _, err := headGitRepo.RevParse(c.Req.Context(), headRef); err != nil {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
 
-	headBranches, err := headGitRepo.Branches()
+	headBranches, err := headGitRepo.Branches(c.Req.Context())
 	if err != nil {
 		c.Error(err, "get branches")
 		return nil, nil, nil, nil, "", ""
@@ -542,9 +546,9 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	c.Data["HeadBranches"] = headBranches
 
 	baseRepoPath := database.RepoPath(baseRepo.Owner.Name, baseRepo.Name)
-	meta, err := gitx.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headRef, baseRef)
+	meta, err := headGitRepo.PullRequestMeta(c.Req.Context(), baseRepoPath, headRef, baseRef)
 	if err != nil {
-		if gitx.IsErrNoMergeBase(err) {
+		if git.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
 			c.Success(tmplRepoPullsCompare)
 		} else {
@@ -562,7 +566,7 @@ func PrepareCompareDiff(
 	headUser *database.User,
 	headRepo *database.Repository,
 	headGitRepo *git.Repository,
-	meta *gitx.PullRequestMeta,
+	meta *git.PullRequestMeta,
 	headRef string,
 ) bool {
 	var (
@@ -573,7 +577,7 @@ func PrepareCompareDiff(
 	// Get diff information.
 	c.Data["CommitRepoLink"] = headRepo.Link()
 
-	headCommitID, err := headGitRepo.RevParse(headRef)
+	headCommitID, err := headGitRepo.RevParse(c.Req.Context(), headRef)
 	if err != nil {
 		c.Error(err, "get head commit ID")
 		return false
@@ -585,9 +589,11 @@ func PrepareCompareDiff(
 		return true
 	}
 
-	diff, err := gitx.RepoDiff(headGitRepo,
+	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
+	diff, err := headGitRepo.Diff(ctx,
 		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: meta.MergeBase, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: meta.MergeBase},
 	)
 	if err != nil {
 		c.Error(err, "get repository diff")
@@ -596,7 +602,7 @@ func PrepareCompareDiff(
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
-	headCommit, err := headGitRepo.CatFileCommit(headCommitID)
+	headCommit, err := headGitRepo.CatFileCommit(c.Req.Context(), headCommitID)
 	if err != nil {
 		c.Error(err, "get head commit")
 		return false
@@ -606,8 +612,12 @@ func PrepareCompareDiff(
 	c.Data["CommitCount"] = len(meta.Commits)
 	c.Data["Username"] = headUser.Name
 	c.Data["Reponame"] = headRepo.Name
-	c.Data["IsImageFile"] = headCommit.IsImageFile
-	c.Data["IsImageFileByIndex"] = headCommit.IsImageFileByIndex
+	c.Data["IsImageFile"] = func(subpath string) (bool, error) {
+		return headCommit.IsImageFile(c.Req.Context(), subpath)
+	}
+	c.Data["IsImageFileByIndex"] = func(index string) (bool, error) {
+		return headCommit.IsImageFileByIndex(c.Req.Context(), index)
+	}
 
 	headTarget := path.Join(headUser.Name, repo.Name)
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", headCommitID)
@@ -713,7 +723,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	patch, err := headGitRepo.DiffBinary(meta.MergeBase, headRef)
+	patch, err := headGitRepo.DiffBinary(c.Req.Context(), meta.MergeBase, headRef)
 	if err != nil {
 		c.Error(err, "get patch")
 		return

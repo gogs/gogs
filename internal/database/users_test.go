@@ -340,26 +340,6 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
 
-	tempServerAppDataPath := filepath.Join(os.TempDir(), "usersChangeUsername-tempServerAppDataPath")
-	conf.SetMockServer(
-		t,
-		conf.ServerOpts{
-			AppDataPath: tempServerAppDataPath,
-		},
-	)
-	err = os.RemoveAll(tempServerAppDataPath)
-	require.NoError(t, err)
-	defer func() { _ = os.RemoveAll(tempServerAppDataPath) }()
-
-	repo, err := newReposStore(s.db).Create(
-		ctx,
-		alice.ID,
-		CreateRepoOptions{
-			Name: "test-repo-1",
-		},
-	)
-	require.NoError(t, err)
-
 	// TODO: Use PullRequests.Create to replace SQL hack when the method is available.
 	err = s.db.Exec(`INSERT INTO pull_request (head_user_name) VALUES (?)`, alice.Name).Error
 	require.NoError(t, err)
@@ -368,10 +348,6 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	err = os.MkdirAll(repox.UserPath(alice.Name), os.ModePerm)
-	require.NoError(t, err)
-	err = os.MkdirAll(repox.RepositoryLocalPath(repo.ID), os.ModePerm)
-	require.NoError(t, err)
-	err = os.MkdirAll(repox.RepositoryLocalWikiPath(repo.ID), os.ModePerm)
 	require.NoError(t, err)
 
 	// Make sure mock data is set up correctly
@@ -387,8 +363,6 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.Equal(t, int64(0), updatedUnix)
 
 	assert.True(t, osx.Exist(repox.UserPath(alice.Name)))
-	assert.True(t, osx.Exist(repox.RepositoryLocalPath(repo.ID)))
-	assert.True(t, osx.Exist(repox.RepositoryLocalWikiPath(repo.ID)))
 
 	const newUsername = "alice-new"
 	err = s.ChangeUsername(ctx, alice.ID, newUsername)
@@ -401,8 +375,6 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.True(t, osx.Exist(repox.UserPath(newUsername)))
 	assert.False(t, osx.Exist(repox.UserPath(alice.Name)))
-	assert.False(t, osx.Exist(repox.RepositoryLocalPath(repo.ID)))
-	assert.False(t, osx.Exist(repox.RepositoryLocalWikiPath(repo.ID)))
 
 	alice, err = s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)

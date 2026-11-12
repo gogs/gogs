@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gopkg.in/ini.v1"
+	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/internal/testx"
 )
@@ -28,18 +28,12 @@ func TestInitHelper(_ *testing.T) {
 		return
 	}
 
-	ini.PrettyFormat = false
-	defer func() {
-		ini.PrettyFormat = true
-	}()
-
 	if err := Init(filepath.Join("testdata", "custom.ini")); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cfg := ini.Empty()
-	cfg.NameMapper = ini.SnackCase
+	cfg := ini.Empty(ini.NameMapping(ini.SnakeCase))
 
 	for _, v := range []struct {
 		section string
@@ -69,7 +63,7 @@ func TestInitHelper(_ *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := cfg.WriteTo(buf); err != nil {
+	if _, err := cfg.Write(buf, ini.AlignDelimiters(false)); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

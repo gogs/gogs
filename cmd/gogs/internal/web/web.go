@@ -22,7 +22,6 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/gogs/git-module"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -35,6 +34,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
@@ -442,7 +442,7 @@ func Run(configPath string, portOverride int) error {
 				m.Post("/delete", repo.DeleteRelease)
 				m.Get("/edit/*", repo.EditRelease)
 				m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-			}, repo.MustBeNotBare, reqRepoWriter, func(c *context.Context) {
+			}, repo.MustBeNotEmpty, reqRepoWriter, func(c *context.Context) {
 				c.Data["PageIsViewFiles"] = true
 			})
 
@@ -472,7 +472,7 @@ func Run(configPath string, portOverride int) error {
 						return
 					}
 				})
-			}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
+			}, repo.MustBeNotEmpty, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
 				if !c.Repo.CanEnableEditor() {
 					c.NotFound()
 					return
@@ -484,7 +484,7 @@ func Run(configPath string, portOverride int) error {
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
-				m.Get("/releases", repo.MustBeNotBare, repo.Releases)
+				m.Get("/releases", repo.MustBeNotEmpty, repo.Releases)
 				m.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
 				m.Get("/pulls/:index", repo.ViewPull)
 			}, context.RepoRef())
@@ -493,7 +493,7 @@ func Run(configPath string, portOverride int) error {
 				m.Get("", repo.Branches)
 				m.Get("/all", repo.AllBranches)
 				m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
-			}, repo.MustBeNotBare, func(c *context.Context) {
+			}, repo.MustBeNotEmpty, func(c *context.Context) {
 				c.Data["PageIsViewFiles"] = true
 			})
 
@@ -507,7 +507,7 @@ func Run(configPath string, portOverride int) error {
 				}, reqSignIn, reqRepoWriter)
 			}, repo.MustEnableWiki, context.RepoRef())
 
-			m.Get("/archive/*", repo.MustBeNotBare, repo.Download)
+			m.Get("/archive/*", repo.MustBeNotEmpty, repo.Download)
 
 			m.Group("/pulls/:index", func() {
 				m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
@@ -519,14 +519,14 @@ func Run(configPath string, portOverride int) error {
 				m.Get("/src/*", repo.Home)
 				m.Get("/commits/*", repo.RefCommits)
 				m.Get("/forks", repo.Forks)
-			}, repo.MustBeNotBare, context.RepoRef())
+			}, repo.MustBeNotEmpty, context.RepoRef())
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
 			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", flamegoBridger(webHandler))
 			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
-			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.MustBeNotBare, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 
-			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
+			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotEmpty, context.RepoRef(), repo.CompareDiff)
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
 			m.Get("", repo.Home)
@@ -888,13 +888,16 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		// body tag to land just before </body>.
 		"{{.WebContext}}", script + inject.head,
 		"</body>", inject.footer + "</body>",
+		// Make entrypoint paths absolute, so pages nested below the root (e.g.,
+		// "/user/sign-in") load them from the assets directory rather than one
+		// relative to the page. Other bundled assets stay relative to the
+		// entrypoint that references them.
+		`src="./assets/`, `src="` + wc.SubURL + `/assets/`,
+		`href="./assets/`, `href="` + wc.SubURL + `/assets/`,
 	}
 	if wc.SubURL != "" {
-		// Prefix entrypoint paths with the subpath for non-root mounts. Other
-		// bundled assets stay relative to the entrypoint that references them.
+		// Prefix Vite's absolute root paths with the subpath for non-root mounts.
 		pairs = append(pairs,
-			`src="./assets/`, `src="`+wc.SubURL+`/assets/`,
-			`href="./assets/`, `href="`+wc.SubURL+`/assets/`,
 			`src="/src/`, `src="`+wc.SubURL+`/src/`,
 			`href="/img/`, `href="`+wc.SubURL+`/img/`,
 		)

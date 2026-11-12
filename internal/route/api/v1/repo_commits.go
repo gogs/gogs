@@ -5,12 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -24,15 +22,9 @@ func getAllCommits(c *context.APIContext) {
 		pageSize = 30
 	}
 
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
 	// The response object returned as JSON
 	result := make([]*types.Commit, 0, pageSize)
-	commits, err := gitRepo.Log("HEAD", git.LogOptions{MaxCount: pageSize})
+	commits, err := git.RepoLog(c.Req.Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
 	}
@@ -57,14 +49,9 @@ func getSingleCommit(c *context.APIContext) {
 		return
 	}
 
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	commit, err := git.RepoCatFileCommit(c.Req.Context(), c.Repo.Repository.RepoPath(), c.Params(":sha"))
 	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-	commit, err := gitRepo.CatFileCommit(c.Params(":sha"))
-	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get commit")
+		c.NotFoundOrError(git.NewError(err), "get commit")
 		return
 	}
 
@@ -91,9 +78,9 @@ func getReferenceSHA(c *context.APIContext) {
 		ref = after
 		refType = 2
 	} else {
-		if gitRepo.HasBranch(ref) {
+		if gitRepo.HasBranch(c.Req.Context(), ref) {
 			refType = 1
-		} else if gitRepo.HasTag(ref) {
+		} else if gitRepo.HasTag(c.Req.Context(), ref) {
 			refType = 2
 		} else {
 			c.NotFound()
@@ -104,12 +91,12 @@ func getReferenceSHA(c *context.APIContext) {
 	var sha string
 	switch refType {
 	case 1:
-		sha, err = gitRepo.BranchCommitID(ref)
+		sha, err = gitRepo.BranchCommitID(c.Req.Context(), ref)
 	case 2:
-		sha, err = gitRepo.TagCommitID(ref)
+		sha, err = gitRepo.TagCommitID(c.Req.Context(), ref)
 	}
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get reference commit ID")
+		c.NotFoundOrError(git.NewError(err), "get reference commit ID")
 		return
 	}
 	c.PlainText(http.StatusOK, sha)

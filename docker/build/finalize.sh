@@ -5,16 +5,16 @@ set -xe
 # Install gosu
 if [ "$(uname -m)" = "aarch64" ]; then
   export arch='arm64'
-  export checksum='c3805a85d17f4454c23d7059bcb97e1ec1af272b90126e79ed002342de08389b'
+  export checksum='c216cb762520edb5ab0acb21cb9bc4bcc5f1544d365e8952a21514f04ea233ee'
 elif [ "$(uname -m)" = "armv7l" ]; then
   export arch='armhf'
-  export checksum='e5866286277ff2a2159fb9196fea13e0a59d3f1091ea46ddb985160b94b6841b'
+  export checksum='02f58cb01be8cbd981d4850c59ee3249b1039af3b2d43c44e950f90bf18ae0ac'
 else
   export arch='amd64'
-  export checksum='bbc4136d03ab138b1ad66fa4fc051bafc6cc7ffae632b069a53657279a450de3'
+  export checksum='b1892636c281590f34bc63c1118f058cd9de66c4ea463772e3909672d8b302ac'
 fi
 
-wget --quiet https://github.com/tianon/gosu/releases/download/1.17/gosu-${arch} -O /usr/sbin/gosu
+wget --quiet https://github.com/tianon/gosu/releases/download/1.20/gosu-${arch} -O /usr/sbin/gosu
 echo "${checksum}  /usr/sbin/gosu" | sha256sum -cs
 chmod +x /usr/sbin/gosu
 

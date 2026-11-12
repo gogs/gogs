@@ -19,11 +19,7 @@ const (
 
 func Home(c *context.Context) {
 	if c.IsLogged {
-		if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-			c.RedirectSubpath("/user/activate")
-		} else {
-			user.Dashboard(c)
-		}
+		user.Dashboard(c)
 		return
 	}
 
