@@ -36,9 +36,7 @@ func newAdminListPage[T any](items []T, page int, total int64, pageSize int) *ad
 	return &adminListPage[T]{listPage: newListPage(items, page, total, pageSize), Total: total}
 }
 
-// unixTime returns the time of a Unix timestamp column, which is read directly
-// because users and repositories loaded through xorm leave the parsed time
-// unset.
+// unixTime returns the time of a Unix timestamp column in UTC.
 func unixTime(unix int64) time.Time {
 	return time.Unix(unix, 0).UTC()
 }

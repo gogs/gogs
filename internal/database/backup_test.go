@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 34
+	const wantTables = 36
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -328,6 +328,15 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ClosedDateUnix:  1588572486,
 		},
 
+		&Mirror{
+			ID:           1,
+			RepoID:       2,
+			Interval:     8,
+			EnablePrune:  true,
+			LastSyncUnix: 1588568886,
+			NextSyncUnix: 1588597686,
+		},
+
 		&Notice{
 			ID:          1,
 			Type:        NoticeTypeRepository,
@@ -424,6 +433,51 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Note:         "Release notes",
 			IsPrerelease: true,
 			CreatedUnix:  1588568886,
+		},
+
+		&Repository{
+			ID:                    1,
+			OwnerID:               1,
+			LowerName:             "example",
+			Name:                  "Example",
+			Description:           "An example repository",
+			Website:               "https://example.com",
+			DefaultBranch:         "main",
+			Size:                  1024,
+			NumWatches:            2,
+			NumStars:              1,
+			NumForks:              0,
+			NumIssues:             1,
+			NumPulls:              1,
+			NumClosedPulls:        1,
+			NumMilestones:         2,
+			NumClosedMilestones:   1,
+			IsPrivate:             true,
+			EnableWiki:            true,
+			EnableExternalWiki:    true,
+			ExternalWikiURL:       "https://wiki.example.com",
+			EnableIssues:          true,
+			EnableExternalTracker: true,
+			ExternalTrackerURL:    "https://tracker.example.com",
+			ExternalTrackerFormat: "https://tracker.example.com/{index}",
+			ExternalTrackerStyle:  "numeric",
+			EnablePulls:           true,
+			PullsAllowRebase:      true,
+			CreatedUnix:           1588568886,
+			UpdatedUnix:           1588572486,
+		},
+		&Repository{
+			ID:            2,
+			OwnerID:       3,
+			LowerName:     "mirror",
+			Name:          "mirror",
+			DefaultBranch: "master",
+			IsUnlisted:    true,
+			IsMirror:      true,
+			IsFork:        true,
+			ForkID:        1,
+			CreatedUnix:   1588568886,
+			UpdatedUnix:   1588568886,
 		},
 
 		&Star{
@@ -589,6 +643,8 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 		model  any
 		values map[string]any
 	}{
+		{&Repository{ID: 2}, map[string]any{"enable_wiki": false, "enable_issues": false, "enable_pulls": false}},
+		{&Mirror{ID: 1}, map[string]any{"enable_prune": false}},
 		{&User{ID: 2}, map[string]any{"max_repo_creation": 0, "created_unix": 0, "updated_unix": 0}},
 		{&Milestone{ID: 1}, map[string]any{"deadline_unix": 0}},
 		{&Comment{ID: 1}, map[string]any{"created_unix": 0}},

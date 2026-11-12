@@ -28,12 +28,12 @@ var Tables = []any{
 	new(HookTask),
 	new(Issue), new(IssueLabel), new(IssueUser),
 	new(Label), new(LFSObject), new(LoginSource),
-	new(Milestone),
+	new(Milestone), new(Mirror),
 	new(Notice),
 	new(OrgUser),
 	new(Passkey),
 	new(ProtectBranch), new(PublicKey), new(PullRequest),
-	new(Release),
+	new(Release), new(Repository),
 	new(Star),
 	new(Team), new(TeamRepo), new(TeamUser), new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload), new(User),
@@ -81,7 +81,7 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 		conf.UsePostgreSQL = true
 	case "mysql":
 		conf.UseMySQL = true
-		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
+		db = db.Set("gorm:table_options", "ENGINE=InnoDB ROW_FORMAT=DYNAMIC").Session(&gorm.Session{})
 	case "sqlite3":
 		conf.UseSQLite3 = true
 	default:
@@ -101,13 +101,13 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 // DB is the database handler for the storage layer.
 type DB struct {
 	db *gorm.DB
-	// logger is for methods whose signatures are fixed by xorm hooks or
+	// logger is for methods whose signatures are fixed by GORM hooks or
 	// templates, so they cannot receive a logger from their caller.
 	logger *logx.Logger
 }
 
 // handleLogger returns the logger of the global database handle. Only methods
-// whose signatures are fixed by xorm hooks or templates use it, because their
+// whose signatures are fixed by GORM hooks or templates use it, because their
 // callers cannot pass a logger. The handle is nil during installation mode and
 // in tests, which get a no-op logger.
 func handleLogger() *logx.Logger {

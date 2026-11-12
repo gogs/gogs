@@ -344,6 +344,15 @@ func (s *RepositoriesStore) LoadAttributes(ctx context.Context, repos ...*Reposi
 	return nil
 }
 
+// getWithAttributes returns the repository with given ID and its attributes.
+func (s *RepositoriesStore) getWithAttributes(ctx context.Context, id int64) (*Repository, error) {
+	repo, err := s.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return repo, s.LoadAttributes(ctx, repo)
+}
+
 // GetByName returns the repository with given owner and name. It returns
 // ErrRepoNotExist when not found.
 func (s *RepositoriesStore) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {
@@ -607,7 +616,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 		EnableWiki:   true,
 		EnableIssues: true,
 		EnablePulls:  true,
-		// xorm inserts false for a zero bool instead of the column default.
+		// New repositories allow merge commits.
 		PullsAllowMerge: true,
 	}
 
@@ -863,7 +872,7 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 		IsUnlisted:    baseRepo.IsUnlisted,
 		IsFork:        true,
 		ForkID:        baseRepo.ID,
-		// xorm inserts false for a zero bool instead of the column default.
+		// New repositories allow merge commits.
 		PullsAllowMerge: true,
 	}
 

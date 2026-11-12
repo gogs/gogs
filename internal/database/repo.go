@@ -158,75 +158,75 @@ func NewRepoContext(logger *logx.Logger) {
 // Repository contains information of a repository.
 type Repository struct {
 	ID              int64  `gorm:"primaryKey"`
-	OwnerID         int64  `xorm:"UNIQUE(s)" gorm:"uniqueIndex:repo_owner_name_unique"`
-	Owner           *User  `xorm:"-" gorm:"-" json:"-"`
-	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"uniqueIndex:repo_owner_name_unique;index;not null"`
-	Name            string `xorm:"INDEX NOT NULL" gorm:"index;not null"`
-	Description     string `xorm:"VARCHAR(512)" gorm:"type:VARCHAR(512)"`
-	Website         string
-	DefaultBranch   string
-	Size            int64 `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
+	OwnerID         int64  `gorm:"uniqueIndex:UQE_repository_s"`
+	Owner           *User  `gorm:"-" json:"-"`
+	LowerName       string `gorm:"size:255;not null;uniqueIndex:UQE_repository_s;index:IDX_repository_lower_name"`
+	Name            string `gorm:"size:255;not null;index:IDX_repository_name"`
+	Description     string `gorm:"size:512"`
+	Website         string `gorm:"size:255"`
+	DefaultBranch   string `gorm:"size:255"`
+	Size            int64  `gorm:"not null;default:0"`
 	UseCustomAvatar bool
 
 	// Counters
-	NumWatches          int
-	NumStars            int
-	NumForks            int
-	NumIssues           int
-	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-" gorm:"-" json:"-"`
-	NumPulls            int
-	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-" gorm:"-" json:"-"`
-	NumMilestones       int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
-	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
-	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
-	NumTags             int `xorm:"-" gorm:"-" json:"-"`
+	NumWatches          int `gorm:"size:32"`
+	NumStars            int `gorm:"size:32"`
+	NumForks            int `gorm:"size:32"`
+	NumIssues           int `gorm:"size:32"`
+	NumClosedIssues     int `gorm:"size:32"`
+	NumOpenIssues       int `gorm:"-" json:"-"`
+	NumPulls            int `gorm:"size:32"`
+	NumClosedPulls      int `gorm:"size:32"`
+	NumOpenPulls        int `gorm:"-" json:"-"`
+	NumMilestones       int `gorm:"size:32;not null;default:0"`
+	NumClosedMilestones int `gorm:"size:32;not null;default:0"`
+	NumOpenMilestones   int `gorm:"-" json:"-"`
+	NumTags             int `gorm:"-" json:"-"`
 
 	IsPrivate bool
 	// TODO: When migrate to GORM, make sure to do a loose migration with `HasColumn` and `AddColumn`,
 	// see docs in https://gorm.io/docs/migration.html.
-	IsUnlisted bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	IsUnlisted bool `gorm:"not null;default:FALSE"`
 	// Stored as "is_bare" and encoded as "IsBare" to stay compatible with
 	// existing databases and backup archives.
-	IsEmpty bool `xorm:"is_bare" gorm:"column:is_bare" json:"IsBare"`
+	IsEmpty bool `gorm:"column:is_bare" json:"IsBare"`
 
 	IsMirror bool
-	*Mirror  `xorm:"-" gorm:"-" json:"-"`
+	*Mirror  `gorm:"-" json:"-"`
 
 	// Advanced settings
-	EnableWiki            bool `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
+	EnableWiki            bool `gorm:"not null;default:TRUE"`
 	AllowPublicWiki       bool
 	EnableExternalWiki    bool
-	ExternalWikiURL       string
-	EnableIssues          bool `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
+	ExternalWikiURL       string `gorm:"size:255"`
+	EnableIssues          bool   `gorm:"not null;default:TRUE"`
 	AllowPublicIssues     bool
 	EnableExternalTracker bool
-	ExternalTrackerURL    string
-	ExternalTrackerFormat string
-	ExternalTrackerStyle  string
-	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
-	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
-	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
-	PullsAllowMerge       bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
-	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
-	PullsAllowSquash      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	ExternalTrackerURL    string            `gorm:"size:255"`
+	ExternalTrackerFormat string            `gorm:"size:255"`
+	ExternalTrackerStyle  string            `gorm:"size:255"`
+	ExternalMetas         map[string]string `gorm:"-" json:"-"`
+	EnablePulls           bool              `gorm:"not null;default:TRUE"`
+	PullsIgnoreWhitespace bool              `gorm:"not null;default:FALSE"`
+	PullsAllowMerge       bool              `gorm:"not null;default:TRUE"`
+	PullsAllowRebase      bool              `gorm:"not null;default:FALSE"`
+	PullsAllowSquash      bool              `gorm:"not null;default:FALSE"`
 	// PullsDeleteBranch is whether head branches in the repository are
 	// deleted after their pull requests are merged.
-	PullsDeleteBranch bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsDeleteBranch bool `gorm:"not null;default:FALSE"`
 	// PullsMergeMessage and PullsSquashMessage are the presets of the
 	// messages merge commits and squashing start with, e.g.,
 	// MergeMessageTitle.
-	PullsMergeMessage  string `xorm:"NOT NULL DEFAULT ''" gorm:"not null;default:''"`
-	PullsSquashMessage string `xorm:"NOT NULL DEFAULT ''" gorm:"not null;default:''"`
+	PullsMergeMessage  string `gorm:"size:255;not null;default:''"`
+	PullsSquashMessage string `gorm:"size:255;not null;default:''"`
 
-	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	IsFork   bool `gorm:"not null;default:FALSE"`
 	ForkID   int64
-	BaseRepo *Repository `xorm:"-" gorm:"-" json:"-"`
+	BaseRepo *Repository `gorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Updated     time.Time `gorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
@@ -596,7 +596,8 @@ func (r *Repository) setDefaultBranchIfMissing(ctx context.Context, candidate st
 	}
 
 	r.DefaultBranch = branch
-	if _, err = x.Id(r.ID).Cols("default_branch").Update(r); err != nil {
+	err = Handle.db.Model(new(Repository)).Where("id = ?", r.ID).UpdateColumn("default_branch", branch).Error
+	if err != nil {
 		return errors.Wrap(err, "update default branch")
 	}
 	return nil
@@ -892,9 +893,9 @@ func initRepository(ctx context.Context, logger *logx.Logger, tx *gorm.DB, repoP
 
 	// Re-fetch the repository from database before updating it (else it would
 	// override changes that were done earlier with sql)
-	saved, err := getRepositoryByID(tx, repo.ID)
+	saved, err := newReposStore(tx).getWithAttributes(ctx, repo.ID)
 	if err != nil {
-		return errors.Newf("getRepositoryByID: %v", err)
+		return errors.Wrap(err, "get repository")
 	}
 
 	if !opts.AutoInit {
@@ -945,18 +946,6 @@ func (err ErrReachLimitOfRepo) Error() string {
 // Deprecated: Use repox.RepositoryPath instead.
 func RepoPath(userName, repoName string) string {
 	return repox.RepositoryPath(userName, repoName)
-}
-
-// getRepositoryByID returns the repository with given ID and its attributes.
-//
-// TODO: Remove once its callers are moved into stores.
-func getRepositoryByID(tx *gorm.DB, id int64) (*Repository, error) {
-	repos := newReposStore(tx)
-	repo, err := repos.GetByID(context.TODO(), id)
-	if err != nil {
-		return nil, err
-	}
-	return repo, repos.LoadAttributes(context.TODO(), repo)
 }
 
 // iterateRepositories calls fn for every repository in batches, and stops at the
@@ -1258,7 +1247,7 @@ func CheckRepoStats(logger *logx.Logger) {
 		for _, id := range ids {
 			logger.Debug("Correcting inconsistent stats", "check", "repository count 'num_forks'", "id", id)
 
-			repo, err := getRepositoryByID(Handle.db, id)
+			repo, err := newReposStore(Handle.db).getWithAttributes(context.TODO(), id)
 			if err != nil {
 				logger.Error("Failed to get repository", "repoID", id, "error", err)
 				continue
