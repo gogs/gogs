@@ -4,24 +4,17 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 )
 
 func repoGitBlob(c *context.APIContext) {
-	gitRepo, err := git.Open(repox.RepositoryPath(c.Params(":username"), c.Params(":reponame")))
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
+	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	sha := c.Params(":sha")
-	blob, err := gitRepo.CatFileBlob(sha)
+	blob, err := git.RepoCatFileBlob(c.Req.Context(), repoPath, sha)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get blob")
+		c.NotFoundOrError(git.NewError(err), "get blob")
 		return
 	}
 
@@ -33,9 +26,9 @@ func repoGitBlob(c *context.APIContext) {
 		Size     int64  `json:"size"`
 	}
 
-	content, err := blob.Blob().Bytes()
+	content, err := blob.Blob().Bytes(c.Req.Context())
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get blob content")
+		c.NotFoundOrError(git.NewError(err), "get blob content")
 		return
 	}
 
@@ -44,6 +37,6 @@ func repoGitBlob(c *context.APIContext) {
 		Encoding: "base64",
 		URL:      fmt.Sprintf("%s/repos/%s/%s/git/blobs/%s", c.BaseURL, c.Params(":username"), c.Params(":reponame"), sha),
 		SHA:      sha,
-		Size:     blob.Size(),
+		Size:     blob.Size(c.Req.Context()),
 	})
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/gogs/git-module"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -35,6 +34,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
@@ -887,13 +887,16 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		// body tag to land just before </body>.
 		"{{.WebContext}}", script + inject.head,
 		"</body>", inject.footer + "</body>",
+		// Make entrypoint paths absolute, so pages nested below the root (e.g.,
+		// "/user/sign-in") load them from the assets directory rather than one
+		// relative to the page. Other bundled assets stay relative to the
+		// entrypoint that references them.
+		`src="./assets/`, `src="` + wc.SubURL + `/assets/`,
+		`href="./assets/`, `href="` + wc.SubURL + `/assets/`,
 	}
 	if wc.SubURL != "" {
-		// Prefix entrypoint paths with the subpath for non-root mounts. Other
-		// bundled assets stay relative to the entrypoint that references them.
+		// Prefix Vite's absolute root paths with the subpath for non-root mounts.
 		pairs = append(pairs,
-			`src="./assets/`, `src="`+wc.SubURL+`/assets/`,
-			`href="./assets/`, `href="`+wc.SubURL+`/assets/`,
 			`src="/src/`, `src="`+wc.SubURL+`/src/`,
 			`href="/img/`, `href="`+wc.SubURL+`/img/`,
 		)

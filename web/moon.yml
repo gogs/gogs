@@ -12,6 +12,11 @@ fileGroups:
     - "package.json"
     - "tsconfig*.json"
     - "vite.config.*"
+  # `extract-locales.mjs` regenerates src/locales/*.json from these before
+  # dev, build and lint, so changing only an INI must invalidate the cache.
+  locales:
+    - "/conf/locale/locale_*.ini"
+    - "scripts/extract-locales.mjs"
 
 tasks:
   install:
@@ -36,6 +41,7 @@ tasks:
     inputs:
       - "@group(sources)"
       - "@group(configs)"
+      - "@group(locales)"
     outputs:
       - "/public/dist"
     options:
@@ -48,6 +54,7 @@ tasks:
     inputs:
       - "@group(sources)"
       - "@group(configs)"
+      - "@group(locales)"
     options:
       runFromWorkspaceRoot: false
     deps:

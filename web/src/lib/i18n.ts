@@ -1,4 +1,5 @@
-import i18n from "i18next";
+import { i18n as diffsI18n } from "@pierre/diffs";
+import i18n, { t } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import { webContext } from "@/lib/context";
@@ -91,5 +92,26 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
   postProcess: showKeys ? ["i18n-debug"] : undefined,
 });
+
+// Pierre's diff view reads its text from a package-wide store of ICU
+// MessageFormat templates, so it is filled once here rather than per page.
+// `#` is ICU's placeholder for the plural count.
+try {
+  diffsI18n.set({
+    locale: webContext.lang,
+    translations: {
+      unmodifiedLines: `{count, plural, one {${t("repo.diff.unmodified_line", { count: "#" })}} other {${t("repo.diff.unmodified_lines", { count: "#" })}}}`,
+      // Intentionally blank. The `[data-unmodified-lines]:empty` rule in the
+      // commit page's diff CSS keeps the separator clickable without a label.
+      unknownUnmodifiedLines: "",
+      expandAll: t("repo.diff.expand_all"),
+      noNewlineAtEndOfFile: t("repo.diff.no_newline_at_eof"),
+    },
+  });
+} catch (err) {
+  // Pierre rejects templates with braces outside its ICU subset. Fall back to
+  // its English text rather than failing app startup over one translation.
+  console.error("Failed to set diff translations:", err);
+}
 
 export default i18n;

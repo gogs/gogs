@@ -5,12 +5,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -47,7 +45,7 @@ func renderCommits(c *context.Context, filename string) {
 		pageSize = conf.UI.User.CommitsPagingNum
 	}
 
-	commits, err := c.Repo.Commit.CommitsByPage(page, pageSize, git.CommitsByPageOptions{Path: filename})
+	commits, err := c.Repo.Commit.CommitsByPage(c.Req.Context(), page, pageSize, git.CommitsByPageOptions{Path: filename})
 	if err != nil {
 		c.Error(err, "paging commits")
 		return
@@ -84,7 +82,7 @@ func SearchCommits(c *context.Context) {
 		return
 	}
 
-	commits, err := c.Repo.Commit.SearchCommits(keyword)
+	commits, err := c.Repo.Commit.SearchCommits(c.Req.Context(), keyword)
 	if err != nil {
 		c.Error(err, "search commits")
 		return
@@ -145,24 +143,31 @@ func CompareDiff(c *context.Context) {
 	beforeCommitID := c.Params(":before")
 	afterCommitID := c.Params(":after")
 
-	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
+	commit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), afterCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get head commit")
+		c.NotFoundOrError(git.NewError(err), "get head commit")
 		return
 	}
 
-	diff, err := gitx.RepoDiff(c.Repo.GitRepo,
+	ctx := c.Req.Context()
+	// A non-positive timeout means no timeout.
+	if conf.Git.Timeout.Diff > 0 {
+		var cancel gocontext.CancelFunc
+		ctx, cancel = gocontext.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Diff)*time.Second)
+		defer cancel()
+	}
+	diff, err := c.Repo.GitRepo.Diff(ctx,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: beforeCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get diff")
+		c.NotFoundOrError(git.NewError(err), "get diff")
 		return
 	}
 
-	commits, err := commit.CommitsAfter(beforeCommitID)
+	commits, err := commit.CommitsAfter(c.Req.Context(), beforeCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get commits after")
+		c.NotFoundOrError(git.NewError(err), "get commits after")
 		return
 	}
 
@@ -174,8 +179,12 @@ func CompareDiff(c *context.Context) {
 	c.Data["AfterCommitID"] = afterCommitID
 	c.Data["Username"] = userName
 	c.Data["Reponame"] = repoName
-	c.Data["IsImageFile"] = commit.IsImageFile
-	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
+	c.Data["IsImageFile"] = func(subpath string) (bool, error) {
+		return commit.IsImageFile(c.Req.Context(), subpath)
+	}
+	c.Data["IsImageFileByIndex"] = func(index string) (bool, error) {
+		return commit.IsImageFileByIndex(c.Req.Context(), index)
+	}
 	c.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
 	c.Data["Commit"] = commit
 	c.Data["Diff"] = diff

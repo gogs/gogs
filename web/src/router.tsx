@@ -1,3 +1,4 @@
+import { canUseWASM } from "@pierre/diffs";
 import { WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, RouterProvider, createRootRouteWithContext, createRoute, createRouter } from "@tanstack/react-router";
@@ -64,7 +65,7 @@ const queryClient = new QueryClient();
 
 // Pierre's worker pool is a process-wide singleton (refcounted by mount). Hold
 // it at the app root so it stays warm across navigations: the diff renderer
-// uses workers to tokenize files via Shiki off the main thread, and
+// uses workers to tokenize files off the main thread, and
 // without a live pool every file falls back to a sync main-thread path that
 // returns `undefined` until highlighting resolves, painting blanks on fast
 // scroll over large diffs.
@@ -72,11 +73,22 @@ const diffWorkerPoolOptions = {
   workerFactory: () => new Worker(new URL("@pierre/diffs/worker/worker.js", import.meta.url), { type: "module" }),
 };
 
+// Highlights tokenizes with WebAssembly SIMD. Browsers that lack it or block
+// WebAssembly (e.g., a CSP without `wasm-unsafe-eval`) use Shiki's JavaScript
+// regex engine instead.
+const diffHighlighterOptions = (() => {
+  if (canUseWASM()) {
+    return { preferredHighlighter: "highlights" as const };
+  }
+  console.log("WebAssembly SIMD is unavailable, falling back to Shiki for diff highlighting.");
+  return { preferredHighlighter: "shiki-js" as const };
+})();
+
 export function AppRouter({ user }: { user: UserInfo | null }) {
   const router = makeRouter({ user, queryClient });
   return (
     <QueryClientProvider client={queryClient}>
-      <WorkerPoolContextProvider poolOptions={diffWorkerPoolOptions} highlighterOptions={{}}>
+      <WorkerPoolContextProvider poolOptions={diffWorkerPoolOptions} highlighterOptions={diffHighlighterOptions}>
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
           <Toaster position="bottom-right" closeButton richColors />

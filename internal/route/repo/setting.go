@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -17,6 +16,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
@@ -148,7 +148,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 
-		if err := c.Repo.Mirror.SaveAddress(remoteAddr); err != nil {
+		if err := c.Repo.Mirror.SaveAddress(c.Req.Context(), remoteAddr); err != nil {
 			c.Error(err, "save address")
 			return
 		}
@@ -480,7 +480,7 @@ func SettingsBranches(c *context.Context) {
 	// Filter out deleted branches
 	branches := make([]string, 0, len(protectBranches))
 	for i := range protectBranches {
-		if c.Repo.GitRepo.HasBranch(protectBranches[i].Name) {
+		if c.Repo.GitRepo.HasBranch(c.Req.Context(), protectBranches[i].Name) {
 			branches = append(branches, protectBranches[i].Name)
 		}
 	}
@@ -491,10 +491,10 @@ func SettingsBranches(c *context.Context) {
 
 func UpdateDefaultBranch(c *context.Context) {
 	branch := c.Query("branch")
-	if c.Repo.GitRepo.HasBranch(branch) &&
+	if c.Repo.GitRepo.HasBranch(c.Req.Context(), branch) &&
 		c.Repo.Repository.DefaultBranch != branch {
 		c.Repo.Repository.DefaultBranch = branch
-		if _, err := c.Repo.GitRepo.SymbolicRef(git.SymbolicRefOptions{
+		if _, err := c.Repo.GitRepo.SymbolicRef(c.Req.Context(), git.SymbolicRefOptions{
 			Ref: git.RefsHeads + branch,
 		}); err != nil {
 			c.Flash.Warning(c.Tr("repo.settings.update_default_branch_unsupported"))
@@ -514,7 +514,7 @@ func UpdateDefaultBranch(c *context.Context) {
 
 func SettingsProtectedBranch(c *context.Context) {
 	branch := c.Params("*")
-	if !c.Repo.GitRepo.HasBranch(branch) {
+	if !c.Repo.GitRepo.HasBranch(c.Req.Context(), branch) {
 		c.NotFound()
 		return
 	}
@@ -559,7 +559,7 @@ func SettingsProtectedBranch(c *context.Context) {
 
 func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
 	branch := c.Params("*")
-	if !c.Repo.GitRepo.HasBranch(branch) {
+	if !c.Repo.GitRepo.HasBranch(c.Req.Context(), branch) {
 		c.NotFound()
 		return
 	}

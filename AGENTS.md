@@ -49,3 +49,4 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Never commit on the `main` branch directly unless being explicitly asked to do so. A single ask only grants a single commit action on the `main` branch.
 - Never amend commits unless being explicitly asked to do so.
 - When creating a git worktree, the worktree directory name must match its branch name. Do not use random or generated suffixes.
+- When a pull request changes UI, always attach screenshots of the affected states to its description when they are available.

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"net/url"
 	"os"
 	"path"
@@ -11,9 +12,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"
@@ -25,7 +25,7 @@ var wikiWorkingPool = sync.NewExclusivePool()
 // WikiBranch returns the branch name used by the wiki repository. It checks if
 // "main" branch exists, otherwise falls back to "master".
 func WikiBranch(repoPath string) string {
-	if git.RepoHasBranch(repoPath, "main") {
+	if git.RepoHasBranch(context.TODO(), repoPath, "main") {
 		return "main"
 	}
 	return "master"
@@ -72,7 +72,7 @@ func (r *Repository) InitWiki() error {
 		return nil
 	}
 
-	if err := git.Init(r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
+	if err := git.Init(context.TODO(), r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)
@@ -137,12 +137,16 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	if message == "" {
 		message = "Update page '" + title + "'"
 	}
-	if err := git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	localGitRepo, err := git.Open(localPath)
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+	if err := localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
 		return errors.Newf("add all changes: %v", err)
 	}
 
-	err := git.CreateCommit(
-		localPath,
+	err = localGitRepo.Commit(
+		context.TODO(),
 		&git.Signature{
 			Name:  doer.DisplayName(),
 			Email: doer.Email,
@@ -152,7 +156,7 @@ func (r *Repository) updateWikiPage(doer *User, oldTitle, title, content, messag
 	)
 	if err != nil {
 		return errors.Newf("commit changes: %v", err)
-	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
+	} else if err = localGitRepo.Push(context.TODO(), "origin", WikiBranch(localPath)); err != nil {
 		return errors.Newf("push: %v", err)
 	}
 
@@ -183,12 +187,16 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	message := "Delete page '" + title + "'"
 
-	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
+	localGitRepo, err := git.Open(localPath)
+	if err != nil {
+		return errors.Newf("open local copy: %v", err)
+	}
+	if err = localGitRepo.Add(context.TODO(), git.AddOptions{All: true}); err != nil {
 		return errors.Newf("add all changes: %v", err)
 	}
 
-	err = git.CreateCommit(
-		localPath,
+	err = localGitRepo.Commit(
+		context.TODO(),
 		&git.Signature{
 			Name:  doer.DisplayName(),
 			Email: doer.Email,
@@ -198,7 +206,7 @@ func (r *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 	)
 	if err != nil {
 		return errors.Newf("commit changes: %v", err)
-	} else if err = git.Push(localPath, "origin", WikiBranch(localPath)); err != nil {
+	} else if err = localGitRepo.Push(context.TODO(), "origin", WikiBranch(localPath)); err != nil {
 		return errors.Newf("push: %v", err)
 	}
 
