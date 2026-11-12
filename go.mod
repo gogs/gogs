@@ -64,8 +64,6 @@ require (
 	unknwon.dev/i18n v1.1.0
 	unknwon.dev/ini/v2 v2.0.0-beta.7
 	unknwon.dev/x v0.0.0-20261116185950-bb25d45e810c
-	xorm.io/core v0.7.2
-	xorm.io/xorm v0.8.0
 )
 
 require (
@@ -117,12 +115,10 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
-	github.com/lib/pq v1.10.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
-	github.com/mattn/go-sqlite3 v1.14.24 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
@@ -165,5 +161,4 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.51.0 // indirect
-	xorm.io/builder v0.3.6 // indirect
 )

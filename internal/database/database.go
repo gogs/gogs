@@ -1,7 +1,6 @@
 package database
 
 import (
-	"database/sql"
 	"path/filepath"
 	"time"
 
@@ -33,7 +32,7 @@ var Tables = []any{
 	new(Notice),
 	new(OrgUser),
 	new(Passkey), new(ProtectBranch), new(PublicKey), new(PullRequest),
-	new(Release),
+	new(Release), new(Repository),
 	new(Star),
 	new(Team), new(TeamRepo), new(TeamUser), new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload), new(User),
@@ -84,7 +83,7 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 		conf.UsePostgreSQL = true
 	case "mysql":
 		conf.UseMySQL = true
-		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
+		db = db.Set("gorm:table_options", "ENGINE=InnoDB ROW_FORMAT=DYNAMIC").Session(&gorm.Session{})
 	case "sqlite3":
 		conf.UseSQLite3 = true
 	default:
@@ -103,13 +102,13 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 // DB is the database handler for the storage layer.
 type DB struct {
 	db *gorm.DB
-	// logger is for methods whose signatures are fixed by xorm hooks or
+	// logger is for methods whose signatures are fixed by GORM hooks or
 	// templates, so they cannot receive a logger from their caller.
 	logger *logx.Logger
 }
 
 // handleLogger returns the logger of the global database handle. Only methods
-// whose signatures are fixed by xorm hooks or templates use it, because their
+// whose signatures are fixed by GORM hooks or templates use it, because their
 // callers cannot pass a logger. The handle is nil during installation mode and
 // in tests, which get a no-op logger.
 func handleLogger() *logx.Logger {
@@ -243,13 +242,12 @@ func (db *DB) Webhooks() *WebhooksStore {
 	return newWebhooksStore(db.db)
 }
 
-// ConnectionStats tells how busy the database connections are, across the
-// pools of both ORMs.
+// ConnectionStats tells how busy the database connections are.
 type ConnectionStats struct {
 	InUse int
 	Idle  int
-	// Limit is how many connections the pools may open at most, or 0 when
-	// there is no limit.
+	// Limit is how many connections the pool may open at most, or 0 when there
+	// is no limit.
 	Limit int
 	// WaitCount is how many times a query waited for a connection since the
 	// server started, and WaitDuration how long they waited in total.
@@ -259,23 +257,19 @@ type ConnectionStats struct {
 
 // GetConnectionStats returns how busy the database connections are.
 func GetConnectionStats() ConnectionStats {
-	var out ConnectionStats
-	add := func(stats sql.DBStats) {
-		out.InUse += stats.InUse
-		out.Idle += stats.Idle
-		out.WaitCount += stats.WaitCount
-		out.WaitDuration += stats.WaitDuration
+	if Handle == nil {
+		return ConnectionStats{}
 	}
-	if x != nil {
-		add(x.DB().Stats())
+	sqlDB, err := Handle.db.DB()
+	if err != nil {
+		return ConnectionStats{}
 	}
-	if Handle != nil {
-		if sqlDB, err := Handle.db.DB(); err == nil {
-			add(sqlDB.Stats())
-		}
+	stats := sqlDB.Stats()
+	return ConnectionStats{
+		InUse:        stats.InUse,
+		Idle:         stats.Idle,
+		Limit:        stats.MaxOpenConnections,
+		WaitCount:    stats.WaitCount,
+		WaitDuration: stats.WaitDuration,
 	}
-	if conf.Database.MaxOpenConns > 0 {
-		out.Limit = 2 * conf.Database.MaxOpenConns
-	}
-	return out
 }
