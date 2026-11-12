@@ -28,8 +28,8 @@ func WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, c
 	return context.WithTimeout(ctx, timeout)
 }
 
-// newCommand returns a git command that is killed along with every process it
-// started when ctx is done.
+// newCommand returns a git command that is killed when ctx is done. runCommand
+// makes sure every process it started is killed along with it.
 func newCommand(ctx context.Context, dir string, args []string, envs []string) *osexec.Cmd {
 	c := osexec.CommandContext(ctx, "git", args...)
 	c.Dir = dir
@@ -37,7 +37,6 @@ func newCommand(ctx context.Context, dir string, args []string, envs []string) *
 		c.Env = append(os.Environ(), envs...)
 	}
 	c.WaitDelay = waitDelay
-	killProcessGroup(c)
 	return c
 }
 
@@ -65,6 +64,13 @@ func runCommand(c *osexec.Cmd) error {
 		*w = pw
 	}
 
+	tree, err := newProcessTree(c)
+	if err != nil {
+		closeReaders(copiers)
+		return errors.Wrap(err, "set up process tree")
+	}
+	defer tree.close()
+
 	if err := c.Start(); err != nil {
 		closeReaders(copiers)
 		return err
@@ -77,11 +83,18 @@ func runCommand(c *osexec.Cmd) error {
 			_ = pw.Close()
 		}
 	}
+
+	if err := tree.attach(c); err != nil {
+		_ = c.Process.Kill()
+		_ = c.Wait()
+		closeReaders(copiers)
+		return errors.Wrap(err, "attach process tree")
+	}
 	for _, o := range copiers {
 		go o.copy()
 	}
 
-	err := c.Wait()
+	err = c.Wait()
 	for _, o := range copiers {
 		o.wait(waitDelay)
 	}

@@ -8,10 +8,13 @@ import (
 	"syscall"
 )
 
-// killProcessGroup runs the command in its own process group and kills the
+// processTree is the process group that the command runs in.
+type processTree struct{}
+
+// newProcessTree runs the command in its own process group and kills the
 // whole group when the command is canceled, so that processes Git starts, e.g.,
 // "git fetch" started by "git remote add -f" or hooks, do not outlive it.
-func killProcessGroup(c *osexec.Cmd) {
+func newProcessTree(c *osexec.Cmd) (*processTree, error) {
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	setParentDeathSignal(c.SysProcAttr)
 	c.Cancel = func() error {
@@ -21,4 +24,11 @@ func killProcessGroup(c *osexec.Cmd) {
 		}
 		return err
 	}
+	return &processTree{}, nil
 }
+
+// attach does nothing, because the process group is set up when the command
+// starts.
+func (*processTree) attach(*osexec.Cmd) error { return nil }
+
+func (*processTree) close() {}
