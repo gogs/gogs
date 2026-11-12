@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"strings"
 
@@ -90,6 +91,26 @@ func RepoHasBranch(ctx context.Context, repoPath, branch string, opts ...ShowRef
 		return false
 	}
 	return r.HasBranch(ctx, branch, opts...)
+}
+
+// HasBranches returns true if the repository has at least one branch, even when
+// HEAD points to a branch that does not exist.
+func (r *Repository) HasBranches(ctx context.Context) (bool, error) {
+	stdout, err := exec(ctx, r.path, []string{"for-each-ref", "--count=1", "--format=%(refname)", "--end-of-options", RefsHeads}, nil)
+	if err != nil {
+		return false, err
+	}
+	return len(bytes.TrimSpace(stdout)) > 0, nil
+}
+
+// RepoHasBranches is like Repository.HasBranches for the repository in given
+// path.
+func RepoHasBranches(ctx context.Context, repoPath string) (bool, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return false, err
+	}
+	return r.HasBranches(ctx)
 }
 
 // HasTag returns true if given tag exists in the repository. The tag must be

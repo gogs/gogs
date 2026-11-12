@@ -411,6 +411,21 @@ func SyncMirrors() {
 			continue
 		}
 
+		// Pushes clear the bare state of a repository, but a mirror of an empty
+		// repository only receives commits through syncs.
+		if m.Repo.IsBare {
+			hasBranches, err := git.RepoHasBranches(ctx, m.Repo.RepoPath())
+			if err != nil {
+				log.Error("Failed to check if repository has branches [repo_id: %d]: %v", m.RepoID, err)
+			} else if hasBranches {
+				if err = Handle.Repositories().Touch(ctx, m.RepoID); err != nil {
+					log.Error("Failed to touch repository [repo_id: %d]: %v", m.RepoID, err)
+				} else {
+					m.Repo.IsBare = false
+				}
+			}
+		}
+
 		// TODO:
 		// - Create "Mirror Sync" webhook event
 		// - Create mirror sync (create, push and delete) events and trigger the "mirror sync" webhooks
@@ -509,6 +524,10 @@ func SyncMirrors() {
 
 		if _, err = x.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID); err != nil {
 			log.Error("Update 'mirror.updated_unix' [%d]: %v", m.RepoID, err)
+			continue
+		}
+
+		if m.Repo.IsBare {
 			continue
 		}
 

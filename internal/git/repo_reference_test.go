@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRefShortName(t *testing.T) {
@@ -133,6 +134,38 @@ func TestRepository_HasBranch(t *testing.T) {
 			assert.Equal(t, test.expVal, testrepo.HasBranch(ctx, test.ref, test.opt))
 		})
 	}
+}
+
+func TestRepository_HasBranches(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("has branches", func(t *testing.T) {
+		got, err := testrepo.HasBranches(ctx)
+		require.NoError(t, err)
+		assert.True(t, got)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		path := t.TempDir()
+		require.NoError(t, Init(ctx, path, InitOptions{Bare: true}))
+
+		got, err := RepoHasBranches(ctx, path)
+		require.NoError(t, err)
+		assert.False(t, got)
+	})
+
+	t.Run("HEAD points to a missing branch", func(t *testing.T) {
+		r, cleanup, err := setupTempRepo()
+		require.NoError(t, err)
+		defer cleanup()
+
+		_, err = r.SymbolicRef(ctx, SymbolicRefOptions{Ref: RefsHeads + "missing"})
+		require.NoError(t, err)
+
+		got, err := r.HasBranches(ctx)
+		require.NoError(t, err)
+		assert.True(t, got)
+	})
 }
 
 func TestRepository_HasTag(t *testing.T) {

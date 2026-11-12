@@ -854,8 +854,11 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 	repo.DefaultBranch = git.RefShortName(refspec)
 
-	// The repository is empty when its HEAD branch has no commits.
-	repo.IsBare = !gitRepo.HasBranch(context.TODO(), repo.DefaultBranch)
+	hasBranches, err := gitRepo.HasBranches(context.TODO())
+	if err != nil {
+		return repo, errors.Wrap(err, "check bare")
+	}
+	repo.IsBare = !hasBranches
 
 	if !repo.IsBare {
 		if err = repo.UpdateSize(); err != nil {
