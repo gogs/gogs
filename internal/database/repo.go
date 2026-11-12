@@ -20,8 +20,8 @@ import (
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
 	"golang.org/x/image/draw"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 	"xorm.io/xorm"
 
 	embedConf "gogs.io/gogs/conf"
@@ -887,8 +887,12 @@ func cleanUpMigrateGitConfig(configPath string) error {
 	if err != nil {
 		return errors.Newf("open config file: %v", err)
 	}
-	cfg.DeleteSection("remote \"origin\"")
-	if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
+	for sub, sec := range cfg.Subsections("remote") {
+		if sub == "origin" {
+			cfg.DeleteSection(sec.Name())
+		}
+	}
+	if err = cfg.SaveTo(configPath, ini.Indent("\t")); err != nil {
 		return errors.Newf("save config file: %v", err)
 	}
 	return nil

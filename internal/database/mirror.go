@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
@@ -88,15 +88,12 @@ func (m *Mirror) readAddress() {
 		return
 	}
 
-	cfg, err := ini.LoadSources(
-		ini.LoadOptions{IgnoreInlineComment: true},
-		m.Repo.GitConfigPath(),
-	)
+	cfg, err := ini.Load(m.Repo.GitConfigPath(), ini.IgnoreInlineComment(true))
 	if err != nil {
 		log.Error("load config: %v", err)
 		return
 	}
-	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
+	m.address = cfg.Subsection("remote", "origin").Key("url").Value()
 }
 
 // HandleMirrorCredentials replaces user credentials from HTTP/HTTPS URL

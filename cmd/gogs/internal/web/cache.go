@@ -10,7 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
 	"github.com/flamego/cache/redis"
-	"gopkg.in/ini.v1"
+	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/internal/conf"
 )
@@ -46,7 +46,7 @@ func parseRedisConfig(host string) (redis.Config, error) {
 	}
 
 	var config redis.Config
-	for k, v := range cfg.Section("").KeysHash() {
+	for k, v := range cfg.Section("").KeyValues() {
 		switch k {
 		case "network":
 			config.Options.Network = v
