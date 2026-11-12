@@ -10,14 +10,9 @@ import (
 )
 
 func repoGitBlob(c *context.APIContext) {
-	gitRepo, err := git.Open(repox.RepositoryPath(c.Params(":username"), c.Params(":reponame")))
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
+	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	sha := c.Params(":sha")
-	blob, err := gitRepo.CatFileBlob(c.Req.Context(), sha)
+	blob, err := git.RepoCatFileBlob(c.Req.Context(), repoPath, sha)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get blob")
 		return

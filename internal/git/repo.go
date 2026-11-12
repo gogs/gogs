@@ -241,6 +241,15 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 	return err
 }
 
+// RepoPush is like Repository.Push for the repository in given path.
+func RepoPush(ctx context.Context, repoPath, remote, branch string, opts ...PushOptions) error {
+	r, err := Open(repoPath)
+	if err != nil {
+		return err
+	}
+	return r.Push(ctx, remote, branch, opts...)
+}
+
 // CheckoutOptions contains optional arguments for checking out to a branch.
 //
 // Docs: https://git-scm.com/docs/git-checkout
@@ -266,6 +275,15 @@ func (r *Repository) Checkout(ctx context.Context, branch string, opts ...Checko
 
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
+}
+
+// RepoCheckout is like Repository.Checkout for the repository in given path.
+func RepoCheckout(ctx context.Context, repoPath, branch string, opts ...CheckoutOptions) error {
+	r, err := Open(repoPath)
+	if err != nil {
+		return err
+	}
+	return r.Checkout(ctx, branch, opts...)
 }
 
 // ResetOptions contains optional arguments for resetting a branch.
@@ -444,6 +462,15 @@ func (r *Repository) ShowNameStatus(ctx context.Context, rev string, opts ...Sho
 	return fileStatus, nil
 }
 
+// RepoShowNameStatus is like Repository.ShowNameStatus for the repository in given path.
+func RepoShowNameStatus(ctx context.Context, repoPath, rev string, opts ...ShowNameStatusOptions) (*NameStatus, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.ShowNameStatus(ctx, rev, opts...)
+}
+
 // RevParseOptions contains optional arguments for parsing revision.
 //
 // Docs: https://git-scm.com/docs/git-rev-parse
@@ -543,6 +570,15 @@ func (r *Repository) CountObjects(ctx context.Context, opts ...CountObjectsOptio
 	return countObject, nil
 }
 
+// RepoCountObjects is like Repository.CountObjects for the repository in given path.
+func RepoCountObjects(ctx context.Context, repoPath string, opts ...CountObjectsOptions) (*CountObject, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.CountObjects(ctx, opts...)
+}
+
 // FsckOptions contains optional arguments for verifying the objects.
 //
 // Docs: https://git-scm.com/docs/git-fsck
@@ -565,4 +601,13 @@ func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
 	args = append(args, "--end-of-options")
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
+}
+
+// RepoFsck is like Repository.Fsck for the repository in given path.
+func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOptions) error {
+	r, err := Open(repoPath)
+	if err != nil {
+		return err
+	}
+	return r.Fsck(ctx, opts...)
 }

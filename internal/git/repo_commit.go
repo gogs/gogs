@@ -107,6 +107,15 @@ func (r *Repository) CatFileCommit(ctx context.Context, rev string, opts ...CatF
 	return c, nil
 }
 
+// RepoCatFileCommit is like Repository.CatFileCommit for the repository in given path.
+func RepoCatFileCommit(ctx context.Context, repoPath, rev string, opts ...CatFileCommitOptions) (*Commit, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.CatFileCommit(ctx, rev, opts...)
+}
+
 // CatFileTypeOptions contains optional arguments for showing the object type.
 //
 // Docs: https://git-scm.com/docs/git-cat-file#Documentation/git-cat-file.txt--t
@@ -136,10 +145,28 @@ func (r *Repository) BranchCommit(ctx context.Context, branch string, opts ...Ca
 	return r.CatFileCommit(ctx, RefsHeads+branch, opts...)
 }
 
+// RepoBranchCommit is like Repository.BranchCommit for the repository in given path.
+func RepoBranchCommit(ctx context.Context, repoPath, branch string, opts ...CatFileCommitOptions) (*Commit, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.BranchCommit(ctx, branch, opts...)
+}
+
 // TagCommit returns the latest commit of given tag of the repository. The tag
 // must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommit(ctx context.Context, tag string, opts ...CatFileCommitOptions) (*Commit, error) {
 	return r.CatFileCommit(ctx, RefsTags+tag, opts...)
+}
+
+// RepoTagCommit is like Repository.TagCommit for the repository in given path.
+func RepoTagCommit(ctx context.Context, repoPath, tag string, opts ...CatFileCommitOptions) (*Commit, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.TagCommit(ctx, tag, opts...)
 }
 
 // LogOptions contains optional arguments for listing commits.
@@ -207,6 +234,15 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([
 		return nil, err
 	}
 	return r.parsePrettyFormatLogToList(ctx, stdout)
+}
+
+// RepoLog is like Repository.Log for the repository in given path.
+func RepoLog(ctx context.Context, repoPath, rev string, opts ...LogOptions) ([]*Commit, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.Log(ctx, rev, opts...)
 }
 
 // CommitByRevisionOptions contains optional arguments for getting a commit.
@@ -401,6 +437,15 @@ func (r *Repository) RevListCount(ctx context.Context, refspecs []string, opts .
 	}
 
 	return strconv.ParseInt(strings.TrimSpace(string(stdout)), 10, 64)
+}
+
+// RepoRevListCount is like Repository.RevListCount for the repository in given path.
+func RepoRevListCount(ctx context.Context, repoPath string, refspecs []string, opts ...RevListCountOptions) (int64, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return 0, err
+	}
+	return r.RevListCount(ctx, refspecs, opts...)
 }
 
 // RevListOptions contains optional arguments for listing commits.

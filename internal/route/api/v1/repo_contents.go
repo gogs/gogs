@@ -206,13 +206,7 @@ func putContents(c *context.APIContext, r putContentsRequest) {
 	}
 
 	repoPath := repox.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
-	gitRepo, err := git.Open(repoPath)
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
-	commit, err := gitRepo.CatFileCommit(c.Req.Context(), r.Branch)
+	commit, err := git.RepoCatFileCommit(c.Req.Context(), repoPath, r.Branch)
 	if err != nil {
 		c.Error(err, "get file commit")
 		return

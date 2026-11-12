@@ -449,11 +449,7 @@ func (r *Repository) mustOwner(e Engine) *User {
 }
 
 func (r *Repository) UpdateSize() error {
-	gitRepo, err := git.Open(r.RepoPath())
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-	countObject, err := gitRepo.CountObjects(context.TODO())
+	countObject, err := git.RepoCountObjects(context.TODO(), r.RepoPath())
 	if err != nil {
 		return errors.Newf("count repository objects: %v", err)
 	}
@@ -868,11 +864,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	if !repo.IsBare {
 		// Try to get HEAD branch and set it as default branch.
-		gitRepo, err := git.Open(repoPath)
-		if err != nil {
-			return repo, errors.Newf("open repository: %v", err)
-		}
-		refspec, err := gitRepo.SymbolicRef(context.TODO())
+		refspec, err := git.RepoSymbolicRef(context.TODO(), repoPath)
 		if err != nil {
 			return repo, errors.Newf("get HEAD branch: %v", err)
 		}
@@ -1091,12 +1083,9 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 	}
 
 	// Set default branch
-	gitRepo, err := git.Open(repoPath)
-	if err != nil {
-		return errors.Wrap(err, "open repository")
-	}
-	_, err = gitRepo.SymbolicRef(
+	_, err = git.RepoSymbolicRef(
 		context.TODO(),
+		repoPath,
 		git.SymbolicRefOptions{
 			Name: "HEAD",
 			Ref:  git.RefsHeads + conf.Repository.DefaultBranch,
@@ -2125,18 +2114,15 @@ func GitFsck() {
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			gitRepo, err := git.Open(repoPath)
-			if err == nil {
-				ctx, cancel := context.TODO(), context.CancelFunc(func() {})
-				// A non-positive timeout means no timeout.
-				if conf.Cron.RepoHealthCheck.Timeout > 0 {
-					ctx, cancel = context.WithTimeout(ctx, conf.Cron.RepoHealthCheck.Timeout)
-				}
-				err = gitRepo.Fsck(ctx, git.FsckOptions{
-					Args: conf.Cron.RepoHealthCheck.Args,
-				})
-				cancel()
+			ctx, cancel := context.TODO(), context.CancelFunc(func() {})
+			// A non-positive timeout means no timeout.
+			if conf.Cron.RepoHealthCheck.Timeout > 0 {
+				ctx, cancel = context.WithTimeout(ctx, conf.Cron.RepoHealthCheck.Timeout)
 			}
+			err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
+				Args: conf.Cron.RepoHealthCheck.Args,
+			})
+			cancel()
 			if err != nil {
 				const fmtStr = "Failed to perform health check on repository %q: %v"
 				log.Warn(fmtStr, repoPath, err)
@@ -2695,11 +2681,7 @@ func (r *Repository) CreateNewBranch(oldBranch, newBranch string) (err error) {
 		return errors.Newf("create new branch [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 
-	localGitRepo, err := git.Open(localPath)
-	if err != nil {
-		return errors.Newf("open local copy [path: %s]: %v", localPath, err)
-	}
-	if err = localGitRepo.Push(context.TODO(), "origin", newBranch); err != nil {
+	if err = git.RepoPush(context.TODO(), localPath, "origin", newBranch); err != nil {
 		return errors.Newf("push [branch: %s]: %v", newBranch, err)
 	}
 

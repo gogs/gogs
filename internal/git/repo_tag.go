@@ -172,6 +172,15 @@ func (r *Repository) Tags(ctx context.Context, opts ...TagsOptions) ([]string, e
 	return tags, nil
 }
 
+// RepoTags is like Repository.Tags for the repository in given path.
+func RepoTags(ctx context.Context, repoPath string, opts ...TagsOptions) ([]string, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.Tags(ctx, opts...)
+}
+
 // CreateTagOptions contains optional arguments for creating a tag.
 //
 // Docs: https://git-scm.com/docs/git-tag
@@ -227,6 +236,15 @@ func (r *Repository) DeleteTag(ctx context.Context, name string, opts ...DeleteT
 	args := []string{"tag", "--delete", "--end-of-options", name}
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
+}
+
+// RepoDeleteTag is like Repository.DeleteTag for the repository in given path.
+func RepoDeleteTag(ctx context.Context, repoPath, name string, opts ...DeleteTagOptions) error {
+	r, err := Open(repoPath)
+	if err != nil {
+		return err
+	}
+	return r.DeleteTag(ctx, name, opts...)
 }
 
 // TagsPage contains a list of tags and pagination information.

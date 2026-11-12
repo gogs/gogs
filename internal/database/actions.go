@@ -890,11 +890,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 
 		nameStatus := &git.NameStatus{}
 		if !testx.InTest {
-			gitRepo, err := git.Open(repoPath)
-			if err != nil {
-				return nil, errors.Wrap(err, "open repository")
-			}
-			nameStatus, err = gitRepo.ShowNameStatus(ctx, commit.Sha1)
+			nameStatus, err = git.RepoShowNameStatus(ctx, repoPath, commit.Sha1)
 			if err != nil {
 				return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
 			}

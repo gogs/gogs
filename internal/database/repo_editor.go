@@ -112,11 +112,6 @@ func (r *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 
 // CheckoutNewBranch checks out to a new branch from the a branch name.
 func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	localGitRepo, err := git.Open(r.LocalCopyPath())
-	if err != nil {
-		return errors.Newf("open local copy: %v", err)
-	}
-
 	ctx := context.TODO()
 	// A non-positive timeout means no timeout.
 	if conf.Git.Timeout.Pull > 0 {
@@ -124,7 +119,7 @@ func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Pull)*time.Second)
 		defer cancel()
 	}
-	if err := localGitRepo.Checkout(ctx, newBranch, git.CheckoutOptions{
+	if err := git.RepoCheckout(ctx, r.LocalCopyPath(), newBranch, git.CheckoutOptions{
 		BaseBranch: oldBranch,
 	}); err != nil {
 		return errors.Newf("checkout [base: %s, new: %s]: %v", oldBranch, newBranch, err)
@@ -179,10 +174,6 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 		return errors.New("cannot update file with symbolic link in path")
 	}
 
-	gitRepo, err := git.Open(r.RepoPath())
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
 	localGitRepo, err := git.Open(localPath)
 	if err != nil {
 		return errors.Newf("open local copy: %v", err)
@@ -190,7 +181,7 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
-		if gitRepo.HasBranch(context.TODO(), opts.NewBranch) {
+		if git.RepoHasBranch(context.TODO(), r.RepoPath(), opts.NewBranch) {
 			return BranchAlreadyExists{Name: opts.NewBranch}
 		}
 

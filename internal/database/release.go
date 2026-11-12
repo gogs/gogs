@@ -359,11 +359,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return errors.Newf("GetRepositoryByID: %v", err)
 	}
 
-	gitRepo, err := git.Open(repo.RepoPath())
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-	err = gitRepo.DeleteTag(context.TODO(), rel.TagName)
+	err = git.RepoDeleteTag(context.TODO(), repo.RepoPath(), rel.TagName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return errors.Newf("delete tag: %v", err)
 	}

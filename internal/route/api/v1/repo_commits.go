@@ -22,15 +22,9 @@ func getAllCommits(c *context.APIContext) {
 		pageSize = 30
 	}
 
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
 	// The response object returned as JSON
 	result := make([]*types.Commit, 0, pageSize)
-	commits, err := gitRepo.Log(c.Req.Context(), "HEAD", git.LogOptions{MaxCount: pageSize})
+	commits, err := git.RepoLog(c.Req.Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
 	}
@@ -55,12 +49,7 @@ func getSingleCommit(c *context.APIContext) {
 		return
 	}
 
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-	commit, err := gitRepo.CatFileCommit(c.Req.Context(), c.Params(":sha"))
+	commit, err := git.RepoCatFileCommit(c.Req.Context(), c.Repo.Repository.RepoPath(), c.Params(":sha"))
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get commit")
 		return

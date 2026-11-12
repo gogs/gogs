@@ -8,14 +8,8 @@ import (
 )
 
 func getRepoGitTree(c *context.APIContext) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
 	sha := c.Params(":sha")
-	tree, err := gitRepo.LsTree(c.Req.Context(), sha, git.LsTreeOptions{Verbatim: true})
+	tree, err := git.RepoLsTree(c.Req.Context(), c.Repo.Repository.RepoPath(), sha, git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get tree")
 		return

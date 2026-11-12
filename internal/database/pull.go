@@ -311,11 +311,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	}
 
 	// Push changes on base branch to upstream.
-	tmpBaseGitRepo, err := git.Open(tmpBasePath)
-	if err != nil {
-		return errors.Newf("open temporary repository: %v", err)
-	}
-	if err = tmpBaseGitRepo.Push(ctx, baseGitRepo.Path(), pr.BaseBranch); err != nil {
+	if err = git.RepoPush(ctx, tmpBasePath, baseGitRepo.Path(), pr.BaseBranch); err != nil {
 		return errors.Newf("git push: %v", err)
 	}
 

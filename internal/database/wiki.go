@@ -25,8 +25,7 @@ var wikiWorkingPool = sync.NewExclusivePool()
 // WikiBranch returns the branch name used by the wiki repository. It checks if
 // "main" branch exists, otherwise falls back to "master".
 func WikiBranch(repoPath string) string {
-	gitRepo, err := git.Open(repoPath)
-	if err == nil && gitRepo.HasBranch(context.TODO(), "main") {
+	if git.RepoHasBranch(context.TODO(), repoPath, "main") {
 		return "main"
 	}
 	return "master"

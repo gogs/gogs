@@ -64,11 +64,6 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return errors.Newf("run 'git update-server-info': %v", err)
 	}
 
-	gitRepo, err := git.Open(repoPath)
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {
 		return errors.Newf("GetUserByName: %v", err)
@@ -104,7 +99,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	// Skip read parent commits when delete branch
 	if !isDelRef {
 		// Push new branch
-		newCommit, err := gitRepo.CatFileCommit(ctx, opts.NewCommitID)
+		newCommit, err := git.RepoCatFileCommit(ctx, repoPath, opts.NewCommitID)
 		if err != nil {
 			return errors.Newf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}

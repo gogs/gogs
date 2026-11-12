@@ -122,11 +122,8 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		// Check force push
-		gitRepo, err := git.Open(database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName)))
-		if err != nil {
-			fail("Internal error", "Failed to open repository: %v", err)
-		}
-		removedCommits, err := gitRepo.RevListCount(ctx, []string{oldCommitID, "^" + newCommitID})
+		repoPath := database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+		removedCommits, err := git.RepoRevListCount(ctx, repoPath, []string{oldCommitID, "^" + newCommitID})
 		if err != nil {
 			fail("Internal error", "Failed to detect force push: %v", err)
 		} else if removedCommits > 0 {

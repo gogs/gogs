@@ -43,3 +43,12 @@ func (r *Repository) CatFileBlob(ctx context.Context, rev string, opts ...CatFil
 		},
 	}, nil
 }
+
+// RepoCatFileBlob is like Repository.CatFileBlob for the repository in given path.
+func RepoCatFileBlob(ctx context.Context, repoPath, rev string, opts ...CatFileBlobOptions) (*Blob, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.CatFileBlob(ctx, rev, opts...)
+}

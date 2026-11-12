@@ -150,3 +150,12 @@ func (r *Repository) LsTree(ctx context.Context, treeID string, opts ...LsTreeOp
 	r.cachedTrees.Set(treeID, t)
 	return t, nil
 }
+
+// RepoLsTree is like Repository.LsTree for the repository in given path.
+func RepoLsTree(ctx context.Context, repoPath, treeID string, opts ...LsTreeOptions) (*Tree, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.LsTree(ctx, treeID, opts...)
+}

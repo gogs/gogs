@@ -83,6 +83,15 @@ func (r *Repository) HasBranch(ctx context.Context, branch string, opts ...ShowR
 	return r.HasReference(ctx, RefsHeads+branch, opts...)
 }
 
+// RepoHasBranch returns true if the branch exists in the repository in given path.
+func RepoHasBranch(ctx context.Context, repoPath, branch string, opts ...ShowRefVerifyOptions) bool {
+	r, err := Open(repoPath)
+	if err != nil {
+		return false
+	}
+	return r.HasBranch(ctx, branch, opts...)
+}
+
 // HasTag returns true if given tag exists in the repository. The tag must be
 // given in short name, e.g., "v1.0.0".
 func (r *Repository) HasTag(ctx context.Context, tag string, opts ...ShowRefVerifyOptions) bool {
@@ -122,6 +131,15 @@ func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions
 		return "", err
 	}
 	return strings.TrimSpace(string(stdout)), nil
+}
+
+// RepoSymbolicRef is like Repository.SymbolicRef for the repository in given path.
+func RepoSymbolicRef(ctx context.Context, repoPath string, opts ...SymbolicRefOptions) (string, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return "", err
+	}
+	return r.SymbolicRef(ctx, opts...)
 }
 
 // ShowRefOptions contains optional arguments for listing references.
@@ -188,6 +206,15 @@ func (r *Repository) Branches(ctx context.Context) ([]string, error) {
 		branches[i] = strings.TrimPrefix(heads[i].Refspec, RefsHeads)
 	}
 	return branches, nil
+}
+
+// RepoBranches is like Repository.Branches for the repository in given path.
+func RepoBranches(ctx context.Context, repoPath string) ([]string, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return r.Branches(ctx)
 }
 
 // DeleteBranchOptions contains optional arguments for deleting a branch.

@@ -115,13 +115,7 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 	repo := repoCtx.Repo
 	commitID := c.Param("sha")
 
-	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
-	if err != nil {
-		log.Error("getRepoCommit: open repository %q/%q: %v", owner.Name, repo.Name, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
-	}
-
-	commit, err := gitRepo.CatFileCommit(ctx, commitID)
+	commit, err := git.RepoCatFileCommit(ctx, repox.RepositoryPath(owner.Name, repo.Name), commitID)
 	if err != nil {
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil

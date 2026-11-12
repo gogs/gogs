@@ -22,12 +22,7 @@ type Branch struct {
 }
 
 func GetBranchesByPath(path string) ([]*Branch, error) {
-	gitRepo, err := git.Open(path)
-	if err != nil {
-		return nil, errors.Newf("open repository: %v", err)
-	}
-
-	names, err := gitRepo.Branches(context.TODO())
+	names, err := git.RepoBranches(context.TODO(), path)
 	if err != nil {
 		return nil, errors.Newf("list branches")
 	}
@@ -62,11 +57,7 @@ func (ErrBranchNotExist) NotFound() bool {
 }
 
 func (r *Repository) GetBranch(name string) (*Branch, error) {
-	gitRepo, err := git.Open(r.RepoPath())
-	if err != nil {
-		return nil, errors.Newf("open repository: %v", err)
-	}
-	if !gitRepo.HasBranch(context.TODO(), name) {
+	if !git.RepoHasBranch(context.TODO(), r.RepoPath(), name) {
 		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return &Branch{
@@ -80,11 +71,7 @@ func (r *Repository) GetBranches() ([]*Branch, error) {
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {
-	gitRepo, err := git.Open(br.RepoPath)
-	if err != nil {
-		return nil, errors.Newf("open repository: %v", err)
-	}
-	return gitRepo.BranchCommit(context.TODO(), br.Name)
+	return git.RepoBranchCommit(context.TODO(), br.RepoPath, br.Name)
 }
 
 type ProtectBranchWhitelist struct {
