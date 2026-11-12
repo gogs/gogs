@@ -35,7 +35,15 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
-		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
+		req := c.Req.WithContext(ctx)
+		webHandler.ServeHTTP(c.Resp, req)
+		// Flamego's route, e.g., "GET /api/web/{owner}/{repo}/header", is more
+		// specific than the Macaron route that bridges to it, e.g.,
+		// "GET /api/web/*". Copy it to the outer request, the one the tracing
+		// handler reads.
+		if req.Pattern != "" {
+			c.Req.Pattern = req.Pattern
+		}
 	}
 }
 
