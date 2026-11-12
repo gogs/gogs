@@ -40,19 +40,19 @@ const (
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
 	ID          int64      `gorm:"primaryKey"`
-	OwnerID     int64      `xorm:"INDEX NOT NULL" gorm:"index;not null"`
-	Name        string     `xorm:"NOT NULL" gorm:"not null"`
-	Fingerprint string     `xorm:"NOT NULL" gorm:"not null"`
-	Content     string     `xorm:"TEXT NOT NULL" gorm:"type:TEXT;not null"`
-	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2" gorm:"not null;default:2"`
-	Type        KeyType    `xorm:"NOT NULL DEFAULT 1" gorm:"not null;default:1"`
+	OwnerID     int64      `gorm:"not null;index:IDX_public_key_owner_id"`
+	Name        string     `gorm:"size:255;not null"`
+	Fingerprint string     `gorm:"size:255;not null"`
+	Content     string     `gorm:"type:TEXT;not null"`
+	Mode        AccessMode `gorm:"size:32;not null;default:2"`
+	Type        KeyType    `gorm:"size:32;not null;default:1"`
 
-	Created           time.Time `xorm:"-" json:"-" gorm:"-"`
+	Created           time.Time `json:"-" gorm:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-" gorm:"-"`
+	Updated           time.Time `json:"-" gorm:"-"`
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-" gorm:"-"`
-	HasUsed           bool `xorm:"-" json:"-" gorm:"-"`
+	HasRecentActivity bool `json:"-" gorm:"-"`
+	HasUsed           bool `json:"-" gorm:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
@@ -510,18 +510,18 @@ func RewriteAuthorizedKeys() error {
 // DeployKey represents deploy key information and its relation with repository.
 type DeployKey struct {
 	ID          int64
-	KeyID       int64 `xorm:"UNIQUE(s) INDEX"`
-	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
-	Name        string
-	Fingerprint string
-	Content     string `xorm:"-" json:"-" gorm:"-"`
+	KeyID       int64  `gorm:"uniqueIndex:UQE_deploy_key_s;index:IDX_deploy_key_key_id"`
+	RepoID      int64  `gorm:"uniqueIndex:UQE_deploy_key_s;index:IDX_deploy_key_repo_id"`
+	Name        string `gorm:"size:255"`
+	Fingerprint string `gorm:"size:255"`
+	Content     string `json:"-" gorm:"-"`
 
-	Created           time.Time `xorm:"-" json:"-" gorm:"-"`
+	Created           time.Time `json:"-" gorm:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-" gorm:"-"`
+	Updated           time.Time `json:"-" gorm:"-"`
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-" gorm:"-"`
-	HasUsed           bool `xorm:"-" json:"-" gorm:"-"`
+	HasRecentActivity bool `json:"-" gorm:"-"`
+	HasUsed           bool `json:"-" gorm:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
