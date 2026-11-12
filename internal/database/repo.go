@@ -1139,8 +1139,20 @@ func createRepository(tx *gorm.DB, doer, owner *User, repo *Repository) (err err
 		return ErrRepoAlreadyExist{args: errx.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
+	// GORM replaces a false value with the column default (true) on create, so
+	// restore the feature switches the caller chose, e.g., all disabled for forks.
+	enableWiki, enableIssues, enablePulls := repo.EnableWiki, repo.EnableIssues, repo.EnablePulls
 	if err = tx.Create(repo).Error; err != nil {
 		return err
+	}
+	repo.EnableWiki, repo.EnableIssues, repo.EnablePulls = enableWiki, enableIssues, enablePulls
+	err = tx.Model(repo).UpdateColumns(map[string]any{
+		"enable_wiki":   enableWiki,
+		"enable_issues": enableIssues,
+		"enable_pulls":  enablePulls,
+	}).Error
+	if err != nil {
+		return errors.Wrap(err, "restore feature switches")
 	}
 
 	err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
