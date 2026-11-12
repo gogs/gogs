@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRepository(t *testing.T) {
@@ -433,6 +434,42 @@ func TestRepository_Commit(t *testing.T) {
 		assert.Equal(t, author.Name, c.Author.Name)
 		assert.Equal(t, author.Email, c.Author.Email)
 		assert.Equal(t, message+"\n", c.Message)
+	})
+
+	stageFile := func(t *testing.T, name string) {
+		require.NoError(t, os.WriteFile(filepath.Join(r.Path(), name), []byte(name), 0o600))
+		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+	}
+
+	t.Run("empty message", func(t *testing.T) {
+		stageFile(t, "EMPTY_MESSAGE")
+		err := r.Commit(ctx, committer, "")
+		assert.ErrorContains(t, err, "empty commit message")
+	})
+
+	t.Run("rejected by hook", func(t *testing.T) {
+		stageFile(t, "REJECTED_BY_HOOK")
+		hookPath := filepath.Join(r.Path(), ".git", "hooks", "pre-commit")
+		require.NoError(t, os.WriteFile(hookPath, []byte("#!/bin/sh\necho rejected >&2\nexit 1\n"), 0o700))
+		defer func() { _ = os.Remove(hookPath) }()
+
+		err := r.Commit(ctx, committer, message)
+		assert.ErrorContains(t, err, "rejected")
+	})
+
+	t.Run("initial commit", func(t *testing.T) {
+		path := tempPath()
+		defer func() { _ = os.RemoveAll(path) }()
+		require.NoError(t, Init(ctx, path))
+		empty, err := Open(path)
+		require.NoError(t, err)
+
+		require.NoError(t, os.WriteFile(filepath.Join(path, "README"), []byte("README"), 0o600))
+		require.NoError(t, empty.Add(ctx, AddOptions{All: true}))
+		require.NoError(t, empty.Commit(ctx, committer, message))
+
+		_, err = empty.RevParse(ctx, "HEAD")
+		assert.NoError(t, err)
 	})
 }
 

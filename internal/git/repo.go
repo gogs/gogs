@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // Repository contains information of a Git repository.
@@ -372,11 +374,17 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	args = append(args, "-m", message)
 	args = append(args, "--end-of-options")
 
-	_, err := exec(ctx, r.path, args, envs)
-	// No stderr but exit status 1 means nothing to commit.
-	if isExitStatus(err, 1) {
+	// Git also exits with status 1 for real failures (e.g., an empty message or a
+	// rejecting hook), so check for staged changes up front instead of guessing
+	// from the exit status.
+	_, err := exec(ctx, r.path, []string{"diff", "--cached", "--quiet"}, opt.Envs)
+	if err == nil {
 		return nil
+	} else if !isExitStatus(err, 1) {
+		return errors.Wrap(err, "check staged changes")
 	}
+
+	_, err = exec(ctx, r.path, args, envs)
 	return err
 }
 
