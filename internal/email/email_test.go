@@ -62,7 +62,7 @@ func TestCompose(t *testing.T) {
 		assert.Contains(t, m.HTML, `href="https://example.test/user/activate?code=a%26b"`)
 		assert.Contains(t, m.Text, "Hi <b>bob</b>,")
 		assert.Contains(t, m.Text, "within 3 hours")
-		assert.Contains(t, m.Text, "https://example.test/user/activate?code=a&b")
+		assert.Contains(t, m.Text, "https://example.test/user/activate?code=a%26b")
 	})
 
 	t.Run("in the language of the recipient", func(t *testing.T) {

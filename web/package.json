@@ -4,7 +4,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build-emails": "tsx --tsconfig tsconfig.app.json scripts/build-emails.ts",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write ."
   },
@@ -54,9 +53,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "prettier": "^3.8.3",
-    "react-email": "^6.11.11",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
     "vite": "^8.1.6"

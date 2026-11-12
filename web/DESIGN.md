@@ -138,10 +138,6 @@ Use the `Tooltip` component from `@/components/ui/tooltip` (built on `@radix-ui/
 
 The tooltip is supplementary information, not a substitute for an accessible name. Icon-only buttons still need `aria-label`. The tooltip just makes the same label visible to sighted users.
 
-## Emails
-
-Emails are React components in `web/src/emails/templates/`, written with [react-email](https://react.email) and the shared parts in `web/src/emails/Layout.tsx`. `moon run web:build-emails` renders each into the Go templates the server fills in and sends: `templates/mail/<name>.tmpl` for HTML and `.txt` for plain text. Commit both, since CI fails when they differ from the components. Write the data and functions of the Go templates with `v()`, e.g., `v(".Username")`, and text with `t()`, which translates a key in the `[mail]` section of the locale files when the email is sent. React escapes quotes, so never write a Go template action by hand. To add an email, also add its data and made-up sample data in `internal/email/mails.go`, so the emails page of the admin panel previews it and the tests compose it.
-
 ## Accessibility
 
 WCAG 2.2 AA is the floor. Apply these patterns in components:

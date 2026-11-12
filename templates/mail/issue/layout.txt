@@ -1,0 +1,5 @@
+{{define "issue" -}}
+{{Markup .Body}}
+
+{{Tr "mail.view_on" AppName}}: {{.Link}}
+{{- end}}

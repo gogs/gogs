@@ -1,0 +1,6 @@
+{{- /* issue relays an issue or pull request comment, with a link to reply on the site. */ -}}
+{{define "issue" -}}
+<div>{{Markup .Body}}</div>
+<hr style="border:none;border-top:1px solid #e4e4e7;margin:16px 0;">
+<a href="{{.Link}}" style="color:#2563eb;">{{Tr "mail.view_on" AppName}}</a>
+{{- end}}

@@ -9,7 +9,6 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
-      - 'templates/mail/**'
       - '.github/workflows/web.yml'
   pull_request:
     paths:
@@ -17,7 +16,6 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
-      - 'templates/mail/**'
       - '.github/workflows/web.yml'
 
 permissions:
@@ -50,7 +48,5 @@ jobs:
         run: moon run web:lint
       - name: Build
         run: moon run web:build
-      - name: Build emails
-        run: moon run web:build-emails
       - name: Check for uncommitted changes
         run: git diff --exit-code --stat
