@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -105,7 +106,7 @@ func NewMailerIssue(issue *Issue) email.Issue {
 // This functions sends two list of emails:
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
-func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions []string) error {
+func mailIssueCommentToParticipants(tx *gorm.DB, issue *Issue, doer *User, mentions []string) error {
 	ctx := context.TODO()
 
 	if !conf.User.EnableEmailNotification {
@@ -116,7 +117,7 @@ func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions
 	if err != nil {
 		return errors.Newf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
 	}
-	participants, err := GetParticipantsByIssueID(e, issue.ID)
+	participants, err := GetParticipantsByIssueID(tx, issue.ID)
 	if err != nil {
 		return errors.Newf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
@@ -190,11 +191,11 @@ func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions
 // and mentioned people.
 func (issue *Issue) MailParticipants() (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
-	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
+	if err = updateIssueMentions(Handle.db, issue.ID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
-	if err = mailIssueCommentToParticipants(x, issue, issue.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(Handle.db, issue, issue.Poster, mentions); err != nil {
 		log.Error("mailIssueCommentToParticipants: %v", err)
 	}
 
