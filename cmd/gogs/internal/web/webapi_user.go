@@ -103,6 +103,9 @@ func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n
 			Fields: fieldErrors{"captcha": &msg},
 		}, nil
 	}
+	if msg := checkNewPassword(r.Context(), l, req.Password); msg != nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"password": msg}}, nil
+	}
 	u, err := database.Handle.Users().Create(
 		r.Context(),
 		req.UserName,
@@ -201,7 +204,7 @@ type userResetPasswordEmailRequest struct {
 
 type userResetPasswordCompleteRequest struct {
 	Code     string `json:"code" validate:"required"`
-	Password string `json:"password" validate:"required,min=6,max=255"`
+	Password string `json:"password" validate:"required,max=255"`
 }
 
 type userResetPasswordResponse struct {
@@ -252,6 +255,9 @@ func postUserResetPasswordComplete(r *http.Request, mc *macaron.Context, l i18n.
 	u := verifyUserResetPasswordCode(r.Context(), req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+	}
+	if msg := checkNewPassword(r.Context(), l, req.Password); msg != nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"password": msg}}, nil
 	}
 
 	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {

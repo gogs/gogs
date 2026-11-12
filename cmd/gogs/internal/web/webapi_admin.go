@@ -335,6 +335,11 @@ func postAdminUser(c flamego.Context, mc *macaron.Context, l i18n.Locale, admin 
 		msg := l.Tr("form.Password") + l.Tr("form.require_error")
 		fields = fieldErrors{"password": &msg}
 	}
+	if fields == nil && req.LoginSource == 0 {
+		if msg := checkNewPassword(ctx, l, req.Password); msg != nil {
+			fields = fieldErrors{"password": msg}
+		}
+	}
 	if fields != nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fields}, nil
 	}
@@ -486,6 +491,9 @@ func patchAdminUser(c flamego.Context, l i18n.Locale, admin *database.User, targ
 		opts.LoginSource = &req.LoginSource
 	}
 	if req.Password != "" {
+		if msg := checkNewPassword(ctx, l, req.Password); msg != nil {
+			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"password": msg}}, nil
+		}
 		opts.Password = &req.Password
 	}
 	if u.Email != req.Email {

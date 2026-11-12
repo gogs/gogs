@@ -895,13 +895,16 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Page      string `json:"page,omitempty"`
 		Error     string `json:"error,omitempty"`
 		Version   string `json:"version,omitempty"`
+		// MinPasswordLength is the fewest characters a new password can have.
+		MinPasswordLength int `json:"minPasswordLength"`
 	}{
-		Lang:      wc.Lang,
-		SubURL:    wc.SubURL,
-		LocaleURL: wc.SubURL + webLocaleURL(wc.Lang),
-		Page:      wc.Page,
-		Error:     wc.Error,
-		Version:   wc.Version,
+		Lang:              wc.Lang,
+		SubURL:            wc.SubURL,
+		LocaleURL:         wc.SubURL + webLocaleURL(wc.Lang),
+		Page:              wc.Page,
+		Error:             wc.Error,
+		Version:           wc.Version,
+		MinPasswordLength: conf.Auth.MinPasswordLength,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

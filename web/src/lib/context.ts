@@ -12,6 +12,8 @@ export interface WebContext {
   error?: string;
   // The version of Gogs, for site admins on a server error.
   version?: string;
+  // The fewest characters a new password can have.
+  minPasswordLength: number;
 }
 
 declare global {
@@ -22,7 +24,7 @@ declare global {
 
 function read(): WebContext {
   if (typeof window === "undefined") {
-    return { lang: "en-US", subURL: "", localeURL: "" };
+    return { lang: "en-US", subURL: "", localeURL: "", minPasswordLength: 8 };
   }
   const ctx = window.__webContext ?? {};
   return {
@@ -32,6 +34,7 @@ function read(): WebContext {
     page: ctx.page,
     error: ctx.error,
     version: ctx.version,
+    minPasswordLength: ctx.minPasswordLength ?? 8,
   };
 }
 

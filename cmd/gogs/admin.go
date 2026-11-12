@@ -11,6 +11,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/userx"
 )
 
 var (
@@ -146,6 +147,13 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 
 	if _, err = database.SetEngine(); err != nil {
 		return errors.Wrap(err, "set engine")
+	}
+
+	if err = userx.CheckPasswordPolicy(ctx, cmd.String("password")); err != nil {
+		if errors.Is(err, userx.ErrPasswordTooShort) {
+			return errors.Newf("Password must contain at least %d characters", conf.Auth.MinPasswordLength)
+		}
+		return err
 	}
 
 	user, err := database.Handle.Users().Create(
