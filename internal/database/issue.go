@@ -138,7 +138,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	}
 
 	if issue.Attachments == nil {
-		issue.Attachments, err = getAttachmentsByIssueID(e, issue.ID)
+		issue.Attachments, err = getAttachmentsByIssueID(legacyTx(e), issue.ID)
 		if err != nil {
 			return errors.Newf("getAttachmentsByIssueID [%d]: %v", issue.ID, err)
 		}
@@ -733,7 +733,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	}
 
 	if len(opts.Attachments) > 0 {
-		attachments, err := getUnboundAttachmentsByUUIDs(e, opts.Attachments)
+		attachments, err := getUnboundAttachmentsByUUIDs(legacyTx(e), opts.Attachments)
 		if err != nil {
 			return errors.Newf("getUnboundAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
