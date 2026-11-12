@@ -840,13 +840,13 @@ func MigrateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Us
 	}
 
 	if opts.IsMirror {
-		if _, err = x.InsertOne(&Mirror{
+		if err = Handle.db.Create(&Mirror{
 			RepoID:      repo.ID,
 			Interval:    conf.Mirror.DefaultInterval,
 			EnablePrune: true,
 			NextSync:    time.Now().Add(time.Duration(conf.Mirror.DefaultInterval) * time.Hour),
-		}); err != nil {
-			return repo, errors.Newf("InsertOne: %v", err)
+		}).Error; err != nil {
+			return repo, errors.Wrap(err, "create mirror")
 		}
 
 		repo.IsMirror = true
@@ -2338,7 +2338,7 @@ func CheckRepoStats(logger *logx.Logger) {
 
 type MirrorRepositoryList []*Repository
 
-func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
+func (repos MirrorRepositoryList) loadAttributes(tx *gorm.DB) error {
 	if len(repos) == 0 {
 		return nil
 	}
@@ -2353,7 +2353,7 @@ func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
 		repoIDs = append(repoIDs, repos[i].ID)
 	}
 	mirrors := make([]*Mirror, 0, len(repoIDs))
-	if err := e.Where("id > 0").In("repo_id", repoIDs).Find(&mirrors); err != nil {
+	if err := tx.Where("id > 0 AND repo_id IN ?", repoIDs).Find(&mirrors).Error; err != nil {
 		return errors.Newf("find mirrors: %v", err)
 	}
 
@@ -2368,7 +2368,7 @@ func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
 }
 
 func (repos MirrorRepositoryList) LoadAttributes() error {
-	return repos.loadAttributes(x)
+	return repos.loadAttributes(Handle.db)
 }
 
 //  __      __         __         .__
