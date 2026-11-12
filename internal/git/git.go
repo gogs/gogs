@@ -77,3 +77,27 @@ func BinVersion(ctx context.Context) (string, error) {
 	gitVersionSet = true
 	return gitVersion, nil
 }
+
+// ConfigGet returns the value of given key in Git configuration. It returns an
+// empty string when the key is not set.
+//
+// Docs: https://git-scm.com/docs/git-config
+func ConfigGet(ctx context.Context, key string) (string, error) {
+	stdout, err := exec(ctx, "", []string{"config", "--get", "--end-of-options", key}, nil)
+	if err != nil {
+		if isExitStatus(err, 1) {
+			return "", nil
+		}
+		return "", err
+	}
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+// SetGlobalConfig sets given key to the value in the global Git configuration
+// of the current user.
+//
+// Docs: https://git-scm.com/docs/git-config
+func SetGlobalConfig(ctx context.Context, key, value string) error {
+	_, err := exec(ctx, "", []string{"config", "--global", "--end-of-options", key, value}, nil)
+	return err
+}

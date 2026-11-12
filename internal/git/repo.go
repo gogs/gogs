@@ -190,16 +190,27 @@ type PullOptions struct {
 	CommandOptions
 }
 
-// Pull pulls updates for the repository.
-func (r *Repository) Pull(ctx context.Context, opts ...PullOptions) error {
+// Pull pulls updates for the repository. The committer is required and is recorded
+// on any commit this command creates. A rebase keeps the authors of the replayed commits.
+func (r *Repository) Pull(ctx context.Context, committer *Signature, opts ...PullOptions) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
 	var opt PullOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
+	// The strategy flags are explicit so pull.rebase and pull.ff in Git
+	// configuration cannot change which commits this command creates.
 	args := []string{"pull"}
+	envs := committerEnvs(committer)
 	if opt.Rebase {
 		args = append(args, "--rebase")
+	} else {
+		args = append(args, "--no-rebase", "--ff")
+		envs = append(envs, authorEnvs(committer)...)
 	}
 	if opt.All {
 		args = append(args, "--all")
@@ -211,8 +222,9 @@ func (r *Repository) Pull(ctx context.Context, opts ...PullOptions) error {
 			args = append(args, opt.Branch)
 		}
 	}
+	envs = append(envs, opt.Envs...)
 
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, envs)
 	return err
 }
 
@@ -372,9 +384,13 @@ type CommitOptions struct {
 	CommandOptions
 }
 
-// Commit commits local changes with given author, committer and message for the
+// Commit commits local changes with the given committer and message for the
 // repository.
 func (r *Repository) Commit(ctx context.Context, committer *Signature, message string, opts ...CommitOptions) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
 	var opt CommitOptions
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -387,22 +403,119 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 		opt.Author = committer
 	}
 
-	args := []string{"commit"}
-	args = append(args, fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email))
-	args = append(args, "-m", message)
-	args = append(args, "--end-of-options")
+	args := []string{
+		"commit",
+		fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email),
+		"-m", message,
+		"--end-of-options",
+	}
 
 	// Git also exits with status 1 for real failures (e.g., an empty message or a
 	// rejecting hook), so check for staged changes up front instead of guessing
 	// from the exit status.
 	_, err := exec(ctx, r.path, []string{"diff", "--cached", "--quiet"}, opt.Envs)
 	if err == nil {
-		return nil
+		// A merge in progress still needs a commit to record the merged parent, even
+		// when the merge result has the same tree as HEAD.
+		// Use "--verify" so that a file named "MERGE_HEAD" in the working tree is not
+		// mistaken for the reference.
+		_, err = exec(ctx, r.path, []string{"rev-parse", "--quiet", "--verify", "MERGE_HEAD"}, opt.Envs)
+		if isExitStatus(err, 1) {
+			return nil
+		} else if err != nil {
+			return errors.Wrap(err, "check merge in progress")
+		}
 	} else if !isExitStatus(err, 1) {
 		return errors.Wrap(err, "check staged changes")
 	}
 
 	_, err = exec(ctx, r.path, args, envs)
+	return err
+}
+
+// MergeOptions contains optional arguments for merging.
+//
+// Docs: https://git-scm.com/docs/git-merge
+type MergeOptions struct {
+	// Indicates whether to create a merge commit even when the merge resolves as a
+	// fast-forward.
+	NoFastForward bool
+	// Indicates whether to stop before creating the merge commit.
+	NoCommit bool
+	CommandOptions
+}
+
+// Merge merges the given revision into the current branch of the repository.
+// The committer is required and is recorded as both the author and the committer
+// of a merge commit.
+func (r *Repository) Merge(ctx context.Context, rev string, committer *Signature, opts ...MergeOptions) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
+	var opt MergeOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	// Pass "--ff" explicitly so merge.ff in Git configuration cannot turn a
+	// fast-forward into a merge commit.
+	args := []string{"merge"}
+	if opt.NoFastForward {
+		args = append(args, "--no-ff")
+	} else {
+		args = append(args, "--ff")
+	}
+	if opt.NoCommit {
+		args = append(args, "--no-commit")
+	}
+	args = append(args, "--end-of-options", rev)
+
+	envs := append(authorEnvs(committer), committerEnvs(committer)...)
+	envs = append(envs, opt.Envs...)
+	_, err := exec(ctx, r.path, args, envs)
+	return err
+}
+
+// Rebase reapplies commits of the branch on top of the upstream for the
+// repository, leaving the result checked out as a detached HEAD. The committer
+// is required and is recorded on the rewritten commits. Authors of those commits
+// stay as they were.
+//
+// Docs: https://git-scm.com/docs/git-rebase
+func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
+	args := []string{"rebase", "--quiet", "--end-of-options", upstream, branch}
+	_, err := exec(ctx, r.path, args, committerEnvs(committer))
+	return err
+}
+
+// ApplyCheckOptions contains optional arguments for checking a patch.
+//
+// Docs: https://git-scm.com/docs/git-apply
+type ApplyCheckOptions struct {
+	// Indicates whether to ignore whitespace differences in context lines.
+	IgnoreWhitespace bool
+	CommandOptions
+}
+
+// ApplyCheck returns an error if the patch file in given path does not apply
+// cleanly to the working tree of the repository.
+func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) error {
+	var opt ApplyCheckOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	args := []string{"apply", "--check"}
+	if opt.IgnoreWhitespace {
+		args = append(args, "--ignore-whitespace")
+	}
+	args = append(args, "--end-of-options", patchPath)
+	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
 }
 
@@ -610,4 +723,36 @@ func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOptions) error {
 		return err
 	}
 	return r.Fsck(ctx, opts...)
+}
+
+// GCOptions contains optional arguments for cleaning up the repository.
+//
+// Docs: https://git-scm.com/docs/git-gc
+type GCOptions struct {
+	// Additional arguments to be passed to "git gc", e.g., "--aggressive".
+	Args []string
+	CommandOptions
+}
+
+// GC cleans up unnecessary files and optimizes the repository.
+func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
+	var opt GCOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	args := []string{"gc"}
+	args = append(args, opt.Args...)
+	args = append(args, "--end-of-options")
+	_, err := exec(ctx, r.path, args, opt.Envs)
+	return err
+}
+
+// RepoGC is like Repository.GC for the repository in given path.
+func RepoGC(ctx context.Context, repoPath string, opts ...GCOptions) error {
+	r, err := Open(repoPath)
+	if err != nil {
+		return err
+	}
+	return r.GC(ctx, opts...)
 }

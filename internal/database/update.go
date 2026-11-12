@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -58,10 +57,8 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
 
-	gitUpdate := exec.Command("git", "update-server-info")
-	gitUpdate.Dir = repoPath
-	if err = gitUpdate.Run(); err != nil {
-		return errors.Newf("run 'git update-server-info': %v", err)
+	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
+		return errors.Newf("update server info: %v", err)
 	}
 
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)

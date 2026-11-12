@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
-	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -210,23 +210,27 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 	return results
 }
 
-// mirrorGitArgs returns the git-level arguments used by every remote network
-// operation against a mirror source.
-func mirrorGitArgs() []string {
-	// Disabling HTTP redirects prevents an attacker-controlled public URL from
-	// redirecting to an internal endpoint that the up-front clone address
-	// validation would otherwise have blocked.
-	return []string{"-c", "http.followRedirects=false"}
-}
-
-// mirrorGitEnv returns the git-level environment variables used by every remote network
+// mirrorGitEnv returns the environment variables used by every remote network
 // operation against a mirror source.
 func mirrorGitEnv() []string {
-	// Keep git non-interactive during mirror operations. Without these, a
-	// network failure or a missing remote endpoint can make git ask for
-	// credentials and stall the server-side process waiting on a terminal that
-	// never responds.
+	// Append to the Git configuration that the server environment may already pass
+	// through GIT_CONFIG_* (e.g., "http.proxy"), instead of replacing it.
+	existingGitConfigCount := 0
+	if count, err := strconv.Atoi(os.Getenv("GIT_CONFIG_COUNT")); err == nil && count > 0 {
+		existingGitConfigCount = count
+	}
 	return []string{
+		// Disabling HTTP redirects prevents an attacker-controlled public URL from
+		// redirecting to an internal endpoint that the up-front clone address
+		// validation would otherwise have blocked.
+		"GIT_CONFIG_COUNT=" + strconv.Itoa(existingGitConfigCount+1),
+		"GIT_CONFIG_KEY_" + strconv.Itoa(existingGitConfigCount) + "=http.followRedirects",
+		"GIT_CONFIG_VALUE_" + strconv.Itoa(existingGitConfigCount) + "=false",
+
+		// Keep git non-interactive during mirror operations. Without these, a
+		// network failure or a missing remote endpoint can make git ask for
+		// credentials and stall the server-side process waiting on a terminal that
+		// never responds.
 		"GIT_TERMINAL_PROMPT=0",
 		"GIT_ASKPASS=/bin/true",
 		"GCM_INTERACTIVE=Never",
@@ -237,9 +241,24 @@ func mirrorGitEnv() []string {
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
 func isMirrorURLAccessible(timeout time.Duration, url string) bool {
-	args := append(mirrorGitArgs(), "ls-remote", "--quiet", "--end-of-options", url, "HEAD")
-	_, _, err := process.ExecTimeoutEnv(timeout, mirrorGitEnv(), fmt.Sprintf("isMirrorURLAccessible: %s", url), "git", args...)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	_, err := git.LsRemote(ctx, url, git.LsRemoteOptions{
+		Patterns:       []string{"HEAD"},
+		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+	})
 	return err == nil
+}
+
+// mirrorRemoteUpdate fetches updates for the mirror repository in given path,
+// and returns the output that reports updated references.
+func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return git.RepoRemoteUpdate(ctx, repoPath, git.RemoteUpdateOptions{
+		Prune:          prune,
+		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+	})
 }
 
 // runSync returns true if sync finished without error.
@@ -274,43 +293,33 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	gitArgs := append(mirrorGitArgs(), "remote", "update")
-	if m.EnablePrune {
-		gitArgs = append(gitArgs, "--prune")
-	}
-	_, stderr, err := process.ExecDirEnv(
-		timeout, repoPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", repoPath),
-		"git", gitArgs...)
+	output, err := mirrorRemoteUpdate(timeout, repoPath, m.EnablePrune)
 	if err != nil {
-		const fmtStr = "Failed to update mirror repository %q: %s"
-		log.Error(fmtStr, repoPath, stderr)
+		const fmtStr = "Failed to update mirror repository %q: %v"
+		log.Error(fmtStr, repoPath, err)
 		if err = Handle.Notices().Create(
 			context.TODO(),
 			NoticeTypeRepository,
-			fmt.Sprintf(fmtStr, repoPath, stderr),
+			fmt.Sprintf(fmtStr, repoPath, err),
 		); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
 		}
 		return nil, false
 	}
-	output := stderr
 
 	if err := m.Repo.UpdateSize(); err != nil {
 		log.Error("UpdateSize [repo_id: %d]: %v", m.Repo.ID, err)
 	}
 
 	if m.Repo.HasWiki() {
-		wikiArgs := append(mirrorGitArgs(), "remote", "update", "--prune")
 		// Even if wiki sync failed, we still want results from the main repository
-		if _, stderr, err := process.ExecDirEnv(
-			timeout, wikiPath, mirrorGitEnv(), fmt.Sprintf("Mirror.runSync: %s", wikiPath),
-			"git", wikiArgs...); err != nil {
-			const fmtStr = "Failed to update mirror wiki repository %q: %s"
-			log.Error(fmtStr, wikiPath, stderr)
+		if _, err := mirrorRemoteUpdate(timeout, wikiPath, true); err != nil {
+			const fmtStr = "Failed to update mirror wiki repository %q: %v"
+			log.Error(fmtStr, wikiPath, err)
 			if err = Handle.Notices().Create(
 				context.TODO(),
 				NoticeTypeRepository,
-				fmt.Sprintf(fmtStr, wikiPath, stderr),
+				fmt.Sprintf(fmtStr, wikiPath, err),
 			); err != nil {
 				log.Error("CreateRepositoryNotice: %v", err)
 			}

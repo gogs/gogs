@@ -189,7 +189,8 @@ type CreateTagOptions struct {
 	Annotated bool
 	// Message specifies a tagging message for the annotated tag. It is ignored when tag is not annotated.
 	Message string
-	// Author is the author of the tag. It is ignored when tag is not annotated.
+	// Author is the tagger of an annotated tag. It is required when the tag is
+	// annotated and ignored for a lightweight tag.
 	Author *Signature
 	CommandOptions
 }
@@ -204,11 +205,12 @@ func (r *Repository) CreateTag(ctx context.Context, name, rev string, opts ...Cr
 	args := []string{"tag"}
 	var envs []string
 	if opt.Annotated {
+		if opt.Author == nil {
+			return errors.New("author is required")
+		}
 		args = append(args, "-a", name)
 		args = append(args, "--message", opt.Message)
-		if opt.Author != nil {
-			envs = committerEnvs(opt.Author)
-		}
+		envs = committerEnvs(opt.Author)
 		args = append(args, "--end-of-options")
 	} else {
 		args = append(args, "--end-of-options", name)

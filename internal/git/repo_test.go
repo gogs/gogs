@@ -190,7 +190,7 @@ func TestRepository_Pull(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			// Make sure it does not blow up
-			if err := r.Pull(ctx, test.opt); err != nil {
+			if err := r.Pull(ctx, &Signature{Name: "alice", Email: "alice@example.com"}, test.opt); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -372,6 +372,15 @@ func TestRepository_Commit(t *testing.T) {
 		}
 	})
 
+	t.Run("nothing to commit with a file named MERGE_HEAD", func(t *testing.T) {
+		fpath := filepath.Join(r.Path(), "MERGE_HEAD")
+		require.NoError(t, os.WriteFile(fpath, []byte("MERGE_HEAD"), 0600))
+		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+		require.NoError(t, r.Commit(ctx, committer, "Add MERGE_HEAD"))
+
+		assert.NoError(t, r.Commit(ctx, committer, message))
+	})
+
 	t.Run("committer is also the author", func(t *testing.T) {
 		// Generate a file and add to index
 		fpath := filepath.Join(r.Path(), "COMMITTER_IS_AUTHOR")
@@ -471,6 +480,171 @@ func TestRepository_Commit(t *testing.T) {
 		_, err = empty.RevParse(ctx, "HEAD")
 		assert.NoError(t, err)
 	})
+
+	t.Run("nil committer", func(t *testing.T) {
+		err := r.Commit(ctx, nil, message)
+		assert.EqualError(t, err, "committer is required")
+	})
+}
+
+// commitFile writes the file with given content and commits it to the current
+// branch of the repository.
+func commitFile(t *testing.T, r *Repository, name, content string) {
+	t.Helper()
+
+	ctx := context.Background()
+	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), name), []byte(content), 0600))
+	require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+	sig := &Signature{Name: "alice", Email: "alice@example.com"}
+	require.NoError(t, r.Commit(ctx, sig, "Update "+name))
+}
+
+func TestRepository_Merge(t *testing.T) {
+	// Ambient identity must not leak into commits this package creates.
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	t.Setenv("GIT_AUTHOR_NAME", "ambient")
+	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "ambient")
+	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
+
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
+	commitFile(t, r, "FEATURE", "feature")
+	featureID, err := r.BranchCommitID(ctx, "feature")
+	require.NoError(t, err)
+	require.NoError(t, r.Checkout(ctx, "master"))
+	masterID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+
+	committer := &Signature{Name: "carol", Email: "carol@example.com"}
+
+	t.Run("nil committer", func(t *testing.T) {
+		err := r.Merge(ctx, "feature", nil)
+		assert.EqualError(t, err, "committer is required")
+	})
+
+	t.Run("no fast-forward without commit", func(t *testing.T) {
+		err := r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true, NoCommit: true})
+		require.NoError(t, err)
+
+		gotID, err := r.BranchCommitID(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, masterID, gotID)
+		assert.FileExists(t, filepath.Join(r.Path(), ".git", "MERGE_HEAD"))
+
+		require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true}))
+	})
+
+	t.Run("commit merge with unchanged tree", func(t *testing.T) {
+		// Apply the same change to master in a different commit, so merging feature
+		// leaves the tree as is.
+		sig := &Signature{Name: "alice", Email: "alice@example.com"}
+		require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "FEATURE"), []byte("feature"), 0600))
+		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+		require.NoError(t, r.Commit(ctx, sig, "Cherry-pick FEATURE"))
+		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
+
+		require.NoError(t, r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true, NoCommit: true}))
+		require.NoError(t, r.Commit(ctx, sig, "Merge feature"))
+
+		c, err := r.CatFileCommit(ctx, "master")
+		require.NoError(t, err)
+		require.Equal(t, 2, c.ParentsCount())
+		parentID, err := c.ParentID(1)
+		require.NoError(t, err)
+		assert.Equal(t, featureID, parentID.String())
+	})
+
+	t.Run("no fast-forward", func(t *testing.T) {
+		require.NoError(t, r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true}))
+		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
+
+		c, err := r.CatFileCommit(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, committer.Name, c.Author.Name)
+		assert.Equal(t, committer.Email, c.Author.Email)
+		assert.Equal(t, committer.Name, c.Committer.Name)
+		assert.Equal(t, committer.Email, c.Committer.Email)
+		require.Equal(t, 2, c.ParentsCount())
+	})
+
+	t.Run("fast-forward", func(t *testing.T) {
+		require.NoError(t, r.Merge(ctx, "feature", committer))
+
+		gotID, err := r.BranchCommitID(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, featureID, gotID)
+	})
+}
+
+func TestRepository_Rebase(t *testing.T) {
+	// Ambient identity must not leak into commits this package creates.
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	t.Setenv("GIT_AUTHOR_NAME", "ambient")
+	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "ambient")
+	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
+
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, r.Checkout(ctx, "feature", CheckoutOptions{BaseBranch: "master"}))
+	commitFile(t, r, "FEATURE", "feature")
+	require.NoError(t, r.Checkout(ctx, "master"))
+	commitFile(t, r, "MASTER", "master")
+	masterID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+
+	err = r.Rebase(ctx, "master", "feature", nil)
+	assert.EqualError(t, err, "committer is required")
+
+	committer := &Signature{Name: "carol", Email: "carol@example.com"}
+	require.NoError(t, r.Rebase(ctx, "master", "feature", committer))
+
+	head, err := r.CatFileCommit(ctx, "HEAD")
+	require.NoError(t, err)
+	assert.Equal(t, "Update FEATURE\n", head.Message)
+	assert.Equal(t, "alice", head.Author.Name)
+	assert.Equal(t, "alice@example.com", head.Author.Email)
+	assert.Equal(t, committer.Name, head.Committer.Name)
+	assert.Equal(t, committer.Email, head.Committer.Email)
+	parentID, err := head.ParentID(0)
+	require.NoError(t, err)
+	assert.Equal(t, masterID, parentID.String())
+}
+
+func TestRepository_ApplyCheck(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	commitFile(t, r, "a.txt", "a b\ntwo\nc d\n")
+	baseID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+	commitFile(t, r, "a.txt", "a b\nTWO\nc d\n")
+	headID, err := r.BranchCommitID(ctx, "master")
+	require.NoError(t, err)
+
+	patch, err := r.DiffBinary(ctx, baseID, headID)
+	require.NoError(t, err)
+	patchPath := filepath.Join(t.TempDir(), "a.patch")
+	require.NoError(t, os.WriteFile(patchPath, patch, 0600))
+
+	// The context lines of the patch now only differ in whitespace.
+	require.NoError(t, r.Reset(ctx, baseID, ResetOptions{Hard: true}))
+	require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "a.txt"), []byte("a  b\ntwo\nc  d\n"), 0600))
+
+	assert.Error(t, r.ApplyCheck(ctx, patchPath))
+	assert.NoError(t, r.ApplyCheck(ctx, patchPath, ApplyCheckOptions{IgnoreWhitespace: true}))
 }
 
 func TestRepository_RevParse(t *testing.T) {
@@ -550,4 +724,14 @@ func TestRepository_Fsck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestRepository_GC(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.NoError(t, r.GC(ctx, GCOptions{Args: []string{"--quiet"}}))
+	assert.Error(t, r.GC(ctx, GCOptions{Args: []string{"--no-such-option"}}))
 }

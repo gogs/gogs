@@ -45,12 +45,22 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 	} else {
 		args = []string{"diff", "--full-index", "-M", opt.Base, "--end-of-options", rev}
 	}
+	return r.parseDiff(ctx, args, opt.Envs, maxFiles, maxFileLines, maxLineChars)
+}
 
+// DiffWorktree returns a parsed diff of unstaged changes to given path in the
+// working tree of the repository.
+func (r *Repository) DiffWorktree(ctx context.Context, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+	args := []string{"diff", "--", path}
+	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
+}
+
+func (r *Repository) parseDiff(ctx context.Context, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
 	stdout, w := io.Pipe()
 	done := make(chan SteamParseDiffResult)
 	go StreamParseDiff(stdout, done, maxFiles, maxFileLines, maxLineChars)
 
-	err = pipe(ctx, r.path, args, opt.Envs, w)
+	err := pipe(ctx, r.path, args, envs, w)
 	_ = w.Close() // Close writer to exit parsing goroutine
 	if err != nil {
 		return nil, err

@@ -2,9 +2,9 @@ package git
 
 import (
 	"context"
-	"math"
-	"strconv"
-	"time"
+	"io"
+	"os"
+	osexec "os/exec"
 )
 
 // UpdateServerInfoOptions contains optional arguments for updating auxiliary
@@ -34,78 +34,56 @@ func UpdateServerInfo(ctx context.Context, path string, opts ...UpdateServerInfo
 	return err
 }
 
-// ReceivePackOptions contains optional arguments for receiving the info pushed
-// to the repository.
-//
-// Docs: https://git-scm.com/docs/git-receive-pack
-type ReceivePackOptions struct {
-	// Indicates whether to suppress the log output.
-	Quiet bool
-	// Indicates whether to generate the "info/refs" used by the "git http-backend".
-	HTTPBackendInfoRefs bool
-	CommandOptions
-}
+// Service is a Git service that serves fetches and pushes.
+type Service string
 
-// ReceivePack receives what is pushed into the repository in given path.
-func ReceivePack(ctx context.Context, path string, opts ...ReceivePackOptions) ([]byte, error) {
-	var opt ReceivePackOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
+// A list of services that clients can request.
+const (
+	ServiceUploadPack    Service = "upload-pack"
+	ServiceUploadArchive Service = "upload-archive"
+	ServiceReceivePack   Service = "receive-pack"
+)
 
-	args := []string{"receive-pack"}
-	if opt.Quiet {
-		args = append(args, "--quiet")
-	}
-	if opt.HTTPBackendInfoRefs {
-		args = append(args, "--http-backend-info-refs")
-	}
-	args = append(args, "--end-of-options", ".")
-	return exec(ctx, path, args, opt.Envs)
-}
-
-// UploadPackOptions contains optional arguments for sending the packfile to the
-// client.
+// ServiceOptions contains optional arguments for running a service.
 //
 // Docs: https://git-scm.com/docs/git-upload-pack
-type UploadPackOptions struct {
-	// Indicates whether to quit after a single request/response exchange.
+type ServiceOptions struct {
+	// Indicates whether to quit after a single request/response exchange, as the
+	// smart HTTP protocol requires.
 	StatelessRPC bool
-	// Indicates whether to not try "<directory>/.git/" if "<directory>" is not a
-	// Git directory.
-	Strict bool
-	// Indicates whether to generate the "info/refs" used by the "git http-backend".
-	HTTPBackendInfoRefs bool
-	// The git-level inactivity timeout passed to git-upload-pack's --timeout flag.
-	// This is separate from the command execution timeout which is controlled via
-	// context.Context.
-	InactivityTimeout time.Duration
+	// Indicates whether to only advertise references and exit, as the "info/refs"
+	// endpoint of the smart HTTP protocol requires.
+	AdvertiseRefs bool
+	// The streams connected to the client.
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
 	CommandOptions
 }
 
-// UploadPack sends the packfile to the client for the repository in given path.
-func UploadPack(ctx context.Context, path string, opts ...UploadPackOptions) ([]byte, error) {
-	var opt UploadPackOptions
+// RunService runs the service for the repository in given path, e.g., "git
+// upload-pack <path>".
+func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) error {
+	var opt ServiceOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	args := []string{"upload-pack"}
+	args := []string{string(service)}
 	if opt.StatelessRPC {
 		args = append(args, "--stateless-rpc")
 	}
-	if opt.Strict {
-		args = append(args, "--strict")
+	if opt.AdvertiseRefs {
+		args = append(args, "--advertise-refs")
 	}
-	if opt.InactivityTimeout > 0 {
-		// Git takes whole seconds. Round up so a sub-second timeout does not become
-		// 0, which disables the timeout.
-		seconds := int64(math.Ceil(opt.InactivityTimeout.Seconds()))
-		args = append(args, "--timeout", strconv.FormatInt(seconds, 10))
+	args = append(args, path)
+
+	cmd := osexec.CommandContext(ctx, "git", args...)
+	if len(opt.Envs) > 0 {
+		cmd.Env = append(os.Environ(), opt.Envs...)
 	}
-	if opt.HTTPBackendInfoRefs {
-		args = append(args, "--http-backend-info-refs")
-	}
-	args = append(args, "--end-of-options", ".")
-	return exec(ctx, path, args, opt.Envs)
+	cmd.Stdin = opt.Stdin
+	cmd.Stdout = opt.Stdout
+	cmd.Stderr = opt.Stderr
+	return cmd.Run()
 }
