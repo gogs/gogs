@@ -190,16 +190,27 @@ type PullOptions struct {
 	CommandOptions
 }
 
-// Pull pulls updates for the repository.
-func (r *Repository) Pull(ctx context.Context, opts ...PullOptions) error {
+// Pull pulls updates for the repository. The committer is required and is recorded
+// on any commit this command creates. A rebase keeps the authors of the replayed commits.
+func (r *Repository) Pull(ctx context.Context, committer *Signature, opts ...PullOptions) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
 	var opt PullOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
+	// The strategy flags are explicit so pull.rebase and pull.ff in Git
+	// configuration cannot change which commits this command creates.
 	args := []string{"pull"}
+	envs := committerEnvs(committer)
 	if opt.Rebase {
 		args = append(args, "--rebase")
+	} else {
+		args = append(args, "--no-rebase", "--ff")
+		envs = append(envs, authorEnvs(committer)...)
 	}
 	if opt.All {
 		args = append(args, "--all")
@@ -211,8 +222,9 @@ func (r *Repository) Pull(ctx context.Context, opts ...PullOptions) error {
 			args = append(args, opt.Branch)
 		}
 	}
+	envs = append(envs, opt.Envs...)
 
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, envs)
 	return err
 }
 
@@ -433,32 +445,51 @@ type MergeOptions struct {
 	CommandOptions
 }
 
-// Merge merges given revision into the current branch of the repository.
-func (r *Repository) Merge(ctx context.Context, rev string, opts ...MergeOptions) error {
+// Merge merges the given revision into the current branch of the repository.
+// The committer is required and is recorded as both the author and the committer
+// of a merge commit.
+func (r *Repository) Merge(ctx context.Context, rev string, committer *Signature, opts ...MergeOptions) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
 	var opt MergeOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
+	// Pass "--ff" explicitly so merge.ff in Git configuration cannot turn a
+	// fast-forward into a merge commit.
 	args := []string{"merge"}
 	if opt.NoFastForward {
 		args = append(args, "--no-ff")
+	} else {
+		args = append(args, "--ff")
 	}
 	if opt.NoCommit {
 		args = append(args, "--no-commit")
 	}
 	args = append(args, "--end-of-options", rev)
-	_, err := exec(ctx, r.path, args, opt.Envs)
+
+	envs := append(authorEnvs(committer), committerEnvs(committer)...)
+	envs = append(envs, opt.Envs...)
+	_, err := exec(ctx, r.path, args, envs)
 	return err
 }
 
 // Rebase reapplies commits of the branch on top of the upstream for the
-// repository, leaving the result checked out as a detached HEAD.
+// repository, leaving the result checked out as a detached HEAD. The committer
+// is required and is recorded on the rewritten commits. Authors of those commits
+// stay as they were.
 //
 // Docs: https://git-scm.com/docs/git-rebase
-func (r *Repository) Rebase(ctx context.Context, upstream, branch string) error {
+func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
 	args := []string{"rebase", "--quiet", "--end-of-options", upstream, branch}
-	_, err := exec(ctx, r.path, args, nil)
+	_, err := exec(ctx, r.path, args, committerEnvs(committer))
 	return err
 }
 

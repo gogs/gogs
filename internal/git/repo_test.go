@@ -190,7 +190,7 @@ func TestRepository_Pull(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			// Make sure it does not blow up
-			if err := r.Pull(ctx, test.opt); err != nil {
+			if err := r.Pull(ctx, &Signature{Name: "alice", Email: "alice@example.com"}, test.opt); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -500,10 +500,13 @@ func commitFile(t *testing.T, r *Repository, name, content string) {
 }
 
 func TestRepository_Merge(t *testing.T) {
-	// Merging needs a committer, which Gogs sets in the global Git configuration at
-	// startup but test machines may not have.
-	t.Setenv("GIT_COMMITTER_NAME", "alice")
-	t.Setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
+	// Ambient identity must not leak into commits this package creates.
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	t.Setenv("GIT_AUTHOR_NAME", "ambient")
+	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "ambient")
+	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
 
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
@@ -518,8 +521,15 @@ func TestRepository_Merge(t *testing.T) {
 	masterID, err := r.BranchCommitID(ctx, "master")
 	require.NoError(t, err)
 
+	committer := &Signature{Name: "carol", Email: "carol@example.com"}
+
+	t.Run("nil committer", func(t *testing.T) {
+		err := r.Merge(ctx, "feature", nil)
+		assert.EqualError(t, err, "committer is required")
+	})
+
 	t.Run("no fast-forward without commit", func(t *testing.T) {
-		err := r.Merge(ctx, "feature", MergeOptions{NoFastForward: true, NoCommit: true})
+		err := r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true, NoCommit: true})
 		require.NoError(t, err)
 
 		gotID, err := r.BranchCommitID(ctx, "master")
@@ -539,7 +549,7 @@ func TestRepository_Merge(t *testing.T) {
 		require.NoError(t, r.Commit(ctx, sig, "Cherry-pick FEATURE"))
 		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
 
-		require.NoError(t, r.Merge(ctx, "feature", MergeOptions{NoFastForward: true, NoCommit: true}))
+		require.NoError(t, r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true, NoCommit: true}))
 		require.NoError(t, r.Commit(ctx, sig, "Merge feature"))
 
 		c, err := r.CatFileCommit(ctx, "master")
@@ -550,8 +560,21 @@ func TestRepository_Merge(t *testing.T) {
 		assert.Equal(t, featureID, parentID.String())
 	})
 
+	t.Run("no fast-forward", func(t *testing.T) {
+		require.NoError(t, r.Merge(ctx, "feature", committer, MergeOptions{NoFastForward: true}))
+		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
+
+		c, err := r.CatFileCommit(ctx, "master")
+		require.NoError(t, err)
+		assert.Equal(t, committer.Name, c.Author.Name)
+		assert.Equal(t, committer.Email, c.Author.Email)
+		assert.Equal(t, committer.Name, c.Committer.Name)
+		assert.Equal(t, committer.Email, c.Committer.Email)
+		require.Equal(t, 2, c.ParentsCount())
+	})
+
 	t.Run("fast-forward", func(t *testing.T) {
-		require.NoError(t, r.Merge(ctx, "feature"))
+		require.NoError(t, r.Merge(ctx, "feature", committer))
 
 		gotID, err := r.BranchCommitID(ctx, "master")
 		require.NoError(t, err)
@@ -560,10 +583,13 @@ func TestRepository_Merge(t *testing.T) {
 }
 
 func TestRepository_Rebase(t *testing.T) {
-	// Rebasing needs a committer, which Gogs sets in the global Git configuration
-	// at startup but test machines may not have.
-	t.Setenv("GIT_COMMITTER_NAME", "alice")
-	t.Setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
+	// Ambient identity must not leak into commits this package creates.
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	t.Setenv("GIT_AUTHOR_NAME", "ambient")
+	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "ambient")
+	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
 
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
@@ -577,11 +603,19 @@ func TestRepository_Rebase(t *testing.T) {
 	masterID, err := r.BranchCommitID(ctx, "master")
 	require.NoError(t, err)
 
-	require.NoError(t, r.Rebase(ctx, "master", "feature"))
+	err = r.Rebase(ctx, "master", "feature", nil)
+	assert.EqualError(t, err, "committer is required")
+
+	committer := &Signature{Name: "carol", Email: "carol@example.com"}
+	require.NoError(t, r.Rebase(ctx, "master", "feature", committer))
 
 	head, err := r.CatFileCommit(ctx, "HEAD")
 	require.NoError(t, err)
 	assert.Equal(t, "Update FEATURE\n", head.Message)
+	assert.Equal(t, "alice", head.Author.Name)
+	assert.Equal(t, "alice@example.com", head.Author.Email)
+	assert.Equal(t, committer.Name, head.Committer.Name)
+	assert.Equal(t, committer.Email, head.Committer.Email)
 	parentID, err := head.ParentID(0)
 	require.NoError(t, err)
 	assert.Equal(t, masterID, parentID.String())

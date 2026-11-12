@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -108,12 +109,23 @@ func TestRepository_CreateTag(t *testing.T) {
 }
 
 func TestRepository_CreateAnnotatedTag(t *testing.T) {
+	// Ambient identity must not leak into the tagger.
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	t.Setenv("GIT_AUTHOR_NAME", "ambient")
+	t.Setenv("GIT_AUTHOR_EMAIL", "ambient@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "ambient")
+	t.Setenv("GIT_COMMITTER_EMAIL", "ambient@example.com")
+
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
+
+	err = r.CreateTag(ctx, "v2.0.0", "master", CreateTagOptions{Annotated: true})
+	assert.EqualError(t, err, "author is required")
 
 	assert.False(t, r.HasReference(ctx, RefsTags+"v2.0.0"))
 

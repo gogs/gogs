@@ -109,7 +109,17 @@ func pipe(ctx context.Context, dir string, args []string, envs []string, stdout 
 	return nil
 }
 
-// committerEnvs returns environment variables for setting the Git committer.
+// authorEnvs returns environment variables that record the signature as the author.
+// Git otherwise falls back to user.name, user.email, or the system account.
+func authorEnvs(author *Signature) []string {
+	return []string{
+		"GIT_AUTHOR_NAME=" + author.Name,
+		"GIT_AUTHOR_EMAIL=" + author.Email,
+	}
+}
+
+// committerEnvs returns environment variables that record the signature as the committer.
+// Git otherwise falls back to user.name, user.email, or the system account.
 func committerEnvs(committer *Signature) []string {
 	return []string{
 		"GIT_COMMITTER_NAME=" + committer.Name,

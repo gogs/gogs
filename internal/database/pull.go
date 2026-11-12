@@ -250,17 +250,18 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		mergeStyle = MergeStyleRegular
 	}
 
+	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
+
 	switch mergeStyle {
 	case MergeStyleRegular: // Create merge commit
 
 		// Merge changes from head branch.
-		if err = tmpBaseGitRepo.Merge(ctx, remoteHeadBranch, git.MergeOptions{NoFastForward: true, NoCommit: true}); err != nil {
+		if err = tmpBaseGitRepo.Merge(ctx, remoteHeadBranch, committer, git.MergeOptions{NoFastForward: true, NoCommit: true}); err != nil {
 			return errors.Newf("git merge --no-ff --no-commit [%s]: %v", tmpBasePath, err)
 		}
 
 		// Create a merge commit for the base branch.
 		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 		if err = tmpBaseGitRepo.Commit(ctx, committer, message); err != nil {
 			return errors.Newf("git commit [%s]: %v", tmpBasePath, err)
 		}
@@ -268,7 +269,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	case MergeStyleRebase: // Rebase before merging
 
 		// Rebase head branch based on base branch, this creates a non-branch commit state.
-		if err = tmpBaseGitRepo.Rebase(ctx, pr.BaseBranch, remoteHeadBranch); err != nil {
+		if err = tmpBaseGitRepo.Rebase(ctx, pr.BaseBranch, remoteHeadBranch, committer); err != nil {
 			return errors.Newf("git rebase [%s on %s]: %v", remoteHeadBranch, pr.BaseBranch, err)
 		}
 
@@ -284,7 +285,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		}
 
 		// Merge changes from temporary branch to the base branch.
-		if err = tmpBaseGitRepo.Merge(ctx, tmpBranch); err != nil {
+		if err = tmpBaseGitRepo.Merge(ctx, tmpBranch, committer); err != nil {
 			return errors.Newf("git merge [%s]: %v", tmpBasePath, err)
 		}
 
