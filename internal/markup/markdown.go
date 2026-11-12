@@ -42,11 +42,33 @@ func isLink(link []byte) bool {
 func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] != '#' {
-			link = []byte(path.Join(r.urlPrefix, string(link)))
+			if wikiLink, ok := repoWikiLink(link, r.urlPrefix); ok {
+				link = wikiLink
+			} else {
+				link = []byte(path.Join(r.urlPrefix, string(link)))
+			}
 		}
 	}
 
 	r.Renderer.Link(out, link, title, content)
+}
+
+func repoWikiLink(link []byte, urlPrefix string) ([]byte, bool) {
+	linkString := string(link)
+	if linkString != "wiki" && !strings.HasPrefix(linkString, "wiki/") {
+		return nil, false
+	}
+
+	sourceIndex := strings.Index(urlPrefix, "/src/")
+	if sourceIndex < 0 {
+		return nil, false
+	}
+
+	repoLink := urlPrefix[:sourceIndex]
+	if repoLink == "" {
+		return nil, false
+	}
+	return []byte(path.Join(repoLink, linkString)), true
 }
 
 // AutoLink defines how auto-detected links should be processed to produce corresponding HTML elements.
