@@ -45,11 +45,6 @@ func initTracing(ctx context.Context) (bool, error) {
 // newTracingHandler returns a handler that records a span for every request, so
 // that the spans of what the request runs, e.g., Git operations, are grouped
 // under it.
-//
-// Requests served by Flamego are named after their route, e.g.,
-// "GET /api/web/{owner}/{repo}/header", so that every repository is not its own
-// operation. Macaron does not expose the route it matched, so the other
-// requests are named after their path.
 func newTracingHandler(h http.Handler) http.Handler {
 	return otelhttp.NewHandler(h, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 		if r.Pattern != "" {
