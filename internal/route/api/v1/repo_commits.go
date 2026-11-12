@@ -24,7 +24,7 @@ func getAllCommits(c *context.APIContext) {
 
 	// The response object returned as JSON
 	result := make([]*types.Commit, 0, pageSize)
-	commits, err := git.RepoLog(c.Req.Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
+	commits, err := git.RepoLog(c.Req.Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogMaxCount(pageSize))
 	if err != nil {
 		c.Error(err, "git log")
 	}

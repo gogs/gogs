@@ -292,9 +292,7 @@ func TestEntries_CommitsInfo(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		infos, err := es.CommitsInfo(ctx, c, CommitsInfoOptions{
-			Path: "gogs",
-		})
+		infos, err := es.CommitsInfo(ctx, c, CommitsInfoPath("gogs"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -326,9 +324,7 @@ func TestEntries_CommitsInfo(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		infos, err := es.CommitsInfo(ctx, c, CommitsInfoOptions{
-			Path: "sameSHAs",
-		})
+		infos, err := es.CommitsInfo(ctx, c, CommitsInfoPath("sameSHAs"))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -189,7 +189,7 @@ func PrepareMergedViewPullInfo(c *context.Context, issue *database.Issue) {
 		return
 	}
 
-	names, err := c.Repo.GitRepo.DiffNameOnly(c.Req.Context(), pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+	names, err := c.Repo.GitRepo.DiffNameOnly(c.Req.Context(), pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyNeedsMergeBase())
 	c.Data["NumFiles"] = len(names)
 	if err != nil {
 		c.Error(err, "get changed files")

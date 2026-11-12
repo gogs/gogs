@@ -109,7 +109,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		}
 
 		if isNewRef {
-			commits, err = newCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
+			commits, err = newCommit.Ancestors(ctx, git.LogMaxCount(9))
 			if err != nil {
 				return errors.Newf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}

@@ -154,10 +154,7 @@ func RepoTagCommit(ctx context.Context, repoPath, tag string) (*Commit, error) {
 	return r.TagCommit(ctx, tag)
 }
 
-// LogOptions contains optional arguments for listing commits.
-//
-// Docs: https://git-scm.com/docs/git-log
-type LogOptions struct {
+type logOptions struct {
 	// The maximum number of commits to output.
 	MaxCount int
 	// The number commits skipped before starting to show the commit output.
@@ -168,6 +165,39 @@ type LogOptions struct {
 	RegexpIgnoreCase bool
 	// The relative path of the repository.
 	Path string
+}
+
+// LogOption sets an optional argument for listing commits.
+//
+// Docs: https://git-scm.com/docs/git-log
+type LogOption func(*logOptions)
+
+// LogMaxCount sets the maximum number of commits to output.
+func LogMaxCount(n int) LogOption {
+	return func(opt *logOptions) { opt.MaxCount = n }
+}
+
+// LogSkip sets the number of commits skipped before starting to show the
+// commit output.
+func LogSkip(n int) LogOption {
+	return func(opt *logOptions) { opt.Skip = n }
+}
+
+// LogGrepPattern sets the regular expression to filter commits by their
+// messages.
+func LogGrepPattern(pattern string) LogOption {
+	return func(opt *logOptions) { opt.GrepPattern = pattern }
+}
+
+// LogRegexpIgnoreCase ignores letter case when matching the regular
+// expression.
+func LogRegexpIgnoreCase() LogOption {
+	return func(opt *logOptions) { opt.RegexpIgnoreCase = true }
+}
+
+// LogPath sets the relative path of the repository.
+func LogPath(path string) LogOption {
+	return func(opt *logOptions) { opt.Path = path }
 }
 
 func escapePath(path string) string {
@@ -184,13 +214,13 @@ func escapePath(path string) string {
 
 // Log returns a list of commits in the state of given revision of the repository.
 // The returned list is in reverse chronological order.
-func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([]*Commit, error) {
+func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOption) ([]*Commit, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.Log")
 	defer span.End()
 
-	var opt LogOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt logOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"log", "--pretty=" + logFormatHashOnly}
@@ -219,7 +249,7 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) ([
 }
 
 // RepoLog is like Repository.Log for the repository in given path.
-func RepoLog(ctx context.Context, repoPath, rev string, opts ...LogOptions) ([]*Commit, error) {
+func RepoLog(ctx context.Context, repoPath, rev string, opts ...LogOption) ([]*Commit, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
@@ -227,25 +257,29 @@ func RepoLog(ctx context.Context, repoPath, rev string, opts ...LogOptions) ([]*
 	return r.Log(ctx, rev, opts...)
 }
 
-// CommitByRevisionOptions contains optional arguments for getting a commit.
-//
-// Docs: https://git-scm.com/docs/git-log
-type CommitByRevisionOptions struct {
+type commitByRevisionOptions struct {
 	// The relative path of the repository.
 	Path string
 }
 
+// CommitByRevisionOption sets an optional argument for getting a commit.
+//
+// Docs: https://git-scm.com/docs/git-log
+type CommitByRevisionOption func(*commitByRevisionOptions)
+
+// CommitByRevisionPath sets the relative path of the repository.
+func CommitByRevisionPath(path string) CommitByRevisionOption {
+	return func(opt *commitByRevisionOptions) { opt.Path = path }
+}
+
 // commitByRevision returns a commit by given revision.
-func (r *Repository) commitByRevision(ctx context.Context, rev string, opts ...CommitByRevisionOptions) (*Commit, error) {
-	var opt CommitByRevisionOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+func (r *Repository) commitByRevision(ctx context.Context, rev string, opts ...CommitByRevisionOption) (*Commit, error) {
+	var opt commitByRevisionOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
-	commits, err := r.Log(ctx, rev, LogOptions{
-		MaxCount: 1,
-		Path:     opt.Path,
-	})
+	commits, err := r.Log(ctx, rev, LogMaxCount(1), LogPath(opt.Path))
 	if err != nil {
 		if strings.Contains(err.Error(), "bad revision") {
 			return nil, ErrRevisionNotExist
@@ -257,31 +291,33 @@ func (r *Repository) commitByRevision(ctx context.Context, rev string, opts ...C
 	return commits[0], nil
 }
 
-// CommitsByPageOptions contains optional arguments for getting paginated
-// commits.
-//
-// Docs: https://git-scm.com/docs/git-log
-type CommitsByPageOptions struct {
+type commitsByPageOptions struct {
 	// The relative path of the repository.
 	Path string
 }
 
+// CommitsByPageOption sets an optional argument for getting paginated commits.
+//
+// Docs: https://git-scm.com/docs/git-log
+type CommitsByPageOption func(*commitsByPageOptions)
+
+// CommitsByPagePath sets the relative path of the repository.
+func CommitsByPagePath(path string) CommitsByPageOption {
+	return func(opt *commitsByPageOptions) { opt.Path = path }
+}
+
 // CommitsByPage returns a paginated list of commits in the state of given
 // revision. The pagination starts from the newest to the oldest commit.
-func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size int, opts ...CommitsByPageOptions) ([]*Commit, error) {
+func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size int, opts ...CommitsByPageOption) ([]*Commit, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.CommitsByPage")
 	defer span.End()
 
-	var opt CommitsByPageOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt commitsByPageOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
-	return r.Log(ctx, rev, LogOptions{
-		MaxCount: size,
-		Skip:     (page - 1) * size,
-		Path:     opt.Path,
-	})
+	return r.Log(ctx, rev, LogMaxCount(size), LogSkip((page-1)*size), LogPath(opt.Path))
 }
 
 // SearchCommits searches commit message with given pattern in the state of
@@ -290,29 +326,33 @@ func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string) ([]
 	ctx, span := tracer.Start(ctx, "git.Repository.SearchCommits")
 	defer span.End()
 
-	return r.Log(ctx, rev, LogOptions{
-		GrepPattern:      pattern,
-		RegexpIgnoreCase: true,
-	})
+	return r.Log(ctx, rev, LogGrepPattern(pattern), LogRegexpIgnoreCase())
 }
 
-// DiffNameOnlyOptions contains optional arguments for listing changed files.
-//
-// Docs: https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---name-only
-type DiffNameOnlyOptions struct {
+type diffNameOnlyOptions struct {
 	// Indicates whether two commits should have a merge base.
 	NeedsMergeBase bool
 }
 
+// DiffNameOnlyOption sets an optional argument for listing changed files.
+//
+// Docs: https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---name-only
+type DiffNameOnlyOption func(*diffNameOnlyOptions)
+
+// DiffNameOnlyNeedsMergeBase requires the two commits to have a merge base.
+func DiffNameOnlyNeedsMergeBase() DiffNameOnlyOption {
+	return func(opt *diffNameOnlyOptions) { opt.NeedsMergeBase = true }
+}
+
 // DiffNameOnly returns a list of changed files between base and head revisions of the
 // repository.
-func (r *Repository) DiffNameOnly(ctx context.Context, base, head string, opts ...DiffNameOnlyOptions) ([]string, error) {
+func (r *Repository) DiffNameOnly(ctx context.Context, base, head string, opts ...DiffNameOnlyOption) ([]string, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.DiffNameOnly")
 	defer span.End()
 
-	var opt DiffNameOnlyOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt diffNameOnlyOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"diff", "--name-only", "--end-of-options"}

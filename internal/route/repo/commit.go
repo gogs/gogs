@@ -45,7 +45,7 @@ func renderCommits(c *context.Context, filename string) {
 		pageSize = conf.UI.User.CommitsPagingNum
 	}
 
-	commits, err := c.Repo.Commit.CommitsByPage(c.Req.Context(), page, pageSize, git.CommitsByPageOptions{Path: filename})
+	commits, err := c.Repo.Commit.CommitsByPage(c.Req.Context(), page, pageSize, git.CommitsByPagePath(filename))
 	if err != nil {
 		c.Error(err, "paging commits")
 		return

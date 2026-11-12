@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -63,7 +64,7 @@ func (c *Commit) Parent(ctx context.Context, n int) (*Commit, error) {
 }
 
 // CommitByPath returns the commit of the path in the state of this commit.
-func (c *Commit) CommitByPath(ctx context.Context, opts ...CommitByRevisionOptions) (*Commit, error) {
+func (c *Commit) CommitByPath(ctx context.Context, opts ...CommitByRevisionOption) (*Commit, error) {
 	ctx, span := tracer.Start(ctx, "git.Commit.CommitByPath")
 	defer span.End()
 
@@ -72,7 +73,7 @@ func (c *Commit) CommitByPath(ctx context.Context, opts ...CommitByRevisionOptio
 
 // CommitsByPage returns a paginated list of commits in the state of this
 // commit. The returned list is in reverse chronological order.
-func (c *Commit) CommitsByPage(ctx context.Context, page, size int, opts ...CommitsByPageOptions) ([]*Commit, error) {
+func (c *Commit) CommitsByPage(ctx context.Context, page, size int, opts ...CommitsByPageOption) ([]*Commit, error) {
 	ctx, span := tracer.Start(ctx, "git.Commit.CommitsByPage")
 	defer span.End()
 
@@ -123,7 +124,7 @@ func (c *Commit) CommitsAfter(ctx context.Context, after string) ([]*Commit, err
 
 // Ancestors returns a list of ancestors of this commit in reverse chronological
 // order.
-func (c *Commit) Ancestors(ctx context.Context, opts ...LogOptions) ([]*Commit, error) {
+func (c *Commit) Ancestors(ctx context.Context, opts ...LogOption) ([]*Commit, error) {
 	ctx, span := tracer.Start(ctx, "git.Commit.Ancestors")
 	defer span.End()
 
@@ -131,14 +132,9 @@ func (c *Commit) Ancestors(ctx context.Context, opts ...LogOptions) ([]*Commit, 
 		return []*Commit{}, nil
 	}
 
-	var opt LogOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	opt.Skip++
-
-	return c.repo.Log(ctx, c.ID.String(), opt)
+	// Skip the commit itself on top of whatever the caller asks to skip.
+	skipSelf := func(opt *logOptions) { opt.Skip++ }
+	return c.repo.Log(ctx, c.ID.String(), append(slices.Clip(opts), skipSelf)...)
 }
 
 type limitWriter struct {

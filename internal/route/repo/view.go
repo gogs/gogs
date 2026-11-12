@@ -45,10 +45,10 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 	ctx, cancel := gocontext.WithTimeout(c.Req.Context(), 5*time.Minute)
 	defer cancel()
-	c.Data["Files"], err = entries.CommitsInfo(ctx, c.Repo.Commit, git.CommitsInfoOptions{
-		Path:           c.Repo.TreePath,
-		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
-	})
+	c.Data["Files"], err = entries.CommitsInfo(ctx, c.Repo.Commit,
+		git.CommitsInfoPath(c.Repo.TreePath),
+		git.CommitsInfoMaxConcurrency(conf.Repository.CommitsFetchConcurrency),
+	)
 	if err != nil {
 		c.Error(err, "get commits info")
 		return
@@ -101,7 +101,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	// or of directory if not in root directory.
 	latestCommit := c.Repo.Commit
 	if len(c.Repo.TreePath) > 0 {
-		latestCommit, err = c.Repo.Commit.CommitByPath(c.Req.Context(), git.CommitByRevisionOptions{Path: c.Repo.TreePath})
+		latestCommit, err = c.Repo.Commit.CommitByPath(c.Req.Context(), git.CommitByRevisionPath(c.Repo.TreePath))
 		if err != nil {
 			c.Error(err, "get commit by path")
 			return

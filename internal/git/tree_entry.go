@@ -155,14 +155,27 @@ type EntryCommitInfo struct {
 	Submodule *Submodule
 }
 
-// CommitsInfoOptions contains optional arguments for getting commits
-// information.
-type CommitsInfoOptions struct {
+type commitsInfoOptions struct {
 	// The relative path of the repository.
 	Path string
 	// The maximum number of goroutines to be used for getting commits information.
 	// When not set (i.e., <=0), runtime.GOMAXPROCS is used to determine the value.
 	MaxConcurrency int
+}
+
+// CommitsInfoOption sets an optional argument for getting commits information.
+type CommitsInfoOption func(*commitsInfoOptions)
+
+// CommitsInfoPath sets the relative path of the repository.
+func CommitsInfoPath(path string) CommitsInfoOption {
+	return func(opt *commitsInfoOptions) { opt.Path = path }
+}
+
+// CommitsInfoMaxConcurrency sets the maximum number of goroutines to be used
+// for getting commits information. When not set (i.e., <=0),
+// runtime.GOMAXPROCS is used to determine the value.
+func CommitsInfoMaxConcurrency(n int) CommitsInfoOption {
+	return func(opt *commitsInfoOptions) { opt.MaxConcurrency = n }
 }
 
 var defaultConcurrency = runtime.GOMAXPROCS(0)
@@ -171,7 +184,7 @@ var defaultConcurrency = runtime.GOMAXPROCS(0)
 // the state of given commit and subpath. It takes advantages of concurrency to
 // speed up the process. The returned list has the same number of items as tree
 // entries, so the caller can access them via slice indices.
-func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...CommitsInfoOptions) ([]*EntryCommitInfo, error) {
+func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...CommitsInfoOption) ([]*EntryCommitInfo, error) {
 	ctx, span := tracer.Start(ctx, "git.Entries.CommitsInfo")
 	defer span.End()
 
@@ -179,9 +192,9 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 		return []*EntryCommitInfo{}, nil
 	}
 
-	var opt CommitsInfoOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt commitsInfoOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	if opt.MaxConcurrency <= 0 {
@@ -236,9 +249,7 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 				epath := path.Join(opt.Path, e.Name())
 
 				var err error
-				info.Commit, err = commit.CommitByPath(ctx, CommitByRevisionOptions{
-					Path: epath,
-				})
+				info.Commit, err = commit.CommitByPath(ctx, CommitByRevisionPath(epath))
 				if err != nil {
 					setError(errors.Wrapf(err, "get commit by path %q", epath))
 					return

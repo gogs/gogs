@@ -522,7 +522,7 @@ func SyncMirrors() {
 				}
 
 				// TODO(unknwon): Get the commits for the new ref until the closest ancestor branch like GitHub does.
-				commits, err = refNewCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
+				commits, err = refNewCommit.Ancestors(ctx, git.LogMaxCount(9))
 				if err != nil {
 					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
 					continue

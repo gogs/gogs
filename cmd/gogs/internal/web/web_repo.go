@@ -166,7 +166,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 		return
 	}
 
-	if pathCommit, err := commit.CommitByPath(c.Request().Context(), git.CommitByRevisionOptions{Path: filepath}); err == nil && pathCommit != nil {
+	if pathCommit, err := commit.CommitByPath(c.Request().Context(), git.CommitByRevisionPath(filepath)); err == nil && pathCommit != nil {
 		w.Header().Set("Last-Modified", pathCommit.Committer.When.Format(http.TimeFormat))
 	}
 

@@ -13,7 +13,7 @@ import (
 )
 
 func serveData(c *context.Context, name string, data []byte) error {
-	commit, err := c.Repo.Commit.CommitByPath(c.Req.Context(), git.CommitByRevisionOptions{Path: c.Repo.TreePath})
+	commit, err := c.Repo.Commit.CommitByPath(c.Req.Context(), git.CommitByRevisionPath(c.Repo.TreePath))
 	if err != nil {
 		return errors.Newf("get commit by path %q: %v", c.Repo.TreePath, err)
 	}

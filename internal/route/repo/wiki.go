@@ -121,7 +121,7 @@ func Wiki(c *context.Context) {
 
 	// Get last change information.
 	branch := database.WikiBranch(c.Req.Context(), c.Repo.Repository.WikiPath())
-	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
+	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogPath(pageName + ".md"))
 	if err != nil {
 		c.Error(err, "get commits by path")
 		return
@@ -162,7 +162,7 @@ func WikiPages(c *context.Context) {
 	pages := make([]PageMeta, 0, len(entries))
 	for i := range entries {
 		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
-			commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: entries[i].Name()})
+			commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogPath(entries[i].Name()))
 			if err != nil {
 				c.Error(err, "get commits by path")
 				return

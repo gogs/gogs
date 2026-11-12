@@ -91,30 +91,26 @@ func TestRepository_Log(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		rev          string
-		opt          LogOptions
+		opts         []LogOption
 		expCommitIDs []string
 	}{
 		{
-			rev: "0eedd79eba4394bbef888c804e899731644367fe",
-			opt: LogOptions{
-				MaxCount: 2,
-			},
+			rev:  "0eedd79eba4394bbef888c804e899731644367fe",
+			opts: []LogOption{LogMaxCount(2)},
 			expCommitIDs: []string{
 				"0eedd79eba4394bbef888c804e899731644367fe",
 				"4e59b72440188e7c2578299fc28ea425fbe9aece",
 			},
 		},
 		{
-			rev: "0eedd79eba4394bbef888c804e899731644367fe",
-			opt: LogOptions{
-				Path: "no-such-file",
-			},
+			rev:          "0eedd79eba4394bbef888c804e899731644367fe",
+			opts:         []LogOption{LogPath("no-such-file")},
 			expCommitIDs: []string{},
 		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			commits, err := testrepo.Log(ctx, test.rev, test.opt)
+			commits, err := testrepo.Log(ctx, test.rev, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -135,7 +131,7 @@ func TestRepository_CommitByRevision(t *testing.T) {
 
 	tests := []struct {
 		rev   string
-		opt   CommitByRevisionOptions
+		opts  []CommitByRevisionOption
 		expID string
 	}{
 		{
@@ -145,7 +141,7 @@ func TestRepository_CommitByRevision(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			c, err := testrepo.commitByRevision(ctx, test.rev, test.opt)
+			c, err := testrepo.commitByRevision(ctx, test.rev, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -160,7 +156,7 @@ func TestRepository_DiffNameOnly(t *testing.T) {
 	tests := []struct {
 		base     string
 		head     string
-		opt      DiffNameOnlyOptions
+		opts     []DiffNameOnlyOption
 		expFiles []string
 	}{
 		{
@@ -169,17 +165,15 @@ func TestRepository_DiffNameOnly(t *testing.T) {
 			expFiles: []string{"fix.txt"},
 		},
 		{
-			base: "45a30ea9afa413e226ca8614179c011d545ca883",
-			head: "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			opt: DiffNameOnlyOptions{
-				NeedsMergeBase: true,
-			},
+			base:     "45a30ea9afa413e226ca8614179c011d545ca883",
+			head:     "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
+			opts:     []DiffNameOnlyOption{DiffNameOnlyNeedsMergeBase()},
 			expFiles: []string{"fix.txt", "pom.xml", "src/test/java/com/github/AppTest.java"},
 		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			files, err := testrepo.DiffNameOnly(ctx, test.base, test.head, test.opt)
+			files, err := testrepo.DiffNameOnly(ctx, test.base, test.head, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}

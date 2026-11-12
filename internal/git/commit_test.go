@@ -68,21 +68,17 @@ func TestCommit_CommitByPath(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		id          string
-		opt         CommitByRevisionOptions
+		opts        []CommitByRevisionOption
 		expCommitID string
 	}{
 		{
-			id: "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			opt: CommitByRevisionOptions{
-				Path: "", // No path gets back to the commit itself
-			},
+			id:          "2a52e96389d02209b451ae1ddf45d645b42d744c",
+			opts:        []CommitByRevisionOption{CommitByRevisionPath("")}, // No path gets back to the commit itself
 			expCommitID: "2a52e96389d02209b451ae1ddf45d645b42d744c",
 		},
 		{
-			id: "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			opt: CommitByRevisionOptions{
-				Path: "resources/labels.properties",
-			},
+			id:          "2a52e96389d02209b451ae1ddf45d645b42d744c",
+			opts:        []CommitByRevisionOption{CommitByRevisionPath("resources/labels.properties")},
 			expCommitID: "755fd577edcfd9209d0ac072eed3b022cbe4d39b",
 		},
 	}
@@ -93,7 +89,7 @@ func TestCommit_CommitByPath(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			cc, err := c.CommitByPath(ctx, test.opt)
+			cc, err := c.CommitByPath(ctx, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -123,7 +119,7 @@ func TestCommit_CommitsByPage(t *testing.T) {
 	tests := []struct {
 		page         int
 		size         int
-		opt          CommitsByPageOptions
+		opts         []CommitsByPageOption
 		expCommitIDs []string
 	}{
 		{
@@ -165,9 +161,7 @@ func TestCommit_CommitsByPage(t *testing.T) {
 		{
 			page: 2,
 			size: 2,
-			opt: CommitsByPageOptions{
-				Path: "src",
-			},
+			opts: []CommitsByPageOption{CommitsByPagePath("src")},
 			expCommitIDs: []string{
 				"755fd577edcfd9209d0ac072eed3b022cbe4d39b",
 			},
@@ -175,7 +169,7 @@ func TestCommit_CommitsByPage(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			commits, err := c.CommitsByPage(ctx, test.page, test.size, test.opt)
+			commits, err := c.CommitsByPage(ctx, test.page, test.size, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -406,16 +400,22 @@ func TestCommit_Ancestors(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		id           string
-		opt          LogOptions
+		opts         []LogOption
 		expCommitIDs []string
 	}{
 		{
-			id: "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			opt: LogOptions{
-				MaxCount: 3,
-			},
+			id:   "2a52e96389d02209b451ae1ddf45d645b42d744c",
+			opts: []LogOption{LogMaxCount(3)},
 			expCommitIDs: []string{
 				"57d0bf61e57cdacb309ebd1075257c6bd7e1da81",
+				"cb2d322bee073327e058143329d200024bd6b4c6",
+				"818f033c4ae7f26b2b29e904942fa79a5ccaadd0",
+			},
+		},
+		{
+			id:   "2a52e96389d02209b451ae1ddf45d645b42d744c",
+			opts: []LogOption{LogMaxCount(2), LogSkip(1)},
+			expCommitIDs: []string{
 				"cb2d322bee073327e058143329d200024bd6b4c6",
 				"818f033c4ae7f26b2b29e904942fa79a5ccaadd0",
 			},
@@ -432,7 +432,7 @@ func TestCommit_Ancestors(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			commits, err := c.Ancestors(ctx, test.opt)
+			commits, err := c.Ancestors(ctx, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
