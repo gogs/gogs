@@ -17,12 +17,12 @@
 						<a class="text black" href="{{$.OrgLink}}/teams/{{.LowerName}}"><strong>{{.Name}}</strong></a>
 						<div class="ui right">
 							{{if .IsMember $.LoggedUser.ID}}
-								<form class="inline-form" action="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave" method="post">
+								<form class="inline-form" action="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave" method="post">{{$.CSRFTokenHTML}}
 									<input type="hidden" name="uid" value="{{$.LoggedUser.ID}}">
 									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.teams.leave"}}</button>
 								</form>
 							{{else if $.IsOrganizationOwner}}
-								<form class="inline-form" action="{{$.OrgLink}}/teams/{{.LowerName}}/action/join" method="post">
+								<form class="inline-form" action="{{$.OrgLink}}/teams/{{.LowerName}}/action/join" method="post">{{$.CSRFTokenHTML}}
 									<input type="hidden" name="uid" value="{{$.LoggedUser.ID}}">
 									<button class="ui blue small button" type="submit">{{$.i18n.Tr "org.teams.join"}}</button>
 								</form>

@@ -28,10 +28,10 @@
 							{{ $isPublic := .IsPublicMember $.Org.ID}}
 							{{if $isPublic}}
 								<strong>{{$.i18n.Tr "org.members.public"}}</strong>
-								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<form class="inline-form" action="{{$.OrgLink}}/members/action/private" method="post"><input type="hidden" name="uid" value="{{.ID}}"><button class="link-button" type="submit">{{$.i18n.Tr "org.members.public_helper"}}</button></form>){{end}}
+								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<form class="inline-form" action="{{$.OrgLink}}/members/action/private" method="post">{{$.CSRFTokenHTML}}<input type="hidden" name="uid" value="{{.ID}}"><button class="link-button" type="submit">{{$.i18n.Tr "org.members.public_helper"}}</button></form>){{end}}
 							{{else}}
 								<strong>{{$.i18n.Tr "org.members.private"}}</strong>
-								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<form class="inline-form" action="{{$.OrgLink}}/members/action/public" method="post"><input type="hidden" name="uid" value="{{.ID}}"><button class="link-button" type="submit">{{$.i18n.Tr "org.members.private_helper"}}</button></form>){{end}}
+								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<form class="inline-form" action="{{$.OrgLink}}/members/action/public" method="post">{{$.CSRFTokenHTML}}<input type="hidden" name="uid" value="{{.ID}}"><button class="link-button" type="submit">{{$.i18n.Tr "org.members.private_helper"}}</button></form>){{end}}
 							{{end}}
 						</div>
 					</div>
@@ -46,12 +46,12 @@
 					<div class="ui four wide column">
 						<div class="text right">
 							{{if eq $.LoggedUser.ID .ID}}
-								<form class="inline-form" action="{{$.OrgLink}}/members/action/leave" method="post">
+								<form class="inline-form" action="{{$.OrgLink}}/members/action/leave" method="post">{{$.CSRFTokenHTML}}
 									<input type="hidden" name="uid" value="{{.ID}}">
 									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.members.leave"}}</button>
 								</form>
 							{{else if $.IsOrganizationOwner}}
-								<form class="inline-form" action="{{$.OrgLink}}/members/action/remove" method="post">
+								<form class="inline-form" action="{{$.OrgLink}}/members/action/remove" method="post">{{$.CSRFTokenHTML}}
 									<input type="hidden" name="uid" value="{{.ID}}">
 									<button class="ui red small button" type="submit">{{$.i18n.Tr "org.members.remove"}}</button>
 								</form>
