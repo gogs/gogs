@@ -1,6 +1,6 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
-import { useRef, useState } from "react";
+import { Eye, EyeOff, Fingerprint, KeyRound, LoaderCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
+import { type RequestOptionsJSON, getPasskey, passkeysSupported } from "@/lib/passkey";
 import { subUrl } from "@/lib/url";
 
 export interface LoginSource {
@@ -33,7 +34,75 @@ interface SignInErrorResponse {
 // Field display order; the first key with a server-side error gets focus.
 const FIELD_ORDER = ["username", "password"] as const;
 
+// How many times signing in with a passkey is tried in a row before the
+// visitor is asked whether to try again or sign in another way.
+const MAX_PASSKEY_ATTEMPTS = 3;
+
+// The server lets a passkey challenge expire after a minute.
+const DEFAULT_PASSKEY_TIMEOUT_MS = 60_000;
+
+type PasskeyResult = "signed-in" | "failed" | "timed-out" | "cancelled";
+
+type PasskeyState =
+  | { status: "waiting"; attempt: number }
+  | { status: "stopped"; reason: "attempts" | "timed-out" | "cancelled" };
+
 const route = getRouteApi("/user/sign-in");
+
+// redirectAfterSignIn leaves for the page the visitor was sent to sign in
+// from.
+function redirectAfterSignIn() {
+  const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
+  // /redirect is a server endpoint (303), must be a full navigation.
+  window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
+}
+
+// signInWithPasskey asks the browser for a passkey of the site and signs in
+// its owner. Stopping the signal cancels the browser prompt.
+async function signInWithPasskey(stop: AbortSignal): Promise<PasskeyResult> {
+  try {
+    const challenge = await fetch(subUrl("/api/web/user/sign-in/passkey/challenge"), {
+      method: "POST",
+      credentials: "same-origin",
+      signal: stop,
+    });
+    if (!challenge.ok) return "failed";
+    const options = (await challenge.json()) as RequestOptionsJSON;
+
+    // Browsers report a timeout and the visitor cancelling the same way, so
+    // the timeout is ours to tell them apart.
+    const request = new AbortController();
+    let timedOut = false;
+    const timer = window.setTimeout(() => {
+      timedOut = true;
+      request.abort();
+    }, options.publicKey.timeout ?? DEFAULT_PASSKEY_TIMEOUT_MS);
+    const cancel = () => request.abort();
+    stop.addEventListener("abort", cancel);
+    let credential;
+    try {
+      credential = await getPasskey(options, request.signal);
+    } catch (err) {
+      if (timedOut) return "timed-out";
+      if (err instanceof DOMException && err.name === "NotAllowedError") return "cancelled";
+      return "failed";
+    } finally {
+      window.clearTimeout(timer);
+      stop.removeEventListener("abort", cancel);
+    }
+
+    const res = await fetch(subUrl("/api/web/user/sign-in/passkey"), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credential),
+      signal: stop,
+    });
+    return res.ok ? "signed-in" : "failed";
+  } catch {
+    return "failed";
+  }
+}
 
 export function SignIn() {
   const { t } = useTranslation();
@@ -51,6 +120,34 @@ export function SignIn() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  // Visitors sign in with a passkey unless their browser does not support
+  // passkeys or they choose the password.
+  const [method, setMethod] = useState<"passkey" | "password">(() => (passkeysSupported() ? "passkey" : "password"));
+  const [passkey, setPasskey] = useState<PasskeyState>({ status: "waiting", attempt: 1 });
+  // Bumped to try signing in with a passkey again.
+  const [passkeyRun, setPasskeyRun] = useState(0);
+
+  useEffect(() => {
+    if (method !== "passkey") return;
+    const stop = new AbortController();
+    void (async () => {
+      for (let attempt = 1; attempt <= MAX_PASSKEY_ATTEMPTS; attempt++) {
+        setPasskey({ status: "waiting", attempt });
+        const result = await signInWithPasskey(stop.signal);
+        if (stop.signal.aborted) return;
+        if (result === "signed-in") {
+          redirectAfterSignIn();
+          return;
+        }
+        if (result !== "failed") {
+          setPasskey({ status: "stopped", reason: result });
+          return;
+        }
+      }
+      setPasskey({ status: "stopped", reason: "attempts" });
+    })();
+    return () => stop.abort();
+  }, [method, passkeyRun]);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,14 +194,34 @@ export function SignIn() {
           });
           return;
         }
-        const to = new URLSearchParams(window.location.search).get("redirect_to") ?? "";
-        // /redirect is a server endpoint (303), must be a full navigation.
-        window.location.assign(subUrl("/redirect") + "?to=" + encodeURIComponent(to));
+        redirectAfterSignIn();
       } catch {
         setFormError(t("auth.sign_in_failed"));
         setSubmitting(false);
       }
     })();
+  }
+
+  if (method === "passkey") {
+    return (
+      <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
+        <Card className="w-full max-w-md">
+          <CardHeader className="items-center text-center">
+            <CardTitle>{t("sign_in")}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <PasskeySignIn
+              state={passkey}
+              onRetry={() => {
+                setPasskey({ status: "waiting", attempt: 1 });
+                setPasskeyRun((n) => n + 1);
+              }}
+              onUsePassword={() => setMethod("password")}
+            />
+          </CardContent>
+        </Card>
+      </main>
+    );
   }
 
   return (
@@ -156,7 +273,7 @@ export function SignIn() {
                     <Button variant="link" size="inline" asChild>
                       <a
                         href={subUrl("/user/reset-password")}
-                        tabIndex={submitting ? -1 : 6}
+                        tabIndex={submitting ? -1 : 7}
                         aria-disabled={submitting || undefined}
                         className={submitting ? "pointer-events-none opacity-50" : undefined}
                         onClick={(e) => {
@@ -233,10 +350,27 @@ export function SignIn() {
                   <Button type="submit" disabled={submitting} tabIndex={5} className="w-full">
                     {submitting ? t("auth.sign_in_submitting") : t("sign_in")}
                   </Button>
+                  {passkeysSupported() ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      tabIndex={6}
+                      className="w-full"
+                      onClick={() => {
+                        setFormError(null);
+                        setFieldErrors({});
+                        setPasskey({ status: "waiting", attempt: 1 });
+                        setMethod("passkey");
+                      }}
+                    >
+                      <KeyRound className="size-4" aria-hidden />
+                      {t("auth.passkey_sign_in")}
+                    </Button>
+                  ) : null}
                   <Button variant="link" size="inline" asChild className="self-center">
                     <a
                       href={subUrl("/user/sign-up")}
-                      tabIndex={submitting ? -1 : 7}
+                      tabIndex={submitting ? -1 : 8}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}
                       onClick={(e) => {
@@ -253,5 +387,83 @@ export function SignIn() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+// PasskeySignIn shows the sign-in with a passkey in progress, and once it
+// stopped, offers to try again or to sign in with the password.
+function PasskeySignIn({
+  state,
+  onRetry,
+  onUsePassword,
+}: {
+  state: PasskeyState;
+  onRetry: () => void;
+  onUsePassword: () => void;
+}) {
+  const { t } = useTranslation();
+  const retryRef = useRef<HTMLButtonElement>(null);
+  const stopped = state.status === "stopped";
+
+  // Move focus to the options once they replace the progress, so keyboard
+  // and screen reader users land on them.
+  useEffect(() => {
+    if (stopped) retryRef.current?.focus();
+  }, [stopped]);
+
+  let problem: string | null = null;
+  if (state.status === "stopped" && state.reason === "attempts") {
+    problem = t("auth.passkey_failed_attempts", { max: MAX_PASSKEY_ATTEMPTS });
+  } else if (state.status === "stopped" && state.reason === "timed-out") {
+    problem = t("auth.passkey_timed_out");
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <span className="rounded-full bg-(--color-surface) p-3">
+        <Fingerprint className="size-8" aria-hidden />
+      </span>
+      <div className="flex flex-col gap-1">
+        <h2 className="font-semibold">{t("auth.passkey_sign_in")}</h2>
+        <p className="text-sm text-(--color-muted-foreground)">{t("auth.passkey_sign_in_desc")}</p>
+      </div>
+
+      {state.status === "waiting" ? (
+        <p role="status" className="flex items-center gap-2 text-sm">
+          <LoaderCircle className="size-4 shrink-0 motion-safe:animate-spin" aria-hidden />
+          {state.attempt === 1
+            ? t("auth.passkey_waiting")
+            : t("auth.passkey_retrying", { attempt: state.attempt, max: MAX_PASSKEY_ATTEMPTS })}
+        </p>
+      ) : problem ? (
+        <div
+          role="alert"
+          className="w-full rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
+        >
+          {problem}
+        </div>
+      ) : null}
+
+      <div className="mt-2 flex w-full flex-col gap-3">
+        {stopped ? (
+          <>
+            <Button ref={retryRef} type="button" className="w-full" onClick={onRetry}>
+              <KeyRound className="size-4" aria-hidden />
+              {t("auth.passkey_try_again")}
+            </Button>
+            <Button type="button" variant="outline" className="w-full" onClick={onUsePassword}>
+              {t("auth.passkey_use_password")}
+            </Button>
+          </>
+        ) : (
+          <Button type="button" variant="link" size="inline" className="self-center" onClick={onUsePassword}>
+            {t("auth.passkey_use_password")}
+          </Button>
+        )}
+        <Button variant="link" size="inline" asChild className="self-center">
+          <a href={subUrl("/user/sign-up")}>{t("auth.sign_up_now")}</a>
+        </Button>
+      </div>
+    </div>
   );
 }

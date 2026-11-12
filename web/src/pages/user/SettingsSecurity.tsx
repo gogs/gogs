@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy, KeyRound, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { RichText } from "@/components/RichText";
 import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { passkeysSupported } from "@/lib/passkey";
 import { formErrors } from "@/lib/queries/request";
 import {
   type Credential,
@@ -19,10 +20,12 @@ import {
   type SSHKey,
   type TwoFactorEnrollment,
   type UserEmail,
+  addPasskey,
   addSSHKey,
   addUserEmail,
   createAccessToken,
   deleteAccessToken,
+  deletePasskey,
   deleteSSHKey,
   deleteUserEmail,
   disableTwoFactor,
@@ -273,9 +276,9 @@ export function UserSSHKeySettings({ keys }: { keys: SSHKey[] }) {
   );
 }
 
-// UserSecuritySettings shows whether two-factor authentication is on, and
-// turns it on or off.
-export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
+// UserSecuritySettings lists the passkeys of the viewer and adds new ones,
+// shows whether two-factor authentication is on, and turns it on or off.
+export function UserSecuritySettings({ passkeys, enabled }: { passkeys: Credential[]; enabled: boolean }) {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useUserInfo();
@@ -283,59 +286,153 @@ export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
   const cloneExample = `${cloneURL.protocol}//{token}:x-access-token@${cloneURL.host}${cloneURL.pathname}`;
   return (
     <UserSettingsLayout active="security">
-      <SectionHeading title={t("settings.two_factor")} />
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-(--color-border) px-4 py-3">
-        <p className="flex items-center gap-2 text-sm">
-          <span className="font-semibold">{t("settings.two_factor_status")}</span>
+      <h1 className="sr-only">{t("settings.security")}</h1>
+      <UserPasskeys passkeys={passkeys} />
+      <section aria-labelledby="two-factor-heading" className="mt-10">
+        <h2 id="two-factor-heading" className="mb-4 text-xl font-semibold">
+          {t("settings.two_factor")}
+        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-(--color-border) px-4 py-3">
+          <p className="flex items-center gap-2 text-sm">
+            <span className="font-semibold">{t("settings.two_factor_status")}</span>
+            {enabled ? (
+              <span className="inline-flex items-center gap-1 font-semibold text-(--color-success)">
+                <Check className="size-4" aria-hidden />
+                {t("settings.two_factor_on")}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 font-semibold text-(--color-destructive)">
+                <X className="size-4" aria-hidden />
+                {t("settings.two_factor_off")}
+              </span>
+            )}
+          </p>
           {enabled ? (
-            <span className="inline-flex items-center gap-1 font-semibold text-(--color-success)">
-              <Check className="size-4" aria-hidden />
-              {t("settings.two_factor_on")}
-            </span>
+            <ConfirmButton
+              label={t("settings.two_factor_disable")}
+              title={t("settings.two_factor_disable_title")}
+              description={t("settings.two_factor_disable_desc")}
+              size="sm"
+              action={disableTwoFactor}
+              onDone={async () => {
+                toast.success(t("settings.two_factor_disable_success"));
+                await router.invalidate();
+              }}
+            />
           ) : (
-            <span className="inline-flex items-center gap-1 font-semibold text-(--color-destructive)">
-              <X className="size-4" aria-hidden />
-              {t("settings.two_factor_off")}
-            </span>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/user/settings/security/two_factor_enable">{t("settings.two_factor_enable")}</Link>
+            </Button>
           )}
-        </p>
-        {enabled ? (
-          <ConfirmButton
-            label={t("settings.two_factor_disable")}
-            title={t("settings.two_factor_disable_title")}
-            description={t("settings.two_factor_disable_desc")}
-            size="sm"
-            action={disableTwoFactor}
-            onDone={async () => {
-              toast.success(t("settings.two_factor_disable_success"));
-              await router.invalidate();
-            }}
-          />
-        ) : (
-          <Button asChild variant="outline" size="sm">
-            <Link to="/user/settings/security/two_factor_enable">{t("settings.two_factor_enable")}</Link>
-          </Button>
-        )}
-      </div>
-      {enabled ? (
-        <div className="mt-6 flex flex-col gap-3 text-sm">
-          <p>
-            <RichText
-              text={t("settings.two_factor_view_recovery_codes")}
-              links={["/user/settings/security/two_factor_recovery_codes"]}
-            />
-          </p>
-          <p>
-            <RichText
-              text={t("settings.two_factor_http")}
-              links={["/user/settings/applications"]}
-              code={cloneExample}
-            />
-          </p>
-          <p className="text-(--color-muted-foreground)">{t("settings.access_token_tips")}</p>
         </div>
-      ) : null}
+        {enabled ? (
+          <div className="mt-6 flex flex-col gap-3 text-sm">
+            <p>
+              <RichText
+                text={t("settings.two_factor_view_recovery_codes")}
+                links={["/user/settings/security/two_factor_recovery_codes"]}
+              />
+            </p>
+            <p>
+              <RichText
+                text={t("settings.two_factor_http")}
+                links={["/user/settings/applications"]}
+                code={cloneExample}
+              />
+            </p>
+            <p className="text-(--color-muted-foreground)">{t("settings.access_token_tips")}</p>
+          </div>
+        ) : null}
+      </section>
     </UserSettingsLayout>
+  );
+}
+
+// UserPasskeys lists the passkeys of the viewer, who signs in with one
+// without a password or a passcode, and adds new ones.
+function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const supported = passkeysSupported();
+  const add = useMutation({
+    mutationFn: () => addPasskey(name),
+    onSuccess: async () => {
+      toast.success(t("settings.passkey_add_success", { name }));
+      setName("");
+      await router.invalidate();
+    },
+    onError: (err) => focusOnError(err, ["name"]),
+  });
+  const { fields, formError } = formErrors(add.error);
+  // The browser rejects with a DOMException when the viewer cancels the
+  // passkey prompt or no passkey could be created, and with a NotAllowedError
+  // only for the former, which needs no message.
+  const message =
+    add.error instanceof DOMException
+      ? add.error.name === "NotAllowedError"
+        ? null
+        : t("settings.passkey_add_failed")
+      : formError;
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    add.mutate();
+  };
+
+  return (
+    <section aria-labelledby="passkeys-heading">
+      <h2 id="passkeys-heading" className="mb-2 text-xl font-semibold">
+        {t("settings.passkeys")}
+      </h2>
+      <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("settings.passkeys_desc")}</p>
+      {passkeys.length > 0 ? (
+        <ul>
+          {passkeys.map((passkey) => (
+            <CredentialRow
+              key={passkey.id}
+              item={passkey}
+              recentLabel={t("settings.passkey_state_desc")}
+              deletion={{
+                label: t("settings.delete_passkey"),
+                title: t("settings.passkey_deletion"),
+                description: t("settings.passkey_deletion_desc"),
+                success: t("settings.passkey_deletion_success"),
+                action: () => deletePasskey(passkey.id),
+              }}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md border border-dashed border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
+          {t("settings.passkeys_none")}
+        </p>
+      )}
+      <form onSubmit={onSubmit} noValidate className="mt-6">
+        <fieldset disabled={!supported || add.isPending} className="contents">
+          <FormAlert message={supported ? message : t("settings.passkey_unsupported")} />
+          <div className="flex flex-col gap-3">
+            <FormField id="name" label={t("settings.passkey_name")} error={fields.name} invalid={"name" in fields}>
+              <Input
+                id="name"
+                name="name"
+                autoComplete="off"
+                required
+                placeholder={t("settings.passkey_name_placeholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </FormField>
+            <div>
+              <Button type="submit" variant="outline">
+                <KeyRound className="size-4" aria-hidden />
+                {add.isPending ? t("settings.passkey_adding") : t("settings.passkey_add")}
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </section>
   );
 }
 

@@ -13,6 +13,7 @@ All notable changes to Gogs are documented in this file.
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
 
+- Passkeys. Users add them on the security settings page and then sign in without a password or a two-factor passcode. The sign-in page asks for a passkey first, and offers to try again or to sign in with a password after three failed attempts, a timeout, or a cancelled prompt.
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)

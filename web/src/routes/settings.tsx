@@ -3,6 +3,7 @@ import { type AnyRoute, createRoute } from "@tanstack/react-router";
 import { loadSignedInPage } from "@/lib/loader-error";
 import {
   fetchAccessTokens,
+  fetchPasskeys,
   fetchRecoveryCodes,
   fetchSSHKeys,
   fetchSettingsOrgs,
@@ -82,9 +83,14 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const securityRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/security",
-    loader: () => loadSignedInPage(fetchTwoFactorEnabled),
+    loader: () =>
+      loadSignedInPage(async () => {
+        const [passkeys, twoFactorEnabled] = await Promise.all([fetchPasskeys(), fetchTwoFactorEnabled()]);
+        return { passkeys, twoFactorEnabled };
+      }),
     component: function Security() {
-      return <UserSecuritySettings enabled={securityRoute.useLoaderData()} />;
+      const { passkeys, twoFactorEnabled } = securityRoute.useLoaderData();
+      return <UserSecuritySettings passkeys={passkeys} enabled={twoFactorEnabled} />;
     },
   });
 

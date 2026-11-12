@@ -1,3 +1,4 @@
+import { type CreationOptionsJSON, createPasskey } from "@/lib/passkey";
 import { fetchJSON, send, submit, uploadAvatar } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
@@ -125,7 +126,7 @@ export function deleteUserEmail(email: string) {
   return send("DELETE", settingsURL(`/emails/${encodeURIComponent(email)}`));
 }
 
-// Credential is an SSH key or an access token.
+// Credential is an SSH key, an access token or a passkey.
 export interface Credential {
   id: number;
   name: string;
@@ -153,6 +154,22 @@ export function deleteSSHKey(id: number) {
 
 export async function fetchTwoFactorEnabled() {
   return (await fetchJSON<{ enabled: boolean }>(settingsURL("/two-factor"))).enabled;
+}
+
+export async function fetchPasskeys() {
+  return (await fetchJSON<{ items: Credential[] }>(settingsURL("/passkeys"))).items;
+}
+
+// addPasskey has the browser create a passkey and adds it to the viewer. The
+// server checks the name before the browser asks for the passkey.
+export async function addPasskey(name: string) {
+  const options = await submit<CreationOptionsJSON>("POST", settingsURL("/passkeys/registration"), { name });
+  const credential = await createPasskey(options);
+  await submit<void>("POST", settingsURL("/passkeys"), { name, credential });
+}
+
+export function deletePasskey(id: number) {
+  return send("DELETE", settingsURL(`/passkeys/${id}`));
 }
 
 export interface TwoFactorEnrollment {

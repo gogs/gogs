@@ -495,6 +495,7 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 			{&PublicKey{}, "owner_id = @userID"},
 
 			{&AccessToken{}, "uid = @userID"},
+			{&Passkey{}, "user_id = @userID"},
 			{&Collaboration{}, "user_id = @userID"},
 			{&Access{}, "user_id = @userID"},
 			{&Action{}, "user_id = @userID"},
