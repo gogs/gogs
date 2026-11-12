@@ -40,6 +40,8 @@ You can replace any HTML template (including email templates) by placing a custo
 
 Each email has two Go templates under `templates/mail/`: one for the HTML part and one for the plain text part, e.g., `templates/mail/auth/activate.tmpl` and `templates/mail/auth/activate.txt`. To override an email, copy either file to the same path under `custom/templates/mail/` and edit it. When you override only the HTML template, the plain text part is converted from your HTML so the two parts say the same thing. Whether emails carry a plain text part at all depends on `USE_PLAIN_TEXT` and `ADD_PLAIN_TEXT_ALT` in the `[email]` section.
 
+The parts every email shares, i.e., the header, the footer and the button, are defined in `templates/mail/layout.tmpl` and `templates/mail/layout.txt`. Override `layout.tmpl` to restyle all emails at once.
+
 Besides the fields of each email, e.g., `{{.Username}}`, the templates can call these functions:
 
 | Function | Result |
@@ -50,6 +52,7 @@ Besides the fields of each email, e.g., `{{.Username}}`, the templates can call 
 | `Lang` | The language of the email, e.g., `en-US`. |
 | `Tr` | A translation in the language of the email, e.g., `{{Tr "mail.greeting" .Username}}`. Add your own keys to the locale files under `custom/conf/locale/`. |
 | `Markup` | Content written by users, e.g., an issue comment, as HTML in the HTML template and as plain text in the plain text template. |
+| `dict` | Several values for a shared part, e.g., `{{template "button" (dict "URL" .Link "Label" "Open")}}`. |
 
 The **Emails** page of the admin panel previews every email with made-up data, in any language, with your overrides in place of the builtin templates. Use it to check your edits before an email goes out. As with HTML templates, edits require restarting Gogs unless `[server] LOAD_ASSETS_FROM_DISK = true` is set.
 

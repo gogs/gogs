@@ -1,12 +1,5 @@
-{{- /* Generated from web/src/emails/templates/issue/comment.tsx. */ -}}
-{{AppName}}
+{{template "header"}}
 
-----------------------------------------
+{{template "issue" .}}
 
-{{Markup .Body}}
-
-----------------------------------------
-
-{{Tr `mail.view_on` AppName}} {{.Link}}
-
-© {{Year}} {{AppName}} {{AppURL}}
+{{template "footer"}}

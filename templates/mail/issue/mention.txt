@@ -1,14 +1,7 @@
-{{- /* Generated from web/src/emails/templates/issue/mention.tsx. */ -}}
-{{AppName}}
+{{template "header"}}
 
-----------------------------------------
+{{Tr "mail.issue.mentioned" .Doer.DisplayName}}
 
-{{Tr `mail.issue.mentioned` .Doer.DisplayName}}
+{{template "issue" .}}
 
-{{Markup .Body}}
-
-----------------------------------------
-
-{{Tr `mail.view_on` AppName}} {{.Link}}
-
-© {{Year}} {{AppName}} {{AppURL}}
+{{template "footer"}}

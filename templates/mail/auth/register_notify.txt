@@ -1,12 +1,9 @@
-{{- /* Generated from web/src/emails/templates/auth/register_notify.tsx. */ -}}
-{{AppName}}
+{{template "header"}}
 
-----------------------------------------
+{{Tr "mail.greeting" .Username}}
 
-{{Tr `mail.greeting` .Username}}
+{{Tr "mail.register_notify.body" AppName .Username}}
 
-{{Tr `mail.register_notify.body` AppName .Username}}
+{{template "button" (dict "URL" (printf "%suser/sign-in" AppURL) "Label" (Tr "mail.register_notify.action"))}}
 
-{{Tr `mail.register_notify.action`}} {{AppURL}}user/sign-in
-
-© {{Year}} {{AppName}} {{AppURL}}
+{{template "footer"}}

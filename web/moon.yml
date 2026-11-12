@@ -43,18 +43,6 @@ tasks:
     deps:
       - "install"
 
-  build-emails:
-    command: "pnpm run build-emails"
-    inputs:
-      - "src/emails/**/*"
-      - "scripts/build-emails.ts"
-    outputs:
-      - "/templates/mail/**/*"
-    options:
-      runFromWorkspaceRoot: false
-    deps:
-      - "install"
-
   lint:
     command: "pnpm run lint"
     inputs:

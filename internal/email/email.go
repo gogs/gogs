@@ -85,6 +85,22 @@ func funcs() map[string]any {
 		"Tr": func(key string, args ...any) string {
 			return i18n.Tr(defaultLang, key, args...)
 		},
+		// dict passes several values to a shared part of the templates, e.g.,
+		// {{template "button" (dict "URL" $link "Label" (Tr "mail.x"))}}.
+		"dict": func(pairs ...any) (map[string]any, error) {
+			if len(pairs)%2 != 0 {
+				return nil, errors.New("dict wants pairs of keys and values")
+			}
+			m := make(map[string]any, len(pairs)/2)
+			for i := 0; i < len(pairs); i += 2 {
+				key, ok := pairs[i].(string)
+				if !ok {
+					return nil, errors.Newf("dict key %v is not a string", pairs[i])
+				}
+				m[key] = pairs[i+1]
+			}
+			return m, nil
+		},
 	}
 }
 
@@ -96,11 +112,6 @@ func htmlFuncs() htmltemplate.FuncMap {
 	}
 	// Str2HTML is the name of Markup in templates written before it.
 	fm["Str2HTML"] = fm["Markup"]
-	// rawComment prints an HTML comment, which html/template would strip from
-	// the template text, e.g., conditional comments for Outlook.
-	fm["rawComment"] = func(s string) htmltemplate.HTML {
-		return htmltemplate.HTML("<!--" + s + "-->")
-	}
 	return fm
 }
 

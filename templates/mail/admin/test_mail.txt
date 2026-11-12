@@ -1,8 +1,5 @@
-{{- /* Generated from web/src/emails/templates/admin/test_mail.tsx. */ -}}
-{{AppName}}
+{{template "header"}}
 
-----------------------------------------
+{{Tr "mail.test_mail.body" AppName}}
 
-{{Tr `mail.test_mail.body` AppName}}
-
-© {{Year}} {{AppName}} {{AppURL}}
+{{template "footer"}}

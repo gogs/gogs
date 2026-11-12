@@ -1,0 +1,15 @@
+{{- /* The parts every plain text email shares, see layout.tmpl. */ -}}
+
+{{define "header" -}}
+{{AppName}}
+----------------------------------------
+{{- end}}
+
+{{define "footer" -}}
+--
+© {{Year}} {{AppName}} {{AppURL}}
+{{- end}}
+
+{{define "button" -}}
+{{.Label}}: {{.URL}}
+{{- end}}

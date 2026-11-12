@@ -1,12 +1,10 @@
-{{- /* Generated from web/src/emails/templates/auth/activate_email.tsx. */ -}}
-{{AppName}}
+{{$link := printf "%suser/activate_email?code=%s&email=%s" AppURL (urlquery .Code) (urlquery .Email) -}}
+{{template "header"}}
 
-----------------------------------------
+{{Tr "mail.greeting" .Username}}
 
-{{Tr `mail.greeting` .Username}}
+{{Tr "mail.activate_email.body" .Email .ActiveCodeLives}}
 
-{{Tr `mail.activate_email.body` .Email .ActiveCodeLives}}
+{{template "button" (dict "URL" $link "Label" (Tr "mail.activate_email.action"))}}
 
-{{Tr `mail.activate_email.action`}} {{AppURL}}user/activate_email?code={{.Code}}&email={{.Email}}
-
-© {{Year}} {{AppName}} {{AppURL}}
+{{template "footer"}}
