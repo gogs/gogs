@@ -132,9 +132,9 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 // the parent is nil, with the changes that change makes to the index of a
 // temporary repository, and pushes it to the branch of the repository at
 // repoPath with the environment variables. When the changes leave the tree of
-// the parent as it was, it pushes the parent as is. The committer may be nil to
-// use the one from Git configuration.
-func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) error {
+// the parent as it was, it pushes the parent as is. The signature is used as
+// both the author and the committer.
+func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, sig *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -177,11 +177,7 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 		if message == "" {
 			return errors.New("empty commit message")
 		}
-		commitID, err = tmpRepo.CommitTree(ctx, tree, message,
-			git.CommitTreeParents(parents...),
-			git.CommitTreeAuthor(author),
-			git.CommitTreeCommitter(committer),
-		)
+		commitID, err = tmpRepo.CommitTree(ctx, tree, message, sig, git.CommitTreeParents(parents...))
 		if err != nil {
 			return errors.Wrap(err, "commit tree")
 		}
@@ -219,7 +215,7 @@ func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, 
 		RepoName:  r.Name,
 		RepoPath:  r.RepoPath(),
 	})
-	return commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, envs, func(tmpRepo *git.Repository) error {
+	return commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, envs, func(tmpRepo *git.Repository) error {
 		return change(tmpRepo, parent)
 	})
 }

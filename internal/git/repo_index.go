@@ -152,12 +152,6 @@ func (r *Repository) WriteTree(ctx context.Context) (string, error) {
 type commitTreeOptions struct {
 	// The parents of the commit.
 	Parents []string
-	// The author of the commit, or nil to use the one from Git configuration. The
-	// current time is used when its time is zero.
-	Author *Signature
-	// The committer of the commit, or nil to use the one from Git configuration.
-	// The current time is used when its time is zero.
-	Committer *Signature
 }
 
 // CommitTreeOption sets an optional argument for creating a commit object.
@@ -170,21 +164,10 @@ func CommitTreeParents(parents ...string) CommitTreeOption {
 	return func(opt *commitTreeOptions) { opt.Parents = append(opt.Parents, parents...) }
 }
 
-// CommitTreeAuthor sets the author of the commit, or nil to use the one from
-// Git configuration. The current time is used when its time is zero.
-func CommitTreeAuthor(author *Signature) CommitTreeOption {
-	return func(opt *commitTreeOptions) { opt.Author = author }
-}
-
-// CommitTreeCommitter sets the committer of the commit, or nil to use the one
-// from Git configuration. The current time is used when its time is zero.
-func CommitTreeCommitter(committer *Signature) CommitTreeOption {
-	return func(opt *commitTreeOptions) { opt.Committer = committer }
-}
-
 // CommitTree creates a commit object of the tree with given message as is, and
-// returns its ID.
-func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOption) (string, error) {
+// returns its ID. The signature is used as both the author and the committer,
+// with the current time when its time is zero.
+func (r *Repository) CommitTree(ctx context.Context, tree, message string, sig *Signature, opts ...CommitTreeOption) (string, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.CommitTree")
 	defer span.End()
 
@@ -199,9 +182,7 @@ func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts 
 	}
 	args = append(args, "--end-of-options", tree)
 
-	var envs []string
-	envs = append(envs, signatureEnvs("AUTHOR", opt.Author)...)
-	envs = append(envs, signatureEnvs("COMMITTER", opt.Committer)...)
+	envs := append(signatureEnvs("AUTHOR", sig), signatureEnvs("COMMITTER", sig)...)
 
 	stdout, err := execInput(ctx, r.path, args, envs, strings.NewReader(message))
 	if err != nil {

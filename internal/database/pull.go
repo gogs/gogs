@@ -257,10 +257,8 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 
 		// Create a merge commit for the base branch.
 		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message),
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), committer,
 			git.CommitTreeParents(baseCommitID, headCommitID),
-			git.CommitTreeAuthor(committer),
-			git.CommitTreeCommitter(committer),
 		)
 		if err != nil {
 			return errors.Newf("commit tree: %v", err)

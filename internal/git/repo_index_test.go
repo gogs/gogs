@@ -59,7 +59,7 @@ func commitFiles(t *testing.T, r *Repository, branch string, files map[string]st
 	tree, err := r.WriteTree(ctx)
 	require.NoError(t, err)
 	sig := &Signature{Name: "alice", Email: "alice@example.com"}
-	id, err := r.CommitTree(ctx, tree, "Update "+strings.Join(names, ", ")+"\n", CommitTreeParents(parents...), CommitTreeAuthor(sig), CommitTreeCommitter(sig))
+	id, err := r.CommitTree(ctx, tree, "Update "+strings.Join(names, ", ")+"\n", sig, CommitTreeParents(parents...))
 	require.NoError(t, err)
 	_, err = exec(ctx, r.Path(), []string{"update-ref", "--end-of-options", RefsHeads + branch, id}, nil)
 	require.NoError(t, err)
@@ -80,27 +80,6 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 	require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "config", Content: strings.NewReader("hello\n")}))
 	require.NoError(t, r.RemoveFromIndex(ctx, "config"))
 
-	t.Run("committer from Git configuration", func(t *testing.T) {
-		tree, err := r.WriteTree(ctx)
-		require.NoError(t, err)
-
-		t.Setenv("GIT_CONFIG_COUNT", "2")
-		t.Setenv("GIT_CONFIG_KEY_0", "user.name")
-		t.Setenv("GIT_CONFIG_VALUE_0", "carol")
-		t.Setenv("GIT_CONFIG_KEY_1", "user.email")
-		t.Setenv("GIT_CONFIG_VALUE_1", "carol@example.com")
-		id, err := r.CommitTree(ctx, tree, "message\n", CommitTreeAuthor(&Signature{Name: "bob", Email: "bob@example.com"}))
-		require.NoError(t, err)
-
-		c, err := r.CatFileCommit(ctx, id)
-		require.NoError(t, err)
-		assert.Equal(t, "carol", c.Committer.Name)
-		assert.Equal(t, "carol@example.com", c.Committer.Email)
-		assert.Equal(t, "bob", c.Author.Name)
-		assert.Equal(t, "bob@example.com", c.Author.Email)
-		assert.Equal(t, 0, c.ParentsCount())
-	})
-
 	t.Run("invalid changes", func(t *testing.T) {
 		// "run.sh" is a file, so nothing can be added under it.
 		for _, path := range []string{"run.sh/x", ".git/config", "../x"} {
@@ -120,7 +99,7 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 		Email: "alice@example.com",
 		When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", 5*3600+30*60)),
 	}
-	commitID, err := r.CommitTree(ctx, tree, "Add hello\n", CommitTreeParents(parent.ID.String()), CommitTreeAuthor(author), CommitTreeCommitter(author))
+	commitID, err := r.CommitTree(ctx, tree, "Add hello\n", author, CommitTreeParents(parent.ID.String()))
 	require.NoError(t, err)
 
 	raw, err := r.rawCommit(ctx, commitID)
@@ -306,7 +285,7 @@ func TestRepository_Rebase(t *testing.T) {
 			Email: "bob@example.com",
 			When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", -7*3600)),
 		}
-		id, err := r.CommitTree(ctx, tree, message, CommitTreeParents(parent), CommitTreeAuthor(sig), CommitTreeCommitter(sig))
+		id, err := r.CommitTree(ctx, tree, message, sig, CommitTreeParents(parent))
 		require.NoError(t, err)
 		return id
 	}
