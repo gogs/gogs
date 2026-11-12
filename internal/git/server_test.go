@@ -47,12 +47,60 @@ func TestRunService(t *testing.T) {
 				StatelessRPC:  true,
 				AdvertiseRefs: true,
 				Stdout:        &stdout,
-				Envs:          []string{"GIT_PROTOCOL=version=2"},
+				Envs: []string{
+					"GIT_CONFIG_COUNT=1",
+					"GIT_CONFIG_KEY_0=uploadpack.allowFilter",
+					"GIT_CONFIG_VALUE_0=true",
+				},
 			},
 		)
 		require.NoError(t, err)
-		assert.Contains(t, stdout.String(), "version 2")
-		assert.NotContains(t, stdout.String(), "refs/heads/master")
+		assert.Contains(t, stdout.String(), " filter")
+	})
+
+	t.Run("protocol", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			protocol string
+			envs     []string
+			inherit  string
+			want     string
+		}{
+			{name: "v2", protocol: "version=2", want: "version 2"},
+			{name: "v1", protocol: "version=1", want: "version 1"},
+			{name: "empty", protocol: ""},
+			{name: "v0", protocol: "version=0"},
+			{name: "unknown version", protocol: "version=3"},
+			{name: "extra keys", protocol: "version=2:foo=bar"},
+			{name: "garbage", protocol: "foo"},
+			{name: "inherited", inherit: "version=2"},
+			{name: "through Envs", envs: []string{"GIT_PROTOCOL=version=2"}},
+		}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				if test.inherit != "" {
+					t.Setenv("GIT_PROTOCOL", test.inherit)
+				}
+
+				var stdout bytes.Buffer
+				err := RunService(ctx, ServiceUploadPack, repoPath,
+					ServiceOptions{
+						StatelessRPC:  true,
+						AdvertiseRefs: true,
+						Stdout:        &stdout,
+						Protocol:      test.protocol,
+						Envs:          test.envs,
+					},
+				)
+				require.NoError(t, err)
+				if test.want != "" {
+					assert.Contains(t, stdout.String(), test.want)
+					return
+				}
+				assert.NotContains(t, stdout.String(), "version ")
+				assert.Contains(t, stdout.String(), "refs/heads/master")
+			})
+		}
 	})
 
 	t.Run("not a repository", func(t *testing.T) {

@@ -291,7 +291,6 @@ func serviceRPC(h serviceHandler, service string) {
 			RepoPath:  h.dir,
 		})
 	}
-	envs = append(envs, gitProtocolEnvs(h.r)...)
 	// A client disconnecting must not kill Git midway through a push, e.g., while
 	// running hooks after refs were updated.
 	ctx := h.r.Context()
@@ -304,6 +303,7 @@ func serviceRPC(h serviceHandler, service string) {
 		Stdin:        reqBody,
 		Stdout:       h.w,
 		Stderr:       &stderr,
+		Protocol:     h.r.Header.Get("Git-Protocol"),
 		Envs:         envs,
 	})
 	if err != nil {
@@ -319,15 +319,6 @@ func serviceUploadPack(h serviceHandler) {
 
 func serviceReceivePack(h serviceHandler) {
 	serviceRPC(h, "receive-pack")
-}
-
-// gitProtocolEnvs returns the environment variables that pass the Git protocol
-// the client asks for, e.g., "version=2", on to Git.
-func gitProtocolEnvs(r *http.Request) []string {
-	if protocol := r.Header.Get("Git-Protocol"); protocol != "" {
-		return []string{"GIT_PROTOCOL=" + protocol}
-	}
-	return nil
 }
 
 func getServiceType(r *http.Request) string {
@@ -363,7 +354,7 @@ func getInfoRefs(h serviceHandler) {
 		AdvertiseRefs: true,
 		Stdout:        &refs,
 		Stderr:        &stderr,
-		Envs:          gitProtocolEnvs(h.r),
+		Protocol:      h.r.Header.Get("Git-Protocol"),
 	})
 	if err != nil {
 		log.Error("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
