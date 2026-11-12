@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/errx"
@@ -25,6 +26,15 @@ type Team struct {
 	Members     []*User       `xorm:"-" json:"-" gorm:"-"`
 	NumRepos    int
 	NumMembers  int
+}
+
+// AfterFind implements the GORM query hook.
+func (t *Team) AfterFind(_ *gorm.DB) error {
+	// LEGACY [1.0]: this is backward compatibility bug fix for https://github.com/gogs/gogs/issues/3671
+	if t.NumRepos < 0 {
+		t.NumRepos = 0
+	}
+	return nil
 }
 
 func (t *Team) AfterSet(colName string, _ xorm.Cell) {
@@ -74,14 +84,14 @@ func (t *Team) GetRepositories() error {
 	return t.getRepositories(x)
 }
 
-func (t *Team) getMembers(e Engine) (err error) {
-	t.Members, err = getTeamMembers(e, t.ID)
+func (t *Team) getMembers(tx *gorm.DB) (err error) {
+	t.Members, err = getTeamMembers(tx, t.ID)
 	return err
 }
 
 // GetMembers returns all members in team of organization.
 func (t *Team) GetMembers() (err error) {
-	return t.getMembers(x)
+	return t.getMembers(Handle.db)
 }
 
 // AddMember adds new membership of the team to the organization,
@@ -95,13 +105,13 @@ func (t *Team) RemoveMember(uid int64) error {
 	return RemoveTeamMember(t.OrgID, t.ID, uid)
 }
 
-func (t *Team) hasRepository(e Engine, repoID int64) bool {
-	return hasTeamRepo(e, t.OrgID, t.ID, repoID)
+func (t *Team) hasRepository(tx *gorm.DB, repoID int64) bool {
+	return hasTeamRepo(tx, t.OrgID, t.ID, repoID)
 }
 
 // HasRepository returns true if given repository belong to team.
 func (t *Team) HasRepository(repoID int64) bool {
-	return t.hasRepository(x, repoID)
+	return t.hasRepository(Handle.db, repoID)
 }
 
 func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
@@ -114,15 +124,15 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return errors.Newf("update team: %v", err)
 	}
 
-	if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+	if err = repo.recalculateTeamAccesses(legacyTx(e), 0); err != nil {
 		return errors.Newf("recalculateAccesses: %v", err)
 	}
 
-	if err = t.getMembers(e); err != nil {
+	if err = t.getMembers(legacyTx(e)); err != nil {
 		return errors.Newf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
-		if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
+		if err = watchRepo(legacyTx(e), u.ID, repo.ID, true); err != nil {
 			return errors.Newf("watchRepo: %v", err)
 		}
 	}
@@ -162,12 +172,12 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 
 	// Don't need to recalculate when delete a repository from organization.
 	if recalculate {
-		if err = repo.recalculateTeamAccesses(e, t.ID); err != nil {
+		if err = repo.recalculateTeamAccesses(legacyTx(e), t.ID); err != nil {
 			return err
 		}
 	}
 
-	if err = t.getMembers(e); err != nil {
+	if err = t.getMembers(legacyTx(e)); err != nil {
 		return errors.Newf("get team members: %v", err)
 	}
 
@@ -210,7 +220,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 			continue
 		}
 
-		if err = watchRepo(e, member.ID, repo.ID, false); err != nil {
+		if err = watchRepo(legacyTx(e), member.ID, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -351,14 +361,14 @@ func GetTeamByID(teamID int64) (*Team, error) {
 	return getTeamByID(x, teamID)
 }
 
-func getTeamsByOrgID(e Engine, orgID int64) ([]*Team, error) {
+func getTeamsByOrgID(tx *gorm.DB, orgID int64) ([]*Team, error) {
 	teams := make([]*Team, 0, 3)
-	return teams, e.Where("org_id = ?", orgID).Find(&teams)
+	return teams, tx.Where("org_id = ?", orgID).Find(&teams).Error
 }
 
 // GetTeamsByOrgID returns all teams belong to given organization.
 func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
-	return getTeamsByOrgID(x, orgID)
+	return getTeamsByOrgID(Handle.db, orgID)
 }
 
 // UpdateTeam updates information of team.
@@ -397,7 +407,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		}
 
 		for _, repo := range t.Repos {
-			if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
+			if err = repo.recalculateTeamAccesses(legacyTx(sess), 0); err != nil {
 				return errors.Newf("recalculateTeamAccesses: %v", err)
 			}
 		}
@@ -427,7 +437,7 @@ func DeleteTeam(t *Team) error {
 
 	// Delete all accesses.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(sess, t.ID); err != nil {
+		if err = repo.recalculateTeamAccesses(legacyTx(sess), t.ID); err != nil {
 			return err
 		}
 	}
@@ -474,16 +484,16 @@ func IsTeamMember(orgID, teamID, uid int64) bool {
 	return isTeamMember(x, orgID, teamID, uid)
 }
 
-func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
+func getTeamMembers(tx *gorm.DB, teamID int64) (_ []*User, err error) {
 	teamUsers := make([]*TeamUser, 0, 10)
-	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id = ?", teamID).
-		Find(&teamUsers); err != nil {
+	if err = tx.Where("team_id = ?", teamID).Find(&teamUsers).Error; err != nil {
 		return nil, errors.Newf("get team-users: %v", err)
 	}
 	members := make([]*User, 0, len(teamUsers))
 	for i := range teamUsers {
+		// NOTE: A missing user yields an empty member rather than an error.
 		member := new(User)
-		if _, err = e.ID(teamUsers[i].UID).Get(member); err != nil {
+		if err = tx.Where("id = ?", teamUsers[i].UID).Limit(1).Find(member).Error; err != nil {
 			return nil, errors.Newf("get user '%d': %v", teamUsers[i].UID, err)
 		}
 		members = append(members, member)
@@ -493,7 +503,7 @@ func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 
 // GetTeamMembers returns all members in given team of organization.
 func GetTeamMembers(teamID int64) ([]*User, error) {
-	return getTeamMembers(x, teamID)
+	return getTeamMembers(Handle.db, teamID)
 }
 
 func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
@@ -558,7 +568,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 
 	// Give access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
+		if err = repo.recalculateTeamAccesses(legacyTx(sess), 0); err != nil {
 			return err
 		}
 	}
@@ -620,7 +630,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 
 	// Delete access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+		if err = repo.recalculateTeamAccesses(legacyTx(e), 0); err != nil {
 			return err
 		}
 	}
@@ -669,14 +679,15 @@ type TeamRepo struct {
 	RepoID int64 `xorm:"UNIQUE(s)"`
 }
 
-func hasTeamRepo(e Engine, orgID, teamID, repoID int64) bool {
-	has, _ := e.Where("org_id = ?", orgID).And("team_id = ?", teamID).And("repo_id = ?", repoID).Get(new(TeamRepo))
-	return has
+func hasTeamRepo(tx *gorm.DB, orgID, teamID, repoID int64) bool {
+	var count int64
+	_ = tx.Model(new(TeamRepo)).Where("org_id = ? AND team_id = ? AND repo_id = ?", orgID, teamID, repoID).Count(&count).Error
+	return count > 0
 }
 
 // HasTeamRepo returns true if given team has access to the repository of the organization.
 func HasTeamRepo(orgID, teamID, repoID int64) bool {
-	return hasTeamRepo(x, orgID, teamID, repoID)
+	return hasTeamRepo(Handle.db, orgID, teamID, repoID)
 }
 
 func addTeamRepo(e Engine, orgID, teamID, repoID int64) error {
