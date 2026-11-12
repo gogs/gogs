@@ -1,8 +1,10 @@
 package email
 
 import (
+	"bytes"
 	"crypto/tls"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -40,6 +42,15 @@ func newMessageFrom(to []string, from string, mail *Mail) (*message, error) {
 		m.AddAlternativeString(gomail.TypeTextHTML, mail.HTML)
 	default:
 		m.SetBodyString(gomail.TypeTextHTML, mail.HTML)
+	}
+	// The logo goes inside the email rather than as a link to the site, which
+	// mail clients would not load without asking.
+	if !conf.Email.UsePlainText && len(mail.Logo) > 0 {
+		contentType := gomail.ContentType(http.DetectContentType(mail.Logo))
+		err := m.EmbedReader(mailLogoName, bytes.NewReader(mail.Logo), gomail.WithFileContentType(contentType))
+		if err != nil {
+			return nil, errors.Wrap(err, "embed logo")
+		}
 	}
 
 	return &message{

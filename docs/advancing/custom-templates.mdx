@@ -40,7 +40,7 @@ You can replace any HTML template (including email templates) by placing a custo
 
 Each email has two Go templates under `templates/mail/`: one for the HTML part and one for the plain text part, e.g., `templates/mail/auth/activate.tmpl` and `templates/mail/auth/activate.txt`. To override an email, copy either file to the same path under `custom/templates/mail/` and edit it. When you override only the HTML template, the plain text part is converted from your HTML so the two parts say the same thing. Whether emails carry a plain text part at all depends on `USE_PLAIN_TEXT` and `ADD_PLAIN_TEXT_ALT` in the `[email]` section.
 
-The parts every email shares, i.e., the header, the footer and the button, are defined in `templates/mail/layout.tmpl` and `templates/mail/layout.txt`. Override `layout.tmpl` to restyle all emails at once.
+The parts every email shares, i.e., the header, the footer and the button, are defined in `templates/mail/layout.tmpl` and `templates/mail/layout.txt`. Override `layout.tmpl` to restyle all emails at once. The logo next to the site name travels inside each email, so mail clients show it without loading anything from your site. It is `templates/mail/logo.png`, or your custom favicon at `custom/public/img/favicon.png` when you have one. To use another image in emails only, place it at `custom/templates/mail/logo.png`; a small square PNG, e.g., 64×64 pixels, keeps emails light.
 
 Besides the fields of each email, e.g., `{{.Username}}`, the templates can call these functions:
 

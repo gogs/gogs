@@ -43,6 +43,9 @@ func TestPreviews(t *testing.T) {
 				assert.NotContains(t, body, "{{", "%s has an action left over", part)
 			}
 			assert.NotContains(t, m.Text, "<p", "text has HTML in it")
+			// A page cannot show cid: images.
+			assert.Contains(t, m.HTML, `src="data:image/png;base64,`)
+			assert.NotContains(t, m.HTML, "cid:")
 		})
 	}
 
@@ -81,5 +84,42 @@ func TestCompose(t *testing.T) {
 		// Keys missing from a language fall back to English.
 		assert.True(t, strings.HasPrefix(m.Text, "Gogs"), m.Text)
 		assert.Contains(t, m.Text, "Hi bob,")
+	})
+}
+
+func TestMessageLogo(t *testing.T) {
+	setupTemplates(t)
+	conf.Email.From = "Gogs <gogs@example.test>"
+	t.Cleanup(func() { conf.Email.From = "" })
+	render := func(t *testing.T, m *Mail) string {
+		t.Helper()
+		msg, err := newMessage([]string{"bob@example.test"}, m)
+		require.NoError(t, err)
+		var buf strings.Builder
+		_, err = msg.msg.WriteTo(&buf)
+		require.NoError(t, err)
+		return buf.String()
+	}
+
+	m, err := activateAccountMail.compose("en-US", userCodeData{Username: "bob"})
+	require.NoError(t, err)
+	require.NotEmpty(t, m.Logo)
+	assert.Contains(t, m.HTML, `src="cid:logo.png"`)
+
+	t.Run("travels inside the email", func(t *testing.T) {
+		out := render(t, m)
+		assert.Contains(t, out, "multipart/related")
+		assert.Contains(t, out, "Content-Id: <logo.png>")
+		assert.Contains(t, out, "Content-Type: image/png")
+	})
+
+	t.Run("not in plain text emails", func(t *testing.T) {
+		conf.Email.UsePlainText = true
+		t.Cleanup(func() { conf.Email.UsePlainText = false })
+		assert.NotContains(t, render(t, m), "logo.png")
+	})
+
+	t.Run("not when the HTML does not show it", func(t *testing.T) {
+		assert.NotContains(t, render(t, &Mail{Subject: "x", HTML: "<p>x</p>", Text: "x"}), "logo.png")
 	})
 }
