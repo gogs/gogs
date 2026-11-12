@@ -1217,12 +1217,12 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		}
 	} else {
 		// For organizations, the addRepository method calls this.
-		if err = repo.recalculateAccesses(e); err != nil {
+		if err = repo.recalculateAccesses(legacyTx(e)); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
 	}
 
-	if err = watchRepo(e, owner.ID, repo.ID, true); err != nil {
+	if err = watchRepo(legacyTx(e), owner.ID, repo.ID, true); err != nil {
 		return errors.Newf("watchRepo: %v", err)
 	}
 
@@ -1429,7 +1429,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	}
 
 	// Remove redundant collaborators.
-	collaborators, err := repo.getCollaborators(sess)
+	collaborators, err := repo.getCollaborators(legacyTx(sess))
 	if err != nil {
 		return errors.Newf("getCollaborators: %v", err)
 	}
@@ -1444,11 +1444,11 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Remove old team-repository relations.
 	if owner.IsOrganization() {
-		if err = owner.getTeams(sess); err != nil {
+		if err = owner.getTeams(legacyTx(sess)); err != nil {
 			return errors.Newf("getTeams: %v", err)
 		}
 		for _, t := range owner.Teams {
-			if !t.hasRepository(sess, repo.ID) {
+			if !t.hasRepository(legacyTx(sess), repo.ID) {
 				continue
 			}
 
@@ -1472,7 +1472,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		}
 	} else {
 		// For organizations, the addRepository method calls this.
-		if err = repo.recalculateAccesses(sess); err != nil {
+		if err = repo.recalculateAccesses(legacyTx(sess)); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
 
@@ -1493,12 +1493,12 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Remove watch for organization.
 	if owner.IsOrganization() {
-		if err = watchRepo(sess, owner.ID, repo.ID, false); err != nil {
+		if err = watchRepo(legacyTx(sess), owner.ID, repo.ID, false); err != nil {
 			return errors.Wrap(err, "unwatch repository for the organization owner")
 		}
 	}
 
-	if err = watchRepo(sess, newOwner.ID, repo.ID, true); err != nil {
+	if err = watchRepo(legacyTx(sess), newOwner.ID, repo.ID, true); err != nil {
 		return errors.Newf("watchRepo: %v", err)
 	}
 
@@ -1655,7 +1655,7 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 		}
 		if repo.Owner.IsOrganization() {
 			// Organization repository needs to recalculate access table when visibility is changed.
-			if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+			if err = repo.recalculateTeamAccesses(legacyTx(e), 0); err != nil {
 				return errors.Newf("recalculateTeamAccesses: %v", err)
 			}
 		}
@@ -1764,7 +1764,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 
 	if org.IsOrganization() {
 		for _, t := range org.Teams {
-			if !t.hasRepository(sess, repoID) {
+			if !t.hasRepository(legacyTx(sess), repoID) {
 				continue
 			} else if err = t.removeRepository(sess, repo, false); err != nil {
 				return err
@@ -2349,45 +2349,45 @@ type Watch struct {
 	RepoID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
 }
 
-func isWatching(e Engine, userID, repoID int64) bool {
+func isWatching(tx *gorm.DB, userID, repoID int64) bool {
 	if userID <= 0 {
 		return false
 	}
-	has, _ := e.Get(&Watch{0, userID, repoID})
-	return has
+	var count int64
+	_ = tx.Model(new(Watch)).Where("user_id = ? AND repo_id = ?", userID, repoID).Count(&count).Error
+	return count > 0
 }
 
 // IsWatching checks if user has watched given repository.
 func IsWatching(userID, repoID int64) bool {
-	return isWatching(x, userID, repoID)
+	return isWatching(Handle.db, userID, repoID)
 }
 
-func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
+func watchRepo(tx *gorm.DB, userID, repoID int64, watch bool) (err error) {
 	if watch {
-		if isWatching(e, userID, repoID) {
+		if isWatching(tx, userID, repoID) {
 			return nil
 		}
-		if _, err = e.Insert(&Watch{RepoID: repoID, UserID: userID}); err != nil {
+		if err = tx.Create(&Watch{RepoID: repoID, UserID: userID}).Error; err != nil {
 			return err
 		}
-		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoID)
-	} else {
-		if !isWatching(e, userID, repoID) {
-			return nil
-		}
-		if _, err = e.Delete(&Watch{0, userID, repoID}); err != nil {
-			return err
-		}
-		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoID)
+		return tx.Exec("UPDATE repository SET num_watches = num_watches + 1 WHERE id = ?", repoID).Error
 	}
-	return err
+
+	if !isWatching(tx, userID, repoID) {
+		return nil
+	}
+	if err = tx.Where("user_id = ? AND repo_id = ?", userID, repoID).Delete(new(Watch)).Error; err != nil {
+		return err
+	}
+	return tx.Exec("UPDATE repository SET num_watches = num_watches - 1 WHERE id = ?", repoID).Error
 }
 
 // WatchRepo watches or unwatches repository.
 //
 // Deprecated: Use Repositories.Watch instead.
 func WatchRepo(userID, repoID int64, watch bool) (err error) {
-	return watchRepo(x, userID, repoID, watch)
+	return watchRepo(Handle.db, userID, repoID, watch)
 }
 
 // Deprecated: Use Repositories.ListWatches instead.
@@ -2406,13 +2406,15 @@ func GetWatchers(repoID int64) ([]*Watch, error) {
 // GetWatchers returns a page of users watching the repository.
 func (r *Repository) GetWatchers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("watch.repo_id=?", r.ID)
+	userTable := "user"
 	if conf.UsePostgreSQL {
-		sess = sess.Join("LEFT", "watch", `"user".id=watch.user_id`)
-	} else {
-		sess = sess.Join("LEFT", "watch", "user.id=watch.user_id")
+		userTable = `"user"`
 	}
-	return users, sess.Find(&users)
+	return users, Handle.db.Select(userTable+".*").
+		Joins("LEFT JOIN watch ON "+userTable+".id = watch.user_id").
+		Where("watch.repo_id = ?", r.ID).
+		Limit(ItemsPerPage).Offset((page - 1) * ItemsPerPage).
+		Find(&users).Error
 }
 
 // Deprecated: Use Actions.notifyWatchers instead.
@@ -2467,28 +2469,28 @@ type Star struct {
 //
 // Deprecated: Use Repositories.Star instead.
 func StarRepo(userID, repoID int64, star bool) (err error) {
+	db := Handle.db
 	if star {
 		if IsStarring(userID, repoID) {
 			return nil
 		}
-		if _, err = x.Insert(&Star{UserID: userID, RepoID: repoID}); err != nil {
+		if err = db.Create(&Star{UserID: userID, RepoID: repoID}).Error; err != nil {
 			return err
-		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoID); err != nil {
-			return err
-		}
-		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", userID)
-	} else {
-		if !IsStarring(userID, repoID) {
-			return nil
-		}
-		if _, err = x.Delete(&Star{0, userID, repoID}); err != nil {
-			return err
-		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoID); err != nil {
+		} else if err = db.Exec("UPDATE repository SET num_stars = num_stars + 1 WHERE id = ?", repoID).Error; err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars - 1 WHERE id = ?", userID)
+		return db.Model(new(User)).Where("id = ?", userID).UpdateColumn("num_stars", gorm.Expr("num_stars + 1")).Error
 	}
-	return err
+
+	if !IsStarring(userID, repoID) {
+		return nil
+	}
+	if err = db.Where("uid = ? AND repo_id = ?", userID, repoID).Delete(new(Star)).Error; err != nil {
+		return err
+	} else if err = db.Exec("UPDATE repository SET num_stars = num_stars - 1 WHERE id = ?", repoID).Error; err != nil {
+		return err
+	}
+	return db.Model(new(User)).Where("id = ?", userID).UpdateColumn("num_stars", gorm.Expr("num_stars - 1")).Error
 }
 
 // IsStarring checks if user has starred given repository.
@@ -2496,19 +2498,22 @@ func IsStarring(userID, repoID int64) bool {
 	if userID <= 0 {
 		return false
 	}
-	has, _ := x.Get(&Star{0, userID, repoID})
-	return has
+	var count int64
+	_ = Handle.db.Model(new(Star)).Where("uid = ? AND repo_id = ?", userID, repoID).Count(&count).Error
+	return count > 0
 }
 
 func (r *Repository) GetStargazers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("star.repo_id=?", r.ID)
+	userTable := "user"
 	if conf.UsePostgreSQL {
-		sess = sess.Join("LEFT", "star", `"user".id=star.uid`)
-	} else {
-		sess = sess.Join("LEFT", "star", "user.id=star.uid")
+		userTable = `"user"`
 	}
-	return users, sess.Find(&users)
+	return users, Handle.db.Select(userTable+".*").
+		Joins("LEFT JOIN star ON "+userTable+".id = star.uid").
+		Where("star.repo_id = ?", r.ID).
+		Limit(ItemsPerPage).Offset((page - 1) * ItemsPerPage).
+		Find(&users).Error
 }
 
 // HasForkedRepo checks if given user has already forked a repository.
@@ -2607,7 +2612,7 @@ func (r *Repository) GetForks() ([]*Repository, error) {
 }
 
 // Deprecated: Use Permissions.SetRepoPerms instead.
-func (r *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
+func (r *Repository) refreshAccesses(tx *gorm.DB, accessMap map[int64]AccessMode) (err error) {
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
 		newAccesses = append(newAccesses, Access{
@@ -2618,17 +2623,21 @@ func (r *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (
 	}
 
 	// Delete old accesses and insert new ones for repository.
-	if _, err = e.Delete(&Access{RepoID: r.ID}); err != nil {
+	if err = tx.Where("repo_id = ?", r.ID).Delete(new(Access)).Error; err != nil {
 		return errors.Newf("delete old accesses: %v", err)
-	} else if _, err = e.Insert(newAccesses); err != nil {
+	}
+	if len(newAccesses) == 0 {
+		return nil
+	}
+	if err = tx.Create(&newAccesses).Error; err != nil {
 		return errors.Newf("insert new accesses: %v", err)
 	}
 	return nil
 }
 
 // refreshCollaboratorAccesses retrieves repository collaborations with their access modes.
-func (r *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]AccessMode) error {
-	collaborations, err := r.getCollaborations(e)
+func (r *Repository) refreshCollaboratorAccesses(tx *gorm.DB, accessMap map[int64]AccessMode) error {
+	collaborations, err := r.getCollaborations(tx)
 	if err != nil {
 		return errors.Newf("getCollaborations: %v", err)
 	}
@@ -2641,20 +2650,20 @@ func (r *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]A
 // recalculateTeamAccesses recalculates new accesses for teams of an organization
 // except the team whose ID is given. A team ID is given when removing the
 // repository from that team.
-func (r *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
+func (r *Repository) recalculateTeamAccesses(tx *gorm.DB, ignTeamID int64) (err error) {
 	accessMap := make(map[int64]AccessMode, 20)
 
-	if err = r.getOwner(legacyTx(e)); err != nil {
+	if err = r.getOwner(tx); err != nil {
 		return err
 	} else if !r.Owner.IsOrganization() {
 		return errors.Newf("owner is not an organization: %d", r.OwnerID)
 	}
 
-	if err = r.refreshCollaboratorAccesses(e, accessMap); err != nil {
+	if err = r.refreshCollaboratorAccesses(tx, accessMap); err != nil {
 		return errors.Newf("refreshCollaboratorAccesses: %v", err)
 	}
 
-	if err = r.Owner.getTeams(e); err != nil {
+	if err = r.Owner.getTeams(tx); err != nil {
 		return err
 	}
 
@@ -2677,11 +2686,11 @@ func (r *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err err
 		// with repository are skipped.
 		if t.IsOwnerTeam() {
 			t.Authorize = AccessModeOwner
-		} else if !t.hasRepository(e, r.ID) {
+		} else if !t.hasRepository(tx, r.ID) {
 			continue
 		}
 
-		if err = t.getMembers(e); err != nil {
+		if err = t.getMembers(tx); err != nil {
 			return errors.Newf("getMembers '%d': %v", t.ID, err)
 		}
 		for _, m := range t.Members {
@@ -2689,22 +2698,22 @@ func (r *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err err
 		}
 	}
 
-	return r.refreshAccesses(e, accessMap)
+	return r.refreshAccesses(tx, accessMap)
 }
 
-func (r *Repository) recalculateAccesses(e Engine) error {
+func (r *Repository) recalculateAccesses(tx *gorm.DB) error {
 	if r.Owner.IsOrganization() {
-		return r.recalculateTeamAccesses(e, 0)
+		return r.recalculateTeamAccesses(tx, 0)
 	}
 
 	accessMap := make(map[int64]AccessMode, 10)
-	if err := r.refreshCollaboratorAccesses(e, accessMap); err != nil {
+	if err := r.refreshCollaboratorAccesses(tx, accessMap); err != nil {
 		return errors.Newf("refreshCollaboratorAccesses: %v", err)
 	}
-	return r.refreshAccesses(e, accessMap)
+	return r.refreshAccesses(tx, accessMap)
 }
 
 // RecalculateAccesses recalculates all accesses for repository.
 func (r *Repository) RecalculateAccesses() error {
-	return r.recalculateAccesses(x)
+	return r.recalculateAccesses(Handle.db)
 }
