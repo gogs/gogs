@@ -249,10 +249,10 @@ func mirrorGitEnv() []string {
 // remoteDefaultBranch returns the branch that HEAD of the mirror source in
 // given URL points to.
 func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADOptions{
-		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+		Envs: mirrorGitEnv(),
 	})
 	if err != nil {
 		return "", err

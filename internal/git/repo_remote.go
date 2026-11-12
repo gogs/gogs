@@ -57,7 +57,8 @@ func LsRemote(ctx context.Context, url string, opts ...LsRemoteOptions) ([]*Refe
 //
 // Docs: https://git-scm.com/docs/git-ls-remote#Documentation/git-ls-remote.txt---symref
 type RemoteHEADOptions struct {
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // RemoteHEAD returns the reference that HEAD of the remote repository points
