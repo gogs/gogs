@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,4 +58,24 @@ func TestMirrorGitEnv(t *testing.T) {
 		assert.Equal(t, "false", gitConfigGet(t, "http.followRedirects"))
 		assert.Equal(t, "http://proxy.example.com:3128", gitConfigGet(t, "http.proxy"))
 	})
+}
+
+func TestRemoteDefaultBranch(t *testing.T) {
+	git := func(t *testing.T, dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(output))
+	}
+
+	source := t.TempDir()
+	git(t, source, "init", "--initial-branch=trunk")
+	git(t, source, "-c", "user.name=alice", "-c", "user.email=alice@example.com", "commit", "--allow-empty", "--message=initial")
+	git(t, source, "branch", "release/v1")
+	git(t, source, "symbolic-ref", "HEAD", "refs/heads/release/v1")
+
+	got, err := remoteDefaultBranch(time.Minute, source)
+	require.NoError(t, err)
+	assert.Equal(t, "release/v1", got)
 }

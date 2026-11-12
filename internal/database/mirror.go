@@ -237,6 +237,20 @@ func mirrorGitEnv() []string {
 	}
 }
 
+// remoteDefaultBranch returns the branch that HEAD of the mirror source in
+// given URL points to.
+func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADOptions{
+		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+	})
+	if err != nil {
+		return "", err
+	}
+	return git.RefShortName(ref), nil
+}
+
 // isMirrorURLAccessible reports whether the given remote URL is reachable
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
@@ -423,6 +437,15 @@ func SyncMirrors() {
 				} else {
 					m.Repo.IsBare = false
 				}
+			}
+		}
+
+		if !m.Repo.IsBare && !git.RepoHasBranch(ctx, m.Repo.RepoPath(), m.Repo.DefaultBranch) {
+			branch, err := remoteDefaultBranch(time.Duration(conf.Git.Timeout.Mirror)*time.Second, m.RawAddress())
+			if err != nil {
+				log.Error("Failed to get default branch of mirror source [repo_id: %d]: %v", m.RepoID, err)
+			} else if err = m.Repo.setDefaultBranchIfMissing(ctx, branch); err != nil {
+				log.Error("Failed to set default branch [repo_id: %d]: %v", m.RepoID, err)
 			}
 		}
 

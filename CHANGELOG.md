@@ -20,6 +20,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
 - Migrating or mirroring an empty repository no longer fails. Mirrors of an empty repository now show their content once the source repository receives commits. [#8497](https://github.com/gogs/gogs/pull/8497)
+- When the first branch pushed to an empty repository has a different name than the repository's default branch, it now becomes the default branch, so cloning checks it out instead of producing an empty working tree. Mirrors whose default branch no longer exists now follow the default branch of the source repository. [#8497](https://github.com/gogs/gogs/pull/8497)
 
 ### Removed
 

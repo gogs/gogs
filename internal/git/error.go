@@ -16,6 +16,7 @@ var (
 	ErrNoMergeBase          = errors.New("no merge based was found")
 	ErrNotBlob              = errors.New("the entry is not a blob")
 	ErrNotDeleteNonPushURLs = errors.New("will not delete all non-push URLs")
+	ErrNotSymbolicRef       = errors.New("the reference is not a symbolic reference")
 )
 
 var _ errx.NotFound = (*Error)(nil)

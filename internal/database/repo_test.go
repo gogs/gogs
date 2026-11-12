@@ -2,7 +2,9 @@ package database
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -110,4 +112,70 @@ func TestGetRepoInitFile(t *testing.T) {
 	Readmes = nil
 	_, err = getRepoInitFile("readme", "Default")
 	assert.Error(t, err)
+}
+
+func TestPointHEADToBranchIfMissing(t *testing.T) {
+	ctx := t.Context()
+	git := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(output))
+		return strings.TrimSpace(string(output))
+	}
+	// newRepo returns a bare repository with HEAD pointing to "main" and the
+	// given branches.
+	newRepo := func(t *testing.T, branches ...string) string {
+		t.Helper()
+		dir := t.TempDir()
+		git(t, dir, "init", "--bare", "--initial-branch=main")
+		if len(branches) == 0 {
+			return dir
+		}
+
+		work := t.TempDir()
+		git(t, work, "init", "--initial-branch="+branches[0])
+		git(t, work, "-c", "user.name=alice", "-c", "user.email=alice@example.com", "commit", "--allow-empty", "--message=initial")
+		for _, branch := range branches {
+			git(t, work, "push", dir, "HEAD:refs/heads/"+branch)
+		}
+		return dir
+	}
+
+	t.Run("default branch is missing", func(t *testing.T) {
+		dir := newRepo(t, "dev", "master")
+
+		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
+		require.NoError(t, err)
+		assert.True(t, changed)
+		assert.Equal(t, "refs/heads/master", git(t, dir, "symbolic-ref", "HEAD"))
+	})
+
+	t.Run("default branch exists", func(t *testing.T) {
+		dir := newRepo(t, "main", "master")
+
+		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
+		require.NoError(t, err)
+		assert.False(t, changed)
+		assert.Equal(t, "refs/heads/main", git(t, dir, "symbolic-ref", "HEAD"))
+	})
+
+	t.Run("candidate branch is missing", func(t *testing.T) {
+		dir := newRepo(t, "dev")
+
+		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
+		require.NoError(t, err)
+		assert.False(t, changed)
+		assert.Equal(t, "refs/heads/main", git(t, dir, "symbolic-ref", "HEAD"))
+	})
+
+	t.Run("empty repository", func(t *testing.T) {
+		dir := newRepo(t)
+
+		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
+		require.NoError(t, err)
+		assert.False(t, changed)
+		assert.Equal(t, "refs/heads/main", git(t, dir, "symbolic-ref", "HEAD"))
+	})
 }

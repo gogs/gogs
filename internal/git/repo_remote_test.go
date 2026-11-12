@@ -87,6 +87,48 @@ func TestIsURLAccessible(t *testing.T) {
 	}
 }
 
+func TestRemoteHEAD(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("default", func(t *testing.T) {
+		ref, err := RemoteHEAD(ctx, testrepo.Path())
+		require.NoError(t, err)
+		assert.Equal(t, RefsHeads+"master", ref)
+	})
+
+	t.Run("HEAD points to another branch", func(t *testing.T) {
+		r, cleanup, err := setupTempRepo()
+		require.NoError(t, err)
+		defer cleanup()
+
+		// The clone also has "refs/remotes/origin/HEAD", which must not be mistaken
+		// for HEAD.
+		err = r.Checkout(ctx, "develop", CheckoutOptions{BaseBranch: "master"})
+		require.NoError(t, err)
+
+		ref, err := RemoteHEAD(ctx, r.Path())
+		require.NoError(t, err)
+		assert.Equal(t, RefsHeads+"develop", ref)
+	})
+
+	t.Run("HEAD points to a missing branch", func(t *testing.T) {
+		r, cleanup, err := setupTempRepo()
+		require.NoError(t, err)
+		defer cleanup()
+
+		_, err = r.SymbolicRef(ctx, SymbolicRefOptions{Ref: RefsHeads + "missing"})
+		require.NoError(t, err)
+
+		_, err = RemoteHEAD(ctx, r.Path())
+		assert.Equal(t, ErrNotSymbolicRef, err)
+	})
+
+	t.Run("not a repository", func(t *testing.T) {
+		_, err := RemoteHEAD(ctx, t.TempDir())
+		assert.Error(t, err)
+	})
+}
+
 func TestRepository_RemoteAdd(t *testing.T) {
 	ctx := context.Background()
 	path := tempPath()
