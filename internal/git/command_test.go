@@ -65,3 +65,18 @@ func TestCmd_ContextCancellation(t *testing.T) {
 	// Must NOT be ErrExecTimeout, cancellation is distinct from deadline.
 	assert.NotEqual(t, ErrExecTimeout, err)
 }
+
+func TestWithTimeout(t *testing.T) {
+	for _, timeout := range []time.Duration{0, -time.Second} {
+		ctx, cancel := WithTimeout(context.Background(), timeout)
+		_, err := exec(ctx, "", []string{"version"}, nil)
+		cancel()
+		assert.NoError(t, err, "timeout %v", timeout)
+	}
+
+	ctx, cancel := WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	assert.True(t, ok)
+	assert.WithinDuration(t, time.Now().Add(time.Minute), deadline, 5*time.Second)
+}

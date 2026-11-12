@@ -654,13 +654,8 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err
 		if isWiki {
 			branch = ""
 		}
-		ctx := context.TODO()
-		// A non-positive timeout means no timeout.
-		if conf.Git.Timeout.Clone > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Clone)*time.Second)
-			defer cancel()
-		}
+		ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.Clone)*time.Second)
+		defer cancel()
 		if err = git.Clone(ctx, repoPath, localPath, git.CloneOptions{
 			Branch: branch,
 		}); err != nil {
@@ -820,7 +815,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
 	mirrorClone := func(url, dst string) error {
-		ctx, cancel := context.WithTimeout(context.TODO(), migrateTimeout)
+		ctx, cancel := git.WithTimeout(context.TODO(), migrateTimeout)
 		defer cancel()
 		return git.Clone(ctx, url, dst, git.CloneOptions{
 			Mirror: true,
@@ -2150,11 +2145,7 @@ func GitFsck() {
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			ctx, cancel := context.TODO(), context.CancelFunc(func() {})
-			// A non-positive timeout means no timeout.
-			if conf.Cron.RepoHealthCheck.Timeout > 0 {
-				ctx, cancel = context.WithTimeout(ctx, conf.Cron.RepoHealthCheck.Timeout)
-			}
+			ctx, cancel := git.WithTimeout(context.TODO(), conf.Cron.RepoHealthCheck.Timeout)
 			err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
 				Args: conf.Cron.RepoHealthCheck.Args,
 			})
@@ -2183,7 +2174,7 @@ func GitGcRepos() error {
 			if err := repo.GetOwner(); err != nil {
 				return err
 			}
-			ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
+			ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
 			defer cancel()
 			return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
 		})

@@ -255,7 +255,7 @@ func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
 func isMirrorURLAccessible(timeout time.Duration, url string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	_, err := git.LsRemote(ctx, url, git.LsRemoteOptions{
 		Patterns: []string{"HEAD"},
@@ -267,7 +267,7 @@ func isMirrorURLAccessible(timeout time.Duration, url string) bool {
 // mirrorRemoteUpdate fetches updates for the mirror repository in given path,
 // and returns the output that reports updated references.
 func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return git.RepoRemoteUpdate(ctx, repoPath, git.RemoteUpdateOptions{
 		Prune: prune,

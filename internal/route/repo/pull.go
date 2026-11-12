@@ -1,7 +1,6 @@
 package repo
 
 import (
-	gocontext "context"
 	"net/http"
 	"path"
 	"strconv"
@@ -356,13 +355,8 @@ func ViewPullFiles(c *context.Context) {
 		gitRepo = headGitRepo
 	}
 
-	ctx := c.Req.Context()
-	// A non-positive timeout means no timeout.
-	if conf.Git.Timeout.Diff > 0 {
-		var cancel gocontext.CancelFunc
-		ctx, cancel = gocontext.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Diff)*time.Second)
-		defer cancel()
-	}
+	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
 	diff, err := diffGitRepo.Diff(ctx,
 		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: startCommitID},
@@ -596,13 +590,8 @@ func PrepareCompareDiff(
 		return true
 	}
 
-	ctx := c.Req.Context()
-	// A non-positive timeout means no timeout.
-	if conf.Git.Timeout.Diff > 0 {
-		var cancel gocontext.CancelFunc
-		ctx, cancel = gocontext.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Diff)*time.Second)
-		defer cancel()
-	}
+	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
 	diff, err := headGitRepo.Diff(ctx,
 		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: meta.MergeBase},
