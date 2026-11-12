@@ -1144,19 +1144,22 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 
 	// Re-fetch the repository from database before updating it (else it would
 	// override changes that were done earlier with sql)
-	if repo, err = getRepositoryByID(e, repo.ID); err != nil {
+	saved, err := getRepositoryByID(e, repo.ID)
+	if err != nil {
 		return errors.Newf("getRepositoryByID: %v", err)
 	}
 
 	if !opts.AutoInit {
-		repo.IsBare = true
+		saved.IsBare = true
 	}
 
-	repo.DefaultBranch = conf.Repository.DefaultBranch
-	if err = updateRepository(e, repo, false); err != nil {
+	saved.DefaultBranch = conf.Repository.DefaultBranch
+	if err = updateRepository(e, saved, false); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 
+	// The caller returns its copy to API clients, which must match what was saved.
+	*repo = *saved
 	return nil
 }
 
