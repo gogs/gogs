@@ -3,51 +3,73 @@ package email
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	htmltemplate "html/template"
 	"io/fs"
 	"net/mail"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
+	texttemplate "text/template"
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/inbucket/html2text"
+	"github.com/unknwon/i18n"
 
+	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/templates"
 )
 
-// Translator is the minimal locale-translation contract used by mail
-// composition. It decouples this package from any specific web framework so
-// callers can pass either macaron.Context or, post-migration, Flamego's
-// i18n.Locale.
-type Translator interface {
-	Tr(format string, args ...any) string
+// Locale is the language of the person an email is for. It decouples this
+// package from any specific web framework, e.g., both macaron.Context and
+// Flamego's i18n.Locale satisfy it.
+type Locale interface {
+	Language() string
 }
 
-const (
-	tmplAuthActivate       = "auth/activate"
-	tmplAuthActivateEmail  = "auth/activate_email"
-	tmplAuthResetPassword  = "auth/reset_passwd"
-	tmplAuthRegisterNotify = "auth/register_notify"
+// defaultLang is the language of emails to several people at once, e.g.,
+// issue comments, and of emails with no person behind them.
+const defaultLang = "en-US"
 
-	tmplIssueComment = "issue/comment"
-	tmplIssueMention = "issue/mention"
+var localesOnce sync.Once
 
-	tmplNotifyCollaborator = "notify/collaborator"
-)
+// loadLocales loads the locale files for translating emails unless the web
+// server already did, e.g., when a Git hook sends issue emails.
+func loadLocales() {
+	localesOnce.Do(func() {
+		if i18n.Count() > 0 {
+			return
+		}
+		langs, names := []string{defaultLang}, []string{"English"}
+		if conf.I18n != nil && len(conf.I18n.Langs) > 0 {
+			langs, names = conf.I18n.Langs, conf.I18n.Names
+		}
+		for i, lang := range langs {
+			fname := "locale_" + lang + ".ini"
+			data, err := embedconf.Files.ReadFile("locale/" + fname)
+			if err != nil {
+				continue
+			}
+			var custom []any
+			if p := filepath.Join(conf.CustomDir(), "conf", "locale", fname); osx.IsFile(p) {
+				custom = append(custom, p)
+			}
+			_ = i18n.SetMessageWithDesc(lang, names[i], data, custom...)
+		}
+		i18n.SetDefaultLang(defaultLang)
+	})
+}
 
-var (
-	tplSet     *template.Template
-	tplSetOnce sync.Once
-	tplSetErr  error
-)
-
-func funcMap() template.FuncMap {
-	return template.FuncMap{
+// funcs returns the functions shared by the HTML and plain text templates. Tr
+// and Lang stand for the language of each email, see templateSet.render.
+func funcs() map[string]any {
+	return map[string]any{
 		"AppName": func() string {
 			return conf.App.BrandName
 		},
@@ -57,24 +79,83 @@ func funcMap() template.FuncMap {
 		"Year": func() int {
 			return time.Now().Year()
 		},
-		"Str2HTML": func(raw string) template.HTML {
-			return template.HTML(markup.Sanitize(raw))
+		"Lang": func() string {
+			return defaultLang
+		},
+		"Tr": func(key string, args ...any) string {
+			return i18n.Tr(defaultLang, key, args...)
 		},
 	}
 }
 
-// Recognized mail-template file extensions. A template's name is its path
-// relative to the "mail" directory, without extension (e.g. "auth/activate").
-var mailTemplateExts = []string{".tmpl", ".html"}
+func htmlFuncs() htmltemplate.FuncMap {
+	fm := funcs()
+	// Markup prints HTML rendered from user content, e.g., an issue comment.
+	fm["Markup"] = func(raw string) htmltemplate.HTML {
+		return htmltemplate.HTML(markup.Sanitize(raw))
+	}
+	// Str2HTML is the name of Markup in templates written before it.
+	fm["Str2HTML"] = fm["Markup"]
+	// rawComment prints an HTML comment, which html/template would strip from
+	// the template text, e.g., conditional comments for Outlook.
+	fm["rawComment"] = func(s string) htmltemplate.HTML {
+		return htmltemplate.HTML("<!--" + s + "-->")
+	}
+	return fm
+}
+
+func textFuncs() texttemplate.FuncMap {
+	fm := funcs()
+	fm["Markup"] = func(raw string) (string, error) {
+		return html2text.FromString(markup.Sanitize(raw))
+	}
+	return fm
+}
+
+// A template's name is its path relative to the "mail" directory, without
+// extension (e.g. "auth/activate"). HTML templates end with .tmpl or .html,
+// plain text ones with .txt.
+var (
+	htmlTemplateExts = []string{".tmpl", ".html"}
+	textTemplateExt  = ".txt"
+)
+
+// templateSet holds every mail template.
+type templateSet struct {
+	html *htmltemplate.Template
+	text *texttemplate.Template
+	// htmlOnly holds the names of HTML templates overridden in the custom
+	// directory without a plain text one. Their plain text is converted from
+	// the HTML, so that it does not differ from the HTML.
+	htmlOnly map[string]bool
+}
 
 // loadMailTemplates parses every mail template under the embedded "mail" tree
 // (or "<work>/templates/mail" when LoadAssetsFromDisk is set), then overlays
 // files from "<custom>/templates/mail" so an admin can override any builtin.
-func loadMailTemplates() (*template.Template, error) {
-	root := template.New("").Funcs(funcMap())
-	parse := func(name string, data []byte) error {
-		_, err := root.New(name).Parse(string(data))
-		return errors.Wrapf(err, "parse %q", name)
+func loadMailTemplates() (*templateSet, error) {
+	set := &templateSet{
+		html:     htmltemplate.New("").Funcs(htmlFuncs()),
+		text:     texttemplate.New("").Funcs(textFuncs()),
+		htmlOnly: make(map[string]bool),
+	}
+	customText := make(map[string]bool)
+	parse := func(custom bool) func(name, ext string, data []byte) error {
+		return func(name, ext string, data []byte) error {
+			var err error
+			if ext == textTemplateExt {
+				_, err = set.text.New(name).Parse(string(data))
+				if custom {
+					customText[name] = true
+				}
+			} else {
+				_, err = set.html.New(name).Parse(string(data))
+				if custom {
+					set.htmlOnly[name] = true
+				}
+			}
+			return errors.Wrapf(err, "parse %q", name+ext)
+		}
 	}
 
 	if conf.Server.LoadAssetsFromDisk {
@@ -82,33 +163,46 @@ func loadMailTemplates() (*template.Template, error) {
 		if _, err := os.Stat(baseRoot); err != nil {
 			return nil, errors.Wrapf(err, "stat base mail templates %q", baseRoot)
 		}
-		if err := overlayDiskMailTemplates(baseRoot, parse); err != nil {
+		if err := overlayDiskMailTemplates(baseRoot, parse(false)); err != nil {
 			return nil, err
 		}
 	} else {
 		for _, name := range templates.MailFileNames() {
-			ext := strings.ToLower(filepath.Ext(name))
-			if !slices.Contains(mailTemplateExts, ext) {
+			ext := mailTemplateExt(name)
+			if ext == "" {
 				continue
 			}
 			data, err := templates.ReadMailFile(name)
 			if err != nil {
 				return nil, errors.Wrapf(err, "read embedded %q", name)
 			}
-			if err := parse(strings.TrimSuffix(filepath.ToSlash(name), ext), data); err != nil {
+			if err := parse(false)(strings.TrimSuffix(filepath.ToSlash(name), ext), ext, data); err != nil {
 				return nil, err
 			}
 		}
 	}
-	if err := overlayDiskMailTemplates(filepath.Join(conf.CustomDir(), "templates", "mail"), parse); err != nil {
+	if err := overlayDiskMailTemplates(filepath.Join(conf.CustomDir(), "templates", "mail"), parse(true)); err != nil {
 		return nil, err
 	}
-	return root, nil
+	for name := range customText {
+		delete(set.htmlOnly, name)
+	}
+	return set, nil
+}
+
+// mailTemplateExt returns the extension of a recognized template file, or an
+// empty string.
+func mailTemplateExt(name string) string {
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == textTemplateExt || slices.Contains(htmlTemplateExts, ext) {
+		return ext
+	}
+	return ""
 }
 
 // overlayDiskMailTemplates walks root and parses every recognized template
 // file via parse. A missing root is not an error: custom overrides are optional.
-func overlayDiskMailTemplates(root string, parse func(name string, data []byte) error) error {
+func overlayDiskMailTemplates(root string, parse func(name, ext string, data []byte) error) error {
 	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -119,8 +213,8 @@ func overlayDiskMailTemplates(root string, parse func(name string, data []byte) 
 		if d.IsDir() {
 			return nil
 		}
-		ext := strings.ToLower(filepath.Ext(p))
-		if !slices.Contains(mailTemplateExts, ext) {
+		ext := mailTemplateExt(p)
+		if ext == "" {
 			return nil
 		}
 		data, err := os.ReadFile(p)
@@ -131,33 +225,70 @@ func overlayDiskMailTemplates(root string, parse func(name string, data []byte) 
 		if err != nil {
 			return err
 		}
-		return parse(strings.TrimSuffix(filepath.ToSlash(rel), ext), data)
+		return parse(strings.TrimSuffix(filepath.ToSlash(rel), ext), ext, data)
 	})
 }
 
-func render(tpl string, data map[string]any) (string, error) {
-	set, err := mailTemplateSet()
-	if err != nil {
-		return "", errors.Wrap(err, "load mail templates")
+var blankLines = regexp.MustCompile(`\n{3,}`)
+
+// render executes the named template in the language, and returns the HTML
+// and plain text bodies of the email.
+func (s *templateSet) render(lang, name string, data any) (htmlBody, textBody string, err error) {
+	langFuncs := map[string]any{
+		"Tr": func(key string, args ...any) string {
+			return i18n.Tr(lang, key, args...)
+		},
+		"Lang": func() string {
+			return lang
+		},
 	}
-	t := set.Lookup(tpl)
+
+	// Clones keep the parsed set free of any language, so it can be cloned again.
+	htmlSet, err := s.html.Clone()
+	if err != nil {
+		return "", "", errors.Wrap(err, "clone HTML templates")
+	}
+	t := htmlSet.Funcs(langFuncs).Lookup(name)
 	if t == nil {
-		return "", errors.Newf("mail template %q not found", tpl)
+		return "", "", errors.Newf("mail template %q not found", name)
 	}
 	var buf bytes.Buffer
-	if err := t.Execute(&buf, data); err != nil {
-		return "", errors.Wrapf(err, "execute %q", tpl)
+	if err = t.Execute(&buf, data); err != nil {
+		return "", "", errors.Wrapf(err, "execute %q", name)
 	}
-	return buf.String(), nil
+	htmlBody = buf.String()
+
+	if s.text.Lookup(name) == nil || s.htmlOnly[name] {
+		textBody, err = html2text.FromString(htmlBody)
+		return htmlBody, textBody, errors.Wrap(err, "convert HTML to plain text")
+	}
+	textSet, err := s.text.Clone()
+	if err != nil {
+		return "", "", errors.Wrap(err, "clone plain text templates")
+	}
+	buf.Reset()
+	if err = textSet.Funcs(langFuncs).Lookup(name).Execute(&buf, data); err != nil {
+		return "", "", errors.Wrapf(err, "execute %q", name+textTemplateExt)
+	}
+	// Elements the template leaves out, e.g., an empty paragraph, leave runs of
+	// blank lines behind.
+	textBody = blankLines.ReplaceAllString(strings.TrimSpace(buf.String()), "\n\n") + "\n"
+	return htmlBody, textBody, nil
 }
+
+var (
+	tplSet     *templateSet
+	tplSetOnce sync.Once
+	tplSetErr  error
+)
 
 // mailTemplateSet returns the parsed template set. When assets are loaded from
 // disk, templates are reloaded on every call so admin edits under
 // <work>/templates/mail or <custom>/templates/mail take effect without a
-// restart — matching the hot-reload behavior of the previous macaron renderer
+// restart, matching the hot-reload behavior of the previous macaron renderer
 // for non-production environments. When assets are embedded, the set is loaded
 // once and cached for the process lifetime.
-func mailTemplateSet() (*template.Template, error) {
+func mailTemplateSet() (*templateSet, error) {
 	if conf.Server.LoadAssetsFromDisk {
 		return loadMailTemplates()
 	}
@@ -167,8 +298,32 @@ func mailTemplateSet() (*template.Template, error) {
 	return tplSet, tplSetErr
 }
 
-func SendTestMail(email string) error {
-	msg, err := newMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
+// Mail is a composed email.
+type Mail struct {
+	Subject string
+	HTML    string
+	Text    string
+}
+
+// composeMail renders the named template in the language.
+func composeMail(lang, name, subject string, data any) (*Mail, error) {
+	set, err := mailTemplateSet()
+	if err != nil {
+		return nil, errors.Wrap(err, "load mail templates")
+	}
+	htmlBody, textBody, err := set.render(lang, name, data)
+	if err != nil {
+		return nil, err
+	}
+	return &Mail{Subject: subject, HTML: htmlBody, Text: textBody}, nil
+}
+
+func SendTestMail(l Locale, email string) error {
+	m, err := testMail.compose(l.Language(), struct{}{})
+	if err != nil {
+		return errors.Wrap(err, "compose")
+	}
+	msg, err := newMessage([]string{email}, m)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -199,19 +354,13 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
-	data := map[string]any{
-		"Username":          u.DisplayName(),
-		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
-		"ResetPwdCodeLives": conf.Auth.ResetPasswordCodeLives / 60,
-		"Code":              code,
-	}
-	body, err := render(tpl, data)
+// sendUserMail sends an email to the user.
+func sendUserMail[T any](lang string, u User, to string, d definition[T], data T, info string) error {
+	m, err := d.compose(lang, data)
 	if err != nil {
-		return errors.Wrap(err, "render")
+		return errors.Wrap(err, "compose")
 	}
-
-	msg, err := newMessage([]string{u.Email()}, subject, body)
+	msg, err := newMessage([]string{to}, m)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -221,101 +370,50 @@ func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
 	return nil
 }
 
-func SendActivateAccountMail(t Translator, u User) error {
-	return SendUserMail(t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.activate_account"), "activate account")
+func SendActivateAccountMail(l Locale, u User) error {
+	return sendUserMail(l.Language(), u, u.Email(), activateAccountMail, newUserCodeData(u, u.GenerateEmailActivateCode(u.Email())), "activate account")
 }
 
-func SendResetPasswordMail(t Translator, u User) error {
-	return SendUserMail(t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
+func SendResetPasswordMail(l Locale, u User) error {
+	return sendUserMail(l.Language(), u, u.Email(), resetPasswordMail, newUserCodeData(u, u.GenerateEmailResetPasswordCode(u.Email())), "reset password")
 }
 
-func SendActivateEmailMail(t Translator, u User, email string) error {
-	data := map[string]any{
-		"Username":        u.DisplayName(),
-		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
-		"Code":            u.GenerateEmailActivateCode(email),
-		"Email":           email,
+func SendActivateEmailMail(l Locale, u User, email string) error {
+	data := activateEmailData{
+		Username:        u.DisplayName(),
+		ActiveCodeLives: conf.Auth.ActivateCodeLives / 60,
+		Code:            u.GenerateEmailActivateCode(email),
+		Email:           email,
 	}
-	body, err := render(tmplAuthActivateEmail, data)
-	if err != nil {
-		return errors.Wrap(err, "render")
-	}
-
-	msg, err := newMessage([]string{email}, t.Tr("mail.activate_email"), body)
-	if err != nil {
-		return errors.Wrap(err, "new message")
-	}
-	msg.info = fmt.Sprintf("UID: %d, activate email", u.ID())
-
-	send(msg)
-	return nil
+	return sendUserMail(l.Language(), u, email, activateEmailMail, data, "activate email")
 }
 
-func SendRegisterNotifyMail(t Translator, u User) error {
-	data := map[string]any{
-		"Username": u.DisplayName(),
-	}
-	body, err := render(tmplAuthRegisterNotify, data)
-	if err != nil {
-		return errors.Wrap(err, "render")
-	}
-
-	msg, err := newMessage([]string{u.Email()}, t.Tr("mail.register_notify"), body)
-	if err != nil {
-		return errors.Wrap(err, "new message")
-	}
-	msg.info = fmt.Sprintf("UID: %d, registration notify", u.ID())
-
-	send(msg)
-	return nil
+func SendRegisterNotifyMail(l Locale, u User) error {
+	return sendUserMail(l.Language(), u, u.Email(), registerNotifyMail, registerNotifyData{Username: u.DisplayName()}, "registration notify")
 }
 
 func SendCollaboratorMail(u, doer User, repo Repository) error {
-	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
-
-	data := map[string]any{
-		"Subject":  subject,
-		"RepoName": repo.FullName(),
-		"Link":     repo.HTMLURL(),
-	}
-	body, err := render(tmplNotifyCollaborator, data)
-	if err != nil {
-		return errors.Wrap(err, "render")
-	}
-
-	msg, err := newMessage([]string{u.Email()}, subject, body)
-	if err != nil {
-		return errors.Wrap(err, "new message")
-	}
-	msg.info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
-
-	send(msg)
-	return nil
+	data := newCollaboratorData(defaultLang, doer.DisplayName(), repo.FullName(), repo.HTMLURL())
+	return sendUserMail(defaultLang, u, u.Email(), collaboratorMail, data, "add collaborator")
 }
 
-func composeTplData(subject, body, link string) map[string]any {
-	data := make(map[string]any, 10)
-	data["Subject"] = subject
-	data["Body"] = body
-	data["Link"] = link
-	return data
-}
-
-func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) (*message, error) {
-	subject := issue.MailSubject()
-	body := string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
-	data := composeTplData(subject, body, issue.HTMLURL())
-	data["Doer"] = doer
-	content, err := render(tplName, data)
+func composeIssueMessage(issue Issue, repo Repository, doer User, d definition[issueData], tos []string, info string) (*message, error) {
+	data := issueData{
+		Subject: issue.MailSubject(),
+		Body:    string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas())),
+		Link:    issue.HTMLURL(),
+		Doer:    doer,
+	}
+	m, err := d.compose(defaultLang, data)
 	if err != nil {
-		return nil, errors.Wrapf(err, "render %q", tplName)
+		return nil, errors.Wrapf(err, "compose %q", d.name)
 	}
 	from := (&mail.Address{Name: doer.DisplayName(), Address: conf.Email.FromEmail}).String()
-	msg, err := newMessageFrom(tos, from, subject, content)
+	msg, err := newMessageFrom(tos, from, m)
 	if err != nil {
 		return nil, errors.Wrap(err, "new message")
 	}
-	msg.info = fmt.Sprintf("Subject: %s, %s", subject, info)
+	msg.info = fmt.Sprintf("Subject: %s, %s", m.Subject, info)
 	return msg, nil
 }
 
@@ -325,7 +423,7 @@ func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string)
 		return nil
 	}
 
-	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueComment, tos, "issue comment")
+	msg, err := composeIssueMessage(issue, repo, doer, issueCommentMail, tos, "issue comment")
 	if err != nil {
 		return errors.Wrap(err, "compose issue message")
 	}
@@ -338,7 +436,7 @@ func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string)
 	if len(tos) == 0 {
 		return nil
 	}
-	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueMention, tos, "issue mention")
+	msg, err := composeIssueMessage(issue, repo, doer, issueMentionMail, tos, "issue mention")
 	if err != nil {
 		return errors.Wrap(err, "compose issue message")
 	}

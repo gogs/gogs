@@ -471,7 +471,7 @@ func postAdminTestMail(l i18n.Locale, req adminTestMailRequest) (statusCode int,
 	if !conf.Email.Enabled {
 		return http.StatusNotFound, nil, errors.New("email is not enabled")
 	}
-	if err = email.SendTestMail(req.Email); err != nil {
+	if err = email.SendTestMail(l, req.Email); err != nil {
 		log.Error("postAdminTestMail: send to %q: %v", req.Email, err)
 		// The mail server refused or could not be reached, and the reason helps
 		// the admin fix the settings.

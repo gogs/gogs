@@ -1,0 +1,10 @@
+{{- /* Generated from web/src/emails/templates/notify/collaborator.tsx. */ -}}
+{{AppName}}
+
+----------------------------------------
+
+{{Tr `mail.collaborator.body` .RepoName}}
+
+{{Tr `mail.view_repository`}} {{.Link}}
+
+© {{Year}} {{AppName}} {{AppURL}}

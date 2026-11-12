@@ -1,0 +1,12 @@
+{{- /* Generated from web/src/emails/templates/auth/activate.tsx. */ -}}
+{{AppName}}
+
+----------------------------------------
+
+{{Tr `mail.greeting` .Username}}
+
+{{Tr `mail.activate_account.body` AppName .ActiveCodeLives}}
+
+{{Tr `mail.activate_account.action`}} {{AppURL}}user/activate?code={{.Code}}
+
+© {{Year}} {{AppName}} {{AppURL}}

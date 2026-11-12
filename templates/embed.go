@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -92,7 +94,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 	var tmplFiles []macaron.TemplateFile
 	names := mustNames(files)
 	for _, name := range names {
-		if !strings.HasPrefix(name, dir) {
+		if !strings.HasPrefix(name, dir) || isMail(name) {
 			continue
 		}
 		// Check if corresponding custom file exists
@@ -112,4 +114,35 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		tmplFiles = append(tmplFiles, macaron.NewTplFile(name, data, ext))
 	}
 	return &fileSystem{files: tmplFiles}
+}
+
+// isMail reports whether the template file is an email. Emails are rendered by
+// internal/email with functions of its own, so the page renderer skips them.
+func isMail(name string) bool {
+	return strings.HasPrefix(filepath.ToSlash(name), "mail/")
+}
+
+// diskFileSystem lists the page templates on disk, without the emails.
+type diskFileSystem struct {
+	opt macaron.RenderOptions
+}
+
+// NewDiskTemplateFileSystem returns a macaron.TemplateFileSystem for the
+// template files on disk in opt.Directory and opt.AppendDirectories. It reads
+// the directories again on every listing, so the renderer picks up edits.
+func NewDiskTemplateFileSystem(opt macaron.RenderOptions) macaron.TemplateFileSystem {
+	if len(opt.Extensions) == 0 {
+		opt.Extensions = []string{".tmpl", ".html"}
+	}
+	return diskFileSystem{opt: opt}
+}
+
+func (fs diskFileSystem) ListFiles() []macaron.TemplateFile {
+	return slices.DeleteFunc(macaron.NewTemplateFileSystem(fs.opt, false).ListFiles(), func(f macaron.TemplateFile) bool {
+		return isMail(f.Name())
+	})
+}
+
+func (fs diskFileSystem) Get(name string) (io.Reader, error) {
+	return macaron.NewTemplateFileSystem(fs.opt, false).Get(name)
 }

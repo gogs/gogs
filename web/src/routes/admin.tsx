@@ -7,6 +7,7 @@ import {
   fetchAdminAuthSources,
   fetchAdminConfig,
   fetchAdminDashboard,
+  fetchAdminEmailPreview,
   fetchAdminMonitor,
   fetchAdminNotices,
   fetchAdminOrgs,
@@ -16,9 +17,15 @@ import {
   fetchAdminUsers,
 } from "@/lib/queries/admin";
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
+import { AdminEmails } from "@/pages/admin/Emails";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminConfig, AdminDashboard, AdminMonitor, AdminOperations } from "@/pages/admin/System";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
+
+interface EmailSearch {
+  name?: string;
+  language?: string;
+}
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
   const dashboardRoute = createRoute({
@@ -148,6 +155,20 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const emailsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/emails",
+    validateSearch: (search: Record<string, unknown>): EmailSearch => ({
+      name: typeof search.name === "string" ? search.name : undefined,
+      language: typeof search.language === "string" ? search.language : undefined,
+    }),
+    loaderDeps: ({ search }: { search: EmailSearch }) => ({ name: search.name, language: search.language }),
+    loader: ({ deps }) => loadSignedInPage(() => fetchAdminEmailPreview(deps)),
+    component: function Emails() {
+      return <AdminEmails preview={emailsRoute.useLoaderData()} />;
+    },
+  });
+
   return [
     dashboardRoute,
     operationsRoute,
@@ -162,5 +183,6 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     authNewRoute,
     authEditRoute,
     noticesRoute,
+    emailsRoute,
   ];
 }

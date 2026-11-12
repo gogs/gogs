@@ -14,7 +14,8 @@ export type AdminPage =
   | "auths"
   | "config"
   | "notices"
-  | "monitor";
+  | "monitor"
+  | "emails";
 
 // NAV lists the pages of the admin panel.
 const NAV: { page: AdminPage; path: string; label: string }[] = [
@@ -27,6 +28,7 @@ const NAV: { page: AdminPage; path: string; label: string }[] = [
   { page: "config", path: "/config", label: "admin.config" },
   { page: "notices", path: "/notices", label: "admin.notices" },
   { page: "monitor", path: "/monitor", label: "admin.monitor" },
+  { page: "emails", path: "/emails", label: "admin.emails" },
 ];
 
 // AdminLayout heads the pages of the admin panel, with links between them.

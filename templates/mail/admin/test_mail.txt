@@ -1,0 +1,8 @@
+{{- /* Generated from web/src/emails/templates/admin/test_mail.tsx. */ -}}
+{{AppName}}
+
+----------------------------------------
+
+{{Tr `mail.test_mail.body` AppName}}
+
+© {{Year}} {{AppName}} {{AppURL}}

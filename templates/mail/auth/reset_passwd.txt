@@ -1,0 +1,14 @@
+{{- /* Generated from web/src/emails/templates/auth/reset_passwd.tsx. */ -}}
+{{AppName}}
+
+----------------------------------------
+
+{{Tr `mail.greeting` .Username}}
+
+{{Tr `mail.reset_password.body` AppName .ResetPwdCodeLives}}
+
+{{Tr `mail.reset_password.action`}} {{AppURL}}user/reset-password?code={{.Code}}
+
+{{Tr `mail.reset_password.ignore`}}
+
+© {{Year}} {{AppName}} {{AppURL}}

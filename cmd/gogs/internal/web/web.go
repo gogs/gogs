@@ -138,7 +138,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Admin *****
 		m.Group("/admin", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor|emails)$", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/:userid", func(c *context.Context) {
 				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
@@ -821,7 +821,9 @@ func newMacaron() (*macaron.Macaron, error) {
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
-	if !conf.Server.LoadAssetsFromDisk {
+	if conf.Server.LoadAssetsFromDisk {
+		renderOpt.TemplateFileSystem = templates.NewDiskTemplateFileSystem(renderOpt)
+	} else {
 		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
 	}
 	m.Use(macaron.Renderer(renderOpt))

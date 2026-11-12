@@ -1,5 +1,5 @@
 packages:
   - "web"
 
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: true
