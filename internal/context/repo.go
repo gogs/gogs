@@ -158,7 +158,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		c.Repo.Repository = repo
 		c.Data["RepoName"] = c.Repo.Repository.Name
-		c.Data["IsEmptyRepo"] = c.Repo.Repository.IsEmpty
 		c.Repo.RepoLink = repo.Link()
 		c.Data["RepoLink"] = c.Repo.RepoLink
 		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
@@ -264,7 +263,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
 		}
 
-		// repo is empty and display enable
+		// An empty repository has no branches to load.
 		if c.Repo.Repository.IsEmpty {
 			return
 		}

@@ -268,7 +268,7 @@ func reposTouch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	err = s.db.WithContext(ctx).Model(new(Repository)).Where("id = ?", repo.ID).Update("is_bare", true).Error
 	require.NoError(t, err)
 
-	// Make sure it is empty
+	// Make sure it is empty.
 	got, err := s.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.True(t, got.IsEmpty)
@@ -277,7 +277,7 @@ func reposTouch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	err = s.Touch(ctx, repo.ID)
 	require.NoError(t, err)
 
-	// It should not be empty anymore
+	// It should not be empty anymore.
 	got, err = s.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.False(t, got.IsEmpty)
