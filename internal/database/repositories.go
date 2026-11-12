@@ -21,6 +21,9 @@ func (r *Repository) BeforeCreate(tx *gorm.DB) error {
 	if r.CreatedUnix == 0 {
 		r.CreatedUnix = tx.NowFunc().Unix()
 	}
+	if r.UpdatedUnix == 0 {
+		r.UpdatedUnix = r.CreatedUnix
+	}
 	return nil
 }
 
