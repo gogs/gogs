@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
@@ -27,6 +29,7 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
@@ -59,12 +62,20 @@ func Run(configPath string, portOverride int) error {
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
-	shutdownTracing, err := initTracing(gocontext.Background())
+	shutdownTracing, err := tracing.Init(gocontext.Background())
 	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
 	}
 	if shutdownTracing != nil {
 		defer shutdownTracing()
+		// Export the spans that are left when Gogs is interrupted or terminated.
+		go func() {
+			signals := make(chan os.Signal, 1)
+			signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+			<-signals
+			shutdownTracing()
+			os.Exit(0)
+		}()
 	}
 
 	m, err := newMacaron()

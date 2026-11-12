@@ -14,8 +14,12 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
@@ -64,6 +68,8 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	setup(cmd, "pre-receive.log", true)
+	ctx = startHookSpan(ctx, "pre-receive")
+	defer endHookSpan()
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
@@ -152,11 +158,13 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func runHookUpdate(_ context.Context, cmd *cli.Command) error {
+func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(cmd, "update.log", false)
+	_ = startHookSpan(ctx, "update")
+	defer endHookSpan()
 
 	args := cmd.Args().Slice()
 	if len(args) != 3 {
@@ -186,11 +194,13 @@ func runHookUpdate(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
+func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(cmd, "post-receive.log", true)
+	ctx = startHookSpan(ctx, "post-receive")
+	defer endHookSpan()
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
@@ -224,7 +234,7 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 			RepoUserName: os.Getenv(database.EnvRepoOwnerName),
 			RepoName:     os.Getenv(database.EnvRepoName),
 		}
-		if err := database.PushUpdate(options); err != nil {
+		if err := database.PushUpdate(ctx, options); err != nil {
 			log.Error("PushUpdate: %v", err)
 		}
 
@@ -236,10 +246,12 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
-		resp, err := httplib.Get(reqURL).
+		req := httplib.Get(reqURL).
 			SetTLSClientConfig(&tls.Config{
 				InsecureSkipVerify: true,
-			}).Response()
+			})
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Headers()))
+		resp, err := req.Response()
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
@@ -269,4 +281,35 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 		fail("Internal error", "Failed to execute custom post-receive hook: %v", err)
 	}
 	return nil
+}
+
+// The span of the running hook, and the function that ends it and exports it.
+// fail uses them because it exits without returning.
+var (
+	hookSpan    = trace.SpanFromContext(context.Background())
+	endHookSpan = func() {}
+)
+
+// startHookSpan starts the span of the hook when tracing is enabled, under the
+// span of the Git process that runs the hook, which Git passes on through the
+// TRACEPARENT and TRACESTATE environment variables.
+func startHookSpan(ctx context.Context, name string) context.Context {
+	shutdown, err := tracing.Init(ctx)
+	if err != nil {
+		log.Error("Failed to initialize tracing: %v", err)
+		return ctx
+	} else if shutdown == nil {
+		return ctx
+	}
+
+	ctx = propagation.TraceContext{}.Extract(ctx, propagation.MapCarrier{
+		"traceparent": os.Getenv("TRACEPARENT"),
+		"tracestate":  os.Getenv("TRACESTATE"),
+	})
+	ctx, hookSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, "hook "+name)
+	endHookSpan = func() {
+		hookSpan.End()
+		shutdown()
+	}
+	return ctx
 }

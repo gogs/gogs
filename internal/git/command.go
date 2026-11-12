@@ -14,6 +14,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -45,13 +46,15 @@ func newCommand(ctx context.Context, dir string, args []string, envs []string) *
 
 // runCommand starts the command and waits for it to complete. It records the
 // run as a span named after the Git subcommand, without the other arguments,
-// which may contain credentials, e.g., in a remote URL.
+// which may contain credentials, e.g., in a remote URL. The span is passed on
+// to Git through the TRACEPARENT and TRACESTATE environment variables, so that
+// hooks Git runs can record their spans under it.
 //
 // Output is copied through pipes of our own rather than the ones os/exec
 // creates, because os/exec drops what is left in them a fixed delay after the
 // command exited, even while a slow writer, e.g., a client, is still taking it.
 func runCommand(ctx context.Context, c *osexec.Cmd) (err error) {
-	_, span := tracer.Start(ctx, "git "+subcommand(c.Args[1:]), trace.WithAttributes(attribute.String("git.dir", c.Dir)))
+	ctx, span := tracer.Start(ctx, "git "+subcommand(c.Args[1:]), trace.WithAttributes(attribute.String("git.dir", c.Dir)))
 	defer func() {
 		if c.ProcessState != nil {
 			span.SetAttributes(attribute.Int("process.exit.code", c.ProcessState.ExitCode()))
@@ -62,6 +65,15 @@ func runCommand(ctx context.Context, c *osexec.Cmd) (err error) {
 		}
 		span.End()
 	}()
+
+	carrier := propagation.MapCarrier{}
+	propagation.TraceContext{}.Inject(ctx, carrier)
+	if len(carrier) > 0 && c.Env == nil {
+		c.Env = os.Environ()
+	}
+	for key, value := range carrier {
+		c.Env = append(c.Env, strings.ToUpper(key)+"="+value)
+	}
 
 	var copiers []*outputCopier
 	for _, w := range []*io.Writer{&c.Stdout, &c.Stderr} {

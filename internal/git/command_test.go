@@ -131,4 +131,21 @@ func TestTracing(t *testing.T) {
 	lsRemote := byName["git ls-remote"]
 	assert.Equal(t, "Error", lsRemote.Status().Code.String())
 	assert.NotContains(t, fmt.Sprint(lsRemote.Attributes(), lsRemote.Events(), lsRemote.Status()), "secret")
+
+	t.Run("passed on to Git", func(t *testing.T) {
+		t.Setenv("GOGS_TEST_INHERITED", "kept")
+		stdout, err := exec(ctx, "", []string{"-c", "alias.env=!printenv TRACEPARENT GOGS_TEST_INHERITED", "env"}, nil)
+		require.NoError(t, err)
+
+		var span sdktrace.ReadOnlySpan
+		for _, s := range recorder.Ended() {
+			if s.Name() == "git env" {
+				span = s
+			}
+		}
+		require.NotNil(t, span)
+		// The rest of the environment is still inherited.
+		want := fmt.Sprintf("00-%s-%s-01\nkept\n", span.SpanContext().TraceID(), span.SpanContext().SpanID())
+		assert.Equal(t, want, string(stdout))
+	})
 }

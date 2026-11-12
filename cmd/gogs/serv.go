@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel/codes"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -44,6 +45,8 @@ func fail(userMessage, errMessage string, args ...any) {
 		log.Error(errMessage, args...)
 	}
 
+	hookSpan.SetStatus(codes.Error, userMessage)
+	endHookSpan()
 	log.Stop()
 	os.Exit(1)
 }
