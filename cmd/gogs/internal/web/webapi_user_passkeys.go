@@ -321,6 +321,9 @@ func postUserSignInPasskey(c flamego.Context, sess session.Session, mc *macaron.
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "mark passkey used")
 	}
 
-	completeSignIn(sess, mc, owner.User)
+	if err = completeSignIn(sess, mc, owner.User); err != nil {
+		log.Error("postUserSignInPasskey: complete sign-in of user %d: %v", owner.ID, err)
+		return http.StatusInternalServerError, nil, err
+	}
 	return http.StatusNoContent, nil, nil
 }

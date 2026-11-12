@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -18,6 +19,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/tool"
@@ -290,15 +292,22 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	completeSignIn(sess, mc, u)
+	if err = completeSignIn(sess, mc, u); err != nil {
+		log.Error("postUserSignIn: complete sign-in of user %d: %v", u.ID, err)
+		return http.StatusInternalServerError, nil, err
+	}
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
-// completeSignIn finalizes the sign-in session for u: writes the auth session,
-// clears any in-flight MFA state, and sets the login-status cookie. Having just
-// signed in counts as having confirmed who they are. The caller is responsible
-// for navigating to a post-login destination via /redirect?to=.
-func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) {
+// completeSignIn finalizes the sign-in session for u: starts a login session,
+// writes the auth session, clears any in-flight MFA state, and sets the
+// login-status cookie. Having just signed in counts as having confirmed who
+// they are. The caller is responsible for navigating to a post-login
+// destination via /redirect?to=.
+func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) error {
+	if err := startLoginSession(sess, mc, u.ID); err != nil {
+		return err
+	}
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
 	sess.Delete("mfaUserID")
@@ -307,6 +316,18 @@ func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User)
 	if conf.Security.EnableLoginStatusCookie {
 		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
+	return nil
+}
+
+// startLoginSession starts a login session of the user for the browser, see
+// database.LoginSession.
+func startLoginSession(sess session.Session, mc *macaron.Context, userID int64) error {
+	_, token, err := database.Handle.LoginSessions().Create(mc.Req.Context(), userID, mc.Req.UserAgent(), strings.Trim(mc.RemoteAddr(), "[]"))
+	if err != nil {
+		return errors.Wrap(err, "create login session")
+	}
+	sess.Set(context.LoginSessionKey, token)
+	return nil
 }
 
 func getUserMFA(sess session.Session) (statusCode int, resp any, err error) {
@@ -365,7 +386,10 @@ func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca 
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	completeSignIn(sess, mc, u)
+	if err = completeSignIn(sess, mc, u); err != nil {
+		log.Error("postUserMFA: complete sign-in of user %d: %v", u.ID, err)
+		return http.StatusInternalServerError, nil, err
+	}
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -396,7 +420,10 @@ func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Cont
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	completeSignIn(sess, mc, u)
+	if err = completeSignIn(sess, mc, u); err != nil {
+		log.Error("postUserMFARecovery: complete sign-in of user %d: %v", u.ID, err)
+		return http.StatusInternalServerError, nil, err
+	}
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -503,7 +530,10 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
 	if !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
-		completeSignIn(sess, mc, target)
+		if err = completeSignIn(sess, mc, target); err != nil {
+			log.Error("postUserActivateComplete: complete sign-in of user %d: %v", target.ID, err)
+			return http.StatusInternalServerError, nil, err
+		}
 	}
 	return http.StatusNoContent, nil, nil
 }
@@ -512,7 +542,16 @@ type postUserSignOutResponse struct {
 	RedirectTo string `json:"redirectTo,omitempty"`
 }
 
-func postUserSignOut(sess macaronsession.Store, mc *macaron.Context) (statusCode int, resp *postUserSignOutResponse, err error) {
+func postUserSignOut(sess macaronsession.Store, mc *macaron.Context, user *database.User) (statusCode int, resp *postUserSignOutResponse, err error) {
+	if token, ok := sess.Get(context.LoginSessionKey).(string); ok && user != nil {
+		ls, err := database.Handle.LoginSessions().GetByToken(mc.Req.Context(), user.ID, token)
+		if err == nil {
+			err = database.Handle.LoginSessions().DeleteByID(mc.Req.Context(), user.ID, ls.ID)
+		}
+		if err != nil && !database.IsErrLoginSessionNotExist(err) {
+			log.Error("postUserSignOut: end login session of user %d: %v", user.ID, err)
+		}
+	}
 	_ = sess.Flush()
 	_ = sess.Destory(mc)
 	if conf.Auth.CustomLogoutURL != "" {
