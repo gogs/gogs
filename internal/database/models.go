@@ -204,35 +204,45 @@ type Statistic struct {
 }
 
 func GetStatistic(ctx context.Context) (stats Statistic) {
+	count := func(table any) int64 {
+		var n int64
+		_ = Handle.db.WithContext(ctx).Model(table).Count(&n).Error
+		return n
+	}
+
 	stats.Counter.User = Handle.Users().Count(ctx)
 	stats.Counter.Org = CountOrganizations()
-	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
+	stats.Counter.PublicKey = count(new(PublicKey))
 	stats.Counter.Repo = CountRepositories(true)
-	stats.Counter.Watch, _ = x.Count(new(Watch))
-	stats.Counter.Star, _ = x.Count(new(Star))
-	stats.Counter.Action, _ = x.Count(new(Action))
-	stats.Counter.Access, _ = x.Count(new(Access))
-	stats.Counter.Issue, _ = x.Count(new(Issue))
-	stats.Counter.Comment, _ = x.Count(new(Comment))
+	stats.Counter.Watch = count(new(Watch))
+	stats.Counter.Star = count(new(Star))
+	stats.Counter.Action = count(new(Action))
+	stats.Counter.Access = count(new(Access))
+	stats.Counter.Issue = count(new(Issue))
+	stats.Counter.Comment = count(new(Comment))
 	stats.Counter.Oauth = 0
-	stats.Counter.Follow, _ = x.Count(new(Follow))
-	stats.Counter.Mirror, _ = x.Count(new(Mirror))
-	stats.Counter.Release, _ = x.Count(new(Release))
+	stats.Counter.Follow = count(new(Follow))
+	stats.Counter.Mirror = count(new(Mirror))
+	stats.Counter.Release = count(new(Release))
 	stats.Counter.LoginSource = Handle.LoginSources().Count(ctx)
-	stats.Counter.Webhook, _ = x.Count(new(Webhook))
-	stats.Counter.Milestone, _ = x.Count(new(Milestone))
-	stats.Counter.Label, _ = x.Count(new(Label))
-	stats.Counter.HookTask, _ = x.Count(new(HookTask))
-	stats.Counter.Team, _ = x.Count(new(Team))
-	stats.Counter.Attachment, _ = x.Count(new(Attachment))
+	stats.Counter.Webhook = count(new(Webhook))
+	stats.Counter.Milestone = count(new(Milestone))
+	stats.Counter.Label = count(new(Label))
+	stats.Counter.HookTask = count(new(HookTask))
+	stats.Counter.Team = count(new(Team))
+	stats.Counter.Attachment = count(new(Attachment))
 	return stats
 }
 
 func Ping() error {
-	if x == nil {
+	if Handle == nil {
 		return errors.New("database not available")
 	}
-	return x.Ping()
+	sqlDB, err := Handle.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Ping()
 }
 
 // The version table. Should have only one row with id==1
