@@ -10,6 +10,7 @@ import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { passwordHint } from "@/lib/password";
 import {
   type AdminUserCreateForm,
   type AdminUserDetail,
@@ -134,7 +135,13 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
               <Input type="email" autoComplete="off" required {...field("email")} />
             </FormField>
             {isLocal ? (
-              <FormField id="password" label={t("password")} error={fields.password} invalid={"password" in fields}>
+              <FormField
+                id="password"
+                label={t("password")}
+                helper={passwordHint(t)}
+                error={fields.password}
+                invalid={"password" in fields}
+              >
                 <Input type="password" autoComplete="new-password" required {...field("password")} />
               </FormField>
             ) : null}

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePageTitle } from "@/lib/page-title";
+import { passwordHint } from "@/lib/password";
 import { subUrl } from "@/lib/url";
 
 export interface SignUpPage {
@@ -224,13 +225,17 @@ export function SignUp() {
                 show={showPassword}
                 onToggleShow={() => setShowPassword((v) => !v)}
                 disabled={submitting}
-                describedBy={fieldErrors.password ? "password-error" : undefined}
+                describedBy={fieldErrors.password ? "password-error" : "password-helper"}
                 invalid={"password" in fieldErrors}
                 onChange={setPassword}
               />
-              {fieldErrors.password && (
+              {fieldErrors.password ? (
                 <p id="password-error" className="text-sm text-(--color-destructive)">
                   {fieldErrors.password}
+                </p>
+              ) : (
+                <p id="password-helper" className="text-sm text-(--color-muted-foreground)">
+                  {passwordHint(t)}
                 </p>
               )}
             </div>

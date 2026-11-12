@@ -3,13 +3,30 @@ package v1
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/userx"
 )
+
+// checkNewPassword answers 422 Unprocessable Entity and returns false when a
+// password being set fails the password policy of the site.
+func checkNewPassword(c *context.APIContext, password string) bool {
+	err := userx.CheckPasswordPolicy(c.Req.Context(), password)
+	switch {
+	case errors.Is(err, userx.ErrPasswordTooShort):
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("password must contain at least %d characters", conf.Auth.MinPasswordLength))
+		return false
+	case errors.Is(err, userx.ErrPasswordLeaked):
+		c.ErrorStatus(http.StatusUnprocessableEntity, err)
+		return false
+	}
+	return true
+}
 
 func parseLoginSource(c *context.APIContext, sourceID int64) {
 	if sourceID == 0 {
@@ -40,6 +57,10 @@ type adminCreateUserRequest struct {
 func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
+		return
+	}
+	// Only local accounts sign in with the password.
+	if form.SourceID == 0 && !checkNewPassword(c, form.Password) {
 		return
 	}
 
@@ -118,6 +139,9 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 	}
 
 	if form.Password != "" {
+		if !checkNewPassword(c, form.Password) {
+			return
+		}
 		opts.Password = &form.Password
 	}
 
