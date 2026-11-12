@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
@@ -18,21 +17,10 @@ type CommandOptions struct {
 	Envs []string
 }
 
-// DefaultTimeout is the default timeout duration for all commands. It is
-// applied when the context does not already have a deadline.
-const DefaultTimeout = time.Minute
-
 // cmd builds a *run.Command for git with the given arguments, environment
-// variables and working directory. DefaultTimeout will be applied if the context
-// does not already have a deadline.
-func cmd(ctx context.Context, dir string, args []string, envs []string) (*run.Command, context.CancelFunc) {
-	cancel := func() {}
-	if _, ok := ctx.Deadline(); !ok {
-		var timeoutCancel context.CancelFunc
-		ctx, timeoutCancel = context.WithTimeout(ctx, DefaultTimeout)
-		cancel = timeoutCancel
-	}
-
+// variables and working directory. The command is bound only by the deadline
+// and cancellation of the context.
+func cmd(ctx context.Context, dir string, args []string, envs []string) *run.Command {
 	// run.Cmd joins all parts into a single string and then shell-parses it. We must
 	// quote each argument so that special characters (spaces, quotes, angle
 	// brackets, etc.) are preserved correctly.
@@ -49,16 +37,14 @@ func cmd(ctx context.Context, dir string, args []string, envs []string) (*run.Co
 	if len(envs) > 0 {
 		c = c.Environ(append(os.Environ(), envs...))
 	}
-	return c, cancel
+	return c
 }
 
 // exec executes a git command in the given directory and returns stdout as
-// bytes. Stderr is included in the error message on failure. DefaultTimeout will
-// be applied if the context does not already have a deadline. It returns
+// bytes. Stderr is included in the error message on failure. It returns
 // ErrExecTimeout if the execution was timed out.
 func exec(ctx context.Context, dir string, args []string, envs []string) ([]byte, error) {
-	c, cancel := cmd(ctx, dir, args, envs)
-	defer cancel()
+	c := cmd(ctx, dir, args, envs)
 
 	var logBuf *bytes.Buffer
 	if logOutput != nil {
@@ -98,8 +84,7 @@ func exec(ctx context.Context, dir string, args []string, envs []string) ([]byte
 // pipe executes a git command in the given directory, streaming stdout to the
 // given io.Writer.
 func pipe(ctx context.Context, dir string, args []string, envs []string, stdout io.Writer) error {
-	c, cancel := cmd(ctx, dir, args, envs)
-	defer cancel()
+	c := cmd(ctx, dir, args, envs)
 
 	var buf *bytes.Buffer
 	w := stdout

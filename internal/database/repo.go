@@ -671,7 +671,7 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err
 			branch = ""
 		}
 		ctx := context.TODO()
-		// A non-positive timeout falls back to git.DefaultTimeout.
+		// A non-positive timeout means no timeout.
 		if conf.Git.Timeout.Clone > 0 {
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Clone)*time.Second)
@@ -2129,7 +2129,7 @@ func GitFsck() {
 			gitRepo, err := git.Open(repoPath)
 			if err == nil {
 				ctx, cancel := context.TODO(), context.CancelFunc(func() {})
-				// A non-positive timeout falls back to git.DefaultTimeout.
+				// A non-positive timeout means no timeout.
 				if conf.Cron.RepoHealthCheck.Timeout > 0 {
 					ctx, cancel = context.WithTimeout(ctx, conf.Cron.RepoHealthCheck.Timeout)
 				}

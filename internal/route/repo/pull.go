@@ -358,7 +358,7 @@ func ViewPullFiles(c *context.Context) {
 	}
 
 	ctx := c.Req.Context()
-	// A non-positive timeout falls back to git.DefaultTimeout.
+	// A non-positive timeout means no timeout.
 	if conf.Git.Timeout.Diff > 0 {
 		var cancel gocontext.CancelFunc
 		ctx, cancel = gocontext.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Diff)*time.Second)
@@ -598,7 +598,7 @@ func PrepareCompareDiff(
 	}
 
 	ctx := c.Req.Context()
-	// A non-positive timeout falls back to git.DefaultTimeout.
+	// A non-positive timeout means no timeout.
 	if conf.Git.Timeout.Diff > 0 {
 		var cancel gocontext.CancelFunc
 		ctx, cancel = gocontext.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Diff)*time.Second)

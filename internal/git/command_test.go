@@ -24,8 +24,7 @@ func TestExec_ContextTimeout(t *testing.T) {
 
 		// Use cmd directly with a blocking stdin so the command starts successfully and
 		// blocks reading until the context deadline fires.
-		c, timeoutCancel := cmd(ctx, "", []string{"hash-object", "--stdin"}, nil)
-		defer timeoutCancel()
+		c := cmd(ctx, "", []string{"hash-object", "--stdin"}, nil)
 
 		err := c.Input(blockingReader{cancel: ctx.Done()}).StdOut().Run().Stream(io.Discard)
 		err = mapContextError(err, ctx)
@@ -58,22 +57,11 @@ func TestCmd_ContextCancellation(t *testing.T) {
 		close(done)
 	}()
 
-	c, timeoutCancel := cmd(ctx, "", []string{"hash-object", "--stdin"}, nil)
-	defer timeoutCancel()
+	c := cmd(ctx, "", []string{"hash-object", "--stdin"}, nil)
 
 	err := c.Input(blockingReader{cancel: done}).StdOut().Run().Stream(io.Discard)
 	err = mapContextError(err, ctx)
 	assert.ErrorIs(t, err, context.Canceled)
 	// Must NOT be ErrExecTimeout, cancellation is distinct from deadline.
 	assert.NotEqual(t, ErrExecTimeout, err)
-}
-
-func TestExec_DefaultTimeoutApplied(t *testing.T) {
-	// A plain context.Background() has no deadline. The command should still succeed
-	// because DefaultTimeout is applied automatically and "git version" completes
-	// well within that.
-	ctx := context.Background()
-	stdout, err := exec(ctx, "", []string{"version"}, nil)
-	assert.NoError(t, err)
-	assert.Contains(t, string(stdout), "git version")
 }

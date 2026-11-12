@@ -119,7 +119,7 @@ func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
 	}
 
 	ctx := context.TODO()
-	// A non-positive timeout falls back to git.DefaultTimeout.
+	// A non-positive timeout means no timeout.
 	if conf.Git.Timeout.Pull > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Pull)*time.Second)
