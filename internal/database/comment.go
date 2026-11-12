@@ -116,7 +116,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	}
 
 	if c.Attachments == nil {
-		c.Attachments, err = getAttachmentsByCommentID(e, c.ID)
+		c.Attachments, err = getAttachmentsByCommentID(legacyTx(e), c.ID)
 		if err != nil {
 			return errors.Newf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
 		}
@@ -219,7 +219,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			return nil, err
 		}
 
-		attachments, err := getUnboundAttachmentsByUUIDs(e, opts.Attachments)
+		attachments, err := getUnboundAttachmentsByUUIDs(legacyTx(e), opts.Attachments)
 		if err != nil {
 			return nil, errors.Newf("getUnboundAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
