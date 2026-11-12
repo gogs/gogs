@@ -541,6 +541,25 @@ func TestRepository_Merge(t *testing.T) {
 		require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true}))
 	})
 
+	t.Run("commit merge with unchanged tree", func(t *testing.T) {
+		// Apply the same change to master in a different commit, so merging feature
+		// leaves the tree as is.
+		require.NoError(t, os.WriteFile(filepath.Join(r.Path(), "FEATURE"), []byte("feature"), 0600))
+		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+		require.NoError(t, r.Commit(ctx, nil, "Cherry-pick FEATURE"))
+		defer func() { require.NoError(t, r.Reset(ctx, masterID, ResetOptions{Hard: true})) }()
+
+		require.NoError(t, r.Merge(ctx, "feature", MergeOptions{NoFastForward: true, NoCommit: true}))
+		require.NoError(t, r.Commit(ctx, nil, "Merge feature"))
+
+		c, err := r.CatFileCommit(ctx, "master")
+		require.NoError(t, err)
+		require.Equal(t, 2, c.ParentsCount())
+		parentID, err := c.ParentID(1)
+		require.NoError(t, err)
+		assert.Equal(t, featureID, parentID.String())
+	})
+
 	t.Run("fast-forward", func(t *testing.T) {
 		require.NoError(t, r.Merge(ctx, "feature"))
 

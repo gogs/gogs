@@ -402,7 +402,14 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	// from the exit status.
 	_, err := exec(ctx, r.path, []string{"diff", "--cached", "--quiet"}, opt.Envs)
 	if err == nil {
-		return nil
+		// A merge in progress still needs a commit to record the merged parent, even
+		// when the merge result has the same tree as HEAD.
+		_, err = r.RevParse(ctx, "MERGE_HEAD", RevParseOptions{CommandOptions: opt.CommandOptions})
+		if errors.Is(err, ErrRevisionNotExist) {
+			return nil
+		} else if err != nil {
+			return errors.Wrap(err, "check merge in progress")
+		}
 	} else if !isExitStatus(err, 1) {
 		return errors.Wrap(err, "check staged changes")
 	}
