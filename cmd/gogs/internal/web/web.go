@@ -530,11 +530,11 @@ func Run(configPath string, portOverride int) error {
 			}, repo.MustBeNotEmpty, context.RepoRef())
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
-			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", flamegoBridger(webHandler))
+			m.Get("/commit/:sha([a-f0-9]{7,64})\\.:ext(patch|diff)", flamegoBridger(webHandler))
 			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
-			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/commit/:sha([a-f0-9]{7,64})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 
-			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotEmpty, context.RepoRef(), repo.CompareDiff)
+			m.Get("/compare/:before([a-z0-9]{40}|[a-z0-9]{64})\\.\\.\\.:after([a-z0-9]{40}|[a-z0-9]{64})", repo.MustBeNotEmpty, context.RepoRef(), repo.CompareDiff)
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
 			m.Get("", repo.Home)
@@ -590,9 +590,9 @@ func Run(configPath string, portOverride int) error {
 		m.Route("/objects/info/http-alternates", "GET,OPTIONS", gitHTTP...)
 		m.Route("/objects/info/packs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/objects/info/*", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/:prefix([0-9a-f]{2})/:suffix([0-9a-f]{38})", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}).pack", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}).idx", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/:prefix([0-9a-f]{2})/:suffix([0-9a-f]{38}|[0-9a-f]{62})", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}|[0-9a-f]{64}).pack", "GET,OPTIONS", gitHTTP...)
+		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}|[0-9a-f]{64}).idx", "GET,OPTIONS", gitHTTP...)
 	})
 
 	// ***************************
@@ -735,7 +735,7 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Get("/captcha/image.jpeg", func() {})
 
 	f.Group("/{owner}/{repo}", func() {
-		f.Get("/commit/{sha: /[0-9a-f]{7,40}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
+		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
 	}, withRepoContext)
 

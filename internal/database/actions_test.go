@@ -220,7 +220,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 				Owner:       alice,
 				Repo:        repo,
 				RefFullName: "refs/heads/main",
-				OldCommitID: git.EmptyID,
+				OldCommitID: git.ObjectFormatSHA1.EmptyID(),
 				NewCommitID: "085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7",
 				Commits: CommitsToPushCommits(
 					[]*git.Commit{
@@ -296,7 +296,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 				Repo:        repo,
 				RefFullName: "refs/heads/main",
 				OldCommitID: "ca82a6dff817ec66f44342007202690a93763949",
-				NewCommitID: git.EmptyID,
+				NewCommitID: git.ObjectFormatSHA1.EmptyID(),
 			},
 		)
 		require.NoError(t, err)
@@ -806,7 +806,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 				Repo:        repo,
 				PusherName:  alice.Name,
 				RefFullName: "refs/tags/v1.0.0",
-				NewCommitID: git.EmptyID,
+				NewCommitID: git.ObjectFormatSHA1.EmptyID(),
 			},
 		)
 		require.NoError(t, err)

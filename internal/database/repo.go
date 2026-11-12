@@ -966,6 +966,9 @@ type CreateRepoOptionsLegacy struct {
 	IsUnlisted  bool
 	IsMirror    bool
 	AutoInit    bool
+	// The hash algorithm of the repository, or empty to use the default of Git on
+	// the server.
+	ObjectFormat git.ObjectFormat
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
@@ -1049,7 +1052,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Init bare new repository.
-	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true}); err != nil {
+	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(repoPath); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)

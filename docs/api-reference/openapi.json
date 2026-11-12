@@ -200,6 +200,14 @@
                   "readme": {
                     "type": "string",
                     "default": "Default"
+                  },
+                  "object_format": {
+                    "type": "string",
+                    "enum": [
+                      "sha1",
+                      "sha256"
+                    ],
+                    "description": "The hash algorithm of the repository. Defaults to the default of Git on the server."
                   }
                 },
                 "required": [
@@ -353,6 +361,14 @@
                   "readme": {
                     "type": "string",
                     "default": "Default"
+                  },
+                  "object_format": {
+                    "type": "string",
+                    "enum": [
+                      "sha1",
+                      "sha256"
+                    ],
+                    "description": "The hash algorithm of the repository. Defaults to the default of Git on the server."
                   }
                 },
                 "required": [
@@ -4582,6 +4598,14 @@
                   "readme": {
                     "type": "string",
                     "default": "Default"
+                  },
+                  "object_format": {
+                    "type": "string",
+                    "enum": [
+                      "sha1",
+                      "sha256"
+                    ],
+                    "description": "The hash algorithm of the repository. Defaults to the default of Git on the server."
                   }
                 },
                 "required": [

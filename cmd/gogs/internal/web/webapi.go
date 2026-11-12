@@ -148,7 +148,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		})
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("/header", getRepoHeader)
-			f.Get("/commit/{sha: /[0-9a-f]{7,40}/}", getRepoCommit)
+			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)
 		}, withRepoContext)

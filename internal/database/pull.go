@@ -54,10 +54,10 @@ type PullRequest struct {
 	HeadUserName string
 	HeadBranch   string
 	BaseBranch   string
-	MergeBase    string `xorm:"VARCHAR(40)" gorm:"type:VARCHAR(40)"`
+	MergeBase    string `xorm:"VARCHAR(64)" gorm:"type:VARCHAR(64)"`
 
 	HasMerged      bool
-	MergedCommitID string `xorm:"VARCHAR(40)" gorm:"type:VARCHAR(40)"`
+	MergedCommitID string `xorm:"VARCHAR(64)" gorm:"type:VARCHAR(64)"`
 	MergerID       int64
 	Merger         *User     `xorm:"-" json:"-" gorm:"-"`
 	Merged         time.Time `xorm:"-" json:"-" gorm:"-"`

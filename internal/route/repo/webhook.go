@@ -469,7 +469,12 @@ func TestWebhook(c *context.Context) {
 	// Grab latest commit or fake one if it's empty repository.
 
 	if c.Repo.Commit == nil {
-		commitID = git.EmptyID
+		objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
+		if err != nil {
+			c.Error(err, "get object format")
+			return
+		}
+		commitID = objectFormat.EmptyID()
 		commitMessage = "This is a fake commit"
 		ghost := database.NewGhostUser()
 		author = &git.Signature{

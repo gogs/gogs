@@ -11,8 +11,8 @@ import (
 
 // Commit contains information of a Git commit.
 type Commit struct {
-	// The SHA-1 hash of the commit.
-	ID *SHA1
+	// The ID of the commit.
+	ID Oid
 	//  The author of the commit.
 	Author *Signature
 	// The committer of the commit.
@@ -20,7 +20,7 @@ type Commit struct {
 	// The full commit message.
 	Message string
 
-	parents []*SHA1
+	parents []Oid
 	*Tree
 
 	submodules    *sync.Map
@@ -39,9 +39,9 @@ func (c *Commit) ParentsCount() int {
 	return len(c.parents)
 }
 
-// ParentID returns the SHA-1 hash of the n-th parent (0-based) of this commit.
+// ParentID returns the ID of the n-th parent (0-based) of this commit.
 // It returns an ErrParentNotExist if no such parent exists.
-func (c *Commit) ParentID(n int) (*SHA1, error) {
+func (c *Commit) ParentID(n int) (Oid, error) {
 	if n >= len(c.parents) {
 		return nil, ErrParentNotExist
 	}
