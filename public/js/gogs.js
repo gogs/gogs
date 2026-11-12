@@ -1406,8 +1406,86 @@ $(document).ready(function() {
   });
 
   // Semantic UI modules.
+  var accessibleDropdownTarget = function(dropdown) {
+    var $dropdown = $(dropdown);
+    var $searchInput = $dropdown.children("input.search").first();
+    return $searchInput.length > 0 ? $searchInput : $dropdown;
+  };
+  var syncAccessibleDropdown = function(dropdown, expanded) {
+    var $dropdown = $(dropdown);
+    var labelId = $dropdown.attr("data-a11y-label");
+    var optionsId = $dropdown.attr("data-a11y-options");
+    if (!labelId || !optionsId) {
+      return;
+    }
+
+    var $target = accessibleDropdownTarget(dropdown);
+    $target.attr({
+      role: "combobox",
+      "aria-haspopup": "listbox",
+      "aria-labelledby": labelId,
+      "aria-controls": optionsId,
+      "aria-expanded": expanded ? "true" : "false"
+    });
+    if ($target.is("input.search")) {
+      $target.attr("aria-autocomplete", "list");
+    }
+
+    var $items = $dropdown.children(".menu").children(".item");
+    $items.each(function(index) {
+      var $item = $(this);
+      if (!$item.attr("id")) {
+        $item.attr("id", optionsId + "-option-" + index);
+      }
+      $item.attr(
+        "aria-selected",
+        $item.hasClass("active") ? "true" : "false"
+      );
+    });
+
+    var $highlightedItem = $items.filter(".selected").first();
+    if (expanded && $highlightedItem.length > 0) {
+      $target.attr("aria-activedescendant", $highlightedItem.attr("id"));
+    } else {
+      $target.removeAttr("aria-activedescendant");
+    }
+  };
+  var $accessibleDropdowns = $(".ui.dropdown[data-a11y-dropdown]");
+  var openAccessibleDropdown = function(e) {
+    var $dropdown = $(e.currentTarget);
+    var key = e.key || e.which;
+    var isSearchInput = $(e.target).is("input.search");
+    var isEnter = key === "Enter" || key === 13;
+    var isSpace = key === " " || key === 32;
+    if (
+      !$dropdown.hasClass("active") &&
+      (isEnter || (isSpace && !isSearchInput))
+    ) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      $dropdown.dropdown("show");
+      syncAccessibleDropdown(this, true);
+    }
+  };
+  $accessibleDropdowns.each(function() {
+    this.addEventListener("keydown", openAccessibleDropdown, true);
+  }).on("keyup", function() {
+    syncAccessibleDropdown(this, $(this).hasClass("active"));
+  });
   $(".ui.dropdown").dropdown({
-    forceSelection: false
+    forceSelection: false,
+    onShow: function() {
+      syncAccessibleDropdown(this, true);
+    },
+    onHide: function() {
+      syncAccessibleDropdown(this, false);
+    },
+    onChange: function() {
+      syncAccessibleDropdown(this, $(this).hasClass("active"));
+    }
+  });
+  $accessibleDropdowns.each(function() {
+    syncAccessibleDropdown(this, false);
   });
   $(".jump.dropdown").dropdown({
     action: "select",

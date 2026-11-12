@@ -9,21 +9,21 @@
 				<div class="ui attached segment">
 					{{template "base/alert" .}}
 					<div class="inline required field {{if .Err_Owner}}error{{end}}">
-						<label>{{.i18n.Tr "repo.owner"}}</label>
-						<div class="ui selection owner dropdown">
+						<label id="repo-owner-label">{{.i18n.Tr "repo.owner"}}</label>
+						<div class="ui selection owner dropdown" data-a11y-dropdown data-a11y-label="repo-owner-label" data-a11y-options="repo-owner-options">
 							<input type="hidden" id="user_id" name="user_id" value="{{.ContextUser.ID}}" required>
 							<span class="text">
 								<img class="ui mini image" src="{{.ContextUser.AvatarURLPath}}">
 								{{.ContextUser.ShortName 20}}
 							</span>
 							<i class="dropdown icon"></i>
-							<div class="menu">
-								<div class="item" data-value="{{.LoggedUser.ID}}">
+							<div class="menu" id="repo-owner-options" role="listbox">
+								<div class="item" role="option" data-value="{{.LoggedUser.ID}}">
 									<img class="ui mini image" src="{{.LoggedUser.AvatarURLPath}}">
 									{{.LoggedUser.ShortName 20}}
 								</div>
 								{{range .Orgs}}
-									<div class="item" data-value="{{.ID}}">
+									<div class="item" role="option" data-value="{{.ID}}">
 										<img class="ui mini image" src="{{.AvatarURLPath}}">
 										{{.ShortName 20}}
 									</div>
@@ -66,38 +66,38 @@
 					<div class="ui divider"></div>
 
 					<div class="inline field">
-						<label>.gitignore</label>
-						<div class="ui multiple search normal selection dropdown">
+						<label id="repo-gitignore-label">.gitignore</label>
+						<div class="ui multiple search normal selection dropdown" data-a11y-dropdown data-a11y-label="repo-gitignore-label" data-a11y-options="repo-gitignore-options">
 							<input type="hidden" name="gitignores" value="{{.gitignores}}">
 							<div class="default text">{{.i18n.Tr "repo.repo_gitignore_helper"}}</div>
-							<div class="menu">
+							<div class="menu" id="repo-gitignore-options" role="listbox" aria-multiselectable="true">
 								{{range .Gitignores}}
-									<div class="item" data-value="{{.}}">{{.}}</div>
+									<div class="item" role="option" data-value="{{.}}">{{.}}</div>
 								{{end}}
 							</div>
 						</div>
 					</div>
 					<div class="inline field">
-						<label>{{.i18n.Tr "repo.license"}}</label>
-						<div class="ui search selection dropdown">
+						<label id="repo-license-label">{{.i18n.Tr "repo.license"}}</label>
+						<div class="ui search selection dropdown" data-a11y-dropdown data-a11y-label="repo-license-label" data-a11y-options="repo-license-options">
 							<input type="hidden" name="license" value="{{.license}}">
 							<div class="default text">{{.i18n.Tr "repo.license_helper"}}</div>
-							<div class="menu">
+							<div class="menu" id="repo-license-options" role="listbox">
 								{{range .Licenses}}
-									<div class="item" data-value="{{.}}">{{.}}</div>
+									<div class="item" role="option" data-value="{{.}}">{{.}}</div>
 								{{end}}
 							</div>
 						</div>
 					</div>
 
 					<div class="inline field">
-						<label>{{.i18n.Tr "repo.readme"}} <a target="_blank" rel="noopener noreferrer" href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-readme-template"><span class="octicon octicon-question"></span></a></label>
-						<div class="ui selection dropdown">
+						<label id="repo-readme-label">{{.i18n.Tr "repo.readme"}} <a target="_blank" rel="noopener noreferrer" href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-readme-template"><span class="octicon octicon-question"></span></a></label>
+						<div class="ui selection dropdown" data-a11y-dropdown data-a11y-label="repo-readme-label" data-a11y-options="repo-readme-options">
 							<input type="hidden" name="readme" value="{{.readme}}">
 							<div class="default text">{{.i18n.Tr "repo.readme_helper"}}</div>
-							<div class="menu">
+							<div class="menu" id="repo-readme-options" role="listbox">
 								{{range .Readmes}}
-									<div class="item" data-value="{{.}}">{{.}}</div>
+									<div class="item" role="option" data-value="{{.}}">{{.}}</div>
 								{{end}}
 							</div>
 						</div>
