@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -104,6 +105,23 @@ func TestRepository_PullRequestMeta(t *testing.T) {
 	t.Run("base branch does not exist", func(t *testing.T) {
 		_, err := head.PullRequestMeta(ctx, base.Path(), "feature", "404")
 		assert.ErrorIs(t, err, ErrReferenceNotExist)
+	})
+
+	t.Run("base path contains path list separator and quotes", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip(`Windows does not allow ":" or '"' in file names`)
+		}
+
+		root := tempPath()
+		defer func() { _ = os.RemoveAll(root) }()
+		basePath := filepath.Join(root, `repos:root "x"`, "base.git")
+		require.NoError(t, Clone(ctx, base.Path(), basePath, CloneOptions{Bare: true}))
+
+		meta, err := head.PullRequestMeta(ctx, basePath, "feature", "master")
+		require.NoError(t, err)
+		assert.Equal(t, mergeBase, meta.MergeBase)
+		assert.Len(t, meta.Commits, 2)
+		assert.Equal(t, 3, meta.NumFiles)
 	})
 
 	t.Run("same repository", func(t *testing.T) {

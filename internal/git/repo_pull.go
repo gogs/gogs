@@ -66,7 +66,11 @@ func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, 
 		if err != nil {
 			return nil, errors.Wrap(err, "get base objects directory")
 		}
-		envs = []string{"GIT_ALTERNATE_OBJECT_DIRECTORIES=" + strings.TrimSpace(string(stdout))}
+		// Git splits the value on the path list separator unless the entry is
+		// double-quoted, so quote it to support paths containing ":" (or ";" on
+		// Windows).
+		objectsDir := strings.TrimSpace(string(stdout))
+		envs = []string{"GIT_ALTERNATE_OBJECT_DIRECTORIES=" + quoteAlternatePath(objectsDir)}
 	}
 
 	mergeBase, err := r.MergeBase(ctx, base, headBranch, MergeBaseOptions{CommandOptions: CommandOptions{Envs: envs}})
@@ -89,4 +93,10 @@ func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, 
 		Commits:   commits,
 		NumFiles:  len(names),
 	}, nil
+}
+
+// quoteAlternatePath quotes the path in the C style that Git accepts for an
+// entry of GIT_ALTERNATE_OBJECT_DIRECTORIES.
+func quoteAlternatePath(path string) string {
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(path) + `"`
 }
