@@ -47,29 +47,6 @@ func TestExec_ContextCancellation(t *testing.T) {
 	assert.NotEqual(t, ErrExecTimeout, err)
 }
 
-func TestKillAll(t *testing.T) {
-	go func() {
-		for !hasRunning() {
-			time.Sleep(10 * time.Millisecond)
-		}
-		KillAll()
-	}()
-
-	start := time.Now()
-	_, err := exec(context.Background(), "", slowCommand, nil)
-	assert.Error(t, err)
-	assert.Less(t, time.Since(start), 5*time.Second)
-}
-
-func hasRunning() bool {
-	found := false
-	running.Range(func(any, any) bool {
-		found = true
-		return false
-	})
-	return found
-}
-
 func TestExec_BackgroundJobKeepsOutputOpen(t *testing.T) {
 	old := waitDelay
 	waitDelay = 200 * time.Millisecond

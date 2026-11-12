@@ -8,7 +8,6 @@ import (
 	osexec "os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -42,11 +41,7 @@ func newCommand(ctx context.Context, dir string, args []string, envs []string) *
 	return c
 }
 
-// running holds the commands that have started and not yet been waited for.
-var running sync.Map // *osexec.Cmd -> struct{}
-
-// runCommand starts the command and waits for it to complete, keeping track of
-// it so that KillAll can kill it in the meantime.
+// runCommand starts the command and waits for it to complete.
 //
 // Output is copied through pipes of our own rather than the ones os/exec
 // creates, because os/exec drops what is left in them a fixed delay after the
@@ -74,8 +69,6 @@ func runCommand(c *osexec.Cmd) error {
 		closeReaders(copiers)
 		return err
 	}
-	running.Store(c, struct{}{})
-	defer running.Delete(c)
 
 	// Close our copies of the write ends, so that the copies of the output end
 	// once Git and every process it started closed theirs.
@@ -167,16 +160,6 @@ func (o *outputCopier) wait(delay time.Duration) {
 		case <-timer.C:
 		}
 	}
-}
-
-// KillAll kills every running command along with every process it started.
-// It is meant to be called when Gogs is about to exit, because commands run in
-// their own process groups and do not receive signals sent to Gogs's.
-func KillAll() {
-	running.Range(func(c, _ any) bool {
-		_ = c.(*osexec.Cmd).Cancel()
-		return true
-	})
 }
 
 // exitError is returned when Git exits with a non-zero status. Its message
