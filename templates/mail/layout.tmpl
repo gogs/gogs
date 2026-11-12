@@ -1,7 +1,8 @@
 {{- /*
 The parts every email shares. Override this file in custom/templates/mail to
 restyle all emails at once. Styles are inline because many mail clients drop
-<style> elements.
+<style> elements. The logo travels inside the email as logo.png, so mail
+clients show it without loading anything from the site.
 */ -}}
 
 {{define "header" -}}
@@ -18,7 +19,10 @@ restyle all emails at once. Styles are inline because many mail clients drop
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:8px;text-align:left;">
 <tr><td style="padding:24px 32px;">
-	<p style="margin:0;font-size:16px;font-weight:600;">{{AppName}}</p>
+	<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+		<td style="padding-right:10px;vertical-align:middle;"><img src="cid:logo.png" width="32" height="32" alt="" style="display:block;border:0;"></td>
+		<td style="vertical-align:middle;font-size:16px;font-weight:600;">{{AppName}}</td>
+	</tr></table>
 	<hr style="border:none;border-top:1px solid #e4e4e7;margin:16px 0;">
 {{- end}}
 

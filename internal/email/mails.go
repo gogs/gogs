@@ -1,6 +1,10 @@
 package email
 
 import (
+	"encoding/base64"
+	"net/http"
+	"strings"
+
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/i18n"
 
@@ -202,9 +206,17 @@ var ErrNotFound = errors.New("email not found")
 // the templates overridden in the custom directory.
 func Preview(name, lang string) (*Mail, error) {
 	for _, p := range previews {
-		if p.templateName() == name {
-			return p.preview(lang)
+		if p.templateName() != name {
+			continue
 		}
+		m, err := p.preview(lang)
+		if err != nil || m.Logo == nil {
+			return m, err
+		}
+		// A page cannot show cid: images, so the logo goes into the HTML.
+		dataURI := "data:" + http.DetectContentType(m.Logo) + ";base64," + base64.StdEncoding.EncodeToString(m.Logo)
+		m.HTML = strings.ReplaceAll(m.HTML, "cid:"+mailLogoName, dataURI)
+		return m, nil
 	}
 	return nil, ErrNotFound
 }

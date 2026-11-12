@@ -131,10 +131,15 @@ var (
 	textTemplateExt  = ".txt"
 )
 
+// mailLogoName is the file name of the logo that the emails show, and its
+// content ID: the HTML templates show it with <img src="cid:logo.png">.
+const mailLogoName = "logo.png"
+
 // templateSet holds every mail template.
 type templateSet struct {
 	html *htmltemplate.Template
 	text *texttemplate.Template
+	logo []byte
 	// htmlOnly holds the names of HTML templates overridden in the custom
 	// directory without a plain text one. Their plain text is converted from
 	// the HTML, so that it does not differ from the HTML.
@@ -198,7 +203,35 @@ func loadMailTemplates() (*templateSet, error) {
 	for name := range customText {
 		delete(set.htmlOnly, name)
 	}
+
+	var err error
+	set.logo, err = loadMailLogo()
+	if err != nil {
+		return nil, errors.Wrap(err, "load logo")
+	}
 	return set, nil
+}
+
+// loadMailLogo returns the logo that the emails show: logo.png in
+// "<custom>/templates/mail", else the custom favicon of the site, else the
+// builtin logo.
+func loadMailLogo() ([]byte, error) {
+	for _, p := range []string{
+		filepath.Join(conf.CustomDir(), "templates", "mail", mailLogoName),
+		filepath.Join(conf.CustomDir(), "public", "img", "favicon.png"),
+	} {
+		if osx.IsFile(p) {
+			data, err := os.ReadFile(p)
+			return data, errors.Wrapf(err, "read %q", p)
+		}
+	}
+	if conf.Server.LoadAssetsFromDisk {
+		p := filepath.Join(conf.WorkDir(), "templates", "mail", mailLogoName)
+		data, err := os.ReadFile(p)
+		return data, errors.Wrapf(err, "read %q", p)
+	}
+	data, err := templates.ReadMailFile(mailLogoName)
+	return data, errors.Wrap(err, "read embedded logo")
 }
 
 // mailTemplateExt returns the extension of a recognized template file, or an
@@ -314,6 +347,9 @@ type Mail struct {
 	Subject string
 	HTML    string
 	Text    string
+	// Logo is the image the HTML shows as cid:logo.png, or nil when it shows
+	// no logo, e.g., a custom template without one.
+	Logo []byte
 }
 
 // composeMail renders the named template in the language.
@@ -326,7 +362,11 @@ func composeMail(lang, name, subject string, data any) (*Mail, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Mail{Subject: subject, HTML: htmlBody, Text: textBody}, nil
+	m := &Mail{Subject: subject, HTML: htmlBody, Text: textBody}
+	if strings.Contains(htmlBody, "cid:"+mailLogoName) {
+		m.Logo = set.logo
+	}
+	return m, nil
 }
 
 func SendTestMail(l Locale, email string) error {
