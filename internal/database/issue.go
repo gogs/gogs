@@ -417,7 +417,7 @@ func (issue *Issue) ReadBy(uid int64) error {
 
 func updateIssueCols(tx *gorm.DB, issue *Issue, cols ...string) error {
 	cols = append(cols, "updated_unix")
-	return tx.Model(issue).Select(cols).Updates(issue).Error
+	return tx.Model(issue).Where("id = ?", issue.ID).Select(cols).Updates(issue).Error
 }
 
 // UpdateIssueCols only updates values of specific columns for given issue.
@@ -1382,7 +1382,9 @@ func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool)
 }
 
 func updateIssue(tx *gorm.DB, issue *Issue) error {
-	return tx.Model(issue).Select("*").Updates(issue).Error
+	// NOTE: The explicit condition keeps updating an issue that is not yet
+	// inserted (i.e., ID is 0) a no-op instead of an error.
+	return tx.Model(issue).Where("id = ?", issue.ID).Select("*").Updates(issue).Error
 }
 
 // UpdateIssue updates all fields of given issue.
