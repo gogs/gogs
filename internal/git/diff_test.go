@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestDiffSection_NumLines(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, 1, section.NumLines())
+	assert.Equal(t, 1, section.numLines())
 }
 
 func TestDiffSection_Line(t *testing.T) {
@@ -115,10 +116,8 @@ func TestDiffFile(t *testing.T) {
 		isIncomplete: true,
 	}
 
-	assert.Equal(t, 1, file.NumSections())
 	assert.Equal(t, 2, file.NumAdditions())
 	assert.Equal(t, 0, file.NumDeletions())
-	assert.True(t, file.IsCreated())
 	assert.False(t, file.IsDeleted())
 	assert.False(t, file.IsRenamed())
 	assert.Empty(t, file.OldName())
@@ -142,7 +141,6 @@ func TestDiff(t *testing.T) {
 				isSubmodule:  false,
 				isIncomplete: false,
 				mode:         100644,
-				oldMode:      100644,
 			},
 		},
 		totalAdditions: 10,
@@ -222,7 +220,6 @@ index 0000000..6b08f76
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 					{
 						Name:     "gogs/docs-api",
@@ -253,7 +250,6 @@ index 0000000..6b08f76
 						isSubmodule:  true,
 						isIncomplete: false,
 						mode:         0160000,
-						oldMode:      0160000,
 					},
 				},
 				totalAdditions: 4,
@@ -340,7 +336,6 @@ index ee791be..9997571 100644
 						isBinary:     false,
 						isSubmodule:  false,
 						isIncomplete: false,
-						oldMode:      0100644,
 						mode:         0100644,
 					},
 				},
@@ -369,7 +364,6 @@ Binary files /dev/null and b/img/sourcegraph.png differ`,
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -396,7 +390,6 @@ index e69de29..0000000`,
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -488,7 +481,6 @@ index b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0..ab80bda5dd90d8b42be25ac2c7a071b7
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 3,
@@ -576,7 +568,6 @@ index ce53c7e..56a156b 100644
 						numDeletions: 2,
 						oldName:      "src/app/tabs/teacher/teacher.module.ts",
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 2,
@@ -678,7 +669,6 @@ index 335db7ea..51d7543e 100644
 						isSubmodule:  false,
 						isIncomplete: true,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -733,7 +723,6 @@ index 0000000..6abde17
 						isSubmodule:  false,
 						isIncomplete: true,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 2,
@@ -797,7 +786,6 @@ index 0000000..6b08f76
 						isSubmodule:  false,
 						isIncomplete: true,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 2,
@@ -819,7 +807,6 @@ new mode 100755`,
 						oldName: "go.mod",
 						Type:    DiffFileChange,
 						mode:    0100755,
-						oldMode: 0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -830,8 +817,8 @@ new mode 100755`,
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			done := make(chan SteamParseDiffResult)
-			go StreamParseDiff(strings.NewReader(test.input), done, test.maxFiles, test.maxFileLines, test.maxLineChars)
+			done := make(chan streamParseDiffResult)
+			go streamParseDiff(strings.NewReader(test.input), done, test.maxFiles, test.maxFileLines, test.maxLineChars)
 			result := <-done
 			if result.Err != nil {
 				t.Fatal(result.Err)
@@ -843,9 +830,9 @@ new mode 100755`,
 }
 
 func TestStreamParseDiff_QuotedNames(t *testing.T) {
-	const renameBody = "similarity index 85%\n" +
-		"rename from x\n" +
-		"rename to y\n" +
+	const renameBody = "similarity index 85%%\n" +
+		"rename from %s\n" +
+		"rename to %s\n" +
 		"index abc1234..def5678 100644\n" +
 		"--- x\n" +
 		"+++ y\n" +
@@ -855,32 +842,40 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 	tests := []struct {
 		name       string
 		header     string
+		renameFrom string
+		renameTo   string
 		expOldName string
 		expName    string
 	}{
 		{
 			name:       "only old name quoted",
 			header:     `diff --git "a/say \"hi\".txt" b/hi.txt`,
+			renameFrom: `"say \"hi\".txt"`,
+			renameTo:   "hi.txt",
 			expOldName: `say "hi".txt`,
 			expName:    "hi.txt",
 		},
 		{
 			name:       "only new name quoted",
 			header:     `diff --git a/hi.txt "b/say\thi.txt"`,
+			renameFrom: "hi.txt",
+			renameTo:   `"say\thi.txt"`,
 			expOldName: "hi.txt",
 			expName:    "say\thi.txt",
 		},
 		{
 			name:       "both names quoted with separator-like text",
 			header:     `diff --git "a/x \"b/y\".txt" "b/z.txt"`,
+			renameFrom: `"x \"b/y\".txt"`,
+			renameTo:   "z.txt",
 			expOldName: `x "b/y".txt`,
 			expName:    "z.txt",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			done := make(chan SteamParseDiffResult)
-			go StreamParseDiff(strings.NewReader(test.header+"\n"+renameBody), done, 0, 0, 0)
+			done := make(chan streamParseDiffResult)
+			go streamParseDiff(strings.NewReader(test.header+"\n"+fmt.Sprintf(renameBody, test.renameFrom, test.renameTo)), done, 0, 0, 0)
 			result := <-done
 			require.NoError(t, result.Err)
 			require.Len(t, result.Diff.Files, 1)
@@ -892,9 +887,86 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 		})
 	}
 
+	t.Run("unquoted names containing the new name prefix", func(t *testing.T) {
+		const diff = "diff --git a/foo b/bar.txt b/foo b/bar.txt\n" +
+			"index abc1234..def5678 100644\n" +
+			"--- a/foo b/bar.txt\n" +
+			"+++ b/foo b/bar.txt\n" +
+			"@@ -1 +1 @@\n" +
+			"-old\n" +
+			"+new\n" +
+			"diff --git a/x b/y b/x b/z\n" +
+			"similarity index 100%\n" +
+			"rename from x b/y\n" +
+			"rename to x b/z\n" +
+			"diff --git a/q b/q\n" +
+			"index abc1234..def5678 100644\n" +
+			"--- a/q\n" +
+			"+++ b/q\n" +
+			"@@ -1 +1 @@\n" +
+			"-old\n" +
+			"+new\n"
+		done := make(chan streamParseDiffResult)
+		go streamParseDiff(strings.NewReader(diff), done, 0, 0, 0)
+		result := <-done
+		require.NoError(t, result.Err)
+		require.Len(t, result.Diff.Files, 3)
+
+		changed := result.Diff.Files[0]
+		assert.Equal(t, DiffFileChange, changed.Type)
+		assert.Equal(t, "foo b/bar.txt", changed.Name)
+		assert.Equal(t, "foo b/bar.txt", changed.OldName())
+
+		renamed := result.Diff.Files[1]
+		assert.True(t, renamed.IsRenamed())
+		assert.Equal(t, "x b/y", renamed.OldName())
+		assert.Equal(t, "x b/z", renamed.Name)
+
+		assert.Equal(t, "q", result.Diff.Files[2].Name)
+	})
+
+	t.Run("files without an index line", func(t *testing.T) {
+		const diff = "diff --git a/src b/copy\n" +
+			"similarity index 100%\n" +
+			"copy from src\n" +
+			"copy to copy\n" +
+			"diff --git a/del b/del\n" +
+			"deleted file mode 100644\n" +
+			"index 4bcfe98e640c8284511312660fb8709b0afa888e..0000000000000000000000000000000000000000\n" +
+			"--- a/del\n" +
+			"+++ /dev/null\n" +
+			"@@ -1 +0,0 @@\n" +
+			"-d\n" +
+			"diff --git a/m b/m\n" +
+			"old mode 100644\n" +
+			"new mode 100755\n" +
+			"diff --git a/old b/new\n" +
+			"old mode 100644\n" +
+			"new mode 100755\n" +
+			"similarity index 100%\n" +
+			"rename from old\n" +
+			"rename to new\n"
+		done := make(chan streamParseDiffResult)
+		go streamParseDiff(strings.NewReader(diff), done, 0, 0, 0)
+		result := <-done
+		require.NoError(t, result.Err)
+
+		var got []string
+		for _, f := range result.Diff.Files {
+			got = append(got, fmt.Sprintf("%d %s -> %s %o", f.Type, f.OldName(), f.Name, f.Mode()))
+		}
+		assert.Equal(t, []string{
+			fmt.Sprintf("%d src -> copy 0", DiffFileRename),
+			fmt.Sprintf("%d del -> del 100644", DiffFileDelete),
+			fmt.Sprintf("%d m -> m 100755", DiffFileChange),
+			fmt.Sprintf("%d old -> new 100755", DiffFileRename),
+		}, got)
+		assert.Equal(t, 1, result.Diff.Files[1].NumDeletions())
+	})
+
 	t.Run("malformed header", func(t *testing.T) {
-		done := make(chan SteamParseDiffResult)
-		go StreamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
+		done := make(chan streamParseDiffResult)
+		go streamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
 		result := <-done
 		assert.ErrorContains(t, result.Err, "malformed diff header")
 	})

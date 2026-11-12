@@ -15,7 +15,6 @@ type DiffOptions struct {
 	// The commit ID to used for computing diff between a range of commits (base,
 	// revision]. When not set, only computes diff for a single commit at revision.
 	Base string
-	CommandOptions
 }
 
 // Diff returns a parsed diff object between given commits of the repository.
@@ -45,7 +44,7 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 	} else {
 		args = []string{"diff", "--full-index", "-M", opt.Base, "--end-of-options", rev}
 	}
-	return r.parseDiff(ctx, args, opt.Envs, maxFiles, maxFileLines, maxLineChars)
+	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 
 // DiffWorktree returns a parsed diff of unstaged changes to given path in the
@@ -57,8 +56,8 @@ func (r *Repository) DiffWorktree(ctx context.Context, path string, maxFiles, ma
 
 func (r *Repository) parseDiff(ctx context.Context, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
 	stdout, w := io.Pipe()
-	done := make(chan SteamParseDiffResult)
-	go StreamParseDiff(stdout, done, maxFiles, maxFileLines, maxLineChars)
+	done := make(chan streamParseDiffResult)
+	go streamParseDiff(stdout, done, maxFiles, maxFileLines, maxLineChars)
 
 	err := pipe(ctx, r.path, args, envs, w)
 	_ = w.Close() // Close writer to exit parsing goroutine
@@ -84,7 +83,6 @@ const (
 type RawDiffOptions struct {
 	// Additional arguments to be passed right after the subcommand, e.g., "-w".
 	Args []string
-	CommandOptions
 }
 
 // RawDiff dumps diff of repository in given revision directly to given
@@ -127,25 +125,15 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 	}
 	args = slices.Concat(args[:1], opt.Args, args[1:])
 
-	if err = pipe(ctx, r.path, args, opt.Envs, w); err != nil {
+	if err = pipe(ctx, r.path, args, nil, w); err != nil {
 		return err
 	}
 	return nil
 }
 
-// DiffBinaryOptions contains optional arguments for producing binary patch.
-type DiffBinaryOptions struct {
-	CommandOptions
-}
-
 // DiffBinary returns binary patch between base and head revisions that could be
 // used for git-apply.
-func (r *Repository) DiffBinary(ctx context.Context, base, head string, opts ...DiffBinaryOptions) ([]byte, error) {
-	var opt DiffBinaryOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) DiffBinary(ctx context.Context, base, head string) ([]byte, error) {
 	args := []string{"diff", "--full-index", "--binary", "--end-of-options", base, head}
-	return exec(ctx, r.path, args, opt.Envs)
+	return exec(ctx, r.path, args, nil)
 }

@@ -654,16 +654,14 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err
 		if isWiki {
 			branch = ""
 		}
-		ctx := context.TODO()
-		// A non-positive timeout means no timeout.
-		if conf.Git.Timeout.Clone > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Clone)*time.Second)
-			defer cancel()
-		}
+		ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.Clone)*time.Second)
+		defer cancel()
 		if err = git.Clone(ctx, repoPath, localPath, git.CloneOptions{
 			Branch: branch,
 		}); err != nil {
+			// A killed clone leaves a partial local copy, which every later update
+			// would fail to fetch into.
+			_ = os.RemoveAll(localPath)
 			return errors.Newf("git clone [branch: %s]: %v", branch, err)
 		}
 		return nil
@@ -820,12 +818,12 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
 	mirrorClone := func(url, dst string) error {
-		ctx, cancel := context.WithTimeout(context.TODO(), migrateTimeout)
+		ctx, cancel := git.WithTimeout(context.TODO(), migrateTimeout)
 		defer cancel()
 		return git.Clone(ctx, url, dst, git.CloneOptions{
-			Mirror:         true,
-			Quiet:          true,
-			CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+			Mirror: true,
+			Quiet:  true,
+			Envs:   mirrorGitEnv(),
 		})
 	}
 
@@ -861,6 +859,20 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		return repo, errors.Wrap(err, "check empty")
 	}
 	repo.IsEmpty = !hasBranches
+
+	// HEAD may point to a branch that does not exist while other branches do, in
+	// which case any existing branch becomes the default branch.
+	if !repo.IsEmpty && !gitRepo.HasBranch(context.TODO(), repo.DefaultBranch) {
+		branches, err := gitRepo.Branches(context.TODO())
+		if err != nil {
+			return repo, errors.Wrap(err, "list branches")
+		}
+		repo.DefaultBranch = branches[0]
+		_, err = gitRepo.SymbolicRef(context.TODO(), git.SymbolicRefOptions{Ref: git.RefsHeads + repo.DefaultBranch})
+		if err != nil {
+			return repo, errors.Wrap(err, "set HEAD branch")
+		}
+	}
 
 	if !repo.IsEmpty {
 		if err = repo.UpdateSize(); err != nil {
@@ -1416,7 +1428,7 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 //
 // Deprecated: Use repox.RepositoryPath instead.
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(repox.UserPath(userName), strings.ToLower(repoName)+".git")
+	return repox.RepositoryPath(userName, repoName)
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
@@ -2150,11 +2162,7 @@ func GitFsck() {
 		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			ctx, cancel := context.TODO(), context.CancelFunc(func() {})
-			// A non-positive timeout means no timeout.
-			if conf.Cron.RepoHealthCheck.Timeout > 0 {
-				ctx, cancel = context.WithTimeout(ctx, conf.Cron.RepoHealthCheck.Timeout)
-			}
+			ctx, cancel := git.WithTimeout(context.TODO(), conf.Cron.RepoHealthCheck.Timeout)
 			err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
 				Args: conf.Cron.RepoHealthCheck.Args,
 			})
@@ -2183,7 +2191,7 @@ func GitGcRepos() error {
 			if err := repo.GetOwner(); err != nil {
 				return err
 			}
-			ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
+			ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
 			defer cancel()
 			return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
 		})
@@ -2637,6 +2645,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	cloneCtx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
 	defer cancel()
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
+		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
 	}
 

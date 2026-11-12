@@ -53,7 +53,8 @@ func (r *Repository) WikiCloneLink() (cl *repox.CloneLink) {
 
 // WikiPath returns wiki data path by given user and repository name.
 func WikiPath(userName, repoName string) string {
-	return filepath.Join(repox.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
+	// 🚨 SECURITY: Prevent path traversal in repository name.
+	return filepath.Join(repox.UserPath(userName), pathx.Clean(strings.ToLower(repoName))+".wiki.git")
 }
 
 func (r *Repository) WikiPath() string {

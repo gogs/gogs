@@ -4,33 +4,17 @@ import (
 	"context"
 	"io"
 	"os"
-	osexec "os/exec"
-)
+	"sync/atomic"
+	"time"
 
-// UpdateServerInfoOptions contains optional arguments for updating auxiliary
-// info file on the server side.
-//
-// Docs: https://git-scm.com/docs/git-update-server-info
-type UpdateServerInfoOptions struct {
-	// Indicates whether to overwrite the existing server info.
-	Force bool
-	CommandOptions
-}
+	"github.com/cockroachdb/errors"
+)
 
 // UpdateServerInfo updates the auxiliary info file on the server side for the
 // repository in given path.
-func UpdateServerInfo(ctx context.Context, path string, opts ...UpdateServerInfoOptions) error {
-	var opt UpdateServerInfoOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"update-server-info"}
-	if opt.Force {
-		args = append(args, "--force")
-	}
-	args = append(args, "--end-of-options")
-	_, err := exec(ctx, path, args, opt.Envs)
+func UpdateServerInfo(ctx context.Context, path string) error {
+	args := []string{"update-server-info", "--end-of-options"}
+	_, err := exec(ctx, path, args, nil)
 	return err
 }
 
@@ -58,11 +42,20 @@ type ServiceOptions struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
+// serviceIdleTimeout is how long a service may go without reading from or
+// writing to the client before it is killed. Git sends keepalive packets while
+// it prepares or processes a pack, so a transfer that makes progress never stays
+// idle that long. Git sends nothing while hooks run, so a hook that prints
+// nothing for this long is killed along with the service.
+var serviceIdleTimeout = 30 * time.Minute
+
 // RunService runs the service for the repository in given path, e.g., "git
-// upload-pack <path>".
+// upload-pack <path>". Instead of a fixed timeout, which would cut off a large
+// transfer, the service is killed once it has been idle for too long.
 func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) error {
 	var opt ServiceOptions
 	if len(opts) > 0 {
@@ -78,12 +71,74 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	}
 	args = append(args, path)
 
-	cmd := osexec.CommandContext(ctx, "git", args...)
-	if len(opt.Envs) > 0 {
-		cmd.Env = append(os.Environ(), opt.Envs...)
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	idleTimeout := serviceIdleTimeout
+	var lastActive atomic.Int64
+	touch := func() { lastActive.Store(time.Now().UnixNano()) }
+	touch()
+	go func() {
+		ticker := time.NewTicker(idleTimeout / 10)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if time.Since(time.Unix(0, lastActive.Load())) > idleTimeout {
+					cancel(ErrExecTimeout)
+					return
+				}
+			}
+		}
+	}()
+
+	c := newCommand(ctx, "", args, opt.Envs)
+	if opt.Stdin != nil {
+		// Copy the input through a pipe of our own, because waiting for the command
+		// also waits for the input that os/exec copies, and reading from the client
+		// may block long after Git exited.
+		pr, pw, err := os.Pipe()
+		if err != nil {
+			return errors.Wrap(err, "create pipe")
+		}
+		defer func() { _ = pr.Close() }()
+		go func() {
+			_, _ = io.Copy(pw, activityReader{r: opt.Stdin, touch: touch})
+			_ = pw.Close()
+		}()
+		c.Stdin = pr
 	}
-	cmd.Stdin = opt.Stdin
-	cmd.Stdout = opt.Stdout
-	cmd.Stderr = opt.Stderr
-	return cmd.Run()
+	c.Stdout = activityWriter{w: opt.Stdout, touch: touch}
+	c.Stderr = activityWriter{w: opt.Stderr, touch: touch}
+	err := runCommand(c)
+	if context.Cause(ctx) == ErrExecTimeout {
+		return ErrExecTimeout
+	}
+	return err
+}
+
+type activityReader struct {
+	r     io.Reader
+	touch func()
+}
+
+func (r activityReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	r.touch()
+	return n, err
+}
+
+type activityWriter struct {
+	w     io.Writer
+	touch func()
+}
+
+func (w activityWriter) Write(p []byte) (int, error) {
+	w.touch()
+	if w.w == nil {
+		return len(p), nil
+	}
+	return w.w.Write(p)
 }

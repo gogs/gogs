@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 )
 
@@ -11,15 +12,10 @@ import (
 //
 // Docs: https://git-scm.com/docs/git-ls-remote
 type LsRemoteOptions struct {
-	// Indicates whether include heads.
-	Heads bool
-	// Indicates whether include tags.
-	Tags bool
-	// Indicates whether to not show peeled tags or pseudo refs.
-	Refs bool
 	// The list of patterns to filter results.
 	Patterns []string
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // LsRemote returns a list of references in the remote repository.
@@ -30,15 +26,6 @@ func LsRemote(ctx context.Context, url string, opts ...LsRemoteOptions) ([]*Refe
 	}
 
 	args := []string{"ls-remote", "--quiet"}
-	if opt.Heads {
-		args = append(args, "--heads")
-	}
-	if opt.Tags {
-		args = append(args, "--tags")
-	}
-	if opt.Refs {
-		args = append(args, "--refs")
-	}
 	args = append(args, "--end-of-options", url)
 	if len(opt.Patterns) > 0 {
 		args = append(args, opt.Patterns...)
@@ -65,21 +52,13 @@ func LsRemote(ctx context.Context, url string, opts ...LsRemoteOptions) ([]*Refe
 	return refs, nil
 }
 
-// IsURLAccessible returns true if given remote URL is accessible via Git. The
-// caller should use context.WithTimeout to control the timeout.
-func IsURLAccessible(ctx context.Context, url string) bool {
-	_, err := LsRemote(ctx, url, LsRemoteOptions{
-		Patterns: []string{"HEAD"},
-	})
-	return err == nil
-}
-
 // RemoteHEADOptions contains arguments for getting the reference that HEAD of
 // a remote repository points to.
 //
 // Docs: https://git-scm.com/docs/git-ls-remote#Documentation/git-ls-remote.txt---symref
 type RemoteHEADOptions struct {
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // RemoteHEAD returns the reference that HEAD of the remote repository points
@@ -119,7 +98,6 @@ type RemoteAddOptions struct {
 	Fetch bool
 	// Indicates whether to add remote as mirror with --mirror=fetch.
 	MirrorFetch bool
-	CommandOptions
 }
 
 // RemoteAdd adds a new remote to the repository.
@@ -138,27 +116,14 @@ func (r *Repository) RemoteAdd(ctx context.Context, name, url string, opts ...Re
 	}
 	args = append(args, "--end-of-options", name, url)
 
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
-// RemoteRemoveOptions contains arguments for removing a remote from the
-// repository.
-//
-// Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emremoveem
-type RemoteRemoveOptions struct {
-	CommandOptions
-}
-
 // RemoteRemove removes a remote from the repository.
-func (r *Repository) RemoteRemove(ctx context.Context, name string, opts ...RemoteRemoveOptions) error {
-	var opt RemoteRemoveOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) RemoteRemove(ctx context.Context, name string) error {
 	args := []string{"remote", "remove", "--end-of-options", name}
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "error: No such remote") ||
 			strings.Contains(err.Error(), "fatal: No such remote") {
@@ -176,7 +141,8 @@ func (r *Repository) RemoteRemove(ctx context.Context, name string, opts ...Remo
 type RemoteUpdateOptions struct {
 	// Indicates whether to remove references that no longer exist on the remotes.
 	Prune bool
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // RemoteUpdate fetches updates from all remotes of the repository. It returns
@@ -192,13 +158,11 @@ func (r *Repository) RemoteUpdate(ctx context.Context, opts ...RemoteUpdateOptio
 		args = append(args, "--prune")
 	}
 
-	c := cmd(ctx, r.path, args, opt.Envs)
-
-	stderr := new(bytes.Buffer)
-	if err := c.StdErr().Run().Stream(stderr); err != nil {
-		return "", mapContextError(err, ctx)
+	stderr, err := run(ctx, r.path, args, opt.Envs, io.Discard)
+	if err != nil {
+		return "", err
 	}
-	return stderr.String(), nil
+	return string(stderr), nil
 }
 
 // RepoRemoteUpdate is like Repository.RemoteUpdate for the repository in given path.
@@ -210,173 +174,16 @@ func RepoRemoteUpdate(ctx context.Context, repoPath string, opts ...RemoteUpdate
 	return r.RemoteUpdate(ctx, opts...)
 }
 
-// RemotesOptions contains arguments for listing remotes of the repository.
-// /
-// Docs: https://git-scm.com/docs/git-remote#_commands
-type RemotesOptions struct {
-	CommandOptions
-}
-
-// Remotes lists remotes of the repository.
-func (r *Repository) Remotes(ctx context.Context, opts ...RemotesOptions) ([]string, error) {
-	var opt RemotesOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"remote", "--end-of-options"}
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytesToStrings(stdout), nil
-}
-
-// RemoteGetURLOptions contains arguments for retrieving URL(s) of a remote of
-// the repository.
-//
-// Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emget-urlem
-type RemoteGetURLOptions struct {
-	// Indicates whether to get push URLs instead of fetch URLs.
-	Push bool
-	// Indicates whether to get all URLs, including lists that are not part of main
-	// URLs. This option is independent of the Push option.
-	All bool
-	CommandOptions
-}
-
-// RemoteGetURL retrieves URL(s) of a remote of the repository.
-func (r *Repository) RemoteGetURL(ctx context.Context, name string, opts ...RemoteGetURLOptions) ([]string, error) {
-	var opt RemoteGetURLOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"remote", "get-url"}
-	if opt.Push {
-		args = append(args, "--push")
-	}
-	if opt.All {
-		args = append(args, "--all")
-	}
-	args = append(args, "--end-of-options", name)
-
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
-	if err != nil {
-		return nil, err
-	}
-	return bytesToStrings(stdout), nil
-}
-
-// RemoteSetURLOptions contains arguments for setting an URL of a remote of the
-// repository.
-//
-// Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
-type RemoteSetURLOptions struct {
-	// Indicates whether to set push URLs instead of fetch URLs.
-	Push bool
-	// The regex to match existing URLs to replace (instead of first).
-	Regex string
-	CommandOptions
-}
-
 // RemoteSetURL sets the first URL of the remote with given name of the
 // repository.
-func (r *Repository) RemoteSetURL(ctx context.Context, name, newurl string, opts ...RemoteSetURLOptions) error {
-	var opt RemoteSetURLOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"remote", "set-url"}
-	if opt.Push {
-		args = append(args, "--push")
-	}
-	args = append(args, "--end-of-options", name, newurl)
-	if opt.Regex != "" {
-		args = append(args, opt.Regex)
-	}
-
-	_, err := exec(ctx, r.path, args, opt.Envs)
+func (r *Repository) RemoteSetURL(ctx context.Context, name, newurl string) error {
+	args := []string{"remote", "set-url", "--end-of-options", name, newurl}
+	_, err := exec(ctx, r.path, args, nil)
 	if err != nil {
-		if strings.Contains(err.Error(), "No such URL found") {
-			return ErrURLNotExist
-		} else if strings.Contains(err.Error(), "No such remote") {
+		if strings.Contains(err.Error(), "No such remote") {
 			return ErrRemoteNotExist
 		}
 		return err
 	}
 	return nil
-}
-
-// RepoRemoteSetURL is like Repository.RemoteSetURL for the repository in given path.
-func RepoRemoteSetURL(ctx context.Context, repoPath, name, newurl string, opts ...RemoteSetURLOptions) error {
-	r, err := Open(repoPath)
-	if err != nil {
-		return err
-	}
-	return r.RemoteSetURL(ctx, name, newurl, opts...)
-}
-
-// RemoteSetURLAddOptions contains arguments for appending an URL to a remote
-// of the repository.
-//
-// Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
-type RemoteSetURLAddOptions struct {
-	// Indicates whether to add push URLs instead of fetch URLs.
-	Push bool
-	CommandOptions
-}
-
-// RemoteSetURLAdd appends an URL to the remote with given name of the
-// repository. Use RemoteSetURL to overwrite the URL(s) instead.
-func (r *Repository) RemoteSetURLAdd(ctx context.Context, name, newurl string, opts ...RemoteSetURLAddOptions) error {
-	var opt RemoteSetURLAddOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"remote", "set-url", "--add"}
-	if opt.Push {
-		args = append(args, "--push")
-	}
-	args = append(args, "--end-of-options", name, newurl)
-
-	_, err := exec(ctx, r.path, args, opt.Envs)
-	if err != nil && strings.Contains(err.Error(), "Will not delete all non-push URLs") {
-		return ErrNotDeleteNonPushURLs
-	}
-	return err
-}
-
-// RemoteSetURLDeleteOptions contains arguments for deleting an URL of a remote
-// of the repository.
-//
-// Docs: https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
-type RemoteSetURLDeleteOptions struct {
-	// Indicates whether to delete push URLs instead of fetch URLs.
-	Push bool
-	CommandOptions
-}
-
-// RemoteSetURLDelete deletes all URLs matching regex of the remote with given
-// name of the repository.
-func (r *Repository) RemoteSetURLDelete(ctx context.Context, name, regex string, opts ...RemoteSetURLDeleteOptions) error {
-	var opt RemoteSetURLDeleteOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	args := []string{"remote", "set-url", "--delete"}
-	if opt.Push {
-		args = append(args, "--push")
-	}
-	args = append(args, "--end-of-options", name, regex)
-
-	_, err := exec(ctx, r.path, args, opt.Envs)
-	if err != nil && strings.Contains(err.Error(), "Will not delete all non-push URLs") {
-		return ErrNotDeleteNonPushURLs
-	}
-	return err
 }

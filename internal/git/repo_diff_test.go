@@ -39,7 +39,6 @@ func TestRepository_Diff(t *testing.T) {
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -140,7 +139,6 @@ func TestRepository_Diff(t *testing.T) {
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 					{
 						Name:     "resources/labels.properties",
@@ -189,7 +187,6 @@ func TestRepository_Diff(t *testing.T) {
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 					{
 						Name:     "src/Main.groovy",
@@ -250,7 +247,6 @@ func TestRepository_Diff(t *testing.T) {
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 21,
@@ -278,7 +274,6 @@ func TestRepository_Diff(t *testing.T) {
 						isSubmodule:  false,
 						isIncomplete: false,
 						mode:         0100644,
-						oldMode:      0100644,
 					},
 				},
 				totalAdditions: 0,
@@ -485,7 +480,6 @@ func TestRepository_DiffBinary(t *testing.T) {
 	tests := []struct {
 		base      string
 		head      string
-		opt       DiffBinaryOptions
 		expOutput string
 	}{
 		{
@@ -512,7 +506,7 @@ index 0000000000000000000000000000000000000000..6b08f76a5313fa3d26859515b30aa17a
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			p, err := testrepo.DiffBinary(ctx, test.base, test.head, test.opt)
+			p, err := testrepo.DiffBinary(ctx, test.base, test.head)
 			if err != nil {
 				t.Fatal(err)
 			}

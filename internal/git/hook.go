@@ -20,9 +20,9 @@ var (
 	// ServerSideHooks contains a list of Git hooks that are supported on the server
 	// side.
 	ServerSideHooks = []HookName{HookPreReceive, HookUpdate, HookPostReceive}
-	// ServerSideHookSamples contains samples of Git hooks that are supported on the
+	// serverSideHookSamples contains samples of Git hooks that are supported on the
 	// server side.
-	ServerSideHookSamples = map[HookName]string{
+	serverSideHookSamples = map[HookName]string{
 		HookPreReceive: `#!/bin/sh
 #
 # An example hook script to make use of push options.

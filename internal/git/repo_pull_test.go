@@ -17,17 +17,20 @@ func TestRepository_MergeBase(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("bad revision", func(t *testing.T) {
-		// "bad_revision" doesn't exist, so git fails with exit status 128 (fatal),
-		// not exit status 1 (no merge base).
 		mb, err := testrepo.MergeBase(ctx, "0eedd79eba4394bbef888c804e899731644367fe", "bad_revision")
-		assert.Error(t, err)
+		assert.True(t, IsErrNoMergeBase(err), "got %v", err)
+		assert.Empty(t, mb)
+	})
+
+	t.Run("not a commit", func(t *testing.T) {
+		mb, err := testrepo.MergeBase(ctx, "0eedd79eba4394bbef888c804e899731644367fe^{tree}", "master")
+		assert.True(t, IsErrNoMergeBase(err), "got %v", err)
 		assert.Empty(t, mb)
 	})
 
 	tests := []struct {
 		base          string
 		head          string
-		opt           MergeBaseOptions
 		wantMergeBase string
 	}{
 		{
@@ -43,7 +46,7 @@ func TestRepository_MergeBase(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			mb, err := testrepo.MergeBase(ctx, test.base, test.head, test.opt)
+			mb, err := testrepo.MergeBase(ctx, test.base, test.head)
 			require.NoError(t, err)
 			assert.Equal(t, test.wantMergeBase, mb)
 		})

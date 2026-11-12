@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cockroachdb/errors"
 )
@@ -19,9 +20,9 @@ import (
 type Repository struct {
 	path string
 
-	cachedCommits *objectCache
-	cachedTags    *objectCache
-	cachedTrees   *objectCache
+	cachedCommits sync.Map
+	cachedTags    sync.Map
+	cachedTrees   sync.Map
 }
 
 // Path returns the path of the repository.
@@ -29,7 +30,7 @@ func (r *Repository) Path() string {
 	return r.path
 }
 
-const LogFormatHashOnly = `format:%H`
+const logFormatHashOnly = `format:%H`
 
 // parsePrettyFormatLogToList returns a list of commits parsed from given logs
 // that are formatted in LogFormatHashOnly.
@@ -56,7 +57,6 @@ func (r *Repository) parsePrettyFormatLogToList(ctx context.Context, logs []byte
 type InitOptions struct {
 	// Indicates whether the repository should be initialized in bare format.
 	Bare bool
-	CommandOptions
 }
 
 // Init initializes a new Git repository.
@@ -76,7 +76,7 @@ func Init(ctx context.Context, path string, opts ...InitOptions) error {
 		args = append(args, "--bare")
 	}
 	args = append(args, "--end-of-options")
-	_, err = exec(ctx, path, args, opt.Envs)
+	_, err = exec(ctx, path, args, nil)
 	return err
 }
 
@@ -90,12 +90,7 @@ func Open(repoPath string) (*Repository, error) {
 		return nil, os.ErrNotExist
 	}
 
-	return &Repository{
-		path:          repoPath,
-		cachedCommits: newObjectCache(),
-		cachedTags:    newObjectCache(),
-		cachedTrees:   newObjectCache(),
-	}, nil
+	return &Repository{path: repoPath}, nil
 }
 
 // CloneOptions contains optional arguments for cloning a repository.
@@ -110,9 +105,8 @@ type CloneOptions struct {
 	Quiet bool
 	// The branch to checkout for the working tree when Bare=false.
 	Branch string
-	// The number of revisions to clone.
-	Depth uint64
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // Clone clones the repository from remote URL to the destination.
@@ -140,9 +134,6 @@ func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
 	if !opt.Bare && opt.Branch != "" {
 		args = append(args, "-b", opt.Branch)
 	}
-	if opt.Depth > 0 {
-		args = append(args, "--depth", strconv.FormatUint(opt.Depth, 10))
-	}
 
 	args = append(args, "--end-of-options", url, dst)
 	_, err = exec(ctx, "", args, opt.Envs)
@@ -155,7 +146,6 @@ func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
 type FetchOptions struct {
 	// Indicates whether to prune during fetching.
 	Prune bool
-	CommandOptions
 }
 
 // Fetch fetches updates for the repository.
@@ -171,60 +161,7 @@ func (r *Repository) Fetch(ctx context.Context, opts ...FetchOptions) error {
 	}
 	args = append(args, "--end-of-options")
 
-	_, err := exec(ctx, r.path, args, opt.Envs)
-	return err
-}
-
-// PullOptions contains optional arguments for pulling repository updates.
-//
-// Docs: https://git-scm.com/docs/git-pull
-type PullOptions struct {
-	// Indicates whether to rebased during pulling.
-	Rebase bool
-	// Indicates whether to pull from all remotes.
-	All bool
-	// The remote to pull updates from when All=false.
-	Remote string
-	// The branch to pull updates from when All=false and Remote is supplied.
-	Branch string
-	CommandOptions
-}
-
-// Pull pulls updates for the repository. The committer is required and is recorded
-// on any commit this command creates. A rebase keeps the authors of the replayed commits.
-func (r *Repository) Pull(ctx context.Context, committer *Signature, opts ...PullOptions) error {
-	if committer == nil {
-		return errors.New("committer is required")
-	}
-
-	var opt PullOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	// The strategy flags are explicit so pull.rebase and pull.ff in Git
-	// configuration cannot change which commits this command creates.
-	args := []string{"pull"}
-	envs := committerEnvs(committer)
-	if opt.Rebase {
-		args = append(args, "--rebase")
-	} else {
-		args = append(args, "--no-rebase", "--ff")
-		envs = append(envs, authorEnvs(committer)...)
-	}
-	if opt.All {
-		args = append(args, "--all")
-	}
-	args = append(args, "--end-of-options")
-	if !opt.All && opt.Remote != "" {
-		args = append(args, opt.Remote)
-		if opt.Branch != "" {
-			args = append(args, opt.Branch)
-		}
-	}
-	envs = append(envs, opt.Envs...)
-
-	_, err := exec(ctx, r.path, args, envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -232,9 +169,8 @@ func (r *Repository) Pull(ctx context.Context, committer *Signature, opts ...Pul
 //
 // Docs: https://git-scm.com/docs/git-push
 type PushOptions struct {
-	// Indicates whether to set upstream tracking for the branch.
-	SetUpstream bool
-	CommandOptions
+	// The additional environment variables to run the command with.
+	Envs []string
 }
 
 // Push pushes local changes to given remote and branch for the repository.
@@ -245,9 +181,6 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 	}
 
 	args := []string{"push"}
-	if opt.SetUpstream {
-		args = append(args, "-u")
-	}
 	args = append(args, "--end-of-options", remote, branch)
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err
@@ -268,7 +201,6 @@ func RepoPush(ctx context.Context, repoPath, remote, branch string, opts ...Push
 type CheckoutOptions struct {
 	// The base branch if checks out to a new branch.
 	BaseBranch string
-	CommandOptions
 }
 
 // Checkout checks out to given branch for the repository.
@@ -285,7 +217,7 @@ func (r *Repository) Checkout(ctx context.Context, branch string, opts ...Checko
 		args = append(args, "--end-of-options", branch)
 	}
 
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -304,7 +236,6 @@ func RepoCheckout(ctx context.Context, repoPath, branch string, opts ...Checkout
 type ResetOptions struct {
 	// Indicates whether to perform a hard reset.
 	Hard bool
-	CommandOptions
 }
 
 // Reset resets working tree to given revision for the repository.
@@ -320,28 +251,15 @@ func (r *Repository) Reset(ctx context.Context, rev string, opts ...ResetOptions
 	}
 	args = append(args, "--end-of-options", rev)
 
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
-}
-
-// MoveOptions contains optional arguments for moving a file, a directory, or a
-// symlink.
-//
-// Docs: https://git-scm.com/docs/git-mv
-type MoveOptions struct {
-	CommandOptions
 }
 
 // Move moves a file, a directory, or a symlink file or directory from source to
 // destination for the repository.
-func (r *Repository) Move(ctx context.Context, src, dst string, opts ...MoveOptions) error {
-	var opt MoveOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) Move(ctx context.Context, src, dst string) error {
 	args := []string{"mv", "--end-of-options", src, dst}
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -351,9 +269,6 @@ func (r *Repository) Move(ctx context.Context, src, dst string, opts ...MoveOpti
 type AddOptions struct {
 	// Indicates whether to add all changes to index.
 	All bool
-	// The specific pathspecs to be added to index.
-	Pathspecs []string
-	CommandOptions
 }
 
 // Add adds local changes to index for the repository.
@@ -367,45 +282,21 @@ func (r *Repository) Add(ctx context.Context, opts ...AddOptions) error {
 	if opt.All {
 		args = append(args, "--all")
 	}
-	if len(opt.Pathspecs) > 0 {
-		args = append(args, "--")
-		args = append(args, opt.Pathspecs...)
-	}
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
-// CommitOptions contains optional arguments to commit changes.
-//
-// Docs: https://git-scm.com/docs/git-commit
-type CommitOptions struct {
-	// Author is the author of the changes if that's not the same as committer.
-	Author *Signature
-	CommandOptions
-}
-
-// Commit commits local changes with the given committer and message for the
-// repository.
-func (r *Repository) Commit(ctx context.Context, committer *Signature, message string, opts ...CommitOptions) error {
+// Commit commits local changes with the given message for the repository,
+// recording the committer as both the author and the committer.
+func (r *Repository) Commit(ctx context.Context, committer *Signature, message string) error {
 	if committer == nil {
 		return errors.New("committer is required")
 	}
 
-	var opt CommitOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
 	envs := committerEnvs(committer)
-	envs = append(envs, opt.Envs...)
-
-	if opt.Author == nil {
-		opt.Author = committer
-	}
-
 	args := []string{
 		"commit",
-		fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email),
+		fmt.Sprintf("--author=%s <%s>", committer.Name, committer.Email),
 		"-m", message,
 		"--end-of-options",
 	}
@@ -413,13 +304,13 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	// Git also exits with status 1 for real failures (e.g., an empty message or a
 	// rejecting hook), so check for staged changes up front instead of guessing
 	// from the exit status.
-	_, err := exec(ctx, r.path, []string{"diff", "--cached", "--quiet"}, opt.Envs)
+	_, err := exec(ctx, r.path, []string{"diff", "--cached", "--quiet"}, nil)
 	if err == nil {
 		// A merge in progress still needs a commit to record the merged parent, even
 		// when the merge result has the same tree as HEAD.
 		// Use "--verify" so that a file named "MERGE_HEAD" in the working tree is not
 		// mistaken for the reference.
-		_, err = exec(ctx, r.path, []string{"rev-parse", "--quiet", "--verify", "MERGE_HEAD"}, opt.Envs)
+		_, err = exec(ctx, r.path, []string{"rev-parse", "--quiet", "--verify", "MERGE_HEAD"}, nil)
 		if isExitStatus(err, 1) {
 			return nil
 		} else if err != nil {
@@ -442,7 +333,6 @@ type MergeOptions struct {
 	NoFastForward bool
 	// Indicates whether to stop before creating the merge commit.
 	NoCommit bool
-	CommandOptions
 }
 
 // Merge merges the given revision into the current branch of the repository.
@@ -472,7 +362,6 @@ func (r *Repository) Merge(ctx context.Context, rev string, committer *Signature
 	args = append(args, "--end-of-options", rev)
 
 	envs := append(authorEnvs(committer), committerEnvs(committer)...)
-	envs = append(envs, opt.Envs...)
 	_, err := exec(ctx, r.path, args, envs)
 	return err
 }
@@ -499,7 +388,6 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string, commit
 type ApplyCheckOptions struct {
 	// Indicates whether to ignore whitespace differences in context lines.
 	IgnoreWhitespace bool
-	CommandOptions
 }
 
 // ApplyCheck returns an error if the patch file in given path does not apply
@@ -515,7 +403,7 @@ func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...A
 		args = append(args, "--ignore-whitespace")
 	}
 	args = append(args, "--end-of-options", patchPath)
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -526,20 +414,8 @@ type NameStatus struct {
 	Modified []string
 }
 
-// ShowNameStatusOptions contains optional arguments for showing name status.
-//
-// Docs: https://git-scm.com/docs/git-show#Documentation/git-show.txt---name-status
-type ShowNameStatusOptions struct {
-	CommandOptions
-}
-
 // ShowNameStatus returns name status of given revision of the repository.
-func (r *Repository) ShowNameStatus(ctx context.Context, rev string, opts ...ShowNameStatusOptions) (*NameStatus, error) {
-	var opt ShowNameStatusOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (*NameStatus, error) {
 	fileStatus := &NameStatus{}
 	stdout, w := io.Pipe()
 	done := make(chan struct{})
@@ -565,7 +441,7 @@ func (r *Repository) ShowNameStatus(ctx context.Context, rev string, opts ...Sho
 
 	args := []string{"show", "--name-status", "--pretty=format:''", "--end-of-options", rev}
 
-	err := pipe(ctx, r.path, args, opt.Envs, w)
+	err := pipe(ctx, r.path, args, nil, w)
 	_ = w.Close() // Close writer to exit parsing goroutine
 	if err != nil {
 		return nil, err
@@ -576,29 +452,17 @@ func (r *Repository) ShowNameStatus(ctx context.Context, rev string, opts ...Sho
 }
 
 // RepoShowNameStatus is like Repository.ShowNameStatus for the repository in given path.
-func RepoShowNameStatus(ctx context.Context, repoPath, rev string, opts ...ShowNameStatusOptions) (*NameStatus, error) {
+func RepoShowNameStatus(ctx context.Context, repoPath, rev string) (*NameStatus, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.ShowNameStatus(ctx, rev, opts...)
-}
-
-// RevParseOptions contains optional arguments for parsing revision.
-//
-// Docs: https://git-scm.com/docs/git-rev-parse
-type RevParseOptions struct {
-	CommandOptions
+	return r.ShowNameStatus(ctx, rev)
 }
 
 // RevParse returns full length (40) commit ID by given revision in the
 // repository.
-func (r *Repository) RevParse(ctx context.Context, rev string, opts ...RevParseOptions) (string, error) {
-	var opt RevParseOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) RevParse(ctx context.Context, rev string) (string, error) {
 	// A revision that starts with a dash is never a valid object and would
 	// instead be interpreted by "git rev-parse" as a command-line option,
 	// allowing argument injection. The "--end-of-options" separator does not
@@ -610,7 +474,7 @@ func (r *Repository) RevParse(ctx context.Context, rev string, opts ...RevParseO
 
 	args := []string{"rev-parse", rev}
 
-	commitID, err := exec(ctx, r.path, args, opt.Envs)
+	commitID, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		if isExitStatus(err, 128) {
 			return "", ErrRevisionNotExist
@@ -632,23 +496,11 @@ type CountObject struct {
 	SizeGarbage   int64
 }
 
-// CountObjectsOptions contains optional arguments for counting objects.
-//
-// Docs: https://git-scm.com/docs/git-count-objects
-type CountObjectsOptions struct {
-	CommandOptions
-}
-
 // CountObjects returns disk usage report of the repository.
-func (r *Repository) CountObjects(ctx context.Context, opts ...CountObjectsOptions) (*CountObject, error) {
-	var opt CountObjectsOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func (r *Repository) CountObjects(ctx context.Context) (*CountObject, error) {
 	args := []string{"count-objects", "-v", "--end-of-options"}
 
-	stdout, err := exec(ctx, r.path, args, opt.Envs)
+	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -684,12 +536,12 @@ func (r *Repository) CountObjects(ctx context.Context, opts ...CountObjectsOptio
 }
 
 // RepoCountObjects is like Repository.CountObjects for the repository in given path.
-func RepoCountObjects(ctx context.Context, repoPath string, opts ...CountObjectsOptions) (*CountObject, error) {
+func RepoCountObjects(ctx context.Context, repoPath string) (*CountObject, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	return r.CountObjects(ctx, opts...)
+	return r.CountObjects(ctx)
 }
 
 // FsckOptions contains optional arguments for verifying the objects.
@@ -698,7 +550,6 @@ func RepoCountObjects(ctx context.Context, repoPath string, opts ...CountObjects
 type FsckOptions struct {
 	// Additional arguments to be passed to "git fsck", e.g., "--strict".
 	Args []string
-	CommandOptions
 }
 
 // Fsck verifies the connectivity and validity of the objects in the database
@@ -712,7 +563,7 @@ func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
 	args := []string{"fsck"}
 	args = append(args, opt.Args...)
 	args = append(args, "--end-of-options")
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -731,7 +582,6 @@ func RepoFsck(ctx context.Context, repoPath string, opts ...FsckOptions) error {
 type GCOptions struct {
 	// Additional arguments to be passed to "git gc", e.g., "--aggressive".
 	Args []string
-	CommandOptions
 }
 
 // GC cleans up unnecessary files and optimizes the repository.
@@ -744,7 +594,7 @@ func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
 	args := []string{"gc"}
 	args = append(args, opt.Args...)
 	args = append(args, "--end-of-options")
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err := exec(ctx, r.path, args, nil)
 	return err
 }
 

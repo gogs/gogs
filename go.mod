@@ -50,6 +50,7 @@ require (
 	golang.org/x/crypto v0.52.0
 	golang.org/x/image v0.39.0
 	golang.org/x/net v0.55.0
+	golang.org/x/sys v0.45.0
 	golang.org/x/text v0.37.0
 	gopkg.in/ini.v1 v1.67.2
 	gopkg.in/macaron.v1 v1.5.1
@@ -143,7 +144,6 @@ require (
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/bufio.v1 v1.0.0-20140618132640-567b2bfa514e // indirect
 	gopkg.in/redis.v2 v2.3.2 // indirect

@@ -52,7 +52,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 
 	// Get page list.
 	if isViewPage {
-		entries, err := commit.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
+		entries, err := commit.Entries(c.Req.Context())
 		if err != nil {
 			c.Error(err, "list entries")
 			return nil, ""
@@ -154,7 +154,7 @@ func WikiPages(c *context.Context) {
 		return
 	}
 
-	entries, err := commit.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
+	entries, err := commit.Entries(c.Req.Context())
 	if err != nil {
 		c.Error(err, "list entries")
 		return

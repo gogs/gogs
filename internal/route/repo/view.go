@@ -36,7 +36,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		return
 	}
 
-	entries, err := tree.Entries(c.Req.Context(), git.LsTreeOptions{Verbatim: true})
+	entries, err := tree.Entries(c.Req.Context())
 	if err != nil {
 		c.Error(err, "list entries")
 		return

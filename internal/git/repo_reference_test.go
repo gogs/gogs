@@ -39,12 +39,12 @@ func TestRepository_ShowRefVerify(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("reference does not exist", func(t *testing.T) {
-		rev, err := testrepo.ShowRefVerify(ctx, "bad_reference")
+		rev, err := testrepo.showRefVerify(ctx, "bad_reference")
 		assert.NotNil(t, err)
 		assert.Empty(t, rev)
 	})
 
-	rev, err := testrepo.ShowRefVerify(ctx, "refs/heads/release-1.0")
+	rev, err := testrepo.showRefVerify(ctx, "refs/heads/release-1.0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,6 @@ func TestRepository_HasReference(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		ref    string
-		opt    ShowRefVerifyOptions
 		expVal bool
 	}{
 		{
@@ -108,7 +107,7 @@ func TestRepository_HasReference(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, testrepo.HasReference(ctx, test.ref, test.opt))
+			assert.Equal(t, test.expVal, testrepo.hasReference(ctx, test.ref))
 		})
 	}
 }
@@ -117,7 +116,6 @@ func TestRepository_HasBranch(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		ref    string
-		opt    ShowRefVerifyOptions
 		expVal bool
 	}{
 		{
@@ -131,7 +129,7 @@ func TestRepository_HasBranch(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, testrepo.HasBranch(ctx, test.ref, test.opt))
+			assert.Equal(t, test.expVal, testrepo.HasBranch(ctx, test.ref))
 		})
 	}
 }
@@ -172,7 +170,6 @@ func TestRepository_HasTag(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		ref    string
-		opt    ShowRefVerifyOptions
 		expVal bool
 	}{
 		{
@@ -186,7 +183,7 @@ func TestRepository_HasTag(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, testrepo.HasTag(ctx, test.ref, test.opt))
+			assert.Equal(t, test.expVal, testrepo.HasTag(ctx, test.ref))
 		})
 	}
 }
@@ -228,11 +225,11 @@ func TestRepository_SymbolicRef(t *testing.T) {
 func TestRepository_ShowRef(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		opt     ShowRefOptions
+		opt     showRefOptions
 		expRefs []*Reference
 	}{
 		{
-			opt: ShowRefOptions{
+			opt: showRefOptions{
 				Heads:    true,
 				Patterns: []string{"release-1.0"},
 			},
@@ -243,7 +240,7 @@ func TestRepository_ShowRef(t *testing.T) {
 				},
 			},
 		}, {
-			opt: ShowRefOptions{
+			opt: showRefOptions{
 				Tags:     true,
 				Patterns: []string{"v1.0.0"},
 			},
@@ -257,7 +254,7 @@ func TestRepository_ShowRef(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			refs, err := testrepo.ShowRef(ctx, test.opt)
+			refs, err := testrepo.showRef(ctx, test.opt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -319,7 +316,7 @@ func TestRepository_DeleteBranch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assert.True(t, r.HasReference(ctx, RefsHeads+branch))
+			assert.True(t, r.hasReference(ctx, RefsHeads+branch))
 
 			err = r.Checkout(ctx, "master")
 			if err != nil {
@@ -331,7 +328,7 @@ func TestRepository_DeleteBranch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assert.False(t, r.HasReference(ctx, RefsHeads+branch))
+			assert.False(t, r.hasReference(ctx, RefsHeads+branch))
 		})
 	}
 }

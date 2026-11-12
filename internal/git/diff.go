@@ -48,8 +48,8 @@ type DiffSection struct {
 	numDeletions int
 }
 
-// NumLines returns the number of lines in the section.
-func (s *DiffSection) NumLines() int {
+// numLines returns the number of lines in the section.
+func (s *DiffSection) numLines() int {
 	return len(s.Lines)
 }
 
@@ -115,17 +115,11 @@ type DiffFile struct {
 
 	oldName string
 
-	mode    EntryMode
-	oldMode EntryMode
+	mode EntryMode
 
 	isBinary     bool
 	isSubmodule  bool
 	isIncomplete bool
-}
-
-// NumSections returns the number of sections in the file.
-func (f *DiffFile) NumSections() int {
-	return len(f.Sections)
 }
 
 // NumAdditions returns the number of additions in the file.
@@ -136,11 +130,6 @@ func (f *DiffFile) NumAdditions() int {
 // NumDeletions returns the number of deletions in the file.
 func (f *DiffFile) NumDeletions() int {
 	return f.numDeletions
-}
-
-// IsCreated returns true if the file is newly created.
-func (f *DiffFile) IsCreated() bool {
-	return f.Type == DiffFileAdd
 }
 
 // IsDeleted returns true if the file has been deleted.
@@ -161,11 +150,6 @@ func (f *DiffFile) OldName() string {
 // Mode returns the mode of the file.
 func (f *DiffFile) Mode() EntryMode {
 	return f.mode
-}
-
-// OldMode returns the old mode of the file if it's changed.
-func (f *DiffFile) OldMode() EntryMode {
-	return f.oldMode
 }
 
 // IsBinary returns true if the file is in binary format.
@@ -213,8 +197,8 @@ func (d *Diff) IsIncomplete() bool {
 	return d.isIncomplete
 }
 
-// SteamParseDiffResult contains results of streaming parsing a diff.
-type SteamParseDiffResult struct {
+// streamParseDiffResult contains results of streaming parsing a diff.
+type streamParseDiffResult struct {
 	Diff *Diff
 	Err  error
 }
@@ -274,6 +258,9 @@ func parseDiffHeaderNames(names string) (a, b string, err error) {
 		// An unquoted name never contains a double quote.
 		middle = strings.Index(names, ` "b/`)
 		if middle == -1 {
+			middle = splitSameDiffNames(names)
+		}
+		if middle == -1 {
 			middle = strings.Index(names, ` b/`)
 		}
 	}
@@ -292,9 +279,24 @@ func parseDiffHeaderNames(names string) (a, b string, err error) {
 	return a, b, nil
 }
 
+// splitSameDiffNames returns the index of the space between two unquoted names
+// that refer to the same file, e.g., `a/foo b/bar.txt b/foo b/bar.txt`, or -1 if
+// the names differ. Only the names of a renamed or copied file differ, and the
+// parser then reads them from the "rename from" and "rename to" lines, or the
+// "copy from" and "copy to" lines, instead.
+func splitSameDiffNames(names string) int {
+	middle := len(names) / 2
+	if len(names)%2 == 0 || names[middle] != ' ' ||
+		!strings.HasPrefix(names, "a/") || !strings.HasPrefix(names[middle+1:], "b/") ||
+		names[2:middle] != names[middle+3:] {
+		return -1
+	}
+	return middle
+}
+
 func unquoteDiffName(name, prefix string) (string, bool) {
 	if len(name) >= 2 && name[0] == '"' && name[len(name)-1] == '"' {
-		name = string(UnescapeChars([]byte(name[1 : len(name)-1])))
+		name = string(unescapeChars([]byte(name[1 : len(name)-1])))
 	}
 	return strings.CutPrefix(name, prefix)
 }
@@ -321,6 +323,13 @@ checkType:
 			return nil, err
 		}
 
+		// Files without content changes, e.g., a pure rename or a mode change, have
+		// no index line, so the next file starts right after the extended headers.
+		// Leave its header line for the caller.
+		if bytes.HasPrefix(p.buffer, diffHead) {
+			break
+		}
+
 		line := string(p.buffer)
 		p.buffer = nil
 
@@ -336,9 +345,6 @@ checkType:
 			if len(fields) > 0 {
 				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.mode = EntryMode(mode)
-				if file.oldMode == 0 {
-					file.oldMode = file.mode
-				}
 			}
 		case strings.HasPrefix(line, "deleted"):
 			file.Type = DiffFileDelete
@@ -347,9 +353,6 @@ checkType:
 			if len(fields) > 0 {
 				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.mode = EntryMode(mode)
-				if file.oldMode == 0 {
-					file.oldMode = file.mode
-				}
 			}
 		case strings.HasPrefix(line, "index"): // e.g., index ee791be..9997571 100644
 			fields := strings.Fields(line[6:])
@@ -363,29 +366,24 @@ checkType:
 			if len(fields) > 1 {
 				mode, _ := strconv.ParseUint(fields[1], 8, 16)
 				file.mode = EntryMode(mode)
-				file.oldMode = EntryMode(mode)
 			}
 			break checkType
 		case strings.HasPrefix(line, "similarity index "):
 			file.Type = DiffFileRename
 			file.oldName = a
 			file.Name = b
-
-			// No need to look for index if it's a pure rename
-			if strings.HasSuffix(line, "100%") {
-				break checkType
-			}
+		case strings.HasPrefix(line, "rename from "), strings.HasPrefix(line, "copy from "):
+			// The "diff --git" line is ambiguous when an unquoted name contains " b/".
+			_, name, _ := strings.Cut(line, " from ")
+			file.oldName, _ = unquoteDiffName(name, "")
+		case strings.HasPrefix(line, "rename to "), strings.HasPrefix(line, "copy to "):
+			_, name, _ := strings.Cut(line, " to ")
+			file.Name, _ = unquoteDiffName(name, "")
 		case strings.HasPrefix(line, "new mode"):
 			fields := strings.Fields(line)
 			if len(fields) > 0 {
 				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
 				file.mode = EntryMode(mode)
-			}
-		case strings.HasPrefix(line, "old mode"):
-			fields := strings.Fields(line)
-			if len(fields) > 0 {
-				mode, _ := strconv.ParseUint(fields[len(fields)-1], 8, 16)
-				file.oldMode = EntryMode(mode)
 			}
 		}
 	}
@@ -554,7 +552,7 @@ func (p *diffParser) parse() (*Diff, error) {
 		file.numDeletions += section.numDeletions
 		diff.totalAdditions += section.numAdditions
 		diff.totalDeletions += section.numDeletions
-		currentFileLines += section.NumLines()
+		currentFileLines += section.numLines()
 		if isIncomplete {
 			file.isIncomplete = true
 			diff.isIncomplete = true
@@ -564,11 +562,11 @@ func (p *diffParser) parse() (*Diff, error) {
 	return diff, nil
 }
 
-// StreamParseDiff parses the diff read from the given io.Reader. It does
+// streamParseDiff parses the diff read from the given io.Reader. It does
 // parse-on-read to minimize the time spent on huge diffs. It accepts a channel
 // to notify and send error (if any) to the caller when the process is done.
 // Therefore, this method should be called in a goroutine asynchronously.
-func StreamParseDiff(r io.Reader, done chan<- SteamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
+func streamParseDiff(r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
 	p := &diffParser{
 		Reader:       bufio.NewReader(r),
 		maxFiles:     maxFiles,
@@ -579,7 +577,7 @@ func StreamParseDiff(r io.Reader, done chan<- SteamParseDiffResult, maxFiles, ma
 	if err == nil {
 		decodeCharsets(diff)
 	}
-	done <- SteamParseDiffResult{
+	done <- streamParseDiffResult{
 		Diff: diff,
 		Err:  err,
 	}

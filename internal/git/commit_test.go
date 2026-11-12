@@ -162,7 +162,6 @@ func TestCommit_CommitsByPage(t *testing.T) {
 			size:         2,
 			expCommitIDs: []string{},
 		},
-
 		{
 			page: 2,
 			size: 2,
@@ -191,7 +190,6 @@ func TestCommit_SearchCommits(t *testing.T) {
 	tests := []struct {
 		id           string
 		pattern      string
-		opt          SearchCommitsOptions
 		expCommitIDs []string
 	}{
 		{
@@ -214,60 +212,10 @@ func TestCommit_SearchCommits(t *testing.T) {
 		},
 		{
 			id:      "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			pattern: "",
-			opt: SearchCommitsOptions{
-				MaxCount: 3,
-			},
-			expCommitIDs: []string{
-				"2a52e96389d02209b451ae1ddf45d645b42d744c",
-				"57d0bf61e57cdacb309ebd1075257c6bd7e1da81",
-				"cb2d322bee073327e058143329d200024bd6b4c6",
-			},
-		},
-
-		{
-			id:      "2a52e96389d02209b451ae1ddf45d645b42d744c",
 			pattern: "feature",
 			expCommitIDs: []string{
 				"2a52e96389d02209b451ae1ddf45d645b42d744c",
 				"cb2d322bee073327e058143329d200024bd6b4c6",
-			},
-		},
-		{
-			id:      "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			pattern: "feature",
-			opt: SearchCommitsOptions{
-				MaxCount: 1,
-			},
-			expCommitIDs: []string{
-				"2a52e96389d02209b451ae1ddf45d645b42d744c",
-			},
-		},
-
-		{
-			id:      "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			pattern: "add.*",
-			opt: SearchCommitsOptions{
-				Path: "src",
-			},
-			expCommitIDs: []string{
-				"cb2d322bee073327e058143329d200024bd6b4c6",
-				"818f033c4ae7f26b2b29e904942fa79a5ccaadd0",
-				"333fd9bc94084c3e07e092e2bc9c22bab4476439",
-				"32c273781bab599b955ce7c59d92c39bedf35db0",
-				"755fd577edcfd9209d0ac072eed3b022cbe4d39b",
-			},
-		},
-		{
-			id:      "2a52e96389d02209b451ae1ddf45d645b42d744c",
-			pattern: "add.*",
-			opt: SearchCommitsOptions{
-				MaxCount: 2,
-				Path:     "src",
-			},
-			expCommitIDs: []string{
-				"cb2d322bee073327e058143329d200024bd6b4c6",
-				"818f033c4ae7f26b2b29e904942fa79a5ccaadd0",
 			},
 		},
 	}
@@ -278,7 +226,7 @@ func TestCommit_SearchCommits(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			commits, err := c.SearchCommits(ctx, test.pattern, test.opt)
+			commits, err := c.SearchCommits(ctx, test.pattern)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -292,7 +240,6 @@ func TestCommit_ShowNameStatus(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		id        string
-		opt       ShowNameStatusOptions
 		expStatus *NameStatus
 	}{
 		{
@@ -340,7 +287,7 @@ func TestCommit_ShowNameStatus(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			status, err := c.ShowNameStatus(ctx, test.opt)
+			status, err := c.ShowNameStatus(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -354,7 +301,6 @@ func TestCommit_CommitsCount(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		id       string
-		opt      RevListCountOptions
 		expCount int64
 	}{
 		{
@@ -369,21 +315,6 @@ func TestCommit_CommitsCount(t *testing.T) {
 			id:       "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
 			expCount: 27,
 		},
-
-		{
-			id: "7c5ee6478d137417ae602140c615e33aed91887c",
-			opt: RevListCountOptions{
-				Path: "README.txt",
-			},
-			expCount: 3,
-		},
-		{
-			id: "7c5ee6478d137417ae602140c615e33aed91887c",
-			opt: RevListCountOptions{
-				Path: "resources",
-			},
-			expCount: 1,
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -392,7 +323,7 @@ func TestCommit_CommitsCount(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			count, err := c.CommitsCount(ctx, test.opt)
+			count, err := c.CommitsCount(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -407,7 +338,6 @@ func TestCommit_FilesChangedAfter(t *testing.T) {
 	tests := []struct {
 		id       string
 		after    string
-		opt      DiffNameOnlyOptions
 		expFiles []string
 	}{
 		{
@@ -420,23 +350,6 @@ func TestCommit_FilesChangedAfter(t *testing.T) {
 			after:    "45a30ea9afa413e226ca8614179c011d545ca883",
 			expFiles: []string{"fix.txt", "pom.xml", "src/test/java/com/github/AppTest.java"},
 		},
-
-		{
-			id:    "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			after: "45a30ea9afa413e226ca8614179c011d545ca883",
-			opt: DiffNameOnlyOptions{
-				Path: "src",
-			},
-			expFiles: []string{"src/test/java/com/github/AppTest.java"},
-		},
-		{
-			id:    "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			after: "45a30ea9afa413e226ca8614179c011d545ca883",
-			opt: DiffNameOnlyOptions{
-				Path: "resources",
-			},
-			expFiles: []string{},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -445,7 +358,7 @@ func TestCommit_FilesChangedAfter(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			files, err := c.FilesChangedAfter(ctx, test.after, test.opt)
+			files, err := c.FilesChangedAfter(ctx, test.after)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -460,7 +373,6 @@ func TestCommit_CommitsAfter(t *testing.T) {
 	tests := []struct {
 		id           string
 		after        string
-		opt          RevListOptions
 		expCommitIDs []string
 	}{
 		{
@@ -472,16 +384,6 @@ func TestCommit_CommitsAfter(t *testing.T) {
 				"ebbbf773431ba07510251bb03f9525c7bab2b13a",
 			},
 		},
-		{
-			id:    "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			after: "45a30ea9afa413e226ca8614179c011d545ca883",
-			opt: RevListOptions{
-				Path: "src",
-			},
-			expCommitIDs: []string{
-				"ebbbf773431ba07510251bb03f9525c7bab2b13a",
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -490,7 +392,7 @@ func TestCommit_CommitsAfter(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			commits, err := c.CommitsAfter(ctx, test.after, test.opt)
+			commits, err := c.CommitsAfter(ctx, test.after)
 			if err != nil {
 				t.Fatal(err)
 			}

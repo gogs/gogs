@@ -22,11 +22,6 @@ func SetOutput(output io.Writer) {
 	logOutput = output
 }
 
-// SetPrefix sets the prefix to be prepended to each log entry.
-func SetPrefix(prefix string) {
-	logPrefix = prefix
-}
-
 func logf(format string, args ...interface{}) {
 	if logOutput == nil {
 		return

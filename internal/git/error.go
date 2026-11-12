@@ -7,16 +7,14 @@ import (
 )
 
 var (
-	ErrParentNotExist       = errors.New("parent does not exist")
-	ErrSubmoduleNotExist    = errors.New("submodule does not exist")
-	ErrRevisionNotExist     = errors.New("revision does not exist")
-	ErrRemoteNotExist       = errors.New("remote does not exist")
-	ErrURLNotExist          = errors.New("URL does not exist")
-	ErrExecTimeout          = errors.New("execution was timed out")
-	ErrNoMergeBase          = errors.New("no merge based was found")
-	ErrNotBlob              = errors.New("the entry is not a blob")
-	ErrNotDeleteNonPushURLs = errors.New("will not delete all non-push URLs")
-	ErrNotSymbolicRef       = errors.New("the reference is not a symbolic reference")
+	ErrParentNotExist    = errors.New("parent does not exist")
+	ErrSubmoduleNotExist = errors.New("submodule does not exist")
+	ErrRevisionNotExist  = errors.New("revision does not exist")
+	ErrRemoteNotExist    = errors.New("remote does not exist")
+	ErrExecTimeout       = errors.New("execution was timed out")
+	ErrNoMergeBase       = errors.New("no merge based was found")
+	ErrNotBlob           = errors.New("the entry is not a blob")
+	ErrNotSymbolicRef    = errors.New("the reference is not a symbolic reference")
 )
 
 var _ errx.NotFound = (*Error)(nil)
@@ -27,18 +25,13 @@ type Error struct {
 }
 
 func (e Error) NotFound() bool {
-	return IsErrSubmoduleNotExist(e.error) ||
+	return errors.Is(e.error, ErrSubmoduleNotExist) ||
 		IsErrRevisionNotExist(e.error)
 }
 
 // NewError wraps given error.
 func NewError(err error) error {
 	return Error{error: err}
-}
-
-// IsErrSubmoduleNotExist returns true if the error is ErrSubmoduleNotExist.
-func IsErrSubmoduleNotExist(err error) bool {
-	return errors.Is(err, ErrSubmoduleNotExist)
 }
 
 // IsErrRevisionNotExist returns true if the error is ErrRevisionNotExist.

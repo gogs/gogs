@@ -3,9 +3,9 @@ package git
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEscapePath(t *testing.T) {
@@ -97,7 +97,7 @@ func TestRepository_Log(t *testing.T) {
 		{
 			rev: "0eedd79eba4394bbef888c804e899731644367fe",
 			opt: LogOptions{
-				Since: time.Unix(1581250680, 0),
+				MaxCount: 2,
 			},
 			expCommitIDs: []string{
 				"0eedd79eba4394bbef888c804e899731644367fe",
@@ -107,7 +107,7 @@ func TestRepository_Log(t *testing.T) {
 		{
 			rev: "0eedd79eba4394bbef888c804e899731644367fe",
 			opt: LogOptions{
-				Since: time.Now().AddDate(100, 0, 0),
+				Path: "no-such-file",
 			},
 			expCommitIDs: []string{},
 		},
@@ -128,7 +128,7 @@ func TestRepository_CommitByRevision(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("invalid revision", func(t *testing.T) {
-		c, err := testrepo.CommitByRevision(ctx, "bad_revision")
+		c, err := testrepo.commitByRevision(ctx, "bad_revision")
 		assert.Equal(t, ErrRevisionNotExist, err)
 		assert.Nil(t, c)
 	})
@@ -145,46 +145,12 @@ func TestRepository_CommitByRevision(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			c, err := testrepo.CommitByRevision(ctx, test.rev, test.opt)
+			c, err := testrepo.commitByRevision(ctx, test.rev, test.opt)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			assert.Equal(t, test.expID, c.ID.String())
-		})
-	}
-}
-
-func TestRepository_CommitsSince(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		rev          string
-		since        time.Time
-		opt          CommitsSinceOptions
-		expCommitIDs []string
-	}{
-		{
-			rev:   "0eedd79eba4394bbef888c804e899731644367fe",
-			since: time.Unix(1581250680, 0),
-			expCommitIDs: []string{
-				"0eedd79eba4394bbef888c804e899731644367fe",
-				"4e59b72440188e7c2578299fc28ea425fbe9aece",
-			},
-		},
-		{
-			rev:          "0eedd79eba4394bbef888c804e899731644367fe",
-			since:        time.Now().AddDate(100, 0, 0),
-			expCommitIDs: []string{},
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			commits, err := testrepo.CommitsSince(ctx, test.rev, test.since, test.opt)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.Equal(t, test.expCommitIDs, commitsToIDs(commits))
 		})
 	}
 }
@@ -210,23 +176,6 @@ func TestRepository_DiffNameOnly(t *testing.T) {
 			},
 			expFiles: []string{"fix.txt", "pom.xml", "src/test/java/com/github/AppTest.java"},
 		},
-
-		{
-			base: "45a30ea9afa413e226ca8614179c011d545ca883",
-			head: "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			opt: DiffNameOnlyOptions{
-				Path: "src",
-			},
-			expFiles: []string{"src/test/java/com/github/AppTest.java"},
-		},
-		{
-			base: "45a30ea9afa413e226ca8614179c011d545ca883",
-			head: "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			opt: DiffNameOnlyOptions{
-				Path: "resources",
-			},
-			expFiles: []string{},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -251,7 +200,6 @@ func TestRepository_RevListCount(t *testing.T) {
 
 	tests := []struct {
 		refspecs []string
-		opt      RevListCountOptions
 		expCount int64
 	}{
 		{
@@ -266,25 +214,10 @@ func TestRepository_RevListCount(t *testing.T) {
 			refspecs: []string{"978fb7f6388b49b532fbef8b856681cfa6fcaa0a"},
 			expCount: 27,
 		},
-
-		{
-			refspecs: []string{"7c5ee6478d137417ae602140c615e33aed91887c"},
-			opt: RevListCountOptions{
-				Path: "README.txt",
-			},
-			expCount: 3,
-		},
-		{
-			refspecs: []string{"7c5ee6478d137417ae602140c615e33aed91887c"},
-			opt: RevListCountOptions{
-				Path: "resources",
-			},
-			expCount: 1,
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			count, err := testrepo.RevListCount(ctx, test.refspecs, test.opt)
+			count, err := testrepo.RevListCount(ctx, test.refspecs)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -305,7 +238,6 @@ func TestRepository_RevList(t *testing.T) {
 
 	tests := []struct {
 		refspecs     []string
-		opt          RevListOptions
 		expCommitIDs []string
 	}{
 		{
@@ -316,19 +248,10 @@ func TestRepository_RevList(t *testing.T) {
 				"ebbbf773431ba07510251bb03f9525c7bab2b13a",
 			},
 		},
-		{
-			refspecs: []string{"45a30ea9afa413e226ca8614179c011d545ca883...978fb7f6388b49b532fbef8b856681cfa6fcaa0a"},
-			opt: RevListOptions{
-				Path: "src",
-			},
-			expCommitIDs: []string{
-				"ebbbf773431ba07510251bb03f9525c7bab2b13a",
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			commits, err := testrepo.RevList(ctx, test.refspecs, test.opt)
+			commits, err := testrepo.RevList(ctx, test.refspecs)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -340,25 +263,7 @@ func TestRepository_RevList(t *testing.T) {
 
 func TestRepository_LatestCommitTime(t *testing.T) {
 	ctx := context.Background()
-	tests := []struct {
-		opt     LatestCommitTimeOptions
-		expTime time.Time
-	}{
-		{
-			opt: LatestCommitTimeOptions{
-				Branch: "release-1.0",
-			},
-			expTime: time.Unix(1581256638, 0),
-		},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			got, err := testrepo.LatestCommitTime(ctx, test.opt)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.Equal(t, test.expTime.Unix(), got.Unix())
-		})
-	}
+	got, err := testrepo.LatestCommitTime(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1598019574), got.Unix())
 }

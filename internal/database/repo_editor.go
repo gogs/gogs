@@ -110,13 +110,8 @@ func (r *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 
 // CheckoutNewBranch checks out to a new branch from the a branch name.
 func (r *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	ctx := context.TODO()
-	// A non-positive timeout means no timeout.
-	if conf.Git.Timeout.Pull > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(conf.Git.Timeout.Pull)*time.Second)
-		defer cancel()
-	}
+	ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.Pull)*time.Second)
+	defer cancel()
 	if err := git.RepoCheckout(ctx, r.LocalCopyPath(), newBranch, git.CheckoutOptions{
 		BaseBranch: oldBranch,
 	}); err != nil {
@@ -237,16 +232,14 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 
 	err = localGitRepo.Push(context.TODO(), "origin", opts.NewBranch,
 		git.PushOptions{
-			CommandOptions: git.CommandOptions{
-				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-					AuthUser:  doer,
-					OwnerName: r.MustOwner().Name,
-					OwnerSalt: r.MustOwner().Salt,
-					RepoID:    r.ID,
-					RepoName:  r.Name,
-					RepoPath:  r.RepoPath(),
-				}),
-			},
+			Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+				AuthUser:  doer,
+				OwnerName: r.MustOwner().Name,
+				OwnerSalt: r.MustOwner().Salt,
+				RepoID:    r.ID,
+				RepoName:  r.Name,
+				RepoPath:  r.RepoPath(),
+			}),
 		},
 	)
 	if err != nil {
@@ -371,16 +364,14 @@ func (r *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err
 
 	err = localGitRepo.Push(context.TODO(), "origin", opts.NewBranch,
 		git.PushOptions{
-			CommandOptions: git.CommandOptions{
-				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-					AuthUser:  doer,
-					OwnerName: r.MustOwner().Name,
-					OwnerSalt: r.MustOwner().Salt,
-					RepoID:    r.ID,
-					RepoName:  r.Name,
-					RepoPath:  r.RepoPath(),
-				}),
-			},
+			Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+				AuthUser:  doer,
+				OwnerName: r.MustOwner().Name,
+				OwnerSalt: r.MustOwner().Salt,
+				RepoID:    r.ID,
+				RepoName:  r.Name,
+				RepoPath:  r.RepoPath(),
+			}),
 		},
 	)
 	if err != nil {
@@ -653,16 +644,14 @@ func (r *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) err
 
 	err = localGitRepo.Push(context.TODO(), "origin", opts.NewBranch,
 		git.PushOptions{
-			CommandOptions: git.CommandOptions{
-				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
-					AuthUser:  doer,
-					OwnerName: r.MustOwner().Name,
-					OwnerSalt: r.MustOwner().Salt,
-					RepoID:    r.ID,
-					RepoName:  r.Name,
-					RepoPath:  r.RepoPath(),
-				}),
-			},
+			Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+				AuthUser:  doer,
+				OwnerName: r.MustOwner().Name,
+				OwnerSalt: r.MustOwner().Salt,
+				RepoID:    r.ID,
+				RepoName:  r.Name,
+				RepoPath:  r.RepoPath(),
+			}),
 		},
 	)
 	if err != nil {

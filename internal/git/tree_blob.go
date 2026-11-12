@@ -7,7 +7,7 @@ import (
 )
 
 // TreeEntry returns the TreeEntry by given subpath of the tree.
-func (t *Tree) TreeEntry(ctx context.Context, subpath string, opts ...LsTreeOptions) (*TreeEntry, error) {
+func (t *Tree) TreeEntry(ctx context.Context, subpath string) (*TreeEntry, error) {
 	if len(subpath) == 0 {
 		return &TreeEntry{
 			id:   t.id,
@@ -23,7 +23,7 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string, opts ...LsTreeOpti
 	for i, name := range paths {
 		// Reached end of the loop
 		if i == len(paths)-1 {
-			entries, err := tree.Entries(ctx, opts...)
+			entries, err := tree.Entries(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -34,7 +34,7 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string, opts ...LsTreeOpti
 				}
 			}
 		} else {
-			tree, err = tree.Subtree(ctx, name, opts...)
+			tree, err = tree.Subtree(ctx, name)
 			if err != nil {
 				return nil, err
 			}
@@ -44,8 +44,8 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string, opts ...LsTreeOpti
 }
 
 // Blob returns the blob object by given subpath of the tree.
-func (t *Tree) Blob(ctx context.Context, subpath string, opts ...LsTreeOptions) (*Blob, error) {
-	e, err := t.TreeEntry(ctx, subpath, opts...)
+func (t *Tree) Blob(ctx context.Context, subpath string) (*Blob, error) {
+	e, err := t.TreeEntry(ctx, subpath)
 	if err != nil {
 		return nil, err
 	}
@@ -57,9 +57,9 @@ func (t *Tree) Blob(ctx context.Context, subpath string, opts ...LsTreeOptions) 
 	return nil, ErrNotBlob
 }
 
-// BlobByIndex returns blob object by given index.
-func (t *Tree) BlobByIndex(ctx context.Context, index string) (*Blob, error) {
-	typ, err := t.repo.CatFileType(ctx, index)
+// blobByIndex returns blob object by given index.
+func (t *Tree) blobByIndex(ctx context.Context, index string) (*Blob, error) {
+	typ, err := t.repo.catFileType(ctx, index)
 	if err != nil {
 		return nil, err
 	}

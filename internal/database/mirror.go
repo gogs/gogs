@@ -138,6 +138,11 @@ func (m *Mirror) RawAddress() string {
 
 // SaveAddress writes new address to Git repository config.
 func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
+	gitRepo, err := git.Open(m.Repo.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "open repository")
+	}
+
 	addrURL, err := url.Parse(addr)
 	if err != nil {
 		return err
@@ -145,7 +150,11 @@ func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
 
 	// Replace the URL in a single config write, so an interrupted request can never
 	// leave the mirror without an "origin" remote.
-	err = git.RepoRemoteSetURL(ctx, m.Repo.RepoPath(), "origin", addrURL.String())
+	err = gitRepo.RemoteSetURL(ctx, "origin", addrURL.String())
+	if errors.Is(err, git.ErrRemoteNotExist) {
+		// Add a missing "origin" back, so that a mirror that lost it can be repaired.
+		err = gitRepo.RemoteAdd(ctx, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
+	}
 	if err != nil {
 		return errors.Wrap(err, "set URL of remote 'origin'")
 	}
@@ -240,10 +249,10 @@ func mirrorGitEnv() []string {
 // remoteDefaultBranch returns the branch that HEAD of the mirror source in
 // given URL points to.
 func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	ref, err := git.RemoteHEAD(ctx, url, git.RemoteHEADOptions{
-		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+		Envs: mirrorGitEnv(),
 	})
 	if err != nil {
 		return "", err
@@ -255,11 +264,11 @@ func remoteDefaultBranch(timeout time.Duration, url string) (string, error) {
 // without following HTTP redirects, matching the redirect policy used by the
 // mirror clone and sync.
 func isMirrorURLAccessible(timeout time.Duration, url string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	_, err := git.LsRemote(ctx, url, git.LsRemoteOptions{
-		Patterns:       []string{"HEAD"},
-		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+		Patterns: []string{"HEAD"},
+		Envs:     mirrorGitEnv(),
 	})
 	return err == nil
 }
@@ -267,11 +276,11 @@ func isMirrorURLAccessible(timeout time.Duration, url string) bool {
 // mirrorRemoteUpdate fetches updates for the mirror repository in given path,
 // and returns the output that reports updated references.
 func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := git.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return git.RepoRemoteUpdate(ctx, repoPath, git.RemoteUpdateOptions{
-		Prune:          prune,
-		CommandOptions: git.CommandOptions{Envs: mirrorGitEnv()},
+		Prune: prune,
+		Envs:  mirrorGitEnv(),
 	})
 }
 
