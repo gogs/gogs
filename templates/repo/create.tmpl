@@ -103,16 +103,11 @@
 						</div>
 					</div>
 					<div class="inline field">
-						<label>{{.i18n.Tr "repo.object_format"}}</label>
-						<div class="ui selection dropdown">
-							<input type="hidden" name="object_format" value="{{or .object_format "sha1"}}">
-							<div class="text"></div>
-							<i class="dropdown icon"></i>
-							<div class="menu">
-								<div class="item" data-value="sha1">SHA-1</div>
-								<div class="item" data-value="sha256">SHA-256</div>
-							</div>
-						</div>
+						<label for="object_format">{{.i18n.Tr "repo.object_format"}}</label>
+						<select id="object_format" name="object_format">
+							<option value="sha1">SHA-1</option>
+							<option value="sha256" {{if eq .object_format "sha256"}}selected{{end}}>SHA-256</option>
+						</select>
 						<span class="help">{{.i18n.Tr "repo.object_format_helper"}}</span>
 					</div>
 					<div class="inline field">

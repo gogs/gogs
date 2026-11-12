@@ -26,6 +26,15 @@ func (f ObjectFormat) EmptyID() string {
 	return strings.Repeat("0", 40)
 }
 
+// EmptyTreeID returns the ID of the tree with no entries in the object format,
+// which every repository of the format has.
+func (f ObjectFormat) EmptyTreeID() string {
+	if f == ObjectFormatSHA256 {
+		return "6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321"
+	}
+	return "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+}
+
 // IsEmptyID returns true if the ID is the empty ID of any object format.
 func IsEmptyID(id string) bool {
 	return id == ObjectFormatSHA1.EmptyID() || id == ObjectFormatSHA256.EmptyID()

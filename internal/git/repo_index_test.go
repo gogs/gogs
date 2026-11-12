@@ -46,7 +46,9 @@ func commitFiles(t *testing.T, r *Repository, branch string, files map[string]st
 		parents = append(parents, parent)
 		require.NoError(t, r.ReadTree(ctx, parent))
 	} else {
-		require.NoError(t, r.ReadTree(ctx, emptyTreeID))
+		objectFormat, err := r.ObjectFormat(ctx)
+		require.NoError(t, err)
+		require.NoError(t, r.ReadTree(ctx, objectFormat.EmptyTreeID()))
 	}
 
 	var names []string
@@ -445,4 +447,48 @@ func TestRepository_Rebase(t *testing.T) {
 		_, err := r.Rebase(ctx, upstream, head, committer)
 		assert.ErrorIs(t, err, ErrMergeConflict)
 	})
+}
+
+func TestRepository_RebaseRootCommit(t *testing.T) {
+	for _, objectFormat := range []ObjectFormat{ObjectFormatSHA1, ObjectFormatSHA256} {
+		t.Run(string(objectFormat), func(t *testing.T) {
+			ctx := context.Background()
+			path := t.TempDir()
+			require.NoError(t, Init(ctx, path, InitOptions{Bare: true, ObjectFormat: objectFormat}))
+			r, err := Open(path)
+			require.NoError(t, err)
+			committer := &Signature{Name: "carol", Email: "carol@example.com"}
+
+			upstream := commitFiles(t, r, "main", map[string]string{"README": "readme\n"})
+
+			t.Run("replays a root commit", func(t *testing.T) {
+				root := commitFiles(t, r, "unrelated", map[string]string{"OTHER": "other\n"})
+
+				got, err := r.Rebase(ctx, upstream, root, committer)
+				require.NoError(t, err)
+				rebased, err := r.rawCommit(ctx, got)
+				require.NoError(t, err)
+				assert.Equal(t, upstream, rebased.parent)
+
+				stdout, err := exec(ctx, r.Path(), []string{"ls-tree", "--name-only", got}, nil)
+				require.NoError(t, err)
+				assert.Equal(t, []string{"OTHER", "README"}, strings.Fields(string(stdout)))
+			})
+
+			t.Run("keeps an empty root commit", func(t *testing.T) {
+				root, err := r.CommitTree(ctx, objectFormat.EmptyTreeID(), "Empty\n", CommitTreeOptions{
+					Author:    committer,
+					Committer: committer,
+				})
+				require.NoError(t, err)
+
+				got, err := r.Rebase(ctx, upstream, root, committer)
+				require.NoError(t, err)
+				rebased, err := r.rawCommit(ctx, got)
+				require.NoError(t, err)
+				assert.Equal(t, upstream, rebased.parent)
+				assert.Equal(t, "Empty\n", rebased.message)
+			})
+		})
+	}
 }

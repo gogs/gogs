@@ -450,7 +450,7 @@ func (r *Repository) UpdateSize(ctx context.Context) error {
 	return nil
 }
 
-// ComposeMetas composes a map of metas for rendering SHA1 URL and external issue tracker URL.
+// ComposeMetas composes a map of metas for rendering commit URL and external issue tracker URL.
 func (r *Repository) ComposeMetas() map[string]string {
 	if r.ExternalMetas != nil {
 		return r.ExternalMetas

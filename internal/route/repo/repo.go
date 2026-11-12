@@ -322,7 +322,7 @@ func Download(c *context.Context) {
 			c.Error(err, "get tag commit")
 			return
 		}
-	} else if len(refName) >= 7 && len(refName) <= 40 {
+	} else if len(refName) >= 7 && len(refName) <= 64 {
 		commit, err = gitRepo.CatFileCommit(c.Req.Context(), refName)
 		if err != nil {
 			c.NotFound()

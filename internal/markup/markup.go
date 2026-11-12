@@ -145,7 +145,7 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[stri
 	return rawBytes
 }
 
-// RenderSha1CurrentPattern renders SHA1 strings to corresponding links that assumes in the same repository.
+// RenderSha1CurrentPattern renders commit IDs to corresponding links that assumes in the same repository.
 func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes), func(m string) string {
 		if v, _ := strconv.Atoi(m); v > 0 {
@@ -156,7 +156,7 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	}))
 }
 
-// RenderSpecialLink renders mentions, indexes and SHA1 strings to corresponding links.
+// RenderSpecialLink renders mentions, indexes and commit IDs to corresponding links.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {

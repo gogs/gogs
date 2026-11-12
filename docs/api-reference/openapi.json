@@ -791,7 +791,7 @@
             "description": "Commit SHA"
           }
         ],
-        "description": "Get details for a single commit. Set Accept header to application/vnd.gogs.sha to return only the SHA-1 hash of a commit reference."
+        "description": "Get details for a single commit. Set Accept header to application/vnd.gogs.sha to return only the full commit ID of a commit reference."
       }
     },
     "/repos/{owner}/{repo}/raw/{ref}/{filepath}": {

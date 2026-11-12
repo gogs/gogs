@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewID(t *testing.T) {
@@ -18,12 +19,12 @@ func TestNewIDFromString(t *testing.T) {
 	assert.Nil(t, sha)
 
 	sha, err = newIDFromString("0eedd79eba4394bbef888c804e899731644367fe")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.IsType(t, &SHA1{}, sha)
 	assert.Equal(t, "0eedd79eba4394bbef888c804e899731644367fe", sha.String())
 
 	sha, err = newIDFromString("31a3d8bb18edda3252f7242035d4695ee9b8ddbd47d7c62f656756442c2e85af")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.IsType(t, &SHA256{}, sha)
 	assert.Equal(t, "31a3d8bb18edda3252f7242035d4695ee9b8ddbd47d7c62f656756442c2e85af", sha.String())
 }
