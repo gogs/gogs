@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 
@@ -66,40 +66,40 @@ type PullRequest struct {
 	MergedUnix     int64
 }
 
-func (pr *PullRequest) BeforeUpdate() {
+// BeforeUpdate implements the GORM update hook.
+func (pr *PullRequest) BeforeUpdate(_ *gorm.DB) error {
 	pr.MergedUnix = pr.Merged.Unix()
+	return nil
 }
 
-// Note: don't try to get Issue because will end up recursive querying.
-func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "merged_unix":
-		if !pr.HasMerged {
-			return
-		}
-
+// AfterFind implements the GORM query hook.
+//
+// NOTE: Don't try to get Issue because will end up recursive querying.
+func (pr *PullRequest) AfterFind(_ *gorm.DB) error {
+	if pr.HasMerged {
 		pr.Merged = time.Unix(pr.MergedUnix, 0).Local()
 	}
+	return nil
 }
 
 // Note: don't try to get Issue because will end up recursive querying.
-func (pr *PullRequest) loadAttributes(e Engine) (err error) {
+func (pr *PullRequest) loadAttributes(tx *gorm.DB) (err error) {
 	if pr.HeadRepo == nil {
-		pr.HeadRepo, err = getRepositoryByID(legacyTx(e), pr.HeadRepoID)
+		pr.HeadRepo, err = getRepositoryByID(tx, pr.HeadRepoID)
 		if err != nil && !IsErrRepoNotExist(err) {
 			return errors.Newf("get head repository by ID: %v", err)
 		}
 	}
 
 	if pr.BaseRepo == nil {
-		pr.BaseRepo, err = getRepositoryByID(legacyTx(e), pr.BaseRepoID)
+		pr.BaseRepo, err = getRepositoryByID(tx, pr.BaseRepoID)
 		if err != nil {
 			return errors.Newf("get base repository by ID: %v", err)
 		}
 	}
 
 	if pr.HasMerged && pr.Merger == nil {
-		pr.Merger, err = getUserByID(legacyTx(e), pr.MergerID)
+		pr.Merger, err = getUserByID(tx, pr.MergerID)
 		if IsErrUserNotExist(err) {
 			pr.MergerID = -1
 			pr.Merger = NewGhostUser()
@@ -112,7 +112,7 @@ func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 }
 
 func (pr *PullRequest) LoadAttributes() error {
-	return pr.loadAttributes(x)
+	return pr.loadAttributes(Handle.db)
 }
 
 func (pr *PullRequest) LoadIssue() (err error) {
@@ -199,13 +199,13 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
 	}()
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
+	tx := Handle.db.Begin()
+	if err = tx.Error; err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	if err = pr.Issue.changeStatus(sess, doer, pr.Issue.Repo, true); err != nil {
+	if err = pr.Issue.changeStatus(tx, doer, pr.Issue.Repo, true); err != nil {
 		return errors.Newf("Issue.changeStatus: %v", err)
 	}
 
@@ -323,11 +323,11 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	pr.HasMerged = true
 	pr.Merged = time.Now()
 	pr.MergerID = doer.ID
-	if _, err = sess.ID(pr.ID).AllCols().Update(pr); err != nil {
+	if err = tx.Model(pr).Select("*").Updates(pr).Error; err != nil {
 		return errors.Newf("update pull request: %v", err)
 	}
 
-	if err = sess.Commit(); err != nil {
+	if err = tx.Commit().Error; err != nil {
 		return errors.Newf("commit: %v", err)
 	}
 
@@ -442,43 +442,40 @@ func (pr *PullRequest) testPatch() (err error) {
 
 // NewPullRequest creates new pull request with labels for repository.
 func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		err := newIssue(tx, NewIssueOptions{
+			Repo:        repo,
+			Issue:       pull,
+			LableIDs:    labelIDs,
+			Attachments: uuids,
+			IsPull:      true,
+		})
+		if err != nil {
+			return errors.Newf("newIssue: %v", err)
+		}
+
+		pr.Index = pull.Index
+		if err = repo.SavePatch(pr.Index, patch); err != nil {
+			return errors.Newf("SavePatch: %v", err)
+		}
+
+		pr.BaseRepo = repo
+		if err = pr.testPatch(); err != nil {
+			return errors.Newf("testPatch: %v", err)
+		}
+		// No conflict appears after test means mergeable.
+		if pr.Status == PullRequestStatusChecking {
+			pr.Status = PullRequestStatusMergeable
+		}
+
+		pr.IssueID = pull.ID
+		if err = tx.Create(pr).Error; err != nil {
+			return errors.Newf("insert pull repo: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
 		return err
-	}
-
-	if err = newIssue(sess, NewIssueOptions{
-		Repo:        repo,
-		Issue:       pull,
-		LableIDs:    labelIDs,
-		Attachments: uuids,
-		IsPull:      true,
-	}); err != nil {
-		return errors.Newf("newIssue: %v", err)
-	}
-
-	pr.Index = pull.Index
-	if err = repo.SavePatch(pr.Index, patch); err != nil {
-		return errors.Newf("SavePatch: %v", err)
-	}
-
-	pr.BaseRepo = repo
-	if err = pr.testPatch(); err != nil {
-		return errors.Newf("testPatch: %v", err)
-	}
-	// No conflict appears after test means mergeable.
-	if pr.Status == PullRequestStatusChecking {
-		pr.Status = PullRequestStatusMergeable
-	}
-
-	pr.IssueID = pull.ID
-	if _, err = sess.Insert(pr); err != nil {
-		return errors.Newf("insert pull repo: %v", err)
-	}
-
-	if err = sess.Commit(); err != nil {
-		return errors.Newf("commit: %v", err)
 	}
 
 	if err = NotifyWatchers(&Action{
@@ -516,18 +513,21 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 // by given head/base and repo/branch.
 func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
 	pr := new(PullRequest)
-	has, err := x.Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
-		headRepoID, headBranch, baseRepoID, baseBranch, false, false).
-		Join("INNER", "issue", "issue.id=pull_request.issue_id").Get(pr)
+	err := Handle.db.Select("pull_request.*").
+		Joins("INNER JOIN issue ON issue.id = pull_request.issue_id").
+		Where("head_repo_id = ? AND head_branch = ? AND base_repo_id = ? AND base_branch = ? AND has_merged = ? AND issue.is_closed = ?",
+			headRepoID, headBranch, baseRepoID, baseBranch, false, false).
+		First(pr).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrPullRequestNotExist{args: map[string]any{
+				"headRepoID": headRepoID,
+				"baseRepoID": baseRepoID,
+				"headBranch": headBranch,
+				"baseBranch": baseBranch,
+			}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{args: map[string]any{
-			"headRepoID": headRepoID,
-			"baseRepoID": baseRepoID,
-			"headBranch": headBranch,
-			"baseBranch": baseBranch,
-		}}
 	}
 
 	return pr, nil
@@ -537,18 +537,20 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 // by given head information (repo and branch).
 func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
-	return prs, x.Where("head_repo_id = ? AND head_branch = ? AND has_merged = ? AND issue.is_closed = ?",
-		repoID, branch, false, false).
-		Join("INNER", "issue", "issue.id = pull_request.issue_id").Find(&prs)
+	return prs, Handle.db.Select("pull_request.*").
+		Joins("INNER JOIN issue ON issue.id = pull_request.issue_id").
+		Where("head_repo_id = ? AND head_branch = ? AND has_merged = ? AND issue.is_closed = ?", repoID, branch, false, false).
+		Find(&prs).Error
 }
 
 // GetUnmergedPullRequestsByBaseInfo returns all pull requests that are open and has not been merged
 // by given base information (repo and branch).
 func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
-	return prs, x.Where("base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
-		repoID, branch, false, false).
-		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
+	return prs, Handle.db.Select("pull_request.*").
+		Joins("INNER JOIN issue ON issue.id = pull_request.issue_id").
+		Where("base_repo_id = ? AND base_branch = ? AND has_merged = ? AND issue.is_closed = ?", repoID, branch, false, false).
+		Find(&prs).Error
 }
 
 var _ errx.NotFound = (*ErrPullRequestNotExist)(nil)
@@ -570,50 +572,48 @@ func (ErrPullRequestNotExist) NotFound() bool {
 	return true
 }
 
-func getPullRequestByID(e Engine, id int64) (*PullRequest, error) {
+func getPullRequestByID(tx *gorm.DB, id int64) (*PullRequest, error) {
 	pr := new(PullRequest)
-	has, err := e.ID(id).Get(pr)
+	err := tx.Where("id = ?", id).First(pr).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrPullRequestNotExist{args: map[string]any{"pullRequestID": id}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{args: map[string]any{"pullRequestID": id}}
 	}
-	return pr, pr.loadAttributes(e)
+	return pr, pr.loadAttributes(tx)
 }
 
 // GetPullRequestByID returns a pull request by given ID.
 func GetPullRequestByID(id int64) (*PullRequest, error) {
-	return getPullRequestByID(x, id)
+	return getPullRequestByID(Handle.db, id)
 }
 
-func getPullRequestByIssueID(e Engine, issueID int64) (*PullRequest, error) {
-	pr := &PullRequest{
-		IssueID: issueID,
-	}
-	has, err := e.Get(pr)
+func getPullRequestByIssueID(tx *gorm.DB, issueID int64) (*PullRequest, error) {
+	pr := new(PullRequest)
+	err := tx.Where("issue_id = ?", issueID).First(pr).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrPullRequestNotExist{args: map[string]any{"issueID": issueID}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{args: map[string]any{"issueID": issueID}}
 	}
-	return pr, pr.loadAttributes(e)
+	return pr, pr.loadAttributes(tx)
 }
 
 // GetPullRequestByIssueID returns pull request by given issue ID.
 func GetPullRequestByIssueID(issueID int64) (*PullRequest, error) {
-	return getPullRequestByIssueID(x, issueID)
+	return getPullRequestByIssueID(Handle.db, issueID)
 }
 
 // Update updates all fields of pull request.
 func (pr *PullRequest) Update() error {
-	_, err := x.Id(pr.ID).AllCols().Update(pr)
-	return err
+	return Handle.db.Model(pr).Select("*").Updates(pr).Error
 }
 
 // Update updates specific fields of pull request.
 func (pr *PullRequest) UpdateCols(cols ...string) error {
-	_, err := x.Id(pr.ID).Cols(cols...).Update(pr)
-	return err
+	return Handle.db.Model(pr).Select(cols).Updates(pr).Error
 }
 
 // UpdatePatch generates and saves a new patch.
@@ -710,7 +710,7 @@ func (pr *PullRequest) AddToTaskQueue() {
 
 type PullRequestList []*PullRequest
 
-func (prs PullRequestList) loadAttributes(e Engine) (err error) {
+func (prs PullRequestList) loadAttributes(tx *gorm.DB) (err error) {
 	if len(prs) == 0 {
 		return nil
 	}
@@ -725,7 +725,7 @@ func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 		issueIDs = append(issueIDs, issueID)
 	}
 	issues := make([]*Issue, 0, len(issueIDs))
-	if err = e.Where("id > 0").In("id", issueIDs).Find(&issues); err != nil {
+	if err = tx.Where("id IN ?", issueIDs).Find(&issues).Error; err != nil {
 		return errors.Newf("find issues: %v", err)
 	}
 	for i := range issues {
@@ -737,7 +737,7 @@ func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 
 	// Load attributes
 	for i := range prs {
-		if err = prs[i].loadAttributes(e); err != nil {
+		if err = prs[i].loadAttributes(tx); err != nil {
 			return errors.Newf("loadAttributes [%d]: %v", prs[i].ID, err)
 		}
 	}
@@ -746,7 +746,7 @@ func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 }
 
 func (prs PullRequestList) LoadAttributes() error {
-	return prs.loadAttributes(x)
+	return prs.loadAttributes(Handle.db)
 }
 
 func addHeadRepoTasks(prs []*PullRequest) {
@@ -837,25 +837,23 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 // TestPullRequests checks and tests untested patches of pull requests.
 // TODO: test more pull requests at same time.
 func TestPullRequests() {
-	prs := make([]*PullRequest, 0, 10)
-	_ = x.Iterate(PullRequest{
-		Status: PullRequestStatusChecking,
-	},
-		func(idx int, bean any) error {
-			pr := bean.(*PullRequest)
+	var checking []*PullRequest
+	if err := Handle.db.Where("status = ?", PullRequestStatusChecking).Find(&checking).Error; err != nil {
+		log.Error("Failed to find pull requests in checking status: %v", err)
+	}
+	prs := make([]*PullRequest, 0, len(checking))
+	for _, pr := range checking {
+		if err := pr.LoadAttributes(); err != nil {
+			log.Error("LoadAttributes: %v", err)
+			continue
+		}
 
-			if err := pr.LoadAttributes(); err != nil {
-				log.Error("LoadAttributes: %v", err)
-				return nil
-			}
-
-			if err := pr.testPatch(); err != nil {
-				log.Error("testPatch: %v", err)
-				return nil
-			}
-			prs = append(prs, pr)
-			return nil
-		})
+		if err := pr.testPatch(); err != nil {
+			log.Error("testPatch: %v", err)
+			continue
+		}
+		prs = append(prs, pr)
+	}
 
 	// Update pull request status.
 	for _, pr := range prs {

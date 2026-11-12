@@ -501,13 +501,13 @@ func (r *Repository) DeleteWiki() {
 }
 
 // getUsersWithAccesMode returns users that have at least given access mode to the repository.
-func (r *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*User, err error) {
-	if err = r.getOwner(legacyTx(e)); err != nil {
+func (r *Repository) getUsersWithAccesMode(tx *gorm.DB, mode AccessMode) (_ []*User, err error) {
+	if err = r.getOwner(tx); err != nil {
 		return nil, err
 	}
 
 	accesses := make([]*Access, 0, 10)
-	if err = e.Where("repo_id = ? AND mode >= ?", r.ID, mode).Find(&accesses); err != nil {
+	if err = tx.Where("repo_id = ? AND mode >= ?", r.ID, mode).Find(&accesses).Error; err != nil {
 		return nil, err
 	}
 
@@ -520,7 +520,7 @@ func (r *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*User
 			userIDs[i] = accesses[i].UserID
 		}
 
-		if err = e.In("id", userIDs).Find(&users); err != nil {
+		if err = tx.Where("id IN ?", userIDs).Find(&users).Error; err != nil {
 			return nil, err
 		}
 
@@ -537,14 +537,14 @@ func (r *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*User
 }
 
 // getAssignees returns a list of users who can be assigned to issues in this repository.
-func (r *Repository) getAssignees(e Engine) (_ []*User, err error) {
-	return r.getUsersWithAccesMode(e, AccessModeRead)
+func (r *Repository) getAssignees(tx *gorm.DB) (_ []*User, err error) {
+	return r.getUsersWithAccesMode(tx, AccessModeRead)
 }
 
 // GetAssignees returns all users that have read access and can be assigned to issues
 // of the repository,
 func (r *Repository) GetAssignees() (_ []*User, err error) {
-	return r.getAssignees(x)
+	return r.getAssignees(Handle.db)
 }
 
 // GetAssigneeByID returns the user that has write access of repository by given ID.
@@ -567,7 +567,7 @@ func (r *Repository) GetAssigneeByID(userID int64) (*User, error) {
 
 // GetWriters returns all users that have write access to the repository.
 func (r *Repository) GetWriters() (_ []*User, err error) {
-	return r.getUsersWithAccesMode(x, AccessModeWrite)
+	return r.getUsersWithAccesMode(Handle.db, AccessModeWrite)
 }
 
 // GetMilestoneByID returns the milestone belongs to repository by given ID.
@@ -1207,7 +1207,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 			opType = ActionForkRepo
 		}
 
-		return notifyWatchers(e, &Action{
+		return notifyWatchers(legacyTx(e), &Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
 			OpType:       opType,
@@ -1492,7 +1492,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	// wrap transaction with different ORM objects, should delete this once migrated
 	// to GORM for this part of logic.
 	transferRepoAction := func(e Engine, doer, oldOwner *User, repo *Repository) error {
-		return notifyWatchers(e, &Action{
+		return notifyWatchers(legacyTx(e), &Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
 			OpType:       ActionTransferRepo,
@@ -2421,16 +2421,16 @@ func WatchRepo(userID, repoID int64, watch bool) (err error) {
 }
 
 // Deprecated: Use Repos.ListByRepo instead.
-func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
+func getWatchers(tx *gorm.DB, repoID int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
-	return watches, e.Find(&watches, &Watch{RepoID: repoID})
+	return watches, tx.Where(&Watch{RepoID: repoID}).Find(&watches).Error
 }
 
 // GetWatchers returns all watchers of given repository.
 //
 // Deprecated: Use Repos.ListByRepo instead.
 func GetWatchers(repoID int64) ([]*Watch, error) {
-	return getWatchers(x, repoID)
+	return getWatchers(Handle.db, repoID)
 }
 
 // Repository.GetWatchers returns range of users watching given repository.
@@ -2446,13 +2446,13 @@ func (r *Repository) GetWatchers(page int) ([]*User, error) {
 }
 
 // Deprecated: Use Actions.notifyWatchers instead.
-func notifyWatchers(e Engine, act *Action) error {
+func notifyWatchers(tx *gorm.DB, act *Action) error {
 	if act.CreatedUnix <= 0 {
 		act.CreatedUnix = time.Now().Unix()
 	}
 
 	// Add feeds for user self and all watchers.
-	watchers, err := getWatchers(e, act.RepoID)
+	watchers, err := getWatchers(tx, act.RepoID)
 	if err != nil {
 		return errors.Newf("getWatchers: %v", err)
 	}
@@ -2462,7 +2462,7 @@ func notifyWatchers(e Engine, act *Action) error {
 
 	// Add feed for actioner.
 	act.UserID = act.ActUserID
-	if _, err = e.Insert(act); err != nil {
+	if err = tx.Create(act).Error; err != nil {
 		return errors.Newf("insert new action: %v", err)
 	}
 
@@ -2473,7 +2473,7 @@ func notifyWatchers(e Engine, act *Action) error {
 
 		act.ID = 0
 		act.UserID = watchers[i].UserID
-		if _, err = e.Insert(act); err != nil {
+		if err = tx.Create(act).Error; err != nil {
 			return errors.Newf("insert new action: %v", err)
 		}
 	}
@@ -2484,7 +2484,7 @@ func notifyWatchers(e Engine, act *Action) error {
 //
 // Deprecated: Use Actions.notifyWatchers instead.
 func NotifyWatchers(act *Action) error {
-	return notifyWatchers(x, act)
+	return notifyWatchers(Handle.db, act)
 }
 
 //   _________ __

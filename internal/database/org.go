@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"xorm.io/builder"
 	"xorm.io/xorm"
 
@@ -301,19 +302,19 @@ func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
 }
 
-func getOrgUsersByOrgID(e Engine, orgID int64, limit int) ([]*OrgUser, error) {
+func getOrgUsersByOrgID(tx *gorm.DB, orgID int64, limit int) ([]*OrgUser, error) {
 	orgUsers := make([]*OrgUser, 0, 10)
 
-	sess := e.Where("org_id=?", orgID)
+	query := tx.Where("org_id = ?", orgID)
 	if limit > 0 {
-		sess = sess.Limit(limit)
+		query = query.Limit(limit)
 	}
-	return orgUsers, sess.Find(&orgUsers)
+	return orgUsers, query.Find(&orgUsers).Error
 }
 
 // GetOrgUsersByOrgID returns all organization-user relations by organization ID.
 func GetOrgUsersByOrgID(orgID int64, limit int) ([]*OrgUser, error) {
-	return getOrgUsersByOrgID(x, orgID, limit)
+	return getOrgUsersByOrgID(Handle.db, orgID, limit)
 }
 
 // ChangeOrgUserStatus changes public or private membership status.
