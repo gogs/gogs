@@ -73,7 +73,7 @@ func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
+			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent, Git-Protocol")
 			if c.Req.Method == "OPTIONS" {
 				c.Status(http.StatusOK)
 				return
@@ -303,6 +303,7 @@ func serviceRPC(h serviceHandler, service string) {
 		Stdin:        reqBody,
 		Stdout:       h.w,
 		Stderr:       &stderr,
+		Protocol:     h.r.Header.Get("Git-Protocol"),
 		Envs:         envs,
 	})
 	if err != nil {
@@ -353,6 +354,7 @@ func getInfoRefs(h serviceHandler) {
 		AdvertiseRefs: true,
 		Stdout:        &refs,
 		Stderr:        &stderr,
+		Protocol:      h.r.Header.Get("Git-Protocol"),
 	})
 	if err != nil {
 		log.Error("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())

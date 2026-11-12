@@ -42,8 +42,27 @@ type ServiceOptions struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+	// The protocol the client asks for, e.g., "version=2". Anything other than a
+	// protocol version Git supports makes the service use protocol v0.
+	Protocol string
 	// The additional environment variables to run the command with.
 	Envs []string
+}
+
+// IsSupportedProtocol returns true if the protocol a client asks for, e.g.,
+// "version=2", is one that services accept.
+func IsSupportedProtocol(protocol string) bool {
+	return protocol == "version=1" || protocol == "version=2"
+}
+
+// protocolEnv returns the GIT_PROTOCOL environment variable for the protocol
+// the client asks for. It is always set so that a value inherited from the
+// environment, e.g., one that sshd accepted, never reaches Git unchecked.
+func protocolEnv(protocol string) string {
+	if !IsSupportedProtocol(protocol) {
+		return "GIT_PROTOCOL="
+	}
+	return "GIT_PROTOCOL=" + protocol
 }
 
 // serviceIdleTimeout is how long a service may go without reading from or
@@ -94,7 +113,8 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 		}
 	}()
 
-	c := newCommand(ctx, "", args, opt.Envs)
+	envs := append(append([]string(nil), opt.Envs...), protocolEnv(opt.Protocol))
+	c := newCommand(ctx, "", args, envs)
 	if opt.Stdin != nil {
 		// Copy the input through a pipe of our own, because waiting for the command
 		// also waits for the input that os/exec copies, and reading from the client
