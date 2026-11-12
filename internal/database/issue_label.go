@@ -6,14 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"xorm.io/xorm"
-
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/lazyregexp"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
-	"gogs.io/gogs/internal/tool"
 )
 
 var labelColorPattern = lazyregexp.New("#([a-fA-F0-9]{6})")
@@ -97,8 +95,10 @@ func (l *Label) ForegroundColor() template.CSS {
 
 // NewLabels creates new label(s) for a repository.
 func NewLabels(labels ...*Label) error {
-	_, err := x.Insert(labels)
-	return err
+	if len(labels) == 0 {
+		return nil
+	}
+	return Handle.db.Create(&labels).Error
 }
 
 var _ errx.NotFound = (*ErrLabelNotExist)(nil)
@@ -123,20 +123,18 @@ func (ErrLabelNotExist) NotFound() bool {
 // getLabelOfRepoByName returns a label by Name in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
-func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, error) {
+func getLabelOfRepoByName(tx *gorm.DB, repoID int64, labelName string) (*Label, error) {
 	if len(labelName) <= 0 {
 		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID}}
 	}
 
-	l := &Label{
-		Name:   labelName,
-		RepoID: repoID,
-	}
-	has, err := e.Get(l)
+	l := new(Label)
+	err := tx.Where(&Label{Name: labelName, RepoID: repoID}).First(l).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID}}
 	}
 	return l, nil
 }
@@ -144,54 +142,52 @@ func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, err
 // getLabelInRepoByID returns a label by ID in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
-func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
+func getLabelOfRepoByID(tx *gorm.DB, repoID, labelID int64) (*Label, error) {
 	if labelID <= 0 {
 		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID, "labelID": labelID}}
 	}
 
-	l := &Label{
-		ID:     labelID,
-		RepoID: repoID,
-	}
-	has, err := e.Get(l)
+	l := new(Label)
+	err := tx.Where(&Label{ID: labelID, RepoID: repoID}).First(l).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID, "labelID": labelID}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID, "labelID": labelID}}
 	}
 	return l, nil
 }
 
 // GetLabelByID returns a label by given ID.
 func GetLabelByID(id int64) (*Label, error) {
-	return getLabelOfRepoByID(x, 0, id)
+	return getLabelOfRepoByID(Handle.db, 0, id)
 }
 
 // GetLabelOfRepoByID returns a label by ID in given repository.
 func GetLabelOfRepoByID(repoID, labelID int64) (*Label, error) {
-	return getLabelOfRepoByID(x, repoID, labelID)
+	return getLabelOfRepoByID(Handle.db, repoID, labelID)
 }
 
 // GetLabelOfRepoByName returns a label by name in given repository.
 func GetLabelOfRepoByName(repoID int64, labelName string) (*Label, error) {
-	return getLabelOfRepoByName(x, repoID, labelName)
+	return getLabelOfRepoByName(Handle.db, repoID, labelName)
 }
 
 // GetLabelsInRepoByIDs returns a list of labels by IDs in given repository,
 // it silently ignores label IDs that are not belong to the repository.
 func GetLabelsInRepoByIDs(repoID int64, labelIDs []int64) ([]*Label, error) {
 	labels := make([]*Label, 0, len(labelIDs))
-	return labels, x.Where("repo_id = ?", repoID).In("id", tool.Int64sToStrings(labelIDs)).Asc("name").Find(&labels)
+	return labels, Handle.db.Where("repo_id = ? AND id IN ?", repoID, labelIDs).Order("name ASC").Find(&labels).Error
 }
 
 // GetLabelsByRepoID returns all labels that belong to given repository by ID.
 func GetLabelsByRepoID(repoID int64) ([]*Label, error) {
 	labels := make([]*Label, 0, 10)
-	return labels, x.Where("repo_id = ?", repoID).Asc("name").Find(&labels)
+	return labels, Handle.db.Where("repo_id = ?", repoID).Order("name ASC").Find(&labels).Error
 }
 
-func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
-	issueLabels, err := getIssueLabels(e, issueID)
+func getLabelsByIssueID(tx *gorm.DB, issueID int64) ([]*Label, error) {
+	issueLabels, err := getIssueLabels(tx, issueID)
 	if err != nil {
 		return nil, errors.Newf("getIssueLabels: %v", err)
 	} else if len(issueLabels) == 0 {
@@ -204,22 +200,21 @@ func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
 	}
 
 	labels := make([]*Label, 0, len(labelIDs))
-	return labels, e.Where("id > 0").In("id", tool.Int64sToStrings(labelIDs)).Asc("name").Find(&labels)
+	return labels, tx.Where("id > 0 AND id IN ?", labelIDs).Order("name ASC").Find(&labels).Error
 }
 
 // GetLabelsByIssueID returns all labels that belong to given issue by ID.
 func GetLabelsByIssueID(issueID int64) ([]*Label, error) {
-	return getLabelsByIssueID(x, issueID)
+	return getLabelsByIssueID(Handle.db, issueID)
 }
 
-func updateLabel(e Engine, l *Label) error {
-	_, err := e.ID(l.ID).AllCols().Update(l)
-	return err
+func updateLabel(tx *gorm.DB, l *Label) error {
+	return tx.Model(l).Select("*").Updates(l).Error
 }
 
 // UpdateLabel updates label information.
 func UpdateLabel(l *Label) error {
-	return updateLabel(x, l)
+	return updateLabel(Handle.db, l)
 }
 
 // DeleteLabel delete a label of given repository.
@@ -232,19 +227,12 @@ func DeleteLabel(repoID, labelID int64) error {
 		return err
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.ID(labelID).Delete(new(Label)); err != nil {
-		return err
-	} else if _, err = sess.Where("label_id = ?", labelID).Delete(new(IssueLabel)); err != nil {
-		return err
-	}
-
-	return sess.Commit()
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id = ?", labelID).Delete(new(Label)).Error; err != nil {
+			return err
+		}
+		return tx.Where("label_id = ?", labelID).Delete(new(IssueLabel)).Error
+	})
 }
 
 // .___                            .____          ___.          .__
@@ -261,21 +249,22 @@ type IssueLabel struct {
 	LabelID int64 `xorm:"UNIQUE(s)"`
 }
 
-func hasIssueLabel(e Engine, issueID, labelID int64) bool {
-	has, _ := e.Where("issue_id = ? AND label_id = ?", issueID, labelID).Get(new(IssueLabel))
-	return has
+func hasIssueLabel(tx *gorm.DB, issueID, labelID int64) bool {
+	var count int64
+	_ = tx.Model(new(IssueLabel)).Where("issue_id = ? AND label_id = ?", issueID, labelID).Count(&count).Error
+	return count > 0
 }
 
 // HasIssueLabel returns true if issue has been labeled.
 func HasIssueLabel(issueID, labelID int64) bool {
-	return hasIssueLabel(x, issueID, labelID)
+	return hasIssueLabel(Handle.db, issueID, labelID)
 }
 
-func newIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
-	if _, err = e.Insert(&IssueLabel{
+func newIssueLabel(tx *gorm.DB, issue *Issue, label *Label) (err error) {
+	if err = tx.Create(&IssueLabel{
 		IssueID: issue.ID,
 		LabelID: label.ID,
-	}); err != nil {
+	}).Error; err != nil {
 		return err
 	}
 
@@ -284,7 +273,7 @@ func newIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 		label.NumClosedIssues++
 	}
 
-	if err = updateLabel(e, label); err != nil {
+	if err = updateLabel(tx, label); err != nil {
 		return errors.Newf("updateLabel: %v", err)
 	}
 
@@ -298,26 +287,18 @@ func NewIssueLabel(issue *Issue, label *Label) (err error) {
 		return nil
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = newIssueLabel(sess, issue, label); err != nil {
-		return err
-	}
-
-	return sess.Commit()
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		return newIssueLabel(tx, issue, label)
+	})
 }
 
-func newIssueLabels(e *xorm.Session, issue *Issue, labels []*Label) (err error) {
+func newIssueLabels(tx *gorm.DB, issue *Issue, labels []*Label) (err error) {
 	for i := range labels {
-		if hasIssueLabel(e, issue.ID, labels[i].ID) {
+		if hasIssueLabel(tx, issue.ID, labels[i].ID) {
 			continue
 		}
 
-		if err = newIssueLabel(e, issue, labels[i]); err != nil {
+		if err = newIssueLabel(tx, issue, labels[i]); err != nil {
 			return errors.Newf("newIssueLabel: %v", err)
 		}
 	}
@@ -327,34 +308,23 @@ func newIssueLabels(e *xorm.Session, issue *Issue, labels []*Label) (err error) 
 
 // NewIssueLabels creates a list of issue-label relations.
 func NewIssueLabels(issue *Issue, labels []*Label) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = newIssueLabels(sess, issue, labels); err != nil {
-		return err
-	}
-
-	return sess.Commit()
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		return newIssueLabels(tx, issue, labels)
+	})
 }
 
-func getIssueLabels(e Engine, issueID int64) ([]*IssueLabel, error) {
+func getIssueLabels(tx *gorm.DB, issueID int64) ([]*IssueLabel, error) {
 	issueLabels := make([]*IssueLabel, 0, 10)
-	return issueLabels, e.Where("issue_id=?", issueID).Asc("label_id").Find(&issueLabels)
+	return issueLabels, tx.Where("issue_id = ?", issueID).Order("label_id ASC").Find(&issueLabels).Error
 }
 
 // GetIssueLabels returns all issue-label relations of given issue by ID.
 func GetIssueLabels(issueID int64) ([]*IssueLabel, error) {
-	return getIssueLabels(x, issueID)
+	return getIssueLabels(Handle.db, issueID)
 }
 
-func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
-	if _, err = e.Delete(&IssueLabel{
-		IssueID: issue.ID,
-		LabelID: label.ID,
-	}); err != nil {
+func deleteIssueLabel(tx *gorm.DB, issue *Issue, label *Label) (err error) {
+	if err = tx.Where(&IssueLabel{IssueID: issue.ID, LabelID: label.ID}).Delete(new(IssueLabel)).Error; err != nil {
 		return err
 	}
 
@@ -362,7 +332,7 @@ func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 	if issue.IsClosed {
 		label.NumClosedIssues--
 	}
-	if err = updateLabel(e, label); err != nil {
+	if err = updateLabel(tx, label); err != nil {
 		return errors.Newf("updateLabel: %v", err)
 	}
 
@@ -377,15 +347,7 @@ func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 
 // DeleteIssueLabel deletes issue-label relation.
 func DeleteIssueLabel(issue *Issue, label *Label) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = deleteIssueLabel(sess, issue, label); err != nil {
-		return err
-	}
-
-	return sess.Commit()
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		return deleteIssueLabel(tx, issue, label)
+	})
 }
