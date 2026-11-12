@@ -1181,10 +1181,10 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 
 	// Give access to all members in owner team.
 	if owner.IsOrganization() {
-		t, err := owner.getOwnerTeam(e)
+		t, err := owner.getOwnerTeam(legacyTx(e))
 		if err != nil {
 			return errors.Newf("getOwnerTeam: %v", err)
-		} else if err = t.addRepository(e, repo); err != nil {
+		} else if err = t.addRepository(legacyTx(e), repo); err != nil {
 			return errors.Newf("addRepository: %v", err)
 		}
 	} else {
@@ -1451,16 +1451,16 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			}
 		}
 
-		if err = owner.removeOrgRepo(sess, repo.ID); err != nil {
+		if err = owner.removeOrgRepo(legacyTx(sess), repo.ID); err != nil {
 			return errors.Newf("removeOrgRepo: %v", err)
 		}
 	}
 
 	if newOwner.IsOrganization() {
-		t, err := newOwner.getOwnerTeam(sess)
+		t, err := newOwner.getOwnerTeam(legacyTx(sess))
 		if err != nil {
 			return errors.Newf("getOwnerTeam: %v", err)
-		} else if err = t.addRepository(sess, repo); err != nil {
+		} else if err = t.addRepository(legacyTx(sess), repo); err != nil {
 			return errors.Newf("add to owner team: %v", err)
 		}
 	} else {
@@ -1698,13 +1698,13 @@ func DeleteRepository(ownerID, repoID int64) error {
 		for _, t := range org.Teams {
 			if !t.hasRepository(legacyTx(sess), repoID) {
 				continue
-			} else if err = t.removeRepository(sess, repo, false); err != nil {
+			} else if err = t.removeRepository(legacyTx(sess), repo, false); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err = deleteBeans(sess,
+	if err = deleteBeans(legacyTx(sess),
 		&Repository{ID: repoID},
 		&Access{RepoID: repo.ID},
 		&Action{RepoID: repo.ID},
