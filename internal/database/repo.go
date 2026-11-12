@@ -952,7 +952,7 @@ func initRepoCommit(tmpPath string, sig *git.Signature) error {
 		return errors.Newf("git add: %v", err)
 	}
 
-	if err = gitRepo.Commit(ctx, nil, "Initial commit", git.CommitOptions{Author: sig}); err != nil {
+	if err = gitRepo.Commit(ctx, sig, "Initial commit"); err != nil {
 		return errors.Newf("git commit: %v", err)
 	}
 

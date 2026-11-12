@@ -260,8 +260,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 
 		// Create a merge commit for the base branch.
 		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		author := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-		if err = tmpBaseGitRepo.Commit(ctx, nil, message, git.CommitOptions{Author: author}); err != nil {
+		committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
+		if err = tmpBaseGitRepo.Commit(ctx, committer, message); err != nil {
 			return errors.Newf("git commit [%s]: %v", tmpBasePath, err)
 		}
 

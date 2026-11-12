@@ -372,30 +372,31 @@ type CommitOptions struct {
 	CommandOptions
 }
 
-// Commit commits local changes with given author, committer and message for the
-// repository. The committer may be nil to use the one from Git configuration.
+// Commit commits local changes with the given committer and message for the
+// repository.
 func (r *Repository) Commit(ctx context.Context, committer *Signature, message string, opts ...CommitOptions) error {
+	if committer == nil {
+		return errors.New("committer is required")
+	}
+
 	var opt CommitOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	var envs []string
-	if committer != nil {
-		envs = committerEnvs(committer)
-	}
+	envs := committerEnvs(committer)
 	envs = append(envs, opt.Envs...)
 
 	if opt.Author == nil {
 		opt.Author = committer
 	}
 
-	args := []string{"commit"}
-	if opt.Author != nil {
-		args = append(args, fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email))
+	args := []string{
+		"commit",
+		fmt.Sprintf("--author=%s <%s>", opt.Author.Name, opt.Author.Email),
+		"-m", message,
+		"--end-of-options",
 	}
-	args = append(args, "-m", message)
-	args = append(args, "--end-of-options")
 
 	// Git also exits with status 1 for real failures (e.g., an empty message or a
 	// rejecting hook), so check for staged changes up front instead of guessing

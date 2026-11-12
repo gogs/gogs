@@ -481,29 +481,9 @@ func TestRepository_Commit(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("committer from Git configuration", func(t *testing.T) {
-		fpath := filepath.Join(r.Path(), "COMMITTER_FROM_CONFIG")
-		require.NoError(t, os.WriteFile(fpath, []byte("something"), 0600))
-		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
-
-		err := r.Commit(ctx, nil, message, CommitOptions{
-			Author: author,
-			CommandOptions: CommandOptions{
-				Envs: []string{
-					"GIT_CONFIG_COUNT=2",
-					"GIT_CONFIG_KEY_0=user.name", "GIT_CONFIG_VALUE_0=carol",
-					"GIT_CONFIG_KEY_1=user.email", "GIT_CONFIG_VALUE_1=carol@example.com",
-				},
-			},
-		})
-		require.NoError(t, err)
-
-		c, err := r.CatFileCommit(ctx, "master")
-		require.NoError(t, err)
-		assert.Equal(t, "carol", c.Committer.Name)
-		assert.Equal(t, "carol@example.com", c.Committer.Email)
-		assert.Equal(t, author.Name, c.Author.Name)
-		assert.Equal(t, author.Email, c.Author.Email)
+	t.Run("nil committer", func(t *testing.T) {
+		err := r.Commit(ctx, nil, message)
+		assert.EqualError(t, err, "committer is required")
 	})
 }
 
