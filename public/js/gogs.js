@@ -336,6 +336,31 @@ function initRepository() {
     });
   }
 
+  // Migration
+  if ($(".repository.new.migrate").length > 0) {
+    var $cloneAddr = $("#clone_addr");
+    var $migrateRepoName = $("#repo_name");
+    var lastSuggestedName = $migrateRepoName.val();
+
+    // Returns the last path segment without the ".git" suffix, or an empty string
+    // if it cannot be a valid repository name.
+    function suggestRepoName(cloneAddr) {
+      var path = cloneAddr.trim().split(/[?#]/)[0].replace(/[\/\\]+$/, "");
+      var name = path.split(/[\/\\:]/).pop().replace(/\.git$/i, "");
+      return /^[\w.-]+$/.test(name) ? name : "";
+    }
+
+    $cloneAddr.on("input change", function() {
+      // Never overwrite a name that the user has typed by hand.
+      var currentName = $migrateRepoName.val();
+      if (currentName !== "" && currentName !== lastSuggestedName) {
+        return;
+      }
+      lastSuggestedName = suggestRepoName($cloneAddr.val().toString());
+      $migrateRepoName.val(lastSuggestedName);
+    });
+  }
+
   // Branches
   if ($(".repository.settings.branches").length > 0) {
     initFilterSearchDropdown(".protected-branches .dropdown");
