@@ -55,6 +55,7 @@ All notable changes to Gogs are documented in this file.
 - When the first branch pushed to an empty repository has a different name than the repository's default branch, it now becomes the default branch, so cloning checks it out instead of producing an empty working tree. Mirrors whose default branch no longer exists now follow the default branch of the source repository. [#8497](https://github.com/gogs/gogs/pull/8497)
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
+- `gogs restore` no longer resets some timestamps to the time of the restore, such as when issues and comments were last updated and when mirrors next sync. [#8511](https://github.com/gogs/gogs/pull/8511)
 
 ### Removed
 
@@ -67,6 +68,7 @@ All notable changes to Gogs are documented in this file.
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
 - CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 - Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
+- The `[log.xorm]` configuration section and the `xorm.log` file. Database logs are written to `gorm.log`, and to `hooks/gorm.log` for Git hooks. [#8511](https://github.com/gogs/gogs/pull/8511)
 
 ## 0.14.4
 
