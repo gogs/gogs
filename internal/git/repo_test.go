@@ -511,6 +511,11 @@ func commitFile(t *testing.T, r *Repository, name, content string) {
 }
 
 func TestRepository_Merge(t *testing.T) {
+	// Merging needs a committer, which Gogs sets in the global Git configuration at
+	// startup but test machines may not have.
+	t.Setenv("GIT_COMMITTER_NAME", "alice")
+	t.Setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
+
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
 	require.NoError(t, err)
@@ -546,6 +551,11 @@ func TestRepository_Merge(t *testing.T) {
 }
 
 func TestRepository_Rebase(t *testing.T) {
+	// Rebasing needs a committer, which Gogs sets in the global Git configuration
+	// at startup but test machines may not have.
+	t.Setenv("GIT_COMMITTER_NAME", "alice")
+	t.Setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
+
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()
 	require.NoError(t, err)
