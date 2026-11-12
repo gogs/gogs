@@ -19,6 +19,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -60,10 +61,11 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						continue
 					}
 					// Other environment variables are not passed on to Git.
-					if env.Name == "GIT_PROTOCOL" {
+					accepted := env.Name == "GIT_PROTOCOL" && git.IsSupportedProtocol(env.Value)
+					if accepted {
 						gitProtocol = env.Value
 					}
-					_ = req.Reply(env.Name == "GIT_PROTOCOL", nil)
+					_ = req.Reply(accepted, nil)
 
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")

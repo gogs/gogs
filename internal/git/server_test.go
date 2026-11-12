@@ -22,6 +22,27 @@ func TestUpdateServerInfo(t *testing.T) {
 	assert.True(t, isFile(filepath.Join(repoPath, "info", "refs")))
 }
 
+func TestIsSupportedProtocol(t *testing.T) {
+	tests := []struct {
+		protocol string
+		want     bool
+	}{
+		{protocol: "version=2", want: true},
+		{protocol: "version=1", want: true},
+		{protocol: ""},
+		{protocol: "version=0"},
+		{protocol: "version=3"},
+		{protocol: "version=2:foo=bar"},
+		{protocol: " version=2"},
+		{protocol: "foo"},
+	}
+	for _, test := range tests {
+		t.Run(test.protocol, func(t *testing.T) {
+			assert.Equal(t, test.want, IsSupportedProtocol(test.protocol))
+		})
+	}
+}
+
 func TestRunService(t *testing.T) {
 	ctx := context.Background()
 

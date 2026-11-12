@@ -49,16 +49,20 @@ type ServiceOptions struct {
 	Envs []string
 }
 
+// IsSupportedProtocol returns true if the protocol a client asks for, e.g.,
+// "version=2", is one that services accept.
+func IsSupportedProtocol(protocol string) bool {
+	return protocol == "version=1" || protocol == "version=2"
+}
+
 // protocolEnv returns the GIT_PROTOCOL environment variable for the protocol
 // the client asks for. It is always set so that a value inherited from the
 // environment, e.g., one that sshd accepted, never reaches Git unchecked.
 func protocolEnv(protocol string) string {
-	switch protocol {
-	case "version=1", "version=2":
-		return "GIT_PROTOCOL=" + protocol
-	default:
+	if !IsSupportedProtocol(protocol) {
 		return "GIT_PROTOCOL="
 	}
+	return "GIT_PROTOCOL=" + protocol
 }
 
 // serviceIdleTimeout is how long a service may go without reading from or
