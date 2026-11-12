@@ -358,7 +358,7 @@ func ViewPullFiles(c *context.Context) {
 	defer cancel()
 	diff, err := diffGitRepo.Diff(ctx,
 		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: startCommitID},
+		git.DiffBase(startCommitID),
 	)
 	if err != nil {
 		c.Error(err, "get diff")
@@ -593,7 +593,7 @@ func PrepareCompareDiff(
 	defer cancel()
 	diff, err := headGitRepo.Diff(ctx,
 		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: meta.MergeBase},
+		git.DiffBase(meta.MergeBase),
 	)
 	if err != nil {
 		c.Error(err, "get repository diff")

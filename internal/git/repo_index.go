@@ -149,10 +149,7 @@ func (r *Repository) WriteTree(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(stdout)), nil
 }
 
-// CommitTreeOptions contains optional arguments for creating a commit object.
-//
-// Docs: https://git-scm.com/docs/git-commit-tree
-type CommitTreeOptions struct {
+type commitTreeOptions struct {
 	// The parents of the commit.
 	Parents []string
 	// The author of the commit, or nil to use the one from Git configuration. The
@@ -163,15 +160,37 @@ type CommitTreeOptions struct {
 	Committer *Signature
 }
 
+// CommitTreeOption sets an optional argument for creating a commit object.
+//
+// Docs: https://git-scm.com/docs/git-commit-tree
+type CommitTreeOption func(*commitTreeOptions)
+
+// CommitTreeParents adds parents of the commit.
+func CommitTreeParents(parents ...string) CommitTreeOption {
+	return func(opt *commitTreeOptions) { opt.Parents = append(opt.Parents, parents...) }
+}
+
+// CommitTreeAuthor sets the author of the commit, or nil to use the one from
+// Git configuration. The current time is used when its time is zero.
+func CommitTreeAuthor(author *Signature) CommitTreeOption {
+	return func(opt *commitTreeOptions) { opt.Author = author }
+}
+
+// CommitTreeCommitter sets the committer of the commit, or nil to use the one
+// from Git configuration. The current time is used when its time is zero.
+func CommitTreeCommitter(committer *Signature) CommitTreeOption {
+	return func(opt *commitTreeOptions) { opt.Committer = committer }
+}
+
 // CommitTree creates a commit object of the tree with given message as is, and
 // returns its ID.
-func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOptions) (string, error) {
+func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOption) (string, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.CommitTree")
 	defer span.End()
 
-	var opt CommitTreeOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt commitTreeOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"commit-tree", "-F", "-"}
@@ -239,25 +258,33 @@ func CleanupMessage(message string) string {
 	return b.String()
 }
 
-// MergeTreeOptions contains optional arguments for merging trees.
-//
-// Docs: https://git-scm.com/docs/git-merge-tree
-type MergeTreeOptions struct {
+type mergeTreeOptions struct {
 	// The commit to use as the merge base instead of finding one.
 	MergeBase string
+}
+
+// MergeTreeOption sets an optional argument for merging trees.
+//
+// Docs: https://git-scm.com/docs/git-merge-tree
+type MergeTreeOption func(*mergeTreeOptions)
+
+// MergeTreeMergeBase sets the commit to use as the merge base instead of
+// finding one.
+func MergeTreeMergeBase(mergeBase string) MergeTreeOption {
+	return func(opt *mergeTreeOptions) { opt.MergeBase = mergeBase }
 }
 
 // MergeTree merges the two commits the same way "git merge" does but only
 // writes the tree of the result, whose ID it returns. Like "git merge" on a
 // checkout of ours, it follows the ".gitattributes" of ours. It returns
 // ErrMergeConflict when the merge has conflicts.
-func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ...MergeTreeOptions) (string, error) {
+func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ...MergeTreeOption) (string, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.MergeTree")
 	defer span.End()
 
-	var opt MergeTreeOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt mergeTreeOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	args := []string{"--attr-source=" + ours, "merge-tree", "--write-tree", "--no-messages", "--name-only"}
@@ -357,7 +384,7 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string, commit
 			mergeBase = emptyCommit
 		}
 
-		tree, err := r.MergeTree(ctx, head, id, MergeTreeOptions{MergeBase: mergeBase})
+		tree, err := r.MergeTree(ctx, head, id, MergeTreeMergeBase(mergeBase))
 		if err != nil {
 			return "", errors.Wrapf(err, "apply commit %s", id)
 		}

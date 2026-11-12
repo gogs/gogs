@@ -16,7 +16,7 @@ func TestRepository_Diff(t *testing.T) {
 		maxFiles     int
 		maxFileLines int
 		maxLineChars int
-		opt          DiffOptions
+		opts         []DiffOption
 		expDiff      *Diff
 	}{
 		{
@@ -252,10 +252,8 @@ func TestRepository_Diff(t *testing.T) {
 			},
 		},
 		{
-			rev: "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
-			opt: DiffOptions{
-				Base: "ef7bebf8bdb1919d947afe46ab4b2fb4278039b3",
-			},
+			rev:  "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
+			opts: []DiffOption{DiffBase("ef7bebf8bdb1919d947afe46ab4b2fb4278039b3")},
 			expDiff: &Diff{
 				Files: []*DiffFile{
 					{
@@ -281,7 +279,7 @@ func TestRepository_Diff(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			diff, err := testrepo.Diff(ctx, test.rev, test.maxFiles, test.maxFileLines, test.maxLineChars, test.opt)
+			diff, err := testrepo.Diff(ctx, test.rev, test.maxFiles, test.maxFileLines, test.maxLineChars, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -307,7 +305,7 @@ func TestRepository_RawDiff(t *testing.T) {
 	tests := []struct {
 		rev       string
 		diffType  RawDiffFormat
-		opt       RawDiffOptions
+		opts      []RawDiffOption
 		expOutput string
 	}{
 		{
@@ -455,7 +453,7 @@ index 0000000000000000000000000000000000000000..51680791956b43effdb2f16bccd2b475
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			buf := new(bytes.Buffer)
-			err := testrepo.RawDiff(ctx, test.rev, test.diffType, buf, test.opt)
+			err := testrepo.RawDiff(ctx, test.rev, test.diffType, buf, test.opts...)
 			if err != nil {
 				t.Fatal(err)
 			}

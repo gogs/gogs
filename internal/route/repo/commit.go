@@ -153,7 +153,7 @@ func CompareDiff(c *context.Context) {
 	defer cancel()
 	diff, err := c.Repo.GitRepo.Diff(ctx,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: beforeCommitID},
+		git.DiffBase(beforeCommitID),
 	)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get diff")

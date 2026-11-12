@@ -74,11 +74,9 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 		return
 	}
 
-	var rawOpts []git.RawDiffOptions
+	var rawOpts []git.RawDiffOption
 	if flag := whitespaceFlag(c.Request().URL.Query().Get("whitespace")); flag != "" {
-		rawOpts = append(rawOpts, git.RawDiffOptions{
-			Args: []string{flag},
-		})
+		rawOpts = append(rawOpts, git.RawDiffArgs(flag))
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")

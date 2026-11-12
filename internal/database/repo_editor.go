@@ -177,11 +177,11 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 		if message == "" {
 			return errors.New("empty commit message")
 		}
-		commitID, err = tmpRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
-			Parents:   parents,
-			Author:    author,
-			Committer: committer,
-		})
+		commitID, err = tmpRepo.CommitTree(ctx, tree, message,
+			git.CommitTreeParents(parents...),
+			git.CommitTreeAuthor(author),
+			git.CommitTreeCommitter(committer),
+		)
 		if err != nil {
 			return errors.Wrap(err, "commit tree")
 		}

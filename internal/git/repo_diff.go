@@ -8,23 +8,32 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
-// DiffOptions contains optional arguments for parsing diff.
-//
-// Docs: https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---full-index
-type DiffOptions struct {
+type diffOptions struct {
 	// The commit ID to used for computing diff between a range of commits (base,
 	// revision]. When not set, only computes diff for a single commit at revision.
 	Base string
 }
 
+// DiffOption sets an optional argument for parsing diff.
+//
+// Docs: https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---full-index
+type DiffOption func(*diffOptions)
+
+// DiffBase sets the commit ID to used for computing diff between a range of
+// commits (base, revision]. When not set, only computes diff for a single
+// commit at revision.
+func DiffBase(base string) DiffOption {
+	return func(opt *diffOptions) { opt.Base = base }
+}
+
 // Diff returns a parsed diff object between given commits of the repository.
-func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (*Diff, error) {
+func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOption) (*Diff, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.Diff")
 	defer span.End()
 
-	var opt DiffOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt diffOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	commit, err := r.CatFileCommit(ctx, rev)
@@ -83,23 +92,31 @@ const (
 	RawDiffPatch  RawDiffFormat = "patch"
 )
 
-// RawDiffOptions contains optional arguments for dumping a raw diff.
-//
-// Docs: https://git-scm.com/docs/git-format-patch
-type RawDiffOptions struct {
+type rawDiffOptions struct {
 	// Additional arguments to be passed right after the subcommand, e.g., "-w".
 	Args []string
 }
 
+// RawDiffOption sets an optional argument for dumping a raw diff.
+//
+// Docs: https://git-scm.com/docs/git-format-patch
+type RawDiffOption func(*rawDiffOptions)
+
+// RawDiffArgs adds arguments to be passed right after the subcommand, e.g.,
+// "-w".
+func RawDiffArgs(args ...string) RawDiffOption {
+	return func(opt *rawDiffOptions) { opt.Args = append(opt.Args, args...) }
+}
+
 // RawDiff dumps diff of repository in given revision directly to given
 // io.Writer.
-func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFormat, w io.Writer, opts ...RawDiffOptions) error {
+func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFormat, w io.Writer, opts ...RawDiffOption) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.RawDiff")
 	defer span.End()
 
-	var opt RawDiffOptions
-	if len(opts) > 0 {
-		opt = opts[0]
+	var opt rawDiffOptions
+	for _, o := range opts {
+		o(&opt)
 	}
 
 	commit, err := r.CatFileCommit(ctx, rev) //nolint

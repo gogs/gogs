@@ -59,11 +59,7 @@ func commitFiles(t *testing.T, r *Repository, branch string, files map[string]st
 	tree, err := r.WriteTree(ctx)
 	require.NoError(t, err)
 	sig := &Signature{Name: "alice", Email: "alice@example.com"}
-	id, err := r.CommitTree(ctx, tree, "Update "+strings.Join(names, ", ")+"\n", CommitTreeOptions{
-		Parents:   parents,
-		Author:    sig,
-		Committer: sig,
-	})
+	id, err := r.CommitTree(ctx, tree, "Update "+strings.Join(names, ", ")+"\n", CommitTreeParents(parents...), CommitTreeAuthor(sig), CommitTreeCommitter(sig))
 	require.NoError(t, err)
 	_, err = exec(ctx, r.Path(), []string{"update-ref", "--end-of-options", RefsHeads + branch, id}, nil)
 	require.NoError(t, err)
@@ -93,9 +89,7 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 		t.Setenv("GIT_CONFIG_VALUE_0", "carol")
 		t.Setenv("GIT_CONFIG_KEY_1", "user.email")
 		t.Setenv("GIT_CONFIG_VALUE_1", "carol@example.com")
-		id, err := r.CommitTree(ctx, tree, "message\n", CommitTreeOptions{
-			Author: &Signature{Name: "bob", Email: "bob@example.com"},
-		})
+		id, err := r.CommitTree(ctx, tree, "message\n", CommitTreeAuthor(&Signature{Name: "bob", Email: "bob@example.com"}))
 		require.NoError(t, err)
 
 		c, err := r.CatFileCommit(ctx, id)
@@ -126,11 +120,7 @@ func TestRepository_CommitThroughIndex(t *testing.T) {
 		Email: "alice@example.com",
 		When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", 5*3600+30*60)),
 	}
-	commitID, err := r.CommitTree(ctx, tree, "Add hello\n", CommitTreeOptions{
-		Parents:   []string{parent.ID.String()},
-		Author:    author,
-		Committer: author,
-	})
+	commitID, err := r.CommitTree(ctx, tree, "Add hello\n", CommitTreeParents(parent.ID.String()), CommitTreeAuthor(author), CommitTreeCommitter(author))
 	require.NoError(t, err)
 
 	raw, err := r.rawCommit(ctx, commitID)
@@ -316,11 +306,7 @@ func TestRepository_Rebase(t *testing.T) {
 			Email: "bob@example.com",
 			When:  time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("", -7*3600)),
 		}
-		id, err := r.CommitTree(ctx, tree, message, CommitTreeOptions{
-			Parents:   []string{parent},
-			Author:    sig,
-			Committer: sig,
-		})
+		id, err := r.CommitTree(ctx, tree, message, CommitTreeParents(parent), CommitTreeAuthor(sig), CommitTreeCommitter(sig))
 		require.NoError(t, err)
 		return id
 	}

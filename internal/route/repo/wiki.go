@@ -121,7 +121,7 @@ func Wiki(c *context.Context) {
 
 	// Get last change information.
 	branch := database.WikiBranch(c.Req.Context(), c.Repo.Repository.WikiPath())
-	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogPath(pageName + ".md"))
+	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogPath(pageName+".md"))
 	if err != nil {
 		c.Error(err, "get commits by path")
 		return
