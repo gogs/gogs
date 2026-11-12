@@ -1,0 +1,2 @@
+{"ID":1,"Type":0,"PosterID":2,"IssueID":1,"CommitID":0,"Line":0,"Content":"Looks good to me","CreatedUnix":0,"UpdatedUnix":1588572486,"CommitSHA":""}
+{"ID":2,"Type":4,"PosterID":1,"IssueID":1,"CommitID":0,"Line":0,"Content":"\u003ca href=\"/alice/example/commit/f3a9c2b\"\u003efix the bug\u003c/a\u003e","CreatedUnix":1588568887,"UpdatedUnix":1588568887,"CommitSHA":"f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3"}

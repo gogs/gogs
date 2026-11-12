@@ -15,7 +15,6 @@ require (
 	github.com/flamego/flamego v1.13.0
 	github.com/flamego/session v1.3.0
 	github.com/flamego/validator v1.0.0
-	github.com/glebarez/go-sqlite v1.21.2
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-macaron/binding v1.2.0
@@ -58,8 +57,6 @@ require (
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.25.12
 	unknwon.dev/clog/v2 v2.2.0
-	xorm.io/core v0.7.2
-	xorm.io/xorm v0.8.0
 )
 
 require (
@@ -89,6 +86,7 @@ require (
 	github.com/djherbis/nio/v3 v3.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/getsentry/sentry-go v0.46.0 // indirect
+	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
@@ -112,12 +110,10 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/lib/pq v1.10.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	github.com/mattn/go-sqlite3 v1.14.24 // indirect
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
@@ -153,5 +149,4 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.39.0 // indirect
-	xorm.io/builder v0.3.6 // indirect
 )

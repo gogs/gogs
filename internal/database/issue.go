@@ -22,35 +22,35 @@ var ErrMissingIssueNumber = errors.New("no issue number specified")
 // Issue represents an issue or pull request of repository.
 type Issue struct {
 	ID              int64       `gorm:"primaryKey"`
-	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)" gorm:"index;uniqueIndex:issue_repo_index_unique;not null"`
-	Repo            *Repository `xorm:"-" json:"-" gorm:"-"`
-	Index           int64       `xorm:"UNIQUE(repo_index)" gorm:"uniqueIndex:issue_repo_index_unique;not null"` // Index in one repository.
-	PosterID        int64       `gorm:"index"`
-	Poster          *User       `xorm:"-" json:"-" gorm:"-"`
-	Title           string      `xorm:"name" gorm:"column:name"`
-	Content         string      `xorm:"TEXT" gorm:"type:TEXT"`
-	RenderedContent string      `xorm:"-" json:"-" gorm:"-"`
-	Labels          []*Label    `xorm:"-" json:"-" gorm:"-"`
-	MilestoneID     int64       `gorm:"index"`
-	Milestone       *Milestone  `xorm:"-" json:"-" gorm:"-"`
-	Priority        int
-	AssigneeID      int64 `gorm:"index"`
-	Assignee        *User `xorm:"-" json:"-" gorm:"-"`
+	RepoID          int64       `gorm:"index:IDX_issue_repo_id;uniqueIndex:UQE_issue_repo_index"`
+	Repo            *Repository `json:"-" gorm:"-"`
+	Index           int64       `gorm:"uniqueIndex:UQE_issue_repo_index"` // Index in one repository.
+	PosterID        int64
+	Poster          *User    `json:"-" gorm:"-"`
+	Title           string   `gorm:"column:name;size:255"`
+	Content         string   `gorm:"type:TEXT"`
+	RenderedContent string   `json:"-" gorm:"-"`
+	Labels          []*Label `json:"-" gorm:"-"`
+	MilestoneID     int64
+	Milestone       *Milestone `json:"-" gorm:"-"`
+	Priority        int        `gorm:"size:32"`
+	AssigneeID      int64
+	Assignee        *User `json:"-" gorm:"-"`
 	IsClosed        bool
-	IsRead          bool         `xorm:"-" json:"-" gorm:"-"`
+	IsRead          bool         `json:"-" gorm:"-"`
 	IsPull          bool         // Indicates whether is a pull request or not.
-	PullRequest     *PullRequest `xorm:"-" json:"-" gorm:"-"`
-	NumComments     int
+	PullRequest     *PullRequest `json:"-" gorm:"-"`
+	NumComments     int          `gorm:"size:32"`
 
-	Deadline     time.Time `xorm:"-" json:"-" gorm:"-"`
+	Deadline     time.Time `json:"-" gorm:"-"`
 	DeadlineUnix int64
-	Created      time.Time `xorm:"-" json:"-" gorm:"-"`
+	Created      time.Time `json:"-" gorm:"-"`
 	CreatedUnix  int64
-	Updated      time.Time `xorm:"-" json:"-" gorm:"-"`
+	Updated      time.Time `json:"-" gorm:"-"`
 	UpdatedUnix  int64
 
-	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
-	Comments    []*Comment    `xorm:"-" json:"-" gorm:"-"`
+	Attachments []*Attachment `json:"-" gorm:"-"`
+	Comments    []*Comment    `json:"-" gorm:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
@@ -1007,9 +1007,9 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	ID          int64 `gorm:"primary_key"`
-	UserID      int64 `xorm:"uid INDEX" gorm:"column:uid;index"`
+	UserID      int64 `gorm:"column:uid;index:IDX_issue_user_uid"`
 	IssueID     int64
-	RepoID      int64 `xorm:"INDEX" gorm:"index"`
+	RepoID      int64 `gorm:"index:IDX_issue_user_repo_id"`
 	MilestoneID int64
 	IsRead      bool
 	IsAssigned  bool

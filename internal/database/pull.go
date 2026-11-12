@@ -41,28 +41,28 @@ const (
 
 // PullRequest represents relation between pull request and repositories.
 type PullRequest struct {
-	ID     int64 `gorm:"primaryKey"`
-	Type   PullRequestType
-	Status PullRequestStatus
+	ID     int64             `gorm:"primaryKey"`
+	Type   PullRequestType   `gorm:"size:32"`
+	Status PullRequestStatus `gorm:"size:32"`
 
-	IssueID int64  `xorm:"INDEX" gorm:"index"`
-	Issue   *Issue `xorm:"-" json:"-" gorm:"-"`
+	IssueID int64  `gorm:"index:IDX_pull_request_issue_id"`
+	Issue   *Issue `json:"-" gorm:"-"`
 	Index   int64
 
 	HeadRepoID   int64
-	HeadRepo     *Repository `xorm:"-" json:"-" gorm:"-"`
+	HeadRepo     *Repository `json:"-" gorm:"-"`
 	BaseRepoID   int64
-	BaseRepo     *Repository `xorm:"-" json:"-" gorm:"-"`
-	HeadUserName string
-	HeadBranch   string
-	BaseBranch   string
-	MergeBase    string `xorm:"VARCHAR(40)" gorm:"type:VARCHAR(40)"`
+	BaseRepo     *Repository `json:"-" gorm:"-"`
+	HeadUserName string      `gorm:"size:255"`
+	HeadBranch   string      `gorm:"size:255"`
+	BaseBranch   string      `gorm:"size:255"`
+	MergeBase    string      `gorm:"size:40"`
 
 	HasMerged      bool
-	MergedCommitID string `xorm:"VARCHAR(40)" gorm:"type:VARCHAR(40)"`
+	MergedCommitID string `gorm:"size:40"`
 	MergerID       int64
-	Merger         *User     `xorm:"-" json:"-" gorm:"-"`
-	Merged         time.Time `xorm:"-" json:"-" gorm:"-"`
+	Merger         *User     `json:"-" gorm:"-"`
+	Merged         time.Time `json:"-" gorm:"-"`
 	MergedUnix     int64
 }
 

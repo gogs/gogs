@@ -235,11 +235,11 @@ func DeleteOrganization(org *User) error {
 // OrgUser represents relations of organizations and their members.
 type OrgUser struct {
 	ID       int64 `gorm:"primaryKey"`
-	UID      int64 `xorm:"uid INDEX UNIQUE(s)" gorm:"column:uid;uniqueIndex:org_user_user_org_unique;index;not null"`
-	OrgID    int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
-	IsPublic bool  `gorm:"not null;default:FALSE"`
-	IsOwner  bool  `gorm:"not null;default:FALSE"`
-	NumTeams int   `gorm:"not null;default:0"`
+	UID      int64 `gorm:"column:uid;index:IDX_org_user_uid;uniqueIndex:UQE_org_user_s"`
+	OrgID    int64 `gorm:"index:IDX_org_user_org_id;uniqueIndex:UQE_org_user_s"`
+	IsPublic bool
+	IsOwner  bool
+	NumTeams int `gorm:"size:32"`
 }
 
 // IsOrganizationOwner returns true if given user is in the owner team.

@@ -16,21 +16,21 @@ import (
 // Milestone represents a milestone of repository.
 type Milestone struct {
 	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
-	Name            string
-	Content         string `xorm:"TEXT"`
-	RenderedContent string `xorm:"-" json:"-" gorm:"-"`
+	RepoID          int64  `gorm:"index:IDX_milestone_repo_id"`
+	Name            string `gorm:"size:255"`
+	Content         string `gorm:"type:TEXT"`
+	RenderedContent string `json:"-" gorm:"-"`
 	IsClosed        bool
-	NumIssues       int
-	NumClosedIssues int
-	NumOpenIssues   int  `xorm:"-" json:"-" gorm:"-"`
-	Completeness    int  // Percentage(1-100).
-	IsOverDue       bool `xorm:"-" json:"-" gorm:"-"`
+	NumIssues       int  `gorm:"size:32"`
+	NumClosedIssues int  `gorm:"size:32"`
+	NumOpenIssues   int  `json:"-" gorm:"-"`
+	Completeness    int  `gorm:"size:32"` // Percentage(1-100).
+	IsOverDue       bool `json:"-" gorm:"-"`
 
-	DeadlineString string    `xorm:"-" json:"-" gorm:"-"`
-	Deadline       time.Time `xorm:"-" json:"-" gorm:"-"`
+	DeadlineString string    `json:"-" gorm:"-"`
+	Deadline       time.Time `json:"-" gorm:"-"`
 	DeadlineUnix   int64
-	ClosedDate     time.Time `xorm:"-" json:"-" gorm:"-"`
+	ClosedDate     time.Time `json:"-" gorm:"-"`
 	ClosedDateUnix int64
 }
 

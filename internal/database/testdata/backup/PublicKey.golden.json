@@ -1,0 +1,2 @@
+{"ID":1,"OwnerID":1,"Name":"laptop","Fingerprint":"SHA256:ZtRfMl4sIkqP0ofV6QX9QJ0Wy3XFaDpqUVO0xE0lK3U","Content":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBy4YBnnqqtqN0UfhX6s1nLnNd4C6x5cDaoxqKyQbYxE alice@example.com","Mode":2,"Type":1,"CreatedUnix":1588568886,"UpdatedUnix":1588572486}
+{"ID":2,"OwnerID":1,"Name":"CI","Fingerprint":"SHA256:9W6J1BLrJPGbcvnCoyZKuQPRdOJ7zh4Ss3cn5a1ITqA","Content":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGd0o7l0n9bU8nSl6oTnD3v6Zr0hYz3Jw2nX7c0WbV9P ci@example.com","Mode":1,"Type":2,"CreatedUnix":1588568886,"UpdatedUnix":0}

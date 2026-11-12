@@ -27,12 +27,12 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 8
+	const wantTables = 36
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
 
-	db := dbtest.NewDB(t, "dumpAndImport", Tables...)
+	db := dbtest.NewDB(t, "dumpAndImport", backupTables()...)
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)
@@ -128,6 +128,53 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix:  1588568886,
 		},
 
+		&Attachment{
+			ID:          1,
+			UUID:        "4b9e1b8c-6c1f-4a3e-9d43-0c5f3c3f8e2a",
+			IssueID:     1,
+			CommentID:   1,
+			ReleaseID:   0,
+			Name:        "screenshot.png",
+			CreatedUnix: 1588568886,
+		},
+
+		&Collaboration{
+			ID:     1,
+			UserID: 2,
+			RepoID: 1,
+			Mode:   AccessModeWrite,
+		},
+
+		&Comment{
+			ID:          1,
+			Type:        CommentTypeComment,
+			PosterID:    2,
+			IssueID:     1,
+			Content:     "Looks good to me",
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+		&Comment{
+			ID:          2,
+			Type:        CommentTypeCommitRef,
+			PosterID:    1,
+			IssueID:     1,
+			Content:     `<a href="/alice/example/commit/f3a9c2b">fix the bug</a>`,
+			CreatedUnix: 1588568887,
+			UpdatedUnix: 1588568887,
+			CommitSHA:   "f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3",
+		},
+
+		&DeployKey{
+			ID:          1,
+			KeyID:       2,
+			RepoID:      1,
+			Name:        "CI",
+			Fingerprint: "SHA256:9W6J1BLrJPGbcvnCoyZKuQPRdOJ7zh4Ss3cn5a1ITqA",
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+
 		&EmailAddress{
 			ID:          1,
 			UserID:      1,
@@ -150,6 +197,86 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ID:       2,
 			UserID:   2,
 			FollowID: 1,
+		},
+
+		&HookTask{
+			ID:              1,
+			RepoID:          1,
+			HookID:          1,
+			UUID:            "0f9b1a2c-3d4e-4f50-8a6b-7c8d9e0f1a2b",
+			Type:            GOGS,
+			URL:             "https://example.com/hook",
+			Signature:       "5d41402abc4b2a76b9719d911017c592",
+			PayloadContent:  `{"ref":"refs/heads/main"}`,
+			ContentType:     JSON,
+			EventType:       HookEventTypePush,
+			IsSSL:           true,
+			IsDelivered:     true,
+			Delivered:       1588568886000000000,
+			IsSucceed:       true,
+			RequestContent:  `{"headers":{}}`,
+			ResponseContent: `{"status":200}`,
+		},
+
+		&Issue{
+			ID:           1,
+			RepoID:       1,
+			Index:        1,
+			PosterID:     1,
+			Title:        "Something is broken",
+			Content:      "Steps to reproduce",
+			MilestoneID:  1,
+			Priority:     2,
+			AssigneeID:   2,
+			NumComments:  2,
+			DeadlineUnix: 1588655286,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+		},
+		&Issue{
+			ID:          2,
+			RepoID:      1,
+			Index:       2,
+			PosterID:    2,
+			Title:       "Fix the bug",
+			IsClosed:    true,
+			IsPull:      true,
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588568886,
+		},
+
+		&IssueLabel{
+			ID:      1,
+			IssueID: 1,
+			LabelID: 1,
+		},
+
+		&IssueUser{
+			ID:          1,
+			UserID:      1,
+			IssueID:     1,
+			RepoID:      1,
+			MilestoneID: 1,
+			IsRead:      true,
+			IsPoster:    true,
+		},
+		&IssueUser{
+			ID:          2,
+			UserID:      2,
+			IssueID:     1,
+			RepoID:      1,
+			MilestoneID: 1,
+			IsAssigned:  true,
+			IsMentioned: true,
+		},
+
+		&Label{
+			ID:              1,
+			RepoID:          1,
+			Name:            "bug",
+			Color:           "#ee0701",
+			NumIssues:       1,
+			NumClosedIssues: 0,
 		},
 
 		&LFSObject{
@@ -187,15 +314,349 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix: 1588568886,
 		},
 
+		&Milestone{
+			ID:              1,
+			RepoID:          1,
+			Name:            "v1.0",
+			Content:         "The first release",
+			NumIssues:       1,
+			NumClosedIssues: 0,
+			Completeness:    0,
+			DeadlineUnix:    1588655286,
+			ClosedDateUnix:  0,
+		},
+		&Milestone{
+			ID:              2,
+			RepoID:          1,
+			Name:            "v0.9",
+			IsClosed:        true,
+			NumIssues:       3,
+			NumClosedIssues: 3,
+			Completeness:    100,
+			DeadlineUnix:    1588568886,
+			ClosedDateUnix:  1588572486,
+		},
+
+		&Mirror{
+			ID:           1,
+			RepoID:       2,
+			Interval:     8,
+			EnablePrune:  true,
+			LastSyncUnix: 1588568886,
+			NextSyncUnix: 1588597686,
+		},
+
 		&Notice{
 			ID:          1,
 			Type:        NoticeTypeRepository,
 			Description: "This is a notice",
 			CreatedUnix: 1588568886,
 		},
+
+		&OrgUser{
+			ID:       1,
+			UID:      1,
+			OrgID:    3,
+			IsPublic: true,
+			IsOwner:  true,
+			NumTeams: 1,
+		},
+
+		&ProtectBranch{
+			ID:                 1,
+			RepoID:             1,
+			Name:               "main",
+			Protected:          true,
+			RequirePullRequest: true,
+			EnableWhitelist:    true,
+			WhitelistUserIDs:   "1,2",
+			WhitelistTeamIDs:   "1",
+		},
+
+		&ProtectBranchWhitelist{
+			ID:              1,
+			ProtectBranchID: 1,
+			RepoID:          1,
+			Name:            "main",
+			UserID:          2,
+		},
+
+		&PublicKey{
+			ID:          1,
+			OwnerID:     1,
+			Name:        "laptop",
+			Fingerprint: "SHA256:ZtRfMl4sIkqP0ofV6QX9QJ0Wy3XFaDpqUVO0xE0lK3U",
+			Content:     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBy4YBnnqqtqN0UfhX6s1nLnNd4C6x5cDaoxqKyQbYxE alice@example.com",
+			Mode:        AccessModeWrite,
+			Type:        KeyTypeUser,
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+		&PublicKey{
+			ID:          2,
+			OwnerID:     1,
+			Name:        "CI",
+			Fingerprint: "SHA256:9W6J1BLrJPGbcvnCoyZKuQPRdOJ7zh4Ss3cn5a1ITqA",
+			Content:     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGd0o7l0n9bU8nSl6oTnD3v6Zr0hYz3Jw2nX7c0WbV9P ci@example.com",
+			Mode:        AccessModeRead,
+			Type:        KeyTypeDeploy,
+			CreatedUnix: 1588568886,
+		},
+
+		&PullRequest{
+			ID:             1,
+			Type:           PullRequestTypeGogs,
+			Status:         PullRequestStatusMergeable,
+			IssueID:        2,
+			Index:          2,
+			HeadRepoID:     1,
+			BaseRepoID:     1,
+			HeadUserName:   "alice",
+			HeadBranch:     "fix",
+			BaseBranch:     "main",
+			MergeBase:      "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
+			HasMerged:      true,
+			MergedCommitID: "f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3",
+			MergerID:       1,
+			MergedUnix:     1588572486,
+		},
+
+		&Release{
+			ID:           1,
+			RepoID:       1,
+			PublisherID:  1,
+			TagName:      "v1.0",
+			LowerTagName: "v1.0",
+			Target:       "main",
+			Title:        "First release",
+			Sha1:         "f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3",
+			NumCommits:   42,
+			Note:         "Release notes",
+			IsPrerelease: true,
+			CreatedUnix:  1588568886,
+		},
+
+		&Repository{
+			ID:                    1,
+			OwnerID:               1,
+			LowerName:             "example",
+			Name:                  "Example",
+			Description:           "An example repository",
+			Website:               "https://example.com",
+			DefaultBranch:         "main",
+			Size:                  1024,
+			NumWatches:            2,
+			NumStars:              1,
+			NumForks:              0,
+			NumIssues:             1,
+			NumPulls:              1,
+			NumClosedPulls:        1,
+			NumMilestones:         2,
+			NumClosedMilestones:   1,
+			IsPrivate:             true,
+			EnableWiki:            true,
+			EnableExternalWiki:    true,
+			ExternalWikiURL:       "https://wiki.example.com",
+			EnableIssues:          true,
+			EnableExternalTracker: true,
+			ExternalTrackerURL:    "https://tracker.example.com",
+			ExternalTrackerFormat: "https://tracker.example.com/{index}",
+			ExternalTrackerStyle:  "numeric",
+			EnablePulls:           true,
+			PullsAllowRebase:      true,
+			CreatedUnix:           1588568886,
+			UpdatedUnix:           1588572486,
+		},
+		&Repository{
+			ID:            2,
+			OwnerID:       3,
+			LowerName:     "mirror",
+			Name:          "mirror",
+			DefaultBranch: "master",
+			IsUnlisted:    true,
+			IsMirror:      true,
+			IsFork:        true,
+			ForkID:        1,
+			CreatedUnix:   1588568886,
+			UpdatedUnix:   1588568886,
+		},
+
+		&Star{
+			ID:     1,
+			UserID: 2,
+			RepoID: 1,
+		},
+
+		&Team{
+			ID:          1,
+			OrgID:       3,
+			LowerName:   "owners",
+			Name:        "Owners",
+			Description: "The owners",
+			Authorize:   AccessModeOwner,
+			NumRepos:    1,
+			NumMembers:  1,
+		},
+
+		&TeamRepo{
+			ID:     1,
+			OrgID:  3,
+			TeamID: 1,
+			RepoID: 2,
+		},
+
+		&TeamUser{
+			ID:     1,
+			OrgID:  3,
+			TeamID: 1,
+			UID:    1,
+		},
+
+		&TwoFactor{
+			ID:          1,
+			UserID:      1,
+			Secret:      "oR0Mt1ZqRqf2c7G5wHsXbA==",
+			CreatedUnix: 1588568886,
+		},
+
+		&TwoFactorRecoveryCode{
+			ID:     1,
+			UserID: 1,
+			Code:   "a1b2c-d3e4f",
+		},
+		&TwoFactorRecoveryCode{
+			ID:     2,
+			UserID: 1,
+			Code:   "f6e5d-c4b3a",
+			IsUsed: true,
+		},
+
+		&Upload{
+			ID:   1,
+			UUID: "8c2d0f1e-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
+			Name: "notes.txt",
+		},
+
+		&User{
+			ID:               1,
+			LowerName:        "alice",
+			Name:             "Alice",
+			FullName:         "Alice Anders",
+			Email:            "alice@example.com",
+			Password:         "6c1f1a9d0e2b3c4d5e6f7a8b9c0d1e2f",
+			LoginName:        "alice",
+			Type:             UserTypeIndividual,
+			Location:         "Earth",
+			Website:          "https://alice.example.com",
+			Rands:            "abcdefghij",
+			Salt:             "klmnopqrst",
+			CreatedUnix:      1588568886,
+			UpdatedUnix:      1588572486,
+			MaxRepoCreation:  -1,
+			IsActive:         true,
+			IsAdmin:          true,
+			AllowGitHook:     true,
+			AllowImportLocal: true,
+			Avatar:           "1",
+			AvatarEmail:      "alice@example.com",
+			UseCustomAvatar:  true,
+			NumFollowers:     1,
+			NumFollowing:     1,
+			NumStars:         1,
+			NumRepos:         1,
+			Description:      "Hello",
+		},
+		&User{
+			ID:              2,
+			LowerName:       "bob",
+			Name:            "bob",
+			Email:           "bob@example.com",
+			LoginSource:     1,
+			LoginName:       "bob",
+			Type:            UserTypeIndividual,
+			CreatedUnix:     1588568886,
+			UpdatedUnix:     1588568886,
+			MaxRepoCreation: 10,
+			ProhibitLogin:   true,
+			AvatarEmail:     "bob@example.com",
+		},
+		&User{
+			ID:              3,
+			LowerName:       "acme",
+			Name:            "acme",
+			FullName:        "Acme Inc.",
+			Type:            UserTypeOrganization,
+			CreatedUnix:     1588568886,
+			UpdatedUnix:     1588568886,
+			MaxRepoCreation: -1,
+			IsActive:        true,
+			NumRepos:        1,
+			NumTeams:        1,
+			NumMembers:      1,
+		},
+
+		&Version{
+			ID:      1,
+			Version: 23,
+		},
+
+		&Watch{
+			ID:     1,
+			UserID: 1,
+			RepoID: 1,
+		},
+		&Watch{
+			ID:     2,
+			UserID: 2,
+			RepoID: 1,
+		},
+
+		&Webhook{
+			ID:           1,
+			RepoID:       1,
+			URL:          "https://example.com/hook",
+			ContentType:  JSON,
+			Secret:       "s3cr3t",
+			Events:       `{"push_only":true,"send_everything":false,"choose_events":false,"events":{}}`,
+			IsSSL:        true,
+			IsActive:     true,
+			HookTaskType: GOGS,
+			LastStatus:   HookStatusSucceed,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+		},
+		&Webhook{
+			ID:           2,
+			OrgID:        3,
+			URL:          "https://hooks.slack.com/services/T/B/X",
+			ContentType:  JSON,
+			Events:       `{"push_only":false,"send_everything":true,"choose_events":false,"events":{}}`,
+			HookTaskType: SLACK,
+			Meta:         `{"channel":"#dev","username":"gogs"}`,
+			LastStatus:   HookStatusFailed,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588568886,
+		},
 	}
 	for _, val := range vals {
 		err := db.Create(val).Error
+		require.NoError(t, err)
+	}
+
+	// Store values that hooks or column defaults would replace on create, so that
+	// importing has to restore them as they are.
+	updates := []struct {
+		model  any
+		values map[string]any
+	}{
+		{&Repository{ID: 2}, map[string]any{"enable_wiki": false, "enable_issues": false, "enable_pulls": false}},
+		{&Mirror{ID: 1}, map[string]any{"enable_prune": false}},
+		{&User{ID: 2}, map[string]any{"max_repo_creation": 0, "created_unix": 0, "updated_unix": 0}},
+		{&Milestone{ID: 1}, map[string]any{"deadline_unix": 0}},
+		{&Comment{ID: 1}, map[string]any{"created_unix": 0}},
+	}
+	for _, u := range updates {
+		err := db.Model(u.model).UpdateColumns(u.values).Error
 		require.NoError(t, err)
 	}
 }
@@ -203,7 +664,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 func dumpTables(t *testing.T, db *gorm.DB) {
 	ctx := context.Background()
 
-	for _, table := range Tables {
+	for _, table := range backupTables() {
 		tableName := getTableType(table)
 
 		var buf bytes.Buffer
@@ -220,7 +681,7 @@ func dumpTables(t *testing.T, db *gorm.DB) {
 func importTables(t *testing.T, db *gorm.DB) {
 	ctx := context.Background()
 
-	for _, table := range Tables {
+	for _, table := range backupTables() {
 		tableName := getTableType(table)
 
 		err := func() error {
