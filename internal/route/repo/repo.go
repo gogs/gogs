@@ -24,8 +24,8 @@ const (
 	MIGRATE = "repo/migrate"
 )
 
-func MustBeNotBare(c *context.Context) {
-	if c.Repo.Repository.IsBare {
+func MustBeNotEmpty(c *context.Context) {
+	if c.Repo.Repository.IsEmpty {
 		c.NotFound()
 	}
 }

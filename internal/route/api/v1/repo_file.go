@@ -13,7 +13,7 @@ func getRawFile(c *context.APIContext) {
 		return
 	}
 
-	if c.Repo.Repository.IsBare {
+	if c.Repo.Repository.IsEmpty {
 		c.NotFound()
 		return
 	}

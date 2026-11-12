@@ -425,9 +425,9 @@ func SyncMirrors() {
 			continue
 		}
 
-		// Pushes clear the bare state of a repository, but a mirror of an empty
+		// Pushes clear the empty state of a repository, but a mirror of an empty
 		// repository only receives commits through syncs.
-		if m.Repo.IsBare {
+		if m.Repo.IsEmpty {
 			hasBranches, err := git.RepoHasBranches(ctx, m.Repo.RepoPath())
 			if err != nil {
 				log.Error("Failed to check if repository has branches [repo_id: %d]: %v", m.RepoID, err)
@@ -435,12 +435,12 @@ func SyncMirrors() {
 				if err = Handle.Repositories().Touch(ctx, m.RepoID); err != nil {
 					log.Error("Failed to touch repository [repo_id: %d]: %v", m.RepoID, err)
 				} else {
-					m.Repo.IsBare = false
+					m.Repo.IsEmpty = false
 				}
 			}
 		}
 
-		if !m.Repo.IsBare && !git.RepoHasBranch(ctx, m.Repo.RepoPath(), m.Repo.DefaultBranch) {
+		if !m.Repo.IsEmpty && !git.RepoHasBranch(ctx, m.Repo.RepoPath(), m.Repo.DefaultBranch) {
 			branch, err := remoteDefaultBranch(time.Duration(conf.Git.Timeout.Mirror)*time.Second, m.RawAddress())
 			if err != nil {
 				log.Error("Failed to get default branch of mirror source [repo_id: %d]: %v", m.RepoID, err)
@@ -550,7 +550,7 @@ func SyncMirrors() {
 			continue
 		}
 
-		if m.Repo.IsBare {
+		if m.Repo.IsEmpty {
 			continue
 		}
 

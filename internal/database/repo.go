@@ -188,7 +188,9 @@ type Repository struct {
 	// TODO: When migrate to GORM, make sure to do a loose migration with `HasColumn` and `AddColumn`,
 	// see docs in https://gorm.io/docs/migration.html.
 	IsUnlisted bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
-	IsBare     bool
+	// Stored as "is_bare" and encoded as "IsBare" to stay compatible with
+	// existing databases and backup archives.
+	IsEmpty bool `xorm:"is_bare" gorm:"column:is_bare" json:"IsBare"`
 
 	IsMirror bool
 	*Mirror  `xorm:"-" gorm:"-" json:"-"`
@@ -373,7 +375,7 @@ func (r *Repository) APIFormatLegacy(permission *apiv1types.RepositoryPermission
 		Description:   r.Description,
 		Private:       r.IsPrivate,
 		Fork:          r.IsFork,
-		Empty:         r.IsBare,
+		Empty:         r.IsEmpty,
 		Mirror:        r.IsMirror,
 		Size:          r.Size,
 		HTMLURL:       r.HTMLURL(),
@@ -608,12 +610,12 @@ func (r *Repository) IsOwnedBy(userID int64) bool {
 
 // CanBeForked returns true if repository meets the requirements of being forked.
 func (r *Repository) CanBeForked() bool {
-	return !r.IsBare
+	return !r.IsEmpty
 }
 
 // CanEnablePulls returns true if repository meets the requirements of accepting pulls.
 func (r *Repository) CanEnablePulls() bool {
-	return !r.IsMirror && !r.IsBare
+	return !r.IsMirror && !r.IsEmpty
 }
 
 // AllowPulls returns true if repository meets the requirements of accepting pulls and has them enabled.
@@ -856,11 +858,11 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	hasBranches, err := gitRepo.HasBranches(context.TODO())
 	if err != nil {
-		return repo, errors.Wrap(err, "check bare")
+		return repo, errors.Wrap(err, "check empty")
 	}
-	repo.IsBare = !hasBranches
+	repo.IsEmpty = !hasBranches
 
-	if !repo.IsBare {
+	if !repo.IsEmpty {
 		if err = repo.UpdateSize(); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 		}
@@ -1164,7 +1166,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 	}
 
 	if !opts.AutoInit {
-		saved.IsBare = true
+		saved.IsEmpty = true
 	}
 
 	saved.DefaultBranch = conf.Repository.DefaultBranch

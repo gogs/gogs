@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	BARE     = "repo/bare"
+	EMPTY    = "repo/empty"
 	HOME     = "repo/home"
 	WATCHERS = "repo/watchers"
 	FORKS    = "repo/forks"
@@ -226,8 +226,8 @@ func setEditorconfigIfExists(c *context.Context) {
 func Home(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 
-	if c.Repo.Repository.IsBare {
-		c.Success(BARE)
+	if c.Repo.Repository.IsEmpty {
+		c.Success(EMPTY)
 		return
 	}
 
