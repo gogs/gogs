@@ -64,7 +64,6 @@ require (
 	gorm.io/gorm v1.25.12
 	unknwon.dev/clog/v2 v2.2.0
 	unknwon.dev/ini/v2 v2.0.0-beta.4
-	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
 )
@@ -169,4 +168,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.39.0 // indirect
+	xorm.io/builder v0.3.6 // indirect
 )
