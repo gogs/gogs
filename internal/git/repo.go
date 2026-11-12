@@ -159,15 +159,6 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 	return err
 }
 
-// RepoPush is like Repository.Push for the repository in given path.
-func RepoPush(ctx context.Context, repoPath, remote, branch string, opts ...PushOptions) error {
-	r, err := Open(repoPath)
-	if err != nil {
-		return err
-	}
-	return r.Push(ctx, remote, branch, opts...)
-}
-
 // ApplyCheckOptions contains optional arguments for checking a patch.
 //
 // Docs: https://git-scm.com/docs/git-apply

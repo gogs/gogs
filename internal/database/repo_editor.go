@@ -100,11 +100,7 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 
 	// The object format must match for the objects of the repositories to be
 	// readable.
-	sourceRepo, err := git.Open(repoPaths[0])
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "open repository")
-	}
-	objectFormat, err := sourceRepo.ObjectFormat(ctx)
+	objectFormat, err := git.RepoObjectFormat(ctx, repoPaths[0])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "get object format")
 	}
@@ -292,12 +288,8 @@ func (r *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) erro
 
 	ctx := context.TODO()
 	if opts.OldBranch != opts.NewBranch {
-		gitRepo, err := git.Open(r.RepoPath())
-		if err != nil {
-			return errors.Newf("open repository: %v", err)
-		}
 		// Directly return error if new branch already exists in the server
-		if gitRepo.HasBranch(ctx, opts.NewBranch) {
+		if git.RepoHasBranch(ctx, r.RepoPath(), opts.NewBranch) {
 			return BranchAlreadyExists{Name: opts.NewBranch}
 		}
 	}
@@ -353,11 +345,7 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*git.Diff
 	}
 
 	ctx := context.TODO()
-	gitRepo, err := git.Open(r.RepoPath())
-	if err != nil {
-		return nil, errors.Wrap(err, "open repository")
-	}
-	commit, err := gitRepo.BranchCommit(ctx, branch)
+	commit, err := git.RepoBranchCommit(ctx, r.RepoPath(), branch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "get commit of branch %q", branch)
 	}

@@ -26,6 +26,15 @@ func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(stdout)), nil
 }
 
+// RepoObjectFormat is like Repository.ObjectFormat for the repository in given path.
+func RepoObjectFormat(ctx context.Context, repoPath string) (string, error) {
+	r, err := Open(repoPath)
+	if err != nil {
+		return "", err
+	}
+	return r.ObjectFormat(ctx)
+}
+
 // ReadTree replaces the index of the repository with the tree of given
 // tree-ish.
 func (r *Repository) ReadTree(ctx context.Context, treeish string) error {

@@ -378,11 +378,7 @@ func (pr *PullRequest) testPatch() (err error) {
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
 	ctx := context.TODO()
-	baseGitRepo, err := git.Open(pr.BaseRepo.RepoPath())
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
-	baseCommitID, err := baseGitRepo.BranchCommitID(ctx, pr.BaseBranch)
+	baseCommitID, err := git.RepoBranchCommitID(ctx, pr.BaseRepo.RepoPath(), pr.BaseBranch)
 	if err != nil {
 		return errors.Newf("get base branch %q commit ID: %v", pr.BaseBranch, err)
 	}
