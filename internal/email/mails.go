@@ -3,7 +3,9 @@ package email
 import (
 	"encoding/base64"
 	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/i18n"
@@ -187,6 +189,13 @@ var previews = []previewer{
 	collaboratorMail,
 	issueCommentMail,
 	issueMentionMail,
+	AlertNewSignIn,
+	AlertPasswordChanged,
+	AlertEmailChanged,
+	AlertTwoFactorDisabled,
+	AlertSSHKeyAdded,
+	AlertAccessTokenAdded,
+	AlertPasskeyAdded,
 	testMail,
 }
 
@@ -219,4 +228,126 @@ func Preview(name, lang string) (*Mail, error) {
 		return m, nil
 	}
 	return nil, ErrNotFound
+}
+
+// Activity is where a change to an account came from.
+type Activity struct {
+	UserAgent string
+	IP        string
+	Time      time.Time
+}
+
+type securityAlertData struct {
+	Username string
+	// Name names what changed, e.g., the name of the new SSH key or the new
+	// email address.
+	Name string
+	// Time is when it changed, e.g., "2026-11-12 15:04 UTC".
+	Time string
+	// Browser names the browser and the system it changed from, e.g., "Firefox
+	// on macOS".
+	Browser string
+	IP      string
+}
+
+func newSecurityAlertData(lang string, u User, a Activity, name string) securityAlertData {
+	loadLocales()
+	return securityAlertData{
+		Username: u.DisplayName(),
+		Name:     name,
+		Time:     a.Time.UTC().Format("2006-01-02 15:04 MST"),
+		Browser:  describeUserAgent(lang, a.UserAgent),
+		IP:       a.IP,
+	}
+}
+
+type namedPattern struct {
+	re   *regexp.Regexp
+	name string
+}
+
+// Order matters: Edge and Opera also claim to be Chrome, and Chrome claims to
+// be Safari.
+var (
+	userAgentBrowsers = []namedPattern{
+		{regexp.MustCompile(`Edg(?:e|A|iOS)?/`), "Edge"},
+		{regexp.MustCompile(`OPR/|Opera`), "Opera"},
+		{regexp.MustCompile(`Firefox/|FxiOS/`), "Firefox"},
+		{regexp.MustCompile(`Chrome/|CriOS/`), "Chrome"},
+		{regexp.MustCompile(`Safari/`), "Safari"},
+	}
+	userAgentSystems = []namedPattern{
+		{regexp.MustCompile(`iPhone|iPad|iPod`), "iOS"},
+		{regexp.MustCompile(`Android`), "Android"},
+		{regexp.MustCompile(`CrOS`), "ChromeOS"},
+		{regexp.MustCompile(`Mac OS X|Macintosh`), "macOS"},
+		{regexp.MustCompile(`Windows`), "Windows"},
+		{regexp.MustCompile(`Linux`), "Linux"},
+	}
+)
+
+func findPattern(patterns []namedPattern, s string) string {
+	for _, p := range patterns {
+		if p.re.MatchString(s) {
+			return p.name
+		}
+	}
+	return ""
+}
+
+// describeUserAgent names the browser and the system of a user agent string,
+// like describeUserAgent in web/src/lib/user-agent.ts. It never returns the
+// user agent itself, which whoever made the change chose.
+func describeUserAgent(lang, ua string) string {
+	browser, system := findPattern(userAgentBrowsers, ua), findPattern(userAgentSystems, ua)
+	switch {
+	case browser != "" && system != "":
+		return i18n.Tr(lang, "mail.security.browser_on", browser, system)
+	case browser != "":
+		return browser
+	case system != "":
+		return system
+	}
+	return i18n.Tr(lang, "mail.security.unknown_browser")
+}
+
+// SecurityAlert is an email that tells a user about a change to the security
+// of their account.
+type SecurityAlert struct {
+	definition[securityAlertData]
+}
+
+func securityAlert(name, sampleName string) SecurityAlert {
+	return SecurityAlert{definition[securityAlertData]{
+		name:    "security/" + name,
+		subject: translatedSubject[securityAlertData]("mail.security." + name),
+		sample: func(lang string) securityAlertData {
+			activity := Activity{
+				UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 15.7; rv:145.0) Gecko/20100101 Firefox/145.0",
+				IP:        "203.0.113.42",
+				Time:      time.Date(2026, 11, 12, 15, 4, 0, 0, time.UTC),
+			}
+			return newSecurityAlertData(lang, sampleUser{}, activity, sampleName)
+		},
+	}}
+}
+
+var (
+	// AlertNewSignIn is sent when an account is signed in to from a browser it
+	// was not signed in to before.
+	AlertNewSignIn         = securityAlert("new_sign_in", "")
+	AlertPasswordChanged   = securityAlert("password_changed", "")
+	AlertEmailChanged      = securityAlert("email_changed", "alice@new.example.com")
+	AlertTwoFactorDisabled = securityAlert("two_factor_disabled", "")
+	AlertSSHKeyAdded       = securityAlert("ssh_key_added", "Work laptop")
+	AlertAccessTokenAdded  = securityAlert("access_token_added", "CI")
+	AlertPasskeyAdded      = securityAlert("passkey_added", "iPhone")
+)
+
+// SendSecurityAlertMail tells the user about a change to the security of their
+// account. The name names what changed, e.g., the name of the new SSH key or
+// the new email address.
+func SendSecurityAlertMail(l Locale, u User, to string, alert SecurityAlert, a Activity, name string) error {
+	data := newSecurityAlertData(l.Language(), u, a, name)
+	return sendUserMail(l.Language(), u, to, alert.definition, data, "security alert "+alert.name)
 }

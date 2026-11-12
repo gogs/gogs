@@ -1,0 +1,3 @@
+{{template "header" (Tr "mail.security.email_changed")}}
+{{template "security_alert" (dict "Alert" . "Body" (Tr "mail.security.email_changed.body" AppName .Name) "Path" "user/settings/security" "Label" (Tr "mail.security.review_security"))}}
+{{template "footer"}}

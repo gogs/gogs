@@ -1,0 +1,3 @@
+{{template "header" (Tr "mail.security.two_factor_disabled")}}
+{{template "security_alert" (dict "Alert" . "Body" (Tr "mail.security.two_factor_disabled.body" AppName) "Path" "user/settings/security" "Label" (Tr "mail.security.review_security"))}}
+{{template "footer"}}

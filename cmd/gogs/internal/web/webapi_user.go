@@ -248,7 +248,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
 }
 
-func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
+func postUserResetPasswordComplete(r *http.Request, mc *macaron.Context, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
 	u := verifyUserResetPasswordCode(r.Context(), req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
@@ -260,6 +260,7 @@ func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userReset
 	}
 
 	log.Trace("User password reset: %s", u.Name)
+	alertUser(mc, u, u.Email, email.AlertPasswordChanged, "")
 	return http.StatusNoContent, nil, nil
 }
 
@@ -292,7 +293,7 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	if err = completeSignIn(sess, mc, u); err != nil {
+	if err = completeSignIn(sess, mc, u, true); err != nil {
 		log.Error("postUserSignIn: complete sign-in of user %d: %v", u.ID, err)
 		return http.StatusInternalServerError, nil, err
 	}
@@ -302,11 +303,19 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 // completeSignIn finalizes the sign-in session for u: starts a login session,
 // writes the auth session, clears any in-flight MFA state, and sets the
 // login-status cookie. Having just signed in counts as having confirmed who
-// they are. The caller is responsible for navigating to a post-login
-// destination via /redirect?to=.
-func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) error {
+// they are. Signing in from a browser the user has not signed in from before
+// alerts them by email, unless alertNewBrowser is false, e.g., for the browser
+// that just created the account. The caller is responsible for navigating to
+// a post-login destination via /redirect?to=.
+func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User, alertNewBrowser bool) error {
 	if err := startLoginSession(sess, mc, u.ID); err != nil {
 		return err
+	}
+	if !isKnownBrowser(mc, u.ID) {
+		if alertNewBrowser {
+			alertUser(mc, u, u.Email, email.AlertNewSignIn, "")
+		}
+		rememberBrowser(mc, u.ID)
 	}
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
@@ -386,7 +395,7 @@ func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca 
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	if err = completeSignIn(sess, mc, u); err != nil {
+	if err = completeSignIn(sess, mc, u, true); err != nil {
 		log.Error("postUserMFA: complete sign-in of user %d: %v", u.ID, err)
 		return http.StatusInternalServerError, nil, err
 	}
@@ -420,7 +429,7 @@ func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Cont
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	if err = completeSignIn(sess, mc, u); err != nil {
+	if err = completeSignIn(sess, mc, u, true); err != nil {
 		log.Error("postUserMFARecovery: complete sign-in of user %d: %v", u.ID, err)
 		return http.StatusInternalServerError, nil, err
 	}
@@ -530,7 +539,7 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
 	if !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
-		if err = completeSignIn(sess, mc, target); err != nil {
+		if err = completeSignIn(sess, mc, target, false); err != nil {
 			log.Error("postUserActivateComplete: complete sign-in of user %d: %v", target.ID, err)
 			return http.StatusInternalServerError, nil, err
 		}

@@ -1,0 +1,13 @@
+{{define "security_alert" -}}
+{{Tr "mail.greeting" .Alert.Username}}
+
+{{.Body}}
+
+{{Tr "mail.security.when"}}: {{.Alert.Time}}
+{{Tr "mail.security.browser"}}: {{.Alert.Browser}}
+{{Tr "mail.security.ip"}}: {{.Alert.IP}}
+
+{{Tr "mail.security.not_you"}}
+
+{{template "button" (dict "URL" (printf "%s%s" AppURL .Path) "Label" .Label)}}
+{{- end}}
