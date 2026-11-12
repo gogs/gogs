@@ -11,7 +11,7 @@ custom/
 data/
 
 # Test fixtures cloned at test time
-/internal/git/testdata/
+/internal/git/testdata/testrepo.git/
 
 # Configuration and application files
 .idea/
