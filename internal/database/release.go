@@ -55,14 +55,14 @@ func (r *Release) AfterSet(colName string, _ xorm.Cell) {
 
 func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Repo == nil {
-		r.Repo, err = getRepositoryByID(e, r.RepoID)
+		r.Repo, err = getRepositoryByID(legacyTx(e), r.RepoID)
 		if err != nil {
 			return errors.Newf("getRepositoryByID [repo_id: %d]: %v", r.RepoID, err)
 		}
 	}
 
 	if r.Publisher == nil {
-		r.Publisher, err = getUserByID(e, r.PublisherID)
+		r.Publisher, err = getUserByID(legacyTx(e), r.PublisherID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				r.PublisherID = -1

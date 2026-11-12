@@ -85,21 +85,21 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 // Note: don't try to get Issue because will end up recursive querying.
 func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 	if pr.HeadRepo == nil {
-		pr.HeadRepo, err = getRepositoryByID(e, pr.HeadRepoID)
+		pr.HeadRepo, err = getRepositoryByID(legacyTx(e), pr.HeadRepoID)
 		if err != nil && !IsErrRepoNotExist(err) {
 			return errors.Newf("get head repository by ID: %v", err)
 		}
 	}
 
 	if pr.BaseRepo == nil {
-		pr.BaseRepo, err = getRepositoryByID(e, pr.BaseRepoID)
+		pr.BaseRepo, err = getRepositoryByID(legacyTx(e), pr.BaseRepoID)
 		if err != nil {
 			return errors.Newf("get base repository by ID: %v", err)
 		}
 	}
 
 	if pr.HasMerged && pr.Merger == nil {
-		pr.Merger, err = getUserByID(e, pr.MergerID)
+		pr.Merger, err = getUserByID(legacyTx(e), pr.MergerID)
 		if IsErrUserNotExist(err) {
 			pr.MergerID = -1
 			pr.Merger = NewGhostUser()
