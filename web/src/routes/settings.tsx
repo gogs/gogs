@@ -3,6 +3,7 @@ import { type AnyRoute, createRoute } from "@tanstack/react-router";
 import { loadAuthenticatedPage } from "@/lib/loader-error";
 import {
   fetchAccessTokens,
+  fetchPasskeys,
   fetchRecoveryCodes,
   fetchSSHKeys,
   fetchSettingsOrgs,
@@ -57,10 +58,11 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const securityRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/security",
-    loader: () => loadAuthenticatedPage(() => Promise.all([fetchUserSettings(), fetchTwoFactorEnabled()])),
+    loader: () =>
+      loadAuthenticatedPage(() => Promise.all([fetchUserSettings(), fetchPasskeys(), fetchTwoFactorEnabled()])),
     component: function Security() {
-      const [settings, enabled] = securityRoute.useLoaderData();
-      return <UserSecuritySettings isLocal={settings.isLocal} enabled={enabled} />;
+      const [settings, passkeys, enabled] = securityRoute.useLoaderData();
+      return <UserSecuritySettings isLocal={settings.isLocal} passkeys={passkeys} enabled={enabled} />;
     },
   });
 
