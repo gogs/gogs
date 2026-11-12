@@ -28,7 +28,7 @@ type Release struct {
 	LowerTagName     string
 	Target           string
 	Title            string
-	Sha1             string `xorm:"VARCHAR(40)"`
+	Sha1             string `xorm:"VARCHAR(64)"`
 	NumCommits       int64
 	NumCommitsBehind int64  `xorm:"-" json:"-" gorm:"-"`
 	Note             string `xorm:"TEXT"`

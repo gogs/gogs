@@ -54,9 +54,8 @@ func (r *Repository) parsePrettyFormatLogToList(ctx context.Context, logs []byte
 type InitOptions struct {
 	// Indicates whether the repository should be initialized in bare format.
 	Bare bool
-	// The hash algorithm of the repository, e.g., "sha1", or empty to use the
-	// default.
-	ObjectFormat string
+	// The hash algorithm of the repository, or empty to use the default.
+	ObjectFormat ObjectFormat
 }
 
 // Init initializes a new Git repository.
@@ -79,7 +78,7 @@ func Init(ctx context.Context, path string, opts ...InitOptions) error {
 		args = append(args, "--bare")
 	}
 	if opt.ObjectFormat != "" {
-		args = append(args, "--object-format="+opt.ObjectFormat)
+		args = append(args, "--object-format="+string(opt.ObjectFormat))
 	}
 	args = append(args, "--end-of-options")
 	_, err = exec(ctx, path, args, nil)
@@ -252,8 +251,8 @@ func RepoShowNameStatus(ctx context.Context, repoPath, rev string) (*NameStatus,
 	return r.ShowNameStatus(ctx, rev)
 }
 
-// RevParse returns full length (40) commit ID by given revision in the
-// repository.
+// RevParse returns the full length ID, i.e., 40 characters for SHA-1 or 64 for
+// SHA-256, by given revision in the repository.
 func (r *Repository) RevParse(ctx context.Context, rev string) (string, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.RevParse")
 	defer span.End()

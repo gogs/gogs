@@ -117,7 +117,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		// check and deletion
-		if newCommitID == git.EmptyID {
+		if git.IsEmptyID(newCommitID) {
 			fail(fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 

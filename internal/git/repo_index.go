@@ -17,8 +17,8 @@ import (
 // repository, so they also work in a bare repository, which has no working
 // tree to check files out to.
 
-// ObjectFormat returns the hash algorithm of the repository, e.g., "sha1".
-func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
+// ObjectFormat returns the hash algorithm of the repository.
+func (r *Repository) ObjectFormat(ctx context.Context) (ObjectFormat, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.ObjectFormat")
 	defer span.End()
 
@@ -26,11 +26,11 @@ func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(stdout)), nil
+	return ObjectFormat(strings.TrimSpace(string(stdout))), nil
 }
 
 // RepoObjectFormat is like Repository.ObjectFormat for the repository in given path.
-func RepoObjectFormat(ctx context.Context, repoPath string) (string, error) {
+func RepoObjectFormat(ctx context.Context, repoPath string) (ObjectFormat, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return "", err

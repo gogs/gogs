@@ -8,7 +8,7 @@ import (
 
 // Tree represents a flat directory listing in Git.
 type Tree struct {
-	id     *SHA1
+	id     Oid
 	parent *Tree
 
 	repo *Repository

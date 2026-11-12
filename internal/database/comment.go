@@ -63,7 +63,7 @@ type Comment struct {
 	UpdatedUnix int64
 
 	// Reference issue in commit message
-	CommitSHA string `xorm:"VARCHAR(40)"`
+	CommitSHA string `xorm:"VARCHAR(64)"`
 
 	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
 

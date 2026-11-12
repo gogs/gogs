@@ -72,13 +72,13 @@ func parseTree(t *Tree, data []byte) ([]*TreeEntry, error) {
 		}
 		pos += step + 6 // Skip string type of entry type.
 
-		step = 40
+		step = bytes.IndexByte(data[pos:], '\t')
 		id, err := newIDFromString(string(data[pos : pos+step]))
 		if err != nil {
 			return nil, err
 		}
 		entry.id = id
-		pos += step + 1 // Skip half of SHA1.
+		pos += step + 1 // Skip the tab.
 
 		step = bytes.IndexByte(data[pos:], 0)
 		entry.name = string(data[pos : pos+step])

@@ -350,7 +350,7 @@ func RepoRef() macaron.Handler {
 					break
 				}
 			}
-			if !hasMatched && len(parts[0]) == 40 {
+			if !hasMatched && (len(parts[0]) == 40 || len(parts[0]) == 64) {
 				refName = parts[0]
 				c.Repo.TreePath = strings.Join(parts[1:], "/")
 			}
@@ -373,7 +373,7 @@ func RepoRef() macaron.Handler {
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID.String()
-			} else if len(refName) == 40 {
+			} else if len(refName) == 40 || len(refName) == 64 {
 				c.Repo.IsViewCommit = true
 				c.Repo.CommitID = refName
 

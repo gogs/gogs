@@ -404,9 +404,9 @@ var routes = []struct {
 	{lazyregexp.New("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
 	{lazyregexp.New("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
 	{lazyregexp.New("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
-	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
-	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
+	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/(?:[0-9a-f]{38}|[0-9a-f]{62})$"), "GET", getLooseObject},
+	{lazyregexp.New("(.*?)/objects/pack/pack-(?:[0-9a-f]{40}|[0-9a-f]{64})\\.pack$"), "GET", getPackFile},
+	{lazyregexp.New("(.*?)/objects/pack/pack-(?:[0-9a-f]{40}|[0-9a-f]{64})\\.idx$"), "GET", getIdxFile},
 }
 
 func getGitRepoPath(dir string) (string, error) {
