@@ -15,8 +15,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
@@ -112,28 +112,30 @@ type Webhook struct {
 	UpdatedUnix int64
 }
 
-func (w *Webhook) BeforeInsert() {
-	w.CreatedUnix = time.Now().Unix()
-	w.UpdatedUnix = w.CreatedUnix
-}
-
-func (w *Webhook) BeforeUpdate() {
-	w.UpdatedUnix = time.Now().Unix()
-}
-
-func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
-	var err error
-	switch colName {
-	case "events":
-		w.HookEvent = &HookEvent{}
-		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-			log.Error("Unmarshal [%d]: %v", w.ID, err)
-		}
-	case "created_unix":
-		w.Created = time.Unix(w.CreatedUnix, 0).Local()
-	case "updated_unix":
-		w.Updated = time.Unix(w.UpdatedUnix, 0).Local()
+// BeforeCreate implements the GORM create hook.
+func (w *Webhook) BeforeCreate(tx *gorm.DB) error {
+	if w.CreatedUnix == 0 {
+		w.CreatedUnix = tx.NowFunc().Unix()
+		w.UpdatedUnix = w.CreatedUnix
 	}
+	return nil
+}
+
+// BeforeUpdate implements the GORM update hook.
+func (w *Webhook) BeforeUpdate(tx *gorm.DB) error {
+	w.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (w *Webhook) AfterFind(_ *gorm.DB) error {
+	w.HookEvent = &HookEvent{}
+	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+		log.Error("Unmarshal [%d]: %v", w.ID, err)
+	}
+	w.Created = time.Unix(w.CreatedUnix, 0).Local()
+	w.Updated = time.Unix(w.UpdatedUnix, 0).Local()
+	return nil
 }
 
 func (w *Webhook) SlackMeta() *SlackMeta {
@@ -231,8 +233,7 @@ func (w *Webhook) EventsArray() []string {
 
 // CreateWebhook creates a new web hook.
 func CreateWebhook(w *Webhook) error {
-	_, err := x.Insert(w)
-	return err
+	return Handle.db.Create(w).Error
 }
 
 var _ errx.NotFound = (*ErrWebhookNotExist)(nil)
@@ -257,13 +258,15 @@ func (ErrWebhookNotExist) NotFound() bool {
 // getWebhook uses argument bean as query condition,
 // ID must be specified and do not assign unnecessary fields.
 func getWebhook(bean *Webhook) (*Webhook, error) {
-	has, err := x.Get(bean)
+	w := new(Webhook)
+	err := Handle.db.Where(bean).First(w).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrWebhookNotExist{args: map[string]any{"webhookID": bean.ID}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrWebhookNotExist{args: map[string]any{"webhookID": bean.ID}}
 	}
-	return bean, nil
+	return w, nil
 }
 
 // GetWebhookByID returns webhook by given ID.
@@ -292,39 +295,31 @@ func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
 }
 
 // getActiveWebhooksByRepoID returns all active webhooks of repository.
-func getActiveWebhooksByRepoID(e Engine, repoID int64) ([]*Webhook, error) {
+func getActiveWebhooksByRepoID(tx *gorm.DB, repoID int64) ([]*Webhook, error) {
 	webhooks := make([]*Webhook, 0, 5)
-	return webhooks, e.Where("repo_id = ?", repoID).And("is_active = ?", true).Find(&webhooks)
+	return webhooks, tx.Where("repo_id = ? AND is_active = ?", repoID, true).Find(&webhooks).Error
 }
 
 // GetWebhooksByRepoID returns all webhooks of a repository.
 func GetWebhooksByRepoID(repoID int64) ([]*Webhook, error) {
 	webhooks := make([]*Webhook, 0, 5)
-	return webhooks, x.Find(&webhooks, &Webhook{RepoID: repoID})
+	return webhooks, Handle.db.Where(&Webhook{RepoID: repoID}).Find(&webhooks).Error
 }
 
 // UpdateWebhook updates information of webhook.
 func UpdateWebhook(w *Webhook) error {
-	_, err := x.Id(w.ID).AllCols().Update(w)
-	return err
+	return Handle.db.Model(w).Select("*").Updates(w).Error
 }
 
 // deleteWebhook uses argument bean as query condition,
 // ID must be specified and do not assign unnecessary fields.
-func deleteWebhook(bean *Webhook) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Delete(bean); err != nil {
-		return err
-	} else if _, err = sess.Delete(&HookTask{HookID: bean.ID}); err != nil {
-		return err
-	}
-
-	return sess.Commit()
+func deleteWebhook(bean *Webhook) error {
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where(bean).Delete(new(Webhook)).Error; err != nil {
+			return err
+		}
+		return tx.Where(&HookTask{HookID: bean.ID}).Delete(new(HookTask)).Error
+	})
 }
 
 // DeleteWebhookOfRepoByID deletes webhook of repository by given ID.
@@ -345,14 +340,14 @@ func DeleteWebhookOfOrgByID(orgID, id int64) error {
 
 // GetWebhooksByOrgID returns all webhooks for an organization.
 func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{OrgID: orgID})
+	err = Handle.db.Where(&Webhook{OrgID: orgID}).Find(&ws).Error
 	return ws, err
 }
 
 // getActiveWebhooksByOrgID returns all active webhooks for an organization.
-func getActiveWebhooksByOrgID(e Engine, orgID int64) ([]*Webhook, error) {
+func getActiveWebhooksByOrgID(tx *gorm.DB, orgID int64) ([]*Webhook, error) {
 	ws := make([]*Webhook, 0, 3)
-	return ws, e.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
+	return ws, tx.Where("org_id = ? AND is_active = ?", orgID, true).Find(&ws).Error
 }
 
 //   ___ ___                __   ___________              __
@@ -454,41 +449,35 @@ type HookTask struct {
 	ResponseInfo    *HookResponse `xorm:"-" json:"-" gorm:"-"`
 }
 
-func (t *HookTask) BeforeUpdate() {
+// BeforeUpdate implements the GORM update hook.
+func (t *HookTask) BeforeUpdate(_ *gorm.DB) error {
 	if t.RequestInfo != nil {
 		t.RequestContent = t.ToJSON(t.RequestInfo)
 	}
 	if t.ResponseInfo != nil {
 		t.ResponseContent = t.ToJSON(t.ResponseInfo)
 	}
+	return nil
 }
 
-func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
-	var err error
-	switch colName {
-	case "delivered":
-		t.DeliveredString = time.Unix(0, t.Delivered).Format("2006-01-02 15:04:05 MST")
+// AfterFind implements the GORM query hook.
+func (t *HookTask) AfterFind(_ *gorm.DB) error {
+	t.DeliveredString = time.Unix(0, t.Delivered).Format("2006-01-02 15:04:05 MST")
 
-	case "request_content":
-		if t.RequestContent == "" {
-			return
-		}
-
+	if t.RequestContent != "" {
 		t.RequestInfo = &HookRequest{}
-		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
+		if err := json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
 			log.Error("Unmarshal[%d]: %v", t.ID, err)
 		}
+	}
 
-	case "response_content":
-		if t.ResponseContent == "" {
-			return
-		}
-
+	if t.ResponseContent != "" {
 		t.ResponseInfo = &HookResponse{}
-		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+		if err := json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
 			log.Error("Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
+	return nil
 }
 
 func (t *HookTask) ToJSON(v any) string {
@@ -502,20 +491,23 @@ func (t *HookTask) ToJSON(v any) string {
 // HookTasks returns a list of hook tasks by given conditions.
 func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 	tasks := make([]*HookTask, 0, conf.Webhook.PagingNum)
-	return tasks, x.Limit(conf.Webhook.PagingNum, (page-1)*conf.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
+	return tasks, Handle.db.
+		Where("hook_id = ?", hookID).
+		Order("id DESC").
+		Limit(conf.Webhook.PagingNum).Offset((page - 1) * conf.Webhook.PagingNum).
+		Find(&tasks).Error
 }
 
 // createHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
-func createHookTask(e Engine, t *HookTask) error {
+func createHookTask(tx *gorm.DB, t *HookTask) error {
 	data, err := t.JSONPayload()
 	if err != nil {
 		return err
 	}
 	t.UUID = uuid.New().String()
 	t.PayloadContent = string(data)
-	_, err = e.Insert(t)
-	return err
+	return tx.Create(t).Error
 }
 
 var _ errx.NotFound = (*ErrHookTaskNotExist)(nil)
@@ -539,27 +531,24 @@ func (ErrHookTaskNotExist) NotFound() bool {
 
 // GetHookTaskOfWebhookByUUID returns hook task of given webhook by UUID.
 func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error) {
-	hookTask := &HookTask{
-		HookID: webhookID,
-		UUID:   uuid,
-	}
-	has, err := x.Get(hookTask)
+	hookTask := new(HookTask)
+	err := Handle.db.Where(&HookTask{HookID: webhookID, UUID: uuid}).First(hookTask).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrHookTaskNotExist{args: map[string]any{"webhookID": webhookID, "uuid": uuid}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrHookTaskNotExist{args: map[string]any{"webhookID": webhookID, "uuid": uuid}}
 	}
 	return hookTask, nil
 }
 
 // UpdateHookTask updates information of hook task.
 func UpdateHookTask(t *HookTask) error {
-	_, err := x.Id(t.ID).AllCols().Update(t)
-	return err
+	return Handle.db.Model(t).Select("*").Updates(t).Error
 }
 
 // prepareHookTasks adds list of webhooks to task queue.
-func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
+func prepareHookTasks(tx *gorm.DB, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
 	if len(webhooks) == 0 {
 		return nil
 	}
@@ -633,7 +622,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1ty
 			signature = hex.EncodeToString(sig.Sum(nil))
 		}
 
-		if err = createHookTask(e, &HookTask{
+		if err = createHookTask(tx, &HookTask{
 			RepoID:           repo.ID,
 			HookID:           w.ID,
 			Type:             w.HookTaskType,
@@ -655,32 +644,32 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1ty
 	return nil
 }
 
-func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
-	webhooks, err := getActiveWebhooksByRepoID(e, repo.ID)
+func prepareWebhooks(tx *gorm.DB, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
+	webhooks, err := getActiveWebhooksByRepoID(tx, repo.ID)
 	if err != nil {
 		return errors.Newf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
 	}
 
 	// check if repo belongs to org and append additional webhooks
-	if repo.mustOwner(legacyTx(e)).IsOrganization() {
+	if repo.mustOwner(tx).IsOrganization() {
 		// get hooks for org
-		orgws, err := getActiveWebhooksByOrgID(e, repo.OwnerID)
+		orgws, err := getActiveWebhooksByOrgID(tx, repo.OwnerID)
 		if err != nil {
 			return errors.Newf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
 		}
 		webhooks = append(webhooks, orgws...)
 	}
-	return prepareHookTasks(e, repo, event, p, webhooks)
+	return prepareHookTasks(tx, repo, event, p, webhooks)
 }
 
 // PrepareWebhooks adds all active webhooks to task queue.
 func PrepareWebhooks(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
 	// choose to ignore this function in tests.
-	if x == nil && testx.InTest {
+	if Handle == nil && testx.InTest {
 		return nil
 	}
-	return prepareWebhooks(x, repo, event, p)
+	return prepareWebhooks(Handle.db, repo, event, p)
 }
 
 // TestWebhook adds the test webhook matches the ID to task queue.
@@ -689,7 +678,7 @@ func TestWebhook(repo *Repository, event HookEventType, p apiv1types.WebhookPayl
 	if err != nil {
 		return errors.Newf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
 	}
-	return prepareHookTasks(x, repo, event, p, []*Webhook{webhook})
+	return prepareHookTasks(Handle.db, repo, event, p, []*Webhook{webhook})
 }
 
 func (t *HookTask) deliver() {
@@ -790,13 +779,10 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	_ = x.Where("is_delivered = ?", false).Iterate(new(HookTask),
-		func(idx int, bean any) error {
-			t := bean.(*HookTask)
-			t.deliver()
-			tasks = append(tasks, t)
-			return nil
-		})
+	_ = Handle.db.Where("is_delivered = ?", false).Find(&tasks).Error
+	for _, t := range tasks {
+		t.deliver()
+	}
 
 	// Update hook task status.
 	for _, t := range tasks {
@@ -811,7 +797,7 @@ func DeliverHooks() {
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
-		if err := x.Where("repo_id = ?", repoID).And("is_delivered = ?", false).Find(&tasks); err != nil {
+		if err := Handle.db.Where("repo_id = ? AND is_delivered = ?", repoID, false).Find(&tasks).Error; err != nil {
 			log.Error("Get repository [%s] hook tasks: %v", repoID, err)
 			continue
 		}
