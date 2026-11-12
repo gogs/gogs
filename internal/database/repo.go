@@ -24,7 +24,6 @@ import (
 	"gorm.io/gorm/clause"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
-	"xorm.io/xorm"
 
 	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/api/v1types"
@@ -227,30 +226,6 @@ type Repository struct {
 	UpdatedUnix int64
 }
 
-func (r *Repository) BeforeInsert() {
-	r.CreatedUnix = time.Now().Unix()
-	r.UpdatedUnix = r.CreatedUnix
-}
-
-func (r *Repository) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "num_closed_issues":
-		r.NumOpenIssues = r.NumIssues - r.NumClosedIssues
-	case "num_closed_pulls":
-		r.NumOpenPulls = r.NumPulls - r.NumClosedPulls
-	case "num_closed_milestones":
-		r.NumOpenMilestones = r.NumMilestones - r.NumClosedMilestones
-	case "external_tracker_style":
-		if r.ExternalTrackerStyle == "" {
-			r.ExternalTrackerStyle = markup.IssueNameStyleNumeric
-		}
-	case "created_unix":
-		r.Created = time.Unix(r.CreatedUnix, 0).Local()
-	case "updated_unix":
-		r.Updated = time.Unix(r.UpdatedUnix, 0)
-	}
-}
-
 // IsPartialPublic returns true if repository is public or allows public access to wiki or issues.
 func (r *Repository) IsPartialPublic() bool {
 	return !r.IsPrivate || r.AllowPublicWiki || r.AllowPublicIssues
@@ -450,7 +425,8 @@ func (r *Repository) UpdateSize(ctx context.Context) error {
 	}
 
 	r.Size = countObject.Size + countObject.SizePack
-	if _, err = x.Id(r.ID).Cols("size").Update(r); err != nil {
+	// NOTE: Use UpdateColumns to skip hooks so the update time stays unchanged.
+	if err = Handle.db.Model(r).Select("size").UpdateColumns(r).Error; err != nil {
 		return errors.Newf("update size: %v", err)
 	}
 	return nil
@@ -645,17 +621,15 @@ func (r *Repository) SavePatch(index int64, patch []byte) error {
 	return nil
 }
 
-func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
-	has, err := e.Get(&Repository{
-		OwnerID:   u.ID,
-		LowerName: strings.ToLower(repoName),
-	})
-	return has && osx.IsDir(RepoPath(u.Name, repoName)), err
+func isRepositoryExist(tx *gorm.DB, u *User, repoName string) (bool, error) {
+	var count int64
+	err := tx.Model(new(Repository)).Where("owner_id = ? AND lower_name = ?", u.ID, strings.ToLower(repoName)).Count(&count).Error
+	return count > 0 && osx.IsDir(RepoPath(u.Name, repoName)), err
 }
 
 // IsRepositoryExist returns true if the repository with given name under user already exists.
 func IsRepositoryExist(u *User, repoName string) (bool, error) {
-	return isRepositoryExist(x, u, repoName)
+	return isRepositoryExist(Handle.db, u, repoName)
 }
 
 // Deprecated: Use repox.NewCloneLink instead.
@@ -1102,7 +1076,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 }
 
 // initRepository performs initial commit with chosen setup files on behalf of doer.
-func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
+func initRepository(ctx context.Context, logger *logx.Logger, tx *gorm.DB, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	}
@@ -1144,7 +1118,7 @@ func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath
 
 	// Re-fetch the repository from database before updating it (else it would
 	// override changes that were done earlier with SQL).
-	saved, err := getRepositoryByID(legacyTx(e), repo.ID)
+	saved, err := getRepositoryByID(tx, repo.ID)
 	if err != nil {
 		return errors.Newf("getRepositoryByID: %v", err)
 	}
@@ -1154,7 +1128,7 @@ func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath
 	}
 
 	saved.DefaultBranch = conf.Repository.DefaultBranch
-	if err = updateRepository(logger, e, saved, false); err != nil {
+	if err = updateRepository(logger, tx, saved, false); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 
@@ -1179,30 +1153,30 @@ func isRepoNameAllowed(name string) error {
 	return isNameAllowed(reservedRepoNames, reservedRepoPatterns, name)
 }
 
-func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err error) {
+func createRepository(tx *gorm.DB, doer, owner *User, repo *Repository) (err error) {
 	if err = isRepoNameAllowed(repo.Name); err != nil {
 		return err
 	}
 
-	has, err := isRepositoryExist(e, owner, repo.Name)
+	has, err := isRepositoryExist(tx, owner, repo.Name)
 	if err != nil {
 		return errors.Newf("IsRepositoryExist: %v", err)
 	} else if has {
 		return ErrRepoAlreadyExist{args: errx.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
-	if _, err = e.Insert(repo); err != nil {
+	if err = tx.Create(repo).Error; err != nil {
 		return err
 	}
 
-	_, err = e.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID)
+	err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
 	if err != nil {
 		return errors.Wrap(err, "increase owned repository count")
 	}
 
 	// Give access to all members in owner team.
 	if owner.IsOrganization() {
-		teams := newTeamsStore(legacyTx(e))
+		teams := newTeamsStore(tx)
 		t, err := teams.GetOwnerTeam(context.TODO(), owner.ID)
 		if err != nil {
 			return errors.Newf("getOwnerTeam: %v", err)
@@ -1211,40 +1185,20 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		}
 	} else {
 		// For organizations, the addRepository method calls this.
-		if err = newPermissionsStore(legacyTx(e)).recalculateAccesses(context.TODO(), repo); err != nil {
+		if err = newPermissionsStore(tx).recalculateAccesses(context.TODO(), repo); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
 	}
 
-	if err = newReposStore(legacyTx(e)).watch(context.TODO(), owner.ID, repo.ID); err != nil {
+	if err = newReposStore(tx).watch(context.TODO(), owner.ID, repo.ID); err != nil {
 		return errors.Newf("watchRepo: %v", err)
 	}
 
-	// FIXME: This is identical to Actions.NewRepo but we are not yet able to wrap
-	// transaction with different ORM objects, should delete this once migrated to
-	// GORM for this part of logic.
-	newRepoAction := func(e Engine, doer *User, repo *Repository) (err error) {
-		opType := ActionCreateRepo
-		if repo.IsFork {
-			opType = ActionForkRepo
-		}
-
-		return newActionsStore(legacyTx(e)).notifyWatchers(context.TODO(), &Action{
-			ActUserID:    doer.ID,
-			ActUserName:  doer.Name,
-			OpType:       opType,
-			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
-			RepoName:     repo.Name,
-			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-			CreatedUnix:  time.Now().Unix(),
-		})
-	}
-	if err = newRepoAction(e, doer, repo); err != nil {
+	if err = newActionsStore(tx).NewRepo(context.TODO(), doer, owner, repo); err != nil {
 		return errors.Newf("newRepoAction: %v", err)
 	}
 
-	return newReposStore(legacyTx(e)).LoadAttributes(context.TODO(), repo)
+	return newReposStore(tx).LoadAttributes(context.TODO(), repo)
 }
 
 type ErrReachLimitOfRepo struct {
@@ -1289,24 +1243,22 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Use
 		PullsAllowMerge: true,
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return nil, err
-	}
-
-	if err = createRepository(sess, doer, owner, repo); err != nil {
-		return nil, err
-	}
-
-	// No need for init mirror.
-	if !opts.IsMirror {
-		if err = initRepository(ctx, logger, sess, repoPath, doer, repo, opts); err != nil {
-			RemoveAllWithNotice(logger, "Delete repository for initialization failure", repoPath)
-			return nil, errors.Newf("initRepository: %v", err)
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		if err := createRepository(tx, doer, owner, repo); err != nil {
+			return err
 		}
-	}
-	if err = sess.Commit(); err != nil {
+
+		// No need for init mirror.
+		if opts.IsMirror {
+			return nil
+		}
+		if err := initRepository(ctx, logger, tx, repoPath, doer, repo, opts); err != nil {
+			RemoveAllWithNotice(logger, "Delete repository for initialization failure", repoPath)
+			return errors.Newf("initRepository: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -1320,17 +1272,16 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Use
 }
 
 func countRepositories(logger *logx.Logger, userID int64, private bool) int64 {
-	sess := x.Where("id > 0")
-
+	query := Handle.db.Model(new(Repository)).Where("id > 0")
 	if userID > 0 {
-		sess.And("owner_id = ?", userID)
+		query = query.Where("owner_id = ?", userID)
 	}
 	if !private {
-		sess.And("is_private=?", false)
+		query = query.Where("is_private = ?", false)
 	}
 
-	count, err := sess.Count(new(Repository))
-	if err != nil {
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
 		logger.Error("Failed to count repositories", "error", err)
 	}
 	return count
@@ -1352,7 +1303,7 @@ func CountUserRepositories(logger *logx.Logger, userID int64, private bool) int6
 
 func Repositories(page, pageSize int) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
-	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
+	return repos, Handle.db.Order("id ASC").Limit(pageSize).Offset((page - 1) * pageSize).Find(&repos).Error
 }
 
 // FilterRepositoryWithIssues selects repositories that are using internal issue tracker
@@ -1363,24 +1314,17 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 		return nil, nil
 	}
 
-	repos := make([]*Repository, 0, len(repoIDs))
-	if err := x.Where("enable_issues=?", true).
-		And("enable_external_tracker=?", false).
-		In("id", repoIDs).
-		Cols("id").
-		Find(&repos); err != nil {
+	var validIDs []int64
+	if err := Handle.db.Model(new(Repository)).
+		Where("enable_issues = ? AND enable_external_tracker = ? AND id IN ?", true, false, repoIDs).
+		Pluck("id", &validIDs).Error; err != nil {
 		return nil, errors.Newf("filter valid repositories %v: %v", repoIDs, err)
 	}
 
-	if len(repos) == 0 {
+	if len(validIDs) == 0 {
 		return nil, nil
 	}
-
-	repoIDs = make([]int64, len(repos))
-	for i := range repos {
-		repoIDs[i] = repos[i].ID
-	}
-	return repoIDs, nil
+	return validIDs, nil
 }
 
 // RepoPath returns repository path by given user and repository name.
@@ -1405,32 +1349,34 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return ErrRepoAlreadyExist{args: errx.Args{"ownerName": newOwnerName, "name": repo.Name}}
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return errors.Newf("sess.Begin: %v", err)
-	}
-
 	owner := repo.Owner
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		return transferOwnership(tx, doer, owner, newOwner, repo)
+	})
+}
+
+func transferOwnership(tx *gorm.DB, doer, owner, newOwner *User, repo *Repository) error {
 
 	// Note: we have to set value here to make sure recalculate accesses is based on
 	// new owner.
 	repo.OwnerID = newOwner.ID
 	repo.Owner = newOwner
 
-	if _, err := sess.ID(repo.ID).Update(repo); err != nil {
+	// NOTE: Use UpdateColumns to skip hooks so the update time stays unchanged.
+	if err := tx.Model(repo).UpdateColumns(repo).Error; err != nil {
 		return errors.Newf("update owner: %v", err)
 	}
 
 	// Remove redundant collaborators.
-	collaborators, err := newCollaborationsStore(legacyTx(sess)).List(context.TODO(), repo.ID)
+	collaborators, err := newCollaborationsStore(tx).List(context.TODO(), repo.ID)
 	if err != nil {
 		return errors.Newf("getCollaborators: %v", err)
 	}
 
 	for _, c := range collaborators {
-		if c.ID == newOwner.ID || (newOwner.IsOrganization() && newOrganizationsStore(legacyTx(sess)).IsMember(context.TODO(), newOwner.ID, c.ID)) {
-			if err = legacyTx(sess).Where("repo_id = ? AND user_id = ?", repo.ID, c.ID).Delete(new(Collaboration)).Error; err != nil {
+		if c.ID == newOwner.ID || (newOwner.IsOrganization() && newOrganizationsStore(tx).IsMember(context.TODO(), newOwner.ID, c.ID)) {
+			err = tx.Where(&Collaboration{RepoID: repo.ID, UserID: c.ID}).Delete(new(Collaboration)).Error
+			if err != nil {
 				return errors.Newf("remove collaborator '%d': %v", c.ID, err)
 			}
 		}
@@ -1438,7 +1384,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Remove old team-repository relations.
 	if owner.IsOrganization() {
-		teams := newTeamsStore(legacyTx(sess))
+		teams := newTeamsStore(tx)
 		orgTeams, err := teams.ListByOrg(context.TODO(), owner.ID)
 		if err != nil {
 			return errors.Newf("getTeams: %v", err)
@@ -1449,18 +1395,18 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			}
 
 			t.NumRepos--
-			if _, err := sess.ID(t.ID).AllCols().Update(t); err != nil {
+			if err := tx.Model(t).Select("*").Updates(t).Error; err != nil {
 				return errors.Newf("decrease team repository count '%d': %v", t.ID, err)
 			}
 		}
 
-		if err = newOrganizationsStore(legacyTx(sess)).removeRepo(context.TODO(), owner.ID, repo.ID); err != nil {
+		if err = newOrganizationsStore(tx).removeRepo(context.TODO(), owner.ID, repo.ID); err != nil {
 			return errors.Newf("removeOrgRepo: %v", err)
 		}
 	}
 
 	if newOwner.IsOrganization() {
-		teams := newTeamsStore(legacyTx(sess))
+		teams := newTeamsStore(tx)
 		t, err := teams.GetOwnerTeam(context.TODO(), newOwner.ID)
 		if err != nil {
 			return errors.Newf("getOwnerTeam: %v", err)
@@ -1469,53 +1415,37 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		}
 	} else {
 		// For organizations, the addRepository method calls this.
-		if err = newPermissionsStore(legacyTx(sess)).recalculateAccesses(context.TODO(), repo); err != nil {
+		if err = newPermissionsStore(tx).recalculateAccesses(context.TODO(), repo); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
 
 		// Repositories of users have no push allowlist to manage, and one left
 		// enabled would keep out everyone not listed by name, e.g., the new
 		// owner.
-		if _, err = sess.Exec("UPDATE protect_branch SET enable_whitelist = ? WHERE repo_id = ?", false, repo.ID); err != nil {
+		if err = tx.Model(new(ProtectBranch)).Where("repo_id = ?", repo.ID).UpdateColumn("enable_whitelist", false).Error; err != nil {
 			return errors.Wrap(err, "disable push allowlists")
 		}
 	}
 
 	// Update repository count.
-	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos+1 WHERE id=?", newOwner.ID); err != nil {
+	if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
 		return errors.Newf("increase new owner repository count: %v", err)
-	} else if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", owner.ID); err != nil {
+	} else if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
 		return errors.Newf("decrease old owner repository count: %v", err)
 	}
 
 	// Remove watch for organization.
 	if owner.IsOrganization() {
-		if err = newReposStore(legacyTx(sess)).unwatch(context.TODO(), owner.ID, repo.ID); err != nil {
+		if err = newReposStore(tx).unwatch(context.TODO(), owner.ID, repo.ID); err != nil {
 			return errors.Wrap(err, "unwatch repository for the organization owner")
 		}
 	}
 
-	if err = newReposStore(legacyTx(sess)).watch(context.TODO(), newOwner.ID, repo.ID); err != nil {
+	if err = newReposStore(tx).watch(context.TODO(), newOwner.ID, repo.ID); err != nil {
 		return errors.Newf("watchRepo: %v", err)
 	}
 
-	// FIXME: This is identical to Actions.TransferRepo but we are not yet able to
-	// wrap transaction with different ORM objects, should delete this once migrated
-	// to GORM for this part of logic.
-	transferRepoAction := func(e Engine, doer, oldOwner *User, repo *Repository) error {
-		return newActionsStore(legacyTx(e)).notifyWatchers(context.TODO(), &Action{
-			ActUserID:    doer.ID,
-			ActUserName:  doer.Name,
-			OpType:       ActionTransferRepo,
-			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
-			RepoName:     repo.Name,
-			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-			Content:      path.Join(oldOwner.Name, repo.Name),
-			CreatedUnix:  time.Now().Unix(),
-		})
-	}
-	if err = transferRepoAction(sess, doer, owner, repo); err != nil {
+	if err = newActionsStore(tx).TransferRepo(context.TODO(), doer, owner, newOwner, repo); err != nil {
 		return errors.Newf("transferRepoAction: %v", err)
 	}
 
@@ -1534,8 +1464,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			return errors.Newf("rename repository wiki: %v", err)
 		}
 	}
-
-	return sess.Commit()
+	return nil
 }
 
 // ChangeRepositoryName changes all corresponding settings from old repository name to new one.
@@ -1573,19 +1502,19 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	return nil
 }
 
-func getRepositoriesByForkID(e Engine, forkID int64) ([]*Repository, error) {
+func getRepositoriesByForkID(tx *gorm.DB, forkID int64) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	return repos, e.Where("fork_id=?", forkID).Find(&repos)
+	return repos, tx.Where("fork_id = ?", forkID).Find(&repos).Error
 }
 
-func getNonMirrorRepositories(e Engine) ([]*Repository, error) {
+func getNonMirrorRepositories(tx *gorm.DB) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	return repos, e.Where("is_mirror = ?", false).Find(&repos)
+	return repos, tx.Where("is_mirror = ?", false).Find(&repos).Error
 }
 
 // GetNonMirrorRepositories returns all repositories that are not mirrors.
 func GetNonMirrorRepositories() ([]*Repository, error) {
-	return getNonMirrorRepositories(x)
+	return getNonMirrorRepositories(Handle.db)
 }
 
 // ForksMayAllowPublicWiki reports whether a private fork of the repository may
@@ -1611,7 +1540,7 @@ func (r *Repository) limitVisibilityTo(base *Repository) {
 	r.AllowPublicIssues = r.AllowPublicIssues && base.ForksMayAllowPublicIssues()
 }
 
-func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilityChanged bool) (err error) {
+func updateRepository(logger *logx.Logger, tx *gorm.DB, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
 	visibilityCols := []string{"is_private", "is_unlisted", "allow_public_wiki", "allow_public_issues"}
@@ -1620,16 +1549,16 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 	// whichever caller saves it.
 	if repo.IsFork {
 		base := new(Repository)
-		has, err := e.ID(repo.ForkID).Cols(visibilityCols...).Get(base)
-		if err != nil {
-			return errors.Wrap(err, "get base repository")
-		} else if has {
+		result := tx.Select(visibilityCols).Where("id = ?", repo.ForkID).Limit(1).Find(base)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, "get base repository")
+		} else if result.RowsAffected > 0 {
 			repo.limitVisibilityTo(base)
 		}
 	}
 
 	saved := new(Repository)
-	if _, err = e.ID(repo.ID).Cols(visibilityCols...).Get(saved); err != nil {
+	if err = tx.Select(visibilityCols).Where("id = ?", repo.ID).Limit(1).Find(saved).Error; err != nil {
 		return errors.Wrap(err, "get saved visibility")
 	}
 	visibilityChanged = visibilityChanged || repo.IsPrivate != saved.IsPrivate || repo.IsUnlisted != saved.IsUnlisted
@@ -1642,17 +1571,18 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 		repo.Website = repo.Website[:255]
 	}
 
-	if _, err = e.ID(repo.ID).AllCols().Update(repo); err != nil {
+	// NOTE: Use UpdateColumns to skip hooks so the update time stays unchanged.
+	if err = tx.Model(repo).Select("*").UpdateColumns(repo).Error; err != nil {
 		return errors.Newf("update: %v", err)
 	}
 
 	if visibilityChanged {
-		if err = repo.getOwner(legacyTx(e)); err != nil {
+		if err = repo.getOwner(tx); err != nil {
 			return errors.Newf("getOwner: %v", err)
 		}
 		if repo.Owner.IsOrganization() {
 			// Organization repository needs to recalculate access table when visibility is changed.
-			if err = newPermissionsStore(legacyTx(e)).recalculateTeamAccesses(context.TODO(), repo, 0); err != nil {
+			if err = newPermissionsStore(tx).recalculateTeamAccesses(context.TODO(), repo, 0); err != nil {
 				return errors.Newf("recalculateTeamAccesses: %v", err)
 			}
 		}
@@ -1672,13 +1602,14 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 		}
 
 		// Change visibility of generated actions.
-		if _, err = e.Where("repo_id = ?", repo.ID).Cols("is_private").Update(&Action{IsPrivate: repo.IsPrivate || repo.IsUnlisted}); err != nil {
+		err = tx.Model(new(Action)).Where("repo_id = ?", repo.ID).UpdateColumn("is_private", repo.IsPrivate || repo.IsUnlisted).Error
+		if err != nil {
 			return errors.Newf("change action visibility of repository: %v", err)
 		}
 	}
 
 	if visibilityChanged || publicAccessChanged {
-		forkRepos, err := getRepositoriesByForkID(e, repo.ID)
+		forkRepos, err := getRepositoriesByForkID(tx, repo.ID)
 		if err != nil {
 			return errors.Newf("getRepositoriesByForkID: %v", err)
 		}
@@ -1691,7 +1622,7 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 				forkRepos[i].IsPrivate = repo.IsPrivate
 				forkRepos[i].IsUnlisted = repo.IsUnlisted
 			}
-			if err = updateRepository(logger, e, forkRepos[i], visibilityChanged); err != nil {
+			if err = updateRepository(logger, tx, forkRepos[i], visibilityChanged); err != nil {
 				return errors.Newf("updateRepository[%d]: %v", forkRepos[i].ID, err)
 			}
 		}
@@ -1701,27 +1632,23 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 }
 
 func UpdateRepository(logger *logx.Logger, repo *Repository, visibilityChanged bool) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = updateRepository(logger, x, repo, visibilityChanged); err != nil {
-		return errors.Newf("updateRepository: %v", err)
-	}
-
-	return sess.Commit()
+	return Handle.db.Transaction(func(tx *gorm.DB) error {
+		if err := updateRepository(logger, tx, repo, visibilityChanged); err != nil {
+			return errors.Newf("updateRepository: %v", err)
+		}
+		return nil
+	})
 }
 
 // DeleteRepository deletes a repository for a user or organization.
 func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	repo := new(Repository)
-	has, err := x.Where("id = ? AND owner_id = ?", repoID, ownerID).Get(repo)
+	err := Handle.db.Where("id = ? AND owner_id = ?", repoID, ownerID).First(repo).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "repoID": repoID}}
+		}
 		return err
-	} else if !has {
-		return ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "repoID": repoID}}
 	}
 
 	// In case it is an organization.
@@ -1736,134 +1663,124 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		}
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
+	var attachmentPaths []string
+	var publicKeyDeleted bool
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		// Attachments of releases go with the releases, and are deleted after
+		// them, in the order deleting a single release takes their locks, so that
+		// the two cannot deadlock. The releases are locked before anything else
+		// is read, because on MySQL the first plain read fixes the snapshot, which
+		// would hide the attachments an edit of a release adds before the
+		// releases are deleted.
+		var releaseIDs []int64
+		listReleases := tx.Model(new(Release)).Where("repo_id = ?", repoID)
+		if !conf.UseSQLite3 {
+			listReleases = listReleases.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		if err := listReleases.Pluck("id", &releaseIDs).Error; err != nil {
+			return errors.Wrap(err, "list releases")
+		}
 
-	// Attachments of releases go with the releases, and are deleted after them,
-	// in the order deleting a single release takes their locks, so that the two
-	// cannot deadlock. The releases are locked before anything else is read,
-	// because on MySQL the first plain read fixes the snapshot, which would hide
-	// the attachments an edit of a release adds before the releases are deleted.
-	// GORM reads them, because XORM does not report an error that ends the rows,
-	// e.g., when MariaDB refuses the read, and the deletion would then go on
-	// outside the rolled back transaction.
-	tx := legacyTx(sess)
-	var releaseIDs []int64
-	listReleases := tx.Model(new(Release)).Where("repo_id = ?", repoID)
-	if !conf.UseSQLite3 {
-		listReleases = listReleases.Clauses(clause.Locking{Strength: "UPDATE"})
-	}
-	if err = listReleases.Pluck("id", &releaseIDs).Error; err != nil {
-		return errors.Newf("list releases: %v", err)
-	}
+		if org.IsOrganization() {
+			teamsStore := newTeamsStore(tx)
+			for _, t := range teams {
+				if !teamsStore.HasRepo(context.TODO(), org.ID, t.ID, repoID) {
+					continue
+				} else if err := teamsStore.removeRepo(context.TODO(), t, repo, false); err != nil {
+					return err
+				}
+			}
+		}
 
-	if org.IsOrganization() {
-		teamsStore := newTeamsStore(legacyTx(sess))
-		for _, t := range teams {
-			if !teamsStore.HasRepo(context.TODO(), org.ID, t.ID, repoID) {
-				continue
-			} else if err = teamsStore.removeRepo(context.TODO(), t, repo, false); err != nil {
+		// Delete labels and milestones before the repository, the order issue
+		// creation locks them in, so the two cannot deadlock.
+		if err := deleteByColumn(tx, "repo_id", repoID, "label", "milestone"); err != nil {
+			return err
+		}
+		if err := tx.Where("id = ?", repoID).Delete(new(Repository)).Error; err != nil {
+			return errors.Wrap(err, "delete repository")
+		}
+		if err := deleteByColumn(tx, "base_repo_id", repoID, "pull_request"); err != nil {
+			return err
+		}
+		if err := deleteByColumn(tx, "repo_id", repoID,
+			"access",
+			"action",
+			"watch",
+			"star",
+			"mirror",
+			"issue_user",
+			"release",
+			"collaboration",
+			"protect_branch",
+			"webhook",
+			"hook_task",
+			"lfs_object",
+		); err != nil {
+			return err
+		}
+
+		// In chunks, because a statement can bind only so many parameters.
+		for ids := range slices.Chunk(releaseIDs, 500) {
+			var uuids []string
+			if err := tx.Model(new(Attachment)).Where("release_id IN ?", ids).Pluck("uuid", &uuids).Error; err != nil {
+				return errors.Wrap(err, "list attachments of releases")
+			}
+			for _, uuid := range uuids {
+				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
+			}
+			if err := tx.Where("release_id IN ?", ids).Delete(new(Attachment)).Error; err != nil {
+				return errors.Wrap(err, "delete attachments of releases")
+			}
+		}
+
+		// Delete comments and attachments.
+		var issueIDs []int64
+		if err := tx.Model(new(Issue)).Where("repo_id = ?", repoID).Pluck("id", &issueIDs).Error; err != nil {
+			return errors.Wrap(err, "list issues")
+		}
+		for _, issueID := range issueIDs {
+			var uuids []string
+			if err := tx.Model(new(Attachment)).Where("issue_id = ?", issueID).Pluck("uuid", &uuids).Error; err != nil {
+				return errors.Wrap(err, "list attachments")
+			}
+			for _, uuid := range uuids {
+				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
+			}
+			if err := deleteByColumn(tx, "issue_id", issueID, "comment", "attachment", "issue_label"); err != nil {
 				return err
 			}
 		}
-	}
-
-	// Delete labels and milestones before the repository, the order issue
-	// creation locks them in, so the two cannot deadlock.
-	if err = deleteByColumn(sess, "repo_id", repoID, "label", "milestone"); err != nil {
-		return err
-	}
-	if _, err = sess.Where("id = ?", repoID).Delete(new(Repository)); err != nil {
-		return errors.Newf("delete repository: %v", err)
-	}
-	if err = deleteByColumn(sess, "base_repo_id", repoID, "pull_request"); err != nil {
-		return err
-	}
-	if err = deleteByColumn(sess, "repo_id", repoID,
-		"access",
-		"action",
-		"watch",
-		"star",
-		"mirror",
-		"issue_user",
-		"release",
-		"collaboration",
-		"protect_branch",
-		"webhook",
-		"hook_task",
-		"lfs_object",
-	); err != nil {
-		return err
-	}
-
-	attachmentPaths := make([]string, 0, len(releaseIDs))
-	// In chunks, because a statement can bind only so many parameters.
-	for ids := range slices.Chunk(releaseIDs, 500) {
-		var uuids []string
-		if err = tx.Model(new(Attachment)).Where("release_id IN ?", ids).Pluck("uuid", &uuids).Error; err != nil {
-			return errors.Newf("list attachments of releases: %v", err)
-		}
-		for _, uuid := range uuids {
-			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
-		}
-		if err = tx.Where("release_id IN ?", ids).Delete(new(Attachment)).Error; err != nil {
-			return errors.Newf("delete attachments of releases: %v", err)
-		}
-	}
-
-	// Delete comments and attachments.
-	var issueIDs []int64
-	if err = tx.Model(new(Issue)).Where("repo_id = ?", repoID).Pluck("id", &issueIDs).Error; err != nil {
-		return errors.Wrap(err, "list issues")
-	}
-	for _, issueID := range issueIDs {
-		rows, err := sess.Query("SELECT uuid FROM attachment WHERE issue_id = ?", issueID)
-		if err != nil {
-			return errors.Newf("list attachments: %v", err)
-		}
-		for _, row := range rows {
-			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(string(row["uuid"])))
-		}
-		if err = deleteByColumn(sess, "issue_id", issueID, "comment", "attachment", "issue_label"); err != nil {
+		if err := deleteByColumn(tx, "repo_id", repoID, "issue"); err != nil {
 			return err
 		}
-	}
 
-	if err = deleteByColumn(sess, "repo_id", repoID, "issue"); err != nil {
-		return err
-	}
+		var deployKeyIDs []int64
+		if err := tx.Model(new(DeployKey)).Where("repo_id = ?", repoID).Pluck("key_id", &deployKeyIDs).Error; err != nil {
+			return errors.Wrap(err, "list deploy keys")
+		}
+		if err := lockPublicKeys(tx, deployKeyIDs...); err != nil {
+			return errors.Wrap(err, "lock public keys")
+		}
+		if err := tx.Where("repo_id = ?", repoID).Delete(new(DeployKey)).Error; err != nil {
+			return errors.Wrap(err, "delete deploy keys")
+		}
+		// Other repositories may use the same public keys.
+		var err error
+		if publicKeyDeleted, err = deleteUnusedPublicKeys(tx, deployKeyIDs...); err != nil {
+			return err
+		}
 
-	var deployKeyIDs []int64
-	if err = tx.Model(new(DeployKey)).Where("repo_id = ?", repoID).Pluck("key_id", &deployKeyIDs).Error; err != nil {
-		return errors.Wrap(err, "list deploy keys")
-	}
-	if err = lockPublicKeys(tx, deployKeyIDs...); err != nil {
-		return errors.Wrap(err, "lock public keys")
-	}
-	if err = tx.Where("repo_id = ?", repoID).Delete(new(DeployKey)).Error; err != nil {
-		return errors.Wrap(err, "delete deploy keys")
-	}
-	// Other repositories may use the same public keys.
-	publicKeyDeleted, err := deleteUnusedPublicKeys(tx, deployKeyIDs...)
+		if repo.IsFork {
+			if err := tx.Exec("UPDATE repository SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkID).Error; err != nil {
+				return errors.Newf("decrease fork count: %v", err)
+			}
+		}
+
+		return tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error
+	})
 	if err != nil {
 		return err
-	}
-
-	if repo.IsFork {
-		if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks-1 WHERE id=?", repo.ForkID); err != nil {
-			return errors.Newf("decrease fork count: %v", err)
-		}
-	}
-
-	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", ownerID); err != nil {
-		return err
-	}
-
-	if err = sess.Commit(); err != nil {
-		return errors.Newf("commit: %v", err)
 	}
 
 	// Remove repository files.
@@ -1878,7 +1795,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	}
 
 	if repo.NumForks > 0 {
-		if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
+		if err = Handle.db.Exec("UPDATE repository SET fork_id = 0, is_fork = ? WHERE fork_id = ?", false, repo.ID).Error; err != nil {
 			logger.Error("Failed to reset fork status of forks", "repoID", repo.ID, "error", err)
 		}
 	}
@@ -1934,39 +1851,43 @@ type UserRepoOptions struct {
 
 // GetUserRepositories returns a list of repositories of given user.
 func GetUserRepositories(opts *UserRepoOptions) ([]*Repository, error) {
-	sess := x.Where("owner_id=?", opts.UserID).Desc("updated_unix")
+	query := Handle.db.Where("owner_id = ?", opts.UserID).Order("updated_unix DESC")
 	if !opts.Private {
-		sess.And("is_private=?", false)
-		sess.And("is_unlisted=?", false)
+		query = query.Where("is_private = ? AND is_unlisted = ?", false, false)
 	}
 
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
-	sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize)
+	// NOTE: A non-positive page size means no limit, e.g., callers pass the
+	// cached number of repositories which can be zero.
+	if opts.PageSize > 0 {
+		query = query.Limit(opts.PageSize).Offset((opts.Page - 1) * opts.PageSize)
+	}
 
 	repos := make([]*Repository, 0, opts.PageSize)
-	return repos, sess.Find(&repos)
+	return repos, query.Find(&repos).Error
 }
 
 // GetUserMirrorRepositories returns a list of mirror repositories of given user.
 func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	return repos, x.Where("owner_id = ?", userID).And("is_mirror = ?", true).Find(&repos)
+	return repos, Handle.db.Where("owner_id = ? AND is_mirror = ?", userID, true).Find(&repos).Error
 }
 
 // GetUserAndCollaborativeRepositories returns list of repositories the user owns and collaborates.
 func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	if err := x.Alias("repo").
-		Join("INNER", "collaboration", "collaboration.repo_id = repo.id").
+	if err := Handle.db.Table("repository AS repo").
+		Select("repo.*").
+		Joins("INNER JOIN collaboration ON collaboration.repo_id = repo.id").
 		Where("collaboration.user_id = ?", userID).
-		Find(&repos); err != nil {
+		Find(&repos).Error; err != nil {
 		return nil, errors.Newf("select collaborative repositories: %v", err)
 	}
 
 	ownRepos := make([]*Repository, 0, 10)
-	if err := x.Where("owner_id = ?", userID).Find(&ownRepos); err != nil {
+	if err := Handle.db.Where("owner_id = ?", userID).Find(&ownRepos).Error; err != nil {
 		return nil, errors.Newf("select own repositories: %v", err)
 	}
 
@@ -1991,35 +1912,50 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	}
 
 	repos = make([]*Repository, 0, opts.PageSize)
-	sess := x.Alias("repo")
+	query := Handle.db.Table("repository AS repo")
 	// Attempt to find repositories that opts.UserID has access to,
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
-		sess.Join("LEFT", "access", "access.repo_id = repo.id").
-			Where("repo.owner_id = ? OR access.user_id = ? OR (repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", opts.UserID, opts.UserID, false, false, true, true, true)
+		query = query.Joins("LEFT JOIN access ON access.repo_id = repo.id").
+			Where("(repo.owner_id = ? OR access.user_id = ? OR (repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", opts.UserID, opts.UserID, false, false, true, true, true)
 	} else {
 		// Only return public repositories if opts.Private is not set.
 		if !opts.Private {
-			sess.And("(repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", false, false, true, true, true)
+			query = query.Where("((repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", false, false, true, true, true)
 		}
 	}
 	if len(opts.Keyword) > 0 {
-		sess.And("repo.lower_name LIKE ? OR repo.description LIKE ?", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
+		query = query.Where("(repo.lower_name LIKE ? OR repo.description LIKE ?)", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
 	}
 	if opts.OwnerID > 0 {
-		sess.And("repo.owner_id = ?", opts.OwnerID)
+		query = query.Where("repo.owner_id = ?", opts.OwnerID)
 	}
 
 	// We need all fields (repo.*) in final list but only ID (repo.id) is good enough for counting.
-	count, err = sess.Clone().Distinct("repo.id").Count(new(Repository))
-	if err != nil {
+	if err = query.Session(&gorm.Session{}).Distinct("repo.id").Count(&count).Error; err != nil {
 		return nil, 0, errors.Newf("Count: %v", err)
 	}
 
 	if len(opts.OrderBy) > 0 {
-		sess.OrderBy("repo." + opts.OrderBy)
+		query = query.Order("repo." + opts.OrderBy)
 	}
-	return repos, count, sess.Distinct("repo.*").Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
+	return repos, count, query.Distinct("repo.*").
+		Limit(opts.PageSize).Offset((opts.Page - 1) * opts.PageSize).
+		Find(&repos).Error
+}
+
+// iterateRepositories calls fn for every repository in batches, and stops at the
+// first error.
+func iterateRepositories(fn func(repo *Repository) error) error {
+	var repos []*Repository
+	return Handle.db.Where("id > 0").FindInBatches(&repos, 100, func(*gorm.DB, int) error {
+		for _, repo := range repos {
+			if err := fn(repo); err != nil {
+				return err
+			}
+		}
+		return nil
+	}).Error
 }
 
 func DeleteOldRepositoryArchives(logger *logx.Logger) {
@@ -2033,50 +1969,49 @@ func DeleteOldRepositoryArchives(logger *logx.Logger) {
 
 	formats := []string{"zip", "targz"}
 	oldestTime := time.Now().Add(-conf.Cron.RepoArchiveCleanup.OlderThan)
-	if err := x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean any) error {
-			repo := bean.(*Repository)
-			basePath := filepath.Join(repo.RepoPath(), "archives")
-			for _, format := range formats {
-				dirPath := filepath.Join(basePath, format)
-				if !osx.IsDir(dirPath) {
+	if err := iterateRepositories(func(repo *Repository) error {
+		basePath := filepath.Join(repo.RepoPath(), "archives")
+		for _, format := range formats {
+			dirPath := filepath.Join(basePath, format)
+			if !osx.IsDir(dirPath) {
+				continue
+			}
+
+			dir, err := os.Open(dirPath)
+			if err != nil {
+				logger.Error("Failed to open directory", "dirPath", dirPath, "error", err)
+				continue
+			}
+
+			fis, err := dir.Readdir(0)
+			dir.Close()
+			if err != nil {
+				logger.Error("Failed to read directory", "dirPath", dirPath, "error", err)
+				continue
+			}
+
+			for _, fi := range fis {
+				if fi.IsDir() || fi.ModTime().After(oldestTime) {
 					continue
 				}
 
-				dir, err := os.Open(dirPath)
-				if err != nil {
-					logger.Error("Failed to open directory", "dirPath", dirPath, "error", err)
-					continue
-				}
-
-				fis, err := dir.Readdir(0)
-				dir.Close()
-				if err != nil {
-					logger.Error("Failed to read directory", "dirPath", dirPath, "error", err)
-					continue
-				}
-
-				for _, fi := range fis {
-					if fi.IsDir() || fi.ModTime().After(oldestTime) {
-						continue
-					}
-
-					archivePath := filepath.Join(dirPath, fi.Name())
-					if err = os.Remove(archivePath); err != nil {
-						logger.Warn("Failed to delete old repository archive", "archivePath", archivePath, "error", err)
-						if err = Handle.Notices().Create(
-							context.TODO(),
-							NoticeTypeRepository,
-							fmt.Sprintf("Failed to health delete archive %q: %v", archivePath, err),
-						); err != nil {
-							logger.Error("Failed to create repository notice", "error", err)
-						}
+				archivePath := filepath.Join(dirPath, fi.Name())
+				if err = os.Remove(archivePath); err != nil {
+					const fmtStr = "Failed to health delete archive %q: %v"
+					logger.Warn("Failed to delete old repository archive", "archivePath", archivePath, "error", err)
+					if err = Handle.Notices().Create(
+						context.TODO(),
+						NoticeTypeRepository,
+						fmt.Sprintf(fmtStr, archivePath, err),
+					); err != nil {
+						logger.Error("Failed to create repository notice", "error", err)
 					}
 				}
 			}
+		}
 
-			return nil
-		}); err != nil {
+		return nil
+	}); err != nil {
 		logger.Error("Failed to delete old repository archives", "error", err)
 	}
 }
@@ -2089,23 +2024,19 @@ func DeleteRepositoryArchives() error {
 	taskStatusTable.Start(taskNameCleanOldArchives)
 	defer taskStatusTable.Stop(taskNameCleanOldArchives)
 
-	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean any) error {
-			repo := bean.(*Repository)
-			return os.RemoveAll(filepath.Join(repo.RepoPath(), "archives"))
-		})
+	return iterateRepositories(func(repo *Repository) error {
+		return os.RemoveAll(filepath.Join(repo.RepoPath(), "archives"))
+	})
 }
 
 func gatherMissingRepoRecords() ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	if err := x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean any) error {
-			repo := bean.(*Repository)
-			if !osx.IsDir(repo.RepoPath()) {
-				repos = append(repos, repo)
-			}
-			return nil
-		}); err != nil {
+	if err := iterateRepositories(func(repo *Repository) error {
+		if !osx.IsDir(repo.RepoPath()) {
+			repos = append(repos, repo)
+		}
+		return nil
+	}); err != nil {
 		if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("gatherMissingRepoRecords: %v", err)); err2 != nil {
 			return nil, errors.Newf("CreateRepositoryNotice: %v", err)
 		}
@@ -2161,10 +2092,9 @@ func ReinitMissingRepositories(logger *logx.Logger) error {
 // sure the binary and custom conf path are up-to-date, and that every repository
 // has only the delegate hooks it needs.
 func SyncRepositoryHooks() error {
-	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean any) error {
-			return bean.(*Repository).SyncDelegateHooks()
-		})
+	return iterateRepositories(func(repo *Repository) error {
+		return repo.SyncDelegateHooks()
+	})
 }
 
 // Prevent duplicate running tasks.
@@ -2187,42 +2117,39 @@ func GitFsck(logger *logx.Logger) {
 
 	logger.Debug("Running health checks on repositories")
 
-	if err := x.Where("id>0").Iterate(new(Repository),
-		func(idx int, bean any) error {
-			repo := bean.(*Repository)
-			repoPath := repo.RepoPath()
-			ctx, cancel := git.WithTimeout(context.TODO(), conf.Cron.RepoHealthCheck.Timeout)
-			err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
-				Args: conf.Cron.RepoHealthCheck.Args,
-			})
-			cancel()
-			if err != nil {
-				logger.Warn("Failed to perform health check on repository", "repoPath", repoPath, "error", err)
-				if err = Handle.Notices().Create(
-					context.TODO(),
-					NoticeTypeRepository,
-					fmt.Sprintf("Failed to perform health check on repository %q: %v", repoPath, err),
-				); err != nil {
-					logger.Error("Failed to create repository notice", "error", err)
-				}
+	if err := iterateRepositories(func(repo *Repository) error {
+		repoPath := repo.RepoPath()
+		ctx, cancel := git.WithTimeout(context.TODO(), conf.Cron.RepoHealthCheck.Timeout)
+		err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
+			Args: conf.Cron.RepoHealthCheck.Args,
+		})
+		cancel()
+		if err != nil {
+			const fmtStr = "Failed to perform health check on repository %q: %v"
+			logger.Warn("Failed to perform health check on repository", "repoPath", repoPath, "error", err)
+			if err = Handle.Notices().Create(
+				context.TODO(),
+				NoticeTypeRepository,
+				fmt.Sprintf(fmtStr, repoPath, err),
+			); err != nil {
+				logger.Error("Failed to create repository notice", "error", err)
 			}
-			return nil
-		}); err != nil {
+		}
+		return nil
+	}); err != nil {
 		logger.Error("Failed to run health checks on repositories", "error", err)
 	}
 }
 
 func GitGcRepos() error {
-	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean any) error {
-			repo := bean.(*Repository)
-			if err := repo.GetOwner(); err != nil {
-				return err
-			}
-			ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
-			defer cancel()
-			return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
-		})
+	return iterateRepositories(func(repo *Repository) error {
+		if err := repo.GetOwner(); err != nil {
+			return err
+		}
+		ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
+		defer cancel()
+		return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
+	})
 }
 
 type repoChecker struct {
@@ -2231,16 +2158,14 @@ type repoChecker struct {
 }
 
 func repoStatsCheck(logger *logx.Logger, checker *repoChecker) {
-	results, err := x.Query(checker.querySQL)
-	if err != nil {
+	var ids []int64
+	if err := Handle.db.Raw(checker.querySQL).Scan(&ids).Error; err != nil {
 		logger.Error("Failed to find inconsistent stats", "check", checker.desc, "error", err)
 		return
 	}
-	for _, result := range results {
-		id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
+	for _, id := range ids {
 		logger.Debug("Correcting inconsistent stats", "check", checker.desc, "id", id)
-		_, err = x.Exec(checker.correctSQL, id, id)
-		if err != nil {
+		if err := Handle.db.Exec(checker.correctSQL, id, id).Error; err != nil {
 			logger.Error("Failed to correct inconsistent stats", "check", checker.desc, "id", id, "error", err)
 		}
 	}
@@ -2258,32 +2183,32 @@ func CheckRepoStats(logger *logx.Logger) {
 	checkers := []*repoChecker{
 		// Repository.NumWatches
 		{
-			"SELECT repo.id FROM `repository` repo WHERE repo.num_watches!=(SELECT COUNT(*) FROM `watch` WHERE repo_id=repo.id)",
-			"UPDATE `repository` SET num_watches=(SELECT COUNT(*) FROM `watch` WHERE repo_id=?) WHERE id=?",
+			"SELECT repo.id FROM repository repo WHERE repo.num_watches != (SELECT COUNT(*) FROM watch WHERE repo_id = repo.id)",
+			"UPDATE repository SET num_watches = (SELECT COUNT(*) FROM watch WHERE repo_id = ?) WHERE id = ?",
 			"repository count 'num_watches'",
 		},
 		// Repository.NumStars
 		{
-			"SELECT repo.id FROM `repository` repo WHERE repo.num_stars!=(SELECT COUNT(*) FROM `star` WHERE repo_id=repo.id)",
-			"UPDATE `repository` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE repo_id=?) WHERE id=?",
+			"SELECT repo.id FROM repository repo WHERE repo.num_stars != (SELECT COUNT(*) FROM star WHERE repo_id = repo.id)",
+			"UPDATE repository SET num_stars = (SELECT COUNT(*) FROM star WHERE repo_id = ?) WHERE id = ?",
 			"repository count 'num_stars'",
 		},
 		// Label.NumIssues
 		{
-			"SELECT label.id FROM `label` WHERE label.num_issues!=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=label.id)",
-			"UPDATE `label` SET num_issues=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=?) WHERE id=?",
+			"SELECT label.id FROM label WHERE label.num_issues != (SELECT COUNT(*) FROM issue_label WHERE label_id = label.id)",
+			"UPDATE label SET num_issues = (SELECT COUNT(*) FROM issue_label WHERE label_id = ?) WHERE id = ?",
 			"label count 'num_issues'",
 		},
 		// User.NumRepos
 		{
-			"SELECT `user`.id FROM `user` WHERE `user`.num_repos!=(SELECT COUNT(*) FROM `repository` WHERE owner_id=`user`.id)",
-			"UPDATE `user` SET num_repos=(SELECT COUNT(*) FROM `repository` WHERE owner_id=?) WHERE id=?",
+			dbx.Quote("SELECT %[1]s.id FROM %[1]s WHERE %[1]s.num_repos != (SELECT COUNT(*) FROM repository WHERE owner_id = %[1]s.id)", "user"),
+			dbx.Quote("UPDATE %s SET num_repos = (SELECT COUNT(*) FROM repository WHERE owner_id = ?) WHERE id = ?", "user"),
 			"user count 'num_repos'",
 		},
 		// Issue.NumComments
 		{
-			"SELECT `issue`.id FROM `issue` WHERE `issue`.num_comments!=(SELECT COUNT(*) FROM `comment` WHERE issue_id=`issue`.id AND type=0)",
-			"UPDATE `issue` SET num_comments=(SELECT COUNT(*) FROM `comment` WHERE issue_id=? AND type=0) WHERE id=?",
+			"SELECT issue.id FROM issue WHERE issue.num_comments != (SELECT COUNT(*) FROM comment WHERE issue_id = issue.id AND type = 0)",
+			"UPDATE issue SET num_comments = (SELECT COUNT(*) FROM comment WHERE issue_id = ? AND type = 0) WHERE id = ?",
 			"issue count 'num_comments'",
 		},
 	}
@@ -2293,14 +2218,14 @@ func CheckRepoStats(logger *logx.Logger) {
 
 	// ***** START: Repository.NumClosedIssues *****
 	desc := "repository count 'num_closed_issues'"
-	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, false)
+	var ids []int64
+	err := Handle.db.Raw("SELECT repo.id FROM repository repo WHERE repo.num_closed_issues != (SELECT COUNT(*) FROM issue WHERE repo_id = repo.id AND is_closed = ? AND is_pull = ?)", true, false).Scan(&ids).Error
 	if err != nil {
 		logger.Error("Failed to find inconsistent stats", "check", desc, "error", err)
 	} else {
-		for _, result := range results {
-			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
+		for _, id := range ids {
 			logger.Debug("Correcting inconsistent stats", "check", desc, "id", id)
-			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
+			err = Handle.db.Exec("UPDATE repository SET num_closed_issues = (SELECT COUNT(*) FROM issue WHERE repo_id = ? AND is_closed = ? AND is_pull = ?) WHERE id = ?", id, true, false, id).Error
 			if err != nil {
 				logger.Error("Failed to correct inconsistent stats", "check", desc, "id", id, "error", err)
 			}
@@ -2310,12 +2235,12 @@ func CheckRepoStats(logger *logx.Logger) {
 
 	// FIXME: use checker when stop supporting old fork repo format.
 	// ***** START: Repository.NumForks *****
-	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
+	ids = nil
+	err = Handle.db.Raw("SELECT repo.id FROM repository repo WHERE repo.num_forks != (SELECT COUNT(*) FROM repository WHERE fork_id = repo.id)").Scan(&ids).Error
 	if err != nil {
 		logger.Error("Failed to find inconsistent stats", "check", "repository count 'num_forks'", "error", err)
 	} else {
-		for _, result := range results {
-			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
+		for _, id := range ids {
 			logger.Debug("Correcting inconsistent stats", "check", "repository count 'num_forks'", "id", id)
 
 			repo, err := getRepositoryByID(Handle.db, id)
@@ -2325,8 +2250,7 @@ func CheckRepoStats(logger *logx.Logger) {
 			}
 
 			var numForks int64
-			err = Handle.db.Model(new(Repository)).Where("fork_id = ?", repo.ID).Count(&numForks).Error
-			if err != nil {
+			if err = Handle.db.Model(new(Repository)).Where("fork_id = ?", repo.ID).Count(&numForks).Error; err != nil {
 				logger.Error("Failed to count forks", "repoID", repo.ID, "error", err)
 				continue
 			}
@@ -2358,11 +2282,12 @@ type Star struct {
 // When user has already forked, it returns true along with the repository.
 func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 	repo := new(Repository)
-	has, err := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
+	err := Handle.db.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).First(repo).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, false, nil
+		}
 		return nil, false, err
-	} else if !has {
-		return nil, false, nil
 	}
 	return repo, true, newReposStore(Handle.db).LoadAttributes(context.TODO(), repo)
 }
@@ -2392,30 +2317,27 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 		PullsAllowMerge: true,
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		if err := createRepository(tx, doer, owner, repo); err != nil {
+			return err
+		} else if err = tx.Exec("UPDATE repository SET num_forks = num_forks + 1 WHERE id = ?", baseRepo.ID).Error; err != nil {
+			return err
+		}
+
+		repoPath := repo.repoPath(tx)
+		RemoveAllWithNotice(logger, "Repository path erase before creation", repoPath)
+
+		cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+		defer cancel()
+		if err := git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
+			RemoveAllWithNotice(logger, "Delete fork repository for clone failure", repoPath)
+			return errors.Newf("git clone: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
 		return nil, err
-	}
-
-	if err = createRepository(sess, doer, owner, repo); err != nil {
-		return nil, err
-	} else if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks+1 WHERE id=?", baseRepo.ID); err != nil {
-		return nil, err
-	}
-
-	repoPath := repo.repoPath(legacyTx(sess))
-	RemoveAllWithNotice(logger, "Repository path erase before creation", repoPath)
-
-	cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
-	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
-		RemoveAllWithNotice(logger, "Delete fork repository for clone failure", repoPath)
-		return nil, errors.Newf("git clone: %v", err)
-	}
-
-	if err = sess.Commit(); err != nil {
-		return nil, errors.Newf("commit: %v", err)
 	}
 
 	// Remember visibility preference.
@@ -2439,7 +2361,7 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 
 func (r *Repository) GetForks() ([]*Repository, error) {
 	forks := make([]*Repository, 0, r.NumForks)
-	if err := x.Find(&forks, &Repository{ForkID: r.ID}); err != nil {
+	if err := Handle.db.Where("fork_id = ?", r.ID).Find(&forks).Error; err != nil {
 		return nil, err
 	}
 
@@ -2449,16 +2371,18 @@ func (r *Repository) GetForks() ([]*Repository, error) {
 	return forks, nil
 }
 
-// deleteByColumn deletes the rows of given tables whose column has the ID. It
-// takes table names rather than models, because XORM cannot map the models
-// that only GORM queries. A non-positive ID is refused, because a column with 0
-// means "none" in some tables, e.g., webhooks of organizations have repo_id 0.
-func deleteByColumn(e Engine, column string, id int64, tables ...string) error {
+// deleteByColumn deletes the rows of given tables whose column has the ID. A
+// non-positive ID is refused, because a column with 0 means "none" in some
+// tables, e.g., webhooks of organizations have repo_id 0.
+func deleteByColumn(tx *gorm.DB, column string, id int64, tables ...string) error {
 	if id <= 0 {
 		return errors.Newf("delete by %s: invalid ID %d", column, id)
 	}
 	for _, table := range tables {
-		if _, err := e.Exec("DELETE FROM `"+table+"` WHERE "+column+" = ?", id); err != nil {
+		// The names are quoted, because some are reserved words, e.g., "release"
+		// in MySQL.
+		err := tx.Exec("DELETE FROM ? WHERE ? = ?", clause.Table{Name: table}, clause.Column{Name: column}, id).Error
+		if err != nil {
 			return errors.Newf("delete %s by %s: %v", table, column, err)
 		}
 	}
