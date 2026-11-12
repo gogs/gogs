@@ -372,6 +372,15 @@ func TestRepository_Commit(t *testing.T) {
 		}
 	})
 
+	t.Run("nothing to commit with a file named MERGE_HEAD", func(t *testing.T) {
+		fpath := filepath.Join(r.Path(), "MERGE_HEAD")
+		require.NoError(t, os.WriteFile(fpath, []byte("MERGE_HEAD"), 0600))
+		require.NoError(t, r.Add(ctx, AddOptions{All: true}))
+		require.NoError(t, r.Commit(ctx, committer, "Add MERGE_HEAD"))
+
+		assert.NoError(t, r.Commit(ctx, committer, message))
+	})
+
 	t.Run("committer is also the author", func(t *testing.T) {
 		// Generate a file and add to index
 		fpath := filepath.Join(r.Path(), "COMMITTER_IS_AUTHOR")

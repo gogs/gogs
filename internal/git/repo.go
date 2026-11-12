@@ -404,8 +404,10 @@ func (r *Repository) Commit(ctx context.Context, committer *Signature, message s
 	if err == nil {
 		// A merge in progress still needs a commit to record the merged parent, even
 		// when the merge result has the same tree as HEAD.
-		_, err = r.RevParse(ctx, "MERGE_HEAD", RevParseOptions{CommandOptions: opt.CommandOptions})
-		if errors.Is(err, ErrRevisionNotExist) {
+		// Use "--verify" so that a file named "MERGE_HEAD" in the working tree is not
+		// mistaken for the reference.
+		_, err = exec(ctx, r.path, []string{"rev-parse", "--quiet", "--verify", "MERGE_HEAD"}, opt.Envs)
+		if isExitStatus(err, 1) {
 			return nil
 		} else if err != nil {
 			return errors.Wrap(err, "check merge in progress")
