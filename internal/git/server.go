@@ -2,6 +2,8 @@ package git
 
 import (
 	"context"
+	"math"
+	"strconv"
 	"time"
 )
 
@@ -96,7 +98,10 @@ func UploadPack(ctx context.Context, path string, opts ...UploadPackOptions) ([]
 		args = append(args, "--strict")
 	}
 	if opt.InactivityTimeout > 0 {
-		args = append(args, "--timeout", opt.InactivityTimeout.String())
+		// Git takes whole seconds. Round up so a sub-second timeout does not become
+		// 0, which disables the timeout.
+		seconds := int64(math.Ceil(opt.InactivityTimeout.Seconds()))
+		args = append(args, "--timeout", strconv.FormatInt(seconds, 10))
 	}
 	if opt.HTTPBackendInfoRefs {
 		args = append(args, "--http-backend-info-refs")

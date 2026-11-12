@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +35,7 @@ func TestUploadPack(t *testing.T) {
 			StatelessRPC:        true,
 			Strict:              true,
 			HTTPBackendInfoRefs: true,
+			InactivityTimeout:   time.Minute,
 		},
 	)
 	require.NoError(t, err)
