@@ -883,35 +883,49 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	return CleanUpMigrateInfo(repo)
 }
 
-// setDefaultBranchIfMissing makes the candidate branch the default branch when
-// the current one does not exist, e.g., when the first push to an empty
-// repository uses a different branch name than the one set at creation.
+// setDefaultBranchIfMissing replaces the saved default branch when it does not
+// exist, e.g., when the first push to an empty repository uses a different
+// branch name than the one set at creation, or when no default branch was saved.
+// See resolveMissingDefaultBranch for which branch replaces it.
 func (r *Repository) setDefaultBranchIfMissing(ctx context.Context, candidate string) error {
-	changed, err := pointHEADToBranchIfMissing(ctx, r.RepoPath(), r.DefaultBranch, candidate)
-	if err != nil || !changed {
+	branch, err := resolveMissingDefaultBranch(ctx, r.RepoPath(), r.DefaultBranch, candidate)
+	if err != nil || branch == "" || branch == r.DefaultBranch {
 		return err
 	}
 
-	r.DefaultBranch = candidate
+	r.DefaultBranch = branch
 	if _, err = x.Id(r.ID).Cols("default_branch").Update(r); err != nil {
 		return errors.Wrap(err, "update default branch")
 	}
 	return nil
 }
 
-// pointHEADToBranchIfMissing points HEAD of the repository in given path to the
-// candidate branch when the default branch does not exist but the candidate
-// does. It returns true if HEAD was changed.
-func pointHEADToBranchIfMissing(ctx context.Context, repoPath, defaultBranch, candidate string) (bool, error) {
-	if git.RepoHasBranch(ctx, repoPath, defaultBranch) || !git.RepoHasBranch(ctx, repoPath, candidate) {
-		return false, nil
+// resolveMissingDefaultBranch returns the branch that should replace the saved
+// default branch of the repository in given path, or an empty string when the
+// saved one exists or no replacement exists. HEAD is the source of truth, so the
+// branch it points to is used when it exists. Otherwise, HEAD is pointed to the
+// candidate branch if that exists.
+func resolveMissingDefaultBranch(ctx context.Context, repoPath, savedBranch, candidate string) (string, error) {
+	if savedBranch != "" && git.RepoHasBranch(ctx, repoPath, savedBranch) {
+		return "", nil
 	}
 
-	_, err := git.RepoSymbolicRef(ctx, repoPath, git.SymbolicRefOptions{Ref: git.RefsHeads + candidate})
+	head, err := git.RepoSymbolicRef(ctx, repoPath)
 	if err != nil {
-		return false, errors.Wrap(err, "set HEAD")
+		return "", errors.Wrap(err, "get HEAD")
 	}
-	return true, nil
+	if headBranch := git.RefShortName(head); git.RepoHasBranch(ctx, repoPath, headBranch) {
+		return headBranch, nil
+	}
+
+	if candidate == "" || !git.RepoHasBranch(ctx, repoPath, candidate) {
+		return "", nil
+	}
+	_, err = git.RepoSymbolicRef(ctx, repoPath, git.SymbolicRefOptions{Ref: git.RefsHeads + candidate})
+	if err != nil {
+		return "", errors.Wrap(err, "set HEAD")
+	}
+	return candidate, nil
 }
 
 // cleanUpMigrateGitConfig removes mirror info which prevents "push --all".

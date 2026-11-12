@@ -59,8 +59,6 @@ var migrations = []Migration{
 	// on v22. Let's make a noop v22 to make sure every instance will not miss a
 	// real future migration.
 	NewMigration("noop", func(*gorm.DB) error { return nil }),
-	// v22 -> v23:v0.15.0
-	NewMigration("backfill empty repository default branches", backfillRepositoryDefaultBranch),
 }
 
 var errMigrationSkipped = errors.New("the migration has been skipped")

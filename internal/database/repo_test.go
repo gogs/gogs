@@ -114,7 +114,7 @@ func TestGetRepoInitFile(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestPointHEADToBranchIfMissing(t *testing.T) {
+func TestResolveMissingDefaultBranch(t *testing.T) {
 	ctx := t.Context()
 	git := func(t *testing.T, dir string, args ...string) string {
 		t.Helper()
@@ -124,12 +124,12 @@ func TestPointHEADToBranchIfMissing(t *testing.T) {
 		require.NoError(t, err, string(output))
 		return strings.TrimSpace(string(output))
 	}
-	// newRepo returns a bare repository with HEAD pointing to "main" and the
-	// given branches.
-	newRepo := func(t *testing.T, branches ...string) string {
+	// newRepo returns a bare repository with HEAD pointing to the given branch and
+	// having the given branches.
+	newRepo := func(t *testing.T, head string, branches ...string) string {
 		t.Helper()
 		dir := t.TempDir()
-		git(t, dir, "init", "--bare", "--initial-branch=main")
+		git(t, dir, "init", "--bare", "--initial-branch="+head)
 		if len(branches) == 0 {
 			return dir
 		}
@@ -143,39 +143,77 @@ func TestPointHEADToBranchIfMissing(t *testing.T) {
 		return dir
 	}
 
-	t.Run("default branch is missing", func(t *testing.T) {
-		dir := newRepo(t, "dev", "master")
+	tests := []struct {
+		name       string
+		head       string
+		branches   []string
+		saved      string
+		candidate  string
+		wantBranch string
+		wantHEAD   string
+	}{
+		{
+			name:       "first push uses a different branch name",
+			head:       "main",
+			branches:   []string{"dev", "master"},
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "master",
+			wantHEAD:   "refs/heads/master",
+		},
+		{
+			name:       "saved default branch exists",
+			head:       "main",
+			branches:   []string{"main", "master"},
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "",
+			wantHEAD:   "refs/heads/main",
+		},
+		{
+			name:       "no default branch saved and HEAD branch exists",
+			head:       "master",
+			branches:   []string{"master", "dev"},
+			saved:      "",
+			candidate:  "dev",
+			wantBranch: "master",
+			wantHEAD:   "refs/heads/master",
+		},
+		{
+			name:       "saved default branch is missing and HEAD branch exists",
+			head:       "trunk",
+			branches:   []string{"trunk", "dev"},
+			saved:      "main",
+			candidate:  "dev",
+			wantBranch: "trunk",
+			wantHEAD:   "refs/heads/trunk",
+		},
+		{
+			name:       "candidate branch is missing",
+			head:       "main",
+			branches:   []string{"dev"},
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "",
+			wantHEAD:   "refs/heads/main",
+		},
+		{
+			name:       "empty repository",
+			head:       "main",
+			saved:      "main",
+			candidate:  "master",
+			wantBranch: "",
+			wantHEAD:   "refs/heads/main",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := newRepo(t, test.head, test.branches...)
 
-		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
-		require.NoError(t, err)
-		assert.True(t, changed)
-		assert.Equal(t, "refs/heads/master", git(t, dir, "symbolic-ref", "HEAD"))
-	})
-
-	t.Run("default branch exists", func(t *testing.T) {
-		dir := newRepo(t, "main", "master")
-
-		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
-		require.NoError(t, err)
-		assert.False(t, changed)
-		assert.Equal(t, "refs/heads/main", git(t, dir, "symbolic-ref", "HEAD"))
-	})
-
-	t.Run("candidate branch is missing", func(t *testing.T) {
-		dir := newRepo(t, "dev")
-
-		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
-		require.NoError(t, err)
-		assert.False(t, changed)
-		assert.Equal(t, "refs/heads/main", git(t, dir, "symbolic-ref", "HEAD"))
-	})
-
-	t.Run("empty repository", func(t *testing.T) {
-		dir := newRepo(t)
-
-		changed, err := pointHEADToBranchIfMissing(ctx, dir, "main", "master")
-		require.NoError(t, err)
-		assert.False(t, changed)
-		assert.Equal(t, "refs/heads/main", git(t, dir, "symbolic-ref", "HEAD"))
-	})
+			got, err := resolveMissingDefaultBranch(ctx, dir, test.saved, test.candidate)
+			require.NoError(t, err)
+			assert.Equal(t, test.wantBranch, got)
+			assert.Equal(t, test.wantHEAD, git(t, dir, "symbolic-ref", "HEAD"))
+		})
+	}
 }
