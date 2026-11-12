@@ -12,30 +12,30 @@ import (
 	"gogs.io/gogs/internal/repox"
 )
 
-type repositoryV22 struct {
+type repositoryV23 struct {
 	ID            int64
 	OwnerID       int64
 	LowerName     string
 	DefaultBranch string
 }
 
-func (*repositoryV22) TableName() string {
+func (*repositoryV23) TableName() string {
 	return "repository"
 }
 
-type userV22 struct {
+type userV23 struct {
 	ID   int64
 	Name string
 }
 
-func (*userV22) TableName() string {
+func (*userV23) TableName() string {
 	return "user"
 }
 
 // backfillRepositoryDefaultBranch sets the default branch of repositories that
 // have none saved, which happened for repositories that were empty when migrated.
 func backfillRepositoryDefaultBranch(db *gorm.DB) error {
-	var repos []*repositoryV22
+	var repos []*repositoryV23
 	err := db.Where("default_branch = ? OR default_branch IS NULL", "").Find(&repos).Error
 	if err != nil {
 		return errors.Wrap(err, "list repositories")
@@ -53,7 +53,7 @@ func backfillRepositoryDefaultBranch(db *gorm.DB) error {
 			defaultBranch = branch
 		}
 
-		err = db.Model(&repositoryV22{}).Where("id = ?", repo.ID).Update("default_branch", defaultBranch).Error
+		err = db.Model(&repositoryV23{}).Where("id = ?", repo.ID).Update("default_branch", defaultBranch).Error
 		if err != nil {
 			return errors.Wrapf(err, "update default branch of repository [id: %d]", repo.ID)
 		}
@@ -61,8 +61,8 @@ func backfillRepositoryDefaultBranch(db *gorm.DB) error {
 	return nil
 }
 
-func headBranch(db *gorm.DB, repo *repositoryV22) (string, error) {
-	var owner userV22
+func headBranch(db *gorm.DB, repo *repositoryV23) (string, error) {
+	var owner userV23
 	err := db.Where("id = ?", repo.OwnerID).First(&owner).Error
 	if err != nil {
 		return "", errors.Wrap(err, "get owner")

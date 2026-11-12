@@ -25,10 +25,10 @@ func TestBackfillRepositoryDefaultBranch(t *testing.T) {
 		},
 	)
 
-	db := dbtest.NewDB(t, "backfillRepositoryDefaultBranch", new(repositoryV22), new(userV22))
-	require.NoError(t, db.Create(&userV22{ID: 1, Name: "alice"}).Error)
+	db := dbtest.NewDB(t, "backfillRepositoryDefaultBranch", new(repositoryV23), new(userV23))
+	require.NoError(t, db.Create(&userV23{ID: 1, Name: "alice"}).Error)
 	require.NoError(t, db.Create(
-		[]*repositoryV22{
+		[]*repositoryV23{
 			{ID: 1, OwnerID: 1, LowerName: "empty", DefaultBranch: ""},
 			{ID: 2, OwnerID: 1, LowerName: "missing", DefaultBranch: ""},
 			{ID: 3, OwnerID: 1, LowerName: "saved", DefaultBranch: "develop"},
@@ -41,9 +41,9 @@ func TestBackfillRepositoryDefaultBranch(t *testing.T) {
 	err = backfillRepositoryDefaultBranch(db)
 	require.NoError(t, err)
 
-	var got []*repositoryV22
+	var got []*repositoryV23
 	require.NoError(t, db.Order("id").Find(&got).Error)
-	want := []*repositoryV22{
+	want := []*repositoryV23{
 		{ID: 1, OwnerID: 1, LowerName: "empty", DefaultBranch: "trunk"},
 		{ID: 2, OwnerID: 1, LowerName: "missing", DefaultBranch: "main"},
 		{ID: 3, OwnerID: 1, LowerName: "saved", DefaultBranch: "develop"},
