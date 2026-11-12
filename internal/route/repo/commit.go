@@ -149,10 +149,43 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
-	_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
-	if err != nil {
-		c.NotFoundOrError(git.NewError(err), "get base commit")
-		return
+	// The empty ID is the base of a created branch, e.g., in the news feed, so
+	// compare against where the branch forked from the default branch, or
+	// against nothing when they share no history.
+	var commits []*git.Commit
+	if git.IsEmptyID(beforeCommitID) {
+		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
+		if git.IsErrNoMergeBase(err) {
+			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
+			if err != nil {
+				c.Error(err, "get object format")
+				return
+			}
+			beforeCommitID = objectFormat.EmptyTreeID()
+
+			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
+			if err != nil {
+				c.Error(err, "list commits")
+				return
+			}
+		} else if err != nil {
+			c.Error(err, "get merge base")
+			return
+		}
+	} else {
+		_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
+		if err != nil {
+			c.NotFoundOrError(git.NewError(err), "get base commit")
+			return
+		}
+	}
+
+	if commits == nil {
+		commits, err = commit.CommitsAfter(c.Req.Context(), beforeCommitID)
+		if err != nil {
+			c.NotFoundOrError(git.NewError(err), "get commits after")
+			return
+		}
 	}
 
 	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
@@ -163,12 +196,6 @@ func CompareDiff(c *context.Context) {
 	)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get diff")
-		return
-	}
-
-	commits, err := commit.CommitsAfter(c.Req.Context(), beforeCommitID)
-	if err != nil {
-		c.NotFoundOrError(git.NewError(err), "get commits after")
 		return
 	}
 

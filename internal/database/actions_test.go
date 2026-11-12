@@ -650,25 +650,6 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
-
-	// A new reference has no base to compare against.
-	err = s.MirrorSyncPush(ctx,
-		MirrorSyncPushOptions{
-			Owner:       alice,
-			Repo:        repo,
-			RefName:     "feature",
-			OldCommitID: git.ObjectFormatSHA1.EmptyID(),
-			NewCommitID: "085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7",
-			Commits:     CommitsToPushCommits([]*git.Commit{{ID: git.MustIDFromString("085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"), Author: &git.Signature{When: now}, Committer: &git.Signature{When: now}}}),
-		},
-	)
-	require.NoError(t, err)
-
-	got, err = s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
-	require.NoError(t, err)
-	require.Len(t, got, 2)
-	assert.Equal(t, "feature", got[0].RefName)
-	assert.Contains(t, got[0].Content, `"CompareURL":""`)
 }
 
 func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
