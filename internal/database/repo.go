@@ -229,7 +229,9 @@ func (r *Repository) AfterSet(colName string, _ xorm.Cell) {
 	case "default_branch":
 		// FIXME: use db migration to solve all at once.
 		if r.DefaultBranch == "" {
-			r.DefaultBranch = conf.Repository.DefaultBranch
+			// Rows without a default branch predate the configurable default branch,
+			// when every repository was created with "master".
+			r.DefaultBranch = "master"
 		}
 	case "num_closed_issues":
 		r.NumOpenIssues = r.NumIssues - r.NumClosedIssues
