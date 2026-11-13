@@ -171,7 +171,7 @@ func (c *Comment) EventTag() string {
 // and mentioned people.
 func (c *Comment) mailParticipants(tx *gorm.DB, opType ActionType, issue *Issue) (err error) {
 	mentions := markup.FindAllMentions(c.Content)
-	if err = updateIssueMentions(tx, c.IssueID, mentions); err != nil {
+	if err = updateIssueMentions(tx, issue.RepoID, c.IssueID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
