@@ -125,8 +125,8 @@ func expand(template string, match map[string]string) string {
 // linkSpan is a reference found in text and the link that replaces it.
 type linkSpan = dariomark.SpecialLink
 
-// findIssueIndexes returns the issue references in text, outside the spans of
-// skip.
+// findIssueIndexes returns the spans of skip merged with the issue references
+// in text that do not overlap them.
 func findIssueIndexes(text []byte, urlPrefix string, metas map[string]string, skip []linkSpan) []linkSpan {
 	urlPrefix = cutoutVerbosePrefix(urlPrefix)
 
@@ -203,8 +203,8 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 	return replaceSpans(rawBytes, findIssueIndexes(rawBytes, urlPrefix, metas, nil))
 }
 
-// findCrossReferences returns the references to issues of other repositories
-// in text, outside the spans of skip.
+// findCrossReferences returns the spans of skip merged with the references to
+// issues of other repositories in text that do not overlap them.
 func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range CrossReferenceIssueNumericPattern.FindAllIndex(text, -1) {
@@ -225,7 +225,8 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[stri
 	return replaceSpans(rawBytes, findCrossReferences(rawBytes, nil))
 }
 
-// findSha1s returns the commit IDs in text, outside the spans of skip.
+// findSha1s returns the spans of skip merged with the commit IDs in text that
+// do not overlap them.
 func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range Sha1CurrentPattern.FindAllIndex(text, -1) {
@@ -451,7 +452,7 @@ func Detect(filename string) Type {
 const (
 	// largeRenderSize is the input size from which a render takes part of
 	// renderBudget. Smaller documents, such as most comments, are rendered
-	// right away. Hostile documents of this size take up to about 30 MB.
+	// right away.
 	largeRenderSize = 64 << 10
 	// renderBudget is the total input size of large documents rendered at the
 	// same time. Rendering takes up to about 250 times the input in memory for

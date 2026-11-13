@@ -69,7 +69,8 @@ func (p *parser) finalizeParagraph(b *node) {
 		b.kind = kindRefDefs
 		return
 	}
-	// The text starts with the line at segStart, see inlineParser.lineBefore.
+	// The text starts with the line at segStart, past the link reference
+	// definitions, see parser.taskItem and parser.finalizeAlert.
 	b.segStart = b.segEnd - int32(len(segs))
 	if p.opts.Tables {
 		segs = p.extractTable(b, segs, false)

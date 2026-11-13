@@ -33,10 +33,10 @@ const (
 	kindRawHTML
 	kindFootnoteRef
 	kindTaskCheckbox
-	// kindTypo is typographic punctuation; level holds its typo.
+	// kindTypo is typographic punctuation. Its level holds the typo.
 	kindTypo
-	// kindFraction is a fraction; text holds its source, and level the length
-	// of its numerator, or 0 for a vulgar fraction like "½".
+	// kindFraction is a fraction. Its text holds the source, and its level the
+	// length of the numerator, or 0 for a vulgar fraction like "½".
 	kindFraction
 )
 

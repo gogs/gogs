@@ -144,7 +144,8 @@ type Heading struct {
 	// Text is the text content of the heading.
 	Text string
 	// ID is the id attribute of the heading. It is empty when the text has no
-	// letters or digits, in which case the heading has no id.
+	// letters, marks, digits, spaces, "-" or "_", in which case the heading has
+	// no id.
 	ID string
 }
 

@@ -690,7 +690,6 @@ func decodeEntityOctal(b []byte, octal bool) ([]byte, int) {
 	return nil, 0
 }
 
-// unescapeString resolves backslash escapes and entities in b.
 // unescapeDest resolves backslash escapes and then entities in a link
 // destination, see decodeEntityOctal.
 func (p *parser) unescapeDest(b []byte) []byte {
@@ -722,6 +721,7 @@ func (p *parser) unescapeDest(b []byte) []byte {
 	return p.buf[start:len(p.buf):len(p.buf)]
 }
 
+// unescapeString resolves backslash escapes and entities in b.
 func (p *parser) unescapeString(b []byte) []byte {
 	if bytes.IndexByte(b, '\\') < 0 && bytes.IndexByte(b, '&') < 0 {
 		return b

@@ -11,8 +11,9 @@ import (
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
 // rendered content. Render emulates the rest of the policy, which is the
-// bluemonday UGC policy with classes for code languages, alerts and
-// footnotes, and attributes for task list checkboxes.
+// bluemonday UGC policy with classes for code languages, alerts, footnotes and
+// task lists, and attributes for task list items and checkboxes, footnote
+// roles and ordered list start numbers.
 type Sanitizer struct {
 	// AllowURLScheme reports whether the policy allows the URL, which has a
 	// scheme.

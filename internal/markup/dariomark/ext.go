@@ -12,7 +12,7 @@ var (
 	rawAnchorClose = regexp.MustCompile(`(?i)^</a\s*>`)
 )
 
-// special returns the table of characters that start inline constructs.
+// specialChars returns the table of characters that start inline constructs.
 func (p *parser) specialChars() *[256]bool {
 	if t := &p.opts.Typographer; t.Enabled {
 		switch {

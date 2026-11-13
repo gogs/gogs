@@ -2,7 +2,7 @@
 
 A fast, safe Markdown engine for Go that implements CommonMark and GitHub Flavored Markdown.
 
-Dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and it renders 1.5 to 6 times faster than the same pipeline built on blackfriday or goldmark.
+Dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and it renders 1.7 to 6.5 times faster than the same pipeline built on blackfriday or goldmark.
 
 ## Features
 

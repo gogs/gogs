@@ -135,7 +135,7 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 }
 
 // TestMarkdown_ShortenAutoLink checks links whose commit or issue path follows
-// a "#", which used to panic.
+// a "#".
 func TestMarkdown_ShortenAutoLink(t *testing.T) {
 	conf.Server.ExternalURL = "http://localhost:3000/"
 	NewSanitizer()
@@ -156,8 +156,6 @@ func TestMarkdown_Limits(t *testing.T) {
 	NewSanitizer()
 
 	t.Run("mentions render in linear output size", func(t *testing.T) {
-		// Each mention used to be replaced in the whole text, so that repeated
-		// mentions produced output quadratic in the input.
 		input := strings.Repeat("@a ", 10000)
 		got := Markdown(input, "/user/repo", nil)
 		assert.Less(t, len(got), 40*len(input))

@@ -426,7 +426,7 @@ func (r *renderer) appendTextContent(b []byte, n *node) []byte {
 
 // headingID returns the slug of a heading with the given text, as GitHub
 // makes it: letters are lowercased, spaces become "-", and characters other
-// than letters, digits, "-" and "_" are dropped. A slug that an earlier
+// than letters, marks, digits, "-" and "_" are dropped. A slug that an earlier
 // heading has is followed by "-1", "-2" and so on.
 func (r *renderer) headingID(text []byte) string {
 	b := r.slug[:0]
