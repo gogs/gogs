@@ -45,8 +45,8 @@ func fail(userMessage, errMessage string, args ...any) {
 		log.Error(errMessage, args...)
 	}
 
-	hookSpan.SetStatus(codes.Error, userMessage)
-	endHookSpan()
+	processSpan.SetStatus(codes.Error, userMessage)
+	endProcessSpan()
 	log.Stop()
 	os.Exit(1)
 }
@@ -146,6 +146,10 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	verb, args := parseSSHCmd(sshCmd)
+	// Hooks that Git runs record their spans under this one.
+	ctx = startProcessSpan(ctx, "ssh "+verb, time.Second)
+	defer endProcessSpan()
+
 	repoFullName := strings.ToLower(strings.Trim(args, "'"))
 	repoFields := strings.SplitN(repoFullName, "/", 2)
 	if len(repoFields) != 2 {

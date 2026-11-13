@@ -69,8 +69,8 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	setup(cmd, "pre-receive.log", true)
-	ctx = startHookSpan(ctx, "pre-receive", time.Second)
-	defer endHookSpan()
+	ctx = startProcessSpan(ctx, "hook pre-receive", time.Second)
+	defer endProcessSpan()
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
@@ -180,8 +180,8 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	// Git runs the hook for every ref it updates, so it is only traced when it
 	// runs a custom hook, and gives up exporting sooner, to keep exporting spans
 	// from slowing down every push.
-	_ = startHookSpan(ctx, "update", 300*time.Millisecond)
-	defer endHookSpan()
+	_ = startProcessSpan(ctx, "hook update", 300*time.Millisecond)
+	defer endProcessSpan()
 
 	var hookCmd *exec.Cmd
 	if conf.IsWindowsRuntime() {
@@ -204,8 +204,8 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	setup(cmd, "post-receive.log", true)
-	ctx = startHookSpan(ctx, "post-receive", time.Second)
-	defer endHookSpan()
+	ctx = startProcessSpan(ctx, "hook post-receive", time.Second)
+	defer endProcessSpan()
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
@@ -288,19 +288,20 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-// The span of the running hook, and the function that ends it and exports it.
-// fail uses them because it exits without returning.
+// The span of the running hook or serv process, and the function that ends it
+// and exports it. fail uses them because it exits without returning.
 var (
-	hookSpan    = trace.SpanFromContext(context.Background())
-	endHookSpan = func() {}
+	processSpan    = trace.SpanFromContext(context.Background())
+	endProcessSpan = func() {}
 )
 
-// startHookSpan starts the span of the hook when tracing is enabled, under the
-// span of the Git process that runs the hook, which Git passes on through the
-// TRACEPARENT and TRACESTATE environment variables. Git waits for the hook to
-// exit, so exporting the spans of the hook gives up after the timeout to not
-// hold up the push for long on a collector that is down.
-func startHookSpan(ctx context.Context, name string, exportTimeout time.Duration) context.Context {
+// startProcessSpan starts the span of the process when tracing is enabled. For
+// a hook, it is under the span of the Git process that runs the hook, which Git
+// passes on through the TRACEPARENT and TRACESTATE environment variables. The
+// Git client waits for the process to exit, so exporting its spans gives up
+// after the timeout to not hold up the push for long on a collector that is
+// down.
+func startProcessSpan(ctx context.Context, name string, exportTimeout time.Duration) context.Context {
 	shutdown, err := tracing.Init(ctx)
 	if err != nil {
 		log.Error("Failed to initialize tracing: %v", err)
@@ -313,9 +314,9 @@ func startHookSpan(ctx context.Context, name string, exportTimeout time.Duration
 		"traceparent": os.Getenv("TRACEPARENT"),
 		"tracestate":  os.Getenv("TRACESTATE"),
 	})
-	ctx, hookSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, "hook "+name)
-	endHookSpan = func() {
-		hookSpan.End()
+	ctx, processSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, name)
+	endProcessSpan = func() {
+		processSpan.End()
 		shutdown(exportTimeout)
 	}
 	return ctx
