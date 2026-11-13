@@ -232,17 +232,30 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 // findSpecialLinks returns the mentions, indexes and commit IDs in text, see
 // RenderSpecialLink.
 func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string) []linkSpan {
-	var spans []linkSpan
-	for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(rawBytes, -1) {
-		// The mention starts after the character before the "@" that the
-		// pattern requires.
-		start := loc[3]
-		m := rawBytes[start:loc[1]]
-		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
+	kinds := specialLinkKinds(rawBytes, metas)
+	if kinds == 0 {
+		return nil
 	}
-	spans = findIssueIndexes(rawBytes, urlPrefix, metas, spans)
-	spans = findCrossReferences(rawBytes, spans)
-	return findSha1s(rawBytes, metas, spans)
+	var spans []linkSpan
+	if kinds&linkMention != 0 {
+		for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(rawBytes, -1) {
+			// The mention starts after the character before the "@" that the
+			// pattern requires.
+			start := loc[3]
+			m := rawBytes[start:loc[1]]
+			spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
+		}
+	}
+	if kinds&linkIssue != 0 {
+		spans = findIssueIndexes(rawBytes, urlPrefix, metas, spans)
+	}
+	if kinds&linkCrossReference != 0 {
+		spans = findCrossReferences(rawBytes, spans)
+	}
+	if kinds&linkCommit != 0 {
+		spans = findSha1s(rawBytes, metas, spans)
+	}
+	return spans
 }
 
 var (

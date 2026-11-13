@@ -241,9 +241,6 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]b
 	opts.Gogs = &dariomark.GogsOptions{
 		URLPrefix: urlPrefix,
 		SpecialLinks: func(text []byte) []dariomark.SpecialLink {
-			if !mayHaveSpecialLinks(text, metas) {
-				return nil
-			}
 			return findSpecialLinks(text, urlPrefix, metas)
 		},
 	}
@@ -254,35 +251,70 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]b
 	return res.HTML, res.Sanitized
 }
 
-// mayHaveSpecialLinks reports whether RenderSpecialLink may change text. It
-// checks a character sequence that each of its patterns requires, which is much
-// faster than running the patterns.
-func mayHaveSpecialLinks(text []byte, metas map[string]string) bool {
-	alphanumeric := metas["style"] == IssueNameStyleAlphanumeric
-	hexRun := 0
+// Kinds of special links, see specialLinkKinds.
+const (
+	linkMention = 1 << iota
+	linkIssue
+	linkCrossReference
+	linkCommit
+
+	allLinkKinds = linkMention | linkIssue | linkCrossReference | linkCommit
+)
+
+// specialLinkKinds returns the kinds of special links that text may have. For
+// each kind, it checks a character sequence that its pattern requires, which
+// is much faster than running the pattern. Issue references of a tracker
+// style it does not know are always looked for.
+func specialLinkKinds(text []byte, metas map[string]string) int {
+	kinds := 0
+	style := metas["style"]
+	switch style {
+	case "", IssueNameStyleNumeric, IssueNameStyleAlphanumeric:
+	default:
+		kinds |= linkIssue
+	}
+	alphanumeric := style == IssueNameStyleAlphanumeric
+	hexRun, slash := 0, false
 	for i, c := range text {
 		next := byte(0)
 		if i+1 < len(text) {
 			next = text[i+1]
 		}
-		switch {
-		case c == '@' && isMentionChar(next):
-			return true
-		case c == '#' && isDigit(next) && (i == 0 || strings.IndexByte(" ([", text[i-1]) >= 0 || isMentionChar(text[i-1])):
-			return true
-		case c == '-' && alphanumeric && i > 0 && 'A' <= text[i-1] && text[i-1] <= 'Z' && '1' <= next && next <= '9':
-			return true
+		switch c {
+		case '@':
+			if isMentionChar(next) {
+				kinds |= linkMention
+			}
+		case '#':
+			if !isDigit(next) {
+				break
+			}
+			if !alphanumeric && (i == 0 || strings.IndexByte(" ([", text[i-1]) >= 0) {
+				kinds |= linkIssue
+			}
+			if slash && i > 0 && isMentionChar(text[i-1]) {
+				kinds |= linkCrossReference
+			}
+		case '-':
+			if alphanumeric && i > 0 && 'A' <= text[i-1] && text[i-1] <= 'Z' && '1' <= next && next <= '9' {
+				kinds |= linkIssue
+			}
+		case '/':
+			slash = true
 		}
 		if isDigit(c) || 'a' <= c && c <= 'f' {
 			hexRun++
 			if hexRun >= 7 {
-				return true
+				kinds |= linkCommit
 			}
 		} else {
 			hexRun = 0
 		}
+		if kinds == allLinkKinds {
+			break
+		}
 	}
-	return false
+	return kinds
 }
 
 func isDigit(c byte) bool {
