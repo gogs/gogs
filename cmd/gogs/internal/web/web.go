@@ -232,7 +232,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		m.Group("", func() {
 			m.Post("/issues/attachments", repo.UploadIssueAttachment)
-			m.Post("/releases/attachments", repo.UploadReleaseAttachment)
 		}, reqSignIn)
 
 		m.Group("/:username", func() {
@@ -427,14 +426,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			}, reqRepoWriter)
 
 			m.Group("/releases", func() {
-				m.Get("/new", repo.NewRelease)
-				m.Post("/new", bindIgnErr(form.NewRelease{}), repo.NewReleasePost)
-				m.Post("/delete", repo.DeleteRelease)
-				m.Get("/edit/*", repo.EditRelease)
-				m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-			}, repo.MustBeNotEmpty, reqRepoWriter, func(c *context.Context) {
-				c.Data["PageIsViewFiles"] = true
-			})
+				m.Get("/new", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/edit/*", func(c *context.Context) { c.ServeWeb() })
+			}, repo.MustBeNotEmpty, reqRepoWriter)
 
 			// FIXME: Should use c.Repo.PullRequest to unify the template. Same-repo PR URLs include a
 			// redundant head user, e.g. /org1/test-repo/compare/master...org1:develop should be
@@ -474,7 +468,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
-				m.Get("/releases", repo.MustBeNotEmpty, repo.Releases)
+				m.Get("/releases", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 				m.Get("/pulls/:index", repo.ViewPull)
 			}, context.RepoRef())
 

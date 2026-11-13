@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { type IssueAttachmentSettings, uploadRepoIssueAttachment } from "@/lib/queries/repo";
+import { type IssueAttachmentSettings, uploadRepoAttachment } from "@/lib/queries/repo";
 
 export interface PendingFile {
   key: string;
@@ -11,10 +11,15 @@ export interface PendingFile {
   uuid?: string;
 }
 
-// useAttachmentUploads uploads the files picked to attach to an issue or a
-// comment of the repository as soon as they are picked, within the limits of
-// the settings.
-export function useAttachmentUploads(owner: string, name: string, settings?: IssueAttachmentSettings) {
+// useAttachmentUploads uploads the files picked to attach to an issue, a
+// comment or a release of the repository as soon as they are picked, within
+// the limits of the settings.
+export function useAttachmentUploads(
+  owner: string,
+  name: string,
+  settings?: IssueAttachmentSettings,
+  kind: "issues" | "releases" = "issues",
+) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<PendingFile[]>([]);
   const uploaded = files.flatMap((f) => (f.uuid ? [f.uuid] : []));
@@ -34,7 +39,7 @@ export function useAttachmentUploads(owner: string, name: string, settings?: Iss
       }
       const key = crypto.randomUUID();
       setFiles((prev) => [...prev, { key, name: file.name }]);
-      uploadRepoIssueAttachment(owner, name, file).then(
+      uploadRepoAttachment(owner, name, kind, file).then(
         (uuid) => setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, uuid } : f))),
         (err: Error) => {
           toast.error(`${file.name}: ${err.message}`);

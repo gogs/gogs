@@ -169,16 +169,35 @@ func listIssueMetaOptions(repo *database.Repository) (opts issueMetaOptions, err
 	return opts, nil
 }
 
-// attachmentSettings returns how files can be attached to issues and
-// comments, or nil when attachments are disabled.
-func attachmentSettings() *issueAttachmentSettings {
-	if !conf.Attachment.Enabled {
+// attachmentLimits are the configured limits of the files attached to issues
+// and comments, or to releases.
+type attachmentLimits struct {
+	Enabled      bool
+	AllowedTypes []string
+	// MaxSize is the largest file in megabytes.
+	MaxSize  int64
+	MaxFiles int
+}
+
+func issueAttachmentLimits() attachmentLimits {
+	return attachmentLimits{
+		Enabled:      conf.Attachment.Enabled,
+		AllowedTypes: conf.Attachment.AllowedTypes,
+		MaxSize:      conf.Attachment.MaxSize,
+		MaxFiles:     conf.Attachment.MaxFiles,
+	}
+}
+
+// attachmentSettings returns how files can be attached, or nil when
+// attachments are disabled.
+func attachmentSettings(lim attachmentLimits) *issueAttachmentSettings {
+	if !lim.Enabled {
 		return nil
 	}
 	return &issueAttachmentSettings{
-		AllowedTypes: conf.Attachment.AllowedTypes,
-		MaxSize:      conf.Attachment.MaxSize << 20,
-		MaxFiles:     conf.Attachment.MaxFiles,
+		AllowedTypes: lim.AllowedTypes,
+		MaxSize:      lim.MaxSize << 20,
+		MaxFiles:     lim.MaxFiles,
 	}
 }
 
@@ -300,7 +319,7 @@ func getRepoIssue(c flamego.Context, user *database.User, repoCtx *repoContext, 
 	}
 
 	if user != nil {
-		resp.Attachment = attachmentSettings()
+		resp.Attachment = attachmentSettings(issueAttachmentLimits())
 		if err = issue.ReadBy(user.ID); err != nil {
 			log.Error("getRepoIssue: mark issue %d as read by user %d: %v", issue.ID, user.ID, err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "mark as read")
@@ -491,15 +510,15 @@ type repoIssueCommentRequest struct {
 // when the files cannot be attached. Unlike the server-rendered pages, only
 // files that are not attached yet can be, so an issue or a comment cannot take
 // over those of others.
-func checkNewAttachments(uuids []string) (statusCode int, err error) {
+func checkNewAttachments(lim attachmentLimits, uuids []string) (statusCode int, err error) {
 	if len(uuids) == 0 {
 		return 0, nil
 	}
-	if !conf.Attachment.Enabled {
+	if !lim.Enabled {
 		return http.StatusBadRequest, errors.New("attachments are disabled")
 	}
-	if len(uuids) > conf.Attachment.MaxFiles {
-		return http.StatusBadRequest, errors.Newf("at most %d files can be attached", conf.Attachment.MaxFiles)
+	if len(uuids) > lim.MaxFiles {
+		return http.StatusBadRequest, errors.Newf("at most %d files can be attached", lim.MaxFiles)
 	}
 	for _, uuid := range uuids {
 		a, err := database.GetAttachmentByUUID(uuid)
@@ -522,7 +541,7 @@ func postRepoIssueComment(l i18n.Locale, user *database.User, repoCtx *repoConte
 		msg := l.Tr("form.Content") + l.Tr("form.require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if statusCode, err = checkNewAttachments(req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			log.Error("postRepoIssueComment: %v", err)
 		}
@@ -592,28 +611,30 @@ func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int
 }
 
 // limitAttachmentUpload caps the size of an uploaded attachment.
-func limitAttachmentUpload(c flamego.Context) {
-	r := c.Request().Request
-	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, conf.Attachment.MaxSize<<20+64<<10) // Room for the multipart framing.
+func limitAttachmentUpload(lim attachmentLimits) flamego.Handler {
+	return func(c flamego.Context) {
+		r := c.Request().Request
+		r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, lim.MaxSize<<20+64<<10) // Room for the multipart framing.
+	}
 }
 
-// postRepoIssueAttachment stores a file to attach to a comment, which is
-// uploaded as the "file" form field.
-func postRepoIssueAttachment(c flamego.Context, l i18n.Locale) (statusCode int, resp any, err error) {
-	if !conf.Attachment.Enabled {
+// storeAttachment stores the file uploaded as the "file" form field, and
+// returns its UUID.
+func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (statusCode int, resp any, err error) {
+	if !lim.Enabled {
 		return http.StatusNotFound, nil, errors.New("attachments are disabled")
 	}
 	file, header, err := c.Request().FormFile("file")
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", conf.Attachment.MaxSize)
+			return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", lim.MaxSize)
 		}
 		return http.StatusBadRequest, nil, errors.Wrap(err, "read file")
 	}
 	defer func() { _ = file.Close() }()
-	if header.Size > conf.Attachment.MaxSize<<20 {
-		return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", conf.Attachment.MaxSize)
+	if header.Size > lim.MaxSize<<20 {
+		return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", lim.MaxSize)
 	}
 
 	buf := make([]byte, 1024)
@@ -623,7 +644,7 @@ func postRepoIssueAttachment(c flamego.Context, l i18n.Locale) (statusCode int, 
 	}
 	buf = buf[:n]
 	fileType := http.DetectContentType(buf)
-	if !slices.ContainsFunc(conf.Attachment.AllowedTypes, func(t string) bool {
+	if !slices.ContainsFunc(lim.AllowedTypes, func(t string) bool {
 		t = strings.TrimSpace(t)
 		return t == "*/*" || t == fileType
 	}) {
@@ -632,10 +653,18 @@ func postRepoIssueAttachment(c flamego.Context, l i18n.Locale) (statusCode int, 
 
 	attachment, err := database.NewAttachment(header.Filename, buf, file)
 	if err != nil {
-		log.Error("postRepoIssueAttachment: store attachment: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}
 	return http.StatusCreated, map[string]string{"uuid": attachment.UUID}, nil
+}
+
+// postRepoIssueAttachment stores a file to attach to an issue or a comment.
+func postRepoIssueAttachment(c flamego.Context, l i18n.Locale) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, issueAttachmentLimits())
+	if statusCode == http.StatusInternalServerError {
+		log.Error("postRepoIssueAttachment: %v", err)
+	}
+	return statusCode, resp, err
 }
 
 type repoNewIssueOptions struct {
@@ -651,7 +680,7 @@ type repoNewIssueOptions struct {
 func getRepoNewIssue(repoCtx *repoContext) (statusCode int, resp *repoNewIssueOptions, err error) {
 	repo := repoCtx.Repo
 	resp = &repoNewIssueOptions{
-		Attachment:     attachmentSettings(),
+		Attachment:     attachmentSettings(issueAttachmentLimits()),
 		ViewerCanWrite: repoCtx.Viewer.CanWrite(),
 	}
 	if repoCtx.Viewer.CanRead() && !repo.IsEmpty {
@@ -684,7 +713,7 @@ func postRepoIssue(l i18n.Locale, user *database.User, repoCtx *repoContext, req
 	if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if statusCode, err = checkNewAttachments(req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			log.Error("postRepoIssue: %v", err)
 		}

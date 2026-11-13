@@ -15,7 +15,10 @@ import {
   fetchRepoMilestones,
   fetchRepoNewIssue,
   fetchRepoNewOptions,
+  fetchRepoNewRelease,
   fetchRepoPeople,
+  fetchRepoRelease,
+  fetchRepoReleases,
   repoHeaderQuery,
   repoSettingsQuery,
 } from "@/lib/queries/repo";
@@ -34,6 +37,8 @@ import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
 import { RepoNewIssue } from "@/pages/repo/NewIssue";
 import { type RepoNewIssueSearch, validateRepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
 import { RepoPeople } from "@/pages/repo/People";
+import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
+import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
 import { RepoCollaboration, RepoDeployKeys, RepoOptions } from "@/pages/repo/Settings";
 
 // Match the legacy server-side route constraint (see `web.go` near the
@@ -501,6 +506,62 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const repoReleasesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/releases",
+    validateSearch: validateRepoReleasesSearch,
+    loaderDeps: ({ search }: { search: RepoReleasesSearch }) => ({ after: search.after }),
+    loader: ({ params, deps, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoReleases(params.owner, params.repo, deps.after),
+      ),
+    component: function Releases() {
+      const { owner, repo } = repoReleasesRoute.useParams();
+      return <RepoReleases owner={owner} name={repo} data={repoReleasesRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoReleaseNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/releases/new",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoNewRelease(params.owner, params.repo),
+      ),
+    component: function ReleaseNew() {
+      const { owner, repo } = repoReleaseNewRoute.useParams();
+      return (
+        <RepoReleaseEditor
+          key={`${owner}/${repo}`}
+          owner={owner}
+          name={repo}
+          options={repoReleaseNewRoute.useLoaderData()}
+        />
+      );
+    },
+  });
+
+  // Tag names can contain slashes, so the tag is the rest of the path.
+  const repoReleaseEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/releases/edit/$",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoRelease(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function ReleaseEdit() {
+      const { owner, repo, _splat: tag } = repoReleaseEditRoute.useParams();
+      return (
+        <RepoReleaseEditor
+          key={`${owner}/${repo}@${tag}`}
+          owner={owner}
+          name={repo}
+          release={repoReleaseEditRoute.useLoaderData()}
+        />
+      );
+    },
+  });
+
   return [
     repoCommitRoute,
     repoStargazersRoute,
@@ -510,6 +571,9 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoNewIssueRoute,
     repoIssueRoute,
     repoForksRoute,
+    repoReleasesRoute,
+    repoReleaseNewRoute,
+    repoReleaseEditRoute,
     repoLabelsRoute,
     repoMilestonesRoute,
     repoMilestoneNewRoute,
