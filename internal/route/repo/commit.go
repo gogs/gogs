@@ -151,8 +151,10 @@ func CompareDiff(c *context.Context) {
 
 	// The empty ID is the base of a created branch, e.g., in the news feed, so
 	// compare against where the branch forked from the default branch, or
-	// against nothing when they share no history.
+	// against the empty tree when they share no history, e.g., an orphan branch
+	// or a default branch that does not exist.
 	var commits []*git.Commit
+	baseIsEmptyTree := false
 	if git.IsEmptyID(beforeCommitID) {
 		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
 		if git.IsErrNoMergeBase(err) {
@@ -162,6 +164,7 @@ func CompareDiff(c *context.Context) {
 				return
 			}
 			beforeCommitID = objectFormat.EmptyTreeID()
+			baseIsEmptyTree = true
 
 			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
 			if err != nil {
@@ -204,6 +207,7 @@ func CompareDiff(c *context.Context) {
 	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 	c.Data["BeforeCommitID"] = beforeCommitID
+	c.Data["BaseIsEmptyTree"] = baseIsEmptyTree
 	c.Data["AfterCommitID"] = afterCommitID
 	c.Data["Username"] = userName
 	c.Data["Reponame"] = repoName

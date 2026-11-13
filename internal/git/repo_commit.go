@@ -85,8 +85,9 @@ func (r *Repository) CatFileCommit(ctx context.Context, rev string) (*Commit, er
 	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
 		// "git rev-parse" passes a full-length object ID through without checking
-		// that the object exists.
-		if isExitStatus(err, 128) {
+		// that the object exists, and "git cat-file" reports a missing object or
+		// one that is not a commit as a bad file.
+		if strings.Contains(err.Error(), ": bad file") {
 			return nil, ErrRevisionNotExist
 		}
 		return nil, err
