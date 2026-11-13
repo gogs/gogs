@@ -17,6 +17,7 @@ All notable changes to Gogs are documented in this file.
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
 - The minimum required Git version on the server is now 2.43.1. Gogs refuses to start with an older Git. [#8437](https://github.com/gogs/gogs/pull/8437)
+- The minimum supported database versions are now PostgreSQL 12 and MariaDB 10.6. MySQL 5.7 is still supported.
 - Git operations are now stopped when they exceed `[git.timeout]` or `[cron.repo_health_check] TIMEOUT`, and a timeout of zero now means no timeout. The defaults of `[git.timeout] MIRROR` and `GC` are raised to 600 seconds. Git fetches and pushes over HTTP and SSH are stopped after 30 minutes without any data transferred. [#8441](https://github.com/gogs/gogs/pull/8441)
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 - New repositories now use `main` as the default branch. Existing repositories keep their current default branch. Set `[repository] DEFAULT_BRANCH = master` to keep the previous behavior. [#8497](https://github.com/gogs/gogs/pull/8497)
