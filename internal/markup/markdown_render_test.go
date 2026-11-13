@@ -254,3 +254,55 @@ details
 	// Documents with raw HTML are sanitized by bluemonday instead.
 	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
 }
+
+// TestMarkdown_CodeInListItems checks code blocks inside list items. The
+// expected block structure is what GitHub renders for the same input.
+func TestMarkdown_CodeInListItems(t *testing.T) {
+	NewSanitizer()
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "fenced code without a blank line before it",
+			input: "- item\n  ```go\n  func main() {}\n  ```\n- next\n",
+			want:  "<ul>\n<li>item\n<pre><code class=\"language-go\">func main() {}\n</code></pre>\n</li>\n<li>next</li>\n</ul>\n",
+		},
+		{
+			name:  "fenced code in a nested item",
+			input: "- a\n  - b\n\n    ```go\n    nested()\n    ```\n\n  - c\n",
+			want:  "<ul>\n<li>a\n<ul>\n<li>\n<p>b</p>\n<pre><code class=\"language-go\">nested()\n</code></pre>\n</li>\n<li>\n<p>c</p>\n</li>\n</ul>\n</li>\n</ul>\n",
+		},
+		{
+			name:  "fenced code in ordered steps",
+			input: "1. Clone:\n\n   ```sh\n   git clone https://example.com/r.git\n   ```\n\n2. Build:\n\n   ```sh\n   go build ./...\n   ```\n\n   Then run it.\n\n3. Done.\n",
+			want:  "<ol>\n<li>\n<p>Clone:</p>\n<pre><code class=\"language-sh\">git clone https://example.com/r.git\n</code></pre>\n</li>\n<li>\n<p>Build:</p>\n<pre><code class=\"language-sh\">go build ./...\n</code></pre>\n<p>Then run it.</p>\n</li>\n<li>\n<p>Done.</p>\n</li>\n</ol>\n",
+		},
+		{
+			name:  "item that starts with a fence",
+			input: "- ```go\n  first()\n  ```\n- b\n",
+			want:  "<ul>\n<li>\n<pre><code class=\"language-go\">first()\n</code></pre>\n</li>\n<li>b</li>\n</ul>\n",
+		},
+		{
+			name:  "indented code in a nested item",
+			input: "- a\n  - b\n\n        nested indented\n",
+			want:  "<ul>\n<li>a\n<ul>\n<li>\n<p>b</p>\n<pre><code>nested indented\n</code></pre>\n</li>\n</ul>\n</li>\n</ul>\n",
+		},
+		{
+			name:  "fence that is not indented ends the list",
+			input: "- item\n\n```go\noutside()\n```\n",
+			want:  "<ul>\n<li>item</li>\n</ul>\n<pre><code class=\"language-go\">outside()\n</code></pre>\n",
+		},
+		{
+			name:  "less indented line ends the item and its code",
+			input: "- item\n\n  ```\n  a\n b\nc\n  ```\n",
+			want:  "<ul>\n<li>\n<p>item</p>\n<pre><code>a\n</code></pre>\n</li>\n</ul>\n<p>b\nc</p>\n<pre><code></code></pre>\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", nil)))
+		})
+	}
+}
