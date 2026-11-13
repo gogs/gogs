@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -421,6 +422,35 @@ func TestNestingLimit(t *testing.T) {
 			// The markers past the limit are text of the innermost block.
 			assert.Equal(t, maxNesting, strings.Count(got, test.tag))
 			assert.Contains(t, got, test.inner)
+		})
+	}
+}
+
+func TestDeepInlineNesting(t *testing.T) {
+	// Inline contents nest without limit, so walking them must not take
+	// stack for each level: a stack overflow crashes the program.
+	defer debug.SetMaxStack(debug.SetMaxStack(2 << 20))
+	run := strings.Repeat("*", 1<<18)
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "emphasis", input: run + "x a@b.co x" + run, want: "<p><strong>x <a href=\"mailto:a@b.co\">a@b.co</a> x</strong></p>\n"},
+		{name: "heading ID", input: "# " + run + "a" + run, want: "<h1 id=\"a\"><strong>a</strong></h1>\n"},
+		{name: "image description", input: "![" + run + "a" + run + "](b)", want: "<p><img src=\"b\" alt=\"a\"></p>\n"},
+		{
+			name: "streamed link",
+			// The finished link is rendered and freed before the end of the
+			// paragraph, see streamFlush.
+			input: "[" + run + "a" + run + "](b) c",
+			want:  "<p><a href=\"b\"><strong>a</strong></a> c</p>\n",
+		},
+	}
+	opts := &Options{Linkify: true, HeadingIDs: true, TextAutoLinksInRawAnchors: true}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, string(HTML([]byte(test.input), opts)))
 		})
 	}
 }
