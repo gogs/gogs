@@ -115,11 +115,11 @@ func (c *pageContext) redirectToSignIn() {
 func pageAccess(signInRequired bool) flamego.Handler {
 	return func(c *pageContext) {
 		// Frontend assets can match the page routes. Serve them to the viewers this
-		// turns away too, because the pages they are sent to (sign-in, account
-		// activation) are built from them. Dev server paths can also be a real
-		// repository, so they are only served to viewers who could not see it anyway.
-		p := c.Request().URL.Path
-		if isWebAssetPath(p) || (isDevServerPath(p) && turnsAway(c, signInRequired)) {
+		// turns away, because the pages they are sent to (sign-in, account
+		// activation) are built from them. Everyone else goes through the normal
+		// routes, which keeps repositories of owners named like an asset path
+		// reachable and missing assets a 404.
+		if isWebAssetPath(c.Request().URL.Path) && turnsAway(c, signInRequired) {
 			c.ServeWeb()
 			return
 		}
@@ -146,17 +146,14 @@ func pageAccess(signInRequired bool) flamego.Handler {
 	}
 }
 
-// isWebAssetPath returns true for the paths of frontend assets, which cannot be
-// a repository because their first segment is a reserved or invalid username.
+// isWebAssetPath returns true for the paths of frontend assets, including the
+// module paths of the Vite dev server.
 func isWebAssetPath(p string) bool {
 	return strings.HasPrefix(p, "/assets/") ||
 		strings.HasPrefix(p, "/img/") ||
-		strings.HasPrefix(p, "/@")
-}
-
-// isDevServerPath returns true for the module paths of the Vite dev server.
-func isDevServerPath(p string) bool {
-	return strings.HasPrefix(p, "/src/") || strings.HasPrefix(p, "/node_modules/")
+		strings.HasPrefix(p, "/@") ||
+		strings.HasPrefix(p, "/src/") ||
+		strings.HasPrefix(p, "/node_modules/")
 }
 
 // turnsAway returns true if pageAccess denies the viewer the requested page.
