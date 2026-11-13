@@ -97,21 +97,13 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		context.Contexter(context.NewStore(), webHandler),
 	)
 
-	// ***************************
-	// ----- HTTP Git routes -----
-	// ***************************
-
+	// Git over HTTP and LFS authenticate requests on their own, without sessions.
 	m.Group("/:username/:reponame", func() {
-		m.Get("/tasks/trigger", repo.TriggerTask)
-
-		m.Group("/info/lfs", func() {
-			lfs.RegisterRoutes(m.Router)
-		})
-
-		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
-		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
-		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
-		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
+		m.Get("/tasks/trigger", webHandler.ServeHTTP)
+		m.Any("/info/lfs/*", webHandler.ServeHTTP)
+		m.Route("/info/refs", "GET,OPTIONS", webHandler.ServeHTTP)
+		m.Route("/git-upload-pack", "POST,OPTIONS", webHandler.ServeHTTP)
+		m.Route("/git-receive-pack", "POST,OPTIONS", webHandler.ServeHTTP)
 	})
 
 	// Flag for port number in case first time run conflict.
@@ -291,7 +283,25 @@ func newRoutingHandler() (http.Handler, error) {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
 	mountPageRoutes(f, webApp)
+	mountGitHTTPRoutes(f)
 	return f, nil
+}
+
+// mountGitHTTPRoutes mounts the routes of Git over HTTP, Git LFS, and the task
+// trigger of Git hooks.
+func mountGitHTTPRoutes(f *flamego.Flame) {
+	f.Group("/{owner}/{repo}", func() {
+		f.Get("/tasks/trigger", repo.TriggerTask)
+
+		f.Group("/info/lfs", func() {
+			lfs.RegisterRoutes(f)
+		})
+
+		gitHTTP := []flamego.Handler{serveGoGet, repo.HTTPContexter(repo.NewStore()), repo.HTTP}
+		f.Routes("/info/refs", "GET,OPTIONS", gitHTTP...)
+		f.Routes("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
+		f.Routes("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
+	})
 }
 
 // newAPIV1Handler returns the handler of API v1 routes. It is separate from the
