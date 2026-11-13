@@ -8,10 +8,10 @@ import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 
 // Match the legacy server-side route constraint (see `web.go` near the
-// `/commit/:sha([a-f0-9]{7,40})$` declaration). The server enforces the same
+// `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
 // shape for SEO and to skip the SPA shell for malformed paths; this client
 // check short-circuits the loader so we render 404 without a wasted fetch.
-const SHA_RE = /^[a-f0-9]{7,40}$/;
+const SHA_RE = /^[a-f0-9]{7,64}$/;
 
 interface RouterContext {
   queryClient: QueryClient;

@@ -22,7 +22,7 @@ import (
 	"gogs.io/gogs/internal/cryptox"
 )
 
-// ShortSHA1 truncates SHA1 string length to at most 10.
+// ShortSHA1 truncates the commit ID to at most 10 characters.
 func ShortSHA1(sha1 string) string {
 	if len(sha1) > 10 {
 		return sha1[:10]

@@ -531,7 +531,12 @@ func SyncMirrors() {
 				// Put the latest commit in front of ancestors
 				commits = append([]*git.Commit{refNewCommit}, commits...)
 
-				oldCommitID = git.EmptyID
+				objectFormat, err := gitRepo.ObjectFormat(ctx)
+				if err != nil {
+					log.Error("Failed to get object format [repo_id: %d]: %v", m.RepoID, err)
+					continue
+				}
+				oldCommitID = objectFormat.EmptyID()
 				newCommitID = refNewCommit.ID.String()
 			}
 

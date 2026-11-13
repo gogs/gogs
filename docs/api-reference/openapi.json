@@ -200,6 +200,14 @@
                   "readme": {
                     "type": "string",
                     "default": "Default"
+                  },
+                  "object_format": {
+                    "type": "string",
+                    "enum": [
+                      "sha1",
+                      "sha256"
+                    ],
+                    "description": "The hash algorithm of the repository. Defaults to the default of Git on the server."
                   }
                 },
                 "required": [
@@ -353,6 +361,14 @@
                   "readme": {
                     "type": "string",
                     "default": "Default"
+                  },
+                  "object_format": {
+                    "type": "string",
+                    "enum": [
+                      "sha1",
+                      "sha256"
+                    ],
+                    "description": "The hash algorithm of the repository. Defaults to the default of Git on the server."
                   }
                 },
                 "required": [
@@ -775,7 +791,7 @@
             "description": "Commit SHA"
           }
         ],
-        "description": "Get details for a single commit. Set Accept header to application/vnd.gogs.sha to return only the SHA-1 hash of a commit reference."
+        "description": "Get details for a single commit. Set Accept header to application/vnd.gogs.sha to return only the full commit ID of a commit reference."
       }
     },
     "/repos/{owner}/{repo}/raw/{ref}/{filepath}": {
@@ -4582,6 +4598,14 @@
                   "readme": {
                     "type": "string",
                     "default": "Default"
+                  },
+                  "object_format": {
+                    "type": "string",
+                    "enum": [
+                      "sha1",
+                      "sha256"
+                    ],
+                    "description": "The hash algorithm of the repository. Defaults to the default of Git on the server."
                   }
                 },
                 "required": [

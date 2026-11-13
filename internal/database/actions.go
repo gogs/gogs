@@ -477,8 +477,8 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
 
-	isNewRef := opts.OldCommitID == git.EmptyID
-	isDelRef := opts.NewCommitID == git.EmptyID
+	isNewRef := git.IsEmptyID(opts.OldCommitID)
+	isDelRef := git.IsEmptyID(opts.NewCommitID)
 
 	// If not the first commit, set the compare URL.
 	if !isNewRef && !isDelRef {
@@ -637,7 +637,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 
 	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
-	if opts.NewCommitID == git.EmptyID {
+	if git.IsEmptyID(opts.NewCommitID) {
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeDelete,

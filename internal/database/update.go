@@ -49,17 +49,13 @@ type PushUpdateOptions struct {
 func PushUpdate(opts PushUpdateOptions) (err error) {
 	ctx := context.TODO()
 
-	isNewRef := strings.HasPrefix(opts.OldCommitID, git.EmptyID)
-	isDelRef := strings.HasPrefix(opts.NewCommitID, git.EmptyID)
+	isNewRef := git.IsEmptyID(opts.OldCommitID)
+	isDelRef := git.IsEmptyID(opts.NewCommitID)
 	if isNewRef && isDelRef {
-		return errors.Newf("both old and new revisions are %q", git.EmptyID)
+		return errors.New("both old and new revisions are empty")
 	}
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
-
-	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
-		return errors.Newf("update server info: %v", err)
-	}
 
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {

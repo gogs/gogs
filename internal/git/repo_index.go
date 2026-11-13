@@ -17,8 +17,8 @@ import (
 // repository, so they also work in a bare repository, which has no working
 // tree to check files out to.
 
-// ObjectFormat returns the hash algorithm of the repository, e.g., "sha1".
-func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
+// ObjectFormat returns the hash algorithm of the repository.
+func (r *Repository) ObjectFormat(ctx context.Context) (ObjectFormat, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.ObjectFormat")
 	defer span.End()
 
@@ -26,11 +26,11 @@ func (r *Repository) ObjectFormat(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(stdout)), nil
+	return ObjectFormat(strings.TrimSpace(string(stdout))), nil
 }
 
 // RepoObjectFormat is like Repository.ObjectFormat for the repository in given path.
-func RepoObjectFormat(ctx context.Context, repoPath string) (string, error) {
+func RepoObjectFormat(ctx context.Context, repoPath string) (ObjectFormat, error) {
 	r, err := Open(repoPath)
 	if err != nil {
 		return "", err
@@ -292,9 +292,6 @@ func (r *Repository) IsAncestor(ctx context.Context, commit, descendant string) 
 	return true, nil
 }
 
-// emptyTreeID is the ID of the tree with no entries, which every repository has.
-const emptyTreeID = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-
 // Rebase reapplies the commits of the branch that are not in the upstream on
 // top of the upstream, the same way "git rebase <upstream> <branch>" does, and
 // returns the ID of the resulting commit. Like "git rebase", it keeps commits
@@ -331,6 +328,12 @@ func (r *Repository) Rebase(ctx context.Context, upstream, branch string, commit
 		return "", errors.Wrap(err, "get committer")
 	}
 	committerLine := strings.TrimSpace(string(stdout))
+
+	objectFormat, err := r.ObjectFormat(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "get object format")
+	}
+	emptyTreeID := objectFormat.EmptyTreeID()
 
 	var emptyCommit string
 	for _, id := range ids {

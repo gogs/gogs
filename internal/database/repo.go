@@ -450,7 +450,7 @@ func (r *Repository) UpdateSize(ctx context.Context) error {
 	return nil
 }
 
-// ComposeMetas composes a map of metas for rendering SHA1 URL and external issue tracker URL.
+// ComposeMetas composes a map of metas for rendering commit URL and external issue tracker URL.
 func (r *Repository) ComposeMetas() map[string]string {
 	if r.ExternalMetas != nil {
 		return r.ExternalMetas
@@ -458,6 +458,15 @@ func (r *Repository) ComposeMetas() map[string]string {
 
 	r.ExternalMetas = map[string]string{
 		"repoLink": r.Link(),
+	}
+
+	// Markup links hex strings of 64 characters to commits only in SHA-256
+	// repositories, because elsewhere they are checksums and the like.
+	objectFormat, err := git.RepoObjectFormat(context.Background(), r.RepoPath())
+	if err != nil {
+		log.Error("Failed to get object format of repository %q: %v", r.FullName(), err)
+	} else if objectFormat == git.ObjectFormatSHA256 {
+		r.ExternalMetas["objectFormat"] = string(objectFormat)
 	}
 
 	if r.EnableExternalTracker {
@@ -966,6 +975,9 @@ type CreateRepoOptionsLegacy struct {
 	IsUnlisted  bool
 	IsMirror    bool
 	AutoInit    bool
+	// The hash algorithm of the repository, or empty to use the default of Git on
+	// the server.
+	ObjectFormat git.ObjectFormat
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
@@ -1049,7 +1061,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 // initRepository performs initial commit with chosen setup files on behave of doer.
 func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Init bare new repository.
-	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true}); err != nil {
+	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	} else if err = createDelegateHooks(repoPath); err != nil {
 		return errors.Newf("createDelegateHooks: %v", err)
@@ -1249,10 +1261,6 @@ func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOpt
 		if err = initRepository(ctx, sess, repoPath, doer, repo, opts); err != nil {
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, errors.Newf("initRepository: %v", err)
-		}
-
-		if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
-			return nil, errors.Newf("CreateRepository 'git update-server-info': %v", err)
 		}
 	}
 	if err = sess.Commit(); err != nil {
@@ -2563,10 +2571,6 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
 		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
-	}
-
-	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
-		return nil, errors.Newf("git update-server-info: %v", err)
 	}
 
 	if err = createDelegateHooks(repoPath); err != nil {

@@ -29,7 +29,7 @@ const (
 type TreeEntry struct {
 	mode EntryMode
 	typ  ObjectType
-	id   *SHA1
+	id   OID
 	name string
 
 	parent *Tree
@@ -74,8 +74,8 @@ func (e *TreeEntry) Type() ObjectType {
 	return e.typ
 }
 
-// ID returns the SHA-1 hash of the entry.
-func (e *TreeEntry) ID() *SHA1 {
+// ID returns the ID of the entry.
+func (e *TreeEntry) ID() OID {
 	return e.id
 }
 

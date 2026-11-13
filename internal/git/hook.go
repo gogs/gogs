@@ -51,7 +51,7 @@ fi
 		HookUpdate: `#!/bin/sh
 #
 # An example hook script to block unannotated tags from entering.
-# Called by "git receive-pack" with arguments: refname sha1-old sha1-new
+# Called by "git receive-pack" with arguments: refname oid-old oid-new
 #
 # To enable this hook, rename this file to "update".
 #
@@ -110,7 +110,7 @@ esac
 
 # --- Check types
 # if $newrev is 0000...0000, it's a commit to delete a ref.
-zero="0000000000000000000000000000000000000000"
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
 if [ "$newrev" = "$zero" ]; then
 	newrev_type=delete
 else

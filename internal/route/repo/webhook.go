@@ -10,6 +10,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -469,7 +470,13 @@ func TestWebhook(c *context.Context) {
 	// Grab latest commit or fake one if it's empty repository.
 
 	if c.Repo.Commit == nil {
-		commitID = git.EmptyID
+		objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
+		if err != nil {
+			log.Error("Failed to get object format: %v", err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		commitID = objectFormat.EmptyID()
 		commitMessage = "This is a fake commit"
 		ghost := database.NewGhostUser()
 		author = &git.Signature{
