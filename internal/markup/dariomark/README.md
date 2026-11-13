@@ -2,7 +2,7 @@
 
 A fast, safe Markdown engine for Go that implements CommonMark and GitHub Flavored Markdown.
 
-dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and in Gogs it renders 2 to 7 times faster than the same pipeline built on blackfriday or goldmark.
+Dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and in Gogs it renders 2 to 7 times faster than the same pipeline built on blackfriday or goldmark.
 
 ## Features
 
@@ -42,10 +42,10 @@ The numbers were measured with Go 1.27.4 on a 4-core Intel Xeon at 2.60 GHz, as 
 
 ## How it is fast
 
-A general-purpose Markdown library only produces HTML. Rendering a comment on a code hosting site takes more passes over that HTML: linking mentions, issue references and commit IDs, wrapping images in links, and sanitizing. With goldmark v1.8.7, those passes take 80% to 83% of the time of `markup.Markdown` on the README, cheat sheet, changelog and documentation above. dariomark does all of it in one pass over the document tree:
+A general-purpose Markdown library only produces HTML. Rendering a comment on a code hosting site takes more passes over that HTML: linking mentions, issue references and commit IDs, wrapping images in links, and sanitizing. With goldmark v1.8.7, those passes take 80% to 83% of the time of `markup.Markdown` on the README, cheat sheet, changelog and documentation above. Dariomark does all of it in one pass over the document tree:
 
 - **Special links** are rendered while text is written, so the HTML is never tokenized again. Text that cannot contain a reference skips the reference patterns entirely.
-- **Sanitizing** happens while writing. dariomark knows every element and attribute it emits, so documents without raw HTML are checked against the allowlist without parsing HTML. Documents with raw HTML go through bluemonday, which is the final pass for anything an author typed as HTML.
+- **Sanitizing** happens while writing. Dariomark knows every element and attribute it emits, so documents without raw HTML are checked against the allowlist without parsing HTML. Documents with raw HTML go through bluemonday, which is the final pass for anything an author typed as HTML.
 - **Memory** is reused: parsers are pooled, nodes point into the source instead of copying it, and the common paths allocate a few times per document instead of a few times per node.
 
 ## Correctness
@@ -60,7 +60,7 @@ A general-purpose Markdown library only produces HTML. Rendering a comment on a 
 
 Markdown on a code hosting site comes from anyone who can open an issue, so one document must never be able to take down the server.
 
-- **Fail-closed sanitizing.** Every element and attribute dariomark writes goes through one allowlist. Anything it does not recognize sends the document to bluemonday instead of through.
+- **Fail-closed sanitizing.** Every element and attribute Dariomark writes goes through one allowlist. Anything it does not recognize sends the document to bluemonday instead of through.
 - **Safe URLs.** Link and image URLs are checked by scheme. `javascript:`, `vbscript:` and `data:` URLs other than common image types are dropped, however they are encoded.
 - **Bounded nesting.** Containers nested more than 100 levels deep, e.g., `>` repeated, show the deeper markers as text, and the rest of the document renders normally.
 - **Document limits in Gogs.** `markup.Render` shows documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` (8 MB by default) as plain text, and documents of 256 KB or more share a budget of concurrent render memory, so a burst of large documents waits instead of exhausting memory.

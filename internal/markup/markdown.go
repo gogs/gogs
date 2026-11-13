@@ -299,7 +299,7 @@ func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
 }
 
-// markdownSanitizer describes the sanitizer policy to dariomark.
+// markdownSanitizer describes the sanitizer policy to Dariomark.
 var markdownSanitizer = &dariomark.Sanitizer{
 	AllowURLScheme: allowURLScheme,
 	Text:           bluemonday.Paragraph,
