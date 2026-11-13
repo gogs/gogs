@@ -308,7 +308,7 @@ func (r *Repository) CountObjects(ctx context.Context) (*CountObject, error) {
 	}
 
 	countObject := new(CountObject)
-	for _, line := range bytes.Split(stdout, []byte("\n")) {
+	for line := range bytes.SplitSeq(stdout, []byte("\n")) {
 		switch {
 		case bytes.HasPrefix(line, []byte("count: ")):
 			countObject.Count = toInt64(line[7:])

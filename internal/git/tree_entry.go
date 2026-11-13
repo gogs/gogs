@@ -193,13 +193,13 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 	results := make(chan *EntryCommitInfo, len(es))
 	errs := make(chan error, 1)
 
-	var errored int64
+	var errored atomic.Int64
 	hasErrored := func() bool {
-		return atomic.LoadInt64(&errored) != 0
+		return errored.Load() != 0
 	}
 	// Only count for the first error, discard the rest
 	setError := func(err error) {
-		if !atomic.CompareAndSwapInt64(&errored, 0, 1) {
+		if !errored.CompareAndSwap(0, 1) {
 			return
 		}
 		errs <- err

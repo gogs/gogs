@@ -177,10 +177,8 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 // Listen starts a SSH server listens on given port.
 func Listen(opts conf.SSHOpts, appDataPath string) {
 	config := &ssh.ServerConfig{
-		Config: ssh.Config{
-			Ciphers: opts.ServerCiphers,
-			MACs:    opts.ServerMACs,
-		},
+		Ciphers: opts.ServerCiphers,
+		MACs:    opts.ServerMACs,
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			pkey, err := database.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {

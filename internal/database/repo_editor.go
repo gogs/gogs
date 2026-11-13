@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -574,12 +575,7 @@ type UploadRepoFileOptions struct {
 //
 // TODO(unknwon): Move to repox during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
-	for _, component := range strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }) {
-		if isDotGit(component) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }), isDotGit)
 }
 
 // isDotGit returns true if given path component may refer to ".git" on some file

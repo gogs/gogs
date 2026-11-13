@@ -163,16 +163,14 @@ func toHookEvent(f form.Webhook) *database.HookEvent {
 		PushOnly:       f.PushOnly(),
 		SendEverything: f.SendEverything(),
 		ChooseEvents:   f.ChooseEvents(),
-		HookEvents: database.HookEvents{
-			Create:       f.Create,
-			Delete:       f.Delete,
-			Fork:         f.Fork,
-			Push:         f.Push,
-			Issues:       f.Issues,
-			IssueComment: f.IssueComment,
-			PullRequest:  f.PullRequest,
-			Release:      f.Release,
-		},
+		Create:         f.Create,
+		Delete:         f.Delete,
+		Fork:           f.Fork,
+		Push:           f.Push,
+		Issues:         f.Issues,
+		IssueComment:   f.IssueComment,
+		PullRequest:    f.PullRequest,
+		Release:        f.Release,
 	}
 }
 
