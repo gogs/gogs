@@ -50,7 +50,6 @@ All notable changes to Gogs are documented in this file.
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
 - CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 - Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
-- Support for the dumb HTTP protocol. Git clients have used the smart HTTP protocol by default since Git 1.6.6. [#8496](https://github.com/gogs/gogs/pull/8496)
 
 ## 0.14.4
 

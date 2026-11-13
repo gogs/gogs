@@ -317,7 +317,7 @@ func getInfoRefs(h serviceHandler) {
 	h.setHeaderNoCache()
 	service := getServiceType(h.r)
 	if service != "upload-pack" && service != "receive-pack" {
-		http.Error(h.w, "The dumb HTTP protocol is not supported, please upgrade your Git client.", http.StatusForbidden)
+		http.Error(h.w, "Missing or unsupported service", http.StatusBadRequest)
 		return
 	}
 
