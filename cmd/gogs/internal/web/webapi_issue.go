@@ -35,9 +35,15 @@ func withRepoIssues(c flamego.Context, repoCtx *repoContext) {
 	}
 }
 
-// withRepoIssue injects the issue in the route. Like the server-rendered page,
-// a pull request is not found.
+// withRepoIssue injects the issue in the route. A pull request is not found,
+// since it has its own page.
 func withRepoIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
+	injectRepoIssue(c, logger, repoCtx, false)
+}
+
+// injectRepoIssue injects the issue or the pull request in the route, as isPull
+// asks.
+func injectRepoIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, isPull bool) {
 	w := c.ResponseWriter()
 	repo := repoCtx.Repo
 	index, _ := strconv.ParseInt(c.Param("index"), 10, 64)
@@ -55,7 +61,7 @@ func withRepoIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get issue"))
 		return
 	}
-	if issue.IsPull {
+	if issue.IsPull != isPull || (isPull && issue.PullRequest == nil) {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("issue does not exist"))
 		return
 	}
@@ -282,6 +288,17 @@ type repoIssueView struct {
 }
 
 func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoIssueView, err error) {
+	resp, err = toRepoIssueView(c.Request().Context(), logger, viewer, repoCtx, issue)
+	if err != nil {
+		logger.Error("Failed to describe issue", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	}
+	return http.StatusOK, resp, nil
+}
+
+// toRepoIssueView describes the issue or the pull request with its comments,
+// and marks it read by the viewer.
+func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (resp *repoIssueView, err error) {
 	repo := repoCtx.Repo
 	metas := repo.ComposeMetas()
 	resp = &repoIssueView{
@@ -313,7 +330,6 @@ func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User,
 		resp.Assignee = &repoIssueAssignee{ID: issue.Assignee.ID, Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath()}
 	}
 
-	ctx := c.Request().Context()
 	tags := make(map[int64]string)
 	participants := []*database.User{issue.Poster}
 	for _, comment := range issue.Comments {
@@ -370,19 +386,17 @@ func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User,
 
 	if resp.ViewerCanWrite {
 		if resp.issueMetaOptions, err = listIssueMetaOptions(repo); err != nil {
-			logger.Error("Failed to list issue metadata options", "repoID", repo.ID, "error", err)
-			return http.StatusInternalServerError, nil, err
+			return nil, errors.Wrap(err, "list what can be set on issues")
 		}
 	}
 
 	if viewer != nil {
 		resp.Attachment = attachmentSettings(issueAttachmentLimits())
 		if err = issue.ReadBy(viewer.ID); err != nil {
-			logger.Error("Failed to mark issue as read", "issueID", issue.ID, "userID", viewer.ID, "error", err)
-			return http.StatusInternalServerError, nil, errors.Wrap(err, "mark as read")
+			return nil, errors.Wrap(err, "mark as read")
 		}
 	}
-	return http.StatusOK, resp, nil
+	return resp, nil
 }
 
 // limitIssueContent caps the size of the Markdown sent to the issue page,
@@ -445,7 +459,30 @@ func patchRepoIssue(logger *logx.Logger, l i18n.Locale, viewer *database.User, i
 	return http.StatusNoContent, nil, nil
 }
 
-func setRepoIssueClosed(logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, closed bool) (statusCode int, resp any, err error) {
+func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, closed bool) (statusCode int, resp any, err error) {
+	if issue.IsPull {
+		pull := issue.PullRequest
+		if pull.HasMerged {
+			return http.StatusNotFound, nil, errors.New("pull request has been merged")
+		}
+		// Like the server-rendered page, a pull request only reopens when no
+		// other one merges the same branches, and it is checked for conflicts
+		// again.
+		if !closed {
+			other, err := database.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
+			if err != nil && !database.IsErrPullRequestNotExist(err) {
+				logger.Error("Failed to get open pull request with the same branches", "pullID", pull.ID, "error", err)
+				return http.StatusInternalServerError, nil, errors.Wrap(err, "get open pull request")
+			} else if other != nil {
+				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.open_unmerged_pull_exists", other.Index)}, nil
+			}
+			if err = pull.UpdatePatch(c.Request().Context(), logger); err != nil {
+				logger.Error("Failed to update pull request patch", "pullID", pull.ID, "error", err)
+				return http.StatusInternalServerError, nil, errors.Wrap(err, "update patch")
+			}
+			pull.AddToTaskQueue(logger)
+		}
+	}
 	if err = issue.ChangeStatus(logger, viewer, repoCtx.Repo, closed); err != nil {
 		logger.Error("Failed to change issue state", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change state")
@@ -453,12 +490,12 @@ func setRepoIssueClosed(logger *logx.Logger, viewer *database.User, repoCtx *rep
 	return http.StatusNoContent, nil, nil
 }
 
-func putRepoIssueClosed(logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
-	return setRepoIssueClosed(logger, viewer, repoCtx, issue, true)
+func putRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+	return setRepoIssueClosed(c, logger, l, viewer, repoCtx, issue, true)
 }
 
-func deleteRepoIssueClosed(logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
-	return setRepoIssueClosed(logger, viewer, repoCtx, issue, false)
+func deleteRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+	return setRepoIssueClosed(c, logger, l, viewer, repoCtx, issue, false)
 }
 
 type repoIssueLabelsRequest struct {
