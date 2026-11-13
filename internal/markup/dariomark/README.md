@@ -4,9 +4,6 @@ A fast, safe Markdown engine for Go that implements CommonMark and GitHub Flavor
 
 dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and in Gogs it renders 2 to 7 times faster than the same pipeline built on blackfriday or goldmark.
 
-> [!NOTE]
-> dariomark is developed inside [Gogs](https://github.com/gogs/gogs) as `gogs.io/gogs/internal/markup/dariomark`. It is not published as a standalone module yet, and its API may change.
-
 ## Features
 
 - **CommonMark 0.31.2**, passing all 652 examples of the specification.
