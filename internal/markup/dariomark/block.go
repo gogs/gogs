@@ -65,6 +65,9 @@ type parser struct {
 	// padBudget is the number of empty cells that the rest of the document
 	// may add to fill short table rows.
 	padBudget int
+	// footnoteBudget is the number of footnote references that the rest of
+	// the document may render, see footnoteRef.
+	footnoteBudget int
 
 	inl inlineParser
 	// r renders the document. It is part of the parser so that its
@@ -153,6 +156,7 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 	p.src = src
 	p.refBudget = max(10*len(src), 1<<20)
 	p.padBudget = len(src)
+	p.footnoteBudget = max(len(src)/16, 1<<10)
 	p.doc = p.arena.new(kindDocument)
 	p.doc.open = true
 	p.tip = p.doc

@@ -182,11 +182,11 @@ func Render(src []byte, opts *Options) Result {
 	if !p.hasRawHTML {
 		// Inline raw HTML is only found while rendering, which then starts
 		// over without sanitizing.
-		refBudget, padBudget := p.refBudget, p.padBudget
+		refBudget, padBudget, footnoteBudget := p.refBudget, p.padBudget, p.footnoteBudget
 		if out, ok := r.renderSanitized(func() { r.renderDocument(doc) }); ok {
 			return Result{HTML: out, Sanitized: true, Headings: r.headingList()}
 		}
-		p.refBudget, p.padBudget = refBudget, padBudget
+		p.refBudget, p.padBudget, p.footnoteBudget = refBudget, padBudget, footnoteBudget
 		p.footnotes.resetInline()
 		r.init(p, opts)
 	}

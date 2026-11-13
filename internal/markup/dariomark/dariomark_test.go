@@ -333,6 +333,20 @@ func TestReferenceBudget(t *testing.T) {
 			assert.True(t, strings.HasSuffix(got, use+"</p>\n<p><em>after</em></p>\n"))
 		})
 	}
+
+	t.Run("footnote references", func(t *testing.T) {
+		// Each reference renders a link and a backlink.
+		const n = 1 << 16
+		in := "[^a]: b\n\n" + strings.Repeat("[^a]", n)
+		got := string(HTML([]byte(in), &Options{Footnotes: true}))
+		assert.Less(t, len(got), 40*len(in))
+		// The references within the budget are links, the rest stay text.
+		refs := strings.Count(got, `class="footnote-ref"`)
+		assert.Less(t, refs, n)
+		assert.Equal(t, refs, strings.Count(got, `class="footnote-backref"`))
+		assert.Equal(t, n-refs, strings.Count(got, "[^a]"))
+		assert.True(t, strings.HasPrefix(got, "<p><sup"))
+	})
 }
 
 func TestAngleDestination(t *testing.T) {
