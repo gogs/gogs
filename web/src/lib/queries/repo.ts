@@ -723,11 +723,16 @@ export async function renderRepoMarkdown(owner: string, name: string, text: stri
 }
 
 // uploadRepoAttachment uploads a file to attach to an issue, a comment or a
-// release, and returns its UUID.
-export async function uploadRepoAttachment(owner: string, name: string, kind: "issues" | "releases", file: File) {
+// release, or to commit with the editor, and returns its UUID.
+export async function uploadRepoAttachment(
+  owner: string,
+  name: string,
+  kind: "issues" | "releases" | "editor",
+  file: File,
+) {
   const body = new FormData();
   body.append("file", file);
-  const res = await fetch(repoURL(owner, name, `/${kind}/attachments`), {
+  const res = await fetch(repoURL(owner, name, kind === "editor" ? "/editor/uploads" : `/${kind}/attachments`), {
     method: "POST",
     credentials: "same-origin",
     body,
@@ -881,4 +886,64 @@ export async function saveRepoWikiPage(owner: string, name: string, form: RepoWi
 
 export function deleteRepoWikiPage(owner: string, name: string, page: string) {
   return send("DELETE", repoURL(owner, name, `/wiki${wikiPageQuery(page)}`));
+}
+
+export interface RepoEditorTarget {
+  branch: string;
+  // path is the path in the branch, without the branch.
+  path: string;
+  lastCommit: string;
+  kind: "file" | "dir" | "symlink" | "none";
+  // content is only sent for a text file.
+  content?: string;
+  markdownExtensions: string[];
+  // previewMarkdown tells whether Markdown files can be previewed.
+  previewMarkdown: boolean;
+  lineWrapExtensions: string[];
+  // pullRequestsAllowed tells whether committing to a new branch starts a
+  // pull request.
+  pullRequestsAllowed: boolean;
+  upload?: IssueAttachmentSettings;
+}
+
+// fetchRepoEditorTarget describes the branch and the path in the editor
+// pages' path, which is the branch name followed by the path.
+export function fetchRepoEditorTarget(owner: string, name: string, splat: string) {
+  return fetchJSON<RepoEditorTarget>(repoURL(owner, name, `/editor/${refPath(splat)}`));
+}
+
+export interface RepoEditorCommit {
+  branch: string;
+  // newBranch is the branch to commit to instead, created from branch.
+  newBranch: string;
+  summary: string;
+  message: string;
+}
+
+// Each change answers with where to go next: the changed path, or the form to
+// open a pull request from the new branch.
+type RepoEditorResult = { location: string };
+
+export function commitRepoFile(
+  owner: string,
+  name: string,
+  form: RepoEditorCommit & { oldPath: string; path: string; content: string; lastCommit: string },
+) {
+  return submit<RepoEditorResult>("POST", repoURL(owner, name, "/editor/files"), form);
+}
+
+export function deleteRepoFile(owner: string, name: string, form: RepoEditorCommit & { path: string }) {
+  return submit<RepoEditorResult>("POST", repoURL(owner, name, "/editor/delete"), form);
+}
+
+export function uploadRepoFiles(
+  owner: string,
+  name: string,
+  form: RepoEditorCommit & { path: string; files: string[] },
+) {
+  return submit<RepoEditorResult>("POST", repoURL(owner, name, "/editor/upload"), form);
+}
+
+export function deleteRepoEditorUpload(owner: string, name: string, uuid: string) {
+  return send("DELETE", repoURL(owner, name, `/editor/uploads/${encodeURIComponent(uuid)}`));
 }

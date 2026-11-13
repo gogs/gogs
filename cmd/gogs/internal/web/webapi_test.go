@@ -154,6 +154,7 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/orgs/acme/settings/hooks/1",
 		"/api/web/acme/widgets/milestones/1",
 		"/api/web/acme/widgets/wiki/source",
+		"/api/web/acme/widgets/editor/master/README.md",
 	}
 	tests := []struct {
 		name                     string

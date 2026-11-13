@@ -369,6 +369,14 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			Patch(bindJSON(repoWikiPageRequest{}), patchRepoWikiPage)
 	}, limitIssueContent, requireSignIn, withRepoContext)
 	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireSignIn, withRepoContext, withRepoIssues, postRepoIssueAttachment)
+	f.Group("/api/web/{owner}/{repo}/editor", func() {
+		f.Get("/{path: **}", getRepoEditorTarget)
+		f.Post("/files", limitEditorContent, bindJSON(repoEditorFileRequest{}), postRepoEditorFile)
+		f.Post("/delete", limitEditorContent, bindJSON(repoEditorDeleteRequest{}), postRepoEditorDelete)
+		f.Post("/upload", limitEditorContent, bindJSON(repoEditorUploadRequest{}), postRepoEditorUpload)
+		f.Post("/uploads", limitAttachmentUpload(repoUploadLimits()), postRepoEditorUploadFile)
+		f.Delete("/uploads/{uuid}", deleteRepoEditorUploadFile)
+	}, requireSignIn, withRepoContext, withRepoEditor)
 	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireSignIn, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireSignIn).
 		Put(putUserAvatar).

@@ -1,5 +1,6 @@
 import { type AriaAttributes, Suspense, lazy } from "react";
 
+import type { CodeLanguage } from "@/lib/code-language";
 import { cn } from "@/lib/utils";
 
 const CodeEditorView = lazy(() => import("@/components/CodeEditorView"));
@@ -12,10 +13,12 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   label: string;
   value: string;
   onChange: (value: string) => void;
-  lang: "markdown" | "shell";
+  lang: CodeLanguage;
   // code lays the text out as source code: line numbers, long lines scroll
   // instead of wrapping, and Tab indents. Escape then Tab leaves the editor.
   code?: boolean;
+  // wrap wraps long lines, by default unless the text is code.
+  wrap?: boolean;
   // minLines is the height of the empty editor. It grows with its content.
   minLines?: number;
   disabled?: boolean;
