@@ -172,6 +172,7 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/acme/widgets/wiki/source",
 		"/api/web/acme/widgets/editor/master/README.md",
 		"/api/web/acme/widgets/editor-indent",
+		"/api/web/acme/widgets/pulls/new/master...feature/login",
 	} {
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))

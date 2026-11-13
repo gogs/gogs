@@ -13,18 +13,20 @@ const ITEM_CLASS =
 
 // RefPicker switches the branch or the tag a page shows. renderLink renders
 // the link to the same page for another ref, with the class and the content
-// of the item.
+// of the item. Without tags, it only picks branches, under the label.
 export function RefPicker({
   current,
   type,
   branches,
   tags,
   renderLink,
+  label,
 }: {
   current: string;
   type: RefType;
   branches: string[];
-  tags: string[];
+  tags?: string[];
+  label?: string;
   renderLink: (ref: string, className: string, children: ReactNode) => ReactNode;
 }) {
   const { t } = useTranslation();
@@ -32,7 +34,7 @@ export function RefPicker({
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"branches" | "tags">(type === "tag" ? "tags" : "branches");
   const [filter, setFilter] = useState("");
-  const refs = (tab === "branches" ? branches : tags).filter((r) =>
+  const refs = (tab === "branches" || !tags ? branches : tags).filter((r) =>
     r.toLowerCase().includes(filter.trim().toLowerCase()),
   );
   const Icon = type === "branch" ? GitBranch : type === "tag" ? Tag : GitCommitHorizontal;
@@ -53,7 +55,7 @@ export function RefPicker({
         <Button variant="outline" size="sm" className="max-w-full min-w-0">
           <Icon className="size-4 shrink-0" aria-hidden />
           <span className="text-(--color-muted-foreground)">
-            {type === "branch" ? t("repo.branch") : type === "tag" ? t("repo.tag") : t("repo.tree")}:
+            {label ?? (type === "branch" ? t("repo.branch") : type === "tag" ? t("repo.tag") : t("repo.tree"))}:
           </span>
           <span className="min-w-0 truncate font-semibold">{type === "commit" ? current.slice(0, 10) : current}</span>
           <ChevronDown className="size-4 shrink-0" aria-hidden />
@@ -68,41 +70,43 @@ export function RefPicker({
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder={`${t("repo.filter_branch_and_tag")}...`}
-            aria-label={t("repo.filter_branch_and_tag")}
+            placeholder={`${t(tags ? "repo.filter_branch_and_tag" : "repo.pulls.filter_branch")}...`}
+            aria-label={t(tags ? "repo.filter_branch_and_tag" : "repo.pulls.filter_branch")}
             autoFocus
             className="block w-full rounded-md border border-(--color-input) bg-(--color-background) py-1.5 pr-3 pl-8 text-sm outline-none placeholder:text-(--color-muted-foreground) focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
           />
         </div>
+        {tags ? (
+          <div
+            role="tablist"
+            aria-label={t("repo.filter_branch_and_tag")}
+            className="flex gap-1 border-b border-(--color-border) px-2 py-1.5"
+          >
+            {tabs.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                id={`${id}-${item.key}-tab`}
+                aria-selected={tab === item.key}
+                aria-controls={`${id}-list`}
+                onClick={() => setTab(item.key)}
+                className={cn(
+                  "cursor-pointer rounded-md px-3 py-1 text-sm",
+                  tab === item.key
+                    ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
+                    : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div
-          role="tablist"
-          aria-label={t("repo.filter_branch_and_tag")}
-          className="flex gap-1 border-b border-(--color-border) px-2 py-1.5"
-        >
-          {tabs.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="tab"
-              id={`${id}-${item.key}-tab`}
-              aria-selected={tab === item.key}
-              aria-controls={`${id}-list`}
-              onClick={() => setTab(item.key)}
-              className={cn(
-                "cursor-pointer rounded-md px-3 py-1 text-sm",
-                tab === item.key
-                  ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
-                  : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div
-          role="tabpanel"
+          role={tags ? "tabpanel" : undefined}
           id={`${id}-list`}
-          aria-labelledby={`${id}-${tab}-tab`}
+          aria-labelledby={tags ? `${id}-${tab}-tab` : undefined}
           className="max-h-72 overflow-y-auto p-1"
         >
           {refs.length ? (
