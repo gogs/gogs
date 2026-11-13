@@ -12,7 +12,6 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,14 +23,12 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
-	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
@@ -43,7 +40,6 @@ import (
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/repo"
-	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/urlx"
@@ -78,387 +74,15 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	}
 	apiV1Handler := newAPIV1Handler()
 
-	// serveWeb hands the request to the web app, after the middleware of its
-	// route checks what the viewer may see.
-	serveWeb := func(c *context.Context) { c.ServeWeb() }
-	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
 
 	m.SetAutoHead(true)
 
 	m.Group("", func() {
-		m.Get("/", ignSignIn, serveWeb)
-		m.Group("/explore", func() {
-			m.Get("", func(c *context.Context) {
-				c.Redirect(conf.Server.Subpath + "/explore/repos")
-			})
-			m.Get("/^:type(repos|users|organizations)$", serveWeb)
-		}, ignSignIn)
-		m.Get("/^:type(issues|pulls)$", reqSignIn, serveWeb)
-
-		// ***** START: User *****
-		m.Group("/user/settings", func() {
-			m.Get("", serveWeb)
-			m.Get("/^:page(avatar|password|email|ssh|security|repositories|organizations|applications|delete)$", serveWeb)
-			// Like the server-rendered pages, these pages are only found in the
-			// two-factor authentication state they apply to.
-			m.Get("/security/two_factor_enable", func(c *context.Context) {
-				if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
-					c.NotFound()
-					return
-				}
-				c.ServeWeb()
-			})
-			m.Get("/security/two_factor_recovery_codes", func(c *context.Context) {
-				if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
-					c.NotFound()
-					return
-				}
-				c.ServeWeb()
-			})
-		}, reqSignIn)
-
-		m.Group("/user", func() {
-			m.Any("/activate_email", user.ActivateEmail)
-			m.Get("/email2user", user.Email2User)
-			// The pages for signing in stay reachable when the site requires signing in to
-			// view content. Without this route they would match "/:username/:reponame" and
-			// its sign-in toggle.
-			m.Get("/^:page(sign-in|sign-up|mfa|reset-password|activate)$", serveWeb)
-		})
-		// ***** END: User *****
-
-		reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
-
-		// ***** START: Admin *****
-		m.Group("/admin", func() {
-			m.Get("", serveWeb)
-			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", serveWeb)
-			m.Get("/users/new", serveWeb)
-			m.Get("/users/:userid", func(c *context.Context) {
-				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
-				if err != nil {
-					c.NotFoundOrError(err, "get user by ID")
-					return
-				}
-				// Organizations have their own settings.
-				if user.IsOrganization() {
-					c.NotFound()
-					return
-				}
-				c.ServeWeb()
-			})
-
-			m.Get("/auths/new", serveWeb)
-			m.Get("/auths/:authid", func(c *context.Context) {
-				if _, err := database.Handle.LoginSources().GetByID(c.Req.Context(), c.ParamsInt64(":authid")); err != nil {
-					c.NotFoundOrError(err, "get login source by ID")
-					return
-				}
-				c.ServeWeb()
-			})
-		}, reqAdmin)
-		// ***** END: Admin *****
-
-		m.Group("", func() {
-			m.Group("/:username", func() {
-				m.Get("", user.Profile)
-				m.Get("/^:type(followers|following)$", serveWeb)
-			}, context.InjectParamsUser())
-
-			m.Get("/attachments/:uuid", func(c *context.Context) {
-				attach, err := database.GetAttachmentByUUID(c.Params(":uuid"))
-				if err != nil {
-					c.NotFoundOrError(err, "get attachment by UUID")
-					return
-				}
-
-				// Resolve the repository that owns this attachment so we can enforce
-				// repository-level read permission. Without this check, anyone with
-				// the UUID could download files belonging to private repositories.
-				var repo *database.Repository
-				switch {
-				case attach.IssueID > 0:
-					issue, err := database.GetIssueByID(attach.IssueID)
-					if err != nil {
-						c.NotFoundOrError(err, "get issue by ID")
-						return
-					}
-					repo = issue.Repo
-				case attach.ReleaseID > 0:
-					release, err := database.GetReleaseByID(attach.ReleaseID)
-					if err != nil {
-						c.NotFoundOrError(err, "get release by ID")
-						return
-					}
-					repo = release.Repo
-				}
-				if repo == nil {
-					c.NotFound()
-					return
-				}
-				if !repo.HasAccess(c.UserID()) {
-					c.NotFound()
-					return
-				}
-
-				if !osx.IsFile(attach.LocalPath()) {
-					c.NotFound()
-					return
-				}
-
-				fr, err := os.Open(attach.LocalPath())
-				if err != nil {
-					c.Error(err, "open attachment file")
-					return
-				}
-				defer fr.Close()
-
-				c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-				c.Header().Set("Cache-Control", "private,max-age=86400")
-				c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
-
-				if _, err = io.Copy(c.Resp, fr); err != nil {
-					c.Error(err, "copy from file to response")
-					return
-				}
-			})
-		}, ignSignIn)
-
-		reqRepoAdmin := context.RequireRepoAdmin()
-		reqRepoWriter := context.RequireRepoWriter()
-
-		// webhookPages serves the webhook settings pages of a repository or an
-		// organization. Like the server-rendered pages, only the kinds of webhooks
-		// the site allows can be added, and webhooks of others are not found.
-		webhookPages := func(lookup func(c *context.Context, id int64) (*database.Webhook, error)) {
-			m.Get("", serveWeb)
-			m.Get("/:type/new", func(c *context.Context) {
-				if !slices.Contains(conf.Webhook.Types, c.Params(":type")) {
-					c.NotFound()
-					return
-				}
-				c.ServeWeb()
-			})
-			m.Get("/:id", func(c *context.Context) {
-				id := c.ParamsInt64(":id")
-				if id <= 0 {
-					c.NotFound()
-					return
-				}
-				if _, err := lookup(c, id); err != nil {
-					c.NotFoundOrError(err, "get webhook")
-					return
-				}
-				c.ServeWeb()
-			})
-		}
-
-		// ***** START: Organization *****
-		m.Group("/org", func() {
-			m.Group("", func() {
-				m.Get("/create", serveWeb)
-			}, func(c *context.Context) {
-				if !c.User.CanCreateOrganization() {
-					c.NotFound()
-				}
-			})
-
-			m.Group("/:org", func() {
-				m.Get("/dashboard", serveWeb)
-				m.Get("/^:type(issues|pulls)$", serveWeb)
-				m.Get("/members", serveWeb)
-				m.Get("/teams", serveWeb)
-			}, context.OrgAssignment(true))
-
-			m.Group("/:org", func() {
-				m.Get("/teams/:team", serveWeb)
-				m.Get("/teams/:team/repositories", serveWeb)
-			}, context.OrgAssignment(true, false, true))
-
-			m.Group("/:org", func() {
-				m.Get("/teams/new", serveWeb)
-				m.Get("/teams/:team/edit", serveWeb)
-
-				m.Group("/settings", func() {
-					m.Get("", serveWeb)
-					m.Group("/hooks", func() {
-						webhookPages(func(c *context.Context, id int64) (*database.Webhook, error) {
-							return database.GetWebhookByOrgID(c.Org.Organization.ID, id)
-						})
-					})
-					m.Get("/delete", serveWeb)
-				})
-
-				m.Get("/invitations/new", serveWeb)
-			}, context.OrgAssignment(true, true))
-		}, reqSignIn)
-		// ***** END: Organization *****
-
-		// ***** START: Repository *****
-		m.Group("/repo", func() {
-			m.Get("/^:page(create|migrate)$", func(c *context.Context) {
-				_, err := repoOwner(c.Req.Context(), c.User, c.QueryInt64("org"))
-				if errors.Is(err, errRepoOwnerNotAllowed) {
-					c.NotFound()
-					return
-				} else if err != nil {
-					c.Error(err, "get repository owner")
-					return
-				}
-				c.ServeWeb()
-			})
-			m.Get("/fork/:repoid", func(c *context.Context) {
-				_, err := forkBaseRepo(c.User, c.ParamsInt64(":repoid"))
-				if errors.Is(err, errForkBaseNotFound) {
-					c.NotFound()
-					return
-				} else if err != nil {
-					c.Error(err, "get repository to fork")
-					return
-				}
-				c.ServeWeb()
-			})
-		}, reqSignIn)
-
-		m.Group("/:username/:reponame", func() {
-			m.Group("/settings", func() {
-				m.Get("", serveWeb)
-				m.Get("/collaboration", serveWeb)
-				m.Group("/branches", func() {
-					m.Get("", serveWeb)
-					m.Get("/*", serveWeb)
-				}, func(c *context.Context) {
-					if c.Repo.Repository.IsMirror {
-						c.NotFound()
-						return
-					}
-				})
-
-				m.Group("/hooks", func() {
-					webhookPages(func(c *context.Context, id int64) (*database.Webhook, error) {
-						return database.GetWebhookOfRepoByID(c.Repo.Repository.ID, id)
-					})
-
-					m.Group("/git", func() {
-						m.Get("", serveWeb)
-						m.Get("/:name", serveWeb)
-					}, context.GitHookService())
-				})
-
-				m.Get("/keys", serveWeb)
-			})
-		}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
-
-		m.Group("/:username/:reponame", func() {
-			m.Get("/issues", repo.MustEnableIssues, repo.ServeIssueList)
-			m.Get("/issues/:index", repo.ServeIssue)
-			m.Get("/^:page(labels|milestones)$", serveWeb)
-		}, ignSignIn, context.RepoAssignment(true))
-		m.Group("/:username/:reponame", func() {
-			m.Get("/issues/new", repo.MustEnableIssues, serveWeb)
-		}, reqSignIn, context.RepoAssignment(true))
-		m.Group("/:username/:reponame", func() {
-			m.Group("/wiki", func() {
-				m.Get("/?:page", serveWeb)
-				m.Get("/_pages", serveWeb)
-			}, repo.MustEnableWiki)
-		}, ignSignIn, context.RepoAssignment(false, true))
-
-		m.Group("/:username/:reponame", func() {
-			m.Group("/milestones", func() {
-				m.Get("/new", serveWeb)
-				m.Get("/:id/edit", func(c *context.Context) {
-					// An ID of 0 would match any milestone of the repository.
-					id := c.ParamsInt64(":id")
-					if id <= 0 {
-						c.NotFound()
-						return
-					}
-					if _, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, id); err != nil {
-						c.NotFoundOrError(err, "get milestone")
-						return
-					}
-					c.ServeWeb()
-				})
-			}, reqRepoWriter)
-
-			m.Group("/releases", func() {
-				m.Get("/new", serveWeb)
-				m.Get("/edit/*", serveWeb)
-			}, repo.MustBeNotEmpty, reqRepoWriter)
-
-			m.Get("/compare/*", repo.MustAllowPulls, serveWeb)
-
-			m.Group("", func() {
-				m.Get("/_edit/*", serveWeb)
-				m.Get("/_new/*", serveWeb)
-				m.Get("/_delete/*", serveWeb)
-				m.Get("/_upload/*", func(c *context.Context) {
-					if !conf.Repository.Upload.Enabled {
-						c.NotFound()
-						return
-					}
-					c.ServeWeb()
-				})
-			}, repo.MustBeNotEmpty, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
-				if !c.Repo.CanEnableEditor() {
-					c.NotFound()
-					return
-				}
-			})
-		}, reqSignIn, context.RepoAssignment())
-
-		m.Group("/:username/:reponame", func() {
-			m.Group("", func() {
-				m.Get("/releases", repo.MustBeNotEmpty, serveWeb)
-				m.Get("/pulls/:index", repo.ServePull)
-			}, context.RepoRef())
-
-			m.Group("/branches", func() {
-				m.Get("", serveWeb)
-				m.Get("/all", serveWeb)
-			}, repo.MustBeNotEmpty)
-
-			m.Group("/wiki", func() {
-				m.Get("/_new", serveWeb)
-				m.Get("/:page/_edit", serveWeb)
-			}, reqSignIn, reqRepoWriter, repo.MustEnableWiki)
-
-			m.Get("/archive/*", repo.MustBeNotEmpty, repo.Download)
-			m.Get("/forks", repo.MustBeNotEmpty, serveWeb)
-
-			m.Get("/pulls", repo.MustAllowPulls, repo.ServeIssueList)
-			m.Get("/pulls/:index([0-9]+)\\.diff", flamegoBridger(webHandler))
-			m.Get("/pulls/:index/^:tab(commits|files)$", repo.ServePull)
-
-			m.Get("/src/*", repo.MustBeNotEmpty, serveWeb)
-			m.Get("/commits/*", repo.MustBeNotEmpty, serveWeb)
-			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
-			m.Get("/raw/*", flamegoBridger(webHandler))
-			m.Get("/commit/:sha([a-f0-9]{7,64})\\.:ext(patch|diff)", flamegoBridger(webHandler))
-			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
-			m.Get("/commit/:sha([a-f0-9]{7,64})$", repo.MustBeNotEmpty, serveWeb)
-
-			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})\\.diff", flamegoBridger(webHandler))
-			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, serveWeb)
-		}, ignSignIn, context.RepoAssignment())
-		m.Group("/:username/:reponame", func() {
-			m.Get("", serveWeb)
-			m.Get("/^:type(stars|watchers)$", serveWeb)
-		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment())
-		// ***** END: Repository *****
-
-		// **********************
-		// ----- API routes -----
-		// **********************
-
 		// TODO: Without session
 		m.Any("/api/v1/*", ignSignIn, apiV1Bridger(apiV1Handler))
-		m.Any("/api/web/*", flamegoBridger(webHandler))
-		m.Get("/redirect", flamegoBridger(webHandler))
-		m.Get("/captcha/*", flamegoBridger(webHandler))
-		m.Any("/*", serveWeb)
+		m.Any("/", flamegoBridger(webHandler))
+		m.Any("/*", flamegoBridger(webHandler))
 	},
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,
@@ -488,18 +112,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
 		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
-	})
-
-	// ***************************
-	// ----- Internal routes -----
-	// ***************************
-
-	m.Group("/-", func() {
-		m.Get("/metrics", app.MetricsFilter(), promhttp.Handler()) // "/-/metrics"
-
-		m.Group("/api", func() {
-			m.Post("/sanitize_ipynb", app.SanitizeIpynb()) // "/-/api/sanitize_ipynb"
-		})
 	})
 
 	// Flag for port number in case first time run conflict.
@@ -620,6 +232,16 @@ func newTracingHandler(h http.Handler) http.Handler {
 
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
+	f.AutoHead(true)
+	// Like Macaron did, a trailing slash of a page path is ignored, e.g.,
+	// "/alice/widgets/" is the page of "/alice/widgets".
+	f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
+		if p := r.URL.Path; len(p) > 1 && strings.HasSuffix(p, "/") && !strings.HasPrefix(p, "/api/") {
+			r.URL.Path = strings.TrimRight(p, "/")
+			r.URL.RawPath = ""
+		}
+		return false
+	})
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
 	f.Use(flamegoInjector)
 	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
@@ -664,10 +286,11 @@ func newRoutingHandler() (http.Handler, error) {
 
 	mountWebLocaleRoutes(f)
 	mountWebAPIRoutes(f)
-	err = mountWebAppRoutes(f)
+	webApp, err := mountWebAppRoutes(f)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
+	mountPageRoutes(f, webApp)
 	return f, nil
 }
 
