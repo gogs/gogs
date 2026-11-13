@@ -110,25 +110,6 @@ func (f *CreateComment) Validate(ctx *macaron.Context, errs binding.Errors) bind
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-//  __      __.__ __   .__
-// /  \    /  \__|  | _|__|
-// \   \/\/   /  |  |/ /  |
-//  \        /|  |    <|  |
-//   \__/\  / |__|__|_ \__|
-//        \/          \/
-
-type NewWiki struct {
-	OldTitle string
-	Title    string `binding:"Required"`
-	Content  string `binding:"Required"`
-	Message  string
-}
-
-// FIXME: use code generation to generate this method.
-func (f *NewWiki) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 // ___________    .___.__  __
 // \_   _____/  __| _/|__|/  |_
 //  |    __)_  / __ | |  \   __\

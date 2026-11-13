@@ -56,6 +56,8 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/alice/repo/forks",
 		"/api/web/alice/repo/releases",
 		"/api/web/alice/repo/branches",
+		"/api/web/alice/repo/wiki",
+		"/api/web/alice/repo/wiki/pages",
 	}
 	tests := []struct {
 		name                     string
@@ -159,6 +161,7 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/orgs/acme/settings/hooks",
 		"/api/web/orgs/acme/settings/hooks/1",
 		"/api/web/acme/widgets/milestones/1",
+		"/api/web/acme/widgets/wiki/source",
 	} {
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))

@@ -822,3 +822,63 @@ export function updateRepoRelease(owner: string, name: string, tag: string, form
 export function deleteRepoRelease(owner: string, name: string, tag: string) {
   return send("DELETE", repoURL(owner, name, `/releases/edit/${refPath(tag)}`));
 }
+
+export interface RepoWikiPage {
+  name: string;
+  html: string;
+  author: { name: string; when: string };
+}
+
+export interface RepoWikiData {
+  // hasWiki is false until the first page is created, and the other fields
+  // are then left out.
+  hasWiki: boolean;
+  page?: RepoWikiPage;
+  pages?: string[];
+  cloneLinks?: { https?: string; ssh?: string };
+  viewerCanWrite: boolean;
+}
+
+function wikiPageQuery(page: string) {
+  return `?${new URLSearchParams({ page }).toString()}`;
+}
+
+export function fetchRepoWiki(owner: string, name: string, page: string) {
+  return fetchJSON<RepoWikiData>(repoURL(owner, name, `/wiki${wikiPageQuery(page)}`));
+}
+
+export interface RepoWikiPagesData {
+  pages: { name: string; updatedAt: string }[];
+  viewerCanWrite: boolean;
+}
+
+export function fetchRepoWikiPages(owner: string, name: string) {
+  return fetchJSON<RepoWikiPagesData>(repoURL(owner, name, "/wiki/pages"));
+}
+
+export function fetchRepoWikiPageSource(owner: string, name: string, page: string) {
+  return fetchJSON<{ name: string; content: string }>(repoURL(owner, name, `/wiki/source${wikiPageQuery(page)}`));
+}
+
+export interface RepoWikiPageForm {
+  // oldTitle is the page being changed, and is left out for a new page.
+  oldTitle?: string;
+  title: string;
+  content: string;
+  message: string;
+}
+
+// saveRepoWikiPage creates or changes a page, and returns the name it was
+// saved under.
+export async function saveRepoWikiPage(owner: string, name: string, form: RepoWikiPageForm) {
+  const { name: saved } = await submit<{ name: string }>(
+    form.oldTitle === undefined ? "POST" : "PATCH",
+    repoURL(owner, name, "/wiki"),
+    form,
+  );
+  return saved;
+}
+
+export function deleteRepoWikiPage(owner: string, name: string, page: string) {
+  return send("DELETE", repoURL(owner, name, `/wiki${wikiPageQuery(page)}`));
+}
