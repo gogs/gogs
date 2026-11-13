@@ -8,7 +8,7 @@ All notable changes to Gogs are documented in this file.
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
-- The database schema version is now recorded in the `goose_db_version` table. The `version` table is no longer updated and can be dropped. [#PR](https://github.com/gogs/gogs/pull/PR)
+- The database schema version is now recorded in the `goose_db_version` table. The `version` table is no longer updated and can be dropped. [#8526](https://github.com/gogs/gogs/pull/8526)
 
 ### Fixed
 
