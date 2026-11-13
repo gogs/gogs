@@ -195,8 +195,12 @@ func (p *parser) parseLeaves(n *node, keep bool) {
 		switch c.kind {
 		case kindTableRow:
 			// The cells of rows in footnote definitions are parsed with the
-			// definitions, which decides the footnote numbering.
-			p.rowCells(n, c)
+			// definitions, which decides the footnote numbering. A render
+			// that starts over, see Render, parses them again, but the row
+			// keeps its cells.
+			if c.first == nil {
+				p.rowCells(n, c)
+			}
 			p.parseLeaves(c, keep)
 		case kindParagraph, kindHeading, kindTableCell:
 			m := p.parseLeaf(c, nil)

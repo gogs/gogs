@@ -288,6 +288,16 @@ func TestFootnoteLabels(t *testing.T) {
 	}
 }
 
+func TestFootnoteTableAfterRawHTML(t *testing.T) {
+	// The raw HTML after the definition makes the sanitizing render start
+	// over without sanitizing, which parses the definition again.
+	in := "a[^1]\n\n[^1]: | b | c |\n    |---|---|\n    | d | e |\n\nf <b>g</b>\n"
+	got := Render([]byte(in), postProcessTestOptions())
+	assert.False(t, got.Sanitized)
+	assert.Equal(t, 2, strings.Count(string(got.HTML), "<th>"), string(got.HTML))
+	assert.Equal(t, 2, strings.Count(string(got.HTML), "<td>"), string(got.HTML))
+}
+
 func TestTablePadding(t *testing.T) {
 	opts := &Options{Tables: true}
 	t.Run("short rows are filled", func(t *testing.T) {
