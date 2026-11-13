@@ -27,63 +27,86 @@ func parseCacheOptions(confOpts conf.CacheOptions) (cache.Options, error) {
 		opts.Initer = cache.FileIniter()
 		opts.Config = cache.FileConfig{RootDir: confOpts.Host}
 	case "redis":
-		cfg, err := parseRedisConfig(confOpts.Host)
+		redisOpts, err := parseRedisOptions(confOpts.Host)
 		if err != nil {
-			return cache.Options{}, errors.Wrap(err, "parse redis config")
+			return cache.Options{}, errors.Wrap(err, "parse redis options")
 		}
 		opts.Initer = redis.Initer()
-		opts.Config = cfg
+		opts.Config = redis.Config{
+			Options: &redis.Options{
+				Network:         redisOpts.network,
+				Addr:            redisOpts.addr,
+				Password:        redisOpts.password,
+				DB:              redisOpts.db,
+				PoolSize:        redisOpts.poolSize,
+				ConnMaxIdleTime: redisOpts.idleTimeout,
+				TLSConfig:       redisOpts.tlsConfig,
+			},
+			KeyPrefix: redisOpts.prefix,
+		}
 	default:
 		return cache.Options{}, errors.Errorf("unsupported adapter %q", confOpts.Adapter)
 	}
 	return opts, nil
 }
 
-func parseRedisConfig(host string) (redis.Config, error) {
-	cfg, err := ini.Load([]byte(strings.ReplaceAll(host, ",", "\n")))
+// redisOptions are the Redis connection options of the cache and session
+// stores.
+type redisOptions struct {
+	network     string
+	addr        string
+	password    string
+	db          int
+	poolSize    int
+	idleTimeout time.Duration
+	prefix      string
+	tlsConfig   *tls.Config
+}
+
+// parseRedisOptions parses the comma-separated options in the format of
+// go-macaron's Redis adapters, e.g., "network=tcp,addr=:6379,db=0".
+func parseRedisOptions(s string) (redisOptions, error) {
+	cfg, err := ini.Load([]byte(strings.ReplaceAll(s, ",", "\n")))
 	if err != nil {
-		return redis.Config{}, errors.Wrap(err, "load HOST")
+		return redisOptions{}, errors.Wrap(err, "load options")
 	}
 
-	var config redis.Config
+	var opts redisOptions
 	for k, v := range cfg.Section("").KeyValues() {
 		switch k {
 		case "network":
-			config.Options.Network = v
+			opts.network = v
 		case "addr":
-			config.Options.Addr = v
+			opts.addr = v
 		case "password":
-			config.Options.Password = v
+			opts.password = v
 		case "db":
-			n, err := strconv.Atoi(v)
+			opts.db, err = strconv.Atoi(v)
 			if err != nil {
-				return redis.Config{}, errors.Wrapf(err, "parse db %q", v)
+				return redisOptions{}, errors.Wrapf(err, "parse db %q", v)
 			}
-			config.Options.DB = n
 		case "pool_size":
-			n, err := strconv.Atoi(v)
+			opts.poolSize, err = strconv.Atoi(v)
 			if err != nil {
-				return redis.Config{}, errors.Wrapf(err, "parse pool_size %q", v)
+				return redisOptions{}, errors.Wrapf(err, "parse pool_size %q", v)
 			}
-			config.Options.PoolSize = n
 		case "idle_timeout":
-			d, err := time.ParseDuration(v + "s")
+			opts.idleTimeout, err = time.ParseDuration(v + "s")
 			if err != nil {
-				return redis.Config{}, errors.Wrapf(err, "parse idle_timeout %q", v)
+				return redisOptions{}, errors.Wrapf(err, "parse idle_timeout %q", v)
 			}
-			config.Options.ConnMaxIdleTime = d
 		case "prefix":
-			config.KeyPrefix = v
+			opts.prefix = v
 		case "tls":
-			// Matches go-macaron/session/redis: any non-empty `tls=` value enables
+			// Matches go-macaron's Redis adapters: any non-empty `tls=` value enables
 			// TLS with InsecureSkipVerify.
-			config.Options.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+			opts.tlsConfig = &tls.Config{InsecureSkipVerify: true}
 		case "hset_name":
 			// Macaron stored values in a single Redis hash named by this key,
 			// whereas Flamego stores per-key with KeyPrefix, so this knob has no equivalent.
 		default:
-			return redis.Config{}, errors.Errorf("unsupported redis HOST key %q", k)
+			return redisOptions{}, errors.Errorf("unsupported option %q", k)
 		}
 	}
-	return config, nil
+	return opts, nil
 }

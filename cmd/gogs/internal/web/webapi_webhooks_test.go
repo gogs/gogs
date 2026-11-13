@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/go-macaron/i18n"
 	"github.com/stretchr/testify/assert"
 	unknwoni18n "github.com/unknwon/i18n"
+
+	"gogs.io/gogs/internal/i18n"
 )
 
 func TestValidateWebhookURL(t *testing.T) {

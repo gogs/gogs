@@ -18,10 +18,6 @@ require (
 	github.com/glebarez/go-sqlite v1.21.2
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-ldap/ldap/v3 v3.4.13
-	github.com/go-macaron/binding v1.2.0
-	github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07
-	github.com/go-macaron/i18n v0.6.0
-	github.com/go-macaron/session v1.0.4
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
@@ -30,6 +26,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/inbucket/html2text v1.0.0
 	github.com/issue9/identicon v1.2.1
+	github.com/klauspost/compress v1.18.7
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/msteinert/pam v1.2.0
 	github.com/niklasfasching/go-org v1.9.1
@@ -56,7 +53,6 @@ require (
 	golang.org/x/sync v0.23.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/text v0.42.0
-	gopkg.in/macaron.v1 v1.5.1
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.6.0
@@ -100,7 +96,6 @@ require (
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -116,7 +111,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -141,6 +135,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
+	github.com/smartystreets/goconvey v1.8.1 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.bobheadxi.dev/streamline v1.2.1 // indirect
