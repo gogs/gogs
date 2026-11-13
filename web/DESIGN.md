@@ -97,7 +97,7 @@ Pages that show settings or measurements, e.g., the admin dashboard and configur
 
 Show code with syntax highlighting, e.g., the payload of a webhook delivery, with `CodeBlock` from `@/components/CodeBlock`. It renders through `@pierre/diffs` with the same themes and worker pool as the files of a commit, and follows the app theme.
 
-Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a plain `<textarea>`. It is the one editor of the app, built on CodeMirror 6. Markdown wraps like prose and Tab moves focus. `code` lays out source code with line numbers and Tab indents, and Escape then Tab leaves it. Token colors are the `--code-*` variables in `index.css`. For a file, pass the `lang` that `codeLanguageOf` picks by its name, which can change while the editor is open. Plain text fields, such as descriptions and SSH keys, stay textareas.
+Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a plain `<textarea>`. It is the one editor of the app, built on CodeMirror 6. Markdown wraps like prose and Tab moves focus. `code` lays out source code with line numbers and Tab indents, and Escape then Tab leaves it. Token colors are the `--code-*` variables in `index.css`. For a file, pass the `lang` that `codeLanguageOf` picks by its name, and the `indentUnit` and `tabSize` its `.editorconfig` sets, which can all change while the editor is open. Plain text fields, such as descriptions and SSH keys, stay textareas.
 
 ## Rendered Markdown
 

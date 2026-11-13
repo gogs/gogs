@@ -1,5 +1,5 @@
 import { MultiFileDiff } from "@pierre/diffs/react";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { FileX, GitBranch, Upload } from "lucide-react";
 import { type AriaAttributes, type FormEvent, type ReactNode, useId, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -15,10 +15,12 @@ import { codeLanguageOf } from "@/lib/code-language";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoEditorCommit,
+  type RepoEditorIndent,
   type RepoEditorTarget,
   commitRepoFile,
   deleteRepoEditorUpload,
   deleteRepoFile,
+  fetchRepoEditorIndent,
   refPath,
   renderRepoMarkdown,
   repoHeaderQuery,
@@ -357,6 +359,14 @@ function ChangesPreview({
   );
 }
 
+// indentationOf returns how to indent with the rules of .editorconfig: one
+// level is size spaces, 4 when only the style is set, and 2 without rules.
+function indentationOf(indent?: RepoEditorIndent) {
+  const tabSize = indent?.tabWidth || indent?.size || 4;
+  if (indent?.style === "tab") return { indentUnit: "\t", tabSize };
+  return { indentUnit: " ".repeat(indent?.size || (indent?.style ? 4 : 2)), tabSize };
+}
+
 // conflictOf returns the message of a commit refused because the file changed
 // since the editor opened, and the commit of the branch now.
 function conflictOf(error: Error | null) {
@@ -391,6 +401,14 @@ export function RepoFileEditor({
   const extension = fileName.includes(".") ? fileName.slice(fileName.lastIndexOf(".")) : "";
   const isCode = lang !== "markdown";
   const wrap = !isCode || (extension !== "" && target.lineWrapExtensions.includes(extension));
+  // The rules follow the file name as it is typed.
+  const indent = useQuery({
+    queryKey: ["editor-indent", owner, name, target.branch, path],
+    queryFn: () => fetchRepoEditorIndent(owner, name, target.branch, path),
+    enabled: fileName !== "",
+    staleTime: Infinity,
+    placeholderData: keepPreviousData,
+  });
   const preview = useQuery({
     queryKey: ["markdown", owner, name, content],
     queryFn: () => renderRepoMarkdown(owner, name, content),
@@ -472,6 +490,7 @@ export function RepoFileEditor({
                   lang={lang}
                   code={isCode}
                   wrap={wrap}
+                  {...indentationOf(indent.data)}
                   value={content}
                   onChange={setContent}
                   autoFocus={!isNew}
