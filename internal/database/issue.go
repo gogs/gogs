@@ -28,7 +28,7 @@ type Issue struct {
 	Index           int64       `xorm:"UNIQUE(repo_index)" gorm:"uniqueIndex:issue_repo_index_unique;not null"` // Index in one repository.
 	PosterID        int64       `gorm:"index"`
 	Poster          *User       `xorm:"-" json:"-" gorm:"-"`
-	Title           string      `xorm:"name" gorm:"name"`
+	Title           string      `xorm:"name" gorm:"column:name"`
 	Content         string      `xorm:"TEXT" gorm:"type:TEXT"`
 	RenderedContent string      `xorm:"-" json:"-" gorm:"-"`
 	Labels          []*Label    `xorm:"-" json:"-" gorm:"-"`

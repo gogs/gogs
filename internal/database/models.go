@@ -184,11 +184,6 @@ func NewEngine() error {
 	if err = migrations.Migrate(db); err != nil {
 		return errors.Newf("migrate: %v", err)
 	}
-
-	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
-		return errors.Wrap(err, "sync tables")
-	}
-
 	return nil
 }
 
