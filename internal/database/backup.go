@@ -19,6 +19,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -28,12 +29,6 @@ func getTableType(t any) string {
 	return strings.TrimPrefix(fmt.Sprintf("%T", t), "*database.")
 }
 
-// backupTables returns the tables to back up, which are all tables in Tables
-// plus the "version" table owned by migrations.
-func backupTables() []any {
-	return append(append([]any{}, Tables...), new(Version))
-}
-
 // DumpDatabase dumps all data from database to file system in JSON Lines format.
 func DumpDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool) error {
 	err := os.MkdirAll(dirPath, os.ModePerm)
@@ -41,7 +36,7 @@ func DumpDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool
 		return err
 	}
 
-	for _, table := range backupTables() {
+	for _, table := range Tables {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -106,9 +101,16 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 	return rows.Err()
 }
 
-// ImportDatabase imports data from backup archive in JSON Lines format.
+// ImportDatabase migrates the database to the current schema version and
+// replaces the rows of each table with those in the backup archive in JSON Lines
+// format.
 func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool) error {
-	for _, table := range backupTables() {
+	err := migrations.Migrate(db.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "migrate")
+	}
+
+	for _, table := range Tables {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -144,14 +146,9 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 }
 
 func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error {
-	err := db.WithContext(ctx).Migrator().DropTable(table)
+	err := db.WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(table).Error
 	if err != nil {
-		return errors.Wrap(err, "drop table")
-	}
-
-	err = db.WithContext(ctx).Migrator().AutoMigrate(table)
-	if err != nil {
-		return errors.Wrap(err, "auto migrate")
+		return errors.Wrap(err, "delete rows")
 	}
 
 	s, err := schema.Parse(table, &sync.Map{}, db.NamingStrategy)

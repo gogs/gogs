@@ -16,7 +16,6 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/cryptox"
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/lfsx"
 	"gogs.io/gogs/internal/testx"
 )
@@ -32,7 +31,7 @@ func TestDumpAndImport(t *testing.T) {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
 
-	db := dbtest.NewDB(t, "dumpAndImport", backupTables()...)
+	db := newTestDB(t, "dumpAndImport")
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)
@@ -595,11 +594,6 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			NumMembers:      1,
 		},
 
-		&Version{
-			ID:      1,
-			Version: 23,
-		},
-
 		&Watch{
 			ID:     1,
 			UserID: 1,
@@ -664,7 +658,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 func dumpTables(t *testing.T, db *gorm.DB) {
 	ctx := context.Background()
 
-	for _, table := range backupTables() {
+	for _, table := range Tables {
 		tableName := getTableType(table)
 
 		var buf bytes.Buffer
@@ -681,7 +675,7 @@ func dumpTables(t *testing.T, db *gorm.DB) {
 func importTables(t *testing.T, db *gorm.DB) {
 	ctx := context.Background()
 
-	for _, table := range backupTables() {
+	for _, table := range Tables {
 		tableName := getTableType(table)
 
 		err := func() error {

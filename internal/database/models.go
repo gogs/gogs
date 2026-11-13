@@ -12,7 +12,7 @@ import (
 	"gogs.io/gogs/internal/database/migrations"
 )
 
-// SetEngine connects to the database and creates tables that do not exist yet.
+// SetEngine connects to the database.
 func SetEngine() (*gorm.DB, error) {
 	if conf.Database.Type == "sqlite3" {
 		if err := os.MkdirAll(filepath.Dir(conf.Database.Path), os.ModePerm); err != nil {
@@ -90,10 +90,4 @@ func Ping() error {
 		return err
 	}
 	return sqlDB.Ping()
-}
-
-// The version table. Should have only one row with id==1
-type Version struct {
-	ID      int64
-	Version int64
 }
