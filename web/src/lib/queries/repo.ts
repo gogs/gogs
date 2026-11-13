@@ -1107,14 +1107,45 @@ export interface RepoTreeEntry {
   commit?: RepoEntryCommit;
 }
 
+// RepoNotebook is a Jupyter notebook with its Markdown rendered and its HTML
+// sanitized by the server.
+export interface RepoNotebook {
+  // fileExtension is of the source files of the notebook's language, e.g.,
+  // ".py", or empty when not known.
+  fileExtension: string;
+  cells: RepoNotebookCell[];
+}
+
+export interface RepoNotebookCell {
+  type: "markdown" | "code" | "raw";
+  // html is set for a Markdown cell, and source otherwise.
+  html?: string;
+  source?: string;
+  executionCount?: number;
+  outputs?: RepoNotebookOutput[];
+}
+
+export interface RepoNotebookOutput {
+  // The text of "text" and "error" may contain ANSI escape sequences.
+  type: "text" | "error" | "image" | "html";
+  // executionCount is set for the result of a cell.
+  executionCount?: number;
+  text?: string;
+  // src is the data URI of an image.
+  src?: string;
+  html?: string;
+}
+
 export interface RepoFile {
   name: string;
   size: number;
   // too_large is a text file too large to show.
   kind: "text" | "markup" | "notebook" | "image" | "video" | "pdf" | "binary" | "too_large";
-  // content is set for a text file, and html for a file in a markup language.
+  // content is set for a text file, html for a file in a markup language, and
+  // notebook for a Jupyter notebook.
   content?: string;
   html?: string;
+  notebook?: RepoNotebook;
   isReadme: boolean;
   // isSymlink is set for a symbolic link, whose content is its target.
   isSymlink: boolean;
