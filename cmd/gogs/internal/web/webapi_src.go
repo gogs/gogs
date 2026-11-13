@@ -72,11 +72,12 @@ type repoFile struct {
 	// Kind is "text", "markup", "notebook", "image", "video", "pdf",
 	// "binary", or "too_large" for a text file too large to show.
 	Kind string `json:"kind"`
-	// Content is set for a text file, and HTML for a file in a markup
-	// language.
-	Content  *string `json:"content,omitempty"`
-	HTML     string  `json:"html,omitempty"`
-	IsReadme bool    `json:"isReadme"`
+	// Content is set for a text file, HTML for a file in a markup language,
+	// and Notebook for a Jupyter notebook.
+	Content  *string       `json:"content,omitempty"`
+	HTML     string        `json:"html,omitempty"`
+	Notebook *repoNotebook `json:"notebook,omitempty"`
+	IsReadme bool          `json:"isReadme"`
 	// IsSymlink is set for a symbolic link, whose content is its target.
 	IsSymlink bool `json:"isSymlink"`
 	// TabWidth is the width of a tab that .editorconfig sets for the file.
@@ -341,7 +342,13 @@ func describeRepoFile(ctx context.Context, repo *database.Repository, commit *gi
 			file.Kind = "markup"
 			file.HTML = string(markup.OrgMode(p, dirLink, repo.ComposeMetas()))
 		case markup.TypeIPythonNotebook:
-			file.Kind = "notebook"
+			file.Notebook, err = parseNotebook(p, dirLink, repo.ComposeMetas())
+			if err == nil {
+				file.Kind = "notebook"
+				break
+			}
+			// A file that is not a valid notebook shows as text.
+			fallthrough
 		default:
 			file.Kind = "text"
 			content := toUTF8(p)
