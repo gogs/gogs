@@ -198,6 +198,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/forks", getRepoForks)
 			f.Get("/releases", withRepoCode, getRepoReleases)
 			f.Get("/branches", withRepoCode, getRepoBranches)
+			f.Group("/wiki", func() {
+				f.Get("", getRepoWiki)
+				f.Get("/pages", getRepoWikiPages)
+			}, withRepoWiki)
 			f.Group("", func() {
 				f.Get("/labels", getRepoLabels)
 				f.Get("/milestones", getRepoMilestones)
@@ -220,6 +224,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Combo("/edit/{tag: **}", withRepoRelease).Get(getRepoRelease).Delete(deleteRepoRelease)
 			}, withRepoCode)
 		}, requireSignIn, withRepoContext, withRepoWriter)
+		f.Group("/{owner}/{repo}/wiki", func() {
+			f.Get("/source", getRepoWikiPageSource)
+			f.Delete("", deleteRepoWikiPage)
+		}, requireSignIn, withRepoContext, withRepoWiki, withWikiWriter)
 		f.Group("/{owner}/{repo}", func() {
 			f.Delete("", bindJSON(repoConfirmRequest{}), deleteRepo)
 			f.Group("/settings", func() {
@@ -356,6 +364,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Post("", bindJSON(repoReleaseRequest{}), postRepoRelease)
 			f.Patch("/edit/{tag: **}", withRepoRelease, bindJSON(repoReleaseRequest{}), patchRepoRelease)
 		}, withRepoWriter, withRepoCode)
+		f.Combo("/wiki", withRepoWiki, withWikiWriter).
+			Post(bindJSON(repoWikiPageRequest{}), postRepoWikiPage).
+			Patch(bindJSON(repoWikiPageRequest{}), patchRepoWikiPage)
 	}, limitIssueContent, requireSignIn, withRepoContext)
 	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireSignIn, withRepoContext, withRepoIssues, postRepoIssueAttachment)
 	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireSignIn, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)

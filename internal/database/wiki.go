@@ -32,12 +32,17 @@ func ToWikiPageURL(name string) string {
 	return url.QueryEscape(name)
 }
 
-// ToWikiPageName formats a URL back to corresponding wiki page name. It enforces
-// single-level hierarchy by replacing all "/" with spaces.
+// ToWikiPageName formats a URL back to corresponding wiki page name.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(urlString)
-	name = pathx.Clean(name)
-	return strings.ReplaceAll(name, "/", " ")
+	return CleanWikiPageName(name)
+}
+
+// CleanWikiPageName returns the name of the file of a wiki page without its
+// extension. It enforces single-level hierarchy by replacing all "/" with
+// spaces.
+func CleanWikiPageName(name string) string {
+	return strings.ReplaceAll(pathx.Clean(name), "/", " ")
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
@@ -108,7 +113,8 @@ func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error
 	return branch, nil, nil
 }
 
-// updateWikiPage adds new page to repository wiki.
+// updateWikiPage adds new page to repository wiki, or changes the page named
+// oldTitle when isNew is false. Titles are page names, not URLs.
 func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, title, content, message string, isNew bool) error {
 	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
@@ -122,7 +128,7 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 		return err
 	}
 
-	title = ToWikiPageName(title)
+	title = CleanWikiPageName(title)
 	filename := title + ".md"
 	if message == "" {
 		message = "Update page '" + title + "'"
@@ -138,7 +144,15 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 					return ErrWikiAlreadyExist{filename}
 				}
 			} else {
-				oldFilename := ToWikiPageName(oldTitle) + ".md"
+				oldFilename := CleanWikiPageName(oldTitle) + ".md"
+				if oldFilename != filename {
+					entry, err := treeEntry(ctx, parent, filename)
+					if err != nil {
+						return err
+					} else if entry != nil {
+						return ErrWikiAlreadyExist{filename}
+					}
+				}
 				entry, err := treeEntry(ctx, parent, oldFilename)
 				if err != nil {
 					return err
@@ -174,7 +188,7 @@ func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title strin
 		return errors.New("wiki has no pages")
 	}
 
-	title = ToWikiPageName(title)
+	title = CleanWikiPageName(title)
 	filename := title + ".md"
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	return commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, nil, func(tmpRepo *git.Repository) error {
