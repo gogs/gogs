@@ -302,7 +302,7 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 		f.Get("/src/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commits/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commit/{sha: /[a-f0-9]{7,64}/}", requireNonEmptyRepo, serveWeb)
-		f.Get("/compare/{before: /[a-f0-9]{40}([a-f0-9]{24})?/}...{after: /[a-f0-9]{40}([a-f0-9]{24})?/}", requireNonEmptyRepo, serveWeb)
+		f.Get("/compare/"+compareRangeRoute, requireNonEmptyRepo, serveWeb)
 	}, page, ignSignIn, withPageRepo(false, false))
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("", serveWeb)
