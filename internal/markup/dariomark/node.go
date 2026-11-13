@@ -33,7 +33,8 @@ const (
 	kindRawHTML
 	kindFootnoteRef
 	kindTaskCheckbox
-	// kindTypo is typographic punctuation. Its level holds the typo.
+	// kindTypo is typographic punctuation. Its level holds the typo, e.g.,
+	// typoEmDash.
 	kindTypo
 	// kindFraction is a fraction. Its text holds the source, and its level the
 	// length of the numerator, or 0 for a vulgar fraction like "½".
@@ -136,7 +137,7 @@ type node struct {
 	// which still counts for the typographer.
 	textEOL bool
 	checked bool
-	// alert is the alertKind of a blockquote, or 0.
+	// alert is the index in alertKinds of a blockquote that is an alert, or 0.
 	alert uint8
 }
 

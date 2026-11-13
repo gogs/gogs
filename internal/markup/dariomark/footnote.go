@@ -151,7 +151,7 @@ func footnoteKey(label []byte) string {
 }
 
 // footnoteRef parses a footnote reference at the current position, which is
-// at "[" or at "!" followed by "[".
+// at "[" or at "!" followed by "[", and reports whether there is one.
 func (ip *inlineParser) footnoteRef() bool {
 	src := ip.src
 	i := ip.pos

@@ -146,8 +146,8 @@ func (p *parser) normalizeLineEndings(src []byte) []byte {
 }
 
 // parse parses src into a document tree. If flush is not nil, it is called
-// after each line that closed the first child of the document, and parsing
-// stops when it returns false.
+// after each line while the first child of the document is closed, and once
+// at the end. Parsing stops when it returns false.
 func (p *parser) parse(src []byte, flush func() bool) *node {
 	src = p.normalizeLineEndings(src)
 	p.src = src

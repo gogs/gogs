@@ -218,8 +218,8 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 	}
 }
 
-// TestMarkdown_ShortenAutoLink checks links whose commit or issue path follows
-// a "#".
+// TestMarkdown_ShortenAutoLink checks that links whose commit or issue path
+// follows a "#" are not shortened.
 func TestMarkdown_ShortenAutoLink(t *testing.T) {
 	conf.Server.ExternalURL = "http://localhost:3000/"
 	NewSanitizer()

@@ -1,8 +1,8 @@
 // Package dariomark renders Markdown to HTML. Dariomark implements CommonMark
 // 0.31.2 and the GitHub Flavored Markdown extensions (tables, strikethrough,
 // task lists and extended autolinks), plus footnotes, GitHub alerts and
-// special links, e.g., mentions and issue references. It is safe for concurrent use and runs in
-// linear time.
+// special links, e.g., mentions and issue references. It is safe for
+// concurrent use and runs in linear time.
 package dariomark
 
 import (
@@ -156,12 +156,11 @@ var parserPool = sync.Pool{New: func() any { return new(parser) }}
 // Without Options.PostProcess, raw HTML is passed through, and the output is
 // not sanitized.
 //
-// With Options.PostProcess, the output is post-processed: special references in text
-// become links, standalone images are wrapped in links to themselves, and
-// links, code and preformatted text are left alone. Documents without raw
+// With Options.PostProcess, the output is post-processed: special references
+// in text become links, standalone images are wrapped in links to themselves,
+// and links, code and preformatted text are left alone. Documents without raw
 // HTML are sanitized while rendering when Options.Sanitizer is set, and
-// Result.Sanitized is true. Other
-// documents must be sanitized by the caller.
+// Result.Sanitized is true. Other documents must be sanitized by the caller.
 func Render(src []byte, opts *Options) Result {
 	p := parserPool.Get().(*parser)
 	defer func() {

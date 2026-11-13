@@ -86,8 +86,8 @@ func FindAllMentions(content string) []string {
 func findMentions(text []byte) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(text, -1) {
-		// The mention starts after the character before the "@" that the
-		// pattern requires.
+		// The pattern requires a character before the "@", which is not part
+		// of the mention.
 		start := loc[3]
 		m := text[start:loc[1]]
 		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
@@ -256,8 +256,8 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	return replaceSpans(rawBytes, findSpecialLinks(rawBytes, urlPrefix, metas))
 }
 
-// findSpecialLinks returns the mentions, indexes and commit IDs in text, see
-// RenderSpecialLink.
+// findSpecialLinks returns the mentions, issue references, cross-references
+// and commit IDs in text, see RenderSpecialLink.
 func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string) []linkSpan {
 	kinds := specialLinkKinds(rawBytes, metas)
 	if kinds == 0 {

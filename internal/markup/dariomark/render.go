@@ -312,9 +312,10 @@ var (
 )
 
 // taskItem reports whether the list item starts with a task list item
-// marker, and whether the marker is checked. The marker is "[ ]" or "[x]" at
-// the start of a paragraph that is the first block of the item, followed by
-// a space or tab on the same line.
+// marker, and whether the marker is checked. The marker is "[ ]", "[x]" or
+// "[X]", where a tab may stand for the space, at the start of a paragraph
+// that is the first block of the item. It is followed by a space or tab, or
+// ends the line.
 func (p *parser) taskItem(item *node) (task, checked bool) {
 	b := item.first
 	if !p.opts.TaskLists || b == nil || b.kind != kindParagraph || b.segEnd == b.segStart {

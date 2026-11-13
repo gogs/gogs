@@ -31,7 +31,7 @@ var typoEntities = [...]struct{ html, text string }{
 	typoRightAngle:  {"&raquo;", "\u00bb"},
 }
 
-// typoEntity returns the replacement of t under the options.
+// entity returns the HTML and the text that replace t under the options.
 func (o *Typographer) entity(t typo) (html, text string) {
 	switch t {
 	case typoEnDash:
@@ -60,8 +60,8 @@ var (
 	inlineSpecialTypoNoDashLinkifyS = withSpecial(inlineSpecialLinkifyScheme, `"'.123456789`)
 )
 
-// typographer replaces the punctuation at the current position, which is not
-// escaped.
+// typographer replaces the punctuation c at the current position, which is
+// not escaped, and reports whether it did.
 func (ip *inlineParser) typographer(c byte) bool {
 	src := ip.src
 	i := ip.pos
@@ -92,7 +92,8 @@ func (ip *inlineParser) typographer(c byte) bool {
 	return false
 }
 
-// fraction replaces the fraction at the current position. A fraction is
+// fraction replaces the fraction at the current position and reports whether
+// it did. A fraction is
 // surrounded by fractionBoundary bytes, and its numerator does not start
 // with "0".
 func (ip *inlineParser) fraction() bool {
@@ -181,9 +182,9 @@ func (ip *inlineParser) addTypo(t typo, n int) {
 // quotes are delimiters that pair up like emphasis, see processEmphasis. A
 // quote that can open and is not right-flanking may start a pair, and a
 // right-flanking quote may end one. Like cmark-gfm, a single quote after "]"
-// or ")" does not start a pair, e.g., in "[link](url)'s". Unpaired single quotes are apostrophes,
-// and unpaired double quotes are closing quotes when they could end a pair,
-// otherwise opening quotes.
+// or ")" does not start a pair, e.g., in "[link](url)'s". Unpaired single
+// quotes are apostrophes, and unpaired double quotes are closing quotes when
+// they could end a pair, otherwise opening quotes.
 func (ip *inlineParser) quote(c byte) {
 	i := ip.pos
 	before := ip.sourceRuneBefore(i)

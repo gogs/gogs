@@ -115,7 +115,8 @@ func delimIndex(c byte) int {
 
 // materialize gives the delimiter d, which has no node yet, a text node of
 // its own, by splitting the text node that holds it. That node is a sibling
-// before closer, which is a node of a delimiter that d matches.
+// before closer, which is a node of a delimiter that d matches. It reports
+// false when no text node before closer holds all of d.
 func (ip *inlineParser) materialize(d *delimiter, closer *node) bool {
 	start, end := int(d.start), int(d.start+d.origCount)
 	for n := closer.prev; n != nil; n = n.prev {

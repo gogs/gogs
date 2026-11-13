@@ -26,7 +26,7 @@ type bracket struct {
 }
 
 // bracketText records that the brackets from the index first on, up to the
-// next group, are in the text node node, which starts at the offset start.
+// next group, are in node, a text node that starts at the offset start.
 // The node keeps its start when it is split.
 type bracketText struct {
 	first, start int32
@@ -62,7 +62,8 @@ type inlineParser struct {
 	streamAllocs int
 	streamPos    int
 	brackets     stack[bracket]
-	// bracketText holds the text nodes of the brackets before unflushed.
+	// bracketText holds the text nodes of the brackets below the index
+	// unflushed. The brackets from unflushed on are still in the pending text.
 	bracketText []bracketText
 	unflushed   int
 	// inactiveBelow is the number of brackets at the bottom of the stack

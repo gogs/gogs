@@ -162,8 +162,8 @@ func (s *sanitizeSink) flush() {
 		s.specialLinks(text)
 		return
 	}
-	// Long text is passed to Options.SpecialLinks in pieces, which keeps
-	// the memory for the links in each small. See there for the places
+	// Long text is passed to Options.SpecialLinks in pieces, so that the
+	// links of each piece take little memory. See Options.SpecialLinks for
 	// where pieces end.
 	start, http := 0, false
 	for i := 0; i < len(text); i++ {
@@ -190,8 +190,8 @@ func (s *sanitizeSink) flush() {
 // Options.SpecialLinks in pieces.
 var specialLinksPiece = 32 << 10
 
-// startsReference reports whether c may start a special reference at the
-// start of the text, where it may not after a line ending.
+// startsReference reports whether c may start a special reference. A piece of
+// text passed to Options.SpecialLinks does not start with such a character.
 func startsReference(c byte) bool {
 	return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '-' || c == '_' || c == '.' || c == '#'
 }

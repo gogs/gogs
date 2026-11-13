@@ -2,8 +2,11 @@ package dariomark
 
 import "bytes"
 
+// alertKinds are the kinds of GitHub alerts. The first entry stands for no
+// alert, so that 0 means none.
 var alertKinds = [...]struct {
-	// marker is lowercase.
+	// marker is the line that starts the alert, in lowercase. It matches
+	// ignoring case, see alertType.
 	marker, class, title string
 }{
 	{},
@@ -14,8 +17,8 @@ var alertKinds = [...]struct {
 	{"[!caution]", "markdown-alert markdown-alert-caution", "Caution"},
 }
 
-// alertType returns the alert kind whose marker is line, ignoring case and
-// trailing whitespace, or 0.
+// alertType returns the index in alertKinds of the alert whose marker is line,
+// ignoring case and trailing whitespace, or 0.
 func alertType(line []byte) int {
 	line = bytes.TrimRight(line, " \t\r")
 	for i := 1; i < len(alertKinds); i++ {

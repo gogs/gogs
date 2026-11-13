@@ -50,7 +50,8 @@ func withSpecial(t [256]bool, chars string) [256]bool {
 	return t
 }
 
-// extension handles the characters that only extensions treat specially.
+// extension handles the characters that only extensions treat specially, and
+// reports whether it consumed c.
 func (ip *inlineParser) extension(c byte) bool {
 	switch c {
 	case ' ', '\t', '(':
@@ -246,7 +247,7 @@ var emailLocal = func() (t [256]bool) {
 // text and escaped characters, e.g., "a_b@example.com". The local part is the
 // longest run of letters, digits, ".", "-", "_" and "+" before the "@" (GFM
 // 0.29, section 6.9). Like cmark-gfm, a domain followed by another "@" is not
-// part of an address, e.g., in "a@b.c@d.e", where "b.c@d.e" is.
+// part of an address, e.g., "a@b.c@d.e" only links "b.c@d.e".
 func (ip *inlineParser) linkifyEmails(n *node) {
 	for c := n.first; c != nil; {
 		switch c.kind {
@@ -423,8 +424,8 @@ func (ip *inlineParser) taskCheckbox() {
 }
 
 // walkLinks applies Options.RelativeLinks and TextAutoLinksInRawAnchors to the
-// inline contents of n: relative link destinations are joined with the link base, and autolinks
-// inside raw HTML anchors become text.
+// inline contents of n: relative link destinations are joined with the link
+// base, and autolinks inside raw HTML anchors become text.
 func (p *parser) walkLinks(n *node, inRawAnchor *bool) {
 	for c := n.first; c != nil; c = c.next {
 		switch c.kind {
