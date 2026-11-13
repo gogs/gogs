@@ -45,6 +45,11 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 			want:  "<p><a href=\"http://example.com\" rel=\"nofollow\">#12</a> <code>#12</code> and <code>@user</code></p>\n",
 		},
 		{
+			name:  "raw text elements are left alone",
+			input: "<textarea>@user #12</textarea> <script>@user</script> @user",
+			want:  "@user #12  <a href=\"/user\" rel=\"nofollow\">@user</a>\n",
+		},
+		{
 			name:  "relative image",
 			input: "![logo](images/logo.png)",
 			want:  "<p><a href=\"/user/repo/images/logo.png\" rel=\"nofollow\"><img src=\"/user/repo/images/logo.png\" alt=\"logo\"></a></p>\n",

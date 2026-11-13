@@ -8,25 +8,33 @@ import (
 	"golang.org/x/net/html"
 )
 
-// postProcess applies Options.PostProcess to the HTML of a document with raw HTML. It
-// tokenizes the whole output because raw HTML can change how the HTML that
-// follows it is tokenized.
+// postProcess applies Options.PostProcess to the HTML of a document with raw
+// HTML. It tokenizes the whole output because raw HTML can change how the
+// HTML that follows it is tokenized.
 //
-// Text outside links, code and preformatted text gets special links, images
-// are wrapped in links to themselves, and end tags are renamed to close the
-// innermost open element. If the tokenizer fails other than at the end of the
-// input, the input is returned unchanged.
+// Text outside links, code, preformatted text and raw text elements gets
+// special links, images are wrapped in links to themselves, and end tags are
+// renamed to close the innermost open element. If the tokenizer fails other
+// than at the end of the input, the input is returned unchanged.
 func (r *renderer) postProcess(b []byte) []byte {
 	var out bytes.Buffer
 	out.Grow(len(b) + len(b)/8)
 	var startTags []string
+	rawText := false
 	z := html.NewTokenizer(bytes.NewReader(b))
 	for z.Next() != html.ErrorToken {
 		t := z.Token()
+		inRawText := rawText
+		rawText = false
 		switch t.Type {
 		case html.TextToken:
+			if inRawText {
+				out.WriteString(t.String())
+				break
+			}
 			out.Write(r.specialLinks([]byte(t.String())))
 		case html.StartTagToken:
+			rawText = isRawTextElement(t.Data)
 			if t.Data == "img" {
 				if !r.imageLink(&out, t) {
 					out.WriteString(t.String())
@@ -80,6 +88,17 @@ func (r *renderer) postProcess(b []byte) []byte {
 func isNoEndTag(name string) bool {
 	switch name {
 	case "input", "br", "hr", "img":
+		return true
+	}
+	return false
+}
+
+// isRawTextElement reports whether the tokenizer reads the content of the
+// element name as one text token, e.g., "script" and "textarea". The
+// sanitizer drops or escapes that content, so links in it would show as text.
+func isRawTextElement(name string) bool {
+	switch name {
+	case "iframe", "noembed", "noframes", "noscript", "plaintext", "script", "style", "textarea", "title", "xmp":
 		return true
 	}
 	return false
