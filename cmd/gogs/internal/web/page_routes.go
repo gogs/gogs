@@ -301,6 +301,8 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 		f.Get("/forks", requireNonEmptyRepo, serveWeb)
 		f.Get("/src/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commits/{**}", requireNonEmptyRepo, serveWeb)
+		f.Get("/search", requireNonEmptyRepo, serveWeb)
+		f.Get("/search/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commit/{sha: /[a-f0-9]{7,64}/}", requireNonEmptyRepo, serveWeb)
 		f.Get("/compare/"+compareRangeRoute, requireNonEmptyRepo, serveWeb)
 	}, page, ignSignIn, withPageRepo(false, false))

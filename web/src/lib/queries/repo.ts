@@ -1189,6 +1189,27 @@ export function fetchRepoSrc(owner: string, name: string, splat: string) {
   return fetchJSON<RepoSrcData>(repoURL(owner, name, `/src/${refPath(splat)}`));
 }
 
+export interface RepoSearchData {
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  keyword: string;
+  // files are ordered by path, each with its matching lines in order.
+  files: { path: string; matches: { line: number; text: string }[] }[];
+  // truncated is set when more lines matched than files lists.
+  truncated: boolean;
+  // timedOut is set when the search took too long and listed nothing.
+  timedOut: boolean;
+  branches: string[];
+  tags: string[];
+}
+
+// fetchRepoSearch searches the files of the ref in the splat, or of the
+// default branch for an empty splat, for lines that contain the keyword.
+export function fetchRepoSearch(owner: string, name: string, splat: string, q?: string) {
+  const qs = q ? `?${new URLSearchParams({ q }).toString()}` : "";
+  return fetchJSON<RepoSearchData>(repoURL(owner, name, `/search/${refPath(splat)}${qs}`));
+}
+
 export interface RepoCompareData {
   before: string;
   after: string;
