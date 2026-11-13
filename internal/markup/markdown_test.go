@@ -10,7 +10,7 @@ import (
 	. "gogs.io/gogs/internal/markup"
 )
 
-func Test_IsMarkdownFile(t *testing.T) {
+func TestIsMarkdownFile(t *testing.T) {
 	// TODO: Refactor to accept a list of extensions
 	conf.Markdown.FileExtensions = strings.Split(".md,.markdown,.mdown,.mkd", ",")
 	tests := []struct {
@@ -30,7 +30,7 @@ func Test_IsMarkdownFile(t *testing.T) {
 	}
 }
 
-func Test_Markdown(t *testing.T) {
+func TestMarkdown(t *testing.T) {
 	// TODO: Refactor to accept URL
 	conf.Server.ExternalURL = "http://localhost:3000/"
 
@@ -67,7 +67,7 @@ func Test_Markdown(t *testing.T) {
 	}
 }
 
-func Test_RawMarkdown_RelativeLinks(t *testing.T) {
+func TestRawMarkdown_RelativeLinks(t *testing.T) {
 	tests := []struct {
 		prefix string
 		input  string

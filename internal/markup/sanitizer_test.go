@@ -8,7 +8,7 @@ import (
 	. "gogs.io/gogs/internal/markup"
 )
 
-func Test_Sanitizer(t *testing.T) {
+func TestSanitizer(t *testing.T) {
 	NewSanitizer()
 	tests := []struct {
 		input  string
