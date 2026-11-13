@@ -167,10 +167,12 @@ function RepoItem({ repo }: { repo: ExploreRepo }) {
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <a href={repoLink} className="min-w-0 break-all text-(--color-primary) hover:underline">
-            {repo.owner} / <span className="font-semibold">{repo.name}</span>
-          </a>
-          <RepoMarker repo={repo} />
+          <span className="flex min-w-0 items-center gap-0.5">
+            <a href={repoLink} className="min-w-0 break-all text-(--color-primary) hover:underline">
+              {repo.owner} / <span className="font-semibold">{repo.name}</span>
+            </a>
+            <RepoMarker repo={repo} />
+          </span>
           <span className="ml-auto flex items-center gap-3 text-xs tabular-nums text-(--color-muted-foreground)">
             <span className="inline-flex items-center gap-1">
               <Star className="size-3.5" aria-hidden />
