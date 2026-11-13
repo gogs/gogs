@@ -16,44 +16,6 @@ dariomark was written from scratch, from the specifications, for the Markdown th
 - **Built-in sanitizing**: documents without raw HTML are sanitized while they are written, with the same result as [bluemonday](https://github.com/microcosm-cc/bluemonday)'s user content policy.
 - **Safe for concurrent use**, with no dependencies beyond the Go standard library and `golang.org/x/net/html`.
 
-## Usage
-
-```go
-import "gogs.io/gogs/internal/markup/dariomark"
-
-res := dariomark.Render(src, &dariomark.Options{
-	Tables:          true,
-	Strikethrough:   true,
-	TaskLists:       true,
-	Footnotes:       true,
-	Alerts:          true,
-	HeadingIDs:      true,
-	HeadingIDPrefix: "user-content-",
-})
-
-fmt.Printf("%s", res.HTML)
-for _, h := range res.Headings {
-	fmt.Printf("%d %s #%s\n", h.Level, h.Text, h.ID)
-}
-```
-
-The zero value of `Options` renders plain CommonMark. Without `Options.Gogs`, raw HTML in the source is passed through, so sanitize the output before showing untrusted documents.
-
-## Options
-
-| Option | What it does |
-|---|---|
-| `Tables`, `Strikethrough`, `TaskLists` | The GFM extensions. |
-| `Linkify`, `LinkifyURL`, `LinkifyAfterPunct` | Extended autolinks, with a configurable URL matcher. |
-| `Footnotes`, `FootnoteIDPrefix` | Footnotes, with a prefix that keeps ids of several documents on one page apart. |
-| `Alerts` | GitHub alerts. |
-| `HeadingIDs`, `HeadingIDPrefix` | Heading anchors and `Result.Headings`. |
-| `HardWraps`, `XHTML` | Line breaks as `<br>`, and XHTML void elements. |
-| `Typographer` | SmartyPants punctuation: dashes, LaTeX dashes, angled quotes and fractions. |
-| `RelativeLinks`, `LinkBase`, `IsLink` | Resolving relative link destinations against a base path or URL. |
-| `ShortenAutoLink` | Rendering an autolink as custom HTML, e.g., a short commit reference. |
-| `Gogs` | Special links (mentions, issue references, commit IDs), image links and built-in sanitizing. |
-
 ## Performance
 
 `markup.Markdown`, the full Gogs pipeline (rendering, special links and sanitizing), in microseconds per document. Lower is better.
