@@ -36,7 +36,7 @@ func TestSpec(t *testing.T) {
 		468: "<p><em><strong>foo</strong></em></p>\n",
 	}
 
-	data, err := os.ReadFile("testdata/spec.json")
+	data, err := os.ReadFile("testdata/commonmark_spec.json")
 	require.NoError(t, err)
 	var examples []struct {
 		Markdown string `json:"markdown"`
