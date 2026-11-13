@@ -1,40 +1,17 @@
 package templates
 
 import (
-	"bytes"
 	"embed"
-	"io"
 	"io/fs"
 	"os"
 	"path"
 	"strings"
-
-	"github.com/cockroachdb/errors"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/osx"
 )
 
 //go:embed **/*
 var files embed.FS
-
-// fileSystem implements the macaron.TemplateFileSystem interface.
-type fileSystem struct {
-	files []macaron.TemplateFile
-}
-
-func (fs *fileSystem) ListFiles() []macaron.TemplateFile {
-	return fs.files
-}
-
-func (fs *fileSystem) Get(name string) (io.Reader, error) {
-	for i := range fs.files {
-		if fs.files[i].Name()+fs.files[i].Ext() == name {
-			return bytes.NewReader(fs.files[i].Data()), nil
-		}
-	}
-	return nil, errors.Newf("file %q not found", name)
-}
 
 func mustNames(fsys fs.FS) []string {
 	var names []string
@@ -78,38 +55,4 @@ func ReadInjectFile(customDir, name string) ([]byte, error) {
 		return os.ReadFile(fpath)
 	}
 	return files.ReadFile(path.Join("inject", name))
-}
-
-// NewTemplateFileSystem returns a macaron.TemplateFileSystem instance for embedded assets.
-// The argument "dir" can be used to serve subset of embedded assets. Template file
-// found under the "customDir" on disk has higher precedence over embedded assets.
-func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
-	if dir != "" && !strings.HasSuffix(dir, "/") {
-		dir += "/"
-	}
-
-	var err error
-	var tmplFiles []macaron.TemplateFile
-	names := mustNames(files)
-	for _, name := range names {
-		if !strings.HasPrefix(name, dir) {
-			continue
-		}
-		// Check if corresponding custom file exists
-		var data []byte
-		fpath := path.Join(customDir, name)
-		if osx.IsFile(fpath) {
-			data, err = os.ReadFile(fpath)
-		} else {
-			data, err = files.ReadFile(name)
-		}
-		if err != nil {
-			panic(err)
-		}
-		name = strings.TrimPrefix(name, dir)
-		ext := path.Ext(name)
-		name = strings.TrimSuffix(name, ext)
-		tmplFiles = append(tmplFiles, macaron.NewTplFile(name, data, ext))
-	}
-	return &fileSystem{files: tmplFiles}
 }

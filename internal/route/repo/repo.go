@@ -10,57 +10,15 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/urlx"
 )
 
 func MustBeNotEmpty(c *context.Context) {
 	if c.Repo.Repository.IsEmpty {
 		c.NotFound()
 	}
-}
-
-func Action(c *context.Context) {
-	var err error
-	switch c.Params(":action") {
-	case "watch":
-		err = database.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
-	case "unwatch":
-		if userID := c.QueryInt64("user_id"); userID != 0 {
-			if c.User.IsAdmin {
-				err = database.WatchRepo(userID, c.Repo.Repository.ID, false)
-			}
-		} else {
-			err = database.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
-		}
-	case "star":
-		err = database.StarRepo(c.User.ID, c.Repo.Repository.ID, true)
-	case "unstar":
-		err = database.StarRepo(c.User.ID, c.Repo.Repository.ID, false)
-	case "desc": // FIXME: this is not used
-		if !c.Repo.IsOwner() {
-			c.NotFound()
-			return
-		}
-
-		c.Repo.Repository.Description = c.Query("desc")
-		c.Repo.Repository.Website = c.Query("site")
-		err = database.UpdateRepository(c.Repo.Repository, false)
-	}
-
-	if err != nil {
-		c.Errorf(err, "action %q", c.Params(":action"))
-		return
-	}
-
-	redirectTo := c.Query("redirect_to")
-	if !urlx.IsSameSite(redirectTo) {
-		redirectTo = c.Repo.RepoLink
-	}
-	c.Redirect(redirectTo)
 }
 
 func Download(c *context.Context) {

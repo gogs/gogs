@@ -88,7 +88,7 @@ custom/
 │   ├── label/               # Custom issue label sets
 │   └── locale/              # Translation overrides
 │       └── locale_*.ini
-├── templates/               # HTML template overrides
+├── templates/               # Email template overrides and injected content
 ├── public/                  # Static asset overrides (CSS, JS, images)
 └── robots.txt               # Search engine crawling rules
 ```
@@ -118,9 +118,9 @@ The `[repository] PREFERRED_LICENSES` option controls which licenses appear at t
 
 ## Custom templates and static assets
 
-You can override any of Gogs' HTML templates or static assets by mirroring the file structure under `custom/`.
+You can override Gogs' email templates and static assets, and inject content into every page, by mirroring the file structure under `custom/`.
 
-**Templates** -- Place files in `custom/templates/` matching the path of the [embedded template](https://github.com/gogs/gogs/tree/main/templates) you want to override. See [Custom templates](/advancing/custom-templates) for details.
+**Templates** -- Place files in `custom/templates/` matching the path of the [embedded email template](https://github.com/gogs/gogs/tree/main/templates/mail) you want to override, or in `custom/templates/inject/` to add content to every page. See [Custom templates](/advancing/custom-templates) for details.
 
 **Static assets** -- Place files in `custom/public/` to override CSS, JavaScript, or images. Custom public files are served with higher priority than embedded ones.
 

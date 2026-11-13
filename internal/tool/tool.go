@@ -6,14 +6,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"html/template"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/unknwon/i18n"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/chardet"
@@ -239,115 +237,6 @@ func TimeSincePro(then time.Time) string {
 		timeStr += ", " + diffStr
 	}
 	return strings.TrimPrefix(timeStr, ", ")
-}
-
-func timeSince(then time.Time, lang string) string {
-	now := time.Now()
-
-	lbl := i18n.Tr(lang, "tool.ago")
-	diff := now.Unix() - then.Unix()
-	if then.After(now) {
-		lbl = i18n.Tr(lang, "tool.from_now")
-		diff = then.Unix() - now.Unix()
-	}
-
-	switch {
-	case diff <= 0:
-		return i18n.Tr(lang, "tool.now")
-	case diff <= 2:
-		return i18n.Tr(lang, "tool.1s", lbl)
-	case diff < 1*Minute:
-		return i18n.Tr(lang, "tool.seconds", diff, lbl)
-
-	case diff < 2*Minute:
-		return i18n.Tr(lang, "tool.1m", lbl)
-	case diff < 1*Hour:
-		return i18n.Tr(lang, "tool.minutes", diff/Minute, lbl)
-
-	case diff < 2*Hour:
-		return i18n.Tr(lang, "tool.1h", lbl)
-	case diff < 1*Day:
-		return i18n.Tr(lang, "tool.hours", diff/Hour, lbl)
-
-	case diff < 2*Day:
-		return i18n.Tr(lang, "tool.1d", lbl)
-	case diff < 1*Week:
-		return i18n.Tr(lang, "tool.days", diff/Day, lbl)
-
-	case diff < 2*Week:
-		return i18n.Tr(lang, "tool.1w", lbl)
-	case diff < 1*Month:
-		return i18n.Tr(lang, "tool.weeks", diff/Week, lbl)
-
-	case diff < 2*Month:
-		return i18n.Tr(lang, "tool.1mon", lbl)
-	case diff < 1*Year:
-		return i18n.Tr(lang, "tool.months", diff/Month, lbl)
-
-	case diff < 2*Year:
-		return i18n.Tr(lang, "tool.1y", lbl)
-	default:
-		return i18n.Tr(lang, "tool.years", diff/Year, lbl)
-	}
-}
-
-func RawTimeSince(t time.Time, lang string) string {
-	return timeSince(t, lang)
-}
-
-// TimeSince calculates the time interval and generate user-friendly string.
-func TimeSince(t time.Time, lang string) template.HTML {
-	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(conf.Time.FormatLayout), timeSince(t, lang)))
-}
-
-// Subtract deals with subtraction of all types of number.
-func Subtract(left, right any) any {
-	var rleft, rright int64
-	var fleft, fright float64
-	isInt := true
-	switch left := left.(type) {
-	case int:
-		rleft = int64(left)
-	case int8:
-		rleft = int64(left)
-	case int16:
-		rleft = int64(left)
-	case int32:
-		rleft = int64(left)
-	case int64:
-		rleft = left
-	case float32:
-		fleft = float64(left)
-		isInt = false
-	case float64:
-		fleft = left
-		isInt = false
-	}
-
-	switch right := right.(type) {
-	case int:
-		rright = int64(right)
-	case int8:
-		rright = int64(right)
-	case int16:
-		rright = int64(right)
-	case int32:
-		rright = int64(right)
-	case int64:
-		rright = right
-	case float32:
-		fright = float64(left.(float32))
-		isInt = false
-	case float64:
-		fleft = left.(float64)
-		isInt = false
-	}
-
-	if isInt {
-		return rleft - rright
-	} else {
-		return fleft + float64(rleft) - (fright + float64(rright))
-	}
 }
 
 // StringsToInt64s converts a slice of string to a slice of int64.

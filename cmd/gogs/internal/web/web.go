@@ -21,7 +21,6 @@ import (
 	"github.com/flamego/cache"
 	"github.com/flamego/captcha"
 	"github.com/flamego/flamego"
-	macaroncache "github.com/go-macaron/cache"
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
@@ -41,13 +40,11 @@ import (
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/route"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/ssh"
-	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/public"
@@ -80,25 +77,28 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		return errors.Wrap(err, "initialize web handler")
 	}
 
+	// serveWeb hands the request to the web app, after the middleware of its
+	// route checks what the viewer may see.
+	serveWeb := func(c *context.Context) { c.ServeWeb() }
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
 
 	m.SetAutoHead(true)
 
 	m.Group("", func() {
-		m.Get("/", ignSignIn, route.Home)
+		m.Get("/", ignSignIn, serveWeb)
 		m.Group("/explore", func() {
 			m.Get("", func(c *context.Context) {
 				c.Redirect(conf.Server.Subpath + "/explore/repos")
 			})
-			m.Get("/^:type(repos|users|organizations)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:type(repos|users|organizations)$", serveWeb)
 		}, ignSignIn)
-		m.Get("/^:type(issues|pulls)$", reqSignIn, func(c *context.Context) { c.ServeWeb() })
+		m.Get("/^:type(issues|pulls)$", reqSignIn, serveWeb)
 
 		// ***** START: User *****
 		m.Group("/user/settings", func() {
-			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(avatar|password|email|ssh|security|repositories|organizations|applications|delete)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("", serveWeb)
+			m.Get("/^:page(avatar|password|email|ssh|security|repositories|organizations|applications|delete)$", serveWeb)
 			// Like the server-rendered pages, these pages are only found in the
 			// two-factor authentication state they apply to.
 			m.Get("/security/two_factor_enable", func(c *context.Context) {
@@ -115,9 +115,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				}
 				c.ServeWeb()
 			})
-		}, reqSignIn, func(c *context.Context) {
-			c.Data["PageIsUserSettings"] = true
-		})
+		}, reqSignIn)
 
 		m.Group("/user", func() {
 			m.Any("/activate_email", user.ActivateEmail)
@@ -125,7 +123,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			// The pages for signing in stay reachable when the site requires signing in to
 			// view content. Without this route they would match "/:username/:reponame" and
 			// its sign-in toggle.
-			m.Get("/^:page(sign-in|sign-up|mfa|reset-password|activate)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(sign-in|sign-up|mfa|reset-password|activate)$", serveWeb)
 		})
 		// ***** END: User *****
 
@@ -133,9 +131,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		// ***** START: Admin *****
 		m.Group("/admin", func() {
-			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
+			m.Get("", serveWeb)
+			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", serveWeb)
+			m.Get("/users/new", serveWeb)
 			m.Get("/users/:userid", func(c *context.Context) {
 				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 				if err != nil {
@@ -150,7 +148,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				c.ServeWeb()
 			})
 
-			m.Get("/auths/new", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/auths/new", serveWeb)
 			m.Get("/auths/:authid", func(c *context.Context) {
 				if _, err := database.Handle.LoginSources().GetByID(c.Req.Context(), c.ParamsInt64(":authid")); err != nil {
 					c.NotFoundOrError(err, "get login source by ID")
@@ -164,7 +162,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("", func() {
 			m.Group("/:username", func() {
 				m.Get("", user.Profile)
-				m.Get("/^:type(followers|following)$", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/^:type(followers|following)$", serveWeb)
 			}, context.InjectParamsUser())
 
 			m.Get("/attachments/:uuid", func(c *context.Context) {
@@ -226,10 +224,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			})
 		}, ignSignIn)
 
-		m.Group("/:username", func() {
-			m.Post("/action/:action", user.Action)
-		}, reqSignIn, context.InjectParamsUser())
-
 		reqRepoAdmin := context.RequireRepoAdmin()
 		reqRepoWriter := context.RequireRepoWriter()
 
@@ -237,7 +231,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// organization. Like the server-rendered pages, only the kinds of webhooks
 		// the site allows can be added, and webhooks of others are not found.
 		webhookPages := func(lookup func(c *context.Context, id int64) (*database.Webhook, error)) {
-			m.Get("", func(c *context.Context) { c.ServeWeb() })
+			m.Get("", serveWeb)
 			m.Get("/:type/new", func(c *context.Context) {
 				if !slices.Contains(conf.Webhook.Types, c.Params(":type")) {
 					c.NotFound()
@@ -262,7 +256,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Organization *****
 		m.Group("/org", func() {
 			m.Group("", func() {
-				m.Get("/create", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/create", serveWeb)
 			}, func(c *context.Context) {
 				if !c.User.CanCreateOrganization() {
 					c.NotFound()
@@ -270,32 +264,32 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			})
 
 			m.Group("/:org", func() {
-				m.Get("/dashboard", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/^:type(issues|pulls)$", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/members", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/teams", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/dashboard", serveWeb)
+				m.Get("/^:type(issues|pulls)$", serveWeb)
+				m.Get("/members", serveWeb)
+				m.Get("/teams", serveWeb)
 			}, context.OrgAssignment(true))
 
 			m.Group("/:org", func() {
-				m.Get("/teams/:team", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/teams/:team/repositories", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/teams/:team", serveWeb)
+				m.Get("/teams/:team/repositories", serveWeb)
 			}, context.OrgAssignment(true, false, true))
 
 			m.Group("/:org", func() {
-				m.Get("/teams/new", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/teams/:team/edit", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/teams/new", serveWeb)
+				m.Get("/teams/:team/edit", serveWeb)
 
 				m.Group("/settings", func() {
-					m.Get("", func(c *context.Context) { c.ServeWeb() })
+					m.Get("", serveWeb)
 					m.Group("/hooks", func() {
 						webhookPages(func(c *context.Context, id int64) (*database.Webhook, error) {
 							return database.GetWebhookByOrgID(c.Org.Organization.ID, id)
 						})
 					})
-					m.Get("/delete", func(c *context.Context) { c.ServeWeb() })
+					m.Get("/delete", serveWeb)
 				})
 
-				m.Get("/invitations/new", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/invitations/new", serveWeb)
 			}, context.OrgAssignment(true, true))
 		}, reqSignIn)
 		// ***** END: Organization *****
@@ -328,11 +322,11 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("/settings", func() {
-				m.Get("", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/collaboration", func(c *context.Context) { c.ServeWeb() })
+				m.Get("", serveWeb)
+				m.Get("/collaboration", serveWeb)
 				m.Group("/branches", func() {
-					m.Get("", func(c *context.Context) { c.ServeWeb() })
-					m.Get("/*", func(c *context.Context) { c.ServeWeb() })
+					m.Get("", serveWeb)
+					m.Get("/*", serveWeb)
 				}, func(c *context.Context) {
 					if c.Repo.Repository.IsMirror {
 						c.NotFound()
@@ -346,36 +340,33 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					})
 
 					m.Group("/git", func() {
-						m.Get("", func(c *context.Context) { c.ServeWeb() })
-						m.Get("/:name", func(c *context.Context) { c.ServeWeb() })
+						m.Get("", serveWeb)
+						m.Get("/:name", serveWeb)
 					}, context.GitHookService())
 				})
 
-				m.Get("/keys", func(c *context.Context) { c.ServeWeb() })
-			}, func(c *context.Context) {
-				c.Data["PageIsSettings"] = true
+				m.Get("/keys", serveWeb)
 			})
 		}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
 
-		m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 		m.Group("/:username/:reponame", func() {
 			m.Get("/issues", repo.MustEnableIssues, repo.ServeIssueList)
 			m.Get("/issues/:index", repo.ServeIssue)
-			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(labels|milestones)$", serveWeb)
 		}, ignSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
-			m.Get("/issues/new", repo.MustEnableIssues, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/issues/new", repo.MustEnableIssues, serveWeb)
 		}, reqSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
 			m.Group("/wiki", func() {
-				m.Get("/?:page", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/_pages", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/?:page", serveWeb)
+				m.Get("/_pages", serveWeb)
 			}, repo.MustEnableWiki)
 		}, ignSignIn, context.RepoAssignment(false, true))
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("/milestones", func() {
-				m.Get("/new", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/new", serveWeb)
 				m.Get("/:id/edit", func(c *context.Context) {
 					// An ID of 0 would match any milestone of the repository.
 					id := c.ParamsInt64(":id")
@@ -392,16 +383,16 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			}, reqRepoWriter)
 
 			m.Group("/releases", func() {
-				m.Get("/new", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/edit/*", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/new", serveWeb)
+				m.Get("/edit/*", serveWeb)
 			}, repo.MustBeNotEmpty, reqRepoWriter)
 
-			m.Get("/compare/*", repo.MustAllowPulls, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/compare/*", repo.MustAllowPulls, serveWeb)
 
 			m.Group("", func() {
-				m.Get("/_edit/*", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/_new/*", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/_delete/*", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/_edit/*", serveWeb)
+				m.Get("/_new/*", serveWeb)
+				m.Get("/_delete/*", serveWeb)
 				m.Get("/_upload/*", func(c *context.Context) {
 					if !conf.Repository.Upload.Enabled {
 						c.NotFound()
@@ -419,44 +410,41 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
-				m.Get("/releases", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
+				m.Get("/releases", repo.MustBeNotEmpty, serveWeb)
 				m.Get("/pulls/:index", repo.ServePull)
 			}, context.RepoRef())
 
 			m.Group("/branches", func() {
-				m.Get("", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/all", func(c *context.Context) { c.ServeWeb() })
-				m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
-			}, repo.MustBeNotEmpty, func(c *context.Context) {
-				c.Data["PageIsViewFiles"] = true
-			})
+				m.Get("", serveWeb)
+				m.Get("/all", serveWeb)
+			}, repo.MustBeNotEmpty)
 
 			m.Group("/wiki", func() {
-				m.Get("/_new", func(c *context.Context) { c.ServeWeb() })
-				m.Get("/:page/_edit", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/_new", serveWeb)
+				m.Get("/:page/_edit", serveWeb)
 			}, reqSignIn, reqRepoWriter, repo.MustEnableWiki)
 
 			m.Get("/archive/*", repo.MustBeNotEmpty, repo.Download)
-			m.Get("/forks", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/forks", repo.MustBeNotEmpty, serveWeb)
 
 			m.Get("/pulls", repo.MustAllowPulls, repo.ServeIssueList)
 			m.Get("/pulls/:index([0-9]+)\\.diff", flamegoBridger(webHandler))
 			m.Get("/pulls/:index/^:tab(commits|files)$", repo.ServePull)
 
-			m.Get("/src/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
-			m.Get("/commits/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/src/*", repo.MustBeNotEmpty, serveWeb)
+			m.Get("/commits/*", repo.MustBeNotEmpty, serveWeb)
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
 			m.Get("/commit/:sha([a-f0-9]{7,64})\\.:ext(patch|diff)", flamegoBridger(webHandler))
 			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
-			m.Get("/commit/:sha([a-f0-9]{7,64})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/commit/:sha([a-f0-9]{7,64})$", repo.MustBeNotEmpty, serveWeb)
 
 			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})\\.diff", flamegoBridger(webHandler))
-			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, serveWeb)
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
-			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("", serveWeb)
+			m.Get("/^:type(stars|watchers)$", serveWeb)
 		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment())
 		// ***** END: Repository *****
 
@@ -472,7 +460,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Any("/api/web/*", flamegoBridger(webHandler))
 		m.Get("/redirect", flamegoBridger(webHandler))
 		m.Get("/captcha/*", flamegoBridger(webHandler))
-		m.Any("/*", func(c *context.Context) { c.ServeWeb() })
+		m.Any("/*", serveWeb)
 	},
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,
@@ -752,17 +740,9 @@ func newMacaron() (*macaron.Macaron, error) {
 		},
 	))
 
-	customDir := filepath.Join(conf.CustomDir(), "templates")
-	renderOpt := macaron.RenderOptions{
-		Directory:         filepath.Join(conf.WorkDir(), "templates"),
-		AppendDirectories: []string{customDir},
-		Funcs:             template.FuncMap(),
-		IndentJSON:        macaron.Env != macaron.PROD,
-	}
-	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", customDir)
-	}
-	m.Use(macaron.Renderer(renderOpt))
+	// API v1, Git HTTP and LFS still write JSON and plain text through
+	// Macaron's renderer, which no page template is rendered with anymore.
+	m.Use(macaron.Renderer(macaron.RenderOptions{TemplateFileSystem: noTemplates{}}))
 
 	localeNames, err := embedconf.FileNames("locale")
 	if err != nil {
@@ -789,13 +769,17 @@ func newMacaron() (*macaron.Macaron, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "load web locales")
 	}
-	m.Use(macaroncache.Cacher(macaroncache.Options{
-		Adapter:       conf.Cache.Adapter,
-		AdapterConfig: conf.Cache.Host,
-		Interval:      conf.Cache.Interval,
-	}))
 	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
 	return m, nil
+}
+
+// noTemplates is a template file system without templates.
+type noTemplates struct{}
+
+func (noTemplates) ListFiles() []macaron.TemplateFile { return nil }
+
+func (noTemplates) Get(name string) (io.Reader, error) {
+	return nil, errors.Newf("template %q does not exist", name)
 }
 
 // injectContent holds the custom content spliced into the React shell.

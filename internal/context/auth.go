@@ -92,7 +92,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				c.Status(http.StatusForbidden)
 				return
 			}
-			c.PageIs("Admin")
 		}
 	}
 }
