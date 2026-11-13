@@ -3,11 +3,14 @@ package dariomark
 import (
 	"bytes"
 	"encoding/json"
+	"math/rand"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +36,47 @@ func TestSpec(t *testing.T) {
 			assert.Equal(t, ex.HTML, string(HTML([]byte(ex.Markdown), opts)), "%s\n%q", ex.Section, ex.Markdown)
 		})
 	}
+}
+
+// TestGFMSpec checks the extension examples of the GitHub Flavored Markdown
+// 0.29 specification, from
+// https://github.com/github/cmark-gfm/blob/master/test/spec.txt.
+func TestGFMSpec(t *testing.T) {
+	data, err := os.ReadFile("testdata/gfm_spec.json")
+	require.NoError(t, err)
+	var examples []struct {
+		Markdown  string `json:"markdown"`
+		HTML      string `json:"html"`
+		Example   int    `json:"example"`
+		Section   string `json:"section"`
+		Extension string `json:"extension"`
+	}
+	require.NoError(t, json.Unmarshal(data, &examples))
+	require.Len(t, examples, 24)
+
+	// Gogs renders task lists with classes and source lines, see
+	// TestTaskListAttributes.
+	taskAttrs := regexp.MustCompile(` class="contains-task-list"| class="task-list-item" data-source-lines="\d+-\d+"`)
+
+	opts := &Options{Tables: true, Strikethrough: true, TaskLists: true, Linkify: true}
+	for _, ex := range examples {
+		t.Run(strconv.Itoa(ex.Example), func(t *testing.T) {
+			if ex.Extension == "tagfilter" {
+				t.Skip("Gogs sanitizes HTML with bluemonday instead of filtering tags")
+			}
+			got := string(HTML([]byte(ex.Markdown), opts))
+			got = taskAttrs.ReplaceAllString(got, "")
+			assert.Equal(t, ex.HTML, got, "%s\n%q", ex.Section, ex.Markdown)
+		})
+	}
+}
+
+func TestTaskListAttributes(t *testing.T) {
+	got := string(HTML([]byte("- [ ] a\n- [x] b\n  c\n- d\n"), &Options{TaskLists: true}))
+	assert.Equal(t, "<ul class=\"contains-task-list\">\n"+
+		"<li class=\"task-list-item\" data-source-lines=\"1-1\"><input disabled=\"\" type=\"checkbox\"> a</li>\n"+
+		"<li class=\"task-list-item\" data-source-lines=\"2-3\"><input checked=\"\" disabled=\"\" type=\"checkbox\"> b\nc</li>\n"+
+		"<li>d</li>\n</ul>\n", got)
 }
 
 func TestAlerts(t *testing.T) {
@@ -119,5 +163,146 @@ func gogsTestOptions() *Options {
 				CodeClass:      regexp.MustCompile(`^language-\w+$`),
 			},
 		},
+	}
+}
+
+func TestFootnoteLabels(t *testing.T) {
+	opts := &Options{Footnotes: true}
+	tests := []struct {
+		name  string
+		input string
+		refs  int
+	}{
+		{name: "case", input: "A[^note-1] B[^Note-1]\n\n[^note-1]: n", refs: 2},
+		{name: "whitespace", input: "A[^a  b] B[^a b]\n\n[^a b]: n", refs: 2},
+		{name: "Unicode case folding", input: "A[^ss] B[^ẞ]\n\n[^ß]: n", refs: 2},
+		{name: "different labels", input: "A[^a] B[^b]\n\n[^a]: n", refs: 1},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			out := string(HTML([]byte(test.input), opts))
+			assert.Equal(t, test.refs, strings.Count(out, `class="footnote-ref"`), out)
+			assert.Equal(t, 1, strings.Count(out, `<li id="fn:1">`), out)
+		})
+	}
+}
+
+func TestTablePadding(t *testing.T) {
+	opts := &Options{Tables: true}
+	t.Run("short rows are filled", func(t *testing.T) {
+		got := string(HTML([]byte("| a | b |\n|:-|-:|\n| c |\n"), opts))
+		assert.Equal(t, "<table>\n<thead>\n<tr>\n<th align=\"left\">a</th>\n<th align=\"right\">b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">c</td>\n<td></td>\n</tr>\n</tbody>\n</table>\n", got)
+	})
+
+	t.Run("filler cells are bounded by the input size", func(t *testing.T) {
+		const n = 3000
+		in := strings.Repeat("|a", n) + "|\n" + strings.Repeat("|-", n) + "|\n" + strings.Repeat("|b\n", n) + "\nafter"
+		start := time.Now()
+		got := string(HTML([]byte(in), opts))
+		assert.Less(t, time.Since(start), 5*time.Second)
+		assert.Less(t, len(got), 40*len(in))
+		// Every written cell still shows, and the rest of the document is
+		// rendered normally.
+		assert.Equal(t, n, strings.Count(got, "<td>b</td>"))
+		assert.True(t, strings.HasSuffix(got, "</table>\n<p>after</p>\n"))
+		// The first rows are filled until the budget runs out.
+		assert.Contains(t, got, "<tr>\n<td>b</td>\n<td></td>\n")
+		assert.Contains(t, got, "<tr>\n<td>b</td>\n</tr>\n")
+	})
+}
+
+func TestReferenceBudget(t *testing.T) {
+	opts := &Options{}
+	t.Run("short references are unaffected", func(t *testing.T) {
+		in := "[a]: /u \"t\"\n\n" + strings.Repeat("[a] ", 100000)
+		got := string(HTML([]byte(in), opts))
+		assert.Equal(t, 100000, strings.Count(got, `<a href="/u" title="t">a</a>`))
+	})
+
+	for _, use := range []string{"[a]", "![a]"} {
+		t.Run("long destination used as "+use, func(t *testing.T) {
+			const n = 1 << 16
+			in := "[a]: /" + strings.Repeat("x", n/2) + "\n\n" + strings.Repeat(use, n/len(use)) + "\n\n*after*"
+			start := time.Now()
+			got := string(HTML([]byte(in), opts))
+			assert.Less(t, time.Since(start), 5*time.Second)
+			assert.Less(t, len(got), 40*len(in))
+			// The references within the budget are links, the rest stay text.
+			assert.True(t, strings.HasPrefix(got, "<p>"+map[string]string{"[a]": "<a href", "![a]": "<img src"}[use]))
+			assert.True(t, strings.HasSuffix(got, use+"</p>\n<p><em>after</em></p>\n"))
+		})
+	}
+}
+
+func TestAngleDestination(t *testing.T) {
+	opts := &Options{}
+	// "<c>" is raw HTML.
+	assert.Equal(t, "<p>[a](&lt;b<c>)</p>\n", string(HTML([]byte("[a](<b<c>)"), opts)))
+	assert.Equal(t, "<p>[a]</p>\n<p>[a]: &lt;b<c></p>\n", string(HTML([]byte("[a]\n\n[a]: <b<c>"), opts)))
+	assert.Equal(t, "<p><a href=\"b%3Cc\">a</a></p>\n", string(HTML([]byte("[a](<b\\<c>)"), opts)))
+
+	in := []byte(strings.Repeat("[a](<", 1<<16))
+	start := time.Now()
+	HTML(in, opts)
+	assert.Less(t, time.Since(start), 2*time.Second)
+}
+
+func TestImageLinkEscaping(t *testing.T) {
+	opts := gogsTestOptions()
+	opts.Gogs.Sanitizer = nil
+	got := string(Render([]byte("![a&quot; id=&quot;x](x.png?a=1&b=2)"), opts).HTML)
+	assert.Equal(t, "<p><a href=\"/user/repo/x.png?a=1&amp;b=2\"><img src=\"/user/repo/x.png?a=1&amp;b=2\" alt=\"a&#34; id=&#34;x\"></a></p>\n", got)
+}
+
+// TestStreaming checks that large documents, which are rendered while they
+// are parsed, render as they would in one piece.
+func TestStreaming(t *testing.T) {
+	parts := []string{
+		"# h\n", "a\n=\n", "para *em\n", "more_ text**\n", "\n", "> q\n", "> [!NOTE]\n> x\n", "- a\n", "  - b\n",
+		"    code\n", "```go\nf\n```\n", "| a | b |\n|---|---|\n| c |\n", "- [ ] t\n", "lazy\n", "***\n",
+		"www.x.com a@b.co\n", "[l](u) ![i](j)\n", "`co\nde`\n", "\"q\" 'q' --\n", "<b>raw</b>\n", "<div>\n\n",
+	}
+	defer func(size int) { streamMinSize = size }(streamMinSize)
+	rng := rand.New(rand.NewSource(1))
+	for i := 0; i < 40; i++ {
+		var b strings.Builder
+		for b.Len() < 64<<10 {
+			// Long runs of one block make the document drop the lines of
+			// rendered blocks.
+			u := parts[rng.Intn(len(parts))]
+			b.WriteString(strings.Repeat(u, 1+rng.Intn(4)*rng.Intn(1500)))
+		}
+		in := []byte(b.String())
+		for _, opts := range []*Options{gogsTestOptions(), {Tables: true, Alerts: true, HeadingIDs: true}} {
+			streamMinSize = len(in) + 1
+			want := Render(in, opts)
+			wantHTML := string(want.HTML)
+			streamMinSize = 0
+			got := Render(in, opts)
+			require.Equal(t, wantHTML, string(got.HTML))
+			require.Equal(t, want.Sanitized, got.Sanitized)
+			require.Equal(t, want.Headings, got.Headings)
+		}
+	}
+}
+
+func TestNestingLimit(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		tag   string
+		inner string
+	}{
+		{name: "block quotes", input: strings.Repeat("> ", maxNesting+1) + "a", tag: "<blockquote>", inner: "<p>&gt; a</p>"},
+		{name: "list items", input: strings.Repeat("- ", maxNesting+1) + "a", tag: "<li>", inner: "<li>- a</li>"},
+		{name: "list item in block quotes", input: strings.Repeat("> ", maxNesting) + "- a", tag: "<blockquote>", inner: "<p>- a</p>"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := string(HTML([]byte(test.input), &Options{}))
+			// The markers past the limit are text of the innermost block.
+			assert.Equal(t, maxNesting, strings.Count(got, test.tag))
+			assert.Contains(t, got, test.inner)
+		})
 	}
 }

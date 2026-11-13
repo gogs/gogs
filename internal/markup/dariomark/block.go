@@ -36,52 +36,80 @@ type parser struct {
 	indent               int
 	blank                bool
 	partiallyConsumedTab bool
-	// wsStart is the offset of the whitespace skipped by the last
-	// advanceNextNonspace on this line, after a partially consumed tab, whose
-	// remaining columns are wsPad, up to wsEnd. It is -1 when nothing was
-	// skipped.
-	wsStart, wsPad, wsEnd int
 	// curBlankIn is the container in which the current line counts as blank,
 	// or nil. prevBlankIn is the same for the previous line.
 	prevBlankIn, curBlankIn *node
-	// tabOrigin is the column that tab stops are relative to.
-	tabOrigin int
-	// rawTabItem is the last list item started on the current line, if its
-	// marker does not directly follow a tab.
-	rawTabItem *node
-	// lineTab reports whether a tab precedes the content of the current line
-	// after its containers. See tabIndent.
-	lineTab bool
 	// emptiedParagraph reports whether a table took all lines of the
 	// paragraph that the current line would underline, which lets the line
 	// start an empty list item.
 	emptiedParagraph bool
 	depth            int
 
+	// crlf holds a copy of the source with line endings normalized, see
+	// normalizeLineEndings.
+	crlf []byte
+
 	refs      map[string]linkRef
 	footnotes footnoteSet
 
 	hasRawHTML bool
+	// rawAnchor reports whether the inline contents parsed so far of the
+	// current leaf are inside a raw HTML anchor, see walkLinks.
+	rawAnchor bool
 	// refBudget is the number of bytes of reference destinations and titles
 	// that the rest of the document may expand, see spendRefBudget.
 	refBudget int
+	// joined is the last relative link destination joined with
+	// Options.LinkBase, from joinedRaw, see walkLinks. It is in buf.
+	joinedRaw, joined []byte
 	// padBudget is the number of empty cells that the rest of the document
 	// may add to fill short table rows.
 	padBudget int
 
 	inl inlineParser
+	// r renders the document. It is part of the parser so that its
+	// buffers are reused.
+	r renderer
 }
 
+// Pooled parsers drop buffers and maps above these sizes, about 1 MB, so
+// that rendering a huge document does not keep its memory alive.
+const (
+	maxPooledBytes = 1 << 20
+	maxPooledSegs  = 1 << 16
+	maxPooledRefs  = 1 << 12
+)
+
 func (p *parser) reset() {
+	p.r.release()
 	p.arena.reset()
 	p.segs = p.segs[:0]
+	if cap(p.segs) > maxPooledSegs {
+		p.segs = nil
+	}
 	p.buf = p.buf[:0]
+	p.joinedRaw, p.joined = nil, nil
+	if cap(p.buf) > maxPooledBytes {
+		p.buf = nil
+	}
 	p.src = nil
+	p.crlf = p.crlf[:0]
+	if cap(p.crlf) > maxPooledBytes {
+		p.crlf = nil
+	}
 	p.opts = nil
 	p.doc, p.tip, p.oldtip, p.lastMatchedContainer = nil, nil, nil, nil
+	p.prevBlankIn, p.curBlankIn = nil, nil
 	p.line = nil
 	p.depth = 0
+	// Cleared maps keep their size.
+	if len(p.refs) > maxPooledRefs {
+		p.refs = nil
+	}
 	clear(p.refs)
+	if len(p.footnotes.byLabel) > maxPooledRefs {
+		p.footnotes.byLabel = nil
+	}
 	p.footnotes.reset()
 	p.hasRawHTML = false
 	p.inl.reset()
@@ -94,7 +122,34 @@ func (p *parser) store(b []byte) []byte {
 	return p.buf[start:len(p.buf):len(p.buf)]
 }
 
-func (p *parser) parse(src []byte) *node {
+// normalizeLineEndings returns src with every "\r\n" and "\r" replaced by
+// "\n". The three are line endings (CommonMark 0.31.2, section 2.1), which
+// are rendered as "\n".
+func (p *parser) normalizeLineEndings(src []byte) []byte {
+	i := bytes.IndexByte(src, '\r')
+	if i < 0 {
+		return src
+	}
+	out := append(p.crlf[:0], src[:i]...)
+	for ; i < len(src); i++ {
+		c := src[i]
+		if c == '\r' {
+			c = '\n'
+			if i+1 < len(src) && src[i+1] == '\n' {
+				i++
+			}
+		}
+		out = append(out, c)
+	}
+	p.crlf = out
+	return out
+}
+
+// parse parses src into a document tree. If flush is not nil, it is called
+// after each line that closed the first child of the document, and parsing
+// stops when it returns false.
+func (p *parser) parse(src []byte, flush func() bool) *node {
+	src = p.normalizeLineEndings(src)
 	p.src = src
 	p.refBudget = max(10*len(src), 1<<20)
 	p.padBudget = len(src)
@@ -124,13 +179,15 @@ func (p *parser) parse(src []byte) *node {
 		p.lineNumber++
 		p.incorporateLine()
 		pos = eol
+		if flush != nil && p.doc.first != nil && !p.doc.first.open && !flush() {
+			return p.doc
+		}
 	}
 	for p.tip != nil {
 		p.finalize(p.tip)
 	}
-	p.processInlines(p.doc)
-	if p.opts.RelativeLinks || p.opts.TextAutoLinksInRawAnchors {
-		p.postInline(p.doc)
+	if flush != nil {
+		flush()
 	}
 	if p.opts.Footnotes {
 		p.detachFootnoteDefs()
@@ -138,9 +195,10 @@ func (p *parser) parse(src []byte) *node {
 	return p.doc
 }
 
-// tabWidth returns the number of columns of a tab at column col.
-func (p *parser) tabWidth(col int) int {
-	return 4 - (col-p.tabOrigin)%4
+// tabWidth returns the number of columns of a tab at column col. Tab stops
+// are every four columns (CommonMark 0.31.2, section 2.2).
+func tabWidth(col int) int {
+	return 4 - col%4
 }
 
 func (p *parser) findNextNonspace() {
@@ -151,7 +209,7 @@ scan:
 		case ' ':
 			cols++
 		case '\t':
-			cols += p.tabWidth(cols)
+			cols += tabWidth(cols)
 		default:
 			break scan
 		}
@@ -163,50 +221,7 @@ scan:
 	p.indent = cols - p.column
 }
 
-// tabIndent reports whether a whole tab precedes the next nonspace character.
-// Inside containers, such a tab may leave fewer than four columns of
-// indentation, and it prevents list items, empty ATX headings after a wide
-// tab, setext headings, HTML blocks and table delimiter rows.
-func (p *parser) tabIndent() bool {
-	i := p.offset
-	if p.partiallyConsumedTab {
-		i++
-	}
-	return i < p.nextNonspace && bytes.IndexByte(p.line[i:p.nextNonspace], '\t') >= 0
-}
-
-// wideTab reports whether a whole tab of at least two columns precedes the
-// next nonspace character.
-func (p *parser) wideTab() bool {
-	i, col := p.offset, p.column
-	if p.partiallyConsumedTab {
-		col += p.tabWidth(col)
-		i++
-	}
-	for ; i < p.nextNonspace; i++ {
-		if p.line[i] == ' ' {
-			col++
-			continue
-		}
-		w := p.tabWidth(col)
-		if w >= 2 {
-			return true
-		}
-		col += w
-	}
-	return false
-}
-
 func (p *parser) advanceNextNonspace() {
-	if p.wsStart >= 0 && p.offset == p.nextNonspace && p.offset == p.wsEnd {
-		// Nothing moved since the last call, keep what it skipped.
-		return
-	}
-	p.wsStart, p.wsPad, p.wsEnd = p.offset, 0, p.nextNonspace
-	if p.partiallyConsumedTab {
-		p.wsStart++
-		p.wsPad = p.tabWidth(p.column)
-	}
 	p.offset = p.nextNonspace
 	p.column = p.nextNonspaceColumn
 	p.partiallyConsumedTab = false
@@ -218,7 +233,7 @@ func (p *parser) advanceOffset(count int, columns bool) {
 	for count > 0 && p.offset < len(p.line) {
 		c := p.line[p.offset]
 		if c == '\t' {
-			toTab := p.tabWidth(p.column)
+			toTab := tabWidth(p.column)
 			if columns {
 				p.partiallyConsumedTab = toTab > count
 				n := min(toTab, count)
@@ -249,6 +264,13 @@ func (p *parser) peek(i int) byte {
 	return 0
 }
 
+// isParagraph reports whether b is a paragraph that has not become a table.
+// The rows of a table end at any block start (GFM 0.29, section 4.10),
+// including those that cannot interrupt a paragraph.
+func isParagraph(b *node) bool {
+	return b.kind == kindParagraph && !b.tableRows
+}
+
 func acceptsLines(k kind) bool {
 	return k == kindParagraph || k == kindCodeBlock || k == kindHTMLBlock
 }
@@ -269,9 +291,9 @@ func (p *parser) addChild(k kind) *node {
 	}
 	n := p.arena.new(k)
 	n.open = true
-	n.startLine = p.lineNumber
-	n.segStart = len(p.segs)
-	n.segEnd = len(p.segs)
+	n.startLine = int32(p.lineNumber)
+	n.segStart = int32(len(p.segs))
+	n.segEnd = int32(len(p.segs))
 	p.tip.appendChild(n)
 	p.tip = n
 	if k == kindBlockquote || k == kindListItem || k == kindFootnoteDef {
@@ -284,8 +306,8 @@ func (p *parser) addChild(k kind) *node {
 // touch records that the current line belongs to b and its ancestors, which
 // decides whether lists are loose.
 func (p *parser) touch(b *node) {
-	for ; b != nil && b.lastLine < p.lineNumber; b = b.parent {
-		b.lastLine = p.lineNumber
+	for ; b != nil && b.lastLine < int32(p.lineNumber); b = b.parent {
+		b.lastLine = int32(p.lineNumber)
 	}
 }
 
@@ -294,19 +316,14 @@ func (p *parser) addLine() {
 	s := seg{start: int32(p.lineStart + p.offset), end: int32(p.lineStart + len(p.line)), eol: int32(p.lineEOL)}
 	if p.partiallyConsumedTab {
 		s.start++
-		s.pad = int8(p.tabWidth(p.column))
+		s.pad = int8(tabWidth(p.column))
 	}
 	if s.start > s.end {
 		s.start = s.end
 	}
 	s.indent = int8(min(p.indent, 127))
-	s.tab = p.lineTab
-	s.ws = s.start
-	if p.wsStart >= 0 && p.wsStart <= p.offset {
-		s.ws, s.wsPad = int32(p.lineStart+p.wsStart), int8(p.wsPad)
-	}
 	p.segs = append(p.segs, s)
-	p.tip.segEnd = len(p.segs)
+	p.tip.segEnd = int32(len(p.segs))
 }
 
 const (
@@ -329,17 +346,15 @@ func (p *parser) continueBlock(n *node) int {
 		return continueFailed
 	case kindListItem:
 		if p.blank {
-			if endsWithEmptyItem(n) {
+			if n.first == nil {
+				// A list item can begin with at most one blank line.
 				return continueFailed
 			}
 			p.advanceNextNonspace()
 			return continueMatched
 		}
-		if p.indent >= n.markerOffset+n.padding {
-			if n.first == nil && p.indent < 4 && p.endsEmptyItem(n, p.line[p.nextNonspace:]) {
-				return continueFailed
-			}
-			p.advanceOffset(n.markerOffset+n.padding, true)
+		if p.indent >= int(n.markerOffset+n.padding) {
+			p.advanceOffset(int(n.markerOffset+n.padding), true)
 			return continueMatched
 		}
 		return continueFailed
@@ -362,16 +377,11 @@ func (p *parser) continueBlock(n *node) int {
 				for i < len(p.line) && p.line[i] == n.fenceChar {
 					i++
 				}
-				if i-p.nextNonspace >= n.fenceLen && isBlankBytes(p.line[i:]) {
+				if i-p.nextNonspace >= int(n.fenceLen) && isBlankBytes(p.line[i:]) {
 					n.fenceClosed = true
 					p.finalize(n)
 					return continueDone
 				}
-			}
-			if p.blank && p.indent < n.fenceOffset {
-				// A blank line with less indentation than the fence keeps
-				// its whitespace.
-				return continueMatched
 			}
 			for i := n.fenceOffset; i > 0; i-- {
 				if c := p.peek(p.offset); c != ' ' && c != '\t' {
@@ -406,13 +416,9 @@ func (p *parser) continueBlock(n *node) int {
 
 func (p *parser) incorporateLine() {
 	p.offset, p.column = 0, 0
-	p.tabOrigin = 0
-	p.rawTabItem = nil
 	p.blank = false
 	p.partiallyConsumedTab = false
-	p.wsStart, p.wsPad = -1, 0
 	p.prevBlankIn, p.curBlankIn = p.curBlankIn, nil
-	p.lineTab = false
 	p.emptiedParagraph = false
 	p.oldtip = p.tip
 	var marked *node
@@ -427,11 +433,6 @@ func (p *parser) incorporateLine() {
 			goto matched
 		case continueDone:
 			p.touch(container)
-			// goldmark treats the line that closes a fenced code block of
-			// the document as blank.
-			if container.parent == p.doc {
-				p.curBlankIn = p.doc
-			}
 			return
 		}
 		if container.kind == kindBlockquote {
@@ -440,8 +441,9 @@ func (p *parser) incorporateLine() {
 	}
 matched:
 	if isBlankBytes(p.line[min(p.offset, len(p.line)):]) {
-		// goldmark only counts a blank line in a blockquote for the blocks
-		// in that blockquote.
+		// A blank line in a blockquote only separates the blocks in that
+		// blockquote: the blockquote marker is on the line, so it is not a
+		// blank line for the containers around it.
 		p.curBlankIn = p.doc
 		if marked != nil {
 			p.curBlankIn = marked
@@ -453,7 +455,6 @@ matched:
 	matchedLeaf := container.kind != kindParagraph && acceptsLines(container.kind)
 	for !matchedLeaf {
 		p.findNextNonspace()
-		p.lineTab = p.tabIndent()
 		if p.indent < 4 && !maybeSpecial(p.peek(p.nextNonspace)) {
 			p.advanceNextNonspace()
 			break
@@ -469,9 +470,10 @@ matched:
 		}
 	}
 
-	if !p.allClosed && !p.blank && p.tip.kind == kindParagraph {
-		// Lazy paragraph continuation.
+	if !p.allClosed && !p.blank && p.tip.kind == kindParagraph && !p.tip.tableRows {
+		// Lazy paragraph continuation. Table rows cannot be lazy.
 		p.addLine()
+		p.segs[len(p.segs)-1].lazy = true
 		p.touch(p.tip)
 		return
 	}
@@ -488,19 +490,28 @@ matched:
 	}
 
 	switch {
-	case t == kindCodeBlock && container.fenced && container.startLine == p.lineNumber:
+	case t == kindCodeBlock && container.fenced && container.startLine == int32(p.lineNumber):
 		// The opening fence is not content.
+	case t == kindParagraph && container.tableRows && p.emptyTableRow(p.line[p.offset:]):
+		// A row without cells ends the table, and starts a paragraph.
+		p.finalize(container)
+		p.advanceNextNonspace()
+		p.addChild(kindParagraph)
+		p.addLine()
 	case acceptsLines(t):
+		if t == kindParagraph && p.opts.Tables && !container.tableRows && container.segEnd-container.segStart >= 1 {
+			container.tableRows = p.isDelimiterRow(p.segs[container.segEnd-1], p.line[p.offset:])
+		}
+		if p.blank && (t == kindCodeBlock && container.fenced || t == kindHTMLBlock) {
+			// The line is content, not a blank line between blocks.
+			p.curBlankIn = nil
+		}
 		p.addLine()
 		if !p.blank {
 			p.touch(container)
 		}
 		if t == kindHTMLBlock && container.level >= 1 && container.level <= 5 &&
-			htmlBlockEnds(container.level, p.line[min(p.offset, len(p.line)):]) {
-			// Like the closing line of a fenced code block.
-			if container.parent == p.doc && container.startLine < p.lineNumber {
-				p.curBlankIn = p.doc
-			}
+			htmlBlockEnds(int(container.level), p.line[min(p.offset, len(p.line)):]) {
 			container.fenceClosed = true
 			p.finalize(container)
 		}
@@ -557,7 +568,6 @@ func (p *parser) tryBlockStarts(container *node) int {
 	indented := p.indent >= 4
 	c := p.peek(p.nextNonspace)
 
-	tab := p.lineTab
 	if !indented {
 		switch c {
 		case '>':
@@ -573,17 +583,12 @@ func (p *parser) tryBlockStarts(container *node) int {
 			b := p.addChild(kindBlockquote)
 			if p.opts.Alerts && b.parent == p.doc && !p.partiallyConsumedTab {
 				if t := alertType(p.line[p.offset:]); t > 0 {
-					b.alert = t
-					b.markerOffset = p.lineStart + p.offset
+					b.alert = uint8(t)
+					b.markerOffset = int32(p.lineStart + p.offset)
 				}
 			}
 			return startContainer
 		case '#':
-			if tab && p.wideTab() && p.lineEOL == p.lineStart+len(p.line) && string(p.line[p.nextNonspace:]) == "#" {
-				// A lone "#" after a wide tab on the last line, without a line
-				// ending, is paragraph text.
-				break
-			}
 			if r := p.tryATXHeading(); r != startNone {
 				return r
 			}
@@ -592,9 +597,6 @@ func (p *parser) tryBlockStarts(container *node) int {
 				return r
 			}
 		case '<':
-			if tab {
-				break
-			}
 			if r := p.tryHTMLBlock(container); r != startNone {
 				return r
 			}
@@ -605,7 +607,7 @@ func (p *parser) tryBlockStarts(container *node) int {
 				}
 			}
 		}
-		if (c == '=' || c == '-') && container.kind == kindParagraph && !tab {
+		if (c == '=' || c == '-') && isParagraph(container) {
 			if r := p.trySetextHeading(container); r != startNone {
 				return r
 			}
@@ -619,19 +621,13 @@ func (p *parser) tryBlockStarts(container *node) int {
 			}
 		}
 	}
-	if (!indented || container.kind == kindList) && p.depth < maxNesting && !tab {
+	if (!indented || container.kind == kindList) && p.depth < maxNesting {
 		if r := p.tryListItem(container); r != startNone {
 			return r
 		}
 	}
-	if indented && p.tip.kind != kindParagraph && !p.blank {
+	if indented && !isParagraph(p.tip) && !p.blank {
 		p.advanceOffset(4, true)
-		if p.rawTabItem != nil && p.rawTabItem == container && p.tabOrigin%4 == 1 {
-			// goldmark keeps the whole tab instead of its remaining columns
-			// when the item starts one column after a tab stop, e.g.,
-			// ">-\t\tx".
-			p.partiallyConsumedTab = false
-		}
 		p.closeUnmatchedBlocks()
 		p.addChild(kindCodeBlock)
 		return startLeaf
@@ -653,7 +649,7 @@ func (p *parser) tryATXHeading() int {
 	p.advanceOffset(level, false)
 	p.closeUnmatchedBlocks()
 	h := p.addChild(kindHeading)
-	h.level = level
+	h.level = int32(level)
 	content := p.line[p.offset:]
 	start := p.lineStart + p.offset
 	content = bytes.TrimRight(content, " \t")
@@ -668,7 +664,7 @@ func (p *parser) tryATXHeading() int {
 	content = bytes.TrimRight(content[:end], " \t")
 	lead := len(content) - len(bytes.TrimLeft(content, " \t"))
 	p.segs = append(p.segs, seg{start: int32(start + lead), end: int32(start + len(content)), eol: int32(p.lineEOL)})
-	h.segEnd = len(p.segs)
+	h.segEnd = int32(len(p.segs))
 	p.advanceOffset(len(p.line)-p.offset, false)
 	return startLeaf
 }
@@ -691,19 +687,9 @@ func (p *parser) tryFencedCode() int {
 	b := p.addChild(kindCodeBlock)
 	b.fenced = true
 	b.fenceChar = c
-	b.fenceLen = n
-	// goldmark counts the indentation of a fence in bytes, except for the
-	// rest of a partially consumed tab.
-	b.fenceOffset = p.nextNonspace - p.offset
-	if p.partiallyConsumedTab {
-		b.fenceOffset += p.tabWidth(p.column) - 1
-	}
+	b.fenceLen = int32(n)
+	b.fenceOffset = int32(p.indent)
 	b.text = bytes.Trim(info, " \t")
-	if len(info) == 1 && p.lineStart+len(p.line) == len(p.src) {
-		// A one-byte info string directly after the fence on the last line
-		// of the input, without a line ending, is ignored, e.g., "```a".
-		b.text = nil
-	}
 	p.advanceNextNonspace()
 	p.advanceOffset(len(p.line)-p.offset, false)
 	return startLeaf
@@ -753,7 +739,7 @@ func (p *parser) tryListItem(container *node) int {
 		if i > 9 || i >= len(rest) || (rest[i] != '.' && rest[i] != ')') {
 			return startNone
 		}
-		if container.kind == kindParagraph && start != 1 {
+		if isParagraph(container) && start != 1 {
 			return startNone
 		}
 		ordered = true
@@ -765,18 +751,13 @@ func (p *parser) tryListItem(container *node) int {
 	if markerLen < len(rest) && rest[markerLen] != ' ' && rest[markerLen] != '\t' {
 		return startNone
 	}
-	if container.kind == kindParagraph && !p.emptiedParagraph && isBlankBytes(rest[markerLen:]) {
+	if isParagraph(container) && !p.emptiedParagraph && isBlankBytes(rest[markerLen:]) {
 		return startNone
 	}
 
 	markerOffset := p.indent
-	// Tab stops after a list marker are relative to the start of the
-	// container content.
-	origin := p.column
 	p.findNextNonspace()
 	p.advanceNextNonspace()
-	markerStart := p.offset
-	p.tabOrigin = origin
 	p.advanceOffset(markerLen, true)
 	spacesStartCol, spacesStartOffset := p.column, p.offset
 	for {
@@ -794,13 +775,7 @@ func (p *parser) tryListItem(container *node) int {
 		p.column = spacesStartCol
 		p.offset = spacesStartOffset
 		p.partiallyConsumedTab = false
-		c := p.peek(p.offset)
-		if c == ' ' {
-			// goldmark measures the indented code that follows a space with
-			// absolute tab stops.
-			p.tabOrigin = 0
-		}
-		if c == ' ' || c == '\t' {
+		if c := p.peek(p.offset); c == ' ' || c == '\t' {
 			p.advanceOffset(1, true)
 		}
 	} else {
@@ -813,16 +788,12 @@ func (p *parser) tryListItem(container *node) int {
 		l.ordered = ordered
 		l.bulletChar = bullet
 		l.delimiter = delim
-		l.listStart = start
+		l.listStart = int32(start)
 		l.tight = true
 	}
 	item := p.addChild(kindListItem)
-	item.markerOffset = markerOffset
-	item.padding = padding
-	p.rawTabItem = nil
-	if markerStart == 0 || p.line[markerStart-1] != '\t' {
-		p.rawTabItem = item
-	}
+	item.markerOffset = int32(markerOffset)
+	item.padding = int32(padding)
 	return startContainer
 }
 
@@ -875,47 +846,9 @@ func (p *parser) finalizeList(l *node) {
 	}
 }
 
-// endsEmptyItem reports whether line, which is indented into the empty list
-// item, ends the item. goldmark ends it at a list item marker of another type
-// than the list, or at a thematic break that starts like a list item marker,
-// e.g., "* * *".
-func (p *parser) endsEmptyItem(item *node, line []byte) bool {
-	i := 0
-	var bullet, delim byte
-	switch {
-	case len(line) > 0 && (line[0] == '-' || line[0] == '*' || line[0] == '+'):
-		bullet = line[0]
-		i = 1
-	default:
-		for i < len(line) && i < 9 && line[i] >= '0' && line[i] <= '9' {
-			i++
-		}
-		if i == 0 || i >= len(line) || line[i] != '.' && line[i] != ')' {
-			return false
-		}
-		delim = line[i]
-		i++
-	}
-	if i < len(line) && line[i] != ' ' && line[i] != '\t' {
-		return false
-	}
-	l := item.parent
-	return bullet != l.bulletChar || delim != l.delimiter || isThematicBreak(line)
-}
-
-// endsWithEmptyItem reports whether the list item is empty, or its last
-// child is a list whose last item ends with an empty item. Such an item ends
-// at a blank line.
-func endsWithEmptyItem(item *node) bool {
-	for item.first != nil {
-		if item.last.kind != kindList || item.last.last == nil {
-			return false
-		}
-		item = item.last.last
-	}
-	return true
-}
-
+// blankBetweenChildren reports whether a blank line separates two children
+// of b. Link reference definitions are blocks too (CommonMark 0.31.2,
+// section 4.7), so their kindRefDefs nodes count.
 func (p *parser) blankBetweenChildren(b *node) bool {
 	var prev *node
 	prevLast := 0
@@ -923,26 +856,13 @@ func (p *parser) blankBetweenChildren(b *node) bool {
 		if c.kind == kindFootnoteDef {
 			// Blank lines before a footnote definition do not count, and its
 			// lines count as the lines of the previous block.
-			prevLast = max(prevLast, c.lastLine)
+			prevLast = max(prevLast, int(c.lastLine))
 			continue
 		}
-		if prev != nil && (c.startLine > prevLast+1 && !c.noBlankBefore || c.blankBefore || b.kind == kindList && p.endsWithOpenFenceBlank(prev)) {
+		if prev != nil && (int(c.startLine) > prevLast+1 && !c.noBlankBefore || c.blankBefore) {
 			return true
 		}
-		prev, prevLast = c, c.lastLine
+		prev, prevLast = c, int(c.lastLine)
 	}
 	return false
-}
-
-// endsWithOpenFenceBlank reports whether item ends with a fenced code block,
-// or an HTML block that ends at an end condition, that did not end and whose
-// last line is blank. Such an item counts as followed by a blank line.
-func (p *parser) endsWithOpenFenceBlank(item *node) bool {
-	c := item.last
-	if c == nil || c.fenceClosed || c.segEnd == c.segStart ||
-		!(c.kind == kindCodeBlock && c.fenced || c.kind == kindHTMLBlock && c.level <= 5) {
-		return false
-	}
-	s := p.segs[c.segEnd-1]
-	return isBlankBytes(p.src[s.start:s.end])
 }

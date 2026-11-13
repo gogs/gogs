@@ -1,4 +1,4 @@
-// Package dariomark renders Markdown to HTML. dariomark implements CommonMark
+// Package dariomark renders Markdown to HTML. Dariomark implements CommonMark
 // 0.31.2 and the GitHub Flavored Markdown extensions (tables, strikethrough,
 // task lists and extended autolinks), plus footnotes, GitHub alerts and the
 // Gogs-specific link handling. It is safe for concurrent use and runs in
@@ -6,6 +6,7 @@
 package dariomark
 
 import (
+	"bytes"
 	"sync"
 )
 
@@ -34,8 +35,9 @@ type Options struct {
 	// Linkify detects URLs, "www." links and email addresses in text.
 	Linkify bool
 	// LinkifyURL returns the length of the URL at the start of b, or 0 if there
-	// is none. It is required when Linkify is enabled, and only called on input
-	// that starts with "http://", "https://" or "ftp://".
+	// is none. It is only called on input that starts with "http://",
+	// "https://" or "ftp://". When nil, URLs are detected as in GFM: the
+	// scheme, a valid domain, and everything up to whitespace or "<".
 	LinkifyURL func(b []byte) int
 	// LinkifyAfterPunct also detects URLs whose scheme directly follows a
 	// character other than an ASCII letter or digit.
@@ -81,6 +83,13 @@ type GogsOptions struct {
 	// SpecialLinks renders mentions, issue references and commit SHAs in the
 	// HTML-escaped text to links. It returns text unchanged when there is
 	// nothing to render.
+	//
+	// In documents without raw HTML, text longer than 32 KB is passed in
+	// pieces. A piece ends after a space that no "http" precedes on its line,
+	// or after a line ending followed by a character other than an ASCII
+	// letter or digit, "-", "_", "." or "#". SpecialLinks must render the
+	// pieces as it would the whole text: references other than URLs do not
+	// contain spaces, and the start of the text counts as a space.
 	SpecialLinks func(text []byte) []byte
 	// Sanitizer, if not nil, enables sanitizing documents without raw HTML.
 	Sanitizer *Sanitizer
@@ -126,22 +135,65 @@ func Render(src []byte, opts *Options) Result {
 		parserPool.Put(p)
 	}()
 	p.opts = opts
-	doc := p.parse(src)
+	if len(src) >= streamMinSize && !bytes.Contains(src, []byte("]:")) {
+		return p.renderStream(src)
+	}
+	doc := p.parse(src, nil)
 
-	var r renderer
+	r := &p.r
 	r.init(p, opts)
 	if opts.Gogs == nil {
 		r.renderHTML(doc)
-		return Result{HTML: r.out.Bytes(), Headings: r.headings}
+		return Result{HTML: r.out.Bytes(), Headings: r.headingList()}
 	}
 	if !p.hasRawHTML {
-		if out, ok := r.renderSanitized(doc); ok {
-			return Result{HTML: out, Sanitized: true, Headings: r.headings}
+		// Inline raw HTML is only found while rendering, which then starts
+		// over without sanitizing.
+		refBudget, padBudget := p.refBudget, p.padBudget
+		if out, ok := r.renderSanitized(func() { r.renderDocument(doc) }); ok {
+			return Result{HTML: out, Sanitized: true, Headings: r.headingList()}
 		}
+		p.refBudget, p.padBudget = refBudget, padBudget
+		p.footnotes.resetInline()
 		r.init(p, opts)
 	}
 	r.renderHTML(doc)
-	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headings}
+	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headingList()}
+}
+
+// streamMinSize is the size from which documents are rendered while they are
+// parsed, when they allow it, see parser.renderStream.
+var streamMinSize = 256 << 10
+
+// renderStream renders src while parsing it: each top-level block is
+// rendered and freed when it is closed, which keeps memory small for large
+// documents. Link reference and footnote definitions change how the blocks
+// before them render, so src must have none, i.e., no "]:".
+func (p *parser) renderStream(src []byte) Result {
+	opts := p.opts
+	r := &p.r
+	r.init(p, opts)
+	if opts.Gogs != nil {
+		// Raw HTML stops the sanitizing render, which then starts over.
+		if out, ok := r.renderSanitized(func() {
+			p.parse(src, r.renderClosed)
+			if p.hasRawHTML {
+				r.stop = true
+			}
+		}); ok {
+			return Result{HTML: out, Sanitized: true, Headings: r.headingList()}
+		}
+		p.reset()
+		p.opts = opts
+		r.init(p, opts)
+	}
+	r.out.Grow(len(src) + len(src)/4)
+	r.s = &r.html
+	p.parse(src, r.renderClosed)
+	if opts.Gogs == nil {
+		return Result{HTML: r.out.Bytes(), Headings: r.headingList()}
+	}
+	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headingList()}
 }
 
 // HTML renders the Markdown source to HTML without post-processing.

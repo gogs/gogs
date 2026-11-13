@@ -1,5 +1,9 @@
 package dariomark
 
+import (
+	"bytes"
+)
+
 type footnote struct {
 	def    *node
 	number int // 0 until referenced
@@ -11,10 +15,20 @@ type footnoteSet struct {
 	ordered []*footnote
 	defs    []*node
 	inlined bool
+	// firstLine is the first line of the first definition, see
+	// parser.parseLeaf, and seen whether there is one.
+	firstLine int
+	seen      bool
+	// leaves are the leaf blocks of definitions whose inline contents are
+	// kept, see parser.parseFootnoteDefs.
+	leaves []*node
 }
 
 func (s *footnoteSet) reset() {
 	s.inlined = false
+	s.seen = false
+	clear(s.leaves)
+	s.leaves = s.leaves[:0]
 	clear(s.byLabel)
 	clear(s.ordered)
 	s.ordered = s.ordered[:0]
@@ -62,14 +76,69 @@ func (p *parser) tryFootnoteDef() int {
 
 func (p *parser) finalizeFootnoteDef(d *node) {
 	s := &p.footnotes
-	s.defs = append(s.defs, d)
+	if !s.seen || int(d.startLine) < s.firstLine {
+		s.firstLine = int(d.startLine)
+	}
+	s.seen = true
 	if s.byLabel == nil {
 		s.byLabel = make(map[string]*footnote)
 	}
-	if key := footnoteKey(d.text); s.byLabel[key] == nil {
+	key := footnoteKey(d.text)
+	if s.byLabel[key] != nil && d.parent.kind != kindListItem && !p.mayContainRefs(d) {
+		// Only the first definition of a label is rendered, and parsing the
+		// contents of a later one only matters for the references in it.
+		// In list items, definitions still count for blankBetweenChildren.
+		p.dropBlock(d)
+		return
+	}
+	s.defs = append(s.defs, d)
+	if s.byLabel[key] == nil {
 		s.byLabel[key] = &footnote{def: d}
 	}
 }
+
+// mayContainRefs reports whether the lines of the block b, which is the
+// last block that has lines, contain a "[", or b contains a footnote
+// definition.
+func (p *parser) mayContainRefs(b *node) bool {
+	if containsKind(b, kindFootnoteDef) {
+		return true
+	}
+	for _, s := range p.segs[b.segStart:] {
+		if bytes.IndexByte(p.src[s.start:s.end], '[') >= 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func containsKind(b *node, k kind) bool {
+	for c := b.first; c != nil; c = c.next {
+		if c.kind == k || containsKind(c, k) {
+			return true
+		}
+	}
+	return false
+}
+
+// dropBlock removes the closed block b from the tree and frees it.
+func (p *parser) dropBlock(b *node) {
+	for _, blankIn := range []**node{&p.prevBlankIn, &p.curBlankIn} {
+		for a := *blankIn; a != nil; a = a.parent {
+			if a == b {
+				// The freed node may be reused for an open container, which
+				// must not match.
+				*blankIn = &droppedBlock
+				break
+			}
+		}
+	}
+	b.unlink()
+	p.arena.freeTree(b)
+}
+
+// droppedBlock stands for a block that dropBlock freed.
+var droppedBlock node
 
 // footnoteKey returns the key of a footnote label, which is normalized like
 // the label of a link reference definition. Labels of only whitespace stay
@@ -102,16 +171,30 @@ func (ip *inlineParser) footnoteRef() bool {
 		fn.number = len(ip.p.footnotes.ordered)
 	}
 	ref := ip.p.arena.new(kindFootnoteRef)
-	ref.footnote = fn
-	ref.refIndex = fn.refs
+	e := ip.p.arena.newExt(ref)
+	e.footnote = fn
+	e.refIndex = fn.refs
 	fn.refs++
-	if ip.pos == ip.lineStart && ip.textStart == i {
-		ip.lineStart = end
-	}
 	ip.flushText(i)
 	ip.parent.appendChild(ref)
 	ip.pos, ip.textStart, ip.boundary = end, end, end
 	return true
+}
+
+// resetInline undoes the effects of parsing inline contents on the
+// footnotes, so that the document can be rendered again.
+func (s *footnoteSet) resetInline() {
+	for _, fn := range s.ordered {
+		fn.number, fn.refs = 0, 0
+	}
+	clear(s.ordered)
+	s.ordered = s.ordered[:0]
+	for _, n := range s.leaves {
+		n.first, n.last, n.parsed, n.persistent = nil, nil, false, false
+	}
+	clear(s.leaves)
+	s.leaves = s.leaves[:0]
+	s.inlined = false
 }
 
 // footnote returns the footnote with the label, or nil.
@@ -122,24 +205,7 @@ func (p *parser) footnote(label []byte) *footnote {
 // detachFootnoteDefs removes the footnote definitions from the tree after
 // their contents have been parsed.
 func (p *parser) detachFootnoteDefs() {
-	if p.footnotes.nestedFirst() {
-		p.footnotes.defs[0].insertBefore(p.arena.new(kindFootnoteHolder))
-	}
 	for _, d := range p.footnotes.defs {
 		d.unlink()
 	}
-}
-
-// nestedFirst reports whether the first definition to close is nested in
-// another definition.
-func (s *footnoteSet) nestedFirst() bool {
-	if len(s.defs) == 0 {
-		return false
-	}
-	for a := s.defs[0].parent; a != nil; a = a.parent {
-		if a.kind == kindFootnoteDef {
-			return true
-		}
-	}
-	return false
 }

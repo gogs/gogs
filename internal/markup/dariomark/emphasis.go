@@ -64,44 +64,126 @@ func (ip *inlineParser) delimRun(c byte) bool {
 		canOpen = leftFlanking
 		canClose = rightFlanking
 	}
-	if c == '~' && (n > 2 || start > 0 && src[start-1] == '~') {
-		// A tilde run directly after an escaped tilde never forms
-		// strikethrough.
+	if c == '~' && n > 2 {
 		canOpen, canClose = false, false
 	}
 
-	t := ip.p.arena.new(kindText)
-	t.text = src[start:end]
-	lineStart := ip.lineStart
-	ip.appendNode(t, end)
-	if c == '~' && n > 2 {
-		// Such tildes are text for lineStartBackslash.
-		ip.lineStart = lineStart
+	d := delimiter{start: int32(start), char: c, count: int32(n), origCount: int32(n), canOpen: canOpen, canClose: canClose}
+	if canClose && ip.openers[delimIndex(c)] > 0 {
+		// The run may close emphasis, so it gets a node of its own.
+		t := ip.p.arena.new(kindText)
+		t.text = src[start:end]
+		ip.appendNode(t, end)
+		d.node = t
+	} else {
+		ip.keepPending()
+		ip.pos, ip.textStart, ip.boundary = end, end, end
 	}
 	if canOpen || canClose {
-		ip.pushDelim(delimiter{node: t, char: c, count: n, origCount: n, canOpen: canOpen, canClose: canClose})
+		ip.pushDelim(d)
 	}
 	return true
 }
 
+// delimIndex returns the index of the delimiter character c in the per
+// character tables of the delimiter stack.
+func delimIndex(c byte) int {
+	switch c {
+	case '*':
+		return 0
+	case '_':
+		return 1
+	case '~':
+		return 2
+	case '\'':
+		return 3
+	}
+	return 4
+}
+
+// materialize gives the delimiter d, which has no node yet, a text node of
+// its own, by splitting the text node that holds it. That node is a sibling
+// before closer, which is a node of a delimiter that d matches.
+func (ip *inlineParser) materialize(d *delimiter, closer *node) bool {
+	start, end := int(d.start), int(d.start+d.origCount)
+	for n := closer.prev; n != nil; n = n.prev {
+		if n.kind != kindText || !ip.isSrcText(n) {
+			continue
+		}
+		s := ip.srcStart(n)
+		if s > start {
+			continue
+		}
+		e := s + len(n.text)
+		if e < end {
+			return false
+		}
+		if e > end {
+			a := ip.p.arena.new(kindText)
+			a.text = ip.src[end:e]
+			n.insertAfter(a)
+		}
+		if s < start {
+			b := ip.p.arena.new(kindText)
+			b.text = ip.src[s:start]
+			n.insertBefore(b)
+		}
+		n.text = ip.src[start:end]
+		d.node = n
+		return true
+	}
+	return false
+}
+
+// isSrcText reports whether the text of the text node t is a slice of the
+// source of the inline content, rather than, e.g., a decoded entity.
+func (ip *inlineParser) isSrcText(t *node) bool {
+	if len(t.text) == 0 || cap(t.text) > cap(ip.src) {
+		return false
+	}
+	start := cap(ip.src) - cap(t.text)
+	return start+len(t.text) <= len(ip.src) && &ip.src[start] == &t.text[0]
+}
+
+// srcStart returns the offset of the text of t in the source, see isSrcText.
+func (ip *inlineParser) srcStart(t *node) int {
+	return cap(ip.src) - cap(t.text)
+}
+
 func (ip *inlineParser) pushDelim(d delimiter) {
+	if d.canOpen {
+		ip.openers[delimIndex(d.char)]++
+	}
+	if ip.delimTop < 0 {
+		if ip.brackets.len() == 0 {
+			// Nothing refers to the removed delimiters, whose indices are
+			// reused.
+			ip.delims.truncate(0)
+		}
+		ip.delimFirst = int32(ip.delims.len())
+	}
 	d.prev = ip.delimTop
 	d.next = -1
-	ip.delims = append(ip.delims, d)
-	i := len(ip.delims) - 1
+	ip.delims.push(d)
+	i := int32(ip.delims.len() - 1)
 	if ip.delimTop >= 0 {
-		ip.delims[ip.delimTop].next = i
+		ip.delims.at(int(ip.delimTop)).next = i
 	}
 	ip.delimTop = i
 }
 
-func (ip *inlineParser) removeDelim(i int) {
-	d := &ip.delims[i]
+func (ip *inlineParser) removeDelim(i int32) {
+	d := ip.delims.at(int(i))
+	if d.canOpen {
+		ip.openers[delimIndex(d.char)]--
+	}
 	if d.prev >= 0 {
-		ip.delims[d.prev].next = d.next
+		ip.delims.at(int(d.prev)).next = d.next
+	} else {
+		ip.delimFirst = d.next
 	}
 	if d.next >= 0 {
-		ip.delims[d.next].prev = d.prev
+		ip.delims.at(int(d.next)).prev = d.prev
 	} else {
 		ip.delimTop = d.prev
 	}
@@ -110,13 +192,13 @@ func (ip *inlineParser) removeDelim(i int) {
 
 // processEmphasis matches the delimiters above bottom, an index in the
 // delimiter stack or -1, into emphasis and strikethrough.
-func (ip *inlineParser) processEmphasis(bottom int) {
+func (ip *inlineParser) processEmphasis(bottom int32) {
 	// Find the first delimiter above bottom.
 	cur := ip.delimTop
-	first := -1
+	first := int32(-1)
 	for cur > bottom {
 		first = cur
-		cur = ip.delims[cur].prev
+		cur = ip.delims.at(int(cur)).prev
 	}
 	if first < 0 {
 		return
@@ -125,7 +207,7 @@ func (ip *inlineParser) processEmphasis(bottom int) {
 	// and by the length of the closer modulo 3. Delimiter indices grow with
 	// the stack, so bounds are compared by index: a bound may have been
 	// removed from the stack since it was set.
-	var openersBottom [3][2][3]int
+	var openersBottom [5][2][3]int32
 	for a := range openersBottom {
 		for b := range openersBottom[a] {
 			for c := range openersBottom[a][b] {
@@ -133,24 +215,14 @@ func (ip *inlineParser) processEmphasis(bottom int) {
 			}
 		}
 	}
-	charIndex := func(c byte) int {
-		switch c {
-		case '*':
-			return 0
-		case '_':
-			return 1
-		}
-		return 2
-	}
-
 	closer := first
 	for closer >= 0 {
-		cd := &ip.delims[closer]
+		cd := ip.delims.at(int(closer))
 		if !cd.canClose {
 			closer = cd.next
 			continue
 		}
-		ci := charIndex(cd.char)
+		ci := delimIndex(cd.char)
 		oi := 0
 		if cd.canOpen {
 			oi = 1
@@ -158,12 +230,15 @@ func (ip *inlineParser) processEmphasis(bottom int) {
 		mod := cd.origCount % 3
 		found := false
 		opener := cd.prev
+		quote := cd.char == '\'' || cd.char == '"'
 		for opener > bottom && opener > openersBottom[ci][oi][mod] {
-			od := &ip.delims[opener]
-			if od.char == cd.char && od.canOpen {
-				oddMatch := (cd.canOpen || od.canClose) && cd.origCount%3 != 0 &&
+			od := ip.delims.at(int(opener))
+			// Strikethrough pairs tildes of the same length (GFM 0.29,
+			// section 6.5).
+			if od.char == cd.char && od.canOpen && (cd.char != '~' || od.origCount == cd.origCount) {
+				oddMatch := !quote && (cd.canOpen || od.canClose) && cd.origCount%3 != 0 &&
 					(od.origCount+cd.origCount)%3 == 0
-				found = !oddMatch
+				found = !oddMatch && cd.node != nil && (od.node != nil || ip.materialize(od, cd.node))
 				if found {
 					break
 				}
@@ -180,8 +255,21 @@ func (ip *inlineParser) processEmphasis(bottom int) {
 			continue
 		}
 
-		od := &ip.delims[opener]
-		use := 1
+		od := ip.delims.at(int(opener))
+		if quote {
+			// Quotes pair without affecting the delimiters between them.
+			if cd.char == '"' {
+				od.node.level, cd.node.level = int32(typoLeftDouble), int32(typoRightDouble)
+			} else {
+				od.node.level, cd.node.level = int32(typoLeftSingle), int32(typoRightSingle)
+			}
+			next := cd.next
+			ip.removeDelim(opener)
+			ip.removeDelim(closer)
+			closer = next
+			continue
+		}
+		use := int32(1)
 		if od.count >= 2 && cd.count >= 2 {
 			use = 2
 		}
@@ -194,8 +282,8 @@ func (ip *inlineParser) processEmphasis(bottom int) {
 		}
 		od.count -= use
 		cd.count -= use
-		od.node.text = od.node.text[:len(od.node.text)-use]
-		cd.node.text = cd.node.text[:len(cd.node.text)-use]
+		od.node.text = od.node.text[:len(od.node.text)-int(use)]
+		cd.node.text = cd.node.text[:len(cd.node.text)-int(use)]
 
 		emph := ip.p.arena.new(k)
 		emph.level = use
@@ -210,7 +298,7 @@ func (ip *inlineParser) processEmphasis(bottom int) {
 
 		// Remove the delimiters between the opener and the closer.
 		for d := od.next; d >= 0 && d != closer; {
-			next := ip.delims[d].next
+			next := ip.delims.at(int(d)).next
 			ip.removeDelim(d)
 			d = next
 		}

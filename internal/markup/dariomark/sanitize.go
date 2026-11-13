@@ -42,9 +42,11 @@ type sanitizeSink struct {
 	failed  bool
 	attrs   []html.Attribute
 	buf     []byte
+	// escaped is the escaped run, see flush.
+	escaped []byte
 }
 
-func (r *renderer) renderSanitized(doc *node) ([]byte, bool) {
+func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
 	g := r.opts.Gogs
 	if g.Sanitizer == nil {
 		return nil, false
@@ -52,9 +54,10 @@ func (r *renderer) renderSanitized(doc *node) ([]byte, bool) {
 	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
 	s := &sanitizeSink{r: r, out: &r.out, san: g.Sanitizer}
 	r.s = s
-	r.renderDocument(doc)
+	r.sanitizing = true
+	render()
 	s.flush()
-	if s.failed {
+	if s.failed || r.stop {
 		return nil, false
 	}
 	return r.out.Bytes(), true
@@ -148,15 +151,59 @@ func (s *sanitizeSink) flush() {
 		return
 	}
 	s.run = []byte(convertNewlines(string(s.run)))
-	s.buf = appendHTMLEscaped(s.buf[:0], s.run)
+	s.escaped = appendHTMLEscaped(s.escaped[:0], s.run)
 	s.run = s.run[:0]
-	if s.verbatim == 0 {
-		if out := s.r.specialLinks(s.buf); !bytes.Equal(out, s.buf) {
-			s.fragment(out)
-			return
+	if s.verbatim > 0 {
+		s.out.Write(s.escaped)
+		return
+	}
+	text := s.escaped
+	if len(text) <= specialLinksPiece {
+		s.specialLinks(text)
+		return
+	}
+	// Long text is passed to GogsOptions.SpecialLinks in pieces, which keeps
+	// the memory for the links in each small. See there for the places
+	// where pieces end.
+	start, http := 0, false
+	for i := 0; i < len(text); i++ {
+		switch text[i] {
+		case '\n':
+			http = false
+			if i+1-start >= specialLinksPiece && (i+1 == len(text) || !startsReference(text[i+1])) {
+				s.specialLinks(text[start : i+1])
+				start = i + 1
+			}
+		case ' ':
+			if !http && i+1-start >= specialLinksPiece {
+				s.specialLinks(text[start : i+1])
+				start = i + 1
+			}
+		case 'h':
+			http = http || bytes.HasPrefix(text[i:], []byte("http"))
 		}
 	}
-	s.out.Write(s.buf)
+	s.specialLinks(text[start:])
+}
+
+// specialLinksPiece is the length from which text is passed to
+// GogsOptions.SpecialLinks in pieces.
+var specialLinksPiece = 32 << 10
+
+// startsReference reports whether c may start a special reference at the
+// start of the text, where it may not after a line ending.
+func startsReference(c byte) bool {
+	return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '-' || c == '_' || c == '.' || c == '#'
+}
+
+// specialLinks writes the escaped text with special references rendered as
+// links.
+func (s *sanitizeSink) specialLinks(text []byte) {
+	if out := s.r.specialLinks(text); !bytes.Equal(out, text) {
+		s.fragment(out)
+		return
+	}
+	s.out.Write(text)
 }
 
 // fragment sanitizes HTML that postProcess wrote without tokenizing it.

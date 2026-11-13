@@ -32,7 +32,7 @@ func alertType(line []byte) int {
 func (p *parser) finalizeAlert(b *node) {
 	first := b.first
 	if first == nil || first.kind != kindParagraph || first.segEnd == first.segStart ||
-		int(p.segs[first.segStart].start) != b.markerOffset {
+		p.segs[first.segStart].start != b.markerOffset {
 		b.alert = 0
 		return
 	}

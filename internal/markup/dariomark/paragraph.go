@@ -28,35 +28,14 @@ func (p *parser) joinSegs(segs []seg) []byte {
 	return p.buf[start:len(p.buf):len(p.buf)]
 }
 
-// joinSegsIndented is joinSegs with the indentation of the lines after the
-// first.
-func (p *parser) joinSegsIndented(segs []seg) []byte {
-	start := len(p.buf)
-	for i, s := range segs {
-		if i > 0 {
-			prev := segs[i-1]
-			p.buf = append(p.buf, p.src[prev.end:prev.eol]...)
-			// goldmark counts the rest of a partially consumed tab twice.
-			p.buf = append(p.buf, spaces[:2*s.wsPad]...)
-			p.buf = append(p.buf, p.src[min(s.ws, s.start):s.start]...)
-		}
-		p.buf = append(p.buf, p.src[s.start:s.end]...)
-	}
-	return p.buf[start:len(p.buf):len(p.buf)]
-}
-
 // paragraphLines strips link reference definitions from the start of the
-// lines and returns the remaining lines. With indented, titles keep the
-// indentation of their lines.
-func (p *parser) paragraphLines(b *node, indented bool) []seg {
+// lines and returns the remaining lines.
+func (p *parser) paragraphLines(b *node) []seg {
 	segs := p.segs[b.segStart:b.segEnd]
 	if len(segs) == 0 || p.src[segs[0].start] != '[' {
 		return segs
 	}
 	content := p.joinSegs(segs)
-	if indented {
-		content = p.joinSegsIndented(segs)
-	}
 	consumed, lines := 0, 0
 	for {
 		i := consumed
@@ -66,7 +45,7 @@ func (p *parser) paragraphLines(b *node, indented bool) []seg {
 		if i >= len(content) || content[i] != '[' || lines >= len(segs) {
 			break
 		}
-		n := p.parseRefDef(content[i:], segs[lines:], indented)
+		n := p.parseRefDef(content[i:])
 		if n == 0 {
 			break
 		}
@@ -83,22 +62,15 @@ func (p *parser) paragraphLines(b *node, indented bool) []seg {
 }
 
 func (p *parser) finalizeParagraph(b *node) {
-	segs := p.paragraphLines(b, true)
+	segs := p.paragraphLines(b)
 	if len(segs) == 0 {
-		// Removed paragraphs still make lists loose.
+		// The lines of removed paragraphs still count for loose lists, see
+		// blankBetweenChildren.
 		b.kind = kindRefDefs
 		return
 	}
-	if removed := b.segEnd - b.segStart - len(segs); removed > 0 && b.parent.kind == kindListItem {
-		// goldmark keeps the definitions in a list item as an invisible
-		// block before the paragraph, which then makes the list loose if a
-		// blank line precedes the definitions.
-		h := p.arena.new(kindRefDefs)
-		h.startLine, h.lastLine = b.startLine, b.startLine+removed-1
-		b.insertBefore(h)
-	}
 	// The text starts with the line at segStart, see inlineParser.lineBefore.
-	b.segStart = b.segEnd - len(segs)
+	b.segStart = b.segEnd - int32(len(segs))
 	if p.opts.Tables {
 		segs = p.extractTable(b, segs, false)
 		if len(segs) == 0 {
@@ -127,17 +99,8 @@ func (p *parser) trySetextHeading(container *node) int {
 		return startNone
 	}
 	p.closeUnmatchedBlocks()
-	// goldmark parses the definitions before a setext underline without the
-	// indentation of their lines.
-	segs := p.paragraphLines(container, false)
-	first := container.segEnd - len(segs)
-	holder := first > container.segStart && len(segs) > 0 && container.parent.kind == kindListItem
-	if holder {
-		// See finalizeParagraph.
-		h := p.arena.new(kindRefDefs)
-		h.startLine, h.lastLine = container.startLine, container.startLine+first-container.segStart-1
-		container.insertBefore(h)
-	}
+	segs := p.paragraphLines(container)
+	first := int(container.segEnd) - len(segs)
 	table := false
 	if p.opts.Tables && len(segs) > 0 {
 		n := len(segs)
@@ -147,22 +110,16 @@ func (p *parser) trySetextHeading(container *node) int {
 	if len(segs) == 0 {
 		// Without content, the underline is paragraph text, unless it is a
 		// thematic break.
-		if !holder && container.segEnd > container.segStart && container.parent.kind == kindListItem {
-			// See finalizeParagraph.
-			h := p.arena.new(kindRefDefs)
-			h.startLine, h.lastLine = container.startLine, p.lineNumber-1
-			container.insertBefore(h)
-			container.blankBefore = false
-		}
-		container.segStart = len(p.segs)
-		container.segEnd = len(p.segs)
-		container.startLine = p.lineNumber
-		p.emptiedParagraph = true
+		container.segStart = int32(len(p.segs))
+		container.segEnd = int32(len(p.segs))
+		container.startLine = int32(p.lineNumber)
+		p.emptiedParagraph = table
 		return startNone
 	}
-	h := p.arena.new(kindHeading)
-	h.startLine = container.startLine
-	h.lastLine = container.lastLine
+	// The paragraph becomes the heading.
+	h := container
+	h.kind = kindHeading
+	h.open = false
 	if c == '=' {
 		h.level = 1
 	} else {
@@ -180,10 +137,7 @@ func (p *parser) trySetextHeading(container *node) int {
 		h.text = p.trimParagraph(p.joinSegs(segs))
 	}
 	h.setext = true
-	h.blankBefore = container.blankBefore
-	h.segStart, h.segEnd = first, first+len(segs)
-	container.insertAfter(h)
-	container.unlink()
+	h.segStart, h.segEnd = int32(first), int32(first+len(segs))
 	p.tip = h.parent
 	p.touch(h)
 	p.advanceOffset(len(p.line)-p.offset, false)
@@ -191,9 +145,8 @@ func (p *parser) trySetextHeading(container *node) int {
 }
 
 // parseRefDef parses a link reference definition at the start of b and
-// returns its length including the line ending, or 0. The lines of b start
-// with segs[0], and indented is as for paragraphLines.
-func (p *parser) parseRefDef(b []byte, segs []seg, indented bool) int {
+// returns its length including the line ending, or 0.
+func (p *parser) parseRefDef(b []byte) int {
 	label, i := scanLinkLabel(b, 0)
 	if i < 0 || i >= len(b) || b[i] != ':' {
 		return 0
@@ -211,13 +164,10 @@ func (p *parser) parseRefDef(b []byte, segs []seg, indented bool) int {
 	end := -1
 	if k > j && k < len(b) {
 		if t, e, ok := scanLinkTitle(b, k); ok {
+			// A title followed by other text is not a title, and the
+			// definition ends with its destination if that ends a line.
 			if eol, ok := lineEndAfterSpace(b, e); ok {
 				title, hasTitle, end = t, true, eol
-			} else if bytes.IndexByte(b[j:k], '\n') >= 0 {
-				// A title on a later line that is followed by text still
-				// counts, but only the first line of the definition is
-				// consumed.
-				title, hasTitle, end = t, true, bytes.IndexByte(b, '\n')+1
 			}
 		}
 	}
@@ -238,11 +188,6 @@ func (p *parser) parseRefDef(b []byte, segs []seg, indented bool) int {
 	if _, exists := p.refs[key]; !exists {
 		ref := linkRef{dest: p.unescapeDest(dest), rawDest: dest}
 		if hasTitle {
-			// goldmark starts the title with the rest of a partially
-			// consumed tab on its first line.
-			if line := bytes.Count(b[:k], []byte{'\n'}); indented && line < len(segs) && segs[line].wsPad > 0 {
-				title = append(spaces[:segs[line].wsPad:segs[line].wsPad], title...)
-			}
 			ref.title = p.unescapeString(title)
 			if ref.title == nil {
 				ref.title = []byte{}
@@ -353,7 +298,10 @@ loop:
 		}
 		j++
 	}
-	// Unbalanced opening parentheses are allowed.
+	if depth > 0 {
+		// Parentheses must be balanced (CommonMark 0.31.2, section 6.3).
+		return nil, 0, false
+	}
 	return b[i:j], j, true
 }
 

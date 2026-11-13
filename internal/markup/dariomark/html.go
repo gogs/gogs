@@ -78,7 +78,7 @@ func htmlBlockStart(line []byte, interruptsParagraph bool) int {
 	if rest[0] == '?' {
 		return 3
 	}
-	if rest[0] == '!' && len(rest) > 1 && rest[1] >= 'A' && rest[1] <= 'Z' {
+	if rest[0] == '!' && len(rest) > 1 && isASCIILetter(rest[1]) {
 		return 4
 	}
 	if bytes.HasPrefix(rest, []byte("![CDATA[")) {
@@ -99,8 +99,7 @@ func htmlBlockStart(line []byte, interruptsParagraph bool) int {
 		}
 		if htmlBlock6Tags[string(lower[:i])] {
 			after := name[i:]
-			// Unlike other blocks, a tab cannot follow the tag name.
-			if len(after) == 0 || after[0] == ' ' || after[0] == '>' ||
+			if len(after) == 0 || after[0] == ' ' || after[0] == '\t' || after[0] == '>' ||
 				(after[0] == '/' && len(after) > 1 && after[1] == '>') {
 				return 6
 			}
@@ -129,7 +128,7 @@ func htmlBlockStart(line []byte, interruptsParagraph bool) int {
 			}
 		}
 	}
-	if n > 0 && len(bytes.Trim(line[n:], " ")) == 0 {
+	if n > 0 && isBlankBytes(line[n:]) {
 		return 7
 	}
 	return 0
@@ -155,14 +154,14 @@ func htmlBlockEnds(typ int, line []byte) bool {
 func (p *parser) tryHTMLBlock(container *node) int {
 	// Type 7 blocks cannot interrupt a paragraph, including one that the line
 	// would continue lazily.
-	inParagraph := container.kind == kindParagraph || (!p.allClosed && !p.blank && p.tip.kind == kindParagraph)
+	inParagraph := isParagraph(container) || (!p.allClosed && !p.blank && isParagraph(p.tip))
 	typ := htmlBlockStart(p.line[p.nextNonspace:], inParagraph)
 	if typ == 0 {
 		return startNone
 	}
 	p.closeUnmatchedBlocks()
 	b := p.addChild(kindHTMLBlock)
-	b.level = typ
+	b.level = int32(typ)
 	// The indentation is part of the block's content.
 	return startLeaf
 }
@@ -325,8 +324,7 @@ func (s *htmlScanner) scan(b []byte, pos int) int {
 	case c == '/':
 		return scanClosingTag(rest)
 	case c == '?':
-		// The "?" of "<?" may also end the processing instruction, e.g., "<?>".
-		e := indexFrom(b, pos+1, "?>", &s.noPIEnd)
+		e := indexFrom(b, pos+2, "?>", &s.noPIEnd)
 		if e < 0 {
 			return 0
 		}
@@ -352,7 +350,7 @@ func (s *htmlScanner) scan(b []byte, pos int) int {
 			}
 			return e + 3 - pos
 		}
-		if len(rest) > 2 && rest[2] >= 'A' && rest[2] <= 'Z' {
+		if len(rest) > 2 && isASCIILetter(rest[2]) {
 			e := indexFrom(b, pos+3, ">", &s.noDeclEnd)
 			if e < 0 {
 				return 0

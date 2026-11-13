@@ -5,20 +5,32 @@ import (
 	"unicode/utf8"
 )
 
+// delimiter is a delimiter run on the delimiter stack. Runs of "*", "_" and
+// "~" that can only open have no node until they match: they stay in the
+// pending text, at the offset start, see materialize.
 type delimiter struct {
 	node              *node
+	start             int32
+	count, origCount  int32
+	prev, next        int32
 	char              byte
-	count, origCount  int
 	canOpen, canClose bool
-	prev, next        int
 }
 
+// bracket is an opening bracket on the bracket stack. Its text is not a node
+// of its own: it is in the pending text until a text node takes it, see
+// bracketText.
 type bracket struct {
-	node        *node
-	pos         int // offset after the opening bracket
-	image       bool
-	active      bool
-	delimBottom int // the top of the delimiter stack when the bracket was pushed
+	start       int32 // offset of "[" or "!["
+	delimBottom int32 // the top of the delimiter stack when the bracket was pushed
+}
+
+// bracketText records that the brackets from the index first on, up to the
+// next group, are in the text node node, which starts at the offset start.
+// The node keeps its start when it is split.
+type bracketText struct {
+	first, start int32
+	node         *node
 }
 
 type backtickRuns struct {
@@ -36,9 +48,30 @@ type inlineParser struct {
 	// textStart is the start of the text that has not been added as a node.
 	textStart int
 
-	delims    []delimiter
-	delimTop  int
-	brackets  []bracket
+	delims   stack[delimiter]
+	delimTop int32
+	// openers counts the delimiters on the stack that can open, by
+	// delimIndex. delimFirst is the bottom of the stack, or -1.
+	openers    [5]int
+	delimFirst int32
+
+	// stream, when not nil, renders finished inline nodes of the leaf before
+	// its end, see streamFlush. streamAllocs and streamPos are the node
+	// count of the arena and the position at the last flush.
+	stream       func(chunk *node)
+	streamAllocs int
+	streamPos    int
+	brackets     stack[bracket]
+	// bracketText holds the text nodes of the brackets before unflushed.
+	bracketText []bracketText
+	unflushed   int
+	// inactiveBelow is the number of brackets at the bottom of the stack
+	// that cannot open links any more, because they would contain a link.
+	inactiveBelow int
+	// lazyFrom, if not -1, is the start of pending text that comes before
+	// textStart, which keeps brackets and line endings in the text without
+	// nodes of their own. See keepPending.
+	lazyFrom  int
 	html      htmlScanner
 	backticks backtickRuns
 	inCell    bool
@@ -46,55 +79,31 @@ type inlineParser struct {
 	linkify   bool
 	// boundary is the position where a linkified link may start, e.g., after
 	// an inline node.
-	boundary     int
-	emailFailEnd int
-	// line is the number of line endings in src before linePos.
-	line, linePos int
-	// doubleOpen and singleOpen count the opening quotes converted by the
-	// typographer in the document so far.
-	doubleOpen, singleOpen int
+	boundary int
 
-	// lineStart is the start of the current line after a line ending.
-	// loneEOL reports whether the previous line ended with an unpaired
-	// backslash, which pairs with a backslash that starts the line.
-	lineStart int
-	loneEOL   bool
-	// lineStartPaired is the position of the last backslash at a line start
-	// that was paired with an unpaired backslash at the end of the line
-	// before.
-	lineStartPaired int
-	lone            []loneBackslash
-
-	cells [][]byte
-}
-
-// loneBackslash is a text node holding a backslash that stays literal because
-// it is paired across a line ending, see inlineParser.lineStartBackslash.
-type loneBackslash struct {
-	node *node
-	// char is the character after the backslash.
-	char byte
-	// failedBracket reports whether a bracket after the backslash was closed
-	// without forming a link.
-	failedBracket bool
-	// pending is the start of the text after the backslash, or -1. merged
-	// reports whether that text was ended by inline syntax rather than by a
-	// line ending.
-	pending int
-	merged  bool
-	// triggerAfter reports whether inline syntax may start later on the line.
-	triggerAfter bool
+	cells    [][]byte
+	rowCells [][]byte
+	aligns   []alignment
+	// scratch is a buffer for the text of adjacent text nodes.
+	scratch []byte
 }
 
 func (ip *inlineParser) reset() {
 	ip.p = nil
 	ip.src = nil
 	ip.parent = nil
-	ip.delims = ip.delims[:0]
-	ip.brackets = ip.brackets[:0]
-	ip.doubleOpen, ip.singleOpen = 0, 0
+	ip.delims.reset()
+	ip.brackets.reset()
+	clear(ip.bracketText)
+	ip.bracketText = ip.bracketText[:0]
+	if cap(ip.bracketText) > maxPooledSegs {
+		ip.bracketText = nil
+	}
 	clear(ip.cells)
 	ip.cells = ip.cells[:0]
+	if cap(ip.scratch) > maxPooledBytes {
+		ip.scratch = nil
+	}
 }
 
 var inlineSpecial = func() (t [256]bool) {
@@ -104,38 +113,94 @@ var inlineSpecial = func() (t [256]bool) {
 	return t
 }()
 
-// processInlines parses the inline contents of all leaf blocks under n.
-func (p *parser) processInlines(n *node) {
+// The inline contents of leaf blocks are parsed while rendering, one leaf at
+// a time, and dropped after the leaf is rendered, so that only the inline
+// nodes of one leaf exist at a time. See parseLeaf and releaseLeaf.
+
+// inlineMark is the state of the arena and the buffer before the inline
+// contents of a leaf were parsed.
+type inlineMark struct {
+	arena arenaMark
+	buf   int
+}
+
+// parseLeaf parses the inline contents of the leaf block n, unless they were
+// parsed already, and returns the mark to pass to releaseLeaf. When stream is
+// not nil, it may receive finished parts of the contents before the end, see
+// inlineParser.streamFlush.
+func (p *parser) parseLeaf(n *node, stream func(chunk *node)) inlineMark {
+	if p.opts.Footnotes && !p.footnotes.inlined && len(p.footnotes.defs) > 0 && int(n.startLine) > p.footnotes.firstLine {
+		p.parseFootnoteDefs()
+	}
+	m := inlineMark{arena: p.arena.mark(), buf: len(p.buf)}
+	if n.parsed {
+		return m
+	}
+	n.parsed = true
+	p.rawAnchor = false
+	p.inl.stream = stream
+	switch n.kind {
+	case kindParagraph:
+		p.parseInlines(n, n.text, false)
+	case kindHeading:
+		text := n.text
+		if !n.setext && n.segEnd > n.segStart {
+			s := p.segs[n.segStart]
+			text = p.src[s.start:s.end]
+		}
+		p.parseInlines(n, text, false)
+	case kindTableCell:
+		p.parseInlines(n, n.text, true)
+	}
+	p.inl.stream = nil
+	if p.opts.RelativeLinks || p.opts.TextAutoLinksInRawAnchors {
+		p.walkLinks(n, &p.rawAnchor)
+	}
+	return m
+}
+
+// releaseLeaf drops the inline contents of the leaf block n, which were
+// parsed by parseLeaf, unless they belong to a footnote definition.
+func (p *parser) releaseLeaf(n *node, m inlineMark) {
+	if n.persistent {
+		p.arena.free, p.arena.freeExt = m.arena.free, m.arena.freeExt
+		return
+	}
+	n.first, n.last, n.parsed = nil, nil, false
+	p.arena.release(m.arena)
+	p.buf = p.buf[:m.buf]
+	p.joinedRaw, p.joined = nil, nil
+}
+
+// parseFootnoteDefs parses the inline contents of all footnote definitions,
+// in the order they closed. This happens before the first leaf block after
+// the first definition, which decides the footnote numbering. The contents
+// of definitions that are rendered are kept until the end of the document.
+func (p *parser) parseFootnoteDefs() {
+	p.footnotes.inlined = true
+	for _, d := range p.footnotes.defs {
+		used := p.footnotes.byLabel[footnoteKey(d.text)].def == d
+		p.parseLeaves(d, used)
+	}
+}
+
+func (p *parser) parseLeaves(n *node, keep bool) {
 	for c := n.first; c != nil; c = c.next {
 		switch c.kind {
-		case kindParagraph:
-			p.parseInlines(c, c.text, false)
-		case kindHeading:
-			text := c.text
-			if !c.setext && c.segEnd > c.segStart {
-				s := p.segs[c.segStart]
-				text = p.src[s.start:s.end]
+		case kindTableRow:
+			// The cells of rows in footnote definitions are parsed with the
+			// definitions, which decides the footnote numbering.
+			p.rowCells(n, c)
+			p.parseLeaves(c, keep)
+		case kindParagraph, kindHeading, kindTableCell:
+			m := p.parseLeaf(c, nil)
+			if keep {
+				c.persistent = true
+				p.footnotes.leaves = append(p.footnotes.leaves, c)
 			}
-			p.parseInlines(c, text, false)
-		case kindTableCell:
-			p.parseInlines(c, c.text, true)
-		case kindFootnoteDef:
-			// All definitions are parsed together, in the order they closed,
-			// where the first one appears. This decides the footnote numbering.
-			// When the first to close is nested in another definition, none of
-			// them are parsed, which matches goldmark.
-			if !p.footnotes.inlined {
-				p.footnotes.inlined = true
-				if !p.footnotes.nestedFirst() {
-					for _, d := range p.footnotes.defs {
-						p.processInlines(d)
-					}
-				}
-			}
+			p.releaseLeaf(c, m)
 		default:
-			if c.first != nil {
-				p.processInlines(c)
-			}
+			p.parseLeaves(c, keep)
 		}
 	}
 }
@@ -148,18 +213,19 @@ func (p *parser) parseInlines(parent *node, src []byte, inCell bool) {
 	ip.textStart = 0
 	ip.parent = parent
 	ip.inCell = inCell
-	ip.delims = ip.delims[:0]
-	ip.delimTop = -1
-	ip.brackets = ip.brackets[:0]
+	ip.delims.truncate(0)
+	ip.delimTop, ip.delimFirst = -1, -1
+	ip.openers = [5]int{}
+	ip.streamAllocs, ip.streamPos = p.arena.allocs, 0
+	ip.brackets.truncate(0)
+	clear(ip.bracketText)
+	ip.bracketText = ip.bracketText[:0]
+	ip.unflushed, ip.inactiveBelow, ip.lazyFrom = 0, 0, -1
 	ip.html.reset()
 	ip.backticks.built = false
 	ip.special = p.specialChars()
 	ip.linkify = p.opts.Linkify
 	ip.boundary = 0
-	ip.emailFailEnd = 0
-	ip.line, ip.linePos = 0, 0
-	ip.lineStart, ip.loneEOL, ip.lineStartPaired = -1, false, -1
-	ip.lone = ip.lone[:0]
 	if p.opts.TaskLists {
 		ip.taskCheckbox()
 	}
@@ -171,6 +237,9 @@ func (ip *inlineParser) parse() {
 	opts := ip.p.opts
 	special := ip.special
 	for ip.pos < len(src) {
+		if ip.stream != nil && ip.p.arena.allocs-ip.streamAllocs >= streamNodes {
+			ip.streamFlush()
+		}
 		c := src[ip.pos]
 		if ip.pos == ip.boundary && ip.linkify && isASCIIAlnum(c) && ip.tryLinkify() {
 			continue
@@ -186,11 +255,7 @@ func (ip *inlineParser) parse() {
 			ip.lineEnding()
 			handled = true
 		case '\\':
-			if ip.loneEOL && ip.pos == ip.lineStart {
-				handled = ip.lineStartBackslash()
-			} else {
-				handled = ip.backslash()
-			}
+			handled = ip.backslash()
 		case '`':
 			ip.codeSpan()
 			handled = true
@@ -227,23 +292,33 @@ func (ip *inlineParser) parse() {
 	}
 	ip.flushText(len(src))
 	ip.processEmphasis(-1)
-	for _, l := range ip.lone {
-		next := l.node.next
-		leftover := l.pending < 0 && (l.char == '*' || l.char == '_' || l.char == '~') && next != nil && next.kind == kindText && len(next.text) > 0
-		staysText := l.pending >= 0 && next != nil && next.kind == kindText && len(next.text) > 0 && &next.text[0] == &src[l.pending]
-		if leftover || l.failedBracket || l.merged || l.triggerAfter && staysText {
-			// The backslash escapes the delimiter or bracket that stayed text.
-			l.node.unlink()
-		}
+	if ip.linkify && bytes.IndexByte(src, '@') >= 0 {
+		ip.linkifyEmails(ip.parent)
 	}
 }
 
 // flushText adds the pending text up to end as a text node.
 func (ip *inlineParser) flushText(end int) {
-	if end > ip.textStart {
-		ip.appendText(ip.src[ip.textStart:end])
+	start := ip.textStart
+	if ip.lazyFrom >= 0 {
+		start, ip.lazyFrom = ip.lazyFrom, -1
+	}
+	if end > start {
+		n := ip.appendText(ip.src[start:end])
+		if ip.unflushed < ip.brackets.len() {
+			ip.bracketText = append(ip.bracketText, bracketText{first: int32(ip.unflushed), start: int32(start), node: n})
+			ip.unflushed = ip.brackets.len()
+		}
 	}
 	ip.textStart = end
+}
+
+// keepPending keeps the pending text and what follows it up to the next
+// textStart in one text node, instead of ending the text node here.
+func (ip *inlineParser) keepPending() {
+	if ip.lazyFrom < 0 {
+		ip.lazyFrom = ip.textStart
+	}
 }
 
 func (ip *inlineParser) appendText(b []byte) *node {
@@ -256,11 +331,6 @@ func (ip *inlineParser) appendText(b []byte) *node {
 // appendNode flushes the pending text up to the current position, appends n
 // and continues the pending text at next.
 func (ip *inlineParser) appendNode(n *node, next int) {
-	if ip.pos == ip.lineStart && ip.textStart == ip.pos {
-		// Syntax without text in between keeps the line start for
-		// lineStartBackslash.
-		ip.lineStart = next
-	}
 	ip.flushText(ip.pos)
 	ip.parent.appendChild(n)
 	ip.pos = next
@@ -282,124 +352,20 @@ func (ip *inlineParser) lineEnding() {
 	if spaces >= 2 {
 		k = kindHardBreak
 	}
-	if ip.linkify {
-		// With linkify, at most three whitespace characters are removed before
-		// a hard line break, and one before a soft line break.
-		limit := 1
-		if k == kindHardBreak {
-			limit = 3
-		}
-		spaces = 0
-		for spaces < limit && end-spaces > ip.textStart && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
-			spaces++
-		}
-	}
-	ip.flushText(end - spaces)
-	n := ip.p.arena.new(k)
-	ip.parent.appendChild(n)
-
-	runEnd := end
-	for runEnd > 0 && src[runEnd-1] == ' ' {
-		runEnd--
-	}
-	runStart := runEnd
-	for runStart > 0 && src[runStart-1] == '\\' {
-		runStart--
-	}
-	trailing := end - runEnd
-	run := runEnd - runStart
-	// A line of only inline syntax keeps an unpaired backslash before it.
-	if runStart == ip.lineStartPaired {
-		run--
-	}
-	ip.loneEOL = (trailing == 0 || trailing == 2) && (ip.loneEOL && ip.lineStart >= runEnd || run%2 == 1)
-
 	next := ip.pos + 1
+	if k == kindSoftBreak && end-spaces == ip.pos && !ip.p.opts.HardWraps &&
+		(next >= len(src) || src[next] != ' ' && src[next] != '\t') {
+		// The line ending renders as it is, so it stays in the text.
+		ip.keepPending()
+	} else {
+		ip.flushText(end - spaces)
+		ip.parent.appendChild(ip.p.arena.new(k))
+	}
+
 	for next < len(src) && (src[next] == ' ' || src[next] == '\t') {
 		next++
 	}
 	ip.pos, ip.textStart, ip.boundary = next, next, next
-	ip.lineStart = next
-}
-
-// lineStartBackslash handles backslashes at the start of a line after a line
-// that ended with an unpaired backslash. The first backslash pairs with that
-// one, so it stays literal and the parity of the escapes that follow flips
-// for the characters that start inline syntax.
-func (ip *inlineParser) lineStartBackslash() bool {
-	src := ip.src
-	pos := ip.pos
-	n := 0
-	for pos+n < len(src) && src[pos+n] == '\\' {
-		n++
-	}
-	i := pos + n
-	ip.lineStartPaired = pos
-	if i >= len(src) || !ip.escapeFlipped(src[i]) {
-		return ip.backslash()
-	}
-	ip.flushText(pos)
-	if n%2 == 0 {
-		ip.appendText(src[pos+n/2 : i+1])
-		ip.pos, ip.textStart = i+1, i+1
-		return true
-	}
-	if n > 1 {
-		ip.appendText(src[pos : pos+(n-1)/2])
-	}
-	l := loneBackslash{node: ip.appendText(src[i-1 : i]), char: src[i], pending: i}
-	switch {
-	case l.char == '*', l.char == '_', l.char == '~', l.char == '[', l.char == '`',
-		l.char == '!' && i+1 < len(src) && src[i+1] == '[':
-		l.pending = -1
-	default:
-		for j := i + 1; j < len(src) && src[j] != '\n'; j++ {
-			c := src[j]
-			if c == '\\' && j+1 < len(src) && isASCIIPunct(src[j+1]) {
-				j++
-				continue
-			}
-			if c == ' ' && ip.linkify && j+2 < len(src) && src[j+1] == ' ' && src[j+2] == '\n' {
-				// Two spaces before a hard line break.
-				break
-			}
-			if ip.escapeFlipped(c) || (c == ' ' || c == '\t') && ip.linkify {
-				l.triggerAfter = true
-				break
-			}
-		}
-	}
-	ip.lone = append(ip.lone, l)
-	ip.pos, ip.textStart = i, i
-	return true
-}
-
-// mergeLone records that the pending text, if it directly follows a literal
-// backslash from lineStartBackslash, is ended by inline syntax. The backslash
-// then escapes the first character of that text.
-func (ip *inlineParser) mergeLone() {
-	if n := len(ip.lone); n > 0 && ip.lone[n-1].pending == ip.textStart && ip.pos > ip.textStart {
-		ip.lone[n-1].merged = true
-	}
-}
-
-// escapeFlipped reports whether a backslash escape of c at the start of a line
-// is affected by an unpaired backslash at the end of the line before.
-func (ip *inlineParser) escapeFlipped(c byte) bool {
-	opts := ip.p.opts
-	switch c {
-	case '!', '<', '[', ']', '`', '*', '_':
-		return true
-	case '~':
-		return opts.Strikethrough
-	case '(':
-		return opts.Linkify
-	case ':':
-		return opts.Linkify && opts.LinkifyAfterPunct
-	case '"', '\'', ',', '-', '.', '>':
-		return opts.Typographer.Enabled
-	}
-	return false
 }
 
 func isASCIIPunct(c byte) bool {
@@ -409,21 +375,14 @@ func isASCIIPunct(c byte) bool {
 func (ip *inlineParser) backslash() bool {
 	src := ip.src
 	i := ip.pos + 1
-	// A backslash after an escaped backslash does not escape a line ending.
-	afterBackslash := ip.pos > 0 && src[ip.pos-1] == '\\'
-	if !afterBackslash && (i < len(src) && src[i] == '\n' || i+1 < len(src) && src[i] == '\r' && src[i+1] == '\n') {
-		ip.loneEOL = ip.pos == ip.lineStartPaired
+	if i < len(src) && src[i] == '\n' {
 		ip.flushText(ip.pos)
 		ip.parent.appendChild(ip.p.arena.new(kindHardBreak))
-		if src[i] == '\r' {
-			i++
-		}
 		next := i + 1
 		for next < len(src) && (src[next] == ' ' || src[next] == '\t') {
 			next++
 		}
 		ip.pos, ip.textStart, ip.boundary = next, next, next
-		ip.lineStart = next
 		return true
 	}
 	if i < len(src) && isASCIIPunct(src[i]) {
@@ -431,34 +390,13 @@ func (ip *inlineParser) backslash() bool {
 		// The escaped character starts the next text node.
 		ip.textStart = i
 		ip.pos = i + 1
-		return true
-	}
-	if ip.linkify && i < len(src) && src[i] == ' ' && !isBlankLineTail(src[i:]) {
-		// An unpaired backslash before a space pairs like one before a line
-		// ending, see lineStartBackslash.
-		ip.flushText(i)
-		ip.pos = i
-		ip.loneEOL = true
-		ip.lineStart = i
-		ip.lineStartPaired = -1
+		if c := src[i]; c == '*' || c == '_' || c == '~' || c == '(' {
+			// Extended autolinks may follow these characters, see tryLinkify.
+			ip.boundary = ip.pos
+		}
 		return true
 	}
 	return false
-}
-
-// isBlankLineTail reports whether b has only spaces and tabs before the end of
-// its first line.
-func isBlankLineTail(b []byte) bool {
-	for _, c := range b {
-		switch c {
-		case ' ', '\t', '\r':
-		case '\n':
-			return true
-		default:
-			return false
-		}
-	}
-	return true
 }
 
 func (ip *inlineParser) buildBackticks() {
@@ -521,25 +459,18 @@ func (ip *inlineParser) codeSpan() {
 	closer := ip.findBackticks(n, end)
 	if closer < 0 {
 		// The whole run is literal text.
-		if ip.pos == ip.lineStart && ip.textStart == ip.pos {
-			t := ip.p.arena.new(kindText)
-			t.text = src[start:end]
-			ip.appendNode(t, end)
-			return
-		}
 		ip.pos = end
 		ip.unmatchedBackticks(end)
 		return
 	}
 	code := ip.p.arena.new(kindCodeSpan)
-	code.text, code.title = ip.codeContent(src[end:closer])
+	code.text = ip.codeContent(src[end:closer])
 	ip.appendNode(code, closer+n)
 }
 
-// codeContent returns the content of a code span, and the same content with
-// its line endings kept, which goldmark uses in image descriptions.
-func (ip *inlineParser) codeContent(b []byte) (content, plain []byte) {
-	plain = b
+// codeContent returns the content of a code span (CommonMark 0.31.2,
+// section 6.1).
+func (ip *inlineParser) codeContent(b []byte) []byte {
 	if bytes.IndexByte(b, '\n') >= 0 || (ip.inCell && bytes.Contains(b, []byte(`\|`))) {
 		out := ip.p.buf[len(ip.p.buf):]
 		for i := 0; i < len(b); i++ {
@@ -548,20 +479,24 @@ func (ip *inlineParser) codeContent(b []byte) (content, plain []byte) {
 			}
 			out = append(out, b[i])
 		}
+		for i, c := range out {
+			if c == '\n' {
+				out[i] = ' '
+			}
+		}
 		ip.p.buf = append(ip.p.buf, out...)
-		plain = ip.p.buf[len(ip.p.buf)-len(out):]
-		b = bytes.ReplaceAll(plain, []byte("\n"), []byte(" "))
+		b = ip.p.buf[len(ip.p.buf)-len(out):]
 	}
 	if len(b) >= 2 && b[0] == ' ' && b[len(b)-1] == ' ' {
-		// Unlike CommonMark, goldmark also keeps the spaces around content
-		// of only tabs and line endings.
+		// One space is stripped from both sides, unless the content is
+		// only spaces.
 		for _, c := range b {
-			if c != ' ' && c != '\t' && c != '\r' && c != '\n' {
-				return b[1 : len(b)-1], plain[1 : len(plain)-1]
+			if c != ' ' {
+				return b[1 : len(b)-1]
 			}
 		}
 	}
-	return b, plain
+	return b
 }
 
 func (ip *inlineParser) angle() bool {
@@ -569,7 +504,6 @@ func (ip *inlineParser) angle() bool {
 	if n, ok := scanAutolinkURI(src[ip.pos:]); ok {
 		link := ip.p.arena.new(kindAutoLink)
 		link.text = src[ip.pos+1 : ip.pos+n-1]
-		link.dest = link.text
 		link.autoLink = autoLinkURL
 		link.angle = true
 		ip.appendNode(link, ip.pos+n)
@@ -578,7 +512,6 @@ func (ip *inlineParser) angle() bool {
 	if n, ok := scanAutolinkEmail(src[ip.pos:]); ok {
 		link := ip.p.arena.new(kindAutoLink)
 		link.text = src[ip.pos+1 : ip.pos+n-1]
-		link.dest = link.text
 		link.autoLink = autoLinkEmail
 		link.angle = true
 		ip.appendNode(link, ip.pos+n)
@@ -664,10 +597,7 @@ func (ip *inlineParser) entity() bool {
 	}
 	t := ip.p.arena.new(kindText)
 	t.text = r
-	lineStart := ip.lineStart
 	ip.appendNode(t, ip.pos+n)
-	// Entities are text for lineStartBackslash.
-	ip.lineStart = lineStart
 	// Entities do not end a text run for linkify.
 	ip.boundary = -1
 	return true
@@ -809,4 +739,142 @@ func (p *parser) unescapeString(b []byte) []byte {
 		i++
 	}
 	return p.buf[start:len(p.buf):len(p.buf)]
+}
+
+// streamNodes is the number of nodes allocated for a leaf after which
+// streamFlush renders the finished ones.
+const streamNodes = 1024
+
+// streamFlush renders and frees the children of the leaf that are finished:
+// those before the earliest open bracket or delimiter, which a link or
+// emphasis may still take. A run of text nodes before that point stays,
+// because email autolinks are found in runs of text nodes after parsing, see
+// linkifyEmails. Only the end of such a run that may still be part of an
+// email address stays when the run ends the children.
+func (ip *inlineParser) streamFlush() {
+	ip.streamAllocs = ip.p.arena.allocs
+	bound := ip.pos
+	var boundNode *node
+	if ip.brackets.len() > 0 {
+		bound = int(ip.brackets.at(0).start)
+	}
+	if ip.delimFirst >= 0 {
+		if d := ip.delims.at(int(ip.delimFirst)); int(d.start) < bound {
+			bound, boundNode = int(d.start), d.node
+		}
+	}
+	parent := ip.parent
+	var cut *node
+	for c := parent.first; c != nil; c = c.next {
+		if c == boundNode || c.kind == kindText && ip.isSrcText(c) && ip.srcStart(c)+len(c.text) > bound {
+			cut = c
+			break
+		}
+	}
+	// The run of text nodes before cut, or at the end.
+	runEnd := parent.last
+	if cut != nil {
+		runEnd = cut.prev
+	}
+	run := runEnd
+	for run != nil && run.kind == kindText && run.prev != nil && run.prev.kind == kindText {
+		run = run.prev
+	}
+	if run != nil && run.kind != kindText {
+		run = nil
+	}
+	last := runEnd
+	if run != nil {
+		last = run.prev
+		if cut == nil {
+			last = ip.splitEmailTail(run, runEnd)
+		}
+	}
+	if last == nil {
+		return
+	}
+	holder := ip.p.arena.new(kindParagraph)
+	for c := parent.first; ; {
+		next := c.next
+		c.unlink()
+		holder.appendChild(c)
+		if c == last {
+			break
+		}
+		c = next
+	}
+	if ip.linkify {
+		ip.linkifyEmails(holder)
+	}
+	if ip.p.opts.RelativeLinks || ip.p.opts.TextAutoLinksInRawAnchors {
+		ip.p.walkLinks(holder, &ip.p.rawAnchor)
+	}
+	ip.stream(holder)
+	ip.p.arena.freeTree(holder)
+	ip.streamPos = ip.pos
+}
+
+// splitEmailTail splits the text of the text nodes from first to last, which
+// end the children, into the part that may still become part of an email
+// address, which stays as one text node, and the part before it, which is
+// returned as one text node, or nil if there is none. The run is only
+// copied when it is shorter than the input parsed since the last flush, so
+// that copying stays linear.
+func (ip *inlineParser) splitEmailTail(first, last *node) *node {
+	var text []byte
+	if first == last {
+		text = first.text
+	} else {
+		n := 0
+		for c := first; ; c = c.next {
+			n += len(c.text)
+			if c == last {
+				break
+			}
+		}
+		if n > ip.pos-ip.streamPos {
+			return first.prev
+		}
+		start := len(ip.p.buf)
+		for c := first; ; c = c.next {
+			ip.p.buf = append(ip.p.buf, c.text...)
+			if c == last {
+				break
+			}
+		}
+		text = ip.p.buf[start:len(ip.p.buf):len(ip.p.buf)]
+	}
+	k := len(text)
+	for k > 0 && (emailLocal[text[k-1]] || text[k-1] == '@') {
+		k--
+	}
+	prev := first.prev
+	if k == 0 && first == last {
+		return prev
+	}
+	// Replace the run by the two parts.
+	for c := first; ; {
+		next := c.next
+		c.unlink()
+		ip.p.arena.freeTree(c)
+		if c == last {
+			break
+		}
+		c = next
+	}
+	var head *node
+	if k > 0 {
+		head = ip.p.arena.new(kindText)
+		head.text = text[:k]
+		ip.parent.appendChild(head)
+	}
+	if k < len(text) {
+		tail := ip.p.arena.new(kindText)
+		tail.text = text[k:]
+		ip.parent.appendChild(tail)
+	}
+	if head != nil {
+		return head
+	}
+	return prev
 }

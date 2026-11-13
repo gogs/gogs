@@ -40,18 +40,86 @@ type renderer struct {
 	numBuf    [24]byte
 	listAttrs [2]attr
 
-	headings []Heading
+	// headings are the headings rendered so far, whose text and id are in
+	// headingText, see headingList.
+	headings    []headingRef
+	headingText []byte
+	slug        []byte
 	// slugs counts the uses of heading slugs, see headingID.
 	slugs map[string]int
+
+	// sanitizing reports whether the sink sanitizes, which it cannot do for
+	// raw HTML. stop is set when rendering stopped because of raw HTML.
+	sanitizing, stop bool
+	// stream renders streamed inline contents, see parseLeaf.
+	stream func(chunk *node)
 }
 
 func (r *renderer) init(p *parser, opts *Options) {
 	r.p = p
 	r.opts = opts
-	r.out.Reset()
+	// The output of the previous render belongs to its caller.
+	r.out = bytes.Buffer{}
 	r.html = htmlSink{out: &r.out, xhtml: opts.XHTML}
 	r.headings = r.headings[:0]
+	r.headingText = r.headingText[:0]
 	clear(r.slugs)
+	r.sanitizing, r.stop = false, false
+	if r.stream == nil {
+		r.stream = r.renderChunk
+	}
+}
+
+// release drops the references of r to the last render, and its buffers
+// above the sizes that pooled parsers keep.
+func (r *renderer) release() {
+	r.p, r.opts, r.s = nil, nil, nil
+	r.out = bytes.Buffer{}
+	r.html = htmlSink{}
+	if cap(r.plain) > maxPooledBytes {
+		r.plain = nil
+	}
+	if cap(r.headings) > maxPooledSegs {
+		r.headings = nil
+	}
+	if cap(r.headingText) > maxPooledBytes {
+		r.headingText = nil
+	}
+	if len(r.slugs) > maxPooledRefs {
+		r.slugs = nil
+	}
+}
+
+// renderChunk renders inline contents that the parser streams, see
+// parser.parseLeaf.
+func (r *renderer) renderChunk(chunk *node) {
+	if r.sanitizing && r.p.hasRawHTML {
+		r.stop = true
+	}
+	if !r.stop {
+		r.inlines(chunk)
+	}
+}
+
+// parseLeaf parses the inline contents of the leaf block n, see
+// parser.parseLeaf, streaming them if stream is true. It reports false when
+// rendering must stop because the sanitizing sink met raw HTML.
+func (r *renderer) parseLeaf(n *node, stream bool) (inlineMark, bool) {
+	var f func(chunk *node)
+	if stream {
+		f = r.stream
+	}
+	m := r.p.parseLeaf(n, f)
+	if r.stop {
+		r.p.releaseLeaf(n, m)
+		return m, false
+	}
+	if r.sanitizing && r.p.hasRawHTML {
+		r.stop = true
+		r.p.releaseLeaf(n, m)
+		return m, false
+	}
+	return m, true
 }
 
 func (r *renderer) renderHTML(doc *node) {
@@ -62,8 +130,57 @@ func (r *renderer) renderHTML(doc *node) {
 
 func (r *renderer) renderDocument(doc *node) {
 	r.blocks(doc)
+	if r.p.opts.Footnotes && !r.p.footnotes.inlined && len(r.p.footnotes.ordered) > 0 {
+		r.p.parseFootnoteDefs()
+		if r.sanitizing && r.p.hasRawHTML {
+			r.stop = true
+		}
+	}
+	if r.stop {
+		return
+	}
 	if len(r.p.footnotes.ordered) > 0 {
 		r.renderFootnotes()
+	}
+}
+
+// renderClosed renders and frees the closed blocks at the start of the
+// document, see parser.renderStream. It reports false when rendering
+// stopped because the sanitizing sink met raw HTML.
+func (r *renderer) renderClosed() bool {
+	p := r.p
+	for c := p.doc.first; c != nil && !c.open; c = p.doc.first {
+		if r.sanitizing && p.hasRawHTML {
+			r.stop = true
+		}
+		if !r.stop {
+			r.block(c)
+		}
+		p.dropBlock(c)
+	}
+	if p.doc.first == nil {
+		// Nothing refers to the lines and stored bytes of the freed blocks.
+		p.segs = p.segs[:0]
+		p.buf = p.buf[:0]
+		p.joinedRaw, p.joined = nil, nil
+	} else if k := int(p.doc.first.segStart); k >= stackChunk && 2*k >= len(p.segs) {
+		// Drop the lines of the freed blocks. Moving at least as many lines
+		// as are kept makes this take linear time overall.
+		p.segs = p.segs[:copy(p.segs, p.segs[k:])]
+		shiftSegs(p.doc.first, int32(k))
+	}
+	return !r.stop
+}
+
+// shiftSegs subtracts k from the line indices of n and its descendants.
+// Nodes without lines, e.g., table rows, keep their zero indices.
+func shiftSegs(n *node, k int32) {
+	if n.segEnd >= k {
+		n.segStart -= k
+		n.segEnd -= k
+	}
+	for c := n.first; c != nil; c = c.next {
+		shiftSegs(c, k)
 	}
 }
 
@@ -74,7 +191,7 @@ func (r *renderer) nl() {
 var newline = []byte("\n")
 
 func (r *renderer) blocks(parent *node) {
-	for n := parent.first; n != nil; n = n.next {
+	for n := parent.first; n != nil && !r.stop; n = n.next {
 		r.block(n)
 	}
 }
@@ -83,26 +200,40 @@ func (r *renderer) block(n *node) {
 	s := r.s
 	switch n.kind {
 	case kindParagraph:
-		if parent := n.parent; parent != nil && parent.kind == kindListItem && parent.parent.tight {
+		tight := n.parent != nil && n.parent.kind == kindListItem && n.parent.parent.tight
+		if !tight {
+			s.start("p")
+		}
+		m, ok := r.parseLeaf(n, true)
+		if !ok {
+			return
+		}
+		if tight {
 			r.inlines(n)
 			if n.next != nil {
 				r.nl()
 			}
+			r.p.releaseLeaf(n, m)
 			return
 		}
-		s.start("p")
 		r.inlines(n)
 		if n.parent.kind == kindFootnoteDef && n.next == nil {
 			r.backlinks(n.parent)
 		}
 		s.end("p")
 		r.nl()
+		r.p.releaseLeaf(n, m)
 	case kindHeading:
+		m, ok := r.parseLeaf(n, false)
+		if !ok {
+			return
+		}
 		tag := headingTags[n.level]
 		r.headingStart(n, tag)
 		r.inlines(n)
 		s.end(tag)
 		r.nl()
+		r.p.releaseLeaf(n, m)
 	case kindThematicBreak:
 		s.start("hr")
 		r.nl()
@@ -115,6 +246,10 @@ func (r *renderer) block(n *node) {
 				s.raw(spaces[:sg.pad])
 			}
 			s.raw(r.replaceNUL(r.p.src[sg.start:sg.eol]))
+			if sg.eol == sg.end {
+				// The last line of the input has no line ending.
+				r.nl()
+			}
 		}
 	case kindBlockquote:
 		if n.alert > 0 {
@@ -135,7 +270,7 @@ func (r *renderer) block(n *node) {
 		if n.ordered && n.listStart != 1 {
 			attrs = append(attrs, attr{"start", strconv.AppendInt(r.numBuf[:0], int64(n.listStart), 10), false})
 		}
-		if r.opts.TaskLists && hasTaskItem(n) {
+		if r.p.hasTaskItem(n) {
 			attrs = append(attrs, attr{"class", containsTaskListClass, false})
 		}
 		s.start(tag, attrs...)
@@ -144,7 +279,7 @@ func (r *renderer) block(n *node) {
 		s.end(tag)
 		r.nl()
 	case kindListItem:
-		if isTaskItem(n) {
+		if task, _ := r.p.taskItem(n); task {
 			// The source lines let a client reorder or toggle the item by
 			// editing the Markdown source.
 			lines := strconv.AppendInt(r.numBuf[:0], int64(n.startLine), 10)
@@ -155,7 +290,7 @@ func (r *renderer) block(n *node) {
 			s.start("li")
 		}
 		f := n.first
-		if f != nil && f.kind == kindFootnoteHolder {
+		for f != nil && f.kind == kindRefDefs {
 			f = f.next
 		}
 		if f != nil && !(f.kind == kindParagraph && n.parent.tight) {
@@ -176,16 +311,33 @@ var (
 	taskListItemClass     = []byte("task-list-item")
 )
 
-// isTaskItem reports whether the list item n starts with a task checkbox.
-func isTaskItem(n *node) bool {
-	p := n.first
-	return p != nil && p.kind == kindParagraph && p.first != nil && p.first.kind == kindTaskCheckbox
+// taskItem reports whether the list item starts with a task list item
+// marker, and whether the marker is checked. The marker is "[ ]" or "[x]" at
+// the start of a paragraph that is the first block of the item, followed by
+// a space or tab on the same line, like cmark-gfm.
+func (p *parser) taskItem(item *node) (task, checked bool) {
+	b := item.first
+	if !p.opts.TaskLists || b == nil || b.kind != kindParagraph || b.segEnd == b.segStart {
+		return false, false
+	}
+	s := p.segs[b.segStart]
+	line := p.src[s.start:s.end]
+	if len(line) < 4 || line[0] != '[' || line[2] != ']' || line[3] != ' ' && line[3] != '\t' {
+		return false, false
+	}
+	switch line[1] {
+	case ' ', '\t':
+		return true, false
+	case 'x', 'X':
+		return true, true
+	}
+	return false, false
 }
 
 // hasTaskItem reports whether the list n has a task item.
-func hasTaskItem(n *node) bool {
+func (p *parser) hasTaskItem(n *node) bool {
 	for c := n.first; c != nil; c = c.next {
-		if isTaskItem(c) {
+		if task, _ := p.taskItem(c); task {
 			return true
 		}
 	}
@@ -201,14 +353,39 @@ func (r *renderer) headingStart(n *node, tag string) {
 	}
 	text := r.replaceNUL(r.appendTextContent(r.plain[:0], n))
 	r.plain = text[:0]
-	h := Heading{Level: n.level, Text: string(text)}
+	h := headingRef{level: n.level, text: int32(len(r.headingText))}
+	r.headingText = append(r.headingText, text...)
+	h.id = int32(len(r.headingText))
 	if slug := r.headingID(text); slug != "" {
-		h.ID = r.opts.HeadingIDPrefix + slug
-		r.s.start(tag, attr{"id", []byte(h.ID), false})
+		r.headingText = append(append(r.headingText, r.opts.HeadingIDPrefix...), slug...)
+		r.s.start(tag, attr{"id", r.headingText[h.id:], false})
 	} else {
 		r.s.start(tag)
 	}
 	r.headings = append(r.headings, h)
+}
+
+// headingRef is a heading whose text and id are in renderer.headingText:
+// the text starts at the offset text and ends at id, where the id starts.
+type headingRef struct {
+	level, text, id int32
+}
+
+// headingList returns the headings rendered so far.
+func (r *renderer) headingList() []Heading {
+	if len(r.headings) == 0 {
+		return nil
+	}
+	all := string(r.headingText)
+	list := make([]Heading, len(r.headings))
+	for i, h := range r.headings {
+		end := len(all)
+		if i+1 < len(r.headings) {
+			end = int(r.headings[i+1].text)
+		}
+		list[i] = Heading{Level: int(h.level), Text: all[h.text:h.id], ID: all[h.id:end]}
+	}
+	return list
 }
 
 // appendTextContent appends the text of the inline content of n, as a
@@ -243,7 +420,7 @@ func (r *renderer) appendTextContent(b []byte, n *node) []byte {
 // than letters, digits, "-" and "_" are dropped. A slug that an earlier
 // heading has is followed by "-1", "-2" and so on.
 func (r *renderer) headingID(text []byte) string {
-	b := r.numBuf[:0]
+	b := r.slug[:0]
 	for len(text) > 0 {
 		c, size := utf8.DecodeRune(text)
 		text = text[size:]
@@ -254,6 +431,7 @@ func (r *renderer) headingID(text []byte) string {
 			b = utf8.AppendRune(b, unicode.ToLower(c))
 		}
 	}
+	r.slug = b
 	if len(b) == 0 {
 		return ""
 	}
@@ -288,10 +466,6 @@ func (r *renderer) codeBlock(n *node) {
 	}
 	for i := n.segStart; i < n.segEnd; i++ {
 		sg := r.p.segs[i]
-		if sg.start == sg.eol && sg.pad == 0 && n.fenced {
-			// An empty last line without a line ending.
-			continue
-		}
 		if sg.pad > 0 {
 			s.text(spaces[:sg.pad])
 		}
@@ -312,7 +486,7 @@ func (r *renderer) codeLanguage(n *node) []byte {
 	if len(info) == 0 {
 		return nil
 	}
-	if i := bytes.IndexByte(info, ' '); i >= 0 {
+	if i := bytes.IndexAny(info, " \t"); i >= 0 {
 		info = info[:i]
 	}
 	return r.p.unescapeString(info)
@@ -322,7 +496,7 @@ func (r *renderer) table(t *node) {
 	s := r.s
 	s.start("table")
 	r.nl()
-	for row := t.first; row != nil; row = row.next {
+	for row := t.first; row != nil && !r.stop; row = row.next {
 		if row.header {
 			s.start("thead")
 			r.nl()
@@ -337,26 +511,38 @@ func (r *renderer) table(t *node) {
 			tag = "th"
 		}
 		cells := 0
-		for c := row.first; c != nil; c = c.next {
-			cells++
-			switch c.align {
-			case alignLeft:
-				s.start(tag, attr{"align", alignLeftValue, false})
-			case alignCenter:
-				s.start(tag, attr{"align", alignCenterValue, false})
-			case alignRight:
-				s.start(tag, attr{"align", alignRightValue, false})
-			default:
-				s.start(tag)
+		if row.first != nil {
+			// The cells of rows in footnote definitions are parsed already.
+			for c := row.first; c != nil; c = c.next {
+				cells++
+				if !r.tableCell(tag, c) {
+					return
+				}
 			}
-			r.inlines(c)
-			s.end(tag)
-			r.nl()
+		} else {
+			// The cells are rendered one at a time, so that a wide row does
+			// not need a node for each.
+			texts := splitTableRow(row.text, r.p.inl.rowCells[:0], len(t.ext.aligns))
+			for i, text := range texts {
+				m := r.p.arena.mark()
+				c := r.p.arena.new(kindTableCell)
+				c.header = row.header
+				c.align = t.ext.aligns[i]
+				c.text = text
+				ok := r.tableCell(tag, c)
+				r.p.arena.release(m)
+				if !ok {
+					return
+				}
+			}
+			cells = len(texts)
+			clear(texts)
+			r.p.inl.rowCells = texts[:0]
 		}
 		// Short rows are filled with empty cells without alignment, as long
 		// as the document has budget for them. Otherwise a wide header and
 		// many short rows would make the output quadratic in the input.
-		for ; cells < len(t.aligns) && r.p.padBudget > 0; cells++ {
+		for ; cells < len(t.ext.aligns) && r.p.padBudget > 0; cells++ {
 			r.p.padBudget--
 			s.start(tag)
 			s.end(tag)
@@ -374,6 +560,31 @@ func (r *renderer) table(t *node) {
 	}
 	s.end("table")
 	r.nl()
+}
+
+// tableCell renders the table cell c. It reports false when rendering must
+// stop, see parseLeaf.
+func (r *renderer) tableCell(tag string, c *node) bool {
+	s := r.s
+	switch c.align {
+	case alignLeft:
+		s.start(tag, attr{"align", alignLeftValue, false})
+	case alignCenter:
+		s.start(tag, attr{"align", alignCenterValue, false})
+	case alignRight:
+		s.start(tag, attr{"align", alignRightValue, false})
+	default:
+		s.start(tag)
+	}
+	m, ok := r.parseLeaf(c, true)
+	if !ok {
+		return false
+	}
+	r.inlines(c)
+	r.p.releaseLeaf(c, m)
+	s.end(tag)
+	r.nl()
+	return true
 }
 
 var (
@@ -418,19 +629,19 @@ func (r *renderer) inline(n *node) {
 		r.inlines(n)
 		s.end("del")
 	case kindLink:
-		href := r.urlEscape(n.dest)
-		if n.hasTitle {
-			s.start("a", attr{"href", href, false}, attr{"title", n.title, false})
+		href := r.urlEscape(n.ext.dest)
+		if n.ext.hasTitle {
+			s.start("a", attr{"href", href, false}, attr{"title", n.ext.title, false})
 		} else {
 			s.start("a", attr{"href", href, false})
 		}
 		r.inlines(n)
 		s.end("a")
 	case kindImage:
-		href := r.urlEscape(n.dest)
+		href := r.urlEscape(n.ext.dest)
 		alt := r.plainText(n)
-		if n.hasTitle {
-			s.start("img", attr{"src", href, false}, attr{"alt", alt, true}, attr{"title", n.title, false})
+		if n.ext.hasTitle {
+			s.start("img", attr{"src", href, false}, attr{"alt", alt, true}, attr{"title", n.ext.title, false})
 		} else {
 			s.start("img", attr{"src", href, false}, attr{"alt", alt, true})
 		}
@@ -472,13 +683,17 @@ func (r *renderer) autoLink(n *node) {
 		s.text(r.p.unescapeString(n.text))
 		return
 	}
+	dest := n.text
+	if n.ext != nil {
+		// The destination of "www." links has a scheme added.
+		dest = n.ext.dest
+	}
 	if n.autoLink != autoLinkEmail && r.opts.ShortenAutoLink != nil {
-		if html, ok := r.opts.ShortenAutoLink(n.dest); ok {
+		if html, ok := r.opts.ShortenAutoLink(dest); ok {
 			s.raw(html)
 			return
 		}
 	}
-	dest := n.dest
 	if n.autoLink == autoLinkEmail && !hasPrefixFold(dest, "mailto:") {
 		r.plain = append(append(r.plain[:0], "mailto:"...), dest...)
 		dest = r.plain
@@ -499,24 +714,10 @@ func (r *renderer) plainText(n *node) []byte {
 func (r *renderer) appendPlain(n *node) {
 	for c := n.first; c != nil; c = c.next {
 		switch c.kind {
-		case kindAutoLink:
-			// Autolinks in angle brackets have no text in descriptions.
-			if !c.angle {
-				r.p.buf = appendEscapedText(r.p.buf, c.text)
-			}
-		case kindText:
+		case kindAutoLink, kindText, kindCodeSpan, kindRawHTML:
+			// Raw HTML is text in a description, which is an attribute.
 			r.p.buf = appendEscapedText(r.p.buf, c.text)
-		case kindCodeSpan:
-			r.p.buf = appendEscapedText(r.p.buf, c.title)
 		case kindSoftBreak, kindHardBreak:
-			// Line breaks are rendered as in the text, unescaped.
-			if c.kind == kindHardBreak || r.opts.HardWraps {
-				if r.opts.XHTML {
-					r.p.buf = append(r.p.buf, "<br />"...)
-				} else {
-					r.p.buf = append(r.p.buf, "<br>"...)
-				}
-			}
 			r.p.buf = append(r.p.buf, '\n')
 		case kindTypo:
 			html, _ := r.opts.Typographer.entity(typo(c.level))
@@ -589,9 +790,9 @@ func (r *renderer) footnoteID(kind string, fn *footnote, ref int) []byte {
 
 func (r *renderer) footnoteRef(n *node) {
 	s := r.s
-	fn := n.footnote
+	fn := n.ext.footnote
 	start := len(r.p.buf)
-	r.p.buf = append(r.p.buf, r.footnoteID("fnref", fn, n.refIndex)...)
+	r.p.buf = append(r.p.buf, r.footnoteID("fnref", fn, n.ext.refIndex)...)
 	id := r.p.buf[start:len(r.p.buf):len(r.p.buf)]
 	start = len(r.p.buf)
 	r.p.buf = append(append(r.p.buf, '#'), r.footnoteID("fn", fn, 0)...)
@@ -614,7 +815,7 @@ var (
 
 func (r *renderer) backlinks(def *node) {
 	s := r.s
-	fn := def.footnote
+	fn := def.ext.footnote
 	for i := 0; i < fn.refs; i++ {
 		s.entity("&#160;", "\u00a0")
 		start := len(r.p.buf)
@@ -635,7 +836,7 @@ func (r *renderer) renderFootnotes() {
 	r.nl()
 	for _, fn := range r.p.footnotes.ordered {
 		def := fn.def
-		def.footnote = fn
+		r.p.arena.newExt(def).footnote = fn
 		start := len(r.p.buf)
 		r.p.buf = append(r.p.buf, r.footnoteID("fn", fn, 0)...)
 		s.start("li", attr{"id", r.p.buf[start:len(r.p.buf):len(r.p.buf)], false})
