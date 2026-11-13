@@ -244,7 +244,7 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 		case "align":
 			ok = (name == "td" || name == "th") && cellAlignPattern.MatchString(a.Val)
 		case "start":
-			ok = false
+			ok = name == "ol" && listStartPattern.MatchString(a.Val)
 		case "type":
 			ok = name == "input" && a.Val == "checkbox"
 		case "checked", "disabled":
@@ -322,6 +322,7 @@ var (
 	idPattern           = regexp.MustCompile(`[a-zA-Z0-9\:\-_\.]+`)
 	cellAlignPattern    = regexp.MustCompile(`(?i)^(center|justify|left|right|char)$`)
 	sourceLinesPattern  = regexp.MustCompile(`^[0-9]+-[0-9]+$`)
+	listStartPattern    = regexp.MustCompile(`^[0-9]+$`)
 )
 
 // sanitizedElements are the elements that Render produces and the sanitizer

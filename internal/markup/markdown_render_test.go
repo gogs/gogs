@@ -244,7 +244,7 @@ details
 </li>
 <li>plain</li>
 </ul>
-<ol class="contains-task-list">
+<ol start="3" class="contains-task-list">
 <li class="task-list-item" data-source-lines="7-7"><input checked="" disabled="" type="checkbox"> ship</li>
 </ol>
 `

@@ -24,6 +24,11 @@ func Test_Sanitizer(t *testing.T) {
 		{input: `<code class="language-c++"></code>`, expVal: `<code class="language-c++"></code>`},
 		{input: `<code class="language-c#"></code>`, expVal: `<code class="language-c#"></code>`},
 
+		// Ordered list start
+		{input: `<ol start="10"><li>x</li></ol>`, expVal: `<ol start="10"><li>x</li></ol>`},
+		{input: `<ol start="1; x"><li>x</li></ol>`, expVal: `<ol><li>x</li></ol>`},
+		{input: `<ul start="10"><li>x</li></ul>`, expVal: `<ul><li>x</li></ul>`},
+
 		// Input checkbox
 		{input: `<input type="hidden">`, expVal: ``},
 		{input: `<input type="checkbox">`, expVal: `<input type="checkbox">`},

@@ -53,6 +53,9 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert markdown-alert-(note|tip|important|warning|caution)$`).Regexp()).OnElements("div")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert-title$`).Regexp()).OnElements("p")
 
+		// Start numbers of ordered lists
+		sanitizer.policy.AllowAttrs("start").Matching(lazyregexp.New(`^[0-9]+$`).Regexp()).OnElements("ol")
+
 		// Task lists
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^contains-task-list$`).Regexp()).OnElements("ul", "ol")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^task-list-item$`).Regexp()).OnElements("li")
