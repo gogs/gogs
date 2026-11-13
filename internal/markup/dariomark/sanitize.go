@@ -228,8 +228,8 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 			switch name {
 			case "code":
 				ok = s.san.CodeClass.MatchString(a.Val)
-			case "a", "div", "p":
-				ok = allowedClasses[a.Val] == name
+			case "a", "div", "li", "p", "ul", "ol":
+				ok = allowedClasses[a.Val] == name || a.Val == string(containsTaskListClass) && name == "ol"
 				if !ok {
 					s.failed = true
 					return
@@ -249,6 +249,8 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 			ok = name == "input" && a.Val == "checkbox"
 		case "checked", "disabled":
 			ok = name == "input"
+		case "data-source-lines":
+			ok = name == "li" && sourceLinesPattern.MatchString(a.Val)
 		default:
 			s.failed = true
 			return
@@ -319,6 +321,7 @@ var (
 	dataURIBase64Prefix = regexp.MustCompile(`^data:[^,]*;base64,`)
 	idPattern           = regexp.MustCompile(`[a-zA-Z0-9\:\-_\.]+`)
 	cellAlignPattern    = regexp.MustCompile(`(?i)^(center|justify|left|right|char)$`)
+	sourceLinesPattern  = regexp.MustCompile(`^[0-9]+-[0-9]+$`)
 )
 
 // sanitizedElements are the elements that Render produces and the sanitizer
@@ -337,6 +340,8 @@ var allowedClasses = func() map[string]string {
 		"footnote-backref":     "a",
 		"footnotes":            "div",
 		"markdown-alert-title": "p",
+		"contains-task-list":   "ul",
+		"task-list-item":       "li",
 	}
 	for _, k := range alertKinds[1:] {
 		m[k.class] = "div"

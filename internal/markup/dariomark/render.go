@@ -36,8 +36,9 @@ type renderer struct {
 	s    sink
 	html htmlSink
 
-	plain  []byte
-	numBuf [24]byte
+	plain     []byte
+	numBuf    [24]byte
+	listAttrs [2]attr
 
 	headings []Heading
 	// slugs counts the uses of heading slugs, see headingID.
@@ -129,20 +130,30 @@ func (r *renderer) block(n *node) {
 		tag := "ul"
 		if n.ordered {
 			tag = "ol"
-			if n.listStart != 1 {
-				s.start(tag, attr{"start", strconv.AppendInt(r.numBuf[:0], int64(n.listStart), 10), false})
-			} else {
-				s.start(tag)
-			}
-		} else {
-			s.start(tag)
 		}
+		attrs := r.listAttrs[:0]
+		if n.ordered && n.listStart != 1 {
+			attrs = append(attrs, attr{"start", strconv.AppendInt(r.numBuf[:0], int64(n.listStart), 10), false})
+		}
+		if r.opts.TaskLists && hasTaskItem(n) {
+			attrs = append(attrs, attr{"class", containsTaskListClass, false})
+		}
+		s.start(tag, attrs...)
 		r.nl()
 		r.blocks(n)
 		s.end(tag)
 		r.nl()
 	case kindListItem:
-		s.start("li")
+		if isTaskItem(n) {
+			// The source lines let a client reorder or toggle the item by
+			// editing the Markdown source.
+			lines := strconv.AppendInt(r.numBuf[:0], int64(n.startLine), 10)
+			lines = append(lines, '-')
+			lines = strconv.AppendInt(lines, int64(n.lastLine), 10)
+			s.start("li", attr{"class", taskListItemClass, false}, attr{"data-source-lines", lines, false})
+		} else {
+			s.start("li")
+		}
 		f := n.first
 		if f != nil && f.kind == kindFootnoteHolder {
 			f = f.next
@@ -159,6 +170,27 @@ func (r *renderer) block(n *node) {
 }
 
 var headingTags = [...]string{"h1", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+var (
+	containsTaskListClass = []byte("contains-task-list")
+	taskListItemClass     = []byte("task-list-item")
+)
+
+// isTaskItem reports whether the list item n starts with a task checkbox.
+func isTaskItem(n *node) bool {
+	p := n.first
+	return p != nil && p.kind == kindParagraph && p.first != nil && p.first.kind == kindTaskCheckbox
+}
+
+// hasTaskItem reports whether the list n has a task item.
+func hasTaskItem(n *node) bool {
+	for c := n.first; c != nil; c = c.next {
+		if isTaskItem(c) {
+			return true
+		}
+	}
+	return false
+}
 
 // headingStart writes the start tag of the heading n, with an id when
 // Options.HeadingIDs is set.

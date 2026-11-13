@@ -230,3 +230,27 @@ func TestMarkdown_HeadingIDs(t *testing.T) {
 		{Level: 2, Text: "!!!", ID: ""},
 	}, got)
 }
+
+func TestMarkdown_TaskLists(t *testing.T) {
+	NewSanitizer()
+	input := "- [ ] write\n- [x] review\n  details\n  - [ ] sub\n- plain\n\n3. [x] ship\n"
+	want := `<ul class="contains-task-list">
+<li class="task-list-item" data-source-lines="1-1"><input disabled="" type="checkbox"> write</li>
+<li class="task-list-item" data-source-lines="2-4"><input checked="" disabled="" type="checkbox"> review
+details
+<ul class="contains-task-list">
+<li class="task-list-item" data-source-lines="4-4"><input disabled="" type="checkbox"> sub</li>
+</ul>
+</li>
+<li>plain</li>
+</ul>
+<ol class="contains-task-list">
+<li class="task-list-item" data-source-lines="7-7"><input checked="" disabled="" type="checkbox"> ship</li>
+</ol>
+`
+	_, sanitized := renderMarkdown([]byte(input), "/user/repo", nil)
+	assert.True(t, sanitized, "takes the fast path")
+	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
+	// Documents with raw HTML are sanitized by bluemonday instead.
+	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
+}

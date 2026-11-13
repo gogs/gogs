@@ -4,6 +4,8 @@ dariomark is the Markdown engine of Gogs. It implements CommonMark 0.31.2 and Gi
 
 Headings get stable ids made the way GitHub makes them, e.g., `user-content-getting-started`, with `-1`, `-2` and so on for repeated headings. `Result.Headings` lists every heading with its level, text and id, which is what a table of contents needs.
 
+Task list items are rendered as `<li class="task-list-item" data-source-lines="5-7">`, where `5-7` are the first and last source lines of the item, counting from 1. A client can reorder or toggle items by editing those lines of the Markdown source, e.g., for drag and drop.
+
 It was written from scratch for Gogs, from the specifications, with no code taken from other Markdown implementations.
 
 ## Why a Gogs-specific engine

@@ -53,6 +53,11 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert markdown-alert-(note|tip|important|warning|caution)$`).Regexp()).OnElements("div")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert-title$`).Regexp()).OnElements("p")
 
+		// Task lists
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^contains-task-list$`).Regexp()).OnElements("ul", "ol")
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^task-list-item$`).Regexp()).OnElements("li")
+		sanitizer.policy.AllowAttrs("data-source-lines").Matching(lazyregexp.New(`^[0-9]+-[0-9]+$`).Regexp()).OnElements("li")
+
 		// Footnotes
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnotes$`).Regexp()).OnElements("div")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnote-(ref|backref)$`).Regexp()).OnElements("a")
