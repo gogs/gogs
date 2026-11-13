@@ -134,7 +134,7 @@ func TestTracing(t *testing.T) {
 
 	t.Run("passed on to Git", func(t *testing.T) {
 		t.Setenv("GOGS_TEST_INHERITED", "kept")
-		stdout, err := exec(ctx, "", []string{"-c", "alias.env=!printenv TRACEPARENT GOGS_TEST_INHERITED", "env"}, nil)
+		stdout, err := exec(ctx, "", []string{"-c", "alias.env=!printenv TRACEPARENT && printenv GOGS_TEST_INHERITED", "env"}, nil)
 		require.NoError(t, err)
 
 		var span sdktrace.ReadOnlySpan

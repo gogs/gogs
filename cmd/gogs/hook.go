@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/urfave/cli/v3"
 	"go.opentelemetry.io/otel"
@@ -68,7 +69,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	setup(cmd, "pre-receive.log", true)
-	ctx = startHookSpan(ctx, "pre-receive")
+	ctx = startHookSpan(ctx, "pre-receive", time.Second)
 	defer endHookSpan()
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
@@ -163,8 +164,6 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	setup(cmd, "update.log", false)
-	_ = startHookSpan(ctx, "update")
-	defer endHookSpan()
 
 	args := cmd.Args().Slice()
 	if len(args) != 3 {
@@ -177,6 +176,12 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	if !osx.IsFile(customHooksPath) {
 		return nil
 	}
+
+	// Git runs the hook for every ref it updates, so it is only traced when it
+	// runs a custom hook, and gives up exporting sooner, to keep exporting spans
+	// from slowing down every push.
+	_ = startHookSpan(ctx, "update", 300*time.Millisecond)
+	defer endHookSpan()
 
 	var hookCmd *exec.Cmd
 	if conf.IsWindowsRuntime() {
@@ -199,7 +204,7 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	setup(cmd, "post-receive.log", true)
-	ctx = startHookSpan(ctx, "post-receive")
+	ctx = startHookSpan(ctx, "post-receive", time.Second)
 	defer endHookSpan()
 
 	// Post-receive hook does more than just gather Git information,
@@ -292,8 +297,10 @@ var (
 
 // startHookSpan starts the span of the hook when tracing is enabled, under the
 // span of the Git process that runs the hook, which Git passes on through the
-// TRACEPARENT and TRACESTATE environment variables.
-func startHookSpan(ctx context.Context, name string) context.Context {
+// TRACEPARENT and TRACESTATE environment variables. Git waits for the hook to
+// exit, so exporting the spans of the hook gives up after the timeout to not
+// hold up the push for long on a collector that is down.
+func startHookSpan(ctx context.Context, name string, exportTimeout time.Duration) context.Context {
 	shutdown, err := tracing.Init(ctx)
 	if err != nil {
 		log.Error("Failed to initialize tracing: %v", err)
@@ -309,7 +316,7 @@ func startHookSpan(ctx context.Context, name string) context.Context {
 	ctx, hookSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, "hook "+name)
 	endHookSpan = func() {
 		hookSpan.End()
-		shutdown()
+		shutdown(exportTimeout)
 	}
 	return ctx
 }

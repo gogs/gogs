@@ -20,8 +20,9 @@ import (
 // endpoint is set through the standard OpenTelemetry environment variables,
 // i.e., OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT. It
 // returns a function that exports the spans that are left, which wait in a
-// batch for up to 5 seconds, or nil when no endpoint is set.
-func Init(ctx context.Context) (shutdown func(), err error) {
+// batch for up to 5 seconds, giving up after the timeout, or nil when no
+// endpoint is set.
+func Init(ctx context.Context) (shutdown func(timeout time.Duration), err error) {
 	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" && os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") == "" {
 		return nil, nil
 	}
@@ -43,12 +44,12 @@ func Init(ctx context.Context) (shutdown func(), err error) {
 		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(provider)
-	// Requests that Git hooks make to Gogs carry the trace they belong to.
+	// Requests that Git hooks make to Gogs carry the trace they belong to, and the
+	// web server continues the trace of any request that carries one.
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	return func() {
-		// Exiting must not wait long on a collector that is down.
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	return func(timeout time.Duration) {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		if err := provider.Shutdown(ctx); err != nil {
 			log.Warn("Failed to export the remaining spans: %v", err)
