@@ -1,38 +1,38 @@
 ---
 title: "Custom templates"
-description: "Override HTML templates, static files, and inject custom content"
+description: "Override email templates and static files, and inject custom content"
 icon: "paintbrush"
 ---
 
 <Danger>
-  Overriding full HTML page templates such as `custom/templates/home.tmpl` is deprecated starting with 0.15.0. The web interface is being rebuilt as a React application that renders pages on the client, so it no longer reads page templates from the `templates/` directory and your copies of them will stop taking effect once the migration is complete.
+  Starting with 0.15.0, the web interface is a React application that renders pages in the browser, and Gogs no longer reads HTML page templates such as `custom/templates/home.tmpl`. Remove your copies of them, and use content injection or static file overrides instead.
 
-  Content injection through `inject/head.tmpl` and `inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides all remain fully supported.
+  Content injection through `inject/head.tmpl` and `inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides remain fully supported.
 </Danger>
 
-Gogs allows you to customize the appearance and behavior of your instance by overriding HTML templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
+Gogs allows you to customize the appearance and behavior of your instance by overriding email templates, replacing static files, and injecting custom content. All customizations are placed under the `custom/` directory and survive code updates.
 
 <Warning>
   Be careful when overriding templates and static files, as changes to the upstream Gogs codebase may break your customizations in future releases. Keep track of what you have overridden.
 </Warning>
 
-## Override HTML templates
+## Override email templates
 
-You can replace any HTML template (including email templates) by placing a customized version under the `custom/templates/` directory.
+You can replace any email template by placing a customized version under the `custom/templates/mail/` directory.
 
 <Steps>
   <Step title="Find the original template">
-    Locate the template file you want to customize in the `templates/` directory of the Gogs source code. For example, to customize the home page, find `templates/home.tmpl`.
+    Locate the template file you want to customize in the `templates/mail/` directory of the Gogs source code. For example, to customize the account activation email, find `templates/mail/auth/activate.tmpl`.
   </Step>
   <Step title="Copy and edit">
     Copy the content of the template file and save your edited version to the corresponding path under `custom/templates/`. For example:
 
     ```
-    custom/templates/home.tmpl
+    custom/templates/mail/auth/activate.tmpl
     ```
   </Step>
   <Step title="Restart Gogs">
-    Edits to custom HTML templates **require restarting Gogs** to take effect.
+    Edits to custom email templates **require restarting Gogs** to take effect.
   </Step>
 </Steps>
 

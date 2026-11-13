@@ -12,7 +12,6 @@ import (
 	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
@@ -149,7 +148,6 @@ func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 			}
 		}
 		c.Repo.Owner = owner
-		c.Data["Username"] = c.Repo.Owner.Name
 
 		repo, err := database.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
@@ -158,10 +156,7 @@ func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 		}
 
 		c.Repo.Repository = repo
-		c.Data["RepoName"] = c.Repo.Repository.Name
 		c.Repo.RepoLink = repo.Link()
-		c.Data["RepoLink"] = c.Repo.RepoLink
-		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
 
 		// Admin has super access
 		if c.IsLogged && c.User.IsAdmin {
@@ -227,9 +222,6 @@ func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 				c.Error(err, "get mirror by repository ID")
 				return
 			}
-			c.Data["MirrorEnablePrune"] = c.Repo.Mirror.EnablePrune
-			c.Data["MirrorInterval"] = c.Repo.Mirror.Interval
-			c.Data["Mirror"] = c.Repo.Mirror
 		}
 
 		gitRepo, err := git.Open(database.RepoPath(ownerName, repoName))
@@ -244,39 +236,18 @@ func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 			c.Error(err, "get tags")
 			return
 		}
-		c.Data["Tags"] = tags
 		c.Repo.Repository.NumTags = len(tags)
-
-		c.Data["Title"] = owner.Name + "/" + repo.Name
-		c.Data["Repository"] = repo
-		c.Data["Owner"] = c.Repo.Repository.Owner
-		c.Data["IsRepositoryOwner"] = c.Repo.IsOwner()
-		c.Data["IsRepositoryAdmin"] = c.Repo.IsAdmin()
-		c.Data["IsRepositoryWriter"] = c.Repo.IsWriter()
-
-		c.Data["DisableSSH"] = conf.SSH.Disabled
-		c.Data["DisableHTTP"] = conf.Repository.DisableHTTPGit
-		c.Data["CloneLink"] = repo.CloneLink()
-		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
-
-		if c.IsLogged {
-			c.Data["IsWatchingRepo"] = database.IsWatching(c.User.ID, repo.ID)
-			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
-		}
 
 		// An empty repository has no branches to load.
 		if c.Repo.Repository.IsEmpty {
 			return
 		}
 
-		c.Data["TagName"] = c.Repo.TagName
 		branches, err := c.Repo.GitRepo.Branches(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get branches")
 			return
 		}
-		c.Data["Branches"] = branches
-		c.Data["BranchCount"] = len(branches)
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
@@ -287,10 +258,7 @@ func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 				c.Repo.BranchName = branches[0]
 			}
 		}
-		c.Data["BranchName"] = c.Repo.BranchName
-		c.Data["CommitID"] = c.Repo.CommitID
 
-		c.Data["IsGuest"] = !c.Repo.HasAccess()
 	}
 }
 
@@ -390,12 +358,6 @@ func RepoRef() macaron.Handler {
 		}
 
 		c.Repo.BranchName = refName
-		c.Data["BranchName"] = c.Repo.BranchName
-		c.Data["CommitID"] = c.Repo.CommitID
-		c.Data["TreePath"] = c.Repo.TreePath
-		c.Data["IsViewBranch"] = c.Repo.IsViewBranch
-		c.Data["IsViewTag"] = c.Repo.IsViewTag
-		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
 		if c.Repo.IsWriter() || (c.IsLogged && database.Handle.Repositories().HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
@@ -407,11 +369,9 @@ func RepoRef() macaron.Handler {
 					// In-repository pull requests has higher priority than cross-repository if user is viewing
 					// base repository and 1) has write access to it 2) has forked it.
 					if c.Repo.IsWriter() {
-						c.Data["BaseRepo"] = c.Repo.Repository.BaseRepo
 						c.Repo.PullRequest.BaseRepo = c.Repo.Repository.BaseRepo
 						c.Repo.PullRequest.HeadInfo = c.Repo.Owner.Name + ":" + c.Repo.BranchName
 					} else {
-						c.Data["BaseRepo"] = c.Repo.Repository
 						c.Repo.PullRequest.BaseRepo = c.Repo.Repository
 						c.Repo.PullRequest.HeadInfo = c.User.Name + ":" + c.Repo.BranchName
 					}
@@ -419,7 +379,6 @@ func RepoRef() macaron.Handler {
 			} else {
 				// Or, this is repository accepts pull requests between branches.
 				if c.Repo.Repository.AllowsPulls() {
-					c.Data["BaseRepo"] = c.Repo.Repository
 					c.Repo.PullRequest.BaseRepo = c.Repo.Repository
 					c.Repo.PullRequest.Allowed = true
 					c.Repo.PullRequest.SameRepo = true
@@ -427,7 +386,6 @@ func RepoRef() macaron.Handler {
 				}
 			}
 		}
-		c.Data["PullRequestCtx"] = c.Repo.PullRequest
 	}
 }
 
