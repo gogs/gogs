@@ -7,13 +7,6 @@ import (
 	"gogs.io/gogs/internal/git"
 )
 
-// tryGetUserByEmail returns a non-nil value if the email is corresponding to an
-// existing user.
-func tryGetUserByEmail(ctx gocontext.Context, email string) *database.User {
-	user, _ := database.Handle.Users().GetByEmail(ctx, email)
-	return user
-}
-
 type userCommit struct {
 	User *database.User
 	*git.Commit

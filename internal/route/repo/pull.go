@@ -652,3 +652,12 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pullIssue.Index, 10))
 }
+
+func setEditorconfigIfExists(c *context.Context) {
+	ec, err := c.Repo.Editorconfig(c.Req.Context())
+	if err != nil && !git.IsErrRevisionNotExist(err) {
+		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
+		return
+	}
+	c.Data["Editorconfig"] = ec
+}
