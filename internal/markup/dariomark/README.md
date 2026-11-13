@@ -2,7 +2,7 @@
 
 A fast, safe Markdown engine for Go that implements CommonMark and GitHub Flavored Markdown.
 
-Dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and in Gogs it renders 1.5 to 6 times faster than the same pipeline built on blackfriday or goldmark.
+Dariomark was written from scratch, from the specifications, for the Markdown that people write on code hosting: READMEs, issues, comments, wikis and long documents written by AI agents. It renders that Markdown the way GitHub does, and it renders 1.5 to 6 times faster than the same pipeline built on blackfriday or goldmark.
 
 ## Features
 
@@ -19,7 +19,7 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 
 ## Performance
 
-`markup.Markdown`, the full Gogs pipeline (rendering, special links and sanitizing), in microseconds per document. Lower is better.
+`markup.Markdown`, the full pipeline (rendering, special links and sanitizing), in microseconds per document. Lower is better.
 
 | Document | Size | Dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
 |---|---|---|---|---|
@@ -29,7 +29,7 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 | Changelog | 41 KB | **1,368** | 7,219 | 8,867 |
 | Documentation | 92 KB | **5,872** | 12,746 | 17,098 |
 
-The engine alone, without the Gogs passes, in microseconds and allocations per document:
+The engine alone, without special links and sanitizing, in microseconds and allocations per document:
 
 | Document | Dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
 |---|---|---|---|
@@ -39,7 +39,7 @@ The engine alone, without the Gogs passes, in microseconds and allocations per d
 | Changelog | 637 (422) | **636** (2,433) | 1,460 (3,766) |
 | Documentation | **1,134** (479) | 1,161 (3,652) | 2,499 (6,650) |
 
-The numbers were measured with Go 1.27.4 on a 16-core Intel Xeon at 2.60 GHz, as the median of 5 runs of Go benchmarks. The comment is a one-line issue comment, and the other documents are a project README, a Markdown cheat sheet, a project changelog and a documentation page. The blackfriday and goldmark columns of the first table use the Gogs pipeline built for each library, which tokenizes the HTML again for special links and sanitizes all of it with bluemonday.
+The numbers were measured with Go 1.27.4 on a 16-core Intel Xeon at 2.60 GHz, as the median of 5 runs of Go benchmarks. The comment is a one-line issue comment, and the other documents are a project README, a Markdown cheat sheet, a project changelog and a documentation page. The blackfriday and goldmark columns of the first table use the same pipeline built for each library, which tokenizes the HTML again for special links and sanitizes all of it with bluemonday.
 
 ## How it is fast
 
@@ -54,7 +54,7 @@ A general-purpose Markdown library only produces HTML. Rendering a comment on a 
 - `TestSpec` runs all 652 examples of the CommonMark 0.31.2 specification, and checks GitHub's rendering for the 11 where GitHub departs from it.
 - Code blocks in list items match GitHub's rendering on 25 cases covering fenced and indented code, nesting, ordered lists, tabs, task items and blockquotes (`TestMarkdown_CodeInListItems` keeps 7 of them).
 - `TestGFMSpec` runs the examples of the GFM extensions: tables, task lists, strikethrough and autolinks.
-- Differential testing compared the output with cmark-gfm and commonmark.js, byte for byte, on real-world READMEs, changelogs and documentation, and on millions of random documents in every Gogs configuration. Where GitHub's rendering and the specifications disagree, Dariomark follows GitHub. The remaining differences are rare edge cases, e.g., leading whitespace on lazy continuation lines after a backslash line break.
+- Differential testing compared the output with cmark-gfm and commonmark.js, byte for byte, on real-world READMEs, changelogs and documentation, and on millions of random documents in every configuration that `markup` uses. Where GitHub's rendering and the specifications disagree, Dariomark follows GitHub. The remaining differences are rare edge cases, e.g., leading whitespace on lazy continuation lines after a backslash line break.
 - `FuzzRender` checks that rendering never panics and is deterministic.
 - The built-in sanitizer was compared with bluemonday on about 2 million random and fuzzed documents, including hostile URLs, entities, control characters and issue tracker formats, with no difference.
 
@@ -65,4 +65,4 @@ Markdown on a code hosting site comes from anyone who can open an issue, so one 
 - **Fail-closed sanitizing.** Every element and attribute Dariomark writes goes through one allowlist. Anything it does not recognize sends the document to bluemonday instead of through.
 - **Safe URLs.** Link and image URLs are checked by scheme. `javascript:`, `vbscript:` and `data:` URLs other than common image types are dropped, however they are encoded.
 - **Bounded nesting.** Containers nested more than 100 levels deep, e.g., `>` repeated, show the deeper markers as text, and the rest of the document renders normally.
-- **Document limits in Gogs.** `markup.Render` shows documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` (8 MB by default) as plain text, and documents of 64 KB or more share a budget of concurrent render memory, so a burst of large documents waits instead of exhausting memory.
+- **Document limits.** `markup.Render` shows documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` (8 MB by default) as plain text, and documents of 64 KB or more share a budget of concurrent render memory, so a burst of large documents waits instead of exhausting memory.

@@ -10,8 +10,8 @@ import (
 )
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
-// rendered content. Render emulates the rest of the policy of Gogs, which is
-// the bluemonday UGC policy with classes for code languages, alerts and
+// rendered content. Render emulates the rest of the policy, which is the
+// bluemonday UGC policy with classes for code languages, alerts and
 // footnotes, and attributes for task list checkboxes.
 type Sanitizer struct {
 	// AllowURLScheme reports whether the policy allows the URL, which has a
@@ -389,7 +389,7 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 }
 
 // The patterns and tables below, with the attribute checks in emitStart, copy
-// the sanitizer policy of Gogs for the HTML that Render produces. They must be
+// the sanitizer policy for the HTML that Render produces. They must be
 // kept in sync with NewSanitizer in internal/markup/sanitizer.go, and with the
 // bluemonday UGC policy when upgrading bluemonday, which supplies id, align,
 // title, alt and data URIs.

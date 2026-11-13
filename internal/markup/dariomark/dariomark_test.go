@@ -75,7 +75,7 @@ func TestGFMSpec(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &examples))
 	require.Len(t, examples, 24)
 
-	// Gogs renders task lists with classes and source lines, see
+	// Task lists render with classes and source lines, see
 	// TestTaskListAttributes.
 	taskAttrs := regexp.MustCompile(` class="contains-task-list"| class="task-list-item" data-source-lines="\d+-\d+"`)
 
@@ -83,7 +83,7 @@ func TestGFMSpec(t *testing.T) {
 	for _, ex := range examples {
 		t.Run(strconv.Itoa(ex.Example), func(t *testing.T) {
 			if ex.Extension == "tagfilter" {
-				t.Skip("Gogs sanitizes HTML with bluemonday instead of filtering tags")
+				t.Skip("HTML is sanitized with bluemonday instead of filtering tags")
 			}
 			got := string(HTML([]byte(ex.Markdown), opts))
 			got = taskAttrs.ReplaceAllString(got, "")
@@ -189,7 +189,7 @@ func FuzzRender(f *testing.F) {
 	})
 }
 
-// postProcessTestOptions returns options like those of Gogs, with
+// postProcessTestOptions returns options like those of markup.Markdown, with
 // post-processing and the sanitizing of documents without raw HTML.
 func postProcessTestOptions() *Options {
 	return &Options{
