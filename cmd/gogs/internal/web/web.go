@@ -711,7 +711,7 @@ func newRoutingHandler() (http.Handler, error) {
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
-		f.Get("/compare/{before: /[0-9a-f]{40}([0-9a-f]{24})?/}...{after: /[0-9a-f]{40}([0-9a-f]{24})?/}.diff", getRepoCompareRaw)
+		f.Get("/compare/"+compareRangeRoute+".diff", getRepoCompareRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
 	}, requireViewAccess, withRepoContext)
 
