@@ -1,4 +1,4 @@
-# dariomark
+# Dariomark
 
 A fast, safe Markdown engine for Go that implements CommonMark and GitHub Flavored Markdown.
 
@@ -20,7 +20,7 @@ dariomark was written from scratch, from the specifications, for the Markdown th
 
 `markup.Markdown`, the full Gogs pipeline (rendering, special links and sanitizing), in microseconds per document. Lower is better.
 
-| Document | Size | dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
+| Document | Size | Dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
 |---|---|---|---|---|
 | Comment | 59 B | **18** | 35 | 62 |
 | README | 4.5 KB | **305** | 883 | 1,023 |
@@ -30,7 +30,7 @@ dariomark was written from scratch, from the specifications, for the Markdown th
 
 The engine alone, without the Gogs passes, in microseconds and allocations per document:
 
-| Document | dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
+| Document | Dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
 |---|---|---|---|
 | Comment | **1.4** (8) | 3.7 (15) | 33.1 (280) |
 | README | **48.6** (28) | 66.2 (273) | 180.7 (654) |
