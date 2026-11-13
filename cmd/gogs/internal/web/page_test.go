@@ -69,10 +69,13 @@ func TestPageAccess(t *testing.T) {
 	})
 
 	// A user or organization named "src" is allowed, so its repositories must stay
-	// reachable for viewers who may see them.
-	t.Run("repository of an owner named like a dev server path", func(t *testing.T) {
-		resp := serve(t, &database.User{ID: 1, IsActive: true}, "/src/app")
-		assert.Equal(t, http.StatusOK, resp.Code)
-		assert.Equal(t, "page", resp.Body.String())
+	// reachable for viewers who may see them, and a missing asset must stay a 404
+	// from the normal routes.
+	t.Run("asset paths go through the normal routes for viewers who may see them", func(t *testing.T) {
+		for _, path := range []string{"/src/app", "/assets/stale.js"} {
+			resp := serve(t, &database.User{ID: 1, IsActive: true}, path)
+			assert.Equal(t, http.StatusOK, resp.Code, path)
+			assert.Equal(t, "page", resp.Body.String(), path)
+		}
 	})
 }
