@@ -393,3 +393,44 @@ func TestMarkdown_CodeInListItems(t *testing.T) {
 		})
 	}
 }
+
+// FuzzMarkdown checks that documents sanitized while rendering come out as
+// rendering them without sanitizing and then sanitizing them with bluemonday
+// would, and that bluemonday leaves them unchanged.
+func FuzzMarkdown(f *testing.F) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	NewSanitizer()
+	for _, s := range []string{
+		"# Title\n\n*a* **b** `c` [d](e \"f\") ![g](h.png)\n",
+		"> [!NOTE]\n> x\n\n- [ ] a\n- [x] b\n\n| a | b |\n|:-|-:|\n| c | d |\n",
+		"x[^1] ~~y~~ www.example.com a@b.co http://x.y/z\n\n[^1]: note\n",
+		"@user #12 user/repo#7 d8a994ef24 ABC-12 http://localhost:3000/user/repo/issues/1\n",
+		"[x](javascript:alert(1)) ![y](data:image/png;base64,AAA) <a@b.c> [z](//evil.example.com \"t\\\" onclick=\\\"x\")\n",
+		"```c++\nx\n```\n\n    @user\n\n<b>raw</b> <textarea>@user</textarea>\n",
+	} {
+		f.Add(s)
+	}
+	const urlPrefix = "/user/repo"
+	f.Fuzz(func(t *testing.T, s string) {
+		body := []byte(s)
+		got, sanitized := renderMarkdown(body, urlPrefix, trackerMetas())
+		if !sanitized {
+			SanitizeBytes(got)
+			return
+		}
+
+		opts := markdownOptions(urlPrefix)
+		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
+		opts.PostProcess = true
+		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+			return findSpecialLinks(text, urlPrefix, trackerMetas())
+		}
+		want := SanitizeBytes(dariomark.Render(body, opts).HTML)
+		if string(got) != string(want) {
+			t.Fatalf("sanitizing while rendering differs from bluemonday for %q\ngot  %q\nwant %q", s, got, want)
+		}
+		if again := SanitizeBytes(got); string(again) != string(got) {
+			t.Fatalf("bluemonday changes the output for %q\ngot   %q\nagain %q", s, got, again)
+		}
+	})
+}

@@ -56,7 +56,7 @@ A general-purpose Markdown library only produces HTML. Rendering a comment on a 
 - `TestGFMSpec` runs the examples of the GFM extensions: tables, task lists, strikethrough and autolinks.
 - Differential testing compared the output with cmark-gfm and commonmark.js, byte for byte, on real-world READMEs, changelogs and documentation, and on millions of random documents in every configuration that `markup` uses. Where GitHub's rendering and the specifications disagree, Dariomark follows GitHub. The remaining differences are rare edge cases, e.g., leading whitespace on lazy continuation lines after a backslash line break.
 - `FuzzRender` checks that rendering never panics and is deterministic.
-- The built-in sanitizer was compared with bluemonday on about 2 million random and fuzzed documents, including hostile URLs, entities, control characters and issue tracker formats, with no difference.
+- The built-in sanitizer was compared with bluemonday on about 2 million random and fuzzed documents, including hostile URLs, entities, control characters and issue tracker formats, with no difference. `FuzzMarkdown` in `internal/markup` keeps checking it: run `go test -fuzz FuzzMarkdown -timeout 0 ./internal/markup`, and commit the failing inputs it writes to `testdata/fuzz` with the fix, so that `go test` replays them.
 
 ## Security and robustness
 
