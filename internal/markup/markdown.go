@@ -3,14 +3,17 @@ package markup
 import (
 	"bytes"
 	"fmt"
-	"path"
+	"hash/fnv"
+	"html"
+	"net/url"
 	"path/filepath"
 	"strings"
 
-	"github.com/russross/blackfriday"
+	"github.com/microcosm-cc/bluemonday"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/markup/dariomark"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -25,138 +28,291 @@ func IsMarkdownFile(name string) bool {
 	return false
 }
 
-// MarkdownRenderer is a extended version of underlying Markdown render object.
-type MarkdownRenderer struct {
-	blackfriday.Renderer
-	urlPrefix string
-}
+var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:|^//`)
 
-var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
-
-// isLink reports whether link fits valid format.
+// isLink reports whether link is absolute, i.e., has a scheme or is
+// protocol-relative.
 func isLink(link []byte) bool {
 	return validLinksPattern.Match(link)
 }
 
-// Link defines how formal links should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
-	if len(link) > 0 && !isLink(link) {
-		if link[0] != '#' {
-			link = []byte(path.Join(r.urlPrefix, string(link)))
+// linkifyURL returns the length of the URL at the start of b, or 0 if there is
+// none. It does not require a top-level domain, so links to hosts like
+// "localhost:3000" are also detected. It matches what the regular expression
+// below matches, which is too slow to run on every URL:
+//
+//	^(?:http|https|ftp)://[-a-zA-Z0-9@:%._\+~#=]{1,256}(?:[/#?][-a-zA-Z0-9@:%_+.~#$!?&/=\(\);,'">\^{}\[\]`]*)?
+func linkifyURL(b []byte) int {
+	var n int
+	for _, scheme := range []string{"http://", "https://", "ftp://"} {
+		if bytes.HasPrefix(b, []byte(scheme)) {
+			n = len(scheme)
+			break
 		}
 	}
-
-	r.Renderer.Link(out, link, title, content)
+	if n == 0 {
+		return 0
+	}
+	host := n
+	for n < len(b) && n-host < 256 && isURLHostChar(b[n]) {
+		n++
+	}
+	if n == host {
+		return 0
+	}
+	if n < len(b) && (b[n] == '/' || b[n] == '#' || b[n] == '?') {
+		n++
+		for n < len(b) && isURLPathChar(b[n]) {
+			n++
+		}
+	}
+	return n
 }
 
-// AutoLink defines how auto-detected links should be processed to produce corresponding HTML elements.
-// Reference for kind: https://github.com/russross/blackfriday/blob/master/markdown.go#L69-L76
-func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
-	if kind != blackfriday.LINK_TYPE_NORMAL {
-		r.Renderer.AutoLink(out, link, kind)
-		return
-	}
-
-	// Since this method could only possibly serve one link at a time,
-	// we do not need to find all.
-	if bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
-		m := CommitPattern.Find(link)
-		if m != nil {
-			m = bytes.TrimSpace(m)
-			i := bytes.Index(m, []byte("commit/"))
-			j := bytes.Index(m, []byte("#"))
-			if j == -1 {
-				j = len(m)
-			}
-			_, _ = fmt.Fprintf(out, ` <code><a href="%s">%s</a></code>`, m, tool.ShortSHA1(string(m[i+7:j])))
-			return
-		}
-
-		m = IssueFullPattern.Find(link)
-		if m != nil {
-			m = bytes.TrimSpace(m)
-			i := bytes.Index(m, []byte("issues/"))
-			j := bytes.Index(m, []byte("#"))
-			if j == -1 {
-				j = len(m)
-			}
-
-			index := string(m[i+7 : j])
-			fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(r.urlPrefix, "/")
-			var link string
-			if strings.HasPrefix(string(m), fullRepoURL) {
-				// Use a short issue reference if the URL refers to this repository
-				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
-			} else {
-				// Use a cross-repository issue reference if the URL refers to a different repository
-				repo := string(m[len(conf.Server.ExternalURL) : i-1])
-				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
-			}
-			out.WriteString(link)
-			return
-		}
-	}
-
-	r.Renderer.AutoLink(out, link, kind)
+func isURLHostChar(c byte) bool {
+	return isASCIIAlnum(c) || strings.IndexByte("-@:%._+~#=", c) >= 0
 }
 
-// ListItem defines how list items should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
-	// Detect procedures to draw checkboxes.
-	switch {
-	case bytes.HasPrefix(text, []byte("[ ] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" />`), text[3:]...)
-	case bytes.HasPrefix(text, []byte("[x] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
+func isURLPathChar(c byte) bool {
+	return isASCIIAlnum(c) || strings.IndexByte("-@:%_+.~#$!?&/=();,'\">^{}[]`", c) >= 0
+}
+
+// shortenAutoLink renders links to commits and issues on this instance in a
+// short form, e.g., "d8a994ef24" and "#12".
+func shortenAutoLink(link []byte, urlPrefix string) ([]byte, bool) {
+	if !bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
+		return nil, false
 	}
-	r.Renderer.ListItem(out, text, flags)
+
+	if m := findAutoLinkPath(link, CommitPattern, "commit/", isASCIIAlnum); m != nil {
+		m = bytes.TrimSpace(m)
+		i := bytes.Index(m, []byte("commit/"))
+		j := bytes.Index(m, []byte("#"))
+		if j == -1 {
+			j = len(m)
+		}
+		if j < i+7 {
+			// The hash precedes the commit path, e.g., "/#commit/1".
+			return nil, false
+		}
+		html := append([]byte(`<code><a href="`), dariomark.AppendEscaped(nil, m)...)
+		html = append(html, `">`...)
+		html = append(html, tool.ShortSHA1(string(m[i+7:j]))...)
+		return append(html, "</a></code>"...), true
+	}
+
+	if m := findAutoLinkPath(link, IssueFullPattern, "issues/", isDigit); m != nil {
+		m = bytes.TrimSpace(m)
+		i := bytes.Index(m, []byte("issues/"))
+		j := bytes.Index(m, []byte("#"))
+		if j == -1 {
+			j = len(m)
+		}
+		if j < i+7 {
+			// The hash precedes the issue path, e.g., "/#issues/1".
+			return nil, false
+		}
+
+		index := m[i+7 : j]
+		fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(urlPrefix, "/")
+		html := append([]byte(`<a href="`), dariomark.AppendEscaped(nil, m)...)
+		if bytes.HasPrefix(m, []byte(fullRepoURL)) {
+			// Use a short issue reference if the URL refers to this repository
+			html = append(html, `">#`...)
+		} else {
+			// Use a cross-repository issue reference if the URL refers to a different repository
+			if i-1 < len(conf.Server.ExternalURL) {
+				// There is no repository path, e.g., "/issues/1".
+				return nil, false
+			}
+			html = append(html, `">`...)
+			html = dariomark.AppendEscaped(html, m[len(conf.Server.ExternalURL):i-1])
+			html = append(html, '#')
+		}
+		html = append(html, index...)
+		return append(html, "</a>"...), true
+	}
+	return nil, false
+}
+
+// findAutoLinkPath returns what pattern finds in link, where pattern is
+// CommitPattern or IssueFullPattern and path is the literal it requires before
+// the ID. Links without whitespace, which are all links in practice, are
+// matched without running the slow backtracking pattern.
+func findAutoLinkPath(link []byte, pattern *lazyregexp.Regexp, path string, isID func(byte) bool) []byte {
+	if bytes.ContainsAny(link, " \t\n\f\r") {
+		return pattern.Find(link)
+	}
+	if !bytes.HasPrefix(link, []byte("http")) {
+		return nil
+	}
+	// The greedy ".*" after "http" makes the last path followed by an ID win.
+	end := len(link)
+	for {
+		i := bytes.LastIndex(link[4:end], []byte(path))
+		if i < 0 {
+			return nil
+		}
+		j := 4 + i + len(path)
+		if j < len(link) && isID(link[j]) {
+			for j < len(link) && isID(link[j]) {
+				j++
+			}
+			if j < len(link) && link[j] == '#' {
+				for j < len(link) && link[j] == '#' {
+					j++
+				}
+				for j < len(link) && (isASCIIAlnum(link[j]) || link[j] == '-') {
+					j++
+				}
+			}
+			return link[:j]
+		}
+		end = j - 1
+	}
+}
+
+func isASCIIAlnum(c byte) bool {
+	return isDigit(c) || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
+}
+
+// markdownOptions returns the rendering options for Markdown without
+// post-processing.
+func markdownOptions(urlPrefix string) *dariomark.Options {
+	opts := &dariomark.Options{
+		Tables:                    true,
+		Strikethrough:             true,
+		TaskLists:                 true,
+		Linkify:                   true,
+		LinkifyURL:                linkifyURL,
+		LinkifyAfterPunct:         true,
+		Footnotes:                 true,
+		Alerts:                    true,
+		HardWraps:                 conf.Markdown.EnableHardLineBreak,
+		RelativeLinks:             true,
+		LinkBase:                  urlPrefix,
+		IsLink:                    isLink,
+		TextAutoLinksInRawAnchors: true,
+		ShortenAutoLink: func(link []byte) ([]byte, bool) {
+			return shortenAutoLink(link, urlPrefix)
+		},
+	}
+	if conf.Smartypants.Enabled {
+		opts.Typographer = dariomark.Typographer{
+			Enabled:      true,
+			Dashes:       conf.Smartypants.Dashes,
+			LatexDashes:  conf.Smartypants.LatexDashes,
+			AngledQuotes: conf.Smartypants.AngledQuotes,
+		}
+	}
+	return opts
+}
+
+// footnoteIDPrefix returns the prefix of the footnote ids of body. The
+// "user-content-" part keeps the ids from clobbering ids of the page, and the
+// hash keeps footnotes of documents shown on the same page, e.g., comments of
+// an issue, from linking to each other.
+func footnoteIDPrefix(body []byte) string {
+	h := fnv.New32a()
+	_, _ = h.Write(body)
+	return fmt.Sprintf("user-content-%08x-", h.Sum32())
 }
 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
+// The output is not sanitized. Like Render, it shows a document larger than
+// [ui] MAX_DISPLAY_FILE_SIZE as escaped plain text.
 func RawMarkdown(body []byte, urlPrefix string) []byte {
-	htmlFlags := 0
-	htmlFlags |= blackfriday.HTML_SKIP_STYLE
-	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
+	body = bytes.TrimPrefix(body, utf8BOM)
+	return guardRender(body, func() []byte {
+		opts := markdownOptions(urlPrefix)
+		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
+		return dariomark.HTML(body, opts)
+	})
+}
 
-	if conf.Smartypants.Enabled {
-		htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-		if conf.Smartypants.Fractions {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
+// renderMarkdown renders content in Markdown syntax to HTML with special
+// links, and reports whether the HTML is sanitized already.
+func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]byte, bool) {
+	opts := markdownOptions(urlPrefix)
+	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
+	opts.Gogs = &dariomark.GogsOptions{
+		URLPrefix: urlPrefix,
+		SpecialLinks: func(text []byte) []byte {
+			if !mayHaveSpecialLinks(text, metas) {
+				return text
+			}
+			return RenderSpecialLink(text, urlPrefix, metas)
+		},
+	}
+	if sanitizer.ready.Load() {
+		opts.Gogs.Sanitizer = markdownSanitizer
+	}
+	res := dariomark.Render(body, opts)
+	return res.HTML, res.Sanitized
+}
+
+// mayHaveSpecialLinks reports whether RenderSpecialLink may change text. It
+// checks a character sequence that each of its patterns requires, which is much
+// faster than running the patterns.
+func mayHaveSpecialLinks(text []byte, metas map[string]string) bool {
+	alphanumeric := metas["style"] == IssueNameStyleAlphanumeric
+	hexRun := 0
+	for i, c := range text {
+		next := byte(0)
+		if i+1 < len(text) {
+			next = text[i+1]
 		}
-		if conf.Smartypants.Dashes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_DASHES
+		switch {
+		case c == '@' && isMentionChar(next):
+			return true
+		case c == '#' && isDigit(next) && (i == 0 || strings.IndexByte(" ([", text[i-1]) >= 0 || isMentionChar(text[i-1])):
+			return true
+		case c == '-' && alphanumeric && i > 0 && 'A' <= text[i-1] && text[i-1] <= 'Z' && '1' <= next && next <= '9':
+			return true
 		}
-		if conf.Smartypants.LatexDashes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-		}
-		if conf.Smartypants.AngledQuotes {
-			htmlFlags |= blackfriday.HTML_SMARTYPANTS_ANGLED_QUOTES
+		if isDigit(c) || 'a' <= c && c <= 'f' {
+			hexRun++
+			if hexRun >= 7 {
+				return true
+			}
+		} else {
+			hexRun = 0
 		}
 	}
+	return false
+}
 
-	renderer := &MarkdownRenderer{
-		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
-		urlPrefix: urlPrefix,
-	}
+func isDigit(c byte) bool {
+	return '0' <= c && c <= '9'
+}
 
-	// set up the parser
-	extensions := 0
-	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
-	extensions |= blackfriday.EXTENSION_TABLES
-	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
-	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
-	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
-
-	if conf.Markdown.EnableHardLineBreak {
-		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
-	}
-
-	return blackfriday.Markdown(body, renderer, extensions)
+// isMentionChar reports whether c can be part of a user name in a mention.
+func isMentionChar(c byte) bool {
+	return isASCIIAlnum(c) || c == '-' || c == '_' || c == '.'
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
 func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
+}
+
+// markdownSanitizer describes the sanitizer policy to dariomark.
+var markdownSanitizer = &dariomark.Sanitizer{
+	AllowURLScheme: allowURLScheme,
+	Text:           bluemonday.Paragraph,
+	CodeClass:      codeClassPattern.Regexp(),
+}
+
+// allowURLScheme reports whether the sanitizer policy allows u, which has a
+// scheme. Schemes with their own policy are checked by sanitizing a link to u,
+// the others by looking them up, so that unknown schemes are never stored.
+func allowURLScheme(u *url.URL) bool {
+	if _, ok := urlSchemePolicies[u.Scheme]; ok {
+		return policyAllowsHref(u.String())
+	}
+	return sanitizer.schemes[u.Scheme]
+}
+
+func policyAllowsHref(href string) bool {
+	return strings.Contains(sanitizer.policy.Sanitize(`<a href="`+html.EscapeString(href)+`">`), "href=")
 }

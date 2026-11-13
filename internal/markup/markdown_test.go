@@ -1,11 +1,9 @@
 package markup_test
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
-	"github.com/russross/blackfriday"
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/conf"
@@ -36,13 +34,6 @@ func Test_Markdown(t *testing.T) {
 	// TODO: Refactor to accept URL
 	conf.Server.ExternalURL = "http://localhost:3000/"
 
-	htmlFlags := 0
-	htmlFlags |= blackfriday.HTML_SKIP_STYLE
-	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
-	renderer := &MarkdownRenderer{
-		Renderer: blackfriday.HtmlRenderer(htmlFlags, "", ""),
-	}
-
 	tests := []struct {
 		input  string
 		expVal string
@@ -57,16 +48,48 @@ func Test_Markdown(t *testing.T) {
 		{input: "http://tissues/0", expVal: "<a href=\"http://tissues/0\">http://tissues/0</a>"},
 
 		// Commit URL
-		{input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae", expVal: " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a></code>"},
-		{input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", expVal: " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24</a></code>"},
+		{input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae", expVal: "<code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a></code>"},
+		{input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", expVal: "<code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24</a></code>"},
 		{input: "https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", expVal: "<a href=\"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2</a>"},
 		{input: "https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae", expVal: "<a href=\"https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae</a>"},
+
+		// URL boundaries
+		{input: "请看http://example.com/a。", expVal: "请看<a href=\"http://example.com/a\">http://example.com/a</a>。"},
+		{input: "see:https://example.com/a", expVal: "see:<a href=\"https://example.com/a\">https://example.com/a</a>"},
+		{input: "xhttp://example.com/a", expVal: "xhttp://example.com/a"},
+		{input: "<a href=\"https://example.com/a\">https://example.com/b</a>", expVal: "<a href=\"https://example.com/a\">https://example.com/b</a>"},
+		{input: "<a href=\"https://example.com/a\">见https://example.com/b</a> https://example.com/c", expVal: "<a href=\"https://example.com/a\">见https://example.com/b</a> <a href=\"https://example.com/c\">https://example.com/c</a>"},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			buf := new(bytes.Buffer)
-			renderer.AutoLink(buf, []byte(test.input), blackfriday.LINK_TYPE_NORMAL)
-			assert.Equal(t, test.expVal, buf.String())
+			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(RawMarkdown([]byte(test.input), "")))
+		})
+	}
+}
+
+func Test_RawMarkdown_RelativeLinks(t *testing.T) {
+	tests := []struct {
+		prefix string
+		input  string
+		expVal string
+	}{
+		{input: "[a](docs/README.md)", expVal: `<a href="/user/repo/src/main/docs/README.md">a</a>`},
+		{input: "[a](../README.md)", expVal: `<a href="/user/repo/src/README.md">a</a>`},
+		{input: "[a](#section)", expVal: `<a href="#section">a</a>`},
+		{input: "[a](https://example.com/docs)", expVal: `<a href="https://example.com/docs">a</a>`},
+		{input: "[a](//example.com/docs)", expVal: `<a href="//example.com/docs">a</a>`},
+
+		// Emails use the absolute URL of the repository as the prefix.
+		{prefix: "http://localhost:3000/user/repo", input: "[a](docs/README.md)", expVal: `<a href="http://localhost:3000/user/repo/docs/README.md">a</a>`},
+		{prefix: "http://localhost:3000/user/repo", input: "[a](../../../x)", expVal: `<a href="http://localhost:3000/x">a</a>`},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			prefix := test.prefix
+			if prefix == "" {
+				prefix = "/user/repo/src/main"
+			}
+			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(RawMarkdown([]byte(test.input), prefix)))
 		})
 	}
 }

@@ -138,7 +138,6 @@ var (
 	// Smartypants settings
 	Smartypants struct {
 		Enabled      bool
-		Fractions    bool
 		Dashes       bool
 		LatexDashes  bool
 		AngledQuotes bool

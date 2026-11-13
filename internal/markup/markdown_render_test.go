@@ -1,0 +1,187 @@
+package markup
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"gogs.io/gogs/internal/conf"
+)
+
+func trackerMetas() map[string]string {
+	return map[string]string{
+		"repoLink": "/user/repo",
+		"user":     "user",
+		"repo":     "repo",
+		"format":   "https://tracker.example.com/{user}/{repo}/issues/{index}",
+		"style":    "numeric",
+	}
+}
+
+func TestMarkdown_SpecialLinks(t *testing.T) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	NewSanitizer()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "mentions and issues",
+			input: "@user, see #12 and user/repo#7.",
+			want:  "<p><a href=\"/user\" rel=\"nofollow\">@user</a>, see <a href=\"https://tracker.example.com/user/repo/issues/12\" rel=\"nofollow\">#12</a> and <a href=\"http://localhost:3000/user/repo/issues/7\" rel=\"nofollow\">user/repo#7</a>.</p>\n",
+		},
+		{
+			name:  "commit",
+			input: "Fixed in d8a994ef243349f321568f9e36d5c3f444b99cae.",
+			want:  "<p>Fixed in <a href=\"/user/repo/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\" rel=\"nofollow\"><code>d8a994ef24</code></a>.</p>\n",
+		},
+		{
+			name:  "links and code are left alone",
+			input: "[#12](http://example.com) `#12` and ```@user```",
+			want:  "<p><a href=\"http://example.com\" rel=\"nofollow\">#12</a> <code>#12</code> and <code>@user</code></p>\n",
+		},
+		{
+			name:  "relative image",
+			input: "![logo](images/logo.png)",
+			want:  "<p><a href=\"/user/repo/images/logo.png\" rel=\"nofollow\"><img src=\"/user/repo/images/logo.png\" alt=\"logo\"></a></p>\n",
+		},
+		{
+			name:  "absolute image with title",
+			input: "![logo](https://example.com/logo.png \"Logo\")",
+			want:  "<p><a href=\"https://example.com/logo.png\" rel=\"nofollow\"><img src=\"https://example.com/logo.png\" alt=\"logo\" title=\"Logo\"></a></p>\n",
+		},
+		{
+			name:  "image in a link",
+			input: "[![badge](badge.svg)](https://example.com)",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"badge.svg\" alt=\"badge\"></a></p>\n",
+		},
+		{
+			name:  "raw anchor",
+			input: "<a href=\"https://example.com\">#12 @user</a> #13",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\">#12 @user</a> <a href=\"https://tracker.example.com/user/repo/issues/13\" rel=\"nofollow\">#13</a></p>\n",
+		},
+		{
+			name:  "raw HTML text and image",
+			input: "<p>@user</p>\n\n<img src=\"images/a.png\"> <code>#12</code>",
+			want:  "<p><a href=\"/user\" rel=\"nofollow\">@user</a></p>\n<p><a href=\"/user/repo/images/a.png\" rel=\"nofollow\"><img src=\"/user/repo/images/a.png\"></a> <code>#12</code></p>\n",
+		},
+		{
+			name:  "raw anchor across blocks",
+			input: "<a href=\"x\">\n\n#12\n\n</a> #13",
+			want:  "<a href=\"x\" rel=\"nofollow\">\n<p>#12</p>\n<p></a> #13</p>\n",
+		},
+		{
+			name:  "issue URLs on this instance",
+			input: "http://localhost:3000/user/repo/issues/3 and http://localhost:3000/other/repo/issues/4",
+			want:  "<p><a href=\"http://localhost:3000/user/repo/issues/3\" rel=\"nofollow\">#3</a> and <a href=\"http://localhost:3000/other/repo/issues/4\" rel=\"nofollow\">other/repo#4</a></p>\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
+		})
+	}
+}
+
+func TestMarkdown_FastPathXSS(t *testing.T) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	NewSanitizer()
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "[x](javascript:alert(1))", want: "<p><a href=\"/user/repo/javascript:alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](JaVaScRiPt:alert(1))", want: "<p><a href=\"/user/repo/JaVaScRiPt:alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](java&#x09;script:alert(1))", want: "<p><a href=\"/user/repo/java%09script:alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](&#106;avascript:alert(1))", want: "<p><a href=\"/user/repo/javascript:alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](javascript&#58;alert(1))", want: "<p><a href=\"/user/repo/javascript:alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](javascript://alert(1))", want: "<p>x</p>\n"},
+		{input: "[x](JaVaScRiPt://%0Aalert(1))", want: "<p><a href=\"/user/repo/JaVaScRiPt:/%0Aalert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "<javascript:alert(1)>", want: "<p>javascript:alert(1)</p>\n"},
+		{input: "<vbscript:msgbox(1)>", want: "<p>vbscript:msgbox(1)</p>\n"},
+		{input: "[x]\n\n[x]: vbscript:msgbox(1)", want: "<p><a href=\"/user/repo/vbscript:msgbox(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "![x](data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==)", want: "<p><img alt=\"x\"></p>\n"},
+		{input: "![x](data:image/svg+xml,<svg/onload=alert(1)>)", want: "<p><img alt=\"x\"></p>\n"},
+		{input: "![x](data:image/png;base64,iVBORw0KGgo=)", want: "<p><img src=\"data:image/png;base64,iVBORw0KGgo=\" alt=\"x\"></p>\n"},
+		{input: "[x](//evil.example.com/a)", want: "<p><a href=\"//evil.example.com/a\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](\\\\evil.example.com)", want: "<p><a href=\"/user/repo/%5Cevil.example.com\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](%6Aavascript:alert(1))", want: "<p><a href=\"/user/repo/%6Aavascript:alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](https://example.com/\"onmouseover=\"alert(1))", want: "<p><a href=\"https://example.com/%22onmouseover=%22alert(1)\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "[x](https://example.com \"t\\\" onclick=\\\"alert(1)\")", want: "<p><a href=\"https://example.com\" rel=\"nofollow\">x</a></p>\n"},
+		{input: "![a](i.png \"<t>\")", want: "<p><a href=\"/user/repo/i.png\" rel=\"nofollow\"><img src=\"/user/repo/i.png\" alt=\"a\"></a></p>\n"},
+		{input: "[a&b](https://example.com/?a=1&b=<2> \"x & y\")", want: "<p><a href=\"https://example.com/?a=1&amp;b=%3C2%3E\" rel=\"nofollow\">a&amp;b</a></p>\n"},
+		{input: "```js\" onclick=\"alert(1)\nx\n```", want: "<pre><code>x\n</code></pre>\n"},
+		{input: "```c++\nx\n```", want: "<pre><code class=\"language-c++\">x\n</code></pre>\n"},
+		{input: "&lt;script&gt;alert(1)&lt;/script&gt; \\<script>", want: "<p>&lt;script&gt;alert(1)&lt;/script&gt; &lt;script&gt;</p>\n"},
+		{input: "`<script>alert(1)</script>`", want: "<p><code>&lt;script&gt;alert(1)&lt;/script&gt;</code></p>\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas())
+			assert.True(t, sanitized, "takes the fast path")
+			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
+		})
+	}
+}
+
+// TestMarkdown_ShortenAutoLink checks links whose commit or issue path follows
+// a "#", which used to panic.
+func TestMarkdown_ShortenAutoLink(t *testing.T) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	NewSanitizer()
+
+	for _, link := range []string{
+		"http://localhost:3000/#issues/00",
+		"http://localhost:3000/#commit/00",
+	} {
+		t.Run(link, func(t *testing.T) {
+			want := "<p><a href=\"" + link + "\" rel=\"nofollow\">" + link + "</a></p>\n"
+			assert.Equal(t, want, string(Markdown("<"+link+">", "/user/repo", nil)))
+		})
+	}
+}
+
+func TestMarkdown_Limits(t *testing.T) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	NewSanitizer()
+
+	t.Run("mentions render in linear output size", func(t *testing.T) {
+		// Each mention used to be replaced in the whole text, so that repeated
+		// mentions produced output quadratic in the input.
+		input := strings.Repeat("@a ", 10000)
+		got := Markdown(input, "/user/repo", nil)
+		assert.Less(t, len(got), 40*len(input))
+		assert.Equal(t, `<p><a href="/a" rel="nofollow">@a</a> <a href="/ab" rel="nofollow">@ab</a></p>`+"\n", string(Markdown("@a @ab", "/user/repo", nil)))
+	})
+
+	t.Run("oversized document is shown as text", func(t *testing.T) {
+		before := conf.UI.MaxDisplayFileSize
+		conf.UI.MaxDisplayFileSize = 16
+		defer func() { conf.UI.MaxDisplayFileSize = before }()
+
+		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(Markdown("# Title <b> *emphasis*", "/user/repo", nil)))
+		assert.Equal(t, "<h1>Title</h1>\n", string(Markdown("# Title", "/user/repo", nil)))
+		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(RawMarkdown([]byte("# Title <b> *emphasis*"), "")))
+	})
+
+	t.Run("byte order mark is ignored", func(t *testing.T) {
+		assert.Equal(t, "<h1>Title</h1>\n", string(Markdown("\ufeff# Title", "/user/repo", nil)))
+		assert.Equal(t, "<h1>Title</h1>\n", string(RawMarkdown([]byte("\ufeff# Title"), "")))
+	})
+
+	t.Run("fenced code keeps languages with symbols", func(t *testing.T) {
+		assert.Equal(t, "<pre><code class=\"language-c++\">x\n</code></pre>\n", string(Markdown("```c++\nx\n```", "/user/repo", nil)))
+	})
+
+	t.Run("footnote ids differ between documents", func(t *testing.T) {
+		a := string(Markdown("a[^1]\n\n[^1]: one", "/user/repo", nil))
+		b := string(Markdown("b[^1]\n\n[^1]: two", "/user/repo", nil))
+		assert.Contains(t, a, `id="user-content-`)
+		assert.NotEqual(t, footnoteIDPrefix([]byte("a[^1]\n\n[^1]: one")), footnoteIDPrefix([]byte("b[^1]\n\n[^1]: two")))
+		assert.Contains(t, b, footnoteIDPrefix([]byte("b[^1]\n\n[^1]: two"))+"fn:1")
+	})
+}
