@@ -40,6 +40,7 @@ without manually hacking the data files`,
 )
 
 func runImportLocale(_ context.Context, cmd *cli.Command) error {
+	logger := conf.NewConsoleLogger()
 	if !cmd.IsSet("source") {
 		return errors.New("source directory is not specified")
 	} else if !cmd.IsSet("target") {
@@ -51,7 +52,7 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 		return errors.Newf("target directory %q does not exist or is not a directory", cmd.String("target"))
 	}
 
-	err := conf.Init(configFromLineage(cmd))
+	err := conf.Init(logger, configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}

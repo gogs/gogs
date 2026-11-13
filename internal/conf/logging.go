@@ -1,7 +1,6 @@
 package conf
 
 import (
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -10,7 +9,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"unknwon.dev/ini/v2"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/logx"
 )
 
@@ -52,14 +50,6 @@ type logConf struct {
 
 // Log settings.
 var Log *logConf
-
-// Logger is the process logger. It is installed by InitLogging and replaced
-// by tests that need silence.
-func init() {
-	// A console logger until InitLogging replaces it, so packages that log
-	// during init still have somewhere to write.
-	applog.Logger = logx.NewWriter(os.Stderr, slog.LevelDebug, false, os.Getenv("TTY_FORCE") != "")
-}
 
 // initLogConf returns parsed logging configuration from the given INI file.
 // When hookMode is true, it only initializes the root path for log files.
@@ -120,42 +110,43 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 	return lc, hasConsole, nil
 }
 
-// InitLogging initializes the process logger from the loaded configuration.
-// When hookMode is true, it only stores the root path. The caller installs the
-// hook file logger itself, so SSH clients do not receive server logs.
-func InitLogging(hookMode bool) {
+// InitLogging builds the process logger from the loaded configuration. The
+// given logger reports progress. When hookMode is true, it only stores the root
+// path and returns the given logger, so SSH clients do not receive server logs
+// until the caller installs a hook file logger.
+func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 	logConf, _, err := initLogConf(File, hookMode)
 	if err != nil {
-		applog.Logger.Fatalf("Failed to init logging configuration: %v", err)
+		return nil, errors.Wrap(err, "init logging configuration")
 	}
 	Log = logConf
 	if hookMode {
-		return
+		return logger, nil
 	}
 
 	if err := os.MkdirAll(logConf.RootPath, os.ModePerm); err != nil {
-		applog.Logger.Fatalf("Failed to create log directory: %v", err)
+		return nil, errors.Wrap(err, "create log directory")
 	}
 
 	modes := make([]logx.Mode, 0, len(logConf.Modes))
 	for _, c := range logConf.Configs {
 		mode, err := modeFromConf(c)
 		if err != nil {
-			applog.Logger.Fatalf("Failed to init %s logger: %v", c.Name, err)
+			return nil, errors.Wrapf(err, "init %s logger", c.Name)
 		}
 		modes = append(modes, mode)
-		applog.Logger.Tracef("Log mode: %s (%s)", strings.Title(c.Name), strings.Title(c.Level))
+		logger.Tracef("Log mode: %s (%s)", strings.Title(c.Name), strings.Title(c.Level))
 	}
 
-	logger, err := logx.NewFromOptions(logx.Options{
+	logger, err = logx.NewFromOptions(logx.Options{
 		Prod:  IsProdMode(),
 		Level: logx.ParseLevel(File.Section("log").Key("LEVEL").MustString("trace")),
 		Modes: modes,
 	})
 	if err != nil {
-		applog.Logger.Fatalf("Failed to init logging: %v", err)
+		return nil, errors.Wrap(err, "init logging")
 	}
-	applog.Logger = logger
+	return logger, nil
 }
 
 func modeFromConf(c *loggerConf) (logx.Mode, error) {
@@ -187,9 +178,9 @@ func modeFromConf(c *loggerConf) (logx.Mode, error) {
 	return mode, nil
 }
 
-// InitHookLogging installs a rotating file logger for an SSH hook command and
-// drops the console logger so the Git client does not see server logs.
-func InitHookLogging(filename string) {
+// InitHookLogging returns a rotating file logger for an SSH hook command. It
+// has no console sink, so the Git client does not see server logs.
+func InitHookLogging(filename string) (*logx.Logger, error) {
 	level := logx.LevelTrace
 	if IsProdMode() {
 		level = slog.LevelError
@@ -200,9 +191,9 @@ func InitHookLogging(filename string) {
 		MaxDays: 3,
 	})
 	if err != nil {
-		applog.Logger.Fatalf("Failed to init file logger: %v", err)
+		return nil, errors.Wrap(err, "create rotating writer")
 	}
-	logger, err := logx.NewFromOptions(logx.Options{
+	return logx.NewFromOptions(logx.Options{
 		Prod: false,
 		Modes: []logx.Mode{{
 			Name:   ModeFile,
@@ -210,14 +201,10 @@ func InitHookLogging(filename string) {
 			Writer: w,
 		}},
 	})
-	if err != nil {
-		applog.Logger.Fatalf("Failed to init file logger: %v", err)
-	}
-	applog.Logger = logger
 }
 
-// SetOutput replaces the process logger with one that writes to w. Tests use
-// io.Discard. Production code does not.
-func SetOutput(w io.Writer, level slog.Level) {
-	applog.Logger = logx.NewWriter(w, level, false, false)
+// NewConsoleLogger returns the logger a command uses before InitLogging builds
+// the configured one.
+func NewConsoleLogger() *logx.Logger {
+	return logx.NewWriter(os.Stderr, slog.LevelDebug, false, os.Getenv("TTY_FORCE") != "")
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -46,7 +47,7 @@ type PushUpdateOptions struct {
 
 // PushUpdate must be called for any push actions in order to generate necessary
 // push action history feeds.
-func PushUpdate(ctx context.Context, opts PushUpdateOptions) (err error) {
+func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions) (err error) {
 	isNewRef := git.IsEmptyID(opts.OldCommitID)
 	isDelRef := git.IsEmptyID(opts.NewCommitID)
 	if isNewRef && isDelRef {
@@ -71,7 +72,7 @@ func PushUpdate(ctx context.Context, opts PushUpdateOptions) (err error) {
 
 	// Push tags
 	if strings.HasPrefix(opts.FullRefspec, git.RefsTags) {
-		err := Handle.Actions().PushTag(ctx,
+		err := Handle.Actions().PushTag(ctx, logger,
 			PushTagOptions{
 				Owner:       owner,
 				Repo:        repo,
@@ -116,7 +117,7 @@ func PushUpdate(ctx context.Context, opts PushUpdateOptions) (err error) {
 		}
 	}
 
-	err = Handle.Actions().CommitRepo(ctx,
+	err = Handle.Actions().CommitRepo(ctx, logger,
 		CommitRepoOptions{
 			Owner:       owner,
 			Repo:        repo,

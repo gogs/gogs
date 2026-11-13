@@ -21,6 +21,9 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Use `github.com/cockroachdb/errors` for error handling.
 - Use `github.com/stretchr/testify` for assertions in tests. Be mindful about the choice of `require` and `assert`, the former should be used when the test cannot proceed meaningfully after a failed assertion.
 - Every 5xx response must log the error directly inside the handler, do not log errors in a shared helper.
+- When each is available, the first set of arguments should always be: `context.Context`, `*logx.Logger`.
+    - Logger scoping (`logger.Scoped(...)`) is done at the call site, not inside the callee's constructor. The constructor stores the logger as-is.
+    - Log scope and attribute names use camelCase while respecting Go idioms, e.g., `"userID"`, `"messageLength"`.
 
 ## Localization
 

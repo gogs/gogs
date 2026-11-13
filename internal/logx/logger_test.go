@@ -38,7 +38,7 @@ func TestLogger_PrintfMethods(t *testing.T) {
 	logger.Errorf("boom: %v", assert.AnError)
 
 	out := buf.String()
-	assert.Contains(t, out, "trace 1")
+	assert.Contains(t, out, "TRAC trace 1")
 	assert.Contains(t, out, "hello world")
 	assert.Contains(t, out, "boom:")
 }

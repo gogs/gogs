@@ -189,14 +189,16 @@ func charmHandler(w io.Writer, level slog.Level, prod, color bool) *charmlog.Log
 		opts.Formatter = charmlog.JSONFormatter
 	}
 	handler := charmlog.NewWithOptions(w, opts)
+	styles := charmlog.DefaultStyles()
+	// charmlog only labels its own levels, so trace lines would have none.
+	styles.Levels[charmlog.Level(LevelTrace)] = styles.Levels[charmlog.DebugLevel].SetString("TRAC")
 	if color && !prod {
-		styles := charmlog.DefaultStyles()
 		styles.Levels[charmlog.WarnLevel] = lipgloss.NewStyle().
 			SetString("WARN").
 			Bold(true).
 			Foreground(lipgloss.Color("226"))
-		handler.SetStyles(styles)
 	}
+	handler.SetStyles(styles)
 	return handler
 }
 

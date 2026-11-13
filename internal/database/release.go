@@ -10,9 +10,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -149,19 +149,19 @@ func createTag(ctx context.Context, gitRepo *git.Repository, r *Release) error {
 	return nil
 }
 
-func (r *Release) preparePublishWebhooks() {
-	if err := PrepareWebhooks(r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
+func (r *Release) preparePublishWebhooks(logger *logx.Logger) {
+	if err := PrepareWebhooks(logger, r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
 		Action:     apiv1types.WebhookReleasePublished,
 		Release:    r.APIFormat(),
-		Repository: r.Repo.APIFormatLegacy(nil),
+		Repository: r.Repo.APIFormatLegacy(logger, nil),
 		Sender:     r.Publisher.APIFormat(),
 	}); err != nil {
-		applog.Logger.Errorf("PrepareWebhooks: %v", err)
+		logger.Errorf("PrepareWebhooks: %v", err)
 	}
 }
 
 // NewRelease creates a new release with attachments for repository.
-func NewRelease(ctx context.Context, gitRepo *git.Repository, r *Release, uuids []string) error {
+func NewRelease(ctx context.Context, logger *logx.Logger, gitRepo *git.Repository, r *Release, uuids []string) error {
 	isExist, err := IsReleaseExist(r.RepoID, r.TagName)
 	if err != nil {
 		return err
@@ -202,7 +202,7 @@ func NewRelease(ctx context.Context, gitRepo *git.Repository, r *Release, uuids 
 	if err != nil {
 		return errors.Newf("GetReleaseByID: %v", err)
 	}
-	r.preparePublishWebhooks()
+	r.preparePublishWebhooks(logger)
 	return nil
 }
 
@@ -306,7 +306,7 @@ func SortReleases(rels []*Release) {
 }
 
 // UpdateRelease updates information of a release.
-func UpdateRelease(ctx context.Context, doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) (err error) {
+func UpdateRelease(ctx context.Context, logger *logx.Logger, doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) (err error) {
 	if err = createTag(ctx, gitRepo, r); err != nil {
 		return errors.Newf("createTag: %v", err)
 	}
@@ -341,7 +341,7 @@ func UpdateRelease(ctx context.Context, doer *User, gitRepo *git.Repository, r *
 		return nil
 	}
 	r.Publisher = doer
-	r.preparePublishWebhooks()
+	r.preparePublishWebhooks(logger)
 	return nil
 }
 

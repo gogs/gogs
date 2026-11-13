@@ -6,7 +6,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -62,7 +61,7 @@ func searchRepos(c *context.APIContext) {
 
 	results := make([]*types.Repository, len(repos))
 	for i := range repos {
-		results[i] = toRepository(repos[i], nil)
+		results[i] = toRepository(c.Logger, repos[i], nil)
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
@@ -106,7 +105,7 @@ func listReposOfUser(c *context.APIContext, username string) {
 	if c.User.ID != user.ID {
 		repos := make([]*types.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = toRepository(ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
+			repos[i] = toRepository(c.Logger, ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -130,12 +129,12 @@ func listReposOfUser(c *context.APIContext, username string) {
 	numOwnRepos := len(ownRepos)
 	repos := make([]*types.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
-		repos = append(repos, toRepository(r, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+		repos = append(repos, toRepository(c.Logger, r, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 	}
 
 	for repo, access := range accessibleReposWithAccessMode {
 		repos = append(repos,
-			toRepository(repo, &types.RepositoryPermission{
+			toRepository(c.Logger, repo, &types.RepositoryPermission{
 				Admin: access >= database.AccessModeAdmin,
 				Push:  access >= database.AccessModeWrite,
 				Pull:  true,
@@ -170,7 +169,7 @@ type createRepoRequest struct {
 }
 
 func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoRequest) {
-	repo, err := database.CreateRepository(c.Req.Context(), c.User, owner, database.CreateRepoOptionsLegacy{
+	repo, err := database.CreateRepository(c.Req.Context(), c.Logger, c.User, owner, database.CreateRepoOptionsLegacy{
 		Name:         opt.Name,
 		Description:  opt.Description,
 		Gitignores:   opt.Gitignores,
@@ -186,8 +185,8 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			if repo != nil {
-				if err = database.DeleteRepository(c.User.ID, repo.ID); err != nil {
-					applog.Logger.Errorf("Failed to delete repository: %v", err)
+				if err = database.DeleteRepository(c.Logger, c.User.ID, repo.ID); err != nil {
+					c.Logger.Errorf("Failed to delete repository: %v", err)
 				}
 			}
 			c.Error(err, "create repository")
@@ -195,7 +194,7 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 		return
 	}
 
-	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(c.Logger, repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 func createRepo(c *context.APIContext, opt createRepoRequest) {
@@ -281,7 +280,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.Req.Context(), c.User, ctxUser, database.MigrateRepoOptions{
+	repo, err := database.MigrateRepository(c.Req.Context(), c.Logger, c.User, ctxUser, database.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
@@ -290,8 +289,8 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 	})
 	if err != nil {
 		if repo != nil {
-			if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-				applog.Logger.Errorf("DeleteRepository: %v", errDelete)
+			if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
+				c.Logger.Errorf("DeleteRepository: %v", errDelete)
 			}
 		}
 
@@ -303,8 +302,8 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	applog.Logger.Tracef("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.Logger.Tracef("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
+	c.JSON(201, toRepository(c.Logger, repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
@@ -334,7 +333,7 @@ func getRepo(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(toRepository(repo, &types.RepositoryPermission{
+	c.JSONSuccess(toRepository(c.Logger, repo, &types.RepositoryPermission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
@@ -352,12 +351,12 @@ func deleteRepo(c *context.APIContext) {
 		return
 	}
 
-	if err := database.DeleteRepository(owner.ID, repo.ID); err != nil {
+	if err := database.DeleteRepository(c.Logger, owner.ID, repo.ID); err != nil {
 		c.Error(err, "delete repository")
 		return
 	}
 
-	applog.Logger.Tracef("Repository deleted: %s/%s", owner.Name, repo.Name)
+	c.Logger.Tracef("Repository deleted: %s/%s", owner.Name, repo.Name)
 	c.NoContent()
 }
 
@@ -376,7 +375,7 @@ func listForks(c *context.APIContext) {
 		}
 
 		accessMode := database.Handle.Permissions().AccessMode(
-			c.Req.Context(),
+			c.Req.Context(), c.Logger,
 			c.User.ID,
 			forks[i].ID,
 			database.AccessModeOptions{
@@ -385,7 +384,7 @@ func listForks(c *context.APIContext) {
 			},
 		)
 
-		apiForks[i] = toRepository(forks[i],
+		apiForks[i] = toRepository(c.Logger, forks[i],
 			&types.RepositoryPermission{
 				Admin: accessMode >= database.AccessModeAdmin,
 				Push:  accessMode >= database.AccessModeWrite,
@@ -427,7 +426,7 @@ func issueTracker(c *context.APIContext, form editIssueTrackerRequest) {
 		repo.ExternalTrackerStyle = *form.TrackerIssueStyle
 	}
 
-	if err := database.UpdateRepository(repo, false); err != nil {
+	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}
@@ -460,7 +459,7 @@ func wiki(c *context.APIContext, form editWikiRequest) {
 	if form.ExternalWikiURL != nil {
 		repo.ExternalWikiURL = *form.ExternalWikiURL
 	}
-	if err := database.UpdateRepository(repo, false); err != nil {
+	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -155,7 +154,7 @@ func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int
 	// Check assignee.
 	assigneeID := f.AssigneeID
 	if assigneeID > 0 {
-		c.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
+		c.Data["Assignee"], err = repo.GetAssigneeByID(c.Logger, assigneeID)
 		if err != nil {
 			c.Error(err, "get assignee by ID")
 			return nil, 0, 0
@@ -201,7 +200,7 @@ func uploadAttachment(c *context.Context, allowedTypes []string) {
 		return
 	}
 
-	applog.Logger.Tracef("New attachment uploaded: %s", attach.UUID)
+	c.Logger.Tracef("New attachment uploaded: %s", attach.UUID)
 	c.JSONSuccess(map[string]string{
 		"uuid": attach.UUID,
 	})
@@ -351,7 +350,7 @@ func ViewPull(c *context.Context) {
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
 				comment.ShowTag = database.CommentTagOwner
 			} else if database.Handle.Permissions().Authorize(
-				c.Req.Context(),
+				c.Req.Context(), c.Logger,
 				comment.PosterID,
 				repo.ID,
 				database.AccessModeWrite,
@@ -438,7 +437,7 @@ func UpdateIssueTitle(c *context.Context) {
 		return
 	}
 
-	if err := issue.ChangeTitle(c.User, title); err != nil {
+	if err := issue.ChangeTitle(c.Logger, c.User, title); err != nil {
 		c.Error(err, "change title")
 		return
 	}
@@ -460,7 +459,7 @@ func UpdateIssueContent(c *context.Context) {
 	}
 
 	content := c.Query("content")
-	if err := issue.ChangeContent(c.User, content); err != nil {
+	if err := issue.ChangeContent(c.Logger, c.User, content); err != nil {
 		c.Error(err, "change content")
 		return
 	}
@@ -477,7 +476,7 @@ func UpdateIssueLabel(c *context.Context) {
 	}
 
 	if c.Query("action") == "clear" {
-		if err := issue.ClearLabels(c.User); err != nil {
+		if err := issue.ClearLabels(c.Logger, c.User); err != nil {
 			c.Error(err, "clear labels")
 			return
 		}
@@ -490,12 +489,12 @@ func UpdateIssueLabel(c *context.Context) {
 		}
 
 		if isAttach && !issue.HasLabel(label.ID) {
-			if err = issue.AddLabel(c.User, label); err != nil {
+			if err = issue.AddLabel(c.Logger, c.User, label); err != nil {
 				c.Error(err, "add label")
 				return
 			}
 		} else if !isAttach && issue.HasLabel(label.ID) {
-			if err = issue.RemoveLabel(c.User, label); err != nil {
+			if err = issue.RemoveLabel(c.Logger, c.User, label); err != nil {
 				c.Error(err, "remove label")
 				return
 			}
@@ -524,7 +523,7 @@ func UpdateIssueMilestone(c *context.Context) {
 
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneID = milestoneID
-	if err := database.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
+	if err := database.ChangeMilestoneAssign(c.Logger, c.User, issue, oldMilestoneID); err != nil {
 		c.Error(err, "change milestone assign")
 		return
 	}
@@ -548,7 +547,7 @@ func UpdateIssueAssignee(c *context.Context) {
 		return
 	}
 
-	if err := issue.ChangeAssignee(c.User, assigneeID); err != nil {
+	if err := issue.ChangeAssignee(c.Logger, c.User, assigneeID); err != nil {
 		c.Error(err, "change assignee")
 		return
 	}
@@ -598,22 +597,22 @@ func NewComment(c *context.Context, f form.CreateComment) {
 
 				// Regenerate patch and test conflict.
 				if pr == nil {
-					if err = issue.PullRequest.UpdatePatch(c.Req.Context()); err != nil {
+					if err = issue.PullRequest.UpdatePatch(c.Req.Context(), c.Logger); err != nil {
 						c.Error(err, "update patch")
 						return
 					}
 
-					issue.PullRequest.AddToTaskQueue()
+					issue.PullRequest.AddToTaskQueue(c.Logger)
 				}
 			}
 
 			if pr != nil {
 				c.Flash.Info(c.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
 			} else {
-				if err = issue.ChangeStatus(c.User, c.Repo.Repository, f.Status == "close"); err != nil {
-					applog.Logger.Errorf("ChangeStatus: %v", err)
+				if err = issue.ChangeStatus(c.Logger, c.User, c.Repo.Repository, f.Status == "close"); err != nil {
+					c.Logger.Errorf("ChangeStatus: %v", err)
 				} else {
-					applog.Logger.Tracef("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
+					c.Logger.Tracef("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
 			}
 		}
@@ -640,13 +639,13 @@ func NewComment(c *context.Context, f form.CreateComment) {
 		return
 	}
 
-	comment, err = database.CreateIssueComment(c.User, c.Repo.Repository, issue, f.Content, attachments)
+	comment, err = database.CreateIssueComment(c.Logger, c.User, c.Repo.Repository, issue, f.Content, attachments)
 	if err != nil {
 		c.Error(err, "create issue comment")
 		return
 	}
 
-	applog.Logger.Tracef("Comment created: %d/%d/%d", c.Repo.Repository.ID, issue.ID, comment.ID)
+	c.Logger.Tracef("Comment created: %d/%d/%d", c.Repo.Repository.ID, issue.ID, comment.ID)
 }
 
 func UpdateCommentContent(c *context.Context) {
@@ -683,7 +682,7 @@ func UpdateCommentContent(c *context.Context) {
 		})
 		return
 	}
-	if err = database.UpdateComment(c.User, comment, oldContent); err != nil {
+	if err = database.UpdateComment(c.Logger, c.User, comment, oldContent); err != nil {
 		c.Error(err, "update comment")
 		return
 	}
@@ -719,7 +718,7 @@ func DeleteComment(c *context.Context) {
 		return
 	}
 
-	if err = database.DeleteCommentByID(c.User, comment.ID); err != nil {
+	if err = database.DeleteCommentByID(c.Logger, c.User, comment.ID); err != nil {
 		c.Error(err, "delete comment by ID")
 		return
 	}

@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+
+	"gogs.io/gogs/internal/logx"
 )
 
 // DiffLineType is the line type in diff.
@@ -566,7 +568,7 @@ func (p *diffParser) parse() (*Diff, error) {
 // parse-on-read to minimize the time spent on huge diffs. It accepts a channel
 // to notify and send error (if any) to the caller when the process is done.
 // Therefore, this method should be called in a goroutine asynchronously.
-func streamParseDiff(r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
+func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
 	p := &diffParser{
 		Reader:       bufio.NewReader(r),
 		maxFiles:     maxFiles,
@@ -575,7 +577,7 @@ func streamParseDiff(r io.Reader, done chan<- streamParseDiffResult, maxFiles, m
 	}
 	diff, err := p.parse()
 	if err == nil {
-		decodeCharsets(diff)
+		decodeCharsets(logger, diff)
 	}
 	done <- streamParseDiffResult{
 		Diff: diff,

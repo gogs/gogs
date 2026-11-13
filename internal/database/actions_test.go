@@ -12,6 +12,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 )
 
 func TestIssueReferencePattern(t *testing.T) {
@@ -157,7 +158,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.CommitRepo(ctx,
+		err = s.CommitRepo(ctx, logx.NewNoop(),
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -217,7 +218,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.CommitRepo(ctx,
+		err = s.CommitRepo(ctx, logx.NewNoop(),
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -292,7 +293,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.CommitRepo(ctx,
+		err = s.CommitRepo(ctx, logx.NewNoop(),
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -605,7 +606,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 	require.NoError(t, err)
 
 	now := time.Unix(1588568886, 0).UTC()
-	err = s.MirrorSyncPush(ctx,
+	err = s.MirrorSyncPush(ctx, logx.NewNoop(),
 		MirrorSyncPushOptions{
 			Owner:       alice,
 			Repo:        repo,
@@ -766,7 +767,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.PushTag(ctx,
+		err = s.PushTag(ctx, logx.NewNoop(),
 			PushTagOptions{
 				Owner:       alice,
 				Repo:        repo,
@@ -806,7 +807,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.PushTag(ctx,
+		err = s.PushTag(ctx, logx.NewNoop(),
 			PushTagOptions{
 				Owner:       alice,
 				Repo:        repo,

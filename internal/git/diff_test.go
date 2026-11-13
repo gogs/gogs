@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/logx"
 )
 
 func TestDiffSection_NumLines(t *testing.T) {
@@ -818,7 +820,7 @@ new mode 100755`,
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			done := make(chan streamParseDiffResult)
-			go streamParseDiff(strings.NewReader(test.input), done, test.maxFiles, test.maxFileLines, test.maxLineChars)
+			go streamParseDiff(logx.NewNoop(), strings.NewReader(test.input), done, test.maxFiles, test.maxFileLines, test.maxLineChars)
 			result := <-done
 			if result.Err != nil {
 				t.Fatal(result.Err)
@@ -875,7 +877,7 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			done := make(chan streamParseDiffResult)
-			go streamParseDiff(strings.NewReader(test.header+"\n"+fmt.Sprintf(renameBody, test.renameFrom, test.renameTo)), done, 0, 0, 0)
+			go streamParseDiff(logx.NewNoop(), strings.NewReader(test.header+"\n"+fmt.Sprintf(renameBody, test.renameFrom, test.renameTo)), done, 0, 0, 0)
 			result := <-done
 			require.NoError(t, result.Err)
 			require.Len(t, result.Diff.Files, 1)
@@ -907,7 +909,7 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 			"-old\n" +
 			"+new\n"
 		done := make(chan streamParseDiffResult)
-		go streamParseDiff(strings.NewReader(diff), done, 0, 0, 0)
+		go streamParseDiff(logx.NewNoop(), strings.NewReader(diff), done, 0, 0, 0)
 		result := <-done
 		require.NoError(t, result.Err)
 		require.Len(t, result.Diff.Files, 3)
@@ -947,7 +949,7 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 			"rename from old\n" +
 			"rename to new\n"
 		done := make(chan streamParseDiffResult)
-		go streamParseDiff(strings.NewReader(diff), done, 0, 0, 0)
+		go streamParseDiff(logx.NewNoop(), strings.NewReader(diff), done, 0, 0, 0)
 		result := <-done
 		require.NoError(t, result.Err)
 
@@ -966,7 +968,7 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 
 	t.Run("malformed header", func(t *testing.T) {
 		done := make(chan streamParseDiffResult)
-		go streamParseDiff(strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
+		go streamParseDiff(logx.NewNoop(), strings.NewReader("diff --git a/somefile a/somefile\n"), done, 0, 0, 0)
 		result := <-done
 		assert.ErrorContains(t, result.Err, "malformed diff header")
 	})

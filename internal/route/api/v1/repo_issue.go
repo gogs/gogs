@@ -104,13 +104,13 @@ func createIssue(c *context.APIContext, form createIssueRequest) {
 		form.Labels = nil
 	}
 
-	if err := database.NewIssue(c.Repo.Repository, issue, form.Labels, nil); err != nil {
+	if err := database.NewIssue(c.Logger, c.Repo.Repository, issue, form.Labels, nil); err != nil {
 		c.Error(err, "new issue")
 		return
 	}
 
 	if form.Closed {
-		if err := issue.ChangeStatus(c.User, c.Repo.Repository, true); err != nil {
+		if err := issue.ChangeStatus(c.Logger, c.User, c.Repo.Repository, true); err != nil {
 			c.Error(err, "change status to closed")
 			return
 		}
@@ -179,7 +179,7 @@ func editIssue(c *context.APIContext, form editIssueRequest) {
 		issue.MilestoneID != *form.Milestone {
 		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
-		if err = database.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
+		if err = database.ChangeMilestoneAssign(c.Logger, c.User, issue, oldMilestoneID); err != nil {
 			c.Error(err, "change milestone assign")
 			return
 		}
@@ -190,7 +190,7 @@ func editIssue(c *context.APIContext, form editIssueRequest) {
 		return
 	}
 	if form.State != nil {
-		if err = issue.ChangeStatus(c.User, c.Repo.Repository, types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
+		if err = issue.ChangeStatus(c.Logger, c.User, c.Repo.Repository, types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}

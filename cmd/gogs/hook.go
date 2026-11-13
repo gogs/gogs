@@ -21,11 +21,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -65,11 +65,12 @@ var (
 )
 
 func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
+	logger := conf.NewConsoleLogger()
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(cmd, "pre-receive.log", true)
-	ctx = startProcessSpan(ctx, "hook pre-receive", time.Second)
+	logger = setup(logger, cmd, "pre-receive.log", true)
+	ctx = startProcessSpan(ctx, logger, "hook pre-receive", time.Second)
 	defer endProcessSpan()
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
@@ -99,7 +100,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 			if database.IsErrBranchNotExist(err) {
 				continue
 			}
-			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
+			fail(logger, "Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
 		}
 		if !protectBranch.Protected {
 			continue
@@ -112,7 +113,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		if protectBranch.EnableWhitelist {
 			if !database.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
-				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
+				fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
 			}
 
 			bypassRequirePullRequest = true
@@ -120,21 +121,21 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 
 		// Check if branch allows direct push
 		if !bypassRequirePullRequest && protectBranch.RequirePullRequest {
-			fail(fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
+			fail(logger, fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
 		}
 
 		// check and deletion
 		if git.IsEmptyID(newCommitID) {
-			fail(fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
+			fail(logger, fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 
 		// Check force push
 		repoPath := database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 		removedCommits, err := git.RepoRevListCount(ctx, repoPath, []string{oldCommitID, "^" + newCommitID})
 		if err != nil {
-			fail("Internal error", "Failed to detect force push: %v", err)
+			fail(logger, "Internal error", "Failed to detect force push: %v", err)
 		} else if removedCommits > 0 {
-			fail(fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
+			fail(logger, fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
 		}
 	}
 
@@ -154,22 +155,23 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Failed to execute custom pre-receive hook: %v", err)
+		fail(logger, "Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
 
 func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
+	logger := conf.NewConsoleLogger()
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(cmd, "update.log", false)
+	logger = setup(logger, cmd, "update.log", false)
 
 	args := cmd.Args().Slice()
 	if len(args) != 3 {
-		fail("Arguments received are not equal to three", "Arguments received are not equal to three")
+		fail(logger, "Arguments received are not equal to three", "Arguments received are not equal to three")
 	} else if args[0] == "" {
-		fail("First argument 'refName' is empty", "First argument 'refName' is empty")
+		fail(logger, "First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "update")
@@ -180,7 +182,7 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	// Git runs the hook for every ref it updates, so it is only traced when it
 	// runs a custom hook, and gives up exporting sooner, to keep exporting spans
 	// from slowing down every push.
-	_ = startProcessSpan(ctx, "hook update", 300*time.Millisecond)
+	_ = startProcessSpan(ctx, logger, "hook update", 300*time.Millisecond)
 	defer endProcessSpan()
 
 	var hookCmd *exec.Cmd
@@ -194,22 +196,23 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Failed to execute custom pre-receive hook: %v", err)
+		fail(logger, "Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
 
 func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
+	logger := conf.NewConsoleLogger()
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(cmd, "post-receive.log", true)
-	ctx = startProcessSpan(ctx, "hook post-receive", time.Second)
+	logger = setup(logger, cmd, "post-receive.log", true)
+	ctx = startProcessSpan(ctx, logger, "hook post-receive", time.Second)
 	defer endProcessSpan()
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
-	email.NewContext()
+	email.NewContext(logger)
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
@@ -239,8 +242,8 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 			RepoUserName: os.Getenv(database.EnvRepoOwnerName),
 			RepoName:     os.Getenv(database.EnvRepoName),
 		}
-		if err := database.PushUpdate(ctx, options); err != nil {
-			applog.Logger.Errorf("PushUpdate: %v", err)
+		if err := database.PushUpdate(ctx, logger, options); err != nil {
+			logger.Errorf("PushUpdate: %v", err)
 		}
 
 		// Ask for running deliver hook and test pull request tasks
@@ -249,11 +252,11 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		q.Add("secret", os.Getenv(database.EnvRepoOwnerSaltMd5))
 		q.Add("pusher", os.Getenv(database.EnvAuthUserID))
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
-		applog.Logger.Tracef("Trigger task: %s", reqURL)
+		logger.Tracef("Trigger task: %s", reqURL)
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 		if err != nil {
-			log.Error("Failed to trigger task: %v", err)
+			logger.Errorf("Failed to trigger task: %v", err)
 			continue
 		}
 		req.Header.Set("User-Agent", "GogsServer")
@@ -275,10 +278,10 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
-				applog.Logger.Errorf("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
+				logger.Errorf("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
 			}
 		} else {
-			applog.Logger.Errorf("Failed to trigger task: %v", err)
+			logger.Errorf("Failed to trigger task: %v", err)
 		}
 	}
 
@@ -298,7 +301,7 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Failed to execute custom post-receive hook: %v", err)
+		fail(logger, "Internal error", "Failed to execute custom post-receive hook: %v", err)
 	}
 	return nil
 }
@@ -316,10 +319,10 @@ var (
 // Git client waits for the process to exit, so exporting its spans gives up
 // after the timeout to not hold up the push for long on a collector that is
 // down.
-func startProcessSpan(ctx context.Context, name string, exportTimeout time.Duration) context.Context {
-	shutdown, err := tracing.Init(ctx)
+func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exportTimeout time.Duration) context.Context {
+	shutdown, err := tracing.Init(ctx, logger)
 	if err != nil {
-		applog.Logger.Errorf("Failed to initialize tracing: %v", err)
+		logger.Errorf("Failed to initialize tracing: %v", err)
 		return ctx
 	} else if shutdown == nil {
 		return ctx

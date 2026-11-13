@@ -6,9 +6,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/userx"
@@ -161,7 +161,7 @@ func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions
 			names = append(names, issue.Assignee.Name)
 		}
 	}
-	if err = email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+	if err = email.SendIssueCommentMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue comment mail")
 	}
 
@@ -180,7 +180,7 @@ func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions
 	if err != nil {
 		return errors.Wrap(err, "get mailable emails by usernames")
 	}
-	if err = email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+	if err = email.SendIssueMentionMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue mention mail")
 	}
 	return nil
@@ -188,7 +188,7 @@ func mailIssueCommentToParticipants(e Engine, issue *Issue, doer *User, mentions
 
 // MailParticipants sends new issue thread created emails to repository watchers
 // and mentioned people.
-func (issue *Issue) MailParticipants() (err error) {
+func (issue *Issue) MailParticipants(logger *logx.Logger) (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
 	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)

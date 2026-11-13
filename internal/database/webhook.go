@@ -17,9 +17,9 @@ import (
 	"github.com/google/uuid"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
@@ -126,7 +126,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	case "events":
 		w.HookEvent = &HookEvent{}
 		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-			applog.Logger.Errorf("Unmarshal [%d]: %v", w.ID, err)
+			handleLogger().Errorf("Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
 		w.Created = time.Unix(w.CreatedUnix, 0).Local()
@@ -138,7 +138,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 func (w *Webhook) SlackMeta() *SlackMeta {
 	s := &SlackMeta{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
-		applog.Logger.Errorf("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
+		handleLogger().Errorf("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
 	}
 	return s
 }
@@ -475,7 +475,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.RequestInfo = &HookRequest{}
 		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
-			applog.Logger.Errorf("Unmarshal[%d]: %v", t.ID, err)
+			handleLogger().Errorf("Unmarshal[%d]: %v", t.ID, err)
 		}
 
 	case "response_content":
@@ -485,7 +485,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.ResponseInfo = &HookResponse{}
 		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
-			applog.Logger.Errorf("Unmarshal [%d]: %v", t.ID, err)
+			handleLogger().Errorf("Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
@@ -493,7 +493,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 func (t *HookTask) ToJSON(v any) string {
 	p, err := json.Marshal(v)
 	if err != nil {
-		applog.Logger.Errorf("Marshal [%d]: %v", t.ID, err)
+		handleLogger().Errorf("Marshal [%d]: %v", t.ID, err)
 	}
 	return string(p)
 }
@@ -558,7 +558,7 @@ func UpdateHookTask(t *HookTask) error {
 }
 
 // prepareHookTasks adds list of webhooks to task queue.
-func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
+func prepareHookTasks(logger *logx.Logger, e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
 	if len(webhooks) == 0 {
 		return nil
 	}
@@ -625,7 +625,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1ty
 		if len(w.Secret) > 0 {
 			data, err := payloader.JSONPayload()
 			if err != nil {
-				applog.Logger.Errorf("prepareWebhooks.JSONPayload: %v", err)
+				logger.Errorf("prepareWebhooks.JSONPayload: %v", err)
 			}
 			sig := hmac.New(sha256.New, []byte(w.Secret))
 			_, _ = sig.Write(data)
@@ -654,7 +654,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1ty
 	return nil
 }
 
-func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
+func prepareWebhooks(logger *logx.Logger, e Engine, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	webhooks, err := getActiveWebhooksByRepoID(e, repo.ID)
 	if err != nil {
 		return errors.Newf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
@@ -669,29 +669,29 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p apiv1typ
 		}
 		webhooks = append(webhooks, orgws...)
 	}
-	return prepareHookTasks(e, repo, event, p, webhooks)
+	return prepareHookTasks(logger, e, repo, event, p, webhooks)
 }
 
 // PrepareWebhooks adds all active webhooks to task queue.
-func PrepareWebhooks(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
+func PrepareWebhooks(logger *logx.Logger, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
 	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
 	// choose to ignore this function in tests.
 	if x == nil && testx.InTest {
 		return nil
 	}
-	return prepareWebhooks(x, repo, event, p)
+	return prepareWebhooks(logger, x, repo, event, p)
 }
 
 // TestWebhook adds the test webhook matches the ID to task queue.
-func TestWebhook(repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhookID int64) error {
+func TestWebhook(logger *logx.Logger, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhookID int64) error {
 	webhook, err := GetWebhookOfRepoByID(repo.ID, webhookID)
 	if err != nil {
 		return errors.Newf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
 	}
-	return prepareHookTasks(x, repo, event, p, []*Webhook{webhook})
+	return prepareHookTasks(logger, x, repo, event, p, []*Webhook{webhook})
 }
 
-func (t *HookTask) deliver() {
+func (t *HookTask) deliver(logger *logx.Logger) {
 	payloadURL, err := url.Parse(t.URL)
 	if err != nil {
 		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
@@ -741,15 +741,15 @@ func (t *HookTask) deliver() {
 	defer func() {
 		t.Delivered = time.Now().UnixNano()
 		if t.IsSucceed {
-			applog.Logger.Tracef("Hook delivered: %s", t.UUID)
+			logger.Tracef("Hook delivered: %s", t.UUID)
 		} else {
-			applog.Logger.Tracef("Hook delivery failed: %s", t.UUID)
+			logger.Tracef("Hook delivery failed: %s", t.UUID)
 		}
 
 		// Update webhook last delivery status.
 		w, err := GetWebhookByID(t.HookID)
 		if err != nil {
-			applog.Logger.Errorf("GetWebhookByID: %v", err)
+			logger.Errorf("GetWebhookByID: %v", err)
 			return
 		}
 		if t.IsSucceed {
@@ -758,7 +758,7 @@ func (t *HookTask) deliver() {
 			w.LastStatus = HookStatusFailed
 		}
 		if err = UpdateWebhook(w); err != nil {
-			applog.Logger.Errorf("UpdateWebhook: %v", err)
+			logger.Errorf("UpdateWebhook: %v", err)
 			return
 		}
 	}()
@@ -800,12 +800,12 @@ func (t *HookTask) deliver() {
 
 // DeliverHooks checks and delivers undelivered hooks.
 // TODO: shoot more hooks at same time.
-func DeliverHooks() {
+func DeliverHooks(logger *logx.Logger) {
 	tasks := make([]*HookTask, 0, 10)
 	_ = x.Where("is_delivered = ?", false).Iterate(new(HookTask),
 		func(idx int, bean any) error {
 			t := bean.(*HookTask)
-			t.deliver()
+			t.deliver(logger)
 			tasks = append(tasks, t)
 			return nil
 		})
@@ -813,30 +813,30 @@ func DeliverHooks() {
 	// Update hook task status.
 	for _, t := range tasks {
 		if err := UpdateHookTask(t); err != nil {
-			applog.Logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
+			logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
 		}
 	}
 
 	// Start listening on new hook requests.
 	for repoID := range HookQueue.Queue() {
-		applog.Logger.Tracef("DeliverHooks [repo_id: %v]", repoID)
+		logger.Tracef("DeliverHooks [repo_id: %v]", repoID)
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
 		if err := x.Where("repo_id = ?", repoID).And("is_delivered = ?", false).Find(&tasks); err != nil {
-			applog.Logger.Errorf("Get repository [%s] hook tasks: %v", repoID, err)
+			logger.Errorf("Get repository [%s] hook tasks: %v", repoID, err)
 			continue
 		}
 		for _, t := range tasks {
-			t.deliver()
+			t.deliver(logger)
 			if err := UpdateHookTask(t); err != nil {
-				applog.Logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
+				logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
 				continue
 			}
 		}
 	}
 }
 
-func InitDeliverHooks() {
-	go DeliverHooks()
+func InitDeliverHooks(logger *logx.Logger) {
+	go DeliverHooks(logger)
 }

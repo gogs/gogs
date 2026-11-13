@@ -9,7 +9,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/applog"
+	"gogs.io/gogs/internal/logx"
 )
 
 var ErrExecTimeout = errors.New("process execution timeout")
@@ -72,14 +72,14 @@ func Remove(pid int64) bool {
 }
 
 // Exec starts executing a shell command in given path, it tracks corresponding process and timeout.
-func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
-	return ExecDirEnv(timeout, dir, nil, desc, cmdName, args...)
+func ExecDir(logger *logx.Logger, timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(logger, timeout, dir, nil, desc, cmdName, args...)
 }
 
 // ExecDirEnv is the same as ExecDir but allows appending additional environment
 // variables to the child process. Pass nil for env to inherit the parent
 // process environment unchanged.
-func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName string, args ...string) (string, string, error) {
+func ExecDirEnv(logger *logx.Logger, timeout time.Duration, dir string, env []string, desc, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
 		timeout = defaultTimeout
 	}
@@ -108,7 +108,7 @@ func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName s
 	select {
 	case <-time.After(timeout):
 		if errKill := Kill(pid); errKill != nil {
-			applog.Logger.Errorf("Failed to kill timeout process [pid: %d, desc: %s]: %v", pid, desc, errKill)
+			logger.Errorf("Failed to kill timeout process [pid: %d, desc: %s]: %v", pid, desc, errKill)
 		}
 		<-done //nolint:errcheck
 		return "", ErrExecTimeout.Error(), ErrExecTimeout
@@ -120,20 +120,20 @@ func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName s
 }
 
 // Exec starts executing a shell command, it tracks corresponding process and timeout.
-func ExecTimeout(timeout time.Duration, desc, cmdName string, args ...string) (string, string, error) {
-	return ExecDir(timeout, "", desc, cmdName, args...)
+func ExecTimeout(logger *logx.Logger, timeout time.Duration, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDir(logger, timeout, "", desc, cmdName, args...)
 }
 
 // ExecTimeoutEnv is the same as ExecTimeout but allows appending additional
 // environment variables to the child process. Pass nil for env to inherit the
 // parent process environment unchanged.
-func ExecTimeoutEnv(timeout time.Duration, env []string, desc, cmdName string, args ...string) (string, string, error) {
-	return ExecDirEnv(timeout, "", env, desc, cmdName, args...)
+func ExecTimeoutEnv(logger *logx.Logger, timeout time.Duration, env []string, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(logger, timeout, "", env, desc, cmdName, args...)
 }
 
 // Exec starts executing a shell command, it tracks corresponding its process and use default timeout.
-func Exec(desc, cmdName string, args ...string) (string, string, error) {
-	return ExecDir(-1, "", desc, cmdName, args...)
+func Exec(logger *logx.Logger, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDir(logger, -1, "", desc, cmdName, args...)
 }
 
 // Kill kills and removes a process from global list.

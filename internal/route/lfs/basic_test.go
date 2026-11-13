@@ -14,6 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
+	"gogs.io/gogs/internal/logx"
 )
 
 var _ lfsx.Storager = (*mockStorage)(nil)
@@ -47,6 +48,7 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 	}
 
 	m := macaron.New()
+	m.Map(logx.NewNoop())
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})
@@ -144,6 +146,7 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 	}
 
 	m := macaron.New()
+	m.Map(logx.NewNoop())
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})
@@ -200,6 +203,7 @@ func TestBasicHandler_serveVerify(t *testing.T) {
 	basic := &basicHandler{}
 
 	m := macaron.New()
+	m.Map(logx.NewNoop())
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})

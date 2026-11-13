@@ -16,6 +16,7 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/templates"
 )
@@ -167,8 +168,8 @@ func mailTemplateSet() (*template.Template, error) {
 	return tplSet, tplSetErr
 }
 
-func SendTestMail(email string) error {
-	msg, err := newMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
+func SendTestMail(logger *logx.Logger, email string) error {
+	msg, err := newMessage(logger, []string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -199,7 +200,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
+func SendUserMail(logger *logx.Logger, _ Translator, u User, tpl, code, subject, info string) error {
 	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
@@ -211,7 +212,7 @@ func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{u.Email()}, subject, body)
+	msg, err := newMessage(logger, []string{u.Email()}, subject, body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -221,15 +222,15 @@ func SendUserMail(_ Translator, u User, tpl, code, subject, info string) error {
 	return nil
 }
 
-func SendActivateAccountMail(t Translator, u User) error {
-	return SendUserMail(t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.activate_account"), "activate account")
+func SendActivateAccountMail(logger *logx.Logger, t Translator, u User) error {
+	return SendUserMail(logger, t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(t Translator, u User) error {
-	return SendUserMail(t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
+func SendResetPasswordMail(logger *logx.Logger, t Translator, u User) error {
+	return SendUserMail(logger, t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
 }
 
-func SendActivateEmailMail(t Translator, u User, email string) error {
+func SendActivateEmailMail(logger *logx.Logger, t Translator, u User, email string) error {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
@@ -241,7 +242,7 @@ func SendActivateEmailMail(t Translator, u User, email string) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{email}, t.Tr("mail.activate_email"), body)
+	msg, err := newMessage(logger, []string{email}, t.Tr("mail.activate_email"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -251,7 +252,7 @@ func SendActivateEmailMail(t Translator, u User, email string) error {
 	return nil
 }
 
-func SendRegisterNotifyMail(t Translator, u User) error {
+func SendRegisterNotifyMail(logger *logx.Logger, t Translator, u User) error {
 	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
@@ -260,7 +261,7 @@ func SendRegisterNotifyMail(t Translator, u User) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{u.Email()}, t.Tr("mail.register_notify"), body)
+	msg, err := newMessage(logger, []string{u.Email()}, t.Tr("mail.register_notify"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -270,7 +271,7 @@ func SendRegisterNotifyMail(t Translator, u User) error {
 	return nil
 }
 
-func SendCollaboratorMail(u, doer User, repo Repository) error {
+func SendCollaboratorMail(logger *logx.Logger, u, doer User, repo Repository) error {
 	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
 
 	data := map[string]any{
@@ -283,7 +284,7 @@ func SendCollaboratorMail(u, doer User, repo Repository) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage([]string{u.Email()}, subject, body)
+	msg, err := newMessage(logger, []string{u.Email()}, subject, body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -301,7 +302,7 @@ func composeTplData(subject, body, link string) map[string]any {
 	return data
 }
 
-func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) (*message, error) {
+func composeIssueMessage(logger *logx.Logger, issue Issue, repo Repository, doer User, tplName string, tos []string, info string) (*message, error) {
 	subject := issue.MailSubject()
 	body := string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
@@ -311,7 +312,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 		return nil, errors.Wrapf(err, "render %q", tplName)
 	}
 	from := (&mail.Address{Name: doer.DisplayName(), Address: conf.Email.FromEmail}).String()
-	msg, err := newMessageFrom(tos, from, subject, content)
+	msg, err := newMessageFrom(logger, tos, from, subject, content)
 	if err != nil {
 		return nil, errors.Wrap(err, "new message")
 	}
@@ -320,12 +321,12 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 }
 
 // SendIssueCommentMail composes and sends issue comment emails to target receivers.
-func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string) error {
+func SendIssueCommentMail(logger *logx.Logger, issue Issue, repo Repository, doer User, tos []string) error {
 	if len(tos) == 0 {
 		return nil
 	}
 
-	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueComment, tos, "issue comment")
+	msg, err := composeIssueMessage(logger, issue, repo, doer, tmplIssueComment, tos, "issue comment")
 	if err != nil {
 		return errors.Wrap(err, "compose issue message")
 	}
@@ -334,11 +335,11 @@ func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string)
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
-func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string) error {
+func SendIssueMentionMail(logger *logx.Logger, issue Issue, repo Repository, doer User, tos []string) error {
 	if len(tos) == 0 {
 		return nil
 	}
-	msg, err := composeIssueMessage(issue, repo, doer, tmplIssueMention, tos, "issue mention")
+	msg, err := composeIssueMessage(logger, issue, repo, doer, tmplIssueMention, tos, "issue mention")
 	if err != nil {
 		return errors.Wrap(err, "compose issue message")
 	}

@@ -10,8 +10,8 @@ import (
 	"github.com/inbucket/html2text"
 	gomail "github.com/wneessen/go-mail"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/logx"
 )
 
 type message struct {
@@ -20,8 +20,8 @@ type message struct {
 	confirmChan chan struct{}
 }
 
-func newMessageFrom(to []string, from, subject, htmlBody string) (*message, error) {
-	applog.Logger.Tracef("NewMessageFrom (htmlBody):\n%s", htmlBody)
+func newMessageFrom(logger *logx.Logger, to []string, from, subject, htmlBody string) (*message, error) {
+	logger.Tracef("NewMessageFrom (htmlBody):\n%s", htmlBody)
 
 	m := gomail.NewMsg()
 	if err := m.From(from); err != nil {
@@ -54,8 +54,8 @@ func newMessageFrom(to []string, from, subject, htmlBody string) (*message, erro
 	}, nil
 }
 
-func newMessage(to []string, subject, body string) (*message, error) {
-	return newMessageFrom(to, conf.Email.From, subject, body)
+func newMessage(logger *logx.Logger, to []string, subject, body string) (*message, error) {
+	return newMessageFrom(logger, to, conf.Email.From, subject, body)
 }
 
 func newSMTPClient() (*gomail.Client, error) {
@@ -116,14 +116,14 @@ func sendMessage(msg *message) error {
 	return client.DialAndSend(msg.msg)
 }
 
-func processMailQueue() {
+func processMailQueue(logger *logx.Logger) {
 	for msg := range mailQueue {
 		to := strings.Join(msg.msg.GetToString(), ", ")
-		applog.Logger.Tracef("New e-mail sending request %s: %s", to, msg.info)
+		logger.Tracef("New e-mail sending request %s: %s", to, msg.info)
 		if err := sendMessage(msg); err != nil {
-			applog.Logger.Errorf("Failed to send emails %s: %s - %v", to, msg.info, err)
+			logger.Errorf("Failed to send emails %s: %s - %v", to, msg.info, err)
 		} else {
-			applog.Logger.Tracef("E-mails sent %s: %s", to, msg.info)
+			logger.Tracef("E-mails sent %s: %s", to, msg.info)
 		}
 		msg.confirmChan <- struct{}{}
 	}
@@ -132,7 +132,7 @@ func processMailQueue() {
 var mailQueue chan *message
 
 // NewContext initializes settings for mailer.
-func NewContext() {
+func NewContext(logger *logx.Logger) {
 	// Need to check if mailQueue is nil because in during reinstall (user had installed
 	// before but switched install lock off), this function will be called again
 	// while mail queue is already processing tasks, and produces a race condition.
@@ -141,7 +141,7 @@ func NewContext() {
 	}
 
 	mailQueue = make(chan *message, 1000)
-	go processMailQueue()
+	go processMailQueue(logger)
 }
 
 // send puts new message object into mail queue.

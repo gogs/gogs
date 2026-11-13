@@ -15,7 +15,6 @@ import (
 	"xorm.io/core"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbx"
@@ -119,7 +118,7 @@ func NewTestEngine() error {
 	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
-func SetEngine() (*gorm.DB, error) {
+func SetEngine(logger *logx.Logger) (*gorm.DB, error) {
 	var err error
 	x, err = getEngine()
 	if err != nil {
@@ -136,7 +135,7 @@ func SetEngine() (*gorm.DB, error) {
 	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
-	xormWriter := &xormLogWriter{logger: applog.Logger.Scoped("xorm")}
+	xormWriter := &xormLogWriter{logger: logger.Scoped("xorm")}
 	if conf.IsProdMode() {
 		x.SetLogger(xorm.NewSimpleLogger3(xormWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
 	} else {
@@ -144,7 +143,7 @@ func SetEngine() (*gorm.DB, error) {
 	}
 	x.ShowSQL(true)
 
-	return NewConnection(dbx.Logger{})
+	return NewConnection(logger, dbx.NewLogger(logger.Scoped("gorm")))
 }
 
 // xormLogWriter sends xorm's log lines through the process logger. xorm only
@@ -166,13 +165,13 @@ func (w *xormLogWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func NewEngine() error {
-	db, err := SetEngine()
+func NewEngine(logger *logx.Logger) error {
+	db, err := SetEngine(logger)
 	if err != nil {
 		return err
 	}
 
-	if err = migrations.Migrate(db); err != nil {
+	if err = migrations.Migrate(logger, db); err != nil {
 		return errors.Newf("migrate: %v", err)
 	}
 
@@ -194,11 +193,11 @@ type Statistic struct {
 	}
 }
 
-func GetStatistic(ctx context.Context) (stats Statistic) {
+func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	stats.Counter.User = Handle.Users().Count(ctx)
 	stats.Counter.Org = CountOrganizations()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
-	stats.Counter.Repo = CountRepositories(true)
+	stats.Counter.Repo = CountRepositories(logger, true)
 	stats.Counter.Watch, _ = x.Count(new(Watch))
 	stats.Counter.Star, _ = x.Count(new(Star))
 	stats.Counter.Action, _ = x.Count(new(Action))

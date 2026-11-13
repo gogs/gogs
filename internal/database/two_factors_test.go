@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 )
 
 func TestTwoFactor_BeforeCreate(t *testing.T) {
@@ -126,8 +127,8 @@ func twoFactorsIsEnabled(t *testing.T, ctx context.Context, s *TwoFactorsStore) 
 	err := s.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
 
-	assert.True(t, s.IsEnabled(ctx, 1))
-	assert.False(t, s.IsEnabled(ctx, 2))
+	assert.True(t, s.IsEnabled(ctx, logx.NewNoop(), 1))
+	assert.False(t, s.IsEnabled(ctx, logx.NewNoop(), 2))
 }
 
 func twoFactorsUseRecoveryCode(t *testing.T, ctx context.Context, s *TwoFactorsStore) {

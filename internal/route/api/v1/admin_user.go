@@ -3,7 +3,6 @@ package v1
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -64,12 +63,12 @@ func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 		}
 		return
 	}
-	applog.Logger.Tracef("Account %q created by admin %q", u.Name, c.User.Name)
+	c.Logger.Tracef("Account %q created by admin %q", u.Name, c.User.Name)
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		if err := email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u)); err != nil {
-			applog.Logger.Errorf("Failed to send register notify mail: %v", err)
+		if err := email.SendRegisterNotifyMail(c.Logger, c.Context.Context, database.NewMailerUser(u)); err != nil {
+			c.Logger.Errorf("Failed to send register notify mail: %v", err)
 		}
 	}
 
@@ -133,7 +132,7 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 		}
 		return
 	}
-	applog.Logger.Tracef("Account updated by admin %q: %s", c.User.Name, u.Name)
+	c.Logger.Tracef("Account updated by admin %q: %s", c.User.Name, u.Name)
 
 	u, err = database.Handle.Users().GetByID(c.Req.Context(), u.ID)
 	if err != nil {
@@ -158,7 +157,7 @@ func adminDeleteUser(c *context.APIContext) {
 		}
 		return
 	}
-	applog.Logger.Tracef("Account deleted by admin(%s): %s", c.User.Name, u.Name)
+	c.Logger.Tracef("Account deleted by admin(%s): %s", c.User.Name, u.Name)
 
 	c.NoContent()
 }

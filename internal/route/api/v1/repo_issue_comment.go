@@ -75,7 +75,7 @@ func createIssueComment(c *context.APIContext, form createIssueCommentRequest) {
 		return
 	}
 
-	comment, err := database.CreateIssueComment(c.User, c.Repo.Repository, issue, form.Body, nil)
+	comment, err := database.CreateIssueComment(c.Logger, c.User, c.Repo.Repository, issue, form.Body, nil)
 	if err != nil {
 		c.Error(err, "create issue comment")
 		return
@@ -116,7 +116,7 @@ func editIssueComment(c *context.APIContext, form editIssueCommentRequest) {
 
 	oldContent := comment.Content
 	comment.Content = form.Body
-	if err := database.UpdateComment(c.User, comment, oldContent); err != nil {
+	if err := database.UpdateComment(c.Logger, c.User, comment, oldContent); err != nil {
 		c.Error(err, "update comment")
 		return
 	}
@@ -149,7 +149,7 @@ func deleteIssueComment(c *context.APIContext) {
 		return
 	}
 
-	if err = database.DeleteCommentByID(c.User, comment.ID); err != nil {
+	if err = database.DeleteCommentByID(c.Logger, c.User, comment.ID); err != nil {
 		c.Error(err, "delete comment by ID")
 		return
 	}

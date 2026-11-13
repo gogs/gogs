@@ -4,7 +4,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/applog"
+	"gogs.io/gogs/internal/logx"
 )
 
 const minDBVersion = 19
@@ -67,7 +67,7 @@ var migrations = []Migration{
 var errMigrationSkipped = errors.New("the migration has been skipped")
 
 // Migrate migrates the database schema and/or data to the current version.
-func Migrate(db *gorm.DB) error {
+func Migrate(logger *logx.Logger, db *gorm.DB) error {
 	// NOTE: GORM has problem migrating tables that happen to have columns with the
 	// same name, see https://github.com/gogs/gogs/issues/7056.
 	if !db.Migrator().HasTable(new(Version)) {
@@ -96,7 +96,7 @@ func Migrate(db *gorm.DB) error {
 	}
 
 	if minDBVersion > current.Version {
-		applog.Logger.Fatalf(`
+		logger.Fatalf(`
 Hi there, thank you for using Gogs for so long!
 However, Gogs has stopped supporting auto-migration from your previously installed version.
 But the good news is, it's very easy to fix this problem!
@@ -130,12 +130,12 @@ In case you're stilling getting this notice, go through instructions again until
 	}
 
 	for _, m := range migrations[current.Version-minDBVersion:] {
-		applog.Logger.Infof("Migration: %s", m.Description())
+		logger.Infof("Migration: %s", m.Description())
 		if err = m.Migrate(db); err != nil {
 			if err != errMigrationSkipped {
 				return errors.Wrap(err, "do migrate")
 			}
-			applog.Logger.Tracef("The migration %q has been skipped", m.Description())
+			logger.Tracef("The migration %q has been skipped", m.Description())
 		}
 
 		current.Version++

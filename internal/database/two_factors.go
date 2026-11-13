@@ -10,9 +10,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/strx"
 )
 
@@ -101,11 +101,11 @@ func (s *TwoFactorsStore) GetByUserID(ctx context.Context, userID int64) (*TwoFa
 }
 
 // IsEnabled returns true if the user has enabled 2FA.
-func (s *TwoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
+func (s *TwoFactorsStore) IsEnabled(ctx context.Context, logger *logx.Logger, userID int64) bool {
 	var count int64
 	err := s.db.WithContext(ctx).Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
 	if err != nil {
-		applog.Logger.Errorf("Failed to count two factors [user_id: %d]: %v", userID, err)
+		logger.Errorf("Failed to count two factors [user_id: %d]: %v", userID, err)
 	}
 	return count > 0
 }

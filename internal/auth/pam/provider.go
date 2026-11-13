@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/logx"
 )
 
 // Provider contains configuration of a PAM authentication provider.
@@ -18,7 +19,7 @@ func NewProvider(cfg *Config) auth.Provider {
 	}
 }
 
-func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
+func (p *Provider) Authenticate(_ *logx.Logger, login, password string) (*auth.ExternalAccount, error) {
 	err := p.config.doAuth(login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {

@@ -14,10 +14,10 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strx"
@@ -212,7 +212,7 @@ type MirrorSyncPushOptions struct {
 
 // MirrorSyncPush creates an action for mirror synchronization of pushed
 // commits.
-func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
+func (s *ActionsStore) MirrorSyncPush(ctx context.Context, logger *logx.Logger, opts MirrorSyncPushOptions) error {
 	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
@@ -228,7 +228,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOp
 
 	opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	apiPusher := opts.Owner.APIFormat()
-	err = PrepareWebhooks(
+	err = PrepareWebhooks(logger,
 		opts.Repo,
 		HookEventTypePush,
 		&apiv1types.WebhookPushPayload{
@@ -313,7 +313,7 @@ func assembleKeywordsPattern(words []string) string {
 }
 
 // updateCommitReferencesToIssues checks if issues are manipulated by commit message.
-func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*PushCommit) error {
+func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repository, commits []*PushCommit) error {
 	trimRightNonDigits := func(c rune) bool {
 		return !unicode.IsDigit(c)
 	}
@@ -347,7 +347,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 
 			// 🚨 SECURITY: Only reference issues of repositories the pusher can read,
 			// otherwise anyone could post comments into private repositories.
-			if issue.RepoID != repo.ID && !issue.Repo.HasAccess(doer.ID) {
+			if issue.RepoID != repo.ID && !issue.Repo.HasAccess(logger, doer.ID) {
 				continue
 			}
 
@@ -362,7 +362,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 				shortMsg += "..."
 			}
 			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, shortMsg)
-			if err = CreateRefComment(doer, repo, issue, message, c.Sha1); err != nil {
+			if err = CreateRefComment(logger, doer, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
 		}
@@ -402,7 +402,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 				continue
 			}
 
-			if err = issue.ChangeStatus(doer, repo, true); err != nil {
+			if err = issue.ChangeStatus(logger, doer, repo, true); err != nil {
 				return err
 			}
 		}
@@ -442,7 +442,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 				continue
 			}
 
-			if err = issue.ChangeStatus(doer, repo, false); err != nil {
+			if err = issue.ChangeStatus(logger, doer, repo, false); err != nil {
 				return err
 			}
 		}
@@ -465,7 +465,7 @@ type CommitRepoOptions struct {
 // action with the type ActionCommitRepo is created for a regular push. If the
 // regular push also creates a new branch, then another action with type
 // ActionCreateBranch is created.
-func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
+func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts CommitRepoOptions) error {
 	err := newReposStore(s.db).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
@@ -498,7 +498,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
 	if isDelRef {
-		err = PrepareWebhooks(
+		err = PrepareWebhooks(logger,
 			opts.Repo,
 			HookEventTypeDelete,
 			&apiv1types.WebhookDeletePayload{
@@ -525,8 +525,8 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	// Only update issues via commits when internal issue tracker is enabled
 	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
-		if err = updateCommitReferencesToIssues(pusher, opts.Repo, opts.Commits.Commits); err != nil {
-			applog.Logger.Errorf("update commit references to issues: %v", err)
+		if err = updateCommitReferencesToIssues(logger, pusher, opts.Repo, opts.Commits.Commits); err != nil {
+			logger.Errorf("update commit references to issues: %v", err)
 		}
 	}
 
@@ -542,7 +542,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 
 	var compareURL string
 	if isNewRef {
-		err = PrepareWebhooks(
+		err = PrepareWebhooks(logger,
 			opts.Repo,
 			HookEventTypeCreate,
 			&apiv1types.WebhookCreatePayload{
@@ -575,7 +575,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	err = PrepareWebhooks(
+	err = PrepareWebhooks(logger,
 		opts.Repo,
 		HookEventTypePush,
 		&apiv1types.WebhookPushPayload{
@@ -612,7 +612,7 @@ type PushTagOptions struct {
 // PushTag creates an action for pushing tags to the repository. An action with
 // the type ActionDeleteTag is created if the push deletes a tag. Otherwise, an
 // action with the type ActionPushTag is created for a regular push.
-func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
+func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts PushTagOptions) error {
 	err := newReposStore(s.db).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
@@ -637,7 +637,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
 	if git.IsEmptyID(opts.NewCommitID) {
-		err = PrepareWebhooks(
+		err = PrepareWebhooks(logger,
 			opts.Repo,
 			HookEventTypeDelete,
 			&apiv1types.WebhookDeletePayload{
@@ -660,7 +660,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 		return nil
 	}
 
-	err = PrepareWebhooks(
+	err = PrepareWebhooks(logger,
 		opts.Repo,
 		HookEventTypeCreate,
 		&apiv1types.WebhookCreatePayload{
@@ -810,7 +810,7 @@ func (a *Action) GetIssueTitle() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		applog.Logger.Errorf("Failed to get issue title [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
+		handleLogger().Errorf("Failed to get issue title [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
 		return "error getting issue"
 	}
 	return issue.Title
@@ -820,7 +820,7 @@ func (a *Action) GetIssueContent() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		applog.Logger.Errorf("Failed to get issue content [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
+		handleLogger().Errorf("Failed to get issue content [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
 		return "error getting issue"
 	}
 	return issue.Content
@@ -928,9 +928,9 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 	if !ok {
 		u, err := Handle.Users().GetByEmail(context.Background(), email)
 		if err != nil {
-			pcs.avatars[email] = tool.AvatarLink(email)
+			pcs.avatars[email] = tool.AvatarLink(handleLogger(), email)
 			if !IsErrUserNotExist(err) {
-				applog.Logger.Errorf("Failed to get user [email: %s]: %v", email, err)
+				handleLogger().Errorf("Failed to get user [email: %s]: %v", email, err)
 			}
 		} else {
 			pcs.avatars[email] = u.AvatarURLPath()

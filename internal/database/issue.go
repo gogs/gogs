@@ -11,9 +11,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
@@ -238,32 +238,32 @@ func (issue *Issue) HasLabel(labelID int64) bool {
 	return issue.hasLabel(x, labelID)
 }
 
-func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
+func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 	var err error
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			applog.Logger.Errorf("LoadIssue: %v", err)
+			logger.Errorf("LoadIssue: %v", err)
 			return
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueLabelUpdated,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormatLegacy(nil),
+			PullRequest: issue.PullRequest.APIFormat(logger),
+			Repository:  issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     apiv1types.WebhookIssueLabelUpdated,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 }
 
@@ -272,12 +272,12 @@ func (issue *Issue) addLabel(e *xorm.Session, label *Label) error {
 }
 
 // AddLabel adds a new label to the issue.
-func (issue *Issue) AddLabel(doer *User, label *Label) error {
+func (issue *Issue) AddLabel(logger *logx.Logger, doer *User, label *Label) error {
 	if err := NewIssueLabel(issue, label); err != nil {
 		return err
 	}
 
-	issue.sendLabelUpdatedWebhook(doer)
+	issue.sendLabelUpdatedWebhook(logger, doer)
 	return nil
 }
 
@@ -286,12 +286,12 @@ func (issue *Issue) addLabels(e *xorm.Session, labels []*Label) error {
 }
 
 // AddLabels adds a list of new labels to the issue.
-func (issue *Issue) AddLabels(doer *User, labels []*Label) error {
+func (issue *Issue) AddLabels(logger *logx.Logger, doer *User, labels []*Label) error {
 	if err := NewIssueLabels(issue, labels); err != nil {
 		return err
 	}
 
-	issue.sendLabelUpdatedWebhook(doer)
+	issue.sendLabelUpdatedWebhook(logger, doer)
 	return nil
 }
 
@@ -312,12 +312,12 @@ func (issue *Issue) removeLabel(e *xorm.Session, label *Label) error {
 }
 
 // RemoveLabel removes a label from issue by given ID.
-func (issue *Issue) RemoveLabel(doer *User, label *Label) error {
+func (issue *Issue) RemoveLabel(logger *logx.Logger, doer *User, label *Label) error {
 	if err := DeleteIssueLabel(issue, label); err != nil {
 		return err
 	}
 
-	issue.sendLabelUpdatedWebhook(doer)
+	issue.sendLabelUpdatedWebhook(logger, doer)
 	return nil
 }
 
@@ -338,7 +338,7 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 	return nil
 }
 
-func (issue *Issue) ClearLabels(doer *User) (err error) {
+func (issue *Issue) ClearLabels(logger *logx.Logger, doer *User) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -356,27 +356,27 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			applog.Logger.Errorf("LoadIssue: %v", err)
+			logger.Errorf("LoadIssue: %v", err)
 			return err
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueLabelCleared,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormatLegacy(nil),
+			PullRequest: issue.PullRequest.APIFormat(logger),
+			Repository:  issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     apiv1types.WebhookIssueLabelCleared,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -427,7 +427,7 @@ func UpdateIssueCols(issue *Issue, cols ...string) error {
 	return updateIssueCols(x, issue, cols...)
 }
 
-func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
+func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
 	// Nothing should be performed if current status is same as target status
 	if issue.IsClosed == isClosed {
 		return nil
@@ -461,7 +461,7 @@ func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, 
 	}
 
 	// New action comment
-	if _, err = createStatusComment(e, doer, repo, issue); err != nil {
+	if _, err = createStatusComment(logger, e, doer, repo, issue); err != nil {
 		return err
 	}
 
@@ -469,14 +469,14 @@ func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, 
 }
 
 // ChangeStatus changes issue status to open or closed.
-func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (err error) {
+func (issue *Issue) ChangeStatus(logger *logx.Logger, doer *User, repo *Repository, isClosed bool) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = issue.changeStatus(sess, doer, repo, isClosed); err != nil {
+	if err = issue.changeStatus(logger, sess, doer, repo, isClosed); err != nil {
 		return err
 	}
 
@@ -489,8 +489,8 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		issue.PullRequest.Issue = issue
 		apiPullRequest := &apiv1types.WebhookPullRequestPayload{
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  repo.APIFormatLegacy(nil),
+			PullRequest: issue.PullRequest.APIFormat(logger),
+			Repository:  repo.APIFormatLegacy(logger, nil),
 			Sender:      doer.APIFormat(),
 		}
 		if isClosed {
@@ -498,12 +498,12 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		} else {
 			apiPullRequest.Action = apiv1types.WebhookIssueReopened
 		}
-		err = PrepareWebhooks(repo, HookEventTypePullRequest, apiPullRequest)
+		err = PrepareWebhooks(logger, repo, HookEventTypePullRequest, apiPullRequest)
 	} else {
 		apiIssues := &apiv1types.WebhookIssuesPayload{
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: repo.APIFormatLegacy(nil),
+			Repository: repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		}
 		if isClosed {
@@ -511,16 +511,16 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		} else {
 			apiIssues.Action = apiv1types.WebhookIssueReopened
 		}
-		err = PrepareWebhooks(repo, HookEventTypeIssues, apiIssues)
+		err = PrepareWebhooks(logger, repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
 	}
 
 	return nil
 }
 
-func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
+func (issue *Issue) ChangeTitle(logger *logx.Logger, doer *User, title string) (err error) {
 	oldTitle := issue.Title
 	issue.Title = title
 	if err = UpdateIssueCols(issue, "name"); err != nil {
@@ -529,20 +529,20 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueEdited,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
+			PullRequest: issue.PullRequest.APIFormat(logger),
 			Changes: &apiv1types.WebhookChangesPayload{
 				Title: &apiv1types.WebhookChangesFromPayload{
 					From: oldTitle,
 				},
 			},
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action: apiv1types.WebhookIssueEdited,
 			Index:  issue.Index,
 			Issue:  issue.APIFormat(),
@@ -551,18 +551,18 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 					From: oldTitle,
 				},
 			},
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
 }
 
-func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
+func (issue *Issue) ChangeContent(logger *logx.Logger, doer *User, content string) (err error) {
 	oldContent := issue.Content
 	issue.Content = content
 	if err = UpdateIssueCols(issue, "content"); err != nil {
@@ -571,20 +571,20 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueEdited,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
+			PullRequest: issue.PullRequest.APIFormat(logger),
 			Changes: &apiv1types.WebhookChangesPayload{
 				Body: &apiv1types.WebhookChangesFromPayload{
 					From: oldContent,
 				},
 			},
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action: apiv1types.WebhookIssueEdited,
 			Index:  issue.Index,
 			Issue:  issue.APIFormat(),
@@ -593,18 +593,18 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 					From: oldContent,
 				},
 			},
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
 }
 
-func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
+func (issue *Issue) ChangeAssignee(logger *logx.Logger, doer *User, assigneeID int64) (err error) {
 	issue.AssigneeID = assigneeID
 	if err = UpdateIssueUserByAssignee(issue); err != nil {
 		return errors.Newf("UpdateIssueUserByAssignee: %v", err)
@@ -612,7 +612,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 
 	issue.Assignee, err = Handle.Users().GetByID(context.TODO(), issue.AssigneeID)
 	if err != nil && !IsErrUserNotExist(err) {
-		applog.Logger.Errorf("Failed to get user by ID: %v", err)
+		logger.Errorf("Failed to get user by ID: %v", err)
 		return nil
 	}
 
@@ -622,8 +622,8 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		issue.PullRequest.Issue = issue
 		apiPullRequest := &apiv1types.WebhookPullRequestPayload{
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormatLegacy(nil),
+			PullRequest: issue.PullRequest.APIFormat(logger),
+			Repository:  issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:      doer.APIFormat(),
 		}
 		if isRemoveAssignee {
@@ -631,12 +631,12 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		} else {
 			apiPullRequest.Action = apiv1types.WebhookIssueAssigned
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, apiPullRequest)
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, apiPullRequest)
 	} else {
 		apiIssues := &apiv1types.WebhookIssuesPayload{
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		}
 		if isRemoveAssignee {
@@ -644,10 +644,10 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		} else {
 			apiIssues.Action = apiv1types.WebhookIssueAssigned
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, apiIssues)
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
 	}
 
 	return nil
@@ -753,7 +753,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 }
 
 // NewIssue creates new issue with labels and attachments for repository.
-func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
+func NewIssue(logger *logx.Logger, repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -783,20 +783,20 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		applog.Logger.Errorf("NotifyWatchers: %v", err)
+		logger.Errorf("NotifyWatchers: %v", err)
 	}
-	if err = issue.MailParticipants(); err != nil {
-		applog.Logger.Errorf("MailParticipants: %v", err)
+	if err = issue.MailParticipants(logger); err != nil {
+		logger.Errorf("MailParticipants: %v", err)
 	}
 
-	if err = PrepareWebhooks(repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+	if err = PrepareWebhooks(logger, repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 		Action:     apiv1types.WebhookIssueOpened,
 		Index:      issue.Index,
 		Issue:      issue.APIFormat(),
-		Repository: repo.APIFormatLegacy(nil),
+		Repository: repo.APIFormatLegacy(logger, nil),
 		Sender:     issue.Poster.APIFormat(),
 	}); err != nil {
-		applog.Logger.Errorf("PrepareWebhooks: %v", err)
+		logger.Errorf("PrepareWebhooks: %v", err)
 	}
 
 	return nil

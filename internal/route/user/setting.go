@@ -22,14 +22,14 @@ func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User)
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			applog.Logger.Errorf("parseUserFromCode: get user by name %q: %v", string(b), err)
+			logger.Errorf("parseUserFromCode: get user by name %q: %v", string(b), err)
 		}
 	}
 	return nil
 }
 
-func verifyActiveEmailCode(ctx gocontext.Context, code, email string) *database.EmailAddress {
-	if user := parseUserFromCode(ctx, code); user != nil {
+func verifyActiveEmailCode(ctx gocontext.Context, logger *logx.Logger, code, email string) *database.EmailAddress {
+	if user := parseUserFromCode(ctx, logger, code); user != nil {
 		if userx.VerifyActivateCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 			emailAddress, err := database.Handle.Users().GetEmail(ctx, user.ID, email, false)
 			if err == nil {
@@ -44,7 +44,7 @@ func ActivateEmail(c *context.Context) {
 	code := c.Query("code")
 	emailAddr := c.Query("email")
 
-	if email := verifyActiveEmailCode(c.Req.Context(), code, emailAddr); email != nil {
+	if email := verifyActiveEmailCode(c.Req.Context(), c.Logger, code, emailAddr); email != nil {
 		err := database.Handle.Users().MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
 		if err != nil {
 			c.Error(err, "activate email")
