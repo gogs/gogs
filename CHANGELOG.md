@@ -7,6 +7,7 @@ All notable changes to Gogs are documented in this file.
 ### Added
 
 - Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
@@ -18,7 +19,7 @@ All notable changes to Gogs are documented in this file.
 - Git operations are now stopped when they exceed `[git.timeout]` or `[cron.repo_health_check] TIMEOUT`, and a timeout of zero now means no timeout. The defaults of `[git.timeout] MIRROR` and `GC` are raised to 600 seconds. Git fetches and pushes over HTTP and SSH are stopped after 30 minutes without any data transferred. [#8441](https://github.com/gogs/gogs/pull/8441)
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 - New repositories now use `main` as the default branch. Existing repositories keep their current default branch. Set `[repository] DEFAULT_BRANCH = master` to keep the previous behavior. [#8497](https://github.com/gogs/gogs/pull/8497)
-- Markdown is now rendered following the GitHub Flavored Markdown spec, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. The `[smartypants] FRACTIONS` setting is removed and fractions are no longer converted. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Markdown is now rendered following the GitHub Flavored Markdown spec, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders two to seven times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Mentions and issue references are now linked where they appear, e.g., in `@alice @alicia` both names are linked, and a reference that also appears earlier as part of a word is still linked. [#8519](https://github.com/gogs/gogs/pull/8519)

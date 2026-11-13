@@ -1,6 +1,8 @@
 # dariomark
 
-dariomark is the Markdown engine of Gogs. It implements CommonMark 0.31.2 and GitHub Flavored Markdown (tables, strikethrough, task lists and extended autolinks), plus footnotes and GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`).
+dariomark is the Markdown engine of Gogs. It implements CommonMark 0.31.2 and GitHub Flavored Markdown (tables, strikethrough, task lists and extended autolinks), plus footnotes and GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`). It also implements SmartyPants punctuation, including fractions.
+
+Headings get stable ids made the way GitHub makes them, e.g., `user-content-getting-started`, with `-1`, `-2` and so on for repeated headings. `Result.Headings` lists every heading with its level, text and id, which is what a table of contents needs.
 
 It was written from scratch for Gogs, from the specifications, with no code taken from other Markdown implementations.
 

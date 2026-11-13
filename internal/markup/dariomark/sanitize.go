@@ -326,7 +326,7 @@ var (
 var sanitizedElements = map[string]bool{
 	"a": true, "blockquote": true, "br": true, "code": true, "del": true, "div": true, "em": true,
 	"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true, "hr": true, "img": true,
-	"input": true, "li": true, "ol": true, "p": true, "pre": true, "strong": true, "sup": true,
+	"input": true, "li": true, "ol": true, "p": true, "pre": true, "strong": true, "sub": true, "sup": true,
 	"table": true, "tbody": true, "td": true, "th": true, "thead": true, "tr": true, "ul": true,
 }
 

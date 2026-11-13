@@ -1628,6 +1628,23 @@ $(document).ready(function() {
       .find("h1, h2, h3, h4, h5, h6")
       .each(function() {
         var node = $(this);
+        // Rendered Markdown headings have an id like "user-content-setup", as
+        // on GitHub. The wrapper gets "setup", so links to "#setup" work.
+        var id = node.attr("id");
+        if (id && id.indexOf("user-content-") === 0) {
+          var slug = id.slice("user-content-".length);
+          var wrap = document.createElement("div");
+          wrap.id = slug;
+          wrap.className = "anchor-wrap";
+          node.wrap(wrap);
+          var anchor = document.createElement("a");
+          anchor.className = "anchor";
+          anchor.href = "#" + encodeURIComponent(slug);
+          anchor.setAttribute("aria-label", "Link to this section");
+          anchor.innerHTML = '<span class="octicon octicon-link"></span>';
+          node.append(anchor);
+          return;
+        }
         var val = encodeURIComponent(
           node
             .text()

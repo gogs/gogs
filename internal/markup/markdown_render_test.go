@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/markup/dariomark"
 )
 
 func trackerMetas() map[string]string {
@@ -164,13 +165,13 @@ func TestMarkdown_Limits(t *testing.T) {
 		defer func() { conf.UI.MaxDisplayFileSize = before }()
 
 		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(Markdown("# Title <b> *emphasis*", "/user/repo", nil)))
-		assert.Equal(t, "<h1>Title</h1>\n", string(Markdown("# Title", "/user/repo", nil)))
+		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(Markdown("# Title", "/user/repo", nil)))
 		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(RawMarkdown([]byte("# Title <b> *emphasis*"), "")))
 	})
 
 	t.Run("byte order mark is ignored", func(t *testing.T) {
-		assert.Equal(t, "<h1>Title</h1>\n", string(Markdown("\ufeff# Title", "/user/repo", nil)))
-		assert.Equal(t, "<h1>Title</h1>\n", string(RawMarkdown([]byte("\ufeff# Title"), "")))
+		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(Markdown("\ufeff# Title", "/user/repo", nil)))
+		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(RawMarkdown([]byte("\ufeff# Title"), "")))
 	})
 
 	t.Run("fenced code keeps languages with symbols", func(t *testing.T) {
@@ -184,4 +185,48 @@ func TestMarkdown_Limits(t *testing.T) {
 		assert.NotEqual(t, footnoteIDPrefix([]byte("a[^1]\n\n[^1]: one")), footnoteIDPrefix([]byte("b[^1]\n\n[^1]: two")))
 		assert.Contains(t, b, footnoteIDPrefix([]byte("b[^1]\n\n[^1]: two"))+"fn:1")
 	})
+}
+
+func TestMarkdown_Fractions(t *testing.T) {
+	NewSanitizer()
+	before := conf.Smartypants
+	defer func() { conf.Smartypants = before }()
+	conf.Smartypants.Enabled = true
+
+	t.Run("only common fractions without FRACTIONS", func(t *testing.T) {
+		conf.Smartypants.Fractions = false
+		assert.Equal(t, "<p>½ cup, ¼th, ¾ths, 2/3, 1/2th, a1/2, <code>1/2</code></p>\n", string(Markdown("1/2 cup, 1/4th, 3/4ths, 2/3, 1/2th, a1/2, `1/2`", "/user/repo", nil)))
+	})
+
+	t.Run("any fraction with FRACTIONS", func(t *testing.T) {
+		conf.Smartypants.Fractions = true
+		assert.Equal(t, "<p><sup>2</sup>⁄<sub>3</sub>, <sup>12</sup>⁄<sub>345</sub>, 1/4th, 1/2/2020, 01/2</p>\n", string(Markdown("2/3, 12/345, 1/4th, 1/2/2020, 01/2", "/user/repo", nil)))
+		// Documents with raw HTML are sanitized by bluemonday instead.
+		assert.Equal(t, "<p><b>x</b> <sup>2</sup>⁄<sub>3</sub></p>\n", string(Markdown("<b>x</b> 2/3", "/user/repo", nil)))
+	})
+}
+
+func TestMarkdown_HeadingIDs(t *testing.T) {
+	NewSanitizer()
+	input := "# Hello, World!\n\n## Setup *fast*\n\n## Setup fast\n\n### setup-fast-1\n\n## 中文 标题\n\n## !!!\n"
+	want := `<h1 id="user-content-hello-world">Hello, World!</h1>
+<h2 id="user-content-setup-fast">Setup <em>fast</em></h2>
+<h2 id="user-content-setup-fast-1">Setup fast</h2>
+<h3 id="user-content-setup-fast-1-1">setup-fast-1</h3>
+<h2 id="user-content-中文-标题">中文 标题</h2>
+<h2>!!!</h2>
+`
+	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
+	// Documents with raw HTML are sanitized by bluemonday instead.
+	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
+
+	got := dariomark.Render([]byte(input), markdownOptions("")).Headings
+	assert.Equal(t, []dariomark.Heading{
+		{Level: 1, Text: "Hello, World!", ID: "user-content-hello-world"},
+		{Level: 2, Text: "Setup fast", ID: "user-content-setup-fast"},
+		{Level: 2, Text: "Setup fast", ID: "user-content-setup-fast-1"},
+		{Level: 3, Text: "setup-fast-1", ID: "user-content-setup-fast-1-1"},
+		{Level: 2, Text: "中文 标题", ID: "user-content-中文-标题"},
+		{Level: 2, Text: "!!!", ID: ""},
+	}, got)
 }

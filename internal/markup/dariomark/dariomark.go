@@ -20,6 +20,10 @@ type Typographer struct {
 	LatexDashes bool
 	// AngledQuotes renders double quotes as angled quotes.
 	AngledQuotes bool
+	// Fractions renders fractions like "2/3" as a superscript numerator and a
+	// subscript denominator. Otherwise only "1/2", "1/4" and "3/4" are
+	// replaced, with "½", "¼" and "¾".
+	Fractions bool
 }
 
 // Options configures rendering. The zero value renders CommonMark.
@@ -40,6 +44,11 @@ type Options struct {
 	FootnoteIDPrefix  string
 	// Alerts renders GitHub alerts, e.g., "> [!NOTE]".
 	Alerts bool
+	// HeadingIDs gives headings an id attribute made of HeadingIDPrefix and
+	// a slug of their text, as GitHub does, and lists them in
+	// Result.Headings.
+	HeadingIDs      bool
+	HeadingIDPrefix string
 	// HardWraps renders soft line breaks as hard line breaks.
 	HardWraps bool
 	// XHTML renders void elements like "<br />".
@@ -83,6 +92,19 @@ type Result struct {
 	// Sanitized reports whether HTML has been sanitized, which happens for
 	// documents without raw HTML when Options.Gogs is set.
 	Sanitized bool
+	// Headings are the headings of the document in order, when
+	// Options.HeadingIDs is set. They are the entries of a table of contents.
+	Headings []Heading
+}
+
+// Heading is a heading of a rendered document.
+type Heading struct {
+	Level int
+	// Text is the text content of the heading.
+	Text string
+	// ID is the id attribute of the heading. It is empty when the text has no
+	// letters or digits, in which case the heading has no id.
+	ID string
 }
 
 var parserPool = sync.Pool{New: func() any { return new(parser) }}
@@ -110,16 +132,16 @@ func Render(src []byte, opts *Options) Result {
 	r.init(p, opts)
 	if opts.Gogs == nil {
 		r.renderHTML(doc)
-		return Result{HTML: r.out.Bytes()}
+		return Result{HTML: r.out.Bytes(), Headings: r.headings}
 	}
 	if !p.hasRawHTML {
 		if out, ok := r.renderSanitized(doc); ok {
-			return Result{HTML: out, Sanitized: true}
+			return Result{HTML: out, Sanitized: true, Headings: r.headings}
 		}
 		r.init(p, opts)
 	}
 	r.renderHTML(doc)
-	return Result{HTML: r.postProcess(r.out.Bytes())}
+	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headings}
 }
 
 // HTML renders the Markdown source to HTML without post-processing.

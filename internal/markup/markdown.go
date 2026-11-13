@@ -188,6 +188,8 @@ func markdownOptions(urlPrefix string) *dariomark.Options {
 		LinkifyAfterPunct:         true,
 		Footnotes:                 true,
 		Alerts:                    true,
+		HeadingIDs:                true,
+		HeadingIDPrefix:           "user-content-",
 		HardWraps:                 conf.Markdown.EnableHardLineBreak,
 		RelativeLinks:             true,
 		LinkBase:                  urlPrefix,
@@ -203,6 +205,7 @@ func markdownOptions(urlPrefix string) *dariomark.Options {
 			Dashes:       conf.Smartypants.Dashes,
 			LatexDashes:  conf.Smartypants.LatexDashes,
 			AngledQuotes: conf.Smartypants.AngledQuotes,
+			Fractions:    conf.Smartypants.Fractions,
 		}
 	}
 	return opts

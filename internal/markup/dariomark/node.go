@@ -38,6 +38,9 @@ const (
 	kindTaskCheckbox
 	// kindTypo is typographic punctuation; level holds its typo.
 	kindTypo
+	// kindFraction is a fraction; text holds its source, and level the length
+	// of its numerator, or 0 for a vulgar fraction like "½".
+	kindFraction
 )
 
 type autoLinkType uint8

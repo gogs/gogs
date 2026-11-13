@@ -3,6 +3,8 @@ package dariomark
 import (
 	"bytes"
 	"strconv"
+	"unicode"
+	"unicode/utf8"
 )
 
 type attr struct {
@@ -36,6 +38,10 @@ type renderer struct {
 
 	plain  []byte
 	numBuf [24]byte
+
+	headings []Heading
+	// slugs counts the uses of heading slugs, see headingID.
+	slugs map[string]int
 }
 
 func (r *renderer) init(p *parser, opts *Options) {
@@ -43,6 +49,8 @@ func (r *renderer) init(p *parser, opts *Options) {
 	r.opts = opts
 	r.out.Reset()
 	r.html = htmlSink{out: &r.out, xhtml: opts.XHTML}
+	r.headings = r.headings[:0]
+	clear(r.slugs)
 }
 
 func (r *renderer) renderHTML(doc *node) {
@@ -90,7 +98,7 @@ func (r *renderer) block(n *node) {
 		r.nl()
 	case kindHeading:
 		tag := headingTags[n.level]
-		s.start(tag)
+		r.headingStart(n, tag)
 		r.inlines(n)
 		s.end(tag)
 		r.nl()
@@ -151,6 +159,89 @@ func (r *renderer) block(n *node) {
 }
 
 var headingTags = [...]string{"h1", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+// headingStart writes the start tag of the heading n, with an id when
+// Options.HeadingIDs is set.
+func (r *renderer) headingStart(n *node, tag string) {
+	if !r.opts.HeadingIDs {
+		r.s.start(tag)
+		return
+	}
+	text := r.replaceNUL(r.appendTextContent(r.plain[:0], n))
+	r.plain = text[:0]
+	h := Heading{Level: n.level, Text: string(text)}
+	if slug := r.headingID(text); slug != "" {
+		h.ID = r.opts.HeadingIDPrefix + slug
+		r.s.start(tag, attr{"id", []byte(h.ID), false})
+	} else {
+		r.s.start(tag)
+	}
+	r.headings = append(r.headings, h)
+}
+
+// appendTextContent appends the text of the inline content of n, as a
+// browser shows it, without images and footnote references.
+func (r *renderer) appendTextContent(b []byte, n *node) []byte {
+	for c := n.first; c != nil; c = c.next {
+		switch c.kind {
+		case kindText, kindCodeSpan, kindAutoLink:
+			b = append(b, c.text...)
+		case kindSoftBreak, kindHardBreak:
+			b = append(b, ' ')
+		case kindTypo:
+			_, text := r.opts.Typographer.entity(typo(c.level))
+			b = append(b, text...)
+		case kindFraction:
+			if c.level == 0 {
+				_, text := vulgarFraction(c)
+				b = append(b, text...)
+			} else {
+				b = append(b, c.text...)
+			}
+		case kindRawHTML, kindImage, kindFootnoteRef, kindTaskCheckbox:
+		default:
+			b = r.appendTextContent(b, c)
+		}
+	}
+	return b
+}
+
+// headingID returns the slug of a heading with the given text, as GitHub
+// makes it: letters are lowercased, spaces become "-", and characters other
+// than letters, digits, "-" and "_" are dropped. A slug that an earlier
+// heading has is followed by "-1", "-2" and so on.
+func (r *renderer) headingID(text []byte) string {
+	b := r.numBuf[:0]
+	for len(text) > 0 {
+		c, size := utf8.DecodeRune(text)
+		text = text[size:]
+		switch {
+		case c == ' ':
+			b = append(b, '-')
+		case c == '-' || c == '_' || unicode.IsLetter(c) || unicode.IsDigit(c) || unicode.IsMark(c):
+			b = utf8.AppendRune(b, unicode.ToLower(c))
+		}
+	}
+	if len(b) == 0 {
+		return ""
+	}
+	if r.slugs == nil {
+		r.slugs = make(map[string]int)
+	}
+	base := string(b)
+	slug := base
+	for {
+		if _, used := r.slugs[slug]; !used {
+			break
+		}
+		// The count of base only grows, so that each heading takes time
+		// linear in the number of headings with the same slug.
+		r.slugs[base]++
+		slug = base + "-" + strconv.Itoa(r.slugs[base])
+	}
+	r.slugs[slug] = 0
+	return slug
+}
 
 var spaces = []byte("                ")
 
@@ -319,6 +410,18 @@ func (r *renderer) inline(n *node) {
 		r.footnoteRef(n)
 	case kindTypo:
 		s.entity(r.opts.Typographer.entity(typo(n.level)))
+	case kindFraction:
+		if n.level == 0 {
+			s.entity(vulgarFraction(n))
+			break
+		}
+		s.start("sup")
+		s.text(n.text[:n.level])
+		s.end("sup")
+		s.entity("&frasl;", "\u2044")
+		s.start("sub")
+		s.text(n.text[len(n.text)-countDigitsBack(n.text):])
+		s.end("sub")
 	case kindTaskCheckbox:
 		if n.checked {
 			s.start("input", attr{"checked", nil, false}, attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
@@ -386,6 +489,9 @@ func (r *renderer) appendPlain(n *node) {
 		case kindTypo:
 			html, _ := r.opts.Typographer.entity(typo(c.level))
 			r.p.buf = append(r.p.buf, html...)
+		case kindFraction:
+			// Descriptions keep fractions as written.
+			r.p.buf = appendEscapedText(r.p.buf, c.text)
 		default:
 			r.appendPlain(c)
 		}
