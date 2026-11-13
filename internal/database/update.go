@@ -57,10 +57,6 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
 
-	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
-		return errors.Newf("update server info: %v", err)
-	}
-
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {
 		return errors.Newf("GetUserByName: %v", err)

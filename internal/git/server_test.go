@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,15 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestUpdateServerInfo(t *testing.T) {
-	ctx := context.Background()
-	err := os.RemoveAll(filepath.Join(repoPath, "info"))
-	require.NoError(t, err)
-	err = UpdateServerInfo(ctx, repoPath)
-	require.NoError(t, err)
-	assert.True(t, isFile(filepath.Join(repoPath, "info", "refs")))
-}
 
 func TestIsSupportedProtocol(t *testing.T) {
 	tests := []struct {

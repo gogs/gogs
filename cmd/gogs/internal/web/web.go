@@ -583,16 +583,8 @@ func Run(configPath string, portOverride int) error {
 
 		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
-		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
 		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/alternates", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/http-alternates", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/packs", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/*", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/:prefix([0-9a-f]{2})/:suffix([0-9a-f]{62}|[0-9a-f]{38})", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/pack/pack-:sha([0-9a-f]{64}|[0-9a-f]{40}).pack", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/pack/pack-:sha([0-9a-f]{64}|[0-9a-f]{40}).idx", "GET,OPTIONS", gitHTTP...)
 	})
 
 	// ***************************

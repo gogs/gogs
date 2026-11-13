@@ -10,17 +10,6 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
-// UpdateServerInfo updates the auxiliary info file on the server side for the
-// repository in given path.
-func UpdateServerInfo(ctx context.Context, path string) error {
-	ctx, span := tracer.Start(ctx, "git.UpdateServerInfo")
-	defer span.End()
-
-	args := []string{"update-server-info", "--end-of-options"}
-	_, err := exec(ctx, path, args, nil)
-	return err
-}
-
 // Service is a Git service that serves fetches and pushes.
 type Service string
 

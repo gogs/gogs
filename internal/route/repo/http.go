@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -216,10 +215,9 @@ Please create and use personal access token on user settings page`)
 }
 
 type serviceHandler struct {
-	w    http.ResponseWriter
-	r    *http.Request
-	dir  string
-	file string
+	w   http.ResponseWriter
+	r   *http.Request
+	dir string
 
 	authUser  *database.User
 	ownerName string
@@ -232,28 +230,6 @@ func (h *serviceHandler) setHeaderNoCache() {
 	h.w.Header().Set("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	h.w.Header().Set("Pragma", "no-cache")
 	h.w.Header().Set("Cache-Control", "no-cache, max-age=0, must-revalidate")
-}
-
-func (h *serviceHandler) setHeaderCacheForever() {
-	now := time.Now().Unix()
-	expires := now + 31536000
-	h.w.Header().Set("Date", fmt.Sprintf("%d", now))
-	h.w.Header().Set("Expires", fmt.Sprintf("%d", expires))
-	h.w.Header().Set("Cache-Control", "public, max-age=31536000")
-}
-
-func (h *serviceHandler) sendFile(contentType string) {
-	reqFile := path.Join(h.dir, h.file)
-	fi, err := os.Stat(reqFile)
-	if os.IsNotExist(err) {
-		h.w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	h.w.Header().Set("Content-Type", contentType)
-	h.w.Header().Set("Content-Length", fmt.Sprintf("%d", fi.Size()))
-	h.w.Header().Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
-	http.ServeFile(h.w, h.r, reqFile)
 }
 
 func serviceRPC(h serviceHandler, service string) {
@@ -341,10 +317,7 @@ func getInfoRefs(h serviceHandler) {
 	h.setHeaderNoCache()
 	service := getServiceType(h.r)
 	if service != "upload-pack" && service != "receive-pack" {
-		if err := git.UpdateServerInfo(h.r.Context(), h.dir); err != nil {
-			log.Error("HTTP.getInfoRefs: fail to update server info: %v", err)
-		}
-		h.sendFile("text/plain; charset=utf-8")
+		http.Error(h.w, "The dumb HTTP protocol is not supported, please upgrade your Git client.", http.StatusForbidden)
 		return
 	}
 
@@ -366,31 +339,6 @@ func getInfoRefs(h serviceHandler) {
 	_, _ = h.w.Write(refs.Bytes())
 }
 
-func getTextFile(h serviceHandler) {
-	h.setHeaderNoCache()
-	h.sendFile("text/plain")
-}
-
-func getInfoPacks(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("text/plain; charset=utf-8")
-}
-
-func getLooseObject(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("application/x-git-loose-object")
-}
-
-func getPackFile(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("application/x-git-packed-objects")
-}
-
-func getIdxFile(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("application/x-git-packed-objects-toc")
-}
-
 var routes = []struct {
 	re      *lazyregexp.Regexp
 	method  string
@@ -399,14 +347,6 @@ var routes = []struct {
 	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
 	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
 	{lazyregexp.New("(.*?)/info/refs$"), "GET", getInfoRefs},
-	{lazyregexp.New("(.*?)/HEAD$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/alternates$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
-	{lazyregexp.New("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/(?:[0-9a-f]{38}|[0-9a-f]{62})$"), "GET", getLooseObject},
-	{lazyregexp.New("(.*?)/objects/pack/pack-(?:[0-9a-f]{40}|[0-9a-f]{64})\\.pack$"), "GET", getPackFile},
-	{lazyregexp.New("(.*?)/objects/pack/pack-(?:[0-9a-f]{40}|[0-9a-f]{64})\\.idx$"), "GET", getIdxFile},
 }
 
 func getGitRepoPath(dir string) (string, error) {
@@ -447,13 +387,6 @@ func HTTP(c *HTTPContext) {
 			return
 		}
 
-		file := strings.TrimPrefix(reqPath, cleaned)
-		// 🚨 SECURITY: Prevent path traversal, e.g., via backslashes on Windows.
-		if file != "/"+pathx.Clean(file) {
-			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
-			return
-		}
-
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
@@ -462,10 +395,9 @@ func HTTP(c *HTTPContext) {
 		}
 
 		route.handler(serviceHandler{
-			w:    c.Resp,
-			r:    c.Req.Request,
-			dir:  dir,
-			file: file,
+			w:   c.Resp,
+			r:   c.Req.Request,
+			dir: dir,
 
 			authUser:  c.AuthUser,
 			ownerName: c.OwnerName,

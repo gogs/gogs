@@ -1262,10 +1262,6 @@ func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOpt
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, errors.Newf("initRepository: %v", err)
 		}
-
-		if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
-			return nil, errors.Newf("CreateRepository 'git update-server-info': %v", err)
-		}
 	}
 	if err = sess.Commit(); err != nil {
 		return nil, err
@@ -2575,10 +2571,6 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
 		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
-	}
-
-	if err = git.UpdateServerInfo(ctx, repoPath); err != nil {
-		return nil, errors.Newf("git update-server-info: %v", err)
 	}
 
 	if err = createDelegateHooks(repoPath); err != nil {
