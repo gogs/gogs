@@ -483,8 +483,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 			m.Group("", func() {
 				m.Get("/src/*", repo.Home)
-				m.Get("/commits/*", repo.RefCommits)
 			}, repo.MustBeNotEmpty, context.RepoRef())
+			m.Get("/commits/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
 			m.Get("/commit/:sha([a-f0-9]{7,64})\\.:ext(patch|diff)", flamegoBridger(webHandler))

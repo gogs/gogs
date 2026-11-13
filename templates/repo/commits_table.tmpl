@@ -1,19 +1,6 @@
 <h4 class="ui top attached header">
-	{{if .PageIsCommits}}
-		{{.i18n.Tr "repo.commits.commit_history"}}
-	{{else}}
-		{{.CommitsCount}} {{.i18n.Tr "repo.commits.commits"}}
-	{{end}}
-	{{if .PageIsCommits}}
-		<div class="ui right">
-			<form action="{{.RepoLink}}/commits/{{.BranchName}}/search">
-				<div class="ui tiny search input">
-					<input name="q" placeholder="{{.i18n.Tr "repo.commits.search"}}" value="{{.Keyword}}" autofocus>
-				</div>
-				<button class="ui black tiny button" data-panel="#add-deploy-key-panel">{{.i18n.Tr "repo.commits.find"}}</button>
-			</form>
-		</div>
-	{{else if .IsDiffCompare}}
+	{{.CommitsCount}} {{.i18n.Tr "repo.commits.commits"}}
+	{{if .IsDiffCompare}}
 		{{if .BaseIsEmptyTree}}
 			<span class="ui green sha label">{{ShortSHA1 .BeforeCommitID}}</span> ...
 		{{else}}
@@ -61,14 +48,3 @@
 	</div>
 {{end}}
 
-{{if or .HasPrevious .HasNext}}
-	<br>
-	<div class="center">
-		<a class="ui small button {{if not .HasPrevious}}disabled{{end}}" {{if .HasPrevious}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.PreviousPage}}&pageSize={{.PageSize}}"{{end}}>
-			{{$.i18n.Tr "repo.commits.newer"}}
-		</a>
-		<a class="ui small button {{if not .HasNext}}disabled{{end}}" {{if .HasNext}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.NextPage}}&pageSize={{.PageSize}}"{{end}}>
-			{{$.i18n.Tr "repo.commits.older"}}
-		</a>
-	</div>
-{{end}}

@@ -2,11 +2,12 @@ import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { LoaderResponseError, loadSignedInPage, loaderResponseError } from "@/lib/loader-error";
-import { type PageSearch, validatePageSearch } from "@/lib/page-search";
+import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
   fetchRepoBranchSettings,
   fetchRepoBranches,
   fetchRepoCollaborators,
+  fetchRepoCommits,
   fetchRepoDeployKeys,
   fetchRepoEditorTarget,
   fetchRepoForkOptions,
@@ -37,6 +38,7 @@ import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoCommits } from "@/pages/repo/Commits";
 import { RepoFileDelete, RepoFileEditor, RepoFileUpload } from "@/pages/repo/Editor";
 import { RepoForks } from "@/pages/repo/Forks";
 import { RepoIssue } from "@/pages/repo/Issue";
@@ -625,6 +627,40 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // The ref is followed by the path whose history to list, or by "search" to
+  // search the commit messages.
+  const repoCommitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/commits/$",
+    validateSearch: validateListSearch,
+    loaderDeps: ({ search }: { search: ListSearch }) => ({ page: search.page, q: search.q }),
+    loader: async ({ params, deps, context }) => {
+      const data = await loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoCommits(params.owner, params.repo, params._splat ?? "", deps),
+      );
+      if (data.search && !data.keyword) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({
+          to: "/$owner/$repo/commits/$",
+          params: { owner: params.owner, repo: params.repo, _splat: data.ref },
+        });
+      }
+      return data;
+    },
+    component: function Commits() {
+      const { owner, repo } = repoCommitsRoute.useParams();
+      const data = repoCommitsRoute.useLoaderData();
+      return (
+        <RepoCommits
+          key={`${owner}/${repo}@${data.ref}/${data.path}?${data.keyword}`}
+          owner={owner}
+          name={repo}
+          data={data}
+        />
+      );
+    },
+  });
+
   const repoReleasesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/releases",
@@ -877,6 +913,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
 
   return [
     repoCommitRoute,
+    repoCommitsRoute,
     repoStargazersRoute,
     repoWatchersRoute,
     repoIssuesRoute,

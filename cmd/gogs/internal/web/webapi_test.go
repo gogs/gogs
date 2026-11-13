@@ -48,6 +48,7 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/alice/repo/forks",
 		"/api/web/alice/repo/releases",
 		"/api/web/alice/repo/branches",
+		"/api/web/alice/repo/commits/main/README.md",
 		"/api/web/alice/repo/wiki",
 		"/api/web/alice/repo/wiki/pages",
 	}
