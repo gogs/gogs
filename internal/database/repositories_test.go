@@ -36,6 +36,8 @@ func TestRepository_BeforeCreate(t *testing.T) {
 		repo := &Repository{}
 		_ = repo.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), repo.CreatedUnix)
+		assert.Equal(t, db.NowFunc().Unix(), repo.Created.Unix())
+		assert.Equal(t, db.NowFunc().Unix(), repo.Updated.Unix())
 	})
 }
 

@@ -59,6 +59,9 @@ func (issue *Issue) BeforeCreate(tx *gorm.DB) error {
 		issue.CreatedUnix = tx.NowFunc().Unix()
 		issue.UpdatedUnix = issue.CreatedUnix
 	}
+	// Webhook payloads and API responses use the issue just created.
+	issue.Created = time.Unix(issue.CreatedUnix, 0).Local()
+	issue.Updated = time.Unix(issue.UpdatedUnix, 0).Local()
 	return nil
 }
 

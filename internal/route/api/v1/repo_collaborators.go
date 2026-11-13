@@ -3,6 +3,8 @@ package v1
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
+
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
@@ -34,6 +36,11 @@ func addCollaborator(c *context.APIContext, form addCollaboratorRequest) {
 		} else {
 			c.Error(err, "get user by name")
 		}
+		return
+	}
+
+	if collaborator.IsOrganization() {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("organization is not allowed to be added as a collaborator"))
 		return
 	}
 
