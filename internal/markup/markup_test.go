@@ -8,7 +8,7 @@ import (
 	. "gogs.io/gogs/internal/markup"
 )
 
-func Test_IsReadmeFile(t *testing.T) {
+func TestIsReadmeFile(t *testing.T) {
 	tests := []struct {
 		name   string
 		expVal bool
@@ -31,7 +31,7 @@ func Test_IsReadmeFile(t *testing.T) {
 	}
 }
 
-func Test_FindAllMentions(t *testing.T) {
+func TestFindAllMentions(t *testing.T) {
 	tests := []struct {
 		input      string
 		expMatches []string
@@ -51,7 +51,7 @@ func Test_FindAllMentions(t *testing.T) {
 	}
 }
 
-func Test_RenderIssueIndexPattern(t *testing.T) {
+func TestRenderIssueIndexPattern(t *testing.T) {
 	urlPrefix := "/prefix"
 	t.Run("render to internal issue tracker", func(t *testing.T) {
 		tests := []struct {
