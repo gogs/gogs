@@ -21,6 +21,11 @@ import (
 
 var commitIDPattern = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
 
+// compareRangeRoute matches the "{before}...{after}" segment of compare routes
+// for SHA-1 and SHA-256 commit IDs. Flamego binds parameters by submatch
+// position, so the patterns must not contain capture groups.
+const compareRangeRoute = "{before: /[0-9a-f]{40}|[0-9a-f]{64}/}...{after: /[0-9a-f]{40}|[0-9a-f]{64}/}"
+
 // repoRef is a branch, a tag or a commit of a repository, and the path after
 // it in a route.
 type repoRef struct {
