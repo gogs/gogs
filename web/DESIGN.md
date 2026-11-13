@@ -55,7 +55,11 @@ Don't use foreground vs muted-foreground to imply "primary action" vs "secondary
 
 **Ad-hoc colors**
 
-The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the amber dot falls back to `oklch(0.795 0.184 86.047)` via `bg-(--color-warning,...)`. There is no `--color-warning` token defined, so the fallback always wins. This is deliberate. Promoting it to a real token would invite reuse, and warning is not a system-wide concern in the current UI. Leave it inline until a second site needs warning semantics, then define the token in both light and dark palettes.
+The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the amber dot is the literal `oklch(0.795 0.184 86.047)` at 70% opacity. It is decoration, so it keeps that softer amber instead of the warning token.
+
+**Warning**
+
+`--color-warning` (amber, defined in both palettes) marks content that asks for attention without being an error, e.g., the notice banner below the navbar. It is dark enough in the light palette to meet 3:1 as an icon on white, so use it for the icon and border, a 10% tint of it for the background, and keep the text in `--color-foreground`. Links inside a warning surface use the foreground color with an underline, because the primary color loses contrast on the tint.
 
 ## Surface chrome
 

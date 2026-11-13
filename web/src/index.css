@@ -54,6 +54,7 @@
   --color-destructive: initial;
   --color-destructive-foreground: initial;
   --color-success: initial;
+  --color-warning: initial;
   --color-merged: initial;
   --color-diff-added: initial;
   --color-diff-removed: initial;
@@ -83,6 +84,7 @@
   --color-destructive: #d52c36;
   --color-destructive-foreground: #ffffff;
   --color-success: #15803d;
+  --color-warning: #b45309;
   --color-merged: #6f42c1;
   --color-diff-added: #16a34a;
   --color-diff-removed: #dc2626;
@@ -119,6 +121,7 @@
   --color-destructive: #ff6762;
   --color-destructive-foreground: #ffffff;
   --color-success: #4ade80;
+  --color-warning: #fbbf24;
   --color-merged: #b392f0;
   --color-diff-added: #4ade80;
   --color-diff-removed: #f87171;

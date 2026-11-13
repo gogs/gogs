@@ -12,6 +12,8 @@ export interface WebContext {
   error?: string;
   // The version of Gogs, for site admins on a server error.
   version?: string;
+  // The HTML of the notice banner that every page shows.
+  notice?: string;
 }
 
 declare global {
@@ -32,6 +34,7 @@ function read(): WebContext {
     page: ctx.page,
     error: ctx.error,
     version: ctx.version,
+    notice: ctx.notice,
   };
 }
 
