@@ -250,6 +250,18 @@ func TestRenderSha1CurrentPattern(t *testing.T) {
 			expVal: `<a href="/someuser/somerepo/commit/ad8ced4f"><code>ad8ced4f</code></a>`,
 		},
 		{
+			desc:   "Full SHA-256 (64 symbols)",
+			input:  "6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321",
+			prefix: metas["repoLink"],
+			expVal: `<a href="/someuser/somerepo/commit/6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321"><code>6ef19b4122</code></a>`,
+		},
+		{
+			desc:   "Hex string longer than 40 symbols but not 64",
+			input:  "ad8ced4f57d9068cb2874557245be3c7f341149dabcde",
+			prefix: metas["repoLink"],
+			expVal: "ad8ced4f57d9068cb2874557245be3c7f341149dabcde",
+		},
+		{
 			desc:   "9 digits",
 			input:  "123456789",
 			prefix: metas["repoLink"],

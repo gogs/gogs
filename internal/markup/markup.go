@@ -51,7 +51,9 @@ var (
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern by converting string to a number.
-	Sha1CurrentPattern = lazyregexp.New(`\b[0-9a-f]{7,64}\b`)
+	// Only full SHA-256 commit IDs are longer than 40, so other hex strings, e.g.,
+	// checksums of 41 to 63 characters, are not mistaken for commit IDs.
+	Sha1CurrentPattern = lazyregexp.New(`\b(?:[0-9a-f]{7,40}|[0-9a-f]{64})\b`)
 )
 
 // FindAllMentions matches mention patterns in given content
