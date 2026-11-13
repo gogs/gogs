@@ -9,6 +9,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose/v3/database"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 )
@@ -75,13 +76,20 @@ func Migrate(db *gorm.DB) error {
 		return errors.Newf("unsupported dialect %q", db.Name())
 	}
 
-	provider, err := goose.NewProvider(
-		dialect,
-		sqlDB,
-		nil,
+	opts := []goose.ProviderOption{
 		goose.WithDisableGlobalRegistry(true),
 		goose.WithGoMigrations(newMigrations(db)...),
-	)
+	}
+	if dialect == goose.DialectPostgres {
+		store, err := database.NewStore(dialect, goose.DefaultTablename)
+		if err != nil {
+			return errors.Wrap(err, "new goose store")
+		}
+		dialect = goose.DialectCustom
+		opts = append(opts, goose.WithStore(postgresStore{StoreExtender: store.(database.StoreExtender)}))
+	}
+
+	provider, err := goose.NewProvider(dialect, sqlDB, nil, opts...)
 	if err != nil {
 		return errors.Wrap(err, "new goose provider")
 	}
@@ -91,6 +99,23 @@ func Migrate(db *gorm.DB) error {
 		return errors.Wrap(err, "run migrations")
 	}
 	return nil
+}
+
+// postgresStore creates the goose version table with a serial ID instead of
+// the identity column goose uses, which requires PostgreSQL 10 while Gogs
+// supports PostgreSQL 9.6.
+type postgresStore struct {
+	database.StoreExtender
+}
+
+func (s postgresStore) CreateVersionTable(ctx context.Context, db database.DBTxConn) error {
+	_, err := db.ExecContext(ctx, `CREATE TABLE `+s.Tablename()+` (
+		id serial PRIMARY KEY,
+		version_id bigint NOT NULL,
+		is_applied boolean NOT NULL,
+		tstamp timestamp NOT NULL DEFAULT now()
+	)`)
+	return err
 }
 
 // Version represents the legacy "version" table. It should have only one row
