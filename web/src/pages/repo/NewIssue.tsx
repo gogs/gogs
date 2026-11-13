@@ -97,7 +97,14 @@ export function RepoNewIssue({
                 ) : null}
               </div>
               <div className="mt-4 rounded-md border border-(--color-border) p-3">
-                <MarkdownEditor repo={repoRef} label={t("repo.issues.new")} value={content} onChange={setContent} />
+                <MarkdownEditor
+                  repo={repoRef}
+                  label={t("repo.issues.new")}
+                  value={content}
+                  onChange={setContent}
+                  disabled={mutation.isPending}
+                  uploads={uploads}
+                />
                 <PendingFiles uploads={uploads} />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                   <AttachFilesButton uploads={uploads} />
