@@ -14,7 +14,12 @@
 			</form>
 		</div>
 	{{else if .IsDiffCompare}}
-		<a href="{{$.CommitRepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSHA1 .BeforeCommitID}}</a> ... <a href="{{$.CommitRepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSHA1 .AfterCommitID}}</a>
+		{{if .BaseIsEmptyTree}}
+			<span class="ui green sha label">{{ShortSHA1 .BeforeCommitID}}</span> ...
+		{{else}}
+			<a href="{{$.CommitRepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSHA1 .BeforeCommitID}}</a> ...
+		{{end}}
+		<a href="{{$.CommitRepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSHA1 .AfterCommitID}}</a>
 	{{end}}
 </h4>
 

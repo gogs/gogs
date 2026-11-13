@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -495,6 +496,7 @@ func SyncMirrors() {
 
 			// Push commits
 			var commits []*git.Commit
+			var newRefCommitsCount int64
 			var oldCommitID string
 			var newCommitID string
 			if !isNewRef {
@@ -521,15 +523,28 @@ func SyncMirrors() {
 					continue
 				}
 
-				// TODO(unknwon): Get the commits for the new ref until the closest ancestor branch like GitHub does.
-				commits, err = refNewCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
+				// The commits the branch adds since it forked from the default branch, or
+				// all of its commits when it adds none, e.g., it is the default branch,
+				// or they share no history, which is what the compare link of the feed
+				// shows.
+				rev := refNewCommit.ID.String()
+				mergeBase, err := gitRepo.MergeBase(ctx, git.RefsHeads+m.Repo.DefaultBranch, rev)
+				if err != nil && !git.IsErrNoMergeBase(err) {
+					log.Error("Failed to get merge base [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
+					continue
+				} else if err == nil && mergeBase != rev {
+					rev = mergeBase + ".." + rev
+				}
+				newRefCommitsCount, err = gitRepo.RevListCount(ctx, []string{rev})
 				if err != nil {
-					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
+					log.Error("Failed to count commits [repo_id: %d, rev: %s]: %v", m.RepoID, rev, err)
 					continue
 				}
-
-				// Put the latest commit in front of ancestors
-				commits = append([]*git.Commit{refNewCommit}, commits...)
+				commits, err = gitRepo.Log(ctx, rev, git.LogOptions{MaxCount: 10})
+				if err != nil {
+					log.Error("Failed to list commits [repo_id: %d, rev: %s]: %v", m.RepoID, rev, err)
+					continue
+				}
 
 				objectFormat, err := gitRepo.ObjectFormat(ctx)
 				if err != nil {
@@ -540,6 +555,10 @@ func SyncMirrors() {
 				newCommitID = refNewCommit.ID.String()
 			}
 
+			pushCommits := CommitsToPushCommits(commits)
+			if newRefCommitsCount > 0 && newRefCommitsCount <= math.MaxInt {
+				pushCommits.Len = int(newRefCommitsCount)
+			}
 			err = Handle.Actions().MirrorSyncPush(ctx,
 				MirrorSyncPushOptions{
 					Owner:       m.Repo.MustOwner(),
@@ -547,7 +566,7 @@ func SyncMirrors() {
 					RefName:     result.refName,
 					OldCommitID: oldCommitID,
 					NewCommitID: newCommitID,
-					Commits:     CommitsToPushCommits(commits),
+					Commits:     pushCommits,
 				},
 			)
 			if err != nil {
