@@ -48,7 +48,7 @@ func getRawFile(c *apiContext) {
 			break
 		}
 	}
-	if !hasMatched && len(parts[0]) == 40 {
+	if !hasMatched && (len(parts[0]) == 40 || len(parts[0]) == 64) {
 		refName = parts[0]
 		treePath = strings.Join(parts[1:], "/")
 	}
@@ -67,7 +67,7 @@ func getRawFile(c *apiContext) {
 			c.Error(err, "get tag commit")
 			return
 		}
-	case len(refName) == 40:
+	case len(refName) == 40 || len(refName) == 64:
 		commit, err = gitRepo.CatFileCommit(ctx, refName)
 		if err != nil {
 			c.NotFound()
