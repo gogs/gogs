@@ -46,6 +46,7 @@ import {
   fetchRepoPullCommits,
   fetchRepoRelease,
   fetchRepoReleases,
+  fetchRepoSearch,
   fetchRepoSrc,
   fetchRepoWiki,
   fetchRepoWikiPageSource,
@@ -79,6 +80,7 @@ import { RepoPeople } from "@/pages/repo/People";
 import { RepoPull } from "@/pages/repo/Pull";
 import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
 import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
+import { RepoSearch } from "@/pages/repo/Search";
 import {
   RepoBranchProtection,
   RepoBranchSettings,
@@ -890,6 +892,23 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // The ref is the whole route path, or the default branch when it is empty.
+  const repoSearchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/search/$",
+    validateSearch: (search: Record<string, unknown>): { q?: string } => ({ q: validateListSearch(search).q }),
+    loaderDeps: ({ search }: { search: { q?: string } }) => ({ q: search.q }),
+    loader: ({ params, deps, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoSearch(params.owner, params.repo, params._splat ?? "", deps.q),
+      ),
+    component: function Search() {
+      const { owner, repo } = repoSearchRoute.useParams();
+      const data = repoSearchRoute.useLoaderData();
+      return <RepoSearch key={`${owner}/${repo}@${data.ref}?${data.keyword}`} owner={owner} name={repo} data={data} />;
+    },
+  });
+
   function RepoCodePage({
     owner,
     repo,
@@ -1210,6 +1229,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoHomeRoute,
     repoSrcRoute,
     repoCommitsRoute,
+    repoSearchRoute,
     repoStargazersRoute,
     repoWatchersRoute,
     repoIssuesRoute,
