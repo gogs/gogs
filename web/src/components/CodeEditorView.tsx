@@ -55,6 +55,7 @@ export default function CodeEditorView({
   minLines = 6,
   disabled = false,
   autoFocus = false,
+  onFiles,
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
 }: CodeEditorProps) {
@@ -64,6 +65,12 @@ export default function CodeEditorView({
   const [editable] = useState(() => new Compartment());
   const [initial] = useState(() => ({ value, lang, code, minLines, autoFocus }));
   const emitChange = useEffectEvent((text: string) => onChange(text));
+  // takeFiles hands over pasted or dropped files, and tells whether anyone
+  // took them.
+  const takeFiles = useEffectEvent((files: FileList) => {
+    onFiles?.(files);
+    return Boolean(onFiles);
+  });
 
   useEffect(() => {
     const v = new EditorView({
@@ -82,10 +89,16 @@ export default function CodeEditorView({
           EditorView.contentAttributes.of(
             initial.code ? { spellcheck: "false", autocorrect: "off", autocapitalize: "off" } : { spellcheck: "true" },
           ),
-          // Dropping a file would otherwise insert its bytes as text.
           EditorView.domEventHandlers({
+            // Dropping a file would otherwise insert its bytes as text.
             drop: (e) => {
               if (!e.dataTransfer?.files.length) return false;
+              e.preventDefault();
+              takeFiles(e.dataTransfer.files);
+              return true;
+            },
+            paste: (e) => {
+              if (!e.clipboardData?.files.length || !takeFiles(e.clipboardData.files)) return false;
               e.preventDefault();
               return true;
             },
