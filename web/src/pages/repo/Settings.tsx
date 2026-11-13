@@ -1475,7 +1475,7 @@ export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: st
   };
 
   return (
-    <RepoSettingsLayout owner={owner} name={name} active="githooks">
+    <RepoSettingsLayout owner={owner} name={name} active="githooks" wide>
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <h1 className="font-mono text-xl font-semibold">{hook.name}</h1>
         <HookState isActive={hook.isActive} />
