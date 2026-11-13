@@ -40,6 +40,9 @@ func Test_FindAllMentions(t *testing.T) {
 		{input: "@unknwon what do you think?", expMatches: []string{"unknwon"}},
 		{input: "Hi @unknwon, sounds good to me", expMatches: []string{"unknwon"}},
 		{input: "cc/ @unknwon @eddycjy", expMatches: []string{"unknwon", "eddycjy"}},
+		{input: "# @unknwon\n\n> * @eddycjy", expMatches: []string{"unknwon", "eddycjy"}},
+		{input: "<b>x</b> @unknwon", expMatches: []string{"unknwon"}},
+		{input: "`@unknwon` [@eddycjy](https://example.com/@a) https://example.com/@b\n\n    @c\n\n```\n@d\n```"},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {

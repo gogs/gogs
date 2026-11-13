@@ -59,14 +59,41 @@ var (
 	Sha1CurrentPattern = lazyregexp.New(`\b(?:[0-9a-f]{7,40}|[0-9a-f]{64})\b`)
 )
 
-// FindAllMentions matches mention patterns in given content
-// and returns a list of found user names without @ prefix.
+// FindAllMentions returns the user names, without "@", of the mentions that
+// render as links in content, which is Markdown. Mentions in code and links
+// are not included.
 func FindAllMentions(content string) []string {
-	mentions := MentionPattern.FindAllString(content, -1)
-	for i := range mentions {
-		mentions[i] = mentions[i][strings.Index(mentions[i], "@")+1:] // Strip @ character
+	body := bytes.TrimPrefix([]byte(content), utf8BOM)
+	var names []string
+	guardRender(body, func() []byte {
+		opts := markdownOptions("")
+		opts.Gogs = &dariomark.GogsOptions{
+			SpecialLinks: func(text []byte) []dariomark.SpecialLink {
+				if bytes.IndexByte(text, '@') >= 0 {
+					for _, m := range findMentions(text) {
+						names = append(names, string(m.Text[1:]))
+					}
+				}
+				return nil
+			},
+		}
+		dariomark.Render(body, opts)
+		return nil
+	})
+	return names
+}
+
+// findMentions returns the mentions in text.
+func findMentions(text []byte) []linkSpan {
+	var spans []linkSpan
+	for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(text, -1) {
+		// The mention starts after the character before the "@" that the
+		// pattern requires.
+		start := loc[3]
+		m := text[start:loc[1]]
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
 	}
-	return mentions
+	return spans
 }
 
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
@@ -238,13 +265,7 @@ func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string
 	}
 	var spans []linkSpan
 	if kinds&linkMention != 0 {
-		for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(rawBytes, -1) {
-			// The mention starts after the character before the "@" that the
-			// pattern requires.
-			start := loc[3]
-			m := rawBytes[start:loc[1]]
-			spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
-		}
+		spans = findMentions(rawBytes)
 	}
 	if kinds&linkIssue != 0 {
 		spans = findIssueIndexes(rawBytes, urlPrefix, metas, spans)
