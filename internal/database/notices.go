@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
+
+	"gogs.io/gogs/internal/applog"
 )
 
 // NoticesStore is the storage layer for system notices.
@@ -98,7 +99,7 @@ func RemoveAllWithNotice(title, path string) {
 	if err := os.RemoveAll(path); err != nil {
 		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
 		if err = Handle.Notices().Create(context.Background(), NoticeTypeRepository, desc); err != nil {
-			log.Error("Failed to create repository notice: %v", err)
+			applog.Logger.Errorf("Failed to create repository notice: %v", err)
 		}
 	}
 }

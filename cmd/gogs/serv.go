@@ -11,8 +11,8 @@ import (
 
 	"github.com/urfave/cli/v3"
 	"go.opentelemetry.io/otel/codes"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
@@ -42,12 +42,11 @@ func fail(userMessage, errMessage string, args ...any) {
 		if !conf.IsProdMode() {
 			fmt.Fprintf(os.Stderr, errMessage+"\n", args...)
 		}
-		log.Error(errMessage, args...)
+		applog.Logger.Errorf(errMessage, args...)
 	}
 
 	processSpan.SetStatus(codes.Error, userMessage)
 	endProcessSpan()
-	log.Stop()
 	os.Exit(1)
 }
 
@@ -61,23 +60,7 @@ func setup(cmd *cli.Command, logFile string, connectDB bool) {
 		fail("Internal error", "Failed to init configuration: %v", err)
 	}
 	conf.InitLogging(true)
-
-	level := log.LevelTrace
-	if conf.IsProdMode() {
-		level = log.LevelError
-	}
-
-	err = log.NewFile(log.FileConfig{
-		Level:    level,
-		Filename: filepath.Join(conf.Log.RootPath, "hooks", logFile),
-		Rotate:   true,
-		Daily:    true,
-		MaxDays:  3,
-	})
-	if err != nil {
-		fail("Internal error", "Failed to init file logger: %v", err)
-	}
-	log.Remove(log.DefaultConsoleName) // Remove the primary logger
+	conf.InitHookLogging(filepath.Join(conf.Log.RootPath, "hooks", logFile))
 
 	if !connectDB {
 		return

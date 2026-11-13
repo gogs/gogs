@@ -5,8 +5,8 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -187,7 +187,7 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 		} else {
 			if repo != nil {
 				if err = database.DeleteRepository(c.User.ID, repo.ID); err != nil {
-					log.Error("Failed to delete repository: %v", err)
+					applog.Logger.Errorf("Failed to delete repository: %v", err)
 				}
 			}
 			c.Error(err, "create repository")
@@ -291,7 +291,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 	if err != nil {
 		if repo != nil {
 			if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-				log.Error("DeleteRepository: %v", errDelete)
+				applog.Logger.Errorf("DeleteRepository: %v", errDelete)
 			}
 		}
 
@@ -303,7 +303,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
+	applog.Logger.Tracef("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
 	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
@@ -357,7 +357,7 @@ func deleteRepo(c *context.APIContext) {
 		return
 	}
 
-	log.Trace("Repository deleted: %s/%s", owner.Name, repo.Name)
+	applog.Logger.Tracef("Repository deleted: %s/%s", owner.Name, repo.Name)
 	c.NoContent()
 }
 

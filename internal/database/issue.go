@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
@@ -243,7 +243,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error("LoadIssue: %v", err)
+			applog.Logger.Errorf("LoadIssue: %v", err)
 			return
 		}
 		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -263,7 +263,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 		})
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 }
 
@@ -356,7 +356,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error("LoadIssue: %v", err)
+			applog.Logger.Errorf("LoadIssue: %v", err)
 			return err
 		}
 		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -376,7 +376,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 		})
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -514,7 +514,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		err = PrepareWebhooks(repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
 	}
 
 	return nil
@@ -556,7 +556,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 		})
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -598,7 +598,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 		})
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -612,7 +612,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 
 	issue.Assignee, err = Handle.Users().GetByID(context.TODO(), issue.AssigneeID)
 	if err != nil && !IsErrUserNotExist(err) {
-		log.Error("Failed to get user by ID: %v", err)
+		applog.Logger.Errorf("Failed to get user by ID: %v", err)
 		return nil
 	}
 
@@ -647,7 +647,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
 	}
 
 	return nil
@@ -783,10 +783,10 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		log.Error("NotifyWatchers: %v", err)
+		applog.Logger.Errorf("NotifyWatchers: %v", err)
 	}
 	if err = issue.MailParticipants(); err != nil {
-		log.Error("MailParticipants: %v", err)
+		applog.Logger.Errorf("MailParticipants: %v", err)
 	}
 
 	if err = PrepareWebhooks(repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
@@ -796,7 +796,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		Repository: repo.APIFormatLegacy(nil),
 		Sender:     issue.Poster.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks: %v", err)
+		applog.Logger.Errorf("PrepareWebhooks: %v", err)
 	}
 
 	return nil

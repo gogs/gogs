@@ -3,7 +3,8 @@ package migrations
 import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
+
+	"gogs.io/gogs/internal/applog"
 )
 
 const minDBVersion = 19
@@ -95,7 +96,7 @@ func Migrate(db *gorm.DB) error {
 	}
 
 	if minDBVersion > current.Version {
-		log.Fatal(`
+		applog.Logger.Fatalf(`
 Hi there, thank you for using Gogs for so long!
 However, Gogs has stopped supporting auto-migration from your previously installed version.
 But the good news is, it's very easy to fix this problem!
@@ -129,12 +130,12 @@ In case you're stilling getting this notice, go through instructions again until
 	}
 
 	for _, m := range migrations[current.Version-minDBVersion:] {
-		log.Info("Migration: %s", m.Description())
+		applog.Logger.Infof("Migration: %s", m.Description())
 		if err = m.Migrate(db); err != nil {
 			if err != errMigrationSkipped {
 				return errors.Wrap(err, "do migrate")
 			}
-			log.Trace("The migration %q has been skipped", m.Description())
+			applog.Logger.Tracef("The migration %q has been skipped", m.Description())
 		}
 
 		current.Version++

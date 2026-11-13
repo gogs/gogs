@@ -10,6 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -200,7 +201,7 @@ func uploadAttachment(c *context.Context, allowedTypes []string) {
 		return
 	}
 
-	log.Trace("New attachment uploaded: %s", attach.UUID)
+	applog.Logger.Tracef("New attachment uploaded: %s", attach.UUID)
 	c.JSONSuccess(map[string]string{
 		"uuid": attach.UUID,
 	})
@@ -610,9 +611,9 @@ func NewComment(c *context.Context, f form.CreateComment) {
 				c.Flash.Info(c.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
 			} else {
 				if err = issue.ChangeStatus(c.User, c.Repo.Repository, f.Status == "close"); err != nil {
-					log.Error("ChangeStatus: %v", err)
+					applog.Logger.Errorf("ChangeStatus: %v", err)
 				} else {
-					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
+					applog.Logger.Tracef("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
 			}
 		}
@@ -645,7 +646,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 		return
 	}
 
-	log.Trace("Comment created: %d/%d/%d", c.Repo.Repository.ID, issue.ID, comment.ID)
+	applog.Logger.Tracef("Comment created: %d/%d/%d", c.Repo.Repository.ID, issue.ID, comment.ID)
 }
 
 func UpdateCommentContent(c *context.Context) {

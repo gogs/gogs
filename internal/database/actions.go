@@ -13,8 +13,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
@@ -526,7 +526,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	// Only update issues via commits when internal issue tracker is enabled
 	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
 		if err = updateCommitReferencesToIssues(pusher, opts.Repo, opts.Commits.Commits); err != nil {
-			log.Error("update commit references to issues: %v", err)
+			applog.Logger.Errorf("update commit references to issues: %v", err)
 		}
 	}
 
@@ -810,7 +810,7 @@ func (a *Action) GetIssueTitle() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error("Failed to get issue title [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
+		applog.Logger.Errorf("Failed to get issue title [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
 		return "error getting issue"
 	}
 	return issue.Title
@@ -820,7 +820,7 @@ func (a *Action) GetIssueContent() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error("Failed to get issue content [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
+		applog.Logger.Errorf("Failed to get issue content [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
 		return "error getting issue"
 	}
 	return issue.Content
@@ -930,7 +930,7 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 		if err != nil {
 			pcs.avatars[email] = tool.AvatarLink(email)
 			if !IsErrUserNotExist(err) {
-				log.Error("Failed to get user [email: %s]: %v", email, err)
+				applog.Logger.Errorf("Failed to get user [email: %s]: %v", email, err)
 			}
 		} else {
 			pcs.avatars[email] = u.AvatarURLPath()

@@ -8,8 +8,7 @@ import (
 	"strings"
 	"time"
 
-	log "unknwon.dev/clog/v2"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -306,7 +305,7 @@ func MergePullRequest(c *context.Context) {
 		return
 	}
 
-	log.Trace("Pull request merged: %d", pr.ID)
+	applog.Logger.Tracef("Pull request merged: %d", pr.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pr.Index, 10))
 }
 
@@ -319,7 +318,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	// same repo: master...feature
 	infos := strings.Split(c.Params("*"), "...")
 	if len(infos) != 2 {
-		log.Trace("ParseCompareInfo[%d]: not enough compared refs information %s", baseRepo.ID, infos)
+		applog.Logger.Tracef("ParseCompareInfo[%d]: not enough compared refs information %s", baseRepo.ID, infos)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -378,7 +377,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			c.Error(err, "get forked repository")
 			return nil, nil, nil, nil, "", ""
 		} else if !has {
-			log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have fork or in same repository", baseRepo.ID)
+			applog.Logger.Tracef("ParseCompareInfo [base_repo_id: %d]: does not have fork or in same repository", baseRepo.ID)
 			c.NotFound()
 			return nil, nil, nil, nil, "", ""
 		}
@@ -403,7 +402,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			Private: headRepo.IsPrivate,
 		},
 	) && !c.User.IsAdmin {
-		log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have write access or site admin", baseRepo.ID)
+		applog.Logger.Tracef("ParseCompareInfo [base_repo_id: %d]: does not have write access or site admin", baseRepo.ID)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -664,7 +663,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)
+	applog.Logger.Tracef("Pull request created: %d/%d", repo.ID, pullIssue.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pullIssue.Index, 10))
 }
 

@@ -15,10 +15,10 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/conf"
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/semverx"
 )
@@ -29,12 +29,6 @@ func init() {
 	// opt back in without a real terminal.
 	if os.Getenv("TTY_FORCE") != "" {
 		color.NoColor = false
-	}
-
-	// Initialize the primary logger until logging service is up.
-	err := log.NewConsole()
-	if err != nil {
-		panic("init console logger: " + err.Error())
 	}
 }
 
@@ -158,7 +152,7 @@ func Init(customConf string) error {
 
 			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
 				if !HookMode {
-					log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+					applog.Logger.Warnf(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
 	2. OpenSSH version is lower than 5.1`)
 				}
@@ -396,7 +390,7 @@ func Init(customConf string) error {
 	handleDeprecated()
 	if !HookMode {
 		for _, warning := range checkInvalidOptions(File) {
-			log.Warn("%s", warning)
+			applog.Logger.Warnf("%s", warning)
 		}
 	}
 

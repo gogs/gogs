@@ -15,8 +15,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
 	"golang.org/x/crypto/ssh"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
@@ -40,7 +40,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 
 		ch, reqs, err := newChan.Accept()
 		if err != nil {
-			log.Error("Error accepting channel: %v", err)
+			applog.Logger.Errorf("Error accepting channel: %v", err)
 			continue
 		}
 
@@ -56,7 +56,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				case "env":
 					var env struct{ Name, Value string }
 					if err := ssh.Unmarshal(req.Payload, &env); err != nil {
-						log.Error("SSH: Unmarshal env: %v", err)
+						applog.Logger.Errorf("SSH: Unmarshal env: %v", err)
 						_ = req.Reply(false, nil)
 						continue
 					}
@@ -69,10 +69,10 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
-					log.Trace("SSH: Payload: %v", cmdName)
+					applog.Logger.Tracef("SSH: Payload: %v", cmdName)
 
 					args := []string{"serv", "key-" + keyID, "--config=" + conf.CustomConf}
-					log.Trace("SSH: Arguments: %v", args)
+					applog.Logger.Tracef("SSH: Arguments: %v", args)
 					cmd := exec.Command(conf.AppPath(), args...)
 					cmd.Env = append(os.Environ(), "SSH_ORIGINAL_COMMAND="+cmdName)
 					if gitProtocol != "" {
@@ -81,23 +81,23 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
-						log.Error("SSH: StdoutPipe: %v", err)
+						applog.Logger.Errorf("SSH: StdoutPipe: %v", err)
 						return
 					}
 					stderr, err := cmd.StderrPipe()
 					if err != nil {
-						log.Error("SSH: StderrPipe: %v", err)
+						applog.Logger.Errorf("SSH: StderrPipe: %v", err)
 						return
 					}
 					input, err := cmd.StdinPipe()
 					if err != nil {
-						log.Error("SSH: StdinPipe: %v", err)
+						applog.Logger.Errorf("SSH: StdinPipe: %v", err)
 						return
 					}
 
 					// FIXME: check timeout
 					if err = cmd.Start(); err != nil {
-						log.Error("SSH: Start: %v", err)
+						applog.Logger.Errorf("SSH: Start: %v", err)
 						return
 					}
 
@@ -114,7 +114,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					_, _ = io.Copy(ch.Stderr(), stderr)
 
 					if err = cmd.Wait(); err != nil {
-						log.Error("SSH: Wait: %v", err)
+						applog.Logger.Errorf("SSH: Wait: %v", err)
 						return
 					}
 
@@ -130,13 +130,13 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 func listen(config *ssh.ServerConfig, host string, port int) {
 	listener, err := net.Listen("tcp", host+":"+strconv.Itoa(port))
 	if err != nil {
-		log.Fatal("Failed to start SSH server: %v", err)
+		applog.Logger.Fatalf("Failed to start SSH server: %v", err)
 	}
 	for {
 		// Once a ServerConfig has been configured, connections can be accepted.
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Error("SSH: Error accepting incoming connection: %v", err)
+			applog.Logger.Errorf("SSH: Error accepting incoming connection: %v", err)
 			continue
 		}
 
@@ -145,28 +145,28 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 		// otherwise one user could easily block entire loop.
 		// For example, user could be asked to trust server key fingerprint and hangs.
 		go func() {
-			log.Trace("SSH: Handshaking for %s", conn.RemoteAddr())
+			applog.Logger.Tracef("SSH: Handshaking for %s", conn.RemoteAddr())
 			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
-				log.Error("SSH: Failed to set handshake deadline: %v", err)
+				applog.Logger.Errorf("SSH: Failed to set handshake deadline: %v", err)
 				_ = conn.Close()
 				return
 			}
 			sConn, chans, reqs, err := ssh.NewServerConn(conn, config)
 			if err != nil {
 				if err == io.EOF || errors.Is(err, syscall.ECONNRESET) {
-					log.Trace("SSH: Handshaking was terminated: %v", err)
+					applog.Logger.Tracef("SSH: Handshaking was terminated: %v", err)
 				} else {
-					log.Error("SSH: Error on handshaking: %v", err)
+					applog.Logger.Errorf("SSH: Error on handshaking: %v", err)
 				}
 				return
 			}
 			if err := conn.SetDeadline(time.Time{}); err != nil {
-				log.Error("SSH: Failed to clear handshake deadline: %v", err)
+				applog.Logger.Errorf("SSH: Failed to clear handshake deadline: %v", err)
 				_ = sConn.Close()
 				return
 			}
 
-			log.Trace("SSH: Connection from %s (%s)", sConn.RemoteAddr(), sConn.ClientVersion())
+			applog.Logger.Tracef("SSH: Connection from %s (%s)", sConn.RemoteAddr(), sConn.ClientVersion())
 			// The incoming Request channel must be serviced.
 			go ssh.DiscardRequests(reqs)
 			go handleServerConn(sConn.Permissions.Extensions["key-id"], chans)
@@ -183,7 +183,7 @@ func Listen(opts conf.SSHOpts, appDataPath string) {
 			pkey, err := database.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {
 				if !database.IsErrKeyNotExist(err) {
-					log.Error("SearchPublicKeyByContent: %v", err)
+					applog.Logger.Errorf("SearchPublicKeyByContent: %v", err)
 				}
 				return nil, err
 			}
@@ -193,7 +193,7 @@ func Listen(opts conf.SSHOpts, appDataPath string) {
 
 	keys, err := setupHostKeys(appDataPath, opts.ServerAlgorithms)
 	if err != nil {
-		log.Fatal("SSH: Failed to setup host keys: %v", err)
+		applog.Logger.Fatalf("SSH: Failed to setup host keys: %v", err)
 	}
 	for _, key := range keys {
 		config.AddHostKey(key)
@@ -223,7 +223,7 @@ func setupHostKeys(appDataPath string, algorithms []string) ([]ssh.Signer, error
 			if err != nil {
 				return nil, errors.Wrapf(err, "generate host key with args %v", args)
 			}
-			log.Trace("SSH: New private key is generated: %s", keyPath)
+			applog.Logger.Tracef("SSH: New private key is generated: %s", keyPath)
 		}
 
 		keyData, err := os.ReadFile(keyPath)

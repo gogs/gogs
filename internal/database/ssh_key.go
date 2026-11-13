@@ -16,9 +16,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"golang.org/x/crypto/ssh"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/osx"
@@ -298,7 +298,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	if err != nil {
 		return "", errors.Newf("%s: %v", fnName, err)
 	}
-	log.Trace("Key info [native: %v]: %s-%d", conf.SSH.StartBuiltinServer, keyType, length)
+	applog.Logger.Tracef("Key info [native: %v]: %s-%d", conf.SSH.StartBuiltinServer, keyType, length)
 
 	if minLen, found := conf.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
 		return content, nil
@@ -329,7 +329,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 
 		// .ssh directory should have mode 700, and authorized_keys file should have mode 600.
 		if fi.Mode().Perm() > 0o600 {
-			log.Error("authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
+			applog.Logger.Errorf("authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
 			if err = f.Chmod(0o600); err != nil {
 				return err
 			}
@@ -389,7 +389,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 
 // AddPublicKey adds new public key to database and authorized_keys file.
 func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
-	log.Trace("Add public key: %s", content)
+	applog.Logger.Tracef("Add public key: %s", content)
 	if err := checkKeyContent(content); err != nil {
 		return nil, err
 	}
@@ -511,7 +511,7 @@ func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	log.Trace("Doing: RewriteAuthorizedKeys")
+	applog.Logger.Tracef("Doing: RewriteAuthorizedKeys")
 
 	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
 	fpath := authorizedKeysPath()

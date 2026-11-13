@@ -19,9 +19,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
@@ -240,7 +240,7 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 			RepoName:     os.Getenv(database.EnvRepoName),
 		}
 		if err := database.PushUpdate(ctx, options); err != nil {
-			log.Error("PushUpdate: %v", err)
+			applog.Logger.Errorf("PushUpdate: %v", err)
 		}
 
 		// Ask for running deliver hook and test pull request tasks
@@ -249,7 +249,7 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		q.Add("secret", os.Getenv(database.EnvRepoOwnerSaltMd5))
 		q.Add("pusher", os.Getenv(database.EnvAuthUserID))
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
-		log.Trace("Trigger task: %s", reqURL)
+		applog.Logger.Tracef("Trigger task: %s", reqURL)
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 		if err != nil {
@@ -275,10 +275,10 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
-				log.Error("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
+				applog.Logger.Errorf("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
 			}
 		} else {
-			log.Error("Failed to trigger task: %v", err)
+			applog.Logger.Errorf("Failed to trigger task: %v", err)
 		}
 	}
 
@@ -319,7 +319,7 @@ var (
 func startProcessSpan(ctx context.Context, name string, exportTimeout time.Duration) context.Context {
 	shutdown, err := tracing.Init(ctx)
 	if err != nil {
-		log.Error("Failed to initialize tracing: %v", err)
+		applog.Logger.Errorf("Failed to initialize tracing: %v", err)
 		return ctx
 	} else if shutdown == nil {
 		return ctx

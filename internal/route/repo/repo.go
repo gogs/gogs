@@ -6,8 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -82,7 +81,7 @@ func Download(c *context.Context) {
 		archivePath = filepath.Join(c.Repo.GitRepo.Path(), "archives", "targz")
 		archiveFormat = git.ArchiveTarGz
 	default:
-		log.Trace("Unknown format: %s", uri)
+		applog.Logger.Tracef("Unknown format: %s", uri)
 		c.NotFound()
 		return
 	}

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
@@ -298,12 +298,12 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 	}
 
 	if err = Handle.Actions().MergePullRequest(ctx, doer, pr.Issue.Repo.Owner, pr.Issue.Repo, pr.Issue); err != nil {
-		log.Error("Failed to create action for merge pull request, pull_request_id: %d, error: %v", pr.ID, err)
+		applog.Logger.Errorf("Failed to create action for merge pull request, pull_request_id: %d, error: %v", pr.ID, err)
 	}
 
 	// Reload pull request information.
 	if err = pr.LoadAttributes(); err != nil {
-		log.Error("LoadAttributes: %v", err)
+		applog.Logger.Errorf("LoadAttributes: %v", err)
 		return nil
 	}
 	if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -313,13 +313,13 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 		Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
 		Sender:      doer.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks: %v", err)
+		applog.Logger.Errorf("PrepareWebhooks: %v", err)
 		return nil
 	}
 
 	commits, err := headGitRepo.RevList(ctx, []string{pr.MergeBase + "..." + pr.MergedCommitID})
 	if err != nil {
-		log.Error("Failed to list commits [merge_base: %s, merged_commit_id: %s]: %v", pr.MergeBase, pr.MergedCommitID, err)
+		applog.Logger.Errorf("Failed to list commits [merge_base: %s, merged_commit_id: %s]: %v", pr.MergeBase, pr.MergedCommitID, err)
 		return nil
 	}
 
@@ -328,7 +328,7 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 	// commit manually to avoid strange diff commits produced.
 	mergeCommit, err := baseGitRepo.BranchCommit(ctx, pr.BaseBranch)
 	if err != nil {
-		log.Error("Failed to get base branch %q commit: %v", pr.BaseBranch, err)
+		applog.Logger.Errorf("Failed to get base branch %q commit: %v", pr.BaseBranch, err)
 		return nil
 	}
 	if mergeStyle == MergeStyleRegular {
@@ -337,7 +337,7 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 
 	pcs, err := CommitsToPushCommits(commits).APIFormat(ctx, Handle.Users(), pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
 	if err != nil {
-		log.Error("Failed to convert to API payload commits: %v", err)
+		applog.Logger.Errorf("Failed to convert to API payload commits: %v", err)
 		return nil
 	}
 
@@ -352,7 +352,7 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 		Sender:     doer.APIFormat(),
 	}
 	if err = PrepareWebhooks(pr.BaseRepo, HookEventTypePush, p); err != nil {
-		log.Error("Failed to prepare webhooks: %v", err)
+		applog.Logger.Errorf("Failed to prepare webhooks: %v", err)
 		return nil
 	}
 	return nil
@@ -375,11 +375,11 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 
 	// Fast fail if patch does not exist, this assumes data is corrupted.
 	if !osx.IsFile(patchPath) {
-		log.Trace("PullRequest[%d].testPatch: ignored corrupted data", pr.ID)
+		applog.Logger.Tracef("PullRequest[%d].testPatch: ignored corrupted data", pr.ID)
 		return nil
 	}
 
-	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
+	applog.Logger.Tracef("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
 	baseCommitID, err := git.RepoBranchCommitID(ctx, pr.BaseRepo.RepoPath(), pr.BaseBranch)
 	if err != nil {
@@ -400,7 +400,7 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 		IgnoreWhitespace: pr.BaseRepo.PullsIgnoreWhitespace,
 	})
 	if err != nil {
-		log.Trace("PullRequest[%d].testPatch (apply): has conflict\n%v", pr.ID, err)
+		applog.Logger.Tracef("PullRequest[%d].testPatch (apply): has conflict\n%v", pr.ID, err)
 		pr.Status = PullRequestStatusConflict
 		return nil
 	}
@@ -462,10 +462,10 @@ func NewPullRequest(ctx context.Context, repo *Repository, pull *Issue, labelIDs
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		log.Error("NotifyWatchers: %v", err)
+		applog.Logger.Errorf("NotifyWatchers: %v", err)
 	}
 	if err = pull.MailParticipants(); err != nil {
-		log.Error("MailParticipants: %v", err)
+		applog.Logger.Errorf("MailParticipants: %v", err)
 	}
 
 	pr.Issue = pull
@@ -477,7 +477,7 @@ func NewPullRequest(ctx context.Context, repo *Repository, pull *Issue, labelIDs
 		Repository:  repo.APIFormatLegacy(nil),
 		Sender:      pull.Poster.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks: %v", err)
+		applog.Logger.Errorf("PrepareWebhooks: %v", err)
 	}
 
 	return nil
@@ -607,7 +607,7 @@ func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
 	}
 	defer func() {
 		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
-			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+			applog.Logger.Errorf("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
 
@@ -628,7 +628,7 @@ func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
 		return errors.Newf("save patch: %v", err)
 	}
 
-	log.Trace("PullRequest[%d].UpdatePatch: patch saved", pr.ID)
+	applog.Logger.Tracef("PullRequest[%d].UpdatePatch: patch saved", pr.ID)
 	return nil
 }
 
@@ -640,7 +640,7 @@ func (pr *PullRequest) PushToBaseRepo(ctx context.Context) (err error) {
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	log.Trace("PushToBaseRepo[%d]: pushing commits to base repo 'refs/pull/%d/head'", pr.BaseRepoID, pr.Index)
+	applog.Logger.Tracef("PushToBaseRepo[%d]: pushing commits to base repo 'refs/pull/%d/head'", pr.BaseRepoID, pr.Index)
 
 	headRepoPath := pr.HeadRepo.RepoPath()
 	headGitRepo, err := git.Open(headRepoPath)
@@ -656,7 +656,7 @@ func (pr *PullRequest) PushToBaseRepo(ctx context.Context) (err error) {
 	// Make sure to remove the remote even if the push fails
 	defer func() {
 		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
-			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+			applog.Logger.Errorf("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
 
@@ -682,7 +682,7 @@ func (pr *PullRequest) AddToTaskQueue() {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
 		pr.Status = PullRequestStatusChecking
 		if err := pr.UpdateCols("status"); err != nil {
-			log.Error("AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
+			applog.Logger.Errorf("AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
 		}
 	})
 }
@@ -731,16 +731,16 @@ func (prs PullRequestList) LoadAttributes() error {
 func addHeadRepoTasks(prs []*PullRequest) {
 	for _, pr := range prs {
 		if pr.HeadRepo == nil {
-			log.Trace("addHeadRepoTasks[%d]: missing head repository", pr.ID)
+			applog.Logger.Tracef("addHeadRepoTasks[%d]: missing head repository", pr.ID)
 			continue
 		}
 
-		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
+		applog.Logger.Tracef("addHeadRepoTasks[%d]: composing new test task", pr.ID)
 		if err := pr.UpdatePatch(context.Background()); err != nil {
-			log.Error("UpdatePatch: %v", err)
+			applog.Logger.Errorf("UpdatePatch: %v", err)
 			continue
 		} else if err := pr.PushToBaseRepo(context.Background()); err != nil {
-			log.Error("PushToBaseRepo: %v", err)
+			applog.Logger.Errorf("PushToBaseRepo: %v", err)
 			continue
 		}
 
@@ -751,23 +751,23 @@ func addHeadRepoTasks(prs []*PullRequest) {
 // AddTestPullRequestTask adds new test tasks by given head/base repository and head/base branch,
 // and generate new patch for testing as needed.
 func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool) {
-	log.Trace("AddTestPullRequestTask [head_repo_id: %d, head_branch: %s]: finding pull requests", repoID, branch)
+	applog.Logger.Tracef("AddTestPullRequestTask [head_repo_id: %d, head_branch: %s]: finding pull requests", repoID, branch)
 	prs, err := GetUnmergedPullRequestsByHeadInfo(repoID, branch)
 	if err != nil {
-		log.Error("Find pull requests [head_repo_id: %d, head_branch: %s]: %v", repoID, branch, err)
+		applog.Logger.Errorf("Find pull requests [head_repo_id: %d, head_branch: %s]: %v", repoID, branch, err)
 		return
 	}
 
 	if isSync {
 		if err = PullRequestList(prs).LoadAttributes(); err != nil {
-			log.Error("PullRequestList.LoadAttributes: %v", err)
+			applog.Logger.Errorf("PullRequestList.LoadAttributes: %v", err)
 		}
 
 		if err == nil {
 			for _, pr := range prs {
 				pr.Issue.PullRequest = pr
 				if err = pr.Issue.LoadAttributes(); err != nil {
-					log.Error("LoadAttributes: %v", err)
+					applog.Logger.Errorf("LoadAttributes: %v", err)
 					continue
 				}
 				if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -777,7 +777,7 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 					Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
 					Sender:      doer.APIFormat(),
 				}); err != nil {
-					log.Error("PrepareWebhooks [pull_id: %v]: %v", pr.ID, err)
+					applog.Logger.Errorf("PrepareWebhooks [pull_id: %v]: %v", pr.ID, err)
 					continue
 				}
 			}
@@ -786,10 +786,10 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 
 	addHeadRepoTasks(prs)
 
-	log.Trace("AddTestPullRequestTask [base_repo_id: %d, base_branch: %s]: finding pull requests", repoID, branch)
+	applog.Logger.Tracef("AddTestPullRequestTask [base_repo_id: %d, base_branch: %s]: finding pull requests", repoID, branch)
 	prs, err = GetUnmergedPullRequestsByBaseInfo(repoID, branch)
 	if err != nil {
-		log.Error("Find pull requests [base_repo_id: %d, base_branch: %s]: %v", repoID, branch, err)
+		applog.Logger.Errorf("Find pull requests [base_repo_id: %d, base_branch: %s]: %v", repoID, branch, err)
 		return
 	}
 	for _, pr := range prs {
@@ -808,7 +808,7 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 	// Make sure there is no waiting test to process before leaving the checking status.
 	if !PullRequestQueue.Exist(pr.ID) {
 		if err := pr.UpdateCols("status"); err != nil {
-			log.Error("Update[%d]: %v", pr.ID, err)
+			applog.Logger.Errorf("Update[%d]: %v", pr.ID, err)
 		}
 	}
 }
@@ -824,12 +824,12 @@ func TestPullRequests() {
 			pr := bean.(*PullRequest)
 
 			if err := pr.LoadAttributes(); err != nil {
-				log.Error("LoadAttributes: %v", err)
+				applog.Logger.Errorf("LoadAttributes: %v", err)
 				return nil
 			}
 
 			if err := pr.testPatch(context.Background()); err != nil {
-				log.Error("testPatch: %v", err)
+				applog.Logger.Errorf("testPatch: %v", err)
 				return nil
 			}
 			prs = append(prs, pr)
@@ -843,16 +843,16 @@ func TestPullRequests() {
 
 	// Start listening on new test requests.
 	for prID := range PullRequestQueue.Queue() {
-		log.Trace("TestPullRequests[%v]: processing test task", prID)
+		applog.Logger.Tracef("TestPullRequests[%v]: processing test task", prID)
 		PullRequestQueue.Remove(prID)
 
 		id, _ := strconv.ParseInt(prID, 10, 64)
 		pr, err := GetPullRequestByID(id)
 		if err != nil {
-			log.Error("GetPullRequestByID[%s]: %v", prID, err)
+			applog.Logger.Errorf("GetPullRequestByID[%s]: %v", prID, err)
 			continue
 		} else if err = pr.testPatch(context.Background()); err != nil {
-			log.Error("testPatch[%d]: %v", pr.ID, err)
+			applog.Logger.Errorf("testPatch[%d]: %v", pr.ID, err)
 			continue
 		}
 

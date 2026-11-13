@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -92,7 +92,7 @@ func HTTPContexter(store Store) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [name: %s]: %v", ownerName, err)
+				applog.Logger.Errorf("Failed to get user [name: %s]: %v", ownerName, err)
 			}
 			return
 		}
@@ -103,7 +103,7 @@ func HTTPContexter(store Store) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, repoName, err)
+				applog.Logger.Errorf("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, repoName, err)
 			}
 			return
 		}
@@ -146,7 +146,7 @@ func HTTPContexter(store Store) macaron.Handler {
 		authUser, err := store.AuthenticateUser(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
-			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
+			applog.Logger.Errorf("Failed to authenticate user [name: %s]: %v", authUsername, err)
 			return
 		}
 
@@ -156,7 +156,7 @@ func HTTPContexter(store Store) macaron.Handler {
 			authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authUsername)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to authenticate by access token via username: %v", err)
+				applog.Logger.Errorf("Failed to authenticate by access token via username: %v", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
@@ -166,7 +166,7 @@ func HTTPContexter(store Store) macaron.Handler {
 						askCredentials(c, http.StatusUnauthorized, "")
 					} else {
 						c.Status(http.StatusInternalServerError)
-						log.Error("Failed to authenticate by access token via password: %v", err)
+						applog.Logger.Errorf("Failed to authenticate by access token via password: %v", err)
 					}
 					return
 				}
@@ -182,7 +182,7 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
-		log.Trace("[Git] Authenticated user: %s", authUser.Name)
+		applog.Logger.Tracef("[Git] Authenticated user: %s", authUser.Name)
 
 		mode := database.AccessModeWrite
 		if isPull {
@@ -250,7 +250,7 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.r.Header.Get("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
-			log.Error("HTTP.Get: fail to create gzip reader: %v", err)
+			applog.Logger.Errorf("HTTP.Get: fail to create gzip reader: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -283,7 +283,7 @@ func serviceRPC(h serviceHandler, service string) {
 		Envs:         envs,
 	})
 	if err != nil {
-		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
+		applog.Logger.Errorf("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -330,7 +330,7 @@ func getInfoRefs(h serviceHandler) {
 		Protocol:      h.r.Header.Get("Git-Protocol"),
 	})
 	if err != nil {
-		log.Error("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
+		applog.Logger.Errorf("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
 	}
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service))
 	h.w.WriteHeader(http.StatusOK)
@@ -389,7 +389,7 @@ func HTTP(c *HTTPContext) {
 
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
-			log.Warn("HTTP.getGitRepoPath: %v", err)
+			applog.Logger.Warnf("HTTP.getGitRepoPath: %v", err)
 			c.Error(http.StatusNotFound)
 			return
 		}
