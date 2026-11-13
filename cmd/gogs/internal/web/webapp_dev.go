@@ -18,10 +18,12 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-func mountWebAppRoutes(f *flamego.Flame) error {
+// mountWebAppRoutes mounts the catch-all route of the web app, which the Vite
+// dev server serves, and returns the handler that renders its pages.
+func mountWebAppRoutes(f *flamego.Flame) (http.Handler, error) {
 	viteURL, err := url.Parse("http://localhost:5173")
 	if err != nil {
-		return errors.Wrap(err, "parse Vite URL")
+		return nil, errors.Wrap(err, "parse Vite URL")
 	}
 	proxy := httputil.NewSingleHostReverseProxy(viteURL)
 	proxy.ModifyResponse = func(resp *http.Response) error {
@@ -59,8 +61,6 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		resp.Header.Del("Last-Modified")
 		return nil
 	}
-	f.Any("/{**}", func(w http.ResponseWriter, r *http.Request) {
-		proxy.ServeHTTP(w, r)
-	})
-	return nil
+	f.Any("/{**}", proxy.ServeHTTP)
+	return proxy, nil
 }
