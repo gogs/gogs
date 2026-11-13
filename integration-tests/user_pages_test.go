@@ -173,15 +173,3 @@ func TestUserSiteMetrics(t *testing.T) {
 	assert.True(t, strings.HasPrefix(header.Get("Content-Type"), "text/plain"), header.Get("Content-Type"))
 	assert.Contains(t, string(body), "\ngo_goroutines ")
 }
-
-func TestUserSiteSanitizeHTML(t *testing.T) {
-	html := `<div class="nb-output" data-prompt-number="1" onclick="alert(1)">Result<script>alert(2)</script>` +
-		`<img class="nb-image-output" src="data:image/png;base64,iVBORw0KGgo="><img src="data:text/html;base64,PHNjcmlwdD4=">` +
-		`<div class="fixed inset-0">Cover</div></div>`
-	status, _, body := newClient(t).doRaw(http.MethodPost, "/api/web/sanitize-html", "text/html", strings.NewReader(html))
-	require.Equal(t, http.StatusOK, status, "response: %s", body)
-	assert.Equal(t,
-		`<div class="nb-output" data-prompt-number="1">Result<img class="nb-image-output" src="data:image/png;base64,iVBORw0KGgo="><div>Cover</div></div>`,
-		string(body),
-	)
-}

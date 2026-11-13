@@ -76,11 +76,6 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnote-(ref|backref)$`).Regexp()).OnElements("a")
 		sanitizer.policy.AllowAttrs("role").Matching(lazyregexp.New(`^doc-(endnotes|noteref|backlink)$`).Regexp()).OnElements("div", "a")
 
-		// Jupyter notebooks, which notebook.js renders in the browser with "nb-"
-		// classes, e.g., "nb-cell nb-code-cell", and the number of each cell.
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^nb-[a-z-]+( nb-[a-z-]+)?$`).Regexp()).OnElements("div", "img")
-		sanitizer.policy.AllowAttrs("data-prompt-number").Matching(lazyregexp.New(`^[0-9]+$`).Regexp()).OnElements("div")
-
 		for scheme, allow := range urlSchemePolicies {
 			sanitizer.policy.AllowURLSchemeWithCustomPolicy(scheme, allow)
 		}
