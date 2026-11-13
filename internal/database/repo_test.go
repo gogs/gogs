@@ -70,7 +70,11 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
 
-	owner := &User{Name: "testuser"}
+	before := Handle
+	Handle = &DB{db: newTestDB(t, "createRepositoryPreventDeletion")}
+	t.Cleanup(func() { Handle = before })
+
+	owner := &User{ID: 1, Name: "testuser"}
 	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
 	repoPath := RepoPath(owner.Name, opts.Name)
 	require.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
@@ -82,6 +86,28 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))
+
+	// With the repository in the database, the name is reported as taken.
+	require.NoError(t, Handle.db.Create(&Repository{OwnerID: owner.ID, Name: "Safety-Test", LowerName: "safety-test"}).Error)
+	_, err = CreateRepository(owner, owner, CreateRepoOptionsLegacy{Name: "Safety-Test"})
+	assert.True(t, IsErrRepoAlreadyExist(err), "want ErrRepoAlreadyExist, got %v", err)
+	assert.True(t, osx.Exist(canary))
+}
+
+func TestSearchRepositoryByName(t *testing.T) {
+	before := Handle
+	Handle = &DB{db: newTestDB(t, "searchRepositoryByName")}
+	t.Cleanup(func() { Handle = before })
+
+	require.NoError(t, Handle.db.Create(&Repository{OwnerID: 1, Name: "doomed", LowerName: "doomed", Description: "Will be deleted"}).Error)
+
+	// Both the name and the description match regardless of case.
+	for _, keyword := range []string{"DOOMED", "will"} {
+		repos, count, err := SearchRepositoryByName(&SearchRepoOptions{Keyword: keyword, Page: 1, PageSize: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count, keyword)
+		assert.Len(t, repos, 1, keyword)
+	}
 }
 
 func TestGetRepoInitFile(t *testing.T) {

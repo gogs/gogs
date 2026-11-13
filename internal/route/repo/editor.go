@@ -345,6 +345,11 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.Repo.TreePath = pathx.Clean(c.Repo.TreePath)
 	c.Data["TreePath"] = c.Repo.TreePath
 
+	if _, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath); err != nil {
+		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
+		return
+	}
+
 	oldBranchName := c.Repo.BranchName
 	branchName := oldBranchName
 
