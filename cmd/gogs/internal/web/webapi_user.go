@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	stdctx "context"
 	"encoding/hex"
 	"net/http"
@@ -11,15 +12,13 @@ import (
 	"github.com/flamego/cache"
 	"github.com/flamego/captcha"
 	"github.com/flamego/session"
-	"github.com/go-macaron/i18n"
-	macaronsession "github.com/go-macaron/session"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
@@ -91,7 +90,7 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
+func postUserSignUp(r *http.Request, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_prompt")}, nil
 	}
@@ -145,7 +144,7 @@ func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n
 	}
 
 	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
-		if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
+		if err := email.SendActivateAccountMail(l, database.NewMailerUser(u)); err != nil {
 			log.Error("postUserSignUp: send activation mail to user %q: %v", u.Name, err)
 		}
 		if err := ca.Set(r.Context(), userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
@@ -268,7 +267,7 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(r *http.Request, w http.ResponseWriter, sess session.Session, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
 	u, err := database.Handle.Users().Authenticate(r.Context(), req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
@@ -290,7 +289,7 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	completeSignIn(sess, mc, u)
+	completeSignIn(w, sess, u)
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
@@ -298,13 +297,17 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 // clears any in-flight MFA state, and sets the login-status cookie. The
 // caller is responsible for navigating to a post-login destination via
 // /redirect?to=.
-func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) {
+func completeSignIn(w http.ResponseWriter, sess session.Session, u *database.User) {
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
 	sess.Delete("mfaUserID")
 
 	if conf.Security.EnableLoginStatusCookie {
-		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
+		http.SetCookie(w, &http.Cookie{
+			Name:  conf.Security.LoginStatusCookieName,
+			Value: "true",
+			Path:  cmp.Or(conf.Server.Subpath, "/"),
+		})
 	}
 }
 
@@ -321,7 +324,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
+func postUserMFA(r *http.Request, w http.ResponseWriter, sess session.Session, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -364,7 +367,7 @@ func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca 
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	completeSignIn(sess, mc, u)
+	completeSignIn(w, sess, u)
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -372,7 +375,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
-func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
+func postUserMFARecovery(r *http.Request, w http.ResponseWriter, sess session.Session, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -395,7 +398,7 @@ func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Cont
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	completeSignIn(sess, mc, u)
+	completeSignIn(w, sess, u)
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -444,7 +447,7 @@ type postUserActivateResponse struct {
 	CodeLifetimeHours int  `json:"codeLifetimeHours,omitempty"`
 }
 
-func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
+func postUserActivate(r *http.Request, u *database.User, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
 	if u == nil {
 		return http.StatusUnauthorized, nil, nil
 	}
@@ -465,7 +468,7 @@ func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca
 		log.Error("postUserActivate: get mail resend cache for user %q: %v", u.Name, err)
 	}
 
-	if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
+	if err := email.SendActivateAccountMail(l, database.NewMailerUser(u)); err != nil {
 		log.Error("postUserActivate: send activation mail to user %q: %v", u.Name, err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
@@ -478,7 +481,7 @@ type userActivateCompleteRequest struct {
 	Code string `json:"code" validate:"required"`
 }
 
-func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
+func postUserActivateComplete(r *http.Request, w http.ResponseWriter, sess session.Session, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
 	target := verifyUserActivateCode(r.Context(), req.Code)
 	if target == nil || target.IsActive {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
@@ -502,7 +505,7 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
 	if !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
-		completeSignIn(sess, mc, target)
+		completeSignIn(w, sess, target)
 	}
 	return http.StatusNoContent, nil, nil
 }
@@ -511,9 +514,15 @@ type postUserSignOutResponse struct {
 	RedirectTo string `json:"redirectTo,omitempty"`
 }
 
-func postUserSignOut(sess macaronsession.Store, mc *macaron.Context) (statusCode int, resp *postUserSignOutResponse, err error) {
-	_ = sess.Flush()
-	_ = sess.Destory(mc)
+func postUserSignOut(w http.ResponseWriter, sess session.Session) (statusCode int, resp *postUserSignOutResponse, err error) {
+	sess.Flush()
+	http.SetCookie(w, &http.Cookie{
+		Name:     conf.Session.CookieName,
+		Path:     cmp.Or(conf.Server.Subpath, "/"),
+		HttpOnly: true,
+		Expires:  time.Now(),
+		MaxAge:   -1,
+	})
 	if conf.Auth.CustomLogoutURL != "" {
 		return http.StatusOK, &postUserSignOutResponse{RedirectTo: conf.Auth.CustomLogoutURL}, nil
 	}

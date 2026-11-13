@@ -6,13 +6,13 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/i18n"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
