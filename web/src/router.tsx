@@ -16,6 +16,7 @@ import { Toaster } from "sonner";
 
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { NoticeBanner } from "@/components/NoticeBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import type { UserInfo } from "@/lib/user-info";
@@ -40,6 +41,7 @@ function RootLayout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <Navbar />
+      <NoticeBanner />
       <Outlet />
       <Footer />
     </div>
@@ -74,6 +76,7 @@ function ServerPage() {
   return (
     <div className="flex min-h-dvh flex-col">
       <Navbar />
+      <NoticeBanner />
       {webContext.page === "prohibitLogin" ? (
         <ProhibitLogin />
       ) : (

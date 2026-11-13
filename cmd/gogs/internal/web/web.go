@@ -422,6 +422,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Page      string `json:"page,omitempty"`
 		Error     string `json:"error,omitempty"`
 		Version   string `json:"version,omitempty"`
+		Notice    string `json:"notice,omitempty"`
 	}{
 		Lang:      wc.Lang,
 		SubURL:    wc.SubURL,
@@ -429,6 +430,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Page:      wc.Page,
 		Error:     wc.Error,
 		Version:   wc.Version,
+		Notice:    wc.Notice,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

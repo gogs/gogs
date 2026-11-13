@@ -31,7 +31,7 @@ export function ServerError({ error, version }: { error: unknown; version?: stri
         <div className="rounded-lg border border-(--color-foreground)/80 bg-(--color-surface)/40 font-mono shadow-xs dark:border-(--color-border)">
           <div className="flex items-center gap-1.5 border-b border-(--color-foreground)/80 px-3 py-2 sm:px-4 sm:py-2.5 dark:border-(--color-border)">
             <span className="size-2.5 rounded-full bg-(--color-destructive)/70" />
-            <span className="size-2.5 rounded-full bg-(--color-warning,oklch(0.795_0.184_86.047))/70" />
+            <span className="size-2.5 rounded-full bg-[oklch(0.795_0.184_86.047)]/70" />
             <span className="size-2.5 rounded-full bg-(--color-foreground)/20" />
             <span className="ml-2 text-xs text-(--color-muted-foreground) sm:ml-3">gogs — zsh</span>
           </div>
