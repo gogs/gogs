@@ -261,7 +261,8 @@ func (s *sanitizeSink) tokens(b []byte, f func(t *html.Token)) {
 	}
 }
 
-// emitStart writes a start tag as the sanitizer does.
+// emitStart writes a start tag as the sanitizer does. Its attribute checks
+// must be kept in sync with NewSanitizer in internal/markup/sanitizer.go.
 func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 	if !sanitizedElements[name] {
 		s.failed = true
@@ -388,6 +389,11 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 	return v, v != ""
 }
 
+// The patterns and tables below, with the attribute checks in emitStart, copy
+// the sanitizer policy of Gogs for the HTML that Render produces. They must be
+// kept in sync with NewSanitizer in internal/markup/sanitizer.go, and with the
+// bluemonday UGC policy when upgrading bluemonday, which supplies id, align,
+// title, alt and data URIs.
 var (
 	dataURIBase64Prefix = regexp.MustCompile(`^data:[^,]*;base64,`)
 	idPattern           = regexp.MustCompile(`[a-zA-Z0-9\:\-_\.]+`)

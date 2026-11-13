@@ -331,7 +331,9 @@ func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
 }
 
-// markdownSanitizer describes the sanitizer policy to Dariomark.
+// markdownSanitizer describes the sanitizer policy to Dariomark. Its patterns
+// must be the ones that NewSanitizer and bluemonday.UGCPolicy use for the same
+// attributes.
 var markdownSanitizer = &dariomark.Sanitizer{
 	AllowURLScheme: allowURLScheme,
 	Text:           bluemonday.Paragraph,

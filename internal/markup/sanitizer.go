@@ -40,6 +40,13 @@ var urlSchemePolicies = map[string]func(*url.URL) bool{
 // NewSanitizer initializes sanitizer with allowed attributes based on settings.
 // Multiple calls to this function will only create one instance of Sanitizer during
 // entire application lifecycle.
+//
+// Dariomark sanitizes documents without raw HTML itself, with a copy of this
+// policy for the HTML it produces (see dariomark.Sanitizer). When changing the
+// elements, classes or attributes allowed here, update sanitizedElements,
+// allowedClasses, allowedRoles and the attribute checks in
+// internal/markup/dariomark/sanitize.go to match, and markdownSanitizer in
+// markdown.go. URL schemes are not copied: Dariomark asks allowURLScheme.
 func NewSanitizer() {
 	sanitizer.init.Do(func() {
 		// We only want to allow HighlightJS specific classes for code blocks
@@ -74,6 +81,7 @@ func NewSanitizer() {
 		sanitizer.policy.AllowURLSchemes(conf.Markdown.CustomURLSchemes...)
 
 		// The schemes that bluemonday.UGCPolicy allows, plus the custom ones.
+		// Keep in sync with UGCPolicy when upgrading bluemonday.
 		sanitizer.schemes = map[string]bool{"mailto": true, "http": true, "https": true}
 		for _, scheme := range conf.Markdown.CustomURLSchemes {
 			sanitizer.schemes[strings.ToLower(scheme)] = true
