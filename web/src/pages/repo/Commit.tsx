@@ -116,6 +116,8 @@ const DIFF_UNSAFE_CSS = `
   :host {
     --diffs-bg-selection-override: light-dark(#ffe066, #ffd633);
     --diffs-bg-selection-number-override: light-dark(#f5c518, #fff066);
+    /* Pierre's blue number on the yellow selection is below 4.5:1 in dark mode. */
+    --diffs-selection-number-fg: var(--diffs-fg);
   }
 `;
 
