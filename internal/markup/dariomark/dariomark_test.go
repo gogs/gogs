@@ -19,6 +19,23 @@ import (
 // TestSpec checks the examples of the CommonMark 0.31.2 specification, from
 // https://spec.commonmark.org/0.31.2/spec.json.
 func TestSpec(t *testing.T) {
+	// Dariomark renders these examples the way GitHub does instead:
+	// numeric character references of 8 digits, currency symbols that are
+	// not punctuation, and strong emphasis directly inside strong emphasis.
+	github := map[int]string{
+		28:  "<p>&amp;nbsp &amp;x; &amp;#; &amp;#x;\n\ufffd\n&amp;#abcdef0;\n&amp;ThisIsNotDefined; &amp;hi?;</p>\n",
+		354: "<p>*$*alpha.</p>\n<p><em>\u00a3</em>bravo.</p>\n<p><em>\u20ac</em>charlie.</p>\n",
+		389: "<p><strong>foo, bar, baz</strong></p>\n",
+		417: "<p>foo<strong>bar</strong>***baz</p>\n",
+		425: "<p><strong>foo bar baz</strong></p>\n",
+		426: "<p><strong>foo bar</strong></p>\n",
+		427: "<p><strong>foo bar</strong></p>\n",
+		464: "<p><strong>foo</strong></p>\n",
+		465: "<p><strong>foo</strong></p>\n",
+		466: "<p><strong>foo</strong></p>\n",
+		468: "<p><em><strong>foo</strong></em></p>\n",
+	}
+
 	data, err := os.ReadFile("testdata/spec.json")
 	require.NoError(t, err)
 	var examples []struct {
@@ -33,7 +50,11 @@ func TestSpec(t *testing.T) {
 	opts := &Options{XHTML: true}
 	for _, ex := range examples {
 		t.Run(strconv.Itoa(ex.Example), func(t *testing.T) {
-			assert.Equal(t, ex.HTML, string(HTML([]byte(ex.Markdown), opts)), "%s\n%q", ex.Section, ex.Markdown)
+			want, ok := github[ex.Example]
+			if !ok {
+				want = ex.HTML
+			}
+			assert.Equal(t, want, string(HTML([]byte(ex.Markdown), opts)), "%s\n%q", ex.Section, ex.Markdown)
 		})
 	}
 }
@@ -67,6 +88,39 @@ func TestGFMSpec(t *testing.T) {
 			got := string(HTML([]byte(ex.Markdown), opts))
 			got = taskAttrs.ReplaceAllString(got, "")
 			assert.Equal(t, ex.HTML, got, "%s\n%q", ex.Section, ex.Markdown)
+		})
+	}
+}
+
+// TestGitHubRendering checks cases where GitHub's rendering departs from the
+// specifications, with the output of github.com.
+func TestGitHubRendering(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "www link before \";\"", input: "see www.example.com; then", want: "<p>see <a href=\"http://www.example.com\">www.example.com</a>; then</p>\n"},
+		{name: "www link before a quote", input: "see www.example.com\". x", want: "<p>see <a href=\"http://www.example.com\">www.example.com</a>&quot;. x</p>\n"},
+		{name: "emphasized www link", input: "*www.x.m*'", want: "<p><em><a href=\"http://www.x.m\">www.x.m</a></em>'</p>\n"},
+		{name: "entity after URL", input: "see http://a.b/c&x; y", want: "<p>see <a href=\"http://a.b/c\">http://a.b/c</a>&amp;x; y</p>\n"},
+		{name: "underscore ending the text", input: "www.a.b_", want: "<p><a href=\"http://www.a.b\">www.a.b</a>_</p>\n"},
+		{name: "underscore before more text", input: "www.a.b_ x", want: "<p>www.a.b_ x</p>\n"},
+		{name: "short www domain", input: "www.b", want: "<p><a href=\"http://www.b\">www.b</a></p>\n"},
+		{name: "package version", input: "new in i18next@15.1.0", want: "<p>new in i18next@15.1.0</p>\n"},
+		{name: "task marker alone", input: "- [ ] ", want: "<ul>\n<li>[ ]</li>\n</ul>\n"},
+		{name: "task marker before a nested list", input: "- [ ]\n  - b", want: "<ul class=\"contains-task-list\">\n<li class=\"task-list-item\" data-source-lines=\"1-2\"><input disabled=\"\" type=\"checkbox\" /> \n<ul>\n<li>b</li>\n</ul>\n</li>\n</ul>\n"},
+		{name: "tildes of another length", input: "~~approx ~5 min~~", want: "<p>~~approx ~5 min~~</p>\n"},
+		{name: "line break in alt text", input: "![a\nb](u)", want: "<p><img src=\"u\" alt=\"a b\" /></p>\n"},
+		{name: "closing tag after a list item", input: "- a\n</Note>\n", want: "<ul>\n<li>a</li>\n</ul>\n</Note>\n"},
+		{name: "tab before a line ending", input: "a\t\nb", want: "<p>a\nb</p>\n"},
+		{name: "lowercase declaration", input: "<!doctype html>", want: "<p>&lt;!doctype html&gt;</p>\n"},
+		{name: "tilde next to emphasis", input: "*<*~x", want: "<p>*&lt;*~x</p>\n"},
+	}
+	opts := &Options{XHTML: true, Tables: true, Strikethrough: true, TaskLists: true, Linkify: true}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, string(HTML([]byte(test.input), opts)))
 		})
 	}
 }

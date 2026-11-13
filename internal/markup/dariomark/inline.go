@@ -352,6 +352,10 @@ func (ip *inlineParser) lineEnding() {
 	if spaces >= 2 {
 		k = kindHardBreak
 	}
+	// Like GitHub, tabs before a line ending are removed with the spaces.
+	for end-spaces > ip.textStart && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
+		spaces++
+	}
 	next := ip.pos + 1
 	if k == kindSoftBreak && end-spaces == ip.pos && !ip.p.opts.HardWraps &&
 		(next >= len(src) || src[next] != ' ' && src[next] != '\t') {
@@ -649,7 +653,9 @@ func decodeEntityOctal(b []byte, octal bool) ([]byte, int) {
 				r = r*10 + d
 			}
 			i++
-			if hex && i-s > 6 || !hex && i-s > 7 {
+			// Like GitHub, up to 8 digits are read, more than CommonMark
+			// allows.
+			if i-s > 8 {
 				return nil, 0
 			}
 		}

@@ -78,7 +78,9 @@ func htmlBlockStart(line []byte, interruptsParagraph bool) int {
 	if rest[0] == '?' {
 		return 3
 	}
-	if rest[0] == '!' && len(rest) > 1 && isASCIILetter(rest[1]) {
+	// Like GitHub, declarations start with an uppercase letter, as in
+	// CommonMark 0.29.
+	if rest[0] == '!' && len(rest) > 1 && 'A' <= rest[1] && rest[1] <= 'Z' {
 		return 4
 	}
 	if bytes.HasPrefix(rest, []byte("![CDATA[")) {
@@ -152,10 +154,9 @@ func htmlBlockEnds(typ int, line []byte) bool {
 }
 
 func (p *parser) tryHTMLBlock(container *node) int {
-	// Type 7 blocks cannot interrupt a paragraph, including one that the line
-	// would continue lazily.
-	inParagraph := isParagraph(container) || (!p.allClosed && !p.blank && isParagraph(p.tip))
-	typ := htmlBlockStart(p.line[p.nextNonspace:], inParagraph)
+	// Type 7 blocks cannot interrupt a paragraph. Like GitHub, they end a
+	// paragraph that the line would otherwise continue lazily.
+	typ := htmlBlockStart(p.line[p.nextNonspace:], isParagraph(container))
 	if typ == 0 {
 		return startNone
 	}
@@ -350,7 +351,13 @@ func (s *htmlScanner) scan(b []byte, pos int) int {
 			}
 			return e + 3 - pos
 		}
-		if len(rest) > 2 && isASCIILetter(rest[2]) {
+		// Like GitHub, an inline declaration is uppercase letters and
+		// whitespace after "<!", as in CommonMark 0.29.
+		name := 2
+		for name < len(rest) && 'A' <= rest[name] && rest[name] <= 'Z' {
+			name++
+		}
+		if name > 2 && name < len(rest) && isASCIISpace(rest[name]) {
 			e := indexFrom(b, pos+3, ">", &s.noDeclEnd)
 			if e < 0 {
 				return 0

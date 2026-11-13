@@ -314,7 +314,7 @@ var (
 // taskItem reports whether the list item starts with a task list item
 // marker, and whether the marker is checked. The marker is "[ ]" or "[x]" at
 // the start of a paragraph that is the first block of the item, followed by
-// a space or tab on the same line, like cmark-gfm.
+// a space or tab on the same line.
 func (p *parser) taskItem(item *node) (task, checked bool) {
 	b := item.first
 	if !p.opts.TaskLists || b == nil || b.kind != kindParagraph || b.segEnd == b.segStart {
@@ -322,16 +322,25 @@ func (p *parser) taskItem(item *node) (task, checked bool) {
 	}
 	s := p.segs[b.segStart]
 	line := p.src[s.start:s.end]
-	if len(line) < 4 || line[0] != '[' || line[2] != ']' || line[3] != ' ' && line[3] != '\t' {
+	line = bytes.TrimRight(line, " \t\r\n")
+	if len(line) < 3 || line[0] != '[' || line[2] != ']' || len(line) > 3 && line[3] != ' ' && line[3] != '\t' {
 		return false, false
 	}
 	switch line[1] {
 	case ' ', '\t':
-		return true, false
 	case 'x', 'X':
-		return true, true
+		checked = true
+	default:
+		return false, false
 	}
-	return false, false
+	// Like GitHub, a marker needs text after it on its line, or must be the
+	// whole paragraph and followed by a block other than a paragraph, e.g.,
+	// a nested list.
+	if len(line) == 3 &&
+		(b.segEnd-b.segStart > 1 || b.next == nil || b.next.kind == kindParagraph) {
+		return false, false
+	}
+	return true, checked
 }
 
 // hasTaskItem reports whether the list n has a task item.
@@ -621,6 +630,12 @@ func (r *renderer) inline(n *node) {
 		r.inlines(n)
 		s.end("em")
 	case kindStrong:
+		if n.parent != nil && n.parent.kind == kindStrong {
+			// Like GitHub, strong emphasis directly inside strong emphasis
+			// adds nothing, e.g., "****a****" renders one <strong>.
+			r.inlines(n)
+			break
+		}
 		s.start("strong")
 		r.inlines(n)
 		s.end("strong")
@@ -716,9 +731,17 @@ func (r *renderer) appendPlain(n *node) {
 		switch c.kind {
 		case kindAutoLink, kindText, kindCodeSpan, kindRawHTML:
 			// Raw HTML is text in a description, which is an attribute.
+			// Line endings kept in text are spaces, as line breaks are.
+			start := len(r.p.buf)
 			r.p.buf = appendEscapedText(r.p.buf, c.text)
+			for i := start; i < len(r.p.buf); i++ {
+				if r.p.buf[i] == '\n' {
+					r.p.buf[i] = ' '
+				}
+			}
 		case kindSoftBreak, kindHardBreak:
-			r.p.buf = append(r.p.buf, '\n')
+			// Like GitHub, line breaks in a description are spaces.
+			r.p.buf = append(r.p.buf, ' ')
 		case kindTypo:
 			html, _ := r.opts.Typographer.entity(typo(c.level))
 			r.p.buf = append(r.p.buf, html...)

@@ -116,7 +116,8 @@ func (ip *inlineParser) linkifyURL(b []byte) int {
 		return f(b)
 	}
 	n := bytes.Index(b[:min(len(b), 8)], []byte("://")) + 3
-	d := scanDomain(b[n:])
+	// Like GitHub, the domain of a URL needs no period, e.g., "http://localhost".
+	d := scanDomain(b[n:], false)
 	if d == 0 {
 		return 0
 	}
@@ -132,11 +133,12 @@ func (ip *inlineParser) linkifyURL(b []byte) int {
 // everything up to whitespace or "<", without its trailing punctuation (GFM
 // 0.29, section 6.9).
 func scanWWW(b []byte) int {
-	n := scanDomain(b[4:])
-	if n == 0 {
+	// Like GitHub, "www." itself counts as a domain segment, e.g., "www.b"
+	// is a link.
+	end := scanDomain(b, true)
+	if end < 4 {
 		return 0
 	}
-	end := 4 + n
 	for end < len(b) && b[end] != '<' && !isASCIISpace(b[end]) {
 		end++
 	}
@@ -145,9 +147,9 @@ func scanWWW(b []byte) int {
 
 // scanDomain returns the length of the valid domain at the start of b, or 0.
 // A valid domain is segments of letters, digits, "_" and "-", separated by
-// periods. It has at least one period, and its last two segments have no
-// "_".
-func scanDomain(b []byte) int {
+// periods. It has at least one period if needPeriod is true, and its last
+// two segments have no "_". b runs to the end of the inline text.
+func scanDomain(b []byte, needPeriod bool) int {
 	n := 0
 	periods := 0
 	// lastUnderscore and prevUnderscore report whether the current and the
@@ -158,8 +160,11 @@ func scanDomain(b []byte) int {
 		switch {
 		case isASCIIAlnum(c) || c == '-':
 		case c == '_':
-			lastUnderscore = true
-		case c == '.' && n > 0 && b[n-1] != '.' && n+1 < len(b) && isDomainChar(b[n+1]):
+			// Like GitHub, an underscore that ends the text does not count.
+			lastUnderscore = lastUnderscore || n < len(b)-1
+		case c == '.' && n+1 < len(b):
+			// Like GitHub, a period ends a segment even when the next one
+			// is empty, e.g., "www..".
 			periods++
 			prevUnderscore, lastUnderscore = lastUnderscore, false
 		default:
@@ -168,7 +173,7 @@ func scanDomain(b []byte) int {
 		n++
 	}
 done:
-	if periods == 0 || lastUnderscore || prevUnderscore {
+	if n == 0 || needPeriod && periods == 0 || lastUnderscore || prevUnderscore {
 		return 0
 	}
 	return n
@@ -183,7 +188,9 @@ func isASCIISpace(c byte) bool {
 }
 
 // trimLinkTail returns the length of link without trailing punctuation,
-// unbalanced closing parentheses and trailing entity references.
+// unbalanced closing parentheses and trailing entity references. Like GitHub,
+// the punctuation includes quotes and ";", and an entity reference is "&",
+// letters and ";".
 func trimLinkTail(link []byte) int {
 	n := len(link)
 	opens, closes := 0, 0
@@ -197,7 +204,7 @@ func trimLinkTail(link []byte) int {
 	}
 	for n > 0 {
 		switch c := link[n-1]; c {
-		case '?', '!', '.', ',', ':', '*', '_', '~':
+		case '?', '!', '.', ',', ':', '*', '_', '~', '"', '\'':
 			n--
 			continue
 		case ')':
@@ -208,13 +215,15 @@ func trimLinkTail(link []byte) int {
 			}
 		case ';':
 			i := n - 2
-			for i >= 0 && isASCIIAlnum(link[i]) {
+			for i >= 0 && isASCIILetter(link[i]) {
 				i--
 			}
 			if i >= 0 && i < n-2 && link[i] == '&' {
 				n = i
-				continue
+			} else {
+				n--
 			}
+			continue
 		}
 		break
 	}
@@ -329,9 +338,9 @@ func (ip *inlineParser) linkifyEmailRun(first, last *node) {
 }
 
 // scanEmailDomain returns the length of the domain of an email address at the
-// start of b, or 0. The domain is segments of letters, digits, "-" and "_",
-// separated by periods. It has at least one period, and does not end with
-// "-" or "_" (GFM 0.29, section 6.9).
+// start of b, or 0. Like GitHub, the domain is letters, digits, "-" and "_",
+// and periods followed by a letter or digit. It has at least one period, and
+// does not end with "-", "_" or a digit, e.g., "pkg@1.2.3" is not an address.
 func scanEmailDomain(b []byte) int {
 	n, periods := 0, 0
 	for n < len(b) {
@@ -340,14 +349,17 @@ func scanEmailDomain(b []byte) int {
 			n++
 			continue
 		}
-		if c == '.' && n > 0 && b[n-1] != '.' && n+1 < len(b) && isDomainChar(b[n+1]) {
+		if c == '.' && n+1 < len(b) && isASCIIAlnum(b[n+1]) {
 			periods++
 			n++
 			continue
 		}
 		break
 	}
-	if periods == 0 || b[n-1] == '-' || b[n-1] == '_' {
+	if periods == 0 {
+		return 0
+	}
+	if c := b[n-1]; c == '-' || c == '_' || isASCIIDigit(c) {
 		return 0
 	}
 	return n

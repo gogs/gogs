@@ -6,7 +6,8 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 
 ## Features
 
-- **CommonMark 0.31.2**, passing all 652 examples of the specification.
+- **CommonMark 0.31.2**, passing the 652 examples of the specification, except 11 where Dariomark renders what GitHub renders.
+- **GitHub's rendering where it departs from the specifications**, e.g., in trailing punctuation after autolinks, nested strong emphasis and task list markers.
 - **GitHub Flavored Markdown**: tables, strikethrough, task lists and extended autolinks, e.g., bare `www.` links and email addresses.
 - **GitHub extensions**: footnotes and alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`).
 - **Heading anchors**: headings get stable ids made the way GitHub makes them, e.g., `user-content-getting-started`, with `-1`, `-2` and so on for repeated headings.
@@ -50,10 +51,10 @@ A general-purpose Markdown library only produces HTML. Rendering a comment on a 
 
 ## Correctness
 
-- `TestSpec` runs all 652 examples of the CommonMark 0.31.2 specification.
+- `TestSpec` runs all 652 examples of the CommonMark 0.31.2 specification, and checks GitHub's rendering for the 11 where GitHub departs from it.
 - Code blocks in list items match GitHub's rendering on 25 cases covering fenced and indented code, nesting, ordered lists, tabs, task items and blockquotes (`TestMarkdown_CodeInListItems` keeps 7 of them).
 - `TestGFMSpec` runs the examples of the GFM extensions: tables, task lists, strikethrough and autolinks.
-- Differential testing compared the output with cmark-gfm and commonmark.js, byte for byte, on real-world READMEs, changelogs and documentation, and on millions of random documents in every Gogs configuration. In the remaining differences, the other implementation departs from the specifications, or the specifications leave the behavior open.
+- Differential testing compared the output with cmark-gfm and commonmark.js, byte for byte, on real-world READMEs, changelogs and documentation, and on millions of random documents in every Gogs configuration. Where GitHub's rendering and the specifications disagree, Dariomark follows GitHub. The remaining differences are rare edge cases, e.g., leading whitespace on lazy continuation lines after a backslash line break.
 - `FuzzRender` checks that rendering never panics and is deterministic.
 - The built-in sanitizer was compared with bluemonday on about 2 million random and fuzzed documents, including hostile URLs, entities, control characters and issue tracker formats, with no difference.
 

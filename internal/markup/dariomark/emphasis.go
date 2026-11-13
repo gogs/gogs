@@ -15,13 +15,14 @@ func isUnicodeWhitespace(r rune) bool {
 	return r >= 0x80 && unicode.Is(unicode.Zs, r)
 }
 
-// isUnicodePunct reports whether r is a Unicode punctuation character as
-// defined by CommonMark: a character in the P or S general categories.
+// isUnicodePunct reports whether r is a punctuation character: an ASCII
+// punctuation character or a character in the Unicode P general category.
 func isUnicodePunct(r rune) bool {
 	if r < 0x80 {
 		return isASCIIPunct(byte(r))
 	}
-	return unicode.In(r, unicode.P, unicode.S)
+	// Like GitHub, only ASCII symbols count, e.g., "£" does not.
+	return unicode.In(r, unicode.P)
 }
 
 // runeBefore returns the rune before src[i], or '\n' at the start.
@@ -50,8 +51,19 @@ func (ip *inlineParser) delimRun(c byte) bool {
 		end++
 	}
 	n := end - start
-	before := ip.sourceRuneBefore(start)
-	after := runeAt(src, end)
+	// Like GitHub, "*" and "_" runs look past adjacent "~" runs to decide
+	// whether they open or close emphasis.
+	from, to := start, end
+	if c != '~' && ip.p.opts.Strikethrough {
+		for from > 0 && src[from-1] == '~' {
+			from--
+		}
+		for to < len(src) && src[to] == '~' {
+			to++
+		}
+	}
+	before := ip.sourceRuneBefore(from)
+	after := runeAt(src, to)
 	afterWS, afterP := isUnicodeWhitespace(after), isUnicodePunct(after)
 	beforeWS, beforeP := isUnicodeWhitespace(before), isUnicodePunct(before)
 	leftFlanking := !afterWS && (!afterP || beforeWS || beforeP)
@@ -228,11 +240,21 @@ func (ip *inlineParser) processEmphasis(bottom int32) {
 			oi = 1
 		}
 		mod := cd.origCount % 3
-		found := false
+		found, stopped := false, false
 		opener := cd.prev
 		quote := cd.char == '\'' || cd.char == '"'
 		for opener > bottom && opener > openersBottom[ci][oi][mod] {
 			od := ip.delims.at(int(opener))
+			if cd.char == '~' && od.char == '~' && od.canOpen && od.origCount != cd.origCount && !od.canClose {
+				// Like GitHub, a tilde run of another length that can only
+				// open stops the search, and a closer that cannot open
+				// removes it, e.g., "~~a ~b c~~" has no strikethrough.
+				if !cd.canOpen {
+					ip.removeDelim(opener)
+				}
+				stopped = true
+				break
+			}
 			// Strikethrough pairs tildes of the same length (GFM 0.29,
 			// section 6.5).
 			if od.char == cd.char && od.canOpen && (cd.char != '~' || od.origCount == cd.origCount) {
@@ -246,7 +268,9 @@ func (ip *inlineParser) processEmphasis(bottom int32) {
 			opener = od.prev
 		}
 		if !found {
-			openersBottom[ci][oi][mod] = cd.prev
+			if !stopped {
+				openersBottom[ci][oi][mod] = cd.prev
+			}
 			next := cd.next
 			if !cd.canOpen {
 				ip.removeDelim(closer)
