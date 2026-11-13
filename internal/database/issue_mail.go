@@ -191,7 +191,7 @@ func mailIssueCommentToParticipants(tx *gorm.DB, issue *Issue, doer *User, menti
 // and mentioned people.
 func (issue *Issue) MailParticipants() (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
-	if err = updateIssueMentions(Handle.db, issue.ID, mentions); err != nil {
+	if err = updateIssueMentions(Handle.db, issue.RepoID, issue.ID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
