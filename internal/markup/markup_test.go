@@ -43,6 +43,7 @@ func TestFindAllMentions(t *testing.T) {
 		{input: "# @unknwon\n\n> * @eddycjy", expMatches: []string{"unknwon", "eddycjy"}},
 		{input: "<b>x</b> @unknwon", expMatches: []string{"unknwon"}},
 		{input: "<script>@unknwon</script> <textarea>@eddycjy</textarea>"},
+		{input: "<textarea/>@unknwon</textarea>"},
 		{input: "`@unknwon` [@eddycjy](https://example.com/@a) https://example.com/@b\n\n    @c\n\n```\n@d\n```"},
 	}
 	for _, test := range tests {
