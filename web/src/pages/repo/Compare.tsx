@@ -70,7 +70,14 @@ export function RepoCompare({
       </section>
 
       {patch ? (
-        <DiffWorkspace owner={owner} repo={name} patch={patch} oldRef={baseIsEmptyTree ? undefined : base} newRef={after} search={search} />
+        <DiffWorkspace
+          owner={owner}
+          repo={name}
+          patch={patch}
+          oldRef={baseIsEmptyTree ? undefined : base}
+          newRef={after}
+          search={search}
+        />
       ) : null}
     </div>
   );
