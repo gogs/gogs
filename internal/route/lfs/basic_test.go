@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
@@ -46,9 +46,8 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 		},
 	}
 
-	m := macaron.New()
-	m.Use(macaron.Renderer())
-	m.Use(func(c *macaron.Context) {
+	m := flamego.New()
+	m.Use(func(c flamego.Context) {
 		c.Map(&database.Repository{Name: "repo"})
 		c.Map(lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
@@ -143,9 +142,8 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 		},
 	}
 
-	m := macaron.New()
-	m.Use(macaron.Renderer())
-	m.Use(func(c *macaron.Context) {
+	m := flamego.New()
+	m.Use(func(c flamego.Context) {
 		c.Map(&database.Repository{Name: "repo"})
 		c.Map(lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
@@ -199,9 +197,8 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 func TestBasicHandler_serveVerify(t *testing.T) {
 	basic := &basicHandler{}
 
-	m := macaron.New()
-	m.Use(macaron.Renderer())
-	m.Use(func(c *macaron.Context) {
+	m := flamego.New()
+	m.Use(func(c flamego.Context) {
 		c.Map(&database.Repository{Name: "repo"})
 	})
 	m.Post("/", basic.serveVerify)
