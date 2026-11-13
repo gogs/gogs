@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -119,8 +119,8 @@ func TestServeBatch(t *testing.T) {
 				mockStore = test.mockStore()
 			}
 
-			m := macaron.New()
-			m.Use(func(c *macaron.Context) {
+			m := flamego.New()
+			m.Use(func(c flamego.Context) {
 				c.Map(&database.User{Name: "owner"})
 				c.Map(&database.Repository{Name: "repo"})
 			})

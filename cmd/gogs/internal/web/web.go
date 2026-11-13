@@ -126,21 +126,13 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		context.Contexter(logger, context.NewStore(logger), webHandler),
 	)
 
-	// ***************************
-	// ----- HTTP Git routes -----
-	// ***************************
-
+	// Git over HTTP and LFS authenticate requests on their own, without sessions.
 	m.Group("/:username/:reponame", func() {
-		m.Get("/tasks/trigger", repo.TriggerTask)
-
-		m.Group("/info/lfs", func() {
-			lfs.RegisterRoutes(logger.Scoped("lfs"), m.Router)
-		})
-
-		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(logger.Scoped("git"), repo.NewStore(logger)), repo.HTTP}
-		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
-		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
-		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
+		m.Get("/tasks/trigger", webHandler.ServeHTTP)
+		m.Any("/info/lfs/*", webHandler.ServeHTTP)
+		m.Route("/info/refs", "GET,OPTIONS", webHandler.ServeHTTP)
+		m.Route("/git-upload-pack", "POST,OPTIONS", webHandler.ServeHTTP)
+		m.Route("/git-receive-pack", "POST,OPTIONS", webHandler.ServeHTTP)
 	})
 
 	var listenAddr string
@@ -351,7 +343,25 @@ func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 		)
 	})
 	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
+	mountGitHTTPRoutes(logger, f)
 	return f, nil
+}
+
+// mountGitHTTPRoutes mounts the routes of Git over HTTP, Git LFS, and the task
+// trigger of Git hooks.
+func mountGitHTTPRoutes(logger *logx.Logger, f *flamego.Flame) {
+	f.Group("/{owner}/{repo}", func() {
+		f.Get("/tasks/trigger", repo.TriggerTask)
+
+		f.Group("/info/lfs", func() {
+			lfs.RegisterRoutes(logger.Scoped("lfs"), f)
+		})
+
+		gitHTTP := []flamego.Handler{serveGoGet, repo.HTTPContexter(logger.Scoped("git"), repo.NewStore(logger)), repo.HTTP}
+		f.Routes("/info/refs", "GET,OPTIONS", gitHTTP...)
+		f.Routes("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
+		f.Routes("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
+	})
 }
 
 // newAPIV1Handler returns the handler of API v1 routes. It is separate from the

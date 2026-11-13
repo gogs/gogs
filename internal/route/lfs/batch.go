@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -15,13 +15,13 @@ import (
 )
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
-func serveBatch(logger *logx.Logger, store Store) macaron.Handler {
-	return func(c *macaron.Context, owner *database.User, repo *database.Repository) {
+func serveBatch(logger *logx.Logger, store Store) flamego.Handler {
+	return func(c flamego.Context, owner *database.User, repo *database.Repository) {
 		var request batchRequest
-		defer func() { _ = c.Req.Request.Body.Close() }()
-		err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
+		defer func() { _ = c.Request().Request.Body.Close() }()
+		err := json.NewDecoder(c.Request().Request.Body).Decode(&request)
 		if err != nil {
-			responseJSON(logger, c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(logger, c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: strx.ToUpperFirst(err.Error()),
 			})
 			return
@@ -72,9 +72,9 @@ func serveBatch(logger *logx.Logger, store Store) macaron.Handler {
 			for _, obj := range request.Objects {
 				oids = append(oids, obj.Oid)
 			}
-			stored, err := store.GetLFSObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
+			stored, err := store.GetLFSObjectsByOIDs(c.Request().Context(), repo.ID, oids...)
 			if err != nil {
-				internalServerError(logger, c.Resp)
+				internalServerError(logger, c.ResponseWriter())
 				logger.Error("Failed to get objects", "repoID", repo.ID, "oids", oids, "error", err)
 				return
 			}
@@ -111,13 +111,13 @@ func serveBatch(logger *logx.Logger, store Store) macaron.Handler {
 			}
 
 		default:
-			responseJSON(logger, c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(logger, c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: "Operation not recognized",
 			})
 			return
 		}
 
-		responseJSON(logger, c.Resp, http.StatusOK, batchResponse{
+		responseJSON(logger, c.ResponseWriter(), http.StatusOK, batchResponse{
 			Transfer: transfer,
 			Objects:  objects,
 		})
