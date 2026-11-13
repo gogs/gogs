@@ -1,16 +1,19 @@
 package web
 
 import (
+	"bytes"
 	"cmp"
 	"html"
 	"net/http"
 	"net/url"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
+	"github.com/editorconfig/editorconfig-core-go/v2"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
 	log "unknwon.dev/clog/v2"
@@ -158,6 +161,78 @@ func getRepoEditorTarget(c flamego.Context, repoCtx *repoContext) (statusCode in
 			content = string(p)
 		}
 		resp.Content = &content
+	}
+	return http.StatusOK, resp, nil
+}
+
+type repoEditorIndent struct {
+	// Style is "tab" or "space", or left out when .editorconfig does not say.
+	Style    string `json:"style,omitempty"`
+	Size     int    `json:"size,omitempty"`
+	TabWidth int    `json:"tabWidth,omitempty"`
+}
+
+// getRepoEditorIndent returns how the ".editorconfig" of the branch indents
+// the file at the path, which need not exist yet.
+func getRepoEditorIndent(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoEditorIndent, err error) {
+	ctx := c.Request().Context()
+	repo := repoCtx.Repo
+	gitRepo, err := openRepoGit(repoCtx)
+	if err != nil {
+		log.Error("getRepoEditorIndent: open repository %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+	}
+	branch := c.Query("branch")
+	if !editableBranch(c, repoCtx, gitRepo, branch) {
+		return http.StatusNotFound, nil, errors.New("branch does not exist")
+	}
+	commit, err := gitRepo.BranchCommit(ctx, branch)
+	if err != nil {
+		log.Error("getRepoEditorIndent: get commit of branch %q in repo %d: %v", branch, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get branch commit")
+	}
+
+	resp = &repoEditorIndent{}
+	entry, err := commit.TreeEntry(ctx, ".editorconfig")
+	if err != nil {
+		if git.IsErrRevisionNotExist(err) {
+			return http.StatusOK, resp, nil
+		}
+		log.Error("getRepoEditorIndent: get .editorconfig of repo %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get .editorconfig")
+	}
+	p, err := entry.Blob().Bytes(ctx)
+	if err != nil {
+		log.Error("getRepoEditorIndent: read .editorconfig of repo %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "read .editorconfig")
+	}
+	// A broken .editorconfig is the repository's content, so it only means no
+	// rules.
+	ec, err := editorconfig.Parse(bytes.NewReader(p))
+	if err != nil {
+		return http.StatusOK, resp, nil
+	}
+	// 🚨 SECURITY: Prevent path traversal.
+	def, err := ec.GetDefinitionForFilename(pathx.Clean(c.Query("path")))
+	if err != nil {
+		return http.StatusOK, resp, nil
+	}
+
+	switch def.IndentStyle {
+	case editorconfig.IndentStyleTab, editorconfig.IndentStyleSpaces:
+		resp.Style = def.IndentStyle
+	}
+	resp.TabWidth = def.TabWidth
+	if def.TabWidth <= 0 {
+		resp.TabWidth, _ = strconv.Atoi(def.Raw["tab_width"])
+	}
+	if def.IndentSize == editorconfig.IndentStyleTab {
+		resp.Size = resp.TabWidth
+	} else if size, err := strconv.Atoi(def.IndentSize); err == nil {
+		resp.Size = size
+		if resp.TabWidth <= 0 {
+			resp.TabWidth = size
+		}
 	}
 	return http.StatusOK, resp, nil
 }

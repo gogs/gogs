@@ -5,6 +5,7 @@ import {
   StreamLanguage,
   type StreamParser,
   defineLanguageFacet,
+  indentUnit as indentUnitFacet,
   syntaxHighlighting,
 } from "@codemirror/language";
 import { Compartment, EditorState, type Extension, Prec } from "@codemirror/state";
@@ -138,6 +139,8 @@ export default function CodeEditorView({
   lang,
   code = false,
   wrap = !code,
+  indentUnit = "  ",
+  tabSize = 4,
   minLines = 6,
   disabled = false,
   autoFocus = false,
@@ -151,6 +154,7 @@ export default function CodeEditorView({
   const [editable] = useState(() => new Compartment());
   const [language] = useState(() => new Compartment());
   const [layout] = useState(() => new Compartment());
+  const [indentation] = useState(() => new Compartment());
   const [initial] = useState(() => ({ value, minLines, autoFocus }));
   const emitChange = useEffectEvent((text: string) => onChange(text));
   // takeFiles hands over pasted or dropped files, and tells whether anyone
@@ -168,6 +172,7 @@ export default function CodeEditorView({
         extensions: [
           history(),
           layout.of([]),
+          indentation.of([]),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           language.of([]),
           syntaxHighlighting(classHighlighter),
@@ -202,7 +207,7 @@ export default function CodeEditorView({
       v.destroy();
       view.current = null;
     };
-  }, [initial, attrs, editable, language, layout]);
+  }, [initial, attrs, editable, language, layout, indentation]);
 
   // The language follows the name of the file being edited.
   useEffect(() => {
@@ -224,6 +229,12 @@ export default function CodeEditorView({
   useEffect(() => {
     view.current?.dispatch({ effects: layout.reconfigure(layoutOf(code, wrap)) });
   }, [layout, code, wrap]);
+
+  useEffect(() => {
+    view.current?.dispatch({
+      effects: indentation.reconfigure([indentUnitFacet.of(indentUnit), EditorState.tabSize.of(tabSize)]),
+    });
+  }, [indentation, indentUnit, tabSize]);
 
   // Take the value from outside when it changes there, e.g., cleared after
   // submitting.
