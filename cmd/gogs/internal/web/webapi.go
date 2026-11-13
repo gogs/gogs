@@ -197,6 +197,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/pulls", getRepoPulls)
 			f.Get("/forks", getRepoForks)
 			f.Get("/releases", withRepoCode, getRepoReleases)
+			f.Get("/branches", withRepoCode, getRepoBranches)
 			f.Group("", func() {
 				f.Get("/labels", getRepoLabels)
 				f.Get("/milestones", getRepoMilestones)
@@ -235,6 +236,13 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Delete(deleteRepoCollaborator)
 				f.Combo("/keys").Get(getRepoDeployKeys).Post(bindJSON(userSSHKeyRequest{}), postRepoDeployKey)
 				f.Delete("/keys/{id}", deleteRepoDeployKey)
+				f.Group("", func() {
+					f.Get("/branches", getRepoBranchSettings)
+					f.Put("/default-branch", bindJSON(repoDefaultBranchRequest{}), putRepoDefaultBranch)
+					f.Combo("/branches/{branch: **}", withRepoProtectedBranch).
+						Get(getRepoProtectedBranch).
+						Put(bindJSON(repoProtectedBranchRequest{}), putRepoProtectedBranch)
+				}, withRepoBranchSettings)
 				f.Group("/hooks", func() {
 					f.Combo("").Get(getWebhooks).Post(bindJSON(webhookRequest{}), postWebhook)
 					f.Group("/{id}", func() {

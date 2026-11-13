@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { ShieldCheck, Users } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -19,9 +20,12 @@ import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoAdvancedSettings,
+  type RepoBranchSettingsData,
   type RepoCollaborator,
   type RepoCollaboratorMode,
   type RepoMirrorSettings,
+  type RepoProtectedBranch,
+  type RepoProtectedBranchForm,
   type RepoSettingsData,
   type RepoSettingsForm,
   addRepoCollaborator,
@@ -38,7 +42,9 @@ import {
   syncRepoMirror,
   transferRepo,
   updateRepoAdvanced,
+  updateRepoDefaultBranch,
   updateRepoMirror,
+  updateRepoProtectedBranch,
   updateRepoSettings,
   uploadRepoAvatar,
 } from "@/lib/queries/repo";
@@ -52,7 +58,7 @@ const TEXTAREA_CLASS =
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "short" });
 const MODES: RepoCollaboratorMode[] = ["admin", "write", "read"];
 
-type SettingsPage = "options" | "collaboration" | "hooks" | "keys";
+type SettingsPage = "options" | "collaboration" | "branches" | "hooks" | "keys";
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.
@@ -107,6 +113,7 @@ export function RepoSettingsLayout({
   const titles: Record<SettingsPage, string> = {
     options: t("repo.settings.options"),
     collaboration: t("repo.settings.collaboration"),
+    branches: t("repo.settings.branches"),
     hooks: t("repo.settings.hooks"),
     keys: t("repo.settings.deploy_keys"),
   };
@@ -132,10 +139,12 @@ export function RepoSettingsLayout({
                   {titles.collaboration}
                 </Link>
               </SettingsNavItem>
-              {/* Branches and Git hooks are still served by the server-rendered pages. */}
+              {/* Mirrors take their branches from the source repository. */}
               {settings.mirror ? null : (
-                <SettingsNavItem active={false}>
-                  <a href={legacyLink("/branches")}>{t("repo.settings.branches")}</a>
+                <SettingsNavItem active={active === "branches"}>
+                  <Link to="/$owner/$repo/settings/branches" params={params}>
+                    {titles.branches}
+                  </Link>
                 </SettingsNavItem>
               )}
               <SettingsNavItem active={active === "hooks"}>
@@ -143,6 +152,7 @@ export function RepoSettingsLayout({
                   {titles.hooks}
                 </Link>
               </SettingsNavItem>
+              {/* Git hooks are still served by the server-rendered pages. */}
               {settings.viewerCanEditGitHooks ? (
                 <SettingsNavItem active={false}>
                   <a href={legacyLink("/hooks/git")}>{t("repo.settings.githooks")}</a>
@@ -1112,5 +1122,287 @@ export function RepoDeployKeys({ owner, name, keys }: { owner: string; name: str
         <RichText text={t("repo.settings.deploy_keys_helper")} links={["/user/settings/ssh"]} />
       </p>
     </RepoSettingsLayout>
+  );
+}
+
+// RepoBranchSettings changes the default branch of a repository and leads to
+// the protection of its branches.
+export function RepoBranchSettings({
+  owner,
+  name,
+  settings,
+}: {
+  owner: string;
+  name: string;
+  settings: RepoBranchSettingsData;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const refresh = useRefresh(owner, name);
+  const [branch, setBranch] = useState(settings.defaultBranch);
+  const update = useMutation({
+    mutationFn: () => updateRepoDefaultBranch(owner, name, branch),
+    onSuccess: async () => {
+      toast.success(t("repo.settings.update_default_branch_success"));
+      await refresh();
+    },
+  });
+  const { fields, formError } = formErrors(update.error);
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="branches">
+      <h1 className="sr-only">{t("repo.settings.branches")}</h1>
+      {settings.isEmpty ? (
+        <p className="rounded-md border border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
+          {t("repo.settings.branches_empty")}
+        </p>
+      ) : (
+        <div>
+          <Section title={t("repo.settings.default_branch")}>
+            <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.default_branch_desc")}</p>
+            <form onSubmit={onSubmit} noValidate>
+              <fieldset disabled={update.isPending} className="contents">
+                <FormAlert message={formError} />
+                <div className="flex flex-wrap gap-2">
+                  <Select value={branch} onValueChange={setBranch}>
+                    <SelectTrigger
+                      id="branch"
+                      aria-label={t("repo.settings.default_branch")}
+                      aria-invalid={"branch" in fields ? true : undefined}
+                      aria-describedby={fields.branch ? "branch-error" : undefined}
+                      className="w-auto max-w-full min-w-48 gap-2 font-mono"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {settings.branches.map((b) => (
+                        <SelectItem key={b} value={b} className="font-mono">
+                          {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="submit" variant="outline">
+                    {t("repo.settings.update")}
+                  </Button>
+                </div>
+                {fields.branch ? (
+                  <p id="branch-error" className="mt-1.5 text-sm text-(--color-destructive)">
+                    {fields.branch}
+                  </p>
+                ) : null}
+              </fieldset>
+            </form>
+          </Section>
+          <Section title={t("repo.settings.protected_branches")}>
+            <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.protected_branches_desc")}</p>
+            <Select
+              value=""
+              onValueChange={(b) =>
+                void navigate({ to: "/$owner/$repo/settings/branches/$", params: { owner, repo: name, _splat: b } })
+              }
+            >
+              <SelectTrigger
+                aria-label={t("repo.settings.choose_a_branch")}
+                className="w-auto max-w-full min-w-48 gap-2"
+              >
+                <SelectValue placeholder={t("repo.settings.choose_a_branch")} />
+              </SelectTrigger>
+              <SelectContent>
+                {settings.branches.map((b) => (
+                  <SelectItem key={b} value={b} className="font-mono">
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {settings.protectedBranches.length ? (
+              <ul className="mt-4 rounded-md border border-(--color-border)">
+                {settings.protectedBranches.map((b) => (
+                  <li key={b} className="border-b border-(--color-border) last:border-b-0">
+                    <Link
+                      to="/$owner/$repo/settings/branches/$"
+                      params={{ owner, repo: name, _splat: b }}
+                      className="flex items-center gap-2 px-4 py-2.5 font-mono text-sm wrap-anywhere text-(--color-primary) hover:bg-(--color-surface) hover:underline"
+                    >
+                      <ShieldCheck className="size-4 shrink-0" aria-hidden />
+                      {b}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </Section>
+        </div>
+      )}
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoBranchProtection changes how a branch is protected. Only repositories
+// of organizations can let people and teams push past the protection.
+export function RepoBranchProtection({
+  owner,
+  name,
+  branch,
+}: {
+  owner: string;
+  name: string;
+  branch: RepoProtectedBranch;
+}) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [form, setForm] = useState<RepoProtectedBranchForm>({
+    protected: branch.protected,
+    requirePullRequest: branch.requirePullRequest,
+    enableWhitelist: branch.enableWhitelist,
+    whitelistUserIDs: branch.whitelistUserIDs,
+    whitelistTeamIDs: branch.whitelistTeamIDs,
+  });
+  const set = (patch: Partial<RepoProtectedBranchForm>) => setForm({ ...form, ...patch });
+  const toggle = (ids: number[], id: number, on: boolean) => (on ? [...ids, id] : ids.filter((x) => x !== id));
+  const update = useMutation({
+    mutationFn: () => updateRepoProtectedBranch(owner, name, branch.name, form),
+    onSuccess: async () => {
+      toast.success(t("repo.settings.update_protect_branch_success"));
+      await router.invalidate();
+    },
+  });
+  const { formError } = formErrors(update.error);
+  const [before, after = ""] = t("repo.settings.branch_protection_desc").split(/<b>%s<\/b>|%s/);
+  const isOrg = branch.userOptions !== undefined;
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="branches">
+      <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.branch_protection")}</h1>
+      <p className="mb-6 text-sm text-(--color-muted-foreground)">
+        {before}
+        <code className="rounded bg-(--color-surface) px-1 font-mono text-[0.9em] font-semibold wrap-anywhere text-(--color-foreground)">
+          {branch.name}
+        </code>
+        {after}
+      </p>
+      <form onSubmit={onSubmit} noValidate>
+        <fieldset disabled={update.isPending} className="contents">
+          <FormAlert message={formError} />
+          <div className="flex flex-col gap-5">
+            <CheckboxField
+              id="protected"
+              checked={form.protected}
+              onChange={(on) => set({ protected: on })}
+              label={
+                <OptionLabel
+                  title={t("repo.settings.protect_this_branch")}
+                  desc={t("repo.settings.protect_this_branch_desc")}
+                />
+              }
+            />
+            {form.protected ? (
+              <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                <CheckboxField
+                  id="requirePullRequest"
+                  checked={form.requirePullRequest}
+                  onChange={(on) => set({ requirePullRequest: on })}
+                  label={
+                    <OptionLabel
+                      title={t("repo.settings.protect_require_pull_request")}
+                      desc={t("repo.settings.protect_require_pull_request_desc")}
+                    />
+                  }
+                />
+                {isOrg ? (
+                  <CheckboxField
+                    id="enableWhitelist"
+                    checked={form.enableWhitelist}
+                    onChange={(on) => set({ enableWhitelist: on })}
+                    label={
+                      <OptionLabel
+                        title={t("repo.settings.protect_whitelist_committers")}
+                        desc={t("repo.settings.protect_whitelist_committers_desc")}
+                      />
+                    }
+                  />
+                ) : null}
+                {isOrg && form.enableWhitelist ? (
+                  <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                    {branch.userOptions?.length ? (
+                      <fieldset className="flex flex-col gap-2.5">
+                        <legend className="mb-2.5 text-sm font-medium">
+                          {t("repo.settings.protect_whitelist_users")}
+                        </legend>
+                        {branch.userOptions.map((u) => (
+                          <CheckboxField
+                            key={u.id}
+                            id={`whitelist-user-${u.id}`}
+                            checked={form.whitelistUserIDs.includes(u.id)}
+                            onChange={(on) => set({ whitelistUserIDs: toggle(form.whitelistUserIDs, u.id, on) })}
+                            label={
+                              <span className="inline-flex items-center gap-2">
+                                <img src={u.avatarURL} alt="" className="size-5 rounded-full" />
+                                {u.name}
+                              </span>
+                            }
+                          />
+                        ))}
+                      </fieldset>
+                    ) : null}
+                    {branch.teamOptions?.length ? (
+                      <fieldset className="flex flex-col gap-2.5">
+                        <legend className="mb-2.5 text-sm font-medium">
+                          {t("repo.settings.protect_whitelist_teams")}
+                        </legend>
+                        {branch.teamOptions.map((team) => (
+                          <CheckboxField
+                            key={team.id}
+                            id={`whitelist-team-${team.id}`}
+                            checked={form.whitelistTeamIDs.includes(team.id)}
+                            onChange={(on) => set({ whitelistTeamIDs: toggle(form.whitelistTeamIDs, team.id, on) })}
+                            label={
+                              <span className="inline-flex items-center gap-2">
+                                <Users className="size-4 text-(--color-muted-foreground)" aria-hidden />
+                                {team.name}
+                              </span>
+                            }
+                          />
+                        ))}
+                      </fieldset>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
+              <Button type="submit" variant="outline">
+                {t("repo.settings.update_settings")}
+              </Button>
+              <Button asChild variant="ghost">
+                <Link to="/$owner/$repo/settings/branches" params={{ owner, repo: name }}>
+                  {t("cancel")}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </RepoSettingsLayout>
+  );
+}
+
+function OptionLabel({ title, desc }: { title: string; desc: string }) {
+  return (
+    <>
+      <span className="font-medium">{title}</span>
+      <span className="block text-(--color-muted-foreground)">{desc}</span>
+    </>
   );
 }

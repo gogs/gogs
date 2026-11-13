@@ -339,10 +339,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				m.Get("", func(c *context.Context) { c.ServeWeb() })
 				m.Get("/collaboration", func(c *context.Context) { c.ServeWeb() })
 				m.Group("/branches", func() {
-					m.Get("", repo.SettingsBranches)
-					m.Post("/default_branch", repo.UpdateDefaultBranch)
-					m.Combo("/*").Get(repo.SettingsProtectedBranch).
-						Post(bindIgnErr(form.ProtectBranch{}), repo.SettingsProtectedBranchPost)
+					m.Get("", func(c *context.Context) { c.ServeWeb() })
+					m.Get("/*", func(c *context.Context) { c.ServeWeb() })
 				}, func(c *context.Context) {
 					if c.Repo.Repository.IsMirror {
 						c.NotFound()
@@ -473,8 +471,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			}, context.RepoRef())
 
 			m.Group("/branches", func() {
-				m.Get("", repo.Branches)
-				m.Get("/all", repo.AllBranches)
+				m.Get("", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/all", func(c *context.Context) { c.ServeWeb() })
 				m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 			}, repo.MustBeNotEmpty, func(c *context.Context) {
 				c.Data["PageIsViewFiles"] = true

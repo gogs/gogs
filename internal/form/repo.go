@@ -80,25 +80,6 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 	return remoteAddr, nil
 }
 
-// __________                             .__
-// \______   \____________    ____   ____ |  |__
-//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
-//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
-//  |______  / |__|  (____  /___|  /\___  >___|  /
-//         \/             \/     \/     \/     \/
-
-type ProtectBranch struct {
-	Protected          bool
-	RequirePullRequest bool
-	EnableWhitelist    bool
-	WhitelistUsers     string
-	WhitelistTeams     string
-}
-
-func (f *ProtectBranch) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 // .___
 // |   | ______ ________ __   ____
 // |   |/  ___//  ___/  |  \_/ __ \

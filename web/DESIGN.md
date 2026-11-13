@@ -119,6 +119,8 @@ When in doubt, hover-test the new control: if the cursor is still an I-beam or a
 
 Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 320px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.
 
+Switches between sibling views inside a page (labels and milestones, the branch overview and all branches) are a `<nav>` of links in one `rounded-md border border-(--color-input)` group, divided by `border-l`. Each link is `px-3 py-1.5 text-sm` with a leading `size-4` icon. The current one gets `bg-(--color-surface)`, `font-semibold`, foreground text, and `aria-current="page"`. The others are muted.
+
 ## Narrow screens
 
 Every page works at 320px wide, the width the WCAG reflow criterion requires. Only content that is meant to scroll does so sideways: code and diffs. Tab rows fold into a "More" menu instead (see Tabs).
