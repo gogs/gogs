@@ -10,28 +10,11 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 )
-
-func newLogWriter() (logger.Writer, error) {
-	sec := conf.File.Section("log.gorm")
-	w, err := log.NewFileWriter(
-		filepath.Join(conf.Log.RootPath, "gorm.log"),
-		log.FileRotationConfig{
-			Rotate:  sec.Key("ROTATE").MustBool(true),
-			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
-			MaxSize: sec.Key("MAX_SIZE").MustInt64(100) * 1024 * 1024,
-			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, `create "gorm.log"`)
-	}
-	return &dbx.Logger{Writer: w}, nil
-}
 
 // Tables is the list of struct-to-table mappings.
 //
@@ -108,7 +91,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "auto migrate %q", name)
 		}
-		log.Trace("Auto migrated %q", name)
+		applog.Logger.Tracef("Auto migrated %q", name)
 	}
 
 	loadedLoginSourceFilesStore, err = loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)

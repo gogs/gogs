@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	log "unknwon.dev/clog/v2"
+	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"github.com/cockroachdb/errors"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
@@ -353,7 +352,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error("LoadIssue: %v", err)
+			applog.Logger.Errorf("LoadIssue: %v", err)
 			return err
 		}
 		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -373,7 +372,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 		})
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil

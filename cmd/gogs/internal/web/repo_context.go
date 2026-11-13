@@ -6,8 +6,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -88,7 +88,7 @@ func withRepoContext(c flamego.Context, user *database.User) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 			return
 		}
-		log.Error("repoContext: get user by username %q: %v", ownerName, err)
+		applog.Logger.Errorf("repoContext: get user by username %q: %v", ownerName, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get owner"))
 		return
 	}
@@ -99,7 +99,7 @@ func withRepoContext(c flamego.Context, user *database.User) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 			return
 		}
-		log.Error("repoContext: get repo by name %q/%q: %v", ownerName, repoName, err)
+		applog.Logger.Errorf("repoContext: get repo by name %q/%q: %v", ownerName, repoName, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get repo"))
 		return
 	}

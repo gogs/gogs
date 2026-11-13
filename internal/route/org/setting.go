@@ -3,8 +3,7 @@ package org
 import (
 	"net/http"
 
-	log "unknwon.dev/clog/v2"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -53,7 +52,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 		// reset c.org.OrgLink with new name
 		c.Org.OrgLink = conf.Server.Subpath + "/org/" + f.Name
-		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
+		applog.Logger.Tracef("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
 
 	opts := database.UpdateUserOptions{
@@ -117,7 +116,7 @@ func SettingsDelete(c *context.Context) {
 				c.Error(err, "delete organization")
 			}
 		} else {
-			log.Trace("Organization deleted: %s", org.Name)
+			applog.Logger.Tracef("Organization deleted: %s", org.Name)
 			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return

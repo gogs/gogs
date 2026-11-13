@@ -6,21 +6,20 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbx"
+	"gogs.io/gogs/internal/logx"
 )
 
 // Engine represents a XORM engine or session.
@@ -133,46 +132,38 @@ func SetEngine() (*gorm.DB, error) {
 
 	x.SetMapper(core.GonicMapper{})
 
-	var logPath string
-	if conf.HookMode {
-		logPath = filepath.Join(conf.Log.RootPath, "hooks", "xorm.log")
-	} else {
-		logPath = filepath.Join(conf.Log.RootPath, "xorm.log")
-	}
-	sec := conf.File.Section("log.xorm")
-	fileWriter, err := log.NewFileWriter(logPath,
-		log.FileRotationConfig{
-			Rotate:  sec.Key("ROTATE").MustBool(true),
-			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
-			MaxSize: sec.Key("MAX_SIZE").MustInt64(100) * 1024 * 1024,
-			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
-		},
-	)
-	if err != nil {
-		return nil, errors.Newf("create 'xorm.log': %v", err)
-	}
-
 	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
 	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
+	xormWriter := &xormLogWriter{logger: applog.Logger.Scoped("xorm")}
 	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
+		x.SetLogger(xorm.NewSimpleLogger3(xormWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
 	} else {
-		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
+		x.SetLogger(xorm.NewSimpleLogger(xormWriter))
 	}
 	x.ShowSQL(true)
 
-	var gormLogger logger.Writer
-	if conf.HookMode {
-		gormLogger = &dbx.Logger{Writer: fileWriter}
-	} else {
-		gormLogger, err = newLogWriter()
-		if err != nil {
-			return nil, errors.Wrap(err, "new log writer")
-		}
+	return NewConnection(dbx.Logger{})
+}
+
+// xormLogWriter sends xorm's log lines through the process logger. xorm only
+// accepts an io.Writer, so the level is chosen from the line prefix.
+type xormLogWriter struct {
+	logger *logx.Logger
+}
+
+func (w *xormLogWriter) Write(p []byte) (int, error) {
+	msg := strings.TrimRight(string(p), "\n")
+	switch {
+	case strings.Contains(msg, "[error]"):
+		w.logger.Errorf("%s", msg)
+	case strings.Contains(msg, "[warn]"):
+		w.logger.Warnf("%s", msg)
+	default:
+		w.logger.Debugf("%s", msg)
 	}
-	return NewConnection(gormLogger)
+	return len(p), nil
 }
 
 func NewEngine() error {

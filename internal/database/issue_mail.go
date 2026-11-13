@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/markup"
@@ -195,7 +195,7 @@ func (issue *Issue) MailParticipants() (err error) {
 	}
 
 	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {
-		log.Error("mailIssueCommentToParticipants: %v", err)
+		applog.Logger.Errorf("mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil

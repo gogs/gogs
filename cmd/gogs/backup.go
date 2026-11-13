@@ -12,9 +12,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/urfave/cli/v3"
-	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/osx"
@@ -63,13 +63,13 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 
 	tmpDir := cmd.String("tempdir")
 	if !osx.Exist(tmpDir) {
-		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
+		applog.Logger.Fatalf("'--tempdir' does not exist: %s", tmpDir)
 	}
 	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
 	if err != nil {
-		log.Fatal("Failed to create backup root directory '%s': %v", rootDir, err)
+		applog.Logger.Fatalf("Failed to create backup root directory '%s': %v", rootDir, err)
 	}
-	log.Info("Backup root directory: %s", rootDir)
+	applog.Logger.Infof("Backup root directory: %s", rootDir)
 
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
@@ -78,34 +78,34 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
 	if err = metadata.SaveTo(metaFile); err != nil {
-		log.Fatal("Failed to save metadata '%s': %v", metaFile, err)
+		applog.Logger.Fatalf("Failed to save metadata '%s': %v", metaFile, err)
 	}
 
 	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
-	log.Info("Packing backup files to: %s", archiveName)
+	applog.Logger.Infof("Packing backup files to: %s", archiveName)
 
 	z, err := zip.Create(archiveName)
 	if err != nil {
-		log.Fatal("Failed to create backup archive '%s': %v", archiveName, err)
+		applog.Logger.Fatalf("Failed to create backup archive '%s': %v", archiveName, err)
 	}
 	if err = z.AddFile(archiveRootDir+"/metadata.ini", metaFile); err != nil {
-		log.Fatal("Failed to include 'metadata.ini': %v", err)
+		applog.Logger.Fatalf("Failed to include 'metadata.ini': %v", err)
 	}
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
 	if err = database.DumpDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
-		log.Fatal("Failed to dump database: %v", err)
+		applog.Logger.Fatalf("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
-		log.Fatal("Failed to include 'db': %v", err)
+		applog.Logger.Fatalf("Failed to include 'db': %v", err)
 	}
 
 	if !cmd.Bool("database-only") {
 		// Custom files
 		err = addCustomDirToBackup(z)
 		if err != nil {
-			log.Fatal("Failed to add custom directory to backup: %v", err)
+			applog.Logger.Fatalf("Failed to add custom directory to backup: %v", err)
 		}
 
 		// Data files
@@ -116,7 +116,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 			}
 
 			if err = z.AddDir(path.Join(archiveRootDir+"/data", dir), dirPath); err != nil {
-				log.Fatal("Failed to include 'data': %v", err)
+				applog.Logger.Fatalf("Failed to include 'data': %v", err)
 			}
 		}
 	}
@@ -124,45 +124,45 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	// Repositories
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
-		log.Info("Dumping repositories in %q", conf.Repository.Root)
+		applog.Logger.Infof("Dumping repositories in %q", conf.Repository.Root)
 		if cmd.Bool("exclude-mirror-repos") {
 			repos, err := database.GetNonMirrorRepositories()
 			if err != nil {
-				log.Fatal("Failed to get non-mirror repositories: %v", err)
+				applog.Logger.Fatalf("Failed to get non-mirror repositories: %v", err)
 			}
 			reposZip, err := zip.Create(reposDump)
 			if err != nil {
-				log.Fatal("Failed to create %q: %v", reposDump, err)
+				applog.Logger.Fatalf("Failed to create %q: %v", reposDump, err)
 			}
 			baseDir := filepath.Base(conf.Repository.Root)
 			for _, r := range repos {
 				name := r.FullName() + ".git"
 				if err := reposZip.AddDir(filepath.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
-					log.Fatal("Failed to add %q: %v", name, err)
+					applog.Logger.Fatalf("Failed to add %q: %v", name, err)
 				}
 			}
 			if err = reposZip.Close(); err != nil {
-				log.Fatal("Failed to save %q: %v", reposDump, err)
+				applog.Logger.Fatalf("Failed to save %q: %v", reposDump, err)
 			}
 		} else {
 			if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
-				log.Fatal("Failed to dump repositories: %v", err)
+				applog.Logger.Fatalf("Failed to dump repositories: %v", err)
 			}
 		}
-		log.Info("Repositories dumped to: %s", reposDump)
+		applog.Logger.Infof("Repositories dumped to: %s", reposDump)
 
 		if err = z.AddFile(archiveRootDir+"/repositories.zip", reposDump); err != nil {
-			log.Fatal("Failed to include %q: %v", reposDump, err)
+			applog.Logger.Fatalf("Failed to include %q: %v", reposDump, err)
 		}
 	}
 
 	if err = z.Close(); err != nil {
-		log.Fatal("Failed to save backup archive '%s': %v", archiveName, err)
+		applog.Logger.Fatalf("Failed to save backup archive '%s': %v", archiveName, err)
 	}
 
 	_ = os.RemoveAll(rootDir)
-	log.Info("Backup succeed! Archive is located at: %s", archiveName)
-	log.Stop()
+	applog.Logger.Infof("Backup succeed! Archive is located at: %s", archiveName)
+
 	return nil
 }
 
@@ -177,7 +177,7 @@ func addCustomDirToBackup(z *zip.ZipArchive) error {
 		if e.Name() == "data" {
 			// Skip the "data" directory because it lives under the "custom" directory in
 			// the Docker setup and will be backed up separately.
-			log.Trace(`Skipping "data" directory in custom directory`)
+			applog.Logger.Tracef(`Skipping "data" directory in custom directory`)
 			continue
 		}
 

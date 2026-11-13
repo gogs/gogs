@@ -10,8 +10,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -470,7 +470,7 @@ func TestWebhook(c *context.Context) {
 	if c.Repo.Commit == nil {
 		objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 		if err != nil {
-			log.Error("Failed to get object format: %v", err)
+			applog.Logger.Errorf("Failed to get object format: %v", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		}

@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -127,14 +126,14 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		ObjectFormat: git.ObjectFormat(f.ObjectFormat),
 	})
 	if err == nil {
-		log.Trace("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
+		applog.Logger.Tracef("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
 		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
 	if repo != nil {
 		if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-			log.Error("DeleteRepository: %v", errDelete)
+			applog.Logger.Errorf("DeleteRepository: %v", errDelete)
 		}
 	}
 
@@ -207,14 +206,14 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		RemoteAddr:  remoteAddr,
 	})
 	if err == nil {
-		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
+		applog.Logger.Tracef("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
 		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 		return
 	}
 
 	if repo != nil {
 		if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-			log.Error("DeleteRepository: %v", errDelete)
+			applog.Logger.Errorf("DeleteRepository: %v", errDelete)
 		}
 	}
 
@@ -291,7 +290,7 @@ func Download(c *context.Context) {
 		archivePath = filepath.Join(c.Repo.GitRepo.Path(), "archives", "targz")
 		archiveFormat = git.ArchiveTarGz
 	default:
-		log.Trace("Unknown format: %s", uri)
+		applog.Logger.Tracef("Unknown format: %s", uri)
 		c.NotFound()
 		return
 	}

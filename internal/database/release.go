@@ -7,11 +7,10 @@ import (
 	"strings"
 	"time"
 
-	log "unknwon.dev/clog/v2"
+	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"github.com/cockroachdb/errors"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
@@ -157,7 +156,7 @@ func (r *Release) preparePublishWebhooks() {
 		Repository: r.Repo.APIFormatLegacy(nil),
 		Sender:     r.Publisher.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks: %v", err)
+		applog.Logger.Errorf("PrepareWebhooks: %v", err)
 	}
 }
 

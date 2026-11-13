@@ -11,8 +11,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
@@ -1362,7 +1362,7 @@ func (u *User) AvatarURLPath() string {
 	case conf.Picture.DisableGravatar:
 		if !hasCustomAvatar {
 			if err := userx.GenerateRandomAvatar(u.ID, u.Name, u.Email); err != nil {
-				log.Error("Failed to generate random avatar [user_id: %d]: %v", u.ID, err)
+				applog.Logger.Errorf("Failed to generate random avatar [user_id: %d]: %v", u.ID, err)
 			}
 		}
 		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)

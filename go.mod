@@ -3,6 +3,8 @@ module gogs.io/gogs
 go 1.27.0
 
 require (
+	charm.land/lipgloss/v2 v2.0.1
+	charm.land/log/v2 v2.0.0
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/cockroachdb/errors v1.13.0
@@ -61,8 +63,8 @@ require (
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.25.12
-	unknwon.dev/clog/v2 v2.2.0
 	unknwon.dev/ini/v2 v2.0.0-beta.4
+	unknwon.dev/x v0.0.0-20261031163318-04af03672776
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
@@ -70,8 +72,6 @@ require (
 
 require (
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
-	charm.land/lipgloss/v2 v2.0.1 // indirect
-	charm.land/log/v2 v2.0.0 // indirect
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect

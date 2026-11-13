@@ -5,8 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -102,12 +101,12 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		}
 		return
 	}
-	log.Trace("Account %q created by admin %q", user.Name, c.User.Name)
+	applog.Logger.Tracef("Account %q created by admin %q", user.Name, c.User.Name)
 
 	// Send email notification.
 	if f.SendNotify && conf.Email.Enabled {
 		if err := email.SendRegisterNotifyMail(c.Context, database.NewMailerUser(user)); err != nil {
-			log.Error("Failed to send register notify mail: %v", err)
+			applog.Logger.Errorf("Failed to send register notify mail: %v", err)
 		}
 	}
 
@@ -212,7 +211,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		}
 		return
 	}
-	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
+	applog.Logger.Tracef("Account updated by admin %q: %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
@@ -242,7 +241,7 @@ func DeleteUser(c *context.Context) {
 		}
 		return
 	}
-	log.Trace("Account deleted by admin (%s): %s", c.User.Name, u.Name)
+	applog.Logger.Tracef("Account deleted by admin (%s): %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
 	c.JSONSuccess(map[string]any{

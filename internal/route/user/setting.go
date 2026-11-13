@@ -15,8 +15,8 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -96,7 +96,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				return
 			}
 
-			log.Trace("Username changed: %s -> %s", c.User.Name, f.Name)
+			applog.Logger.Tracef("Username changed: %s -> %s", c.User.Name, f.Name)
 		}
 	}
 
@@ -251,7 +251,7 @@ func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User)
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			log.Error("parseUserFromCode: get user by name %q: %v", string(b), err)
+			applog.Logger.Errorf("parseUserFromCode: get user by name %q: %v", string(b), err)
 		}
 	}
 	return nil
@@ -280,7 +280,7 @@ func ActivateEmail(c *context.Context) {
 			return
 		}
 
-		log.Trace("Email activated: %s", email.Email)
+		applog.Logger.Tracef("Email activated: %s", email.Email)
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
 
@@ -328,11 +328,11 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	// Send confirmation email
 	if conf.Auth.RequireEmailConfirmation {
 		if err := email.SendActivateEmailMail(c.Context, database.NewMailerUser(c.User), f.Email); err != nil {
-			log.Error("Failed to send activate email mail: %v", err)
+			applog.Logger.Errorf("Failed to send activate email mail: %v", err)
 		}
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
-			log.Error("Set cache 'MailResendLimit' failed: %v", err)
+			applog.Logger.Errorf("Set cache 'MailResendLimit' failed: %v", err)
 		}
 		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", f.Email, conf.Auth.ActivateCodeLives/60))
 	} else {
@@ -726,7 +726,7 @@ func SettingsDelete(c *context.Context) {
 				c.Errorf(err, "delete user")
 			}
 		} else {
-			log.Trace("Account deleted: %s", c.User.Name)
+			applog.Logger.Tracef("Account deleted: %s", c.User.Name)
 			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return

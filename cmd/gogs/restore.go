@@ -9,9 +9,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/urfave/cli/v3"
-	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/osx"
@@ -47,42 +47,42 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	tmpDir := cmd.String("tempdir")
 	if !osx.IsDir(tmpDir) {
-		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
+		applog.Logger.Fatalf("'--tempdir' does not exist: %s", tmpDir)
 	}
 	archivePath := path.Join(tmpDir, archiveRootDir)
 
 	// Make sure there was no leftover and also clean up afterwards
 	err := os.RemoveAll(archivePath)
 	if err != nil {
-		log.Fatal("Failed to clean up previous leftover in %q: %v", archivePath, err)
+		applog.Logger.Fatalf("Failed to clean up previous leftover in %q: %v", archivePath, err)
 	}
 	defer func() { _ = os.RemoveAll(archivePath) }()
 
-	log.Info("Restoring backup from: %s", cmd.String("from"))
+	applog.Logger.Infof("Restoring backup from: %s", cmd.String("from"))
 	err = zip.ExtractTo(cmd.String("from"), tmpDir)
 	if err != nil {
-		log.Fatal("Failed to extract backup archive: %v", err)
+		applog.Logger.Fatalf("Failed to extract backup archive: %v", err)
 	}
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
 	if !osx.IsFile(metaFile) {
-		log.Fatal("File 'metadata.ini' is missing")
+		applog.Logger.Fatalf("File 'metadata.ini' is missing")
 	}
 	metadata, err := ini.Load(metaFile)
 	if err != nil {
-		log.Fatal("Failed to load metadata '%s': %v", metaFile, err)
+		applog.Logger.Fatalf("Failed to load metadata '%s': %v", metaFile, err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
 	if semverx.Compare(conf.App.Version, "<", backupVersion) {
-		log.Fatal("Current Gogs version is lower than backup version: %s < %s", conf.App.Version, backupVersion)
+		applog.Logger.Fatalf("Current Gogs version is lower than backup version: %s < %s", conf.App.Version, backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {
-		log.Fatal("Failed to determine the backup format version from metadata '%s': %s", metaFile, "VERSION is not presented")
+		applog.Logger.Fatalf("Failed to determine the backup format version from metadata '%s': %s", metaFile, "VERSION is not presented")
 	}
 	if formatVersion != currentBackupFormatVersion {
-		log.Fatal("Backup format version found is %d but this binary only supports %d\nThe last known version that is able to import your backup is %s",
+		applog.Logger.Fatalf("Backup format version found is %d but this binary only supports %d\nThe last known version that is able to import your backup is %s",
 			formatVersion, currentBackupFormatVersion, lastSupportedVersionOfFormat[formatVersion])
 	}
 
@@ -93,7 +93,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if lineageConf := configFromLineage(cmd); lineageConf != "" {
 		customConf = lineageConf
 	} else if !osx.IsFile(configFile) {
-		log.Fatal("'--config' is not specified and custom config file is not found in backup")
+		applog.Logger.Fatalf("'--config' is not specified and custom config file is not found in backup")
 	} else {
 		customConf = configFile
 	}
@@ -115,11 +115,11 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		// Custom files
 		if osx.IsDir(conf.CustomDir()) {
 			if err = moveAside(conf.CustomDir()); err != nil {
-				log.Fatal("Failed to backup current 'custom': %v", err)
+				applog.Logger.Fatalf("Failed to backup current 'custom': %v", err)
 			}
 		}
 		if err = os.Rename(filepath.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
-			log.Fatal("Failed to import 'custom': %v", err)
+			applog.Logger.Fatalf("Failed to import 'custom': %v", err)
 		}
 
 		// Data files
@@ -134,11 +134,11 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if osx.IsDir(dirPath) {
 				if err = moveAside(dirPath); err != nil {
-					log.Fatal("Failed to backup current 'data': %v", err)
+					applog.Logger.Fatalf("Failed to backup current 'data': %v", err)
 				}
 			}
 			if err = os.Rename(srcPath, dirPath); err != nil {
-				log.Fatal("Failed to import 'data': %v", err)
+				applog.Logger.Fatalf("Failed to import 'data': %v", err)
 			}
 		}
 	}
@@ -146,19 +146,19 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// Database
 	dbDir := path.Join(archivePath, "db")
 	if err = database.ImportDatabase(ctx, conn, dbDir, cmd.Bool("verbose")); err != nil {
-		log.Fatal("Failed to import database: %v", err)
+		applog.Logger.Fatalf("Failed to import database: %v", err)
 	}
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osx.IsFile(reposPath) {
 		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
-			log.Fatal("Failed to extract 'repositories.zip': %v", err)
+			applog.Logger.Fatalf("Failed to extract 'repositories.zip': %v", err)
 		}
 	}
 
-	log.Info("Restore succeed!")
-	log.Stop()
+	applog.Logger.Infof("Restore succeed!")
+
 	return nil
 }
 

@@ -2,8 +2,8 @@ package database
 
 import (
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -36,7 +36,7 @@ func IsCollaborator(repoID, userID int64) bool {
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
-		log.Error("get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		applog.Logger.Errorf("get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
 		return false
 	}
 	return has

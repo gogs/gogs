@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -83,7 +83,7 @@ func editFile(c *context.Context, isNewFile bool) {
 
 		if content, err := template.ToUTF8WithErr(p); err != nil {
 			if err != nil {
-				log.Error("Failed to convert encoding to UTF-8: %v", err)
+				applog.Logger.Errorf("Failed to convert encoding to UTF-8: %v", err)
 			}
 			c.Data["FileContent"] = string(p)
 		} else {
@@ -277,7 +277,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		Content:     strings.ReplaceAll(f.Content, "\r", ""),
 		IsNewFile:   isNewFile,
 	}); err != nil {
-		log.Error("Failed to update repo file: %v", err)
+		applog.Logger.Errorf("Failed to update repo file: %v", err)
 		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorEdit, &f)
 		return
@@ -386,7 +386,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		TreePath:     c.Repo.TreePath,
 		Message:      message,
 	}); err != nil {
-		log.Error("Failed to delete repo file: %v", err)
+		applog.Logger.Errorf("Failed to delete repo file: %v", err)
 		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorDelete, &f)
 		return
 	}
@@ -507,7 +507,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		Message:      message,
 		Files:        f.Files,
 	}); err != nil {
-		log.Error("Failed to upload files: %v", err)
+		applog.Logger.Errorf("Failed to upload files: %v", err)
 		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorUpload, &f)
 		return
@@ -557,7 +557,7 @@ func UploadFileToServer(c *context.Context) {
 		return
 	}
 
-	log.Trace("New file uploaded by user[%d]: %s", c.UserID(), upload.UUID)
+	applog.Logger.Tracef("New file uploaded by user[%d]: %s", c.UserID(), upload.UUID)
 	c.JSONSuccess(map[string]string{
 		"uuid": upload.UUID,
 	})
@@ -574,6 +574,6 @@ func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
 		return
 	}
 
-	log.Trace("Upload file removed: %s", f.File)
+	applog.Logger.Tracef("Upload file removed: %s", f.File)
 	c.Status(http.StatusNoContent)
 }

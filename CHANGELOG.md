@@ -24,6 +24,7 @@ All notable changes to Gogs are documented in this file.
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Logs are written through the standard logger. In production the output is JSON. Database logs no longer have their own files. `[log] LEVEL` now applies to a mode that does not set its own level. [#8529](https://github.com/gogs/gogs/pull/8529)
 
 ### Fixed
 

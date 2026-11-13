@@ -12,8 +12,8 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
@@ -115,7 +115,7 @@ func (c *Context) HasValue(name string) bool {
 
 // HTML responses template with given status.
 func (c *Context) HTML(status int, name string) {
-	log.Trace("Template: %s", name)
+	applog.Logger.Tracef("Template: %s", name)
 	c.Context.HTML(status, name)
 }
 
@@ -215,7 +215,7 @@ func (c *Context) serveWeb(wr WebContext) {
 
 // Error renders the 500 page.
 func (c *Context) Error(err error, msg string) {
-	log.ErrorDepth(4, "%s: %v", msg, err)
+	applog.Logger.Errorf("%s: %v", msg, err)
 
 	c.Title("status.internal_server_error")
 
@@ -316,7 +316,7 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 			}
 		}
 
-		log.Trace("Session ID: %s", sess.ID())
+		applog.Logger.Tracef("Session ID: %s", sess.ID())
 
 		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
 

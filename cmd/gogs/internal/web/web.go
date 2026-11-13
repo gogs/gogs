@@ -28,11 +28,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
@@ -621,7 +621,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	} else {
 		listenAddr = fmt.Sprintf("%s:%d", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 	}
-	log.Info("Available on %s", conf.Server.ExternalURL)
+	applog.Logger.Infof("Available on %s", conf.Server.ExternalURL)
 
 	var handler http.Handler = m
 	if shutdownTracing != nil {
@@ -975,13 +975,13 @@ func initServices(customConf string) error {
 	}
 
 	conf.InitLogging(false)
-	log.Info("%s %s", conf.App.BrandName, conf.App.Version)
-	log.Trace("Work directory: %s", conf.WorkDir())
-	log.Trace("Custom path: %s", conf.CustomDir())
-	log.Trace("Custom config: %s", conf.CustomConf)
-	log.Trace("Log path: %s", conf.Log.RootPath)
-	log.Trace("Build time: %s", conf.BuildTime)
-	log.Trace("Build commit: %s", conf.BuildCommit)
+	applog.Logger.Infof("%s %s", conf.App.BrandName, conf.App.Version)
+	applog.Logger.Tracef("Work directory: %s", conf.WorkDir())
+	applog.Logger.Tracef("Custom path: %s", conf.CustomDir())
+	applog.Logger.Tracef("Custom config: %s", conf.CustomConf)
+	applog.Logger.Tracef("Log path: %s", conf.Log.RootPath)
+	applog.Logger.Tracef("Build time: %s", conf.BuildTime)
+	applog.Logger.Tracef("Build commit: %s", conf.BuildCommit)
 
 	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
@@ -991,10 +991,10 @@ func initServices(customConf string) error {
 	} else {
 		git.SetOutput(os.Stdout)
 	}
-	log.Info("Run mode: %s", strings.Title(macaron.Env))
+	applog.Logger.Infof("Run mode: %s", strings.Title(macaron.Env))
 
 	if conf.Email.Enabled {
-		log.Trace("Email service is enabled")
+		applog.Logger.Tracef("Email service is enabled")
 	}
 
 	email.NewContext()
@@ -1014,23 +1014,23 @@ func initServices(customConf string) error {
 	database.InitTestPullRequests()
 
 	if conf.HasMinWinSvc {
-		log.Info("Builtin Windows Service is supported")
+		applog.Logger.Infof("Builtin Windows Service is supported")
 	}
 	if conf.Server.LoadAssetsFromDisk {
-		log.Trace("Assets are loaded from disk")
+		applog.Logger.Tracef("Assets are loaded from disk")
 	}
 
 	if conf.SSH.StartBuiltinServer {
 		ssh.Listen(conf.SSH, conf.Server.AppDataPath)
-		log.Info("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
-		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
-		log.Trace("SSH server MAC list: %v", conf.SSH.ServerMACs)
-		log.Trace("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
+		applog.Logger.Infof("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
+		applog.Logger.Tracef("SSH server cipher list: %v", conf.SSH.ServerCiphers)
+		applog.Logger.Tracef("SSH server MAC list: %v", conf.SSH.ServerMACs)
+		applog.Logger.Tracef("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
 		if err := database.RewriteAuthorizedKeys(); err != nil {
-			log.Warn("Failed to rewrite authorized_keys file: %v", err)
+			applog.Logger.Warnf("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
 

@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/authx"
 	"gogs.io/gogs/internal/conf"
@@ -61,7 +61,7 @@ func authenticate(store Store) macaron.Handler {
 		user, err := store.AuthenticateUser(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(c.Resp)
-			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
+			applog.Logger.Errorf("Failed to authenticate user [name: %s]: %v", username, err)
 			return
 		}
 
@@ -76,7 +76,7 @@ func authenticate(store Store) macaron.Handler {
 			user, err = context.AuthenticateByToken(store, c.Req.Context(), username)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				internalServerError(c.Resp)
-				log.Error("Failed to authenticate by access token via username: %v", err)
+				applog.Logger.Errorf("Failed to authenticate by access token via username: %v", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
@@ -86,7 +86,7 @@ func authenticate(store Store) macaron.Handler {
 						askCredentials(c.Resp)
 					} else {
 						c.Status(http.StatusInternalServerError)
-						log.Error("Failed to authenticate by access token via password: %v", err)
+						applog.Logger.Errorf("Failed to authenticate by access token via password: %v", err)
 					}
 					return
 				}
@@ -100,7 +100,7 @@ func authenticate(store Store) macaron.Handler {
 			return
 		}
 
-		log.Trace("[LFS] Authenticated user: %s", user.Name)
+		applog.Logger.Tracef("[LFS] Authenticated user: %s", user.Name)
 
 		c.Map(user)
 	}
@@ -118,7 +118,7 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				internalServerError(c.Resp)
-				log.Error("Failed to get user [name: %s]: %v", username, err)
+				applog.Logger.Errorf("Failed to get user [name: %s]: %v", username, err)
 			}
 			return
 		}
@@ -129,7 +129,7 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				internalServerError(c.Resp)
-				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
+				applog.Logger.Errorf("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
 			}
 			return
 		}
@@ -144,7 +144,7 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 			return
 		}
 
-		log.Trace("[LFS] Authorized user %q to %q", actor.Name, username+"/"+reponame)
+		applog.Logger.Tracef("[LFS] Authorized user %q to %q", actor.Name, username+"/"+reponame)
 
 		c.Map(owner) // NOTE: Override actor
 		c.Map(repo)
@@ -162,7 +162,7 @@ func verifyHeader(key, value string, failCode int) macaron.Handler {
 			}
 		}
 
-		log.Trace("[LFS] HTTP header %q does not contain value %q", key, value)
+		applog.Logger.Tracef("[LFS] HTTP header %q does not contain value %q", key, value)
 		c.Status(failCode)
 	}
 }

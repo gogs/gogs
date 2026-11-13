@@ -13,11 +13,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/unknwon/i18n"
-	log "unknwon.dev/clog/v2"
-
 	"github.com/gogs/chardet"
+	"github.com/unknwon/i18n"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 )
@@ -33,17 +32,17 @@ func ShortSHA1(sha1 string) string {
 // DetectEncoding returns best guess of encoding of given content.
 func DetectEncoding(content []byte) (string, error) {
 	if utf8.Valid(content) {
-		log.Trace("Detected encoding: UTF-8 (fast)")
+		applog.Logger.Tracef("Detected encoding: UTF-8 (fast)")
 		return "UTF-8", nil
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
 	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
-		log.Trace("Using default ANSICharset: %s", conf.Repository.ANSICharset)
+		applog.Logger.Tracef("Using default ANSICharset: %s", conf.Repository.ANSICharset)
 		return conf.Repository.ANSICharset, err
 	}
 
-	log.Trace("Detected encoding: %s", result.Charset)
+	applog.Logger.Tracef("Detected encoding: %s", result.Charset)
 	return result.Charset, err
 }
 
@@ -136,7 +135,7 @@ func AvatarLink(email string) (url string) {
 		var err error
 		url, err = conf.Picture.LibravatarService.FromEmail(email)
 		if err != nil {
-			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
+			applog.Logger.Warnf("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
 	if url == "" && !conf.Picture.DisableGravatar {

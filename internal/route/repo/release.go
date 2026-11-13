@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -231,7 +231,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		}
 		return
 	}
-	log.Trace("Release created: %s/%s:%s", c.User.LowerName, c.Repo.Repository.Name, f.TagName)
+	applog.Logger.Tracef("Release created: %s/%s:%s", c.User.LowerName, c.Repo.Repository.Name, f.TagName)
 
 	c.Redirect(c.Repo.RepoLink + "/releases")
 }

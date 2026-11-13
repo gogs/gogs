@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -73,7 +73,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				return
 			}
 
-			log.Trace("Repository name changed: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newRepoName)
+			applog.Logger.Tracef("Repository name changed: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newRepoName)
 		}
 		// In case it's just a case change.
 		repo.Name = newRepoName
@@ -95,11 +95,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.Error(err, "update repository")
 			return
 		}
-		log.Trace("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
+		applog.Logger.Tracef("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
 			if err := database.Handle.Actions().RenameRepo(c.Req.Context(), c.User, repo.MustOwner(), oldRepoName, repo); err != nil {
-				log.Error("create rename repository action: %v", err)
+				applog.Logger.Errorf("create rename repository action: %v", err)
 			}
 		}
 
@@ -192,7 +192,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.Error(err, "update repository")
 			return
 		}
-		log.Trace("Repository advanced settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
+		applog.Logger.Tracef("Repository advanced settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.update_settings_success"))
 		c.Redirect(c.Repo.RepoLink + "/settings")
@@ -227,7 +227,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.Error(err, "delete mirror by repository ID")
 			return
 		}
-		log.Trace("Repository converted from mirror to regular: %s/%s", c.Repo.Owner.Name, repo.Name)
+		applog.Logger.Tracef("Repository converted from mirror to regular: %s/%s", c.Repo.Owner.Name, repo.Name)
 		c.Flash.Success(c.Tr("repo.settings.convert_succeed"))
 		c.Redirect(conf.Server.Subpath + "/" + c.Repo.Owner.Name + "/" + repo.Name)
 
@@ -262,7 +262,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 			return
 		}
-		log.Trace("Repository transferred: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newOwner)
+		applog.Logger.Tracef("Repository transferred: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newOwner)
 		c.Flash.Success(c.Tr("repo.settings.transfer_succeed"))
 		c.Redirect(conf.Server.Subpath + "/" + newOwner + "/" + repo.Name)
 
@@ -287,7 +287,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.Error(err, "delete repository")
 			return
 		}
-		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
+		applog.Logger.Tracef("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
 		c.Redirect(userx.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
@@ -310,7 +310,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		repo.DeleteWiki()
-		log.Trace("Repository wiki deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
+		applog.Logger.Tracef("Repository wiki deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		repo.EnableWiki = false
 		if err := database.UpdateRepository(repo, false); err != nil {
@@ -429,7 +429,7 @@ func SettingsCollaborationPost(c *context.Context) {
 
 	if conf.User.EnableEmailNotification {
 		if err := email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository)); err != nil {
-			log.Error("Failed to send collaborator mail: %v", err)
+			applog.Logger.Errorf("Failed to send collaborator mail: %v", err)
 		}
 	}
 
@@ -442,7 +442,7 @@ func ChangeCollaborationAccessMode(c *context.Context) {
 		c.Repo.AccessMode,
 		c.QueryInt64("uid"),
 		database.AccessMode(c.QueryInt("mode"))); err != nil {
-		log.Error("ChangeCollaborationAccessMode: %v", err)
+		applog.Logger.Errorf("ChangeCollaborationAccessMode: %v", err)
 		return
 	}
 
@@ -711,7 +711,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		return
 	}
 
-	log.Trace("Deploy key added: %d", c.Repo.Repository.ID)
+	applog.Logger.Tracef("Deploy key added: %d", c.Repo.Repository.ID)
 	c.Flash.Success(c.Tr("repo.settings.add_key_success", key.Name))
 	c.Redirect(c.Repo.RepoLink + "/settings/keys")
 }

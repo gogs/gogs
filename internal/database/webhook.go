@@ -15,9 +15,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/netx"
@@ -126,7 +126,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	case "events":
 		w.HookEvent = &HookEvent{}
 		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-			log.Error("Unmarshal [%d]: %v", w.ID, err)
+			applog.Logger.Errorf("Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
 		w.Created = time.Unix(w.CreatedUnix, 0).Local()
@@ -138,7 +138,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 func (w *Webhook) SlackMeta() *SlackMeta {
 	s := &SlackMeta{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
-		log.Error("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
+		applog.Logger.Errorf("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
 	}
 	return s
 }
@@ -475,7 +475,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.RequestInfo = &HookRequest{}
 		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
-			log.Error("Unmarshal[%d]: %v", t.ID, err)
+			applog.Logger.Errorf("Unmarshal[%d]: %v", t.ID, err)
 		}
 
 	case "response_content":
@@ -485,7 +485,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.ResponseInfo = &HookResponse{}
 		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
-			log.Error("Unmarshal [%d]: %v", t.ID, err)
+			applog.Logger.Errorf("Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
@@ -493,7 +493,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 func (t *HookTask) ToJSON(v any) string {
 	p, err := json.Marshal(v)
 	if err != nil {
-		log.Error("Marshal [%d]: %v", t.ID, err)
+		applog.Logger.Errorf("Marshal [%d]: %v", t.ID, err)
 	}
 	return string(p)
 }
@@ -625,7 +625,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p apiv1ty
 		if len(w.Secret) > 0 {
 			data, err := payloader.JSONPayload()
 			if err != nil {
-				log.Error("prepareWebhooks.JSONPayload: %v", err)
+				applog.Logger.Errorf("prepareWebhooks.JSONPayload: %v", err)
 			}
 			sig := hmac.New(sha256.New, []byte(w.Secret))
 			_, _ = sig.Write(data)
@@ -741,15 +741,15 @@ func (t *HookTask) deliver() {
 	defer func() {
 		t.Delivered = time.Now().UnixNano()
 		if t.IsSucceed {
-			log.Trace("Hook delivered: %s", t.UUID)
+			applog.Logger.Tracef("Hook delivered: %s", t.UUID)
 		} else {
-			log.Trace("Hook delivery failed: %s", t.UUID)
+			applog.Logger.Tracef("Hook delivery failed: %s", t.UUID)
 		}
 
 		// Update webhook last delivery status.
 		w, err := GetWebhookByID(t.HookID)
 		if err != nil {
-			log.Error("GetWebhookByID: %v", err)
+			applog.Logger.Errorf("GetWebhookByID: %v", err)
 			return
 		}
 		if t.IsSucceed {
@@ -758,7 +758,7 @@ func (t *HookTask) deliver() {
 			w.LastStatus = HookStatusFailed
 		}
 		if err = UpdateWebhook(w); err != nil {
-			log.Error("UpdateWebhook: %v", err)
+			applog.Logger.Errorf("UpdateWebhook: %v", err)
 			return
 		}
 	}()
@@ -813,24 +813,24 @@ func DeliverHooks() {
 	// Update hook task status.
 	for _, t := range tasks {
 		if err := UpdateHookTask(t); err != nil {
-			log.Error("UpdateHookTask [%d]: %v", t.ID, err)
+			applog.Logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
 		}
 	}
 
 	// Start listening on new hook requests.
 	for repoID := range HookQueue.Queue() {
-		log.Trace("DeliverHooks [repo_id: %v]", repoID)
+		applog.Logger.Tracef("DeliverHooks [repo_id: %v]", repoID)
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
 		if err := x.Where("repo_id = ?", repoID).And("is_delivered = ?", false).Find(&tasks); err != nil {
-			log.Error("Get repository [%s] hook tasks: %v", repoID, err)
+			applog.Logger.Errorf("Get repository [%s] hook tasks: %v", repoID, err)
 			continue
 		}
 		for _, t := range tasks {
 			t.deliver()
 			if err := UpdateHookTask(t); err != nil {
-				log.Error("UpdateHookTask [%d]: %v", t.ID, err)
+				applog.Logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
 				continue
 			}
 		}

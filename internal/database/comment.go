@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
@@ -177,7 +177,7 @@ func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (e
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
 	if err = mailIssueCommentToParticipants(issue, c.Poster, mentions); err != nil {
-		log.Error("mailIssueCommentToParticipants: %v", err)
+		applog.Logger.Errorf("mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil
@@ -271,10 +271,10 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Notify watchers for whatever action comes in, ignore if no action type.
 	if act.OpType > 0 {
 		if err = notifyWatchers(e, act); err != nil {
-			log.Error("notifyWatchers: %v", err)
+			applog.Logger.Errorf("notifyWatchers: %v", err)
 		}
 		if err = comment.mailParticipants(e, act.OpType, opts.Issue); err != nil {
-			log.Error("MailParticipants: %v", err)
+			applog.Logger.Errorf("MailParticipants: %v", err)
 		}
 	}
 
@@ -345,7 +345,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 		Repository: repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
+		applog.Logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
 	}
 
 	return comment, nil
@@ -473,7 +473,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 	}
 
 	if err = c.Issue.LoadAttributes(); err != nil {
-		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
+		applog.Logger.Errorf("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
 	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:  apiv1types.WebhookIssueCommentEdited,
 		Issue:   c.Issue.APIFormat(),
@@ -486,7 +486,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 		Repository: c.Issue.Repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
+		applog.Logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
 	}
 
 	return nil
@@ -524,11 +524,11 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	_, err = DeleteAttachmentsByComment(comment.ID, true)
 	if err != nil {
-		log.Error("Failed to delete attachments by comment[%d]: %v", comment.ID, err)
+		applog.Logger.Errorf("Failed to delete attachments by comment[%d]: %v", comment.ID, err)
 	}
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
-		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
+		applog.Logger.Errorf("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
 	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:     apiv1types.WebhookIssueCommentDeleted,
 		Issue:      comment.Issue.APIFormat(),
@@ -536,7 +536,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		Repository: comment.Issue.Repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
+		applog.Logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
 	}
 	return nil
 }

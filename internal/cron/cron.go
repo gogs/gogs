@@ -3,10 +3,9 @@ package cron
 import (
 	"time"
 
-	log "unknwon.dev/clog/v2"
-
 	"github.com/gogs/cron"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
@@ -21,7 +20,7 @@ func NewContext() {
 	if conf.Cron.UpdateMirror.Enabled {
 		entry, err = c.AddFunc("Update mirrors", conf.Cron.UpdateMirror.Schedule, database.MirrorUpdate)
 		if err != nil {
-			log.Fatal("Cron.(update mirrors): %v", err)
+			applog.Logger.Fatalf("Cron.(update mirrors): %v", err)
 		}
 		if conf.Cron.UpdateMirror.RunAtStart {
 			entry.Prev = time.Now()
@@ -32,7 +31,7 @@ func NewContext() {
 	if conf.Cron.RepoHealthCheck.Enabled {
 		entry, err = c.AddFunc("Repository health check", conf.Cron.RepoHealthCheck.Schedule, database.GitFsck)
 		if err != nil {
-			log.Fatal("Cron.(repository health check): %v", err)
+			applog.Logger.Fatalf("Cron.(repository health check): %v", err)
 		}
 		if conf.Cron.RepoHealthCheck.RunAtStart {
 			entry.Prev = time.Now()
@@ -43,7 +42,7 @@ func NewContext() {
 	if conf.Cron.CheckRepoStats.Enabled {
 		entry, err = c.AddFunc("Check repository statistics", conf.Cron.CheckRepoStats.Schedule, database.CheckRepoStats)
 		if err != nil {
-			log.Fatal("Cron.(check repository statistics): %v", err)
+			applog.Logger.Fatalf("Cron.(check repository statistics): %v", err)
 		}
 		if conf.Cron.CheckRepoStats.RunAtStart {
 			entry.Prev = time.Now()
@@ -54,7 +53,7 @@ func NewContext() {
 	if conf.Cron.RepoArchiveCleanup.Enabled {
 		entry, err = c.AddFunc("Repository archive cleanup", conf.Cron.RepoArchiveCleanup.Schedule, database.DeleteOldRepositoryArchives)
 		if err != nil {
-			log.Fatal("Cron.(repository archive cleanup): %v", err)
+			applog.Logger.Fatalf("Cron.(repository archive cleanup): %v", err)
 		}
 		if conf.Cron.RepoArchiveCleanup.RunAtStart {
 			entry.Prev = time.Now()

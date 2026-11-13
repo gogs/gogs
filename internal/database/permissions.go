@@ -5,7 +5,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
+
+	"gogs.io/gogs/internal/applog"
 )
 
 // Access represents the highest access level of a user has to a repository. The
@@ -95,7 +96,7 @@ func (s *PermissionsStore) AccessMode(ctx context.Context, userID, repoID int64,
 	err := s.db.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Error("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
+			applog.Logger.Errorf("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
 		}
 		return mode
 	}

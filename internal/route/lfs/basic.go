@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
 	"gogs.io/gogs/internal/strx"
@@ -48,7 +48,7 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 			})
 		} else {
 			internalServerError(c.Resp)
-			log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
+			applog.Logger.Errorf("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		}
 		return
 	}
@@ -56,7 +56,7 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 	s := h.Storager(object.Storage)
 	if s == nil {
 		internalServerError(c.Resp)
-		log.Error("Failed to locate the object [repo_id: %d, oid: %s]: storage %q not found", object.RepoID, object.OID, object.Storage)
+		applog.Logger.Errorf("Failed to locate the object [repo_id: %d, oid: %s]: storage %q not found", object.RepoID, object.OID, object.Storage)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 
 	err = s.Download(object.OID, c.Resp)
 	if err != nil {
-		log.Error("Failed to download object [oid: %s]: %v", object.OID, err)
+		applog.Logger.Errorf("Failed to download object [oid: %s]: %v", object.OID, err)
 		return
 	}
 }
@@ -84,7 +84,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 		return
 	} else if !database.IsErrLFSObjectNotExist(err) {
 		internalServerError(c.Resp)
-		log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
+		applog.Logger.Errorf("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 			})
 		} else {
 			internalServerError(c.Resp)
-			log.Error("Failed to upload object [storage: %s, oid: %s]: %v", s.Storage(), oid, err)
+			applog.Logger.Errorf("Failed to upload object [storage: %s, oid: %s]: %v", s.Storage(), oid, err)
 		}
 		return
 	}
@@ -108,12 +108,12 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository
 		// with a DB error, a retry on client side will skip the upload as
 		// the file already exists on disk.
 		internalServerError(c.Resp)
-		log.Error("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
+		applog.Logger.Errorf("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return
 	}
 	c.Status(http.StatusOK)
 
-	log.Trace("[LFS] Object created %q", oid)
+	applog.Logger.Tracef("[LFS] Object created %q", oid)
 }
 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
@@ -144,7 +144,7 @@ func (h *basicHandler) serveVerify(c *macaron.Context, repo *database.Repository
 			})
 		} else {
 			internalServerError(c.Resp)
-			log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, request.Oid, err)
+			applog.Logger.Errorf("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, request.Oid, err)
 		}
 		return
 	}

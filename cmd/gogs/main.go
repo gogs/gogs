@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	"github.com/urfave/cli/v3"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/cmd/gogs/internal/web"
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 )
 
@@ -58,6 +58,6 @@ func main() {
 		stop()
 	}()
 	if err := cmd.Run(ctx, os.Args); err != nil {
-		log.Fatal("Failed to start application: %v", err)
+		applog.Logger.Fatalf("Failed to start application: %v", err)
 	}
 }

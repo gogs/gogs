@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 )
 
@@ -53,7 +53,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}
 
 	if err := p.config.doAuth(smtpAuth); err != nil {
-		log.Trace("SMTP: Authentication failed: %v", err)
+		applog.Logger.Tracef("SMTP: Authentication failed: %v", err)
 
 		// Check standard error format first, then fallback to the worse case.
 		tperr, ok := err.(*textproto.Error)

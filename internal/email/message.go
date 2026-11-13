@@ -9,8 +9,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/inbucket/html2text"
 	gomail "github.com/wneessen/go-mail"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 )
 
@@ -21,7 +21,7 @@ type message struct {
 }
 
 func newMessageFrom(to []string, from, subject, htmlBody string) (*message, error) {
-	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
+	applog.Logger.Tracef("NewMessageFrom (htmlBody):\n%s", htmlBody)
 
 	m := gomail.NewMsg()
 	if err := m.From(from); err != nil {
@@ -119,11 +119,11 @@ func sendMessage(msg *message) error {
 func processMailQueue() {
 	for msg := range mailQueue {
 		to := strings.Join(msg.msg.GetToString(), ", ")
-		log.Trace("New e-mail sending request %s: %s", to, msg.info)
+		applog.Logger.Tracef("New e-mail sending request %s: %s", to, msg.info)
 		if err := sendMessage(msg); err != nil {
-			log.Error("Failed to send emails %s: %s - %v", to, msg.info, err)
+			applog.Logger.Errorf("Failed to send emails %s: %s - %v", to, msg.info, err)
 		} else {
-			log.Trace("E-mails sent %s: %s", to, msg.info)
+			applog.Logger.Tracef("E-mails sent %s: %s", to, msg.info)
 		}
 		msg.confirmChan <- struct{}{}
 	}

@@ -9,8 +9,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/strx"
@@ -105,7 +105,7 @@ func (s *TwoFactorsStore) IsEnabled(ctx context.Context, userID int64) bool {
 	var count int64
 	err := s.db.WithContext(ctx).Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
 	if err != nil {
-		log.Error("Failed to count two factors [user_id: %d]: %v", userID, err)
+		applog.Logger.Errorf("Failed to count two factors [user_id: %d]: %v", userID, err)
 	}
 	return count > 0
 }

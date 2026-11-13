@@ -2,8 +2,8 @@ package admin
 
 import (
 	"github.com/unknwon/paginater"
-	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -74,7 +74,7 @@ func DeleteRepo(c *context.Context) {
 		c.Error(err, "delete repository")
 		return
 	}
-	log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
+	applog.Logger.Tracef("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
 	c.JSONSuccess(map[string]any{
