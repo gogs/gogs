@@ -17,7 +17,7 @@ Don't mix sans and mono within the same UI surface for arbitrary reasons. If a c
 
 ## Color hierarchy
 
-Palettes are adapted from [Pierre Theme](https://github.com/pierrecomputer/theme)'s "Light" and "Dark" (non-soft) variants. The dark-mode input background is bumped slightly above Pierre's value (`#262626` instead of `#1d1d1d`) so form fields read as edged elements outside an IDE panel context. Dark mode is opt-in via the `.dark` class on `:root` (see `lib/theme.ts`), not media-query driven, so the user's stored preference always wins. The `@custom-variant dark` rule in `index.css` lets utilities like `dark:...` target the same class.
+Palettes are adapted from [Pierre Theme](https://github.com/pierrecomputer/theme)'s "Light" and "Dark" (non-soft) variants. Text, link, border, and input tokens are darkened in light mode and lightened in dark mode from Pierre's values, so every text pair meets 4.5:1 and input edges meet 3:1 against the page background. Check a changed token against both floors before landing it. Dark mode is opt-in via the `.dark` class on `:root` (see `lib/theme.ts`), not media-query driven, so the user's stored preference always wins. The `@custom-variant dark` rule in `index.css` lets utilities like `dark:...` target the same class.
 
 Use these tokens. Don't introduce raw hex values in components.
 
@@ -32,7 +32,7 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Accents and state**
 
-- `--color-primary` / `--color-primary-foreground`: brand blue (`#009fff` in both modes). Reserved for genuine brand emphasis. Don't use it to mean "primary action" between two peer links (see the peer-item rule below). Note: white-on-primary contrast is 2.84:1, which is below WCAG AA in both modes since the token is identical light and dark. Avoid using primary as a fill for body-sized text. Use it for chrome accents, ring/focus, and large CTAs only.
+- `--color-primary` / `--color-primary-foreground`: brand blue, deepened to `#0b6bcb` in light mode and lightened to `#33b1ff` in dark mode so it reads as link text. `--color-primary-foreground` flips to near-black in dark mode to keep button labels readable on the lighter fill. Reserved for genuine brand emphasis. Don't use it to mean "primary action" between two peer links (see the peer-item rule below).
 - `--color-secondary` / `--color-secondary-foreground`: neutral support fill. Available for chips, tags, low-emphasis fills.
 - `--color-destructive` / `--color-destructive-foreground`: error and danger. The 404 page uses `text-(--color-destructive)` on the `fatal:` token, always paired with the word itself (color is never the sole signal).
 - `--color-success`: affirmative state for signature verification badges and copy-confirm checkmarks. Lighter in dark mode (`#4ade80`) than light (`#15803d`) so it reads on both backgrounds. Always pair with a label or icon, never color alone.
@@ -41,7 +41,7 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Structure**
 
-- `--color-border`: soft container and divider lines. Used for the navbar bottom border, popover edges, card outlines, mobile-menu separators. Deliberately low-contrast (close to `--color-secondary`) so chrome reads as quiet boundary, not as a hard rule.
+- `--color-border`: soft container and divider lines. Used for the navbar bottom border, popover edges, card outlines, mobile-menu separators. Quieter than `--color-input` so chrome reads as a boundary, not as a hard rule, but still visible against the page background in both modes.
 - `--color-input`: input field borders. Similar weight to `--color-border` but kept as a separate token so form fields can drift independently if needed.
 
 **The terminal frame is the exception.** Faux-CLI surfaces (`Landing.tsx`, `NotFound.tsx`, `ServerError.tsx`) wrap their output in a heavy outline so it actually looks like a terminal window. That frame uses `border-(--color-foreground)/80` (light) and the regular `--color-border` token (dark) directly, instead of the shared chrome token.
