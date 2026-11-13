@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
@@ -24,9 +25,11 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
@@ -53,18 +56,20 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-// Run starts the web server with the given configuration path and port override.
-func Run(configPath string, portOverride int) error {
+// Run starts the web server with the given configuration path and port
+// override, and stops it when the context is done.
+func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	err := initServices(configPath)
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
-	shutdownTracing, err := initTracing(gocontext.Background())
+	shutdownTracing, err := tracing.Init(ctx)
 	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
 	}
 	if shutdownTracing != nil {
-		defer shutdownTracing()
+		// Stopping Gogs must not wait long on a collector that is down.
+		defer shutdownTracing(5 * time.Second)
 	}
 
 	m, err := newMacaron()
@@ -620,9 +625,11 @@ func Run(configPath string, portOverride int) error {
 		handler = newTracingHandler(m)
 	}
 
+	server := &http.Server{Addr: listenAddr, Handler: handler}
+	serve := server.ListenAndServe
+	stop := server.Close
 	switch conf.Server.Protocol {
 	case "http":
-		err = http.ListenAndServe(listenAddr, handler)
 
 	case "https":
 		tlsMinVersion := tls.VersionTLS12
@@ -636,26 +643,32 @@ func Run(configPath string, portOverride int) error {
 		case "TLS10":
 			tlsMinVersion = tls.VersionTLS10
 		}
-		server := &http.Server{
-			Addr: listenAddr,
-			TLSConfig: &tls.Config{
-				MinVersion:               uint16(tlsMinVersion),
-				CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
-				PreferServerCipherSuites: true,
-				CipherSuites: []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				},
-			}, Handler: handler,
+		server.TLSConfig = &tls.Config{
+			MinVersion:               uint16(tlsMinVersion),
+			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			},
 		}
-		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+		serve = func() error {
+			return server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+		}
 
 	case "fcgi":
-		err = fcgi.Serve(nil, handler)
+		// The web server is started by a FastCGI server, which passes the listener
+		// as standard input.
+		listener, err := net.FileListener(os.Stdin)
+		if err != nil {
+			return errors.Wrap(err, "listen on standard input")
+		}
+		serve = func() error { return fcgi.Serve(listener, handler) }
+		stop = listener.Close
 
 	case "unix":
 		if osx.Exist(listenAddr) {
@@ -671,22 +684,40 @@ func Run(configPath string, portOverride int) error {
 			return errors.Wrap(err, "listen on Unix network")
 		}
 
-		// FIXME: add proper implementation of signal capture on all protocols
-		// execute this on SIGTERM or SIGINT: listener.Close()
 		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
 			return errors.Wrap(err, "change permission of Unix domain socket")
 		}
-		err = http.Serve(listener, handler)
+		serve = func() error { return server.Serve(listener) }
 
 	default:
 		return errors.Newf("unexpected server protocol: %s", conf.Server.Protocol)
 	}
 
-	if err != nil {
+	served := make(chan error, 1)
+	go func() {
+		served <- serve()
+	}()
+	select {
+	case err = <-served:
 		return errors.Wrap(err, "start server")
+	case <-ctx.Done():
+		if err = stop(); err != nil {
+			return errors.Wrap(err, "stop server")
+		}
+		return nil
 	}
+}
 
-	return nil
+// newTracingHandler returns a handler that records a span for every request, so
+// that the spans of what the request runs, e.g., Git operations, are grouped
+// under it.
+func newTracingHandler(h http.Handler) http.Handler {
+	return otelhttp.NewHandler(h, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+		if r.Pattern != "" {
+			return r.Pattern
+		}
+		return r.Method + " " + r.URL.Path
+	}))
 }
 
 func newRoutingHandler() (http.Handler, error) {

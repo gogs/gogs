@@ -46,9 +46,7 @@ type PushUpdateOptions struct {
 
 // PushUpdate must be called for any push actions in order to generate necessary
 // push action history feeds.
-func PushUpdate(opts PushUpdateOptions) (err error) {
-	ctx := context.TODO()
-
+func PushUpdate(ctx context.Context, opts PushUpdateOptions) (err error) {
 	isNewRef := git.IsEmptyID(opts.OldCommitID)
 	isDelRef := git.IsEmptyID(opts.NewCommitID)
 	if isNewRef && isDelRef {
@@ -67,7 +65,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return errors.Newf("GetRepositoryByName: %v", err)
 	}
 
-	if err = repo.UpdateSize(context.Background()); err != nil {
+	if err = repo.UpdateSize(ctx); err != nil {
 		return errors.Newf("UpdateSize: %v", err)
 	}
 
