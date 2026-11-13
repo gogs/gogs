@@ -478,6 +478,8 @@ export function RepoReleaseEditor({
               label={t("repo.release.content")}
               value={content}
               onChange={setContent}
+              disabled={mutation.isPending}
+              uploads={uploads}
             />
             {kept.length ? (
               <ul className="mt-2 flex flex-col gap-1">
