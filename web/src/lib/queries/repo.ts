@@ -672,48 +672,98 @@ export function createRepoIssue(owner: string, name: string, form: RepoNewIssueF
   return submit<{ index: number }>("POST", repoURL(owner, name, "/issues"), form);
 }
 
-export function updateRepoIssue(
-  owner: string,
-  name: string,
-  index: number,
-  form: { title?: string; content?: string },
-) {
-  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}`), form);
+// IssueRef names an issue or a pull request, which take the same changes
+// under their own path.
+export interface IssueRef {
+  owner: string;
+  name: string;
+  kind: "issues" | "pulls";
+  index: number;
 }
 
-export function setRepoIssueClosed(owner: string, name: string, index: number, closed: boolean) {
-  return send(closed ? "PUT" : "DELETE", repoURL(owner, name, `/issues/${index}/closed`));
+function issueURL(issue: IssueRef, path = "") {
+  return repoURL(issue.owner, issue.name, `/${issue.kind}/${issue.index}${path}`);
 }
 
-export function createRepoIssueComment(
-  owner: string,
-  name: string,
-  index: number,
-  form: { content: string; attachments: string[] },
-) {
-  return submit<{ id: number }>("POST", repoURL(owner, name, `/issues/${index}/comments`), form);
+export function updateRepoIssue(issue: IssueRef, form: { title?: string; content?: string }) {
+  return submit<void>("PATCH", issueURL(issue), form);
 }
 
-export function updateRepoIssueComment(owner: string, name: string, index: number, id: number, content: string) {
-  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content });
+export function setRepoIssueClosed(issue: IssueRef, closed: boolean) {
+  return send(closed ? "PUT" : "DELETE", issueURL(issue, "/closed"));
 }
 
-export function deleteRepoIssueComment(owner: string, name: string, index: number, id: number) {
-  return send("DELETE", repoURL(owner, name, `/issues/${index}/comments/${id}`));
+export function createRepoIssueComment(issue: IssueRef, form: { content: string; attachments: string[] }) {
+  return submit<{ id: number }>("POST", issueURL(issue, "/comments"), form);
 }
 
-export function setRepoIssueLabels(owner: string, name: string, index: number, ids: number[]) {
-  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/labels`), { ids });
+export function updateRepoIssueComment(issue: IssueRef, id: number, content: string) {
+  return submit<void>("PATCH", issueURL(issue, `/comments/${id}`), { content });
+}
+
+export function deleteRepoIssueComment(issue: IssueRef, id: number) {
+  return send("DELETE", issueURL(issue, `/comments/${id}`));
+}
+
+export function setRepoIssueLabels(issue: IssueRef, ids: number[]) {
+  return submit<void>("PUT", issueURL(issue, "/labels"), { ids });
 }
 
 // setRepoIssueMilestone sets the milestone of the issue, or clears it with 0.
-export function setRepoIssueMilestone(owner: string, name: string, index: number, id: number) {
-  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/milestone`), { id });
+export function setRepoIssueMilestone(issue: IssueRef, id: number) {
+  return submit<void>("PUT", issueURL(issue, "/milestone"), { id });
 }
 
 // setRepoIssueAssignee sets the assignee of the issue, or clears it with 0.
-export function setRepoIssueAssignee(owner: string, name: string, index: number, id: number) {
-  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/assignee`), { id });
+export function setRepoIssueAssignee(issue: IssueRef, id: number) {
+  return submit<void>("PUT", issueURL(issue, "/assignee"), { id });
+}
+
+export interface RepoPullInfo {
+  // state is "broken" when a branch or the fork is gone, and "checking"
+  // while conflicts are checked.
+  state: "merged" | "closed" | "broken" | "checking" | "mergeable" | "conflict";
+  headBranch: string;
+  baseBranch: string;
+  // headLabel and baseLabel name the branches after their owners, or are
+  // "deleted" for a branch that is gone.
+  headLabel: string;
+  baseLabel: string;
+  headRepoLink?: string;
+  commitCount: number;
+  fileCount: number;
+  merger?: IssueUser;
+  mergedAt?: string;
+  allowRebase: boolean;
+  viewerCanMerge: boolean;
+  viewerCanDeleteBranch: boolean;
+  // diff is the commits the changes are between, in the repository that has
+  // both, unless the pull request is broken.
+  diff?: { base: string; head: string; owner: string; name: string };
+}
+
+export interface RepoPullData extends RepoIssueData {
+  pull: RepoPullInfo;
+}
+
+export function fetchRepoPull(owner: string, name: string, index: number) {
+  return fetchJSON<RepoPullData>(repoURL(owner, name, `/pulls/${index}`));
+}
+
+export function fetchRepoPullCommits(owner: string, name: string, index: number) {
+  return fetchJSON<{ commits: RepoCommitListItem[] }>(repoURL(owner, name, `/pulls/${index}/commits`));
+}
+
+export function mergeRepoPull(
+  issue: IssueRef,
+  form: { style: "create_merge_commit" | "rebase_before_merging"; description: string },
+) {
+  return submit<void>("POST", issueURL(issue, "/merge"), form);
+}
+
+// deleteRepoPullBranch deletes the head branch of the merged pull request.
+export function deleteRepoPullBranch(issue: IssueRef) {
+  return send("DELETE", issueURL(issue, "/branch"));
 }
 
 // renderRepoMarkdown renders Markdown the way the issues of the repository
