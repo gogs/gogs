@@ -16,11 +16,14 @@ export async function send(method: "POST" | "PUT" | "DELETE", url: string) {
 // or the messages for its fields.
 export class FormError extends Error {
   fields: Record<string, string | null>;
+  // body is the whole response, for errors that tell more, e.g., a conflict.
+  body: Record<string, unknown>;
 
-  constructor(message: string, fields: Record<string, string | null>) {
+  constructor(message: string, fields: Record<string, string | null>, body: Record<string, unknown> = {}) {
     super(message);
     this.name = "FormError";
     this.fields = fields;
+    this.body = body;
   }
 }
 
@@ -33,7 +36,7 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
-    throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {});
+    throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {}, data);
   }
   // Some changes answer without a body, e.g., 201 Created for a new SSH key.
   const text = await res.text();
