@@ -23,7 +23,7 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 
 | Document | Size | Dariomark | blackfriday v1.6.0 | goldmark v1.8.7 |
 |---|---|---|---|---|
-| Comment | 59 B | **23** | 37 | 73 |
+| Comment | 59 B | **19** | 37 | 73 |
 | README | 4.5 KB | **401** | 915 | 1,054 |
 | Cheat sheet | 12 KB | **1,139** | 1,946 | 2,592 |
 | Changelog | 41 KB | **1,368** | 7,219 | 8,867 |

@@ -80,9 +80,9 @@ type Options struct {
 type GogsOptions struct {
 	// URLPrefix is the prefix of relative image sources.
 	URLPrefix string
-	// SpecialLinks renders mentions, issue references and commit SHAs in the
-	// HTML-escaped text to links. It returns text unchanged when there is
-	// nothing to render.
+	// SpecialLinks returns the mentions, issue references and commit SHAs in
+	// the HTML-escaped text that render as links, in order and without
+	// overlaps.
 	//
 	// In documents without raw HTML, text longer than 32 KB is passed in
 	// pieces. A piece ends after a space that no "http" precedes on its line,
@@ -90,9 +90,44 @@ type GogsOptions struct {
 	// letter or digit, "-", "_", "." or "#". SpecialLinks must render the
 	// pieces as it would the whole text: references other than URLs do not
 	// contain spaces, and the start of the text counts as a space.
-	SpecialLinks func(text []byte) []byte
+	SpecialLinks func(text []byte) []SpecialLink
 	// Sanitizer, if not nil, enables sanitizing documents without raw HTML.
 	Sanitizer *Sanitizer
+}
+
+// SpecialLink is a reference in text that renders as a link, see
+// GogsOptions.SpecialLinks.
+type SpecialLink struct {
+	// Start and End are the offsets of the reference in the text.
+	Start, End int
+	// Href is the HTML-escaped destination of the link.
+	Href []byte
+	// Text is the HTML-escaped text of the link.
+	Text []byte
+	// Code reports whether the text of the link is code, e.g., a commit SHA.
+	Code bool
+}
+
+// AppendSpecialLinks appends text to dst with links in place of the
+// references, as HTML.
+func AppendSpecialLinks(dst, text []byte, links []SpecialLink) []byte {
+	last := 0
+	for _, l := range links {
+		dst = append(dst, text[last:l.Start]...)
+		dst = append(dst, `<a href="`...)
+		dst = append(dst, l.Href...)
+		dst = append(dst, `">`...)
+		if l.Code {
+			dst = append(dst, "<code>"...)
+		}
+		dst = append(dst, l.Text...)
+		if l.Code {
+			dst = append(dst, "</code>"...)
+		}
+		dst = append(dst, "</a>"...)
+		last = l.End
+	}
+	return append(dst, text[last:]...)
 }
 
 // Result is the output of Render.

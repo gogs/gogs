@@ -240,11 +240,11 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]b
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.Gogs = &dariomark.GogsOptions{
 		URLPrefix: urlPrefix,
-		SpecialLinks: func(text []byte) []byte {
+		SpecialLinks: func(text []byte) []dariomark.SpecialLink {
 			if !mayHaveSpecialLinks(text, metas) {
-				return text
+				return nil
 			}
-			return RenderSpecialLink(text, urlPrefix, metas)
+			return findSpecialLinks(text, urlPrefix, metas)
 		},
 	}
 	if sanitizer.ready.Load() {

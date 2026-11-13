@@ -197,13 +197,37 @@ func startsReference(c byte) bool {
 }
 
 // specialLinks writes the escaped text with special references rendered as
-// links.
+// links, as the sanitizer would write the HTML of AppendSpecialLinks.
 func (s *sanitizeSink) specialLinks(text []byte) {
-	if out := s.r.specialLinks(text); !bytes.Equal(out, text) {
-		s.fragment(out)
+	f := s.r.opts.Gogs.SpecialLinks
+	if f == nil {
+		s.out.Write(text)
 		return
 	}
-	s.out.Write(text)
+	last := 0
+	for _, l := range f(text) {
+		s.out.Write(text[last:l.Start])
+		last = l.End
+		s.attrs = append(s.attrs[:0], html.Attribute{Key: "href", Val: unescapeHTML(l.Href)})
+		s.emitStart("a", s.attrs)
+		if l.Code {
+			s.emitStart("code", nil)
+		}
+		s.out.Write(l.Text)
+		if l.Code {
+			s.emitEnd("code")
+		}
+		s.emitEnd("a")
+	}
+	s.out.Write(text[last:])
+}
+
+// unescapeHTML returns the text of the escaped HTML b.
+func unescapeHTML(b []byte) string {
+	if bytes.IndexByte(b, '&') < 0 {
+		return string(b)
+	}
+	return html.UnescapeString(string(b))
 }
 
 // fragment sanitizes HTML that postProcess wrote without tokenizing it.

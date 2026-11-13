@@ -210,7 +210,7 @@ func gogsTestOptions() *Options {
 		IsLink:            func(dest []byte) bool { return bytes.Contains(dest, []byte("://")) },
 		Gogs: &GogsOptions{
 			URLPrefix:    "/user/repo",
-			SpecialLinks: func(text []byte) []byte { return text },
+			SpecialLinks: func([]byte) []SpecialLink { return nil },
 			Sanitizer: &Sanitizer{
 				AllowURLScheme: func(u *url.URL) bool { return u.Scheme == "http" || u.Scheme == "https" },
 				Text:           regexp.MustCompile(`^[\p{L}\p{N}\s\-_',\[\]!\./\\\(\)]*$`),

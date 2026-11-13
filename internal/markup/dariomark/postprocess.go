@@ -87,7 +87,9 @@ func isNoEndTag(name string) bool {
 
 func (r *renderer) specialLinks(text []byte) []byte {
 	if f := r.opts.Gogs.SpecialLinks; f != nil {
-		return f(text)
+		if links := f(text); len(links) > 0 {
+			return AppendSpecialLinks(nil, text, links)
+		}
 	}
 	return text
 }

@@ -14,7 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/markup/dariomark"
 )
 
 // IsReadmeFile reports whether name looks like a README file based on its extension.
@@ -97,10 +97,7 @@ func expand(template string, match map[string]string) string {
 }
 
 // linkSpan is a reference found in text and the link that replaces it.
-type linkSpan struct {
-	start, end int
-	link       []byte
-}
+type linkSpan = dariomark.SpecialLink
 
 // findIssueIndexes returns the issue references in text, outside the spans of
 // skip.
@@ -130,18 +127,18 @@ func findIssueIndexes(text []byte, urlPrefix string, metas map[string]string, sk
 			start++
 		}
 		m := text[start:loc[1]]
-		var link []byte
+		var href []byte
 		if match == nil {
-			link = fmt.Appendf(nil, `<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)
+			href = fmt.Appendf(nil, "%s/issues/%s", html.EscapeString(urlPrefix), m[1:])
 		} else {
 			if alphanumeric {
 				match["index"] = string(m)
 			} else {
 				match["index"] = string(m[1:])
 			}
-			link = fmt.Appendf(nil, `<a href="%s">%s</a>`, html.EscapeString(expand(metas["format"], match)), m)
+			href = []byte(html.EscapeString(expand(metas["format"], match)))
 		}
-		spans = append(spans, linkSpan{start: start, end: loc[1], link: link})
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: href, Text: m})
 	}
 	return mergeSpans(skip, spans)
 }
@@ -155,11 +152,11 @@ func mergeSpans(spans, more []linkSpan) []linkSpan {
 	merged := make([]linkSpan, 0, len(spans)+len(more))
 	i := 0
 	for _, s := range more {
-		for i < len(spans) && spans[i].end <= s.start {
+		for i < len(spans) && spans[i].End <= s.Start {
 			merged = append(merged, spans[i])
 			i++
 		}
-		if i < len(spans) && spans[i].start < s.end {
+		if i < len(spans) && spans[i].Start < s.End {
 			continue
 		}
 		merged = append(merged, s)
@@ -172,14 +169,7 @@ func replaceSpans(text []byte, spans []linkSpan) []byte {
 	if len(spans) == 0 {
 		return text
 	}
-	out := make([]byte, 0, len(text)+len(spans)*48)
-	last := 0
-	for _, s := range spans {
-		out = append(out, text[last:s.start]...)
-		out = append(out, s.link...)
-		last = s.end
-	}
-	return append(out, text[last:]...)
+	return dariomark.AppendSpecialLinks(make([]byte, 0, len(text)+len(spans)*48), text, spans)
 }
 
 // RenderIssueIndexPattern renders issue indexes to corresponding links.
@@ -198,8 +188,8 @@ func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
 		}
 		m := text[start:loc[1]]
 		delim := bytes.IndexByte(m, '#')
-		link := fmt.Appendf(nil, `<a href="%s%s/issues/%s">%s</a>`, conf.Server.ExternalURL, m[:delim], m[delim+1:], m)
-		spans = append(spans, linkSpan{start: start, end: loc[1], link: link})
+		href := fmt.Appendf(nil, "%s%s/issues/%s", html.EscapeString(conf.Server.ExternalURL), m[:delim], m[delim+1:])
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: href, Text: m})
 	}
 	return mergeSpans(skip, spans)
 }
@@ -213,14 +203,14 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[stri
 func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range Sha1CurrentPattern.FindAllIndex(text, -1) {
-		m := string(text[loc[0]:loc[1]])
-		if v, _ := strconv.Atoi(m); v > 0 {
+		m := text[loc[0]:loc[1]]
+		if v, _ := strconv.Atoi(string(m)); v > 0 {
 			continue
 		} else if len(m) == 64 && metas["objectFormat"] != "sha256" {
 			continue
 		}
-		link := fmt.Appendf(nil, `<a href="%s/commit/%s"><code>%s</code></a>`, metas["repoLink"], m, tool.ShortSHA1(m))
-		spans = append(spans, linkSpan{start: loc[0], end: loc[1], link: link})
+		href := fmt.Appendf(nil, "%s/commit/%s", html.EscapeString(metas["repoLink"]), m)
+		spans = append(spans, linkSpan{Start: loc[0], End: loc[1], Href: href, Text: m[:min(len(m), 10)], Code: true})
 	}
 	return mergeSpans(skip, spans)
 }
@@ -236,18 +226,23 @@ func RenderSha1CurrentPattern(rawBytes []byte, metas map[string]string) []byte {
 // It replaces each reference where it is found, in a single pass, and a
 // reference that overlaps an earlier kind of reference is left as text.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	return replaceSpans(rawBytes, findSpecialLinks(rawBytes, urlPrefix, metas))
+}
+
+// findSpecialLinks returns the mentions, indexes and commit IDs in text, see
+// RenderSpecialLink.
+func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(rawBytes, -1) {
 		// The mention starts after the character before the "@" that the
 		// pattern requires.
 		start := loc[3]
 		m := rawBytes[start:loc[1]]
-		spans = append(spans, linkSpan{start: start, end: loc[1], link: fmt.Appendf(nil, `<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)})
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
 	}
 	spans = findIssueIndexes(rawBytes, urlPrefix, metas, spans)
 	spans = findCrossReferences(rawBytes, spans)
-	spans = findSha1s(rawBytes, metas, spans)
-	return replaceSpans(rawBytes, spans)
+	return findSha1s(rawBytes, metas, spans)
 }
 
 var (
