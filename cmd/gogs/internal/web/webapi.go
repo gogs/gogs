@@ -377,6 +377,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Post("/uploads", limitAttachmentUpload(repoUploadLimits()), postRepoEditorUploadFile)
 		f.Delete("/uploads/{uuid}", deleteRepoEditorUploadFile)
 	}, requireSignIn, withRepoContext, withRepoEditor)
+	f.Get("/api/web/{owner}/{repo}/editor-indent", requireSignIn, withRepoContext, withRepoEditor, getRepoEditorIndent)
 	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireSignIn, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireSignIn).
 		Put(putUserAvatar).

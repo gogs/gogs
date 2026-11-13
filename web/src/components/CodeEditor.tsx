@@ -19,6 +19,10 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   code?: boolean;
   // wrap wraps long lines, by default unless the text is code.
   wrap?: boolean;
+  // indentUnit is what one level of indentation inserts, a tab or spaces,
+  // two spaces by default. tabSize is how wide a tab shows, 4 by default.
+  indentUnit?: string;
+  tabSize?: number;
   // minLines is the height of the empty editor. It grows with its content.
   minLines?: number;
   disabled?: boolean;
