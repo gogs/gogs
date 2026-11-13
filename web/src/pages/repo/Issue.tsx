@@ -17,6 +17,7 @@ import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } fr
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { CodeEditor } from "@/components/CodeEditor";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { OpenedBy } from "@/components/IssueListItem";
 import { Markdown } from "@/components/Markdown";
@@ -50,8 +51,6 @@ import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
-const TEXTAREA_CLASS =
-  "block min-h-32 w-full resize-y rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 const LINK_CLASS = "hover:text-(--color-primary) hover:underline";
 
 interface IssueRef {
@@ -468,6 +467,7 @@ function ContentEditor({
           onChange={setContent}
           error={fields.content ?? formError}
           autoFocus
+          disabled={mutation.isPending}
         />
         <div className="mt-3 flex justify-end gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
@@ -491,6 +491,8 @@ function MarkdownEditor({
   onChange,
   error,
   autoFocus,
+  disabled,
+  onFiles,
 }: {
   issueRef: IssueRef;
   label: string;
@@ -498,6 +500,9 @@ function MarkdownEditor({
   onChange: (value: string) => void;
   error?: string | null;
   autoFocus?: boolean;
+  disabled?: boolean;
+  // onFiles attaches the files pasted or dropped into the editor.
+  onFiles?: (files: FileList) => void;
 }) {
   const { t } = useTranslation();
   const id = useId();
@@ -538,15 +543,17 @@ function MarkdownEditor({
       </div>
       {tab === "write" ? (
         <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
-          <textarea
-            aria-label={label}
-            className={TEXTAREA_CLASS}
+          <CodeEditor
+            id={`${id}-input`}
+            label={label}
+            lang="markdown"
             value={value}
-            rows={6}
+            onChange={onChange}
             autoFocus={autoFocus}
+            disabled={disabled}
+            onFiles={onFiles}
             aria-invalid={Boolean(error) || undefined}
             aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(e) => onChange(e.target.value)}
           />
           {error ? (
             <p id={`${id}-error`} className="mt-1.5 text-sm text-(--color-destructive)">
@@ -756,6 +763,8 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
             value={content}
             onChange={setContent}
             error={fields.content ?? formError}
+            disabled={mutation.isPending}
+            onFiles={attachment ? addFiles : undefined}
           />
           {files.length ? (
             <ul className="mt-2 flex flex-col gap-1">

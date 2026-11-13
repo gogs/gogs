@@ -20,6 +20,9 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   minLines?: number;
   disabled?: boolean;
   autoFocus?: boolean;
+  // onFiles takes the files pasted or dropped into the editor, e.g., to
+  // attach them. Without it, dropped files are ignored.
+  onFiles?: (files: FileList) => void;
 }
 
 // CodeEditor is the editor for every Markdown and source code field. Its
