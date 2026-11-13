@@ -495,6 +495,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		// The web app sends unauthenticated viewers to these pages.
 		LandingURL                 string `json:"landingURL,omitempty"`
 		RequireAuthenticatedViewer bool   `json:"requireAuthenticatedViewer,omitempty"`
+		Notice                     string `json:"notice,omitempty"`
 	}{
 		Lang:      wc.Lang,
 		SubURL:    wc.SubURL,
@@ -505,6 +506,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 
 		LandingURL:                 landingURL,
 		RequireAuthenticatedViewer: conf.Auth.RequireSigninView,
+		Notice:                     wc.Notice,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

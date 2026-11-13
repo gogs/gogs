@@ -17,6 +17,8 @@ export interface WebContext {
   landingURL?: string;
   // Whether viewers must be authenticated to view any content.
   requireAuthenticatedViewer?: boolean;
+  // The HTML of the notice banner that every page shows.
+  notice?: string;
 }
 
 declare global {
@@ -39,6 +41,7 @@ function read(): WebContext {
     version: ctx.version,
     landingURL: ctx.landingURL,
     requireAuthenticatedViewer: ctx.requireAuthenticatedViewer,
+    notice: ctx.notice,
   };
 }
 
