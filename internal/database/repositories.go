@@ -24,6 +24,9 @@ func (r *Repository) BeforeCreate(tx *gorm.DB) error {
 	if r.UpdatedUnix == 0 {
 		r.UpdatedUnix = r.CreatedUnix
 	}
+	// Webhook payloads and API responses use the repository just created.
+	r.Created = time.Unix(r.CreatedUnix, 0).Local()
+	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
 	return nil
 }
 

@@ -77,6 +77,9 @@ func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 		c.CreatedUnix = tx.NowFunc().Unix()
 		c.UpdatedUnix = c.CreatedUnix
 	}
+	// Webhook payloads and API responses use the comment just created.
+	c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
 	return nil
 }
 
