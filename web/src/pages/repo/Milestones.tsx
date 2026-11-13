@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { CodeEditor } from "@/components/CodeEditor";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { FormAlert, FormField } from "@/components/FormField";
 import { Pagination } from "@/components/Pagination";
@@ -246,8 +247,6 @@ function MilestoneRow({
   );
 }
 
-const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 const MILESTONE_FIELDS = ["title", "description", "deadline"] as const;
 
 // RepoMilestoneEditor creates a milestone, or changes the one with the given
@@ -317,13 +316,13 @@ export function RepoMilestoneEditor({
               error={fields.description}
               invalid={"description" in fields}
             >
-              <textarea
+              <CodeEditor
                 id="description"
-                name="description"
-                rows={6}
-                className={TEXTAREA_CLASS}
+                label={t("repo.milestones.desc")}
+                lang="markdown"
+                disabled={save.isPending}
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(description) => setForm({ ...form, description })}
               />
             </FormField>
             <FormField
