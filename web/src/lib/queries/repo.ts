@@ -912,6 +912,20 @@ export function fetchRepoEditorTarget(owner: string, name: string, splat: string
   return fetchJSON<RepoEditorTarget>(repoURL(owner, name, `/editor/${refPath(splat)}`));
 }
 
+export interface RepoEditorIndent {
+  // style is left out when .editorconfig does not say.
+  style?: "tab" | "space";
+  size?: number;
+  tabWidth?: number;
+}
+
+// fetchRepoEditorIndent returns how the .editorconfig of the branch indents
+// the file at the path.
+export function fetchRepoEditorIndent(owner: string, name: string, branch: string, path: string) {
+  const query = new URLSearchParams({ branch, path }).toString();
+  return fetchJSON<RepoEditorIndent>(repoURL(owner, name, `/editor-indent?${query}`));
+}
+
 export interface RepoEditorCommit {
   branch: string;
   // newBranch is the branch to commit to instead, created from branch.
