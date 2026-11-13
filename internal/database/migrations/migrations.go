@@ -177,9 +177,12 @@ func createBaselineTables(db *gorm.DB) error {
 		return errors.Wrap(err, "read baseline")
 	}
 
+	// Git checkouts on Windows may convert the line endings of the embedded files.
+	baseline := strings.ReplaceAll(string(data), "\r\n", "\n")
+
 	var stmts []string
 	exists := make(map[string]bool)
-	for _, stmt := range strings.Split(string(data), ";\n") {
+	for _, stmt := range strings.Split(baseline, ";\n") {
 		stmt = strings.TrimSpace(stmt)
 		for strings.HasPrefix(stmt, "--") {
 			_, stmt, _ = strings.Cut(stmt, "\n")
