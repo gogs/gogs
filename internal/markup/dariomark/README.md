@@ -63,4 +63,4 @@ Markdown on a code hosting site comes from anyone who can open an issue, so one 
 - **Fail-closed sanitizing.** Every element and attribute Dariomark writes goes through one allowlist. Anything it does not recognize sends the document to bluemonday instead of through.
 - **Safe URLs.** Link and image URLs are checked by scheme. `javascript:`, `vbscript:` and `data:` URLs other than common image types are dropped, however they are encoded.
 - **Bounded nesting.** Containers nested more than 100 levels deep, e.g., `>` repeated, show the deeper markers as text, and the rest of the document renders normally.
-- **Document limits in Gogs.** `markup.Render` shows documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` (8 MB by default) as plain text, and documents of 256 KB or more share a budget of concurrent render memory, so a burst of large documents waits instead of exhausting memory.
+- **Document limits in Gogs.** `markup.Render` shows documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` (8 MB by default) as plain text, and documents of 64 KB or more share a budget of concurrent render memory, so a burst of large documents waits instead of exhausting memory.
