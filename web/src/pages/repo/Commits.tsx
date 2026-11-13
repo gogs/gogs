@@ -129,24 +129,7 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
         </div>
 
         {data.commits.length ? (
-          <div className="flex flex-col gap-6">
-            {groupByDay(data.commits).map((group) => (
-              <section key={group.day} aria-label={group.day}>
-                <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
-                <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
-                  {group.commits.map((commit) => (
-                    <CommitRow
-                      key={commit.sha}
-                      owner={repo.owner}
-                      name={repo.name}
-                      commit={commit}
-                      browseURL={srcURL(commit.sha, data.path)}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
+          <CommitList owner={repo.owner} name={repo.name} commits={data.commits} path={data.path} />
         ) : (
           <p className="rounded-md border border-(--color-border) py-10 text-center text-sm text-(--color-muted-foreground)">
             {t("repo.commits.no_commits")}
@@ -160,6 +143,41 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
           </nav>
         ) : null}
       </main>
+    </div>
+  );
+}
+
+// CommitList lists commits grouped by the day they were authored. Their
+// "Browse files" links open the path at each commit.
+export function CommitList({
+  owner,
+  name,
+  commits,
+  path = "",
+}: {
+  owner: string;
+  name: string;
+  commits: RepoCommitListItem[];
+  path?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      {groupByDay(commits).map((group) => (
+        <section key={group.day} aria-label={group.day}>
+          <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
+          <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+            {group.commits.map((commit) => (
+              <CommitRow
+                key={commit.sha}
+                owner={owner}
+                name={name}
+                commit={commit}
+                browseURL={subUrl(`/${owner}/${name}/src/${refPath(splatOf(commit.sha, path))}`)}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

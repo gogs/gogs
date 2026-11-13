@@ -88,6 +88,45 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 	}
 }
 
+// getRepoCompareRaw writes the diff from one commit to another as text.
+func getRepoCompareRaw(c flamego.Context, repoCtx *repoContext) {
+	w := c.ResponseWriter()
+	if !repoCtx.Viewer.CanRead() {
+		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
+		return
+	}
+
+	owner := repoCtx.Owner
+	repo := repoCtx.Repo
+	before, after := c.Param("before"), c.Param("after")
+	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
+	if err != nil {
+		log.Error("getRepoCompareRaw: open repository %q/%q: %v", owner.Name, repo.Name, err)
+		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
+		return
+	}
+	r, err := resolveCompareRange(c.Request().Context(), gitRepo, repo.DefaultBranch, before, after)
+	if err != nil {
+		if git.IsErrRevisionNotExist(err) {
+			writeErrorResponse(w, http.StatusNotFound, errors.New("commit does not exist"))
+			return
+		}
+		log.Error("getRepoCompareRaw: compare %q to %q in %q/%q: %v", before, after, owner.Name, repo.Name, err)
+		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "compare commits"))
+		return
+	}
+
+	opt := git.RawDiffOptions{Base: r.base}
+	if flag := whitespaceFlag(c.Request().URL.Query().Get("whitespace")); flag != "" {
+		opt.Args = []string{flag}
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if err = gitRepo.RawDiff(c.Request().Context(), after, git.RawDiffNormal, w, opt); err != nil {
+		log.Error("getRepoCompareRaw: get raw diff %s...%s: %v", before, after, err)
+	}
+}
+
 // resolveRef resolves ref as a commit SHA, then a branch name, then a tag
 // name, in that order. A branch and tag of the same name resolve to the branch.
 func resolveRef(ctx context.Context, gitRepo *git.Repository, ref string) (*git.Commit, error) {

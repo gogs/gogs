@@ -4,6 +4,7 @@ import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-
 import { LoaderResponseError, loadSignedInPage, loaderResponseError } from "@/lib/loader-error";
 import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
+  type RepoCompareData,
   fetchRepoBranchSettings,
   fetchRepoBranches,
   fetchRepoCollaborators,
@@ -39,6 +40,7 @@ import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoCommits } from "@/pages/repo/Commits";
+import { RepoCompare } from "@/pages/repo/Compare";
 import { RepoFileDelete, RepoFileEditor, RepoFileUpload } from "@/pages/repo/Editor";
 import { RepoForks } from "@/pages/repo/Forks";
 import { RepoIssue } from "@/pages/repo/Issue";
@@ -69,9 +71,45 @@ import { wikiPageName } from "@/pages/repo/Wiki.path";
 // shape for SEO and to skip the SPA shell for malformed paths; this client
 // check short-circuits the loader so we render 404 without a wasted fetch.
 const SHA_RE = /^[a-f0-9]{7,64}$/;
+const COMPARE_RANGE_RE = /^([a-f0-9]{40}|[a-f0-9]{64})\.\.\.([a-f0-9]{40}|[a-f0-9]{64})$/;
 
 interface RouterContext {
   queryClient: QueryClient;
+}
+
+// loadDiffPage loads the header of a repository, the metadata of a diff page
+// at the path and the diff itself. The diff is fetched as raw text from the
+// path with a ".diff" suffix, which skips JSON-string escaping and lets the
+// browser cache the (often large) diff separately from the metadata.
+async function loadDiffPage<T>(
+  queryClient: QueryClient,
+  owner: string,
+  repo: string,
+  path: string,
+  whitespace: RepoCommitSearch["whitespace"],
+): Promise<T & { patch: string }> {
+  const rawBase = subUrl(`/${owner}/${repo}${path}.diff`);
+  const rawURL = whitespace ? `${rawBase}?whitespace=${encodeURIComponent(whitespace)}` : rawBase;
+  try {
+    const [, meta, patch] = await Promise.all([
+      queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
+      fetch(subUrl(`/api/web/${owner}/${repo}${path}`), { credentials: "same-origin" }).then(async (res) => {
+        if (!res.ok) throw await loaderResponseError(res);
+        return (await res.json()) as T;
+      }),
+      fetch(rawURL, { credentials: "same-origin" }).then(async (res) => {
+        if (!res.ok) throw await loaderResponseError(res);
+        return res.text();
+      }),
+    ]);
+    return { ...meta, patch };
+  } catch (err) {
+    if (err instanceof LoaderResponseError && err.status === 404) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    throw err;
+  }
 }
 
 export function createRepoRoutes(rootRoute: AnyRoute) {
@@ -93,37 +131,53 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       stringify: (params: { owner: string; repo: string; sha: string }) => params,
     },
     loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
-    loader: async ({ params, deps, context }): Promise<RepoCommitPage> => {
-      const metaURL = subUrl(`/api/web/${params.owner}/${params.repo}/commit/${params.sha}`);
-      const rawBase = subUrl(`/${params.owner}/${params.repo}/commit/${params.sha}.diff`);
-      const rawURL = deps.whitespace ? `${rawBase}?whitespace=${encodeURIComponent(deps.whitespace)}` : rawBase;
-      const routerContext = context as RouterContext;
-      // Three requests in parallel: repo header (via Query cache for cross-page
-      // reuse), commit metadata JSON, raw patch text. Splitting the patch out
-      // skips JSON-string escaping and lets the browser cache the (often large)
-      // patch separately from the metadata.
-      try {
-        const [, meta, patch] = await Promise.all([
-          routerContext.queryClient.ensureQueryData(repoHeaderQuery(params.owner, params.repo)),
-          fetch(metaURL, { credentials: "same-origin" }).then(async (res) => {
-            if (!res.ok) throw await loaderResponseError(res);
-            return (await res.json()) as Omit<RepoCommitPage, "patch">;
-          }),
-          fetch(rawURL, { credentials: "same-origin" }).then(async (res) => {
-            if (!res.ok) throw await loaderResponseError(res);
-            return res.text();
-          }),
-        ]);
-        return { ...meta, patch };
-      } catch (err) {
-        if (err instanceof LoaderResponseError && err.status === 404) {
+    loader: ({ params, deps, context }) =>
+      loadDiffPage<Omit<RepoCommitPage, "patch">>(
+        (context as RouterContext).queryClient,
+        params.owner,
+        params.repo,
+        `/commit/${params.sha}`,
+        deps.whitespace,
+      ),
+    component: RepoCommit,
+  });
+
+  const repoCompareRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/compare/$range",
+    validateSearch: validateRepoCommitSearch,
+    // Only full commit IDs are compared here, the same as the server route in
+    // `web.go`. Comparing branches goes to the pull request compare page.
+    params: {
+      parse: (raw: { owner: string; repo: string; range: string }) => {
+        if (!COMPARE_RANGE_RE.test(raw.range)) {
           // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
           throw notFound();
         }
-        throw err;
-      }
+        return raw;
+      },
+      stringify: (params: { owner: string; repo: string; range: string }) => params,
     },
-    component: RepoCommit,
+    loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
+    loader: ({ params, deps, context }) =>
+      loadDiffPage<RepoCompareData>(
+        (context as RouterContext).queryClient,
+        params.owner,
+        params.repo,
+        `/compare/${params.range}`,
+        deps.whitespace,
+      ),
+    component: function Compare() {
+      const { owner, repo } = repoCompareRoute.useParams();
+      return (
+        <RepoCompare
+          owner={owner}
+          name={repo}
+          data={repoCompareRoute.useLoaderData()}
+          search={repoCompareRoute.useSearch()}
+        />
+      );
+    },
   });
 
   // loadRepoPage loads the header of a repository along with the data of the
@@ -913,6 +967,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
 
   return [
     repoCommitRoute,
+    repoCompareRoute,
     repoCommitsRoute,
     repoStargazersRoute,
     repoWatchersRoute,
