@@ -131,15 +131,7 @@ func getArchive(c *apiContext) {
 		return
 	}
 
-	w := c.ResponseWriter()
-	w.Header().Set("Content-Description", "File Transfer")
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", "attachment; filename="+name)
-	w.Header().Set("Content-Transfer-Encoding", "binary")
-	w.Header().Set("Expires", "0")
-	w.Header().Set("Cache-Control", "must-revalidate")
-	w.Header().Set("Pragma", "public")
-	http.ServeFile(w, c.Request().Request, archivePath)
+	routerepo.ServeArchive(c.ResponseWriter(), c.Request().Request, archivePath, name)
 }
 
 func getEditorconfig(c *apiContext) {

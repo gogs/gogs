@@ -1,10 +1,11 @@
 package app
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/microcosm-cc/bluemonday"
-	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/markup"
 )
@@ -19,16 +20,20 @@ func ipynbSanitizer() *bluemonday.Policy {
 	return p
 }
 
-func SanitizeIpynb() macaron.Handler {
+// SanitizeIpynb returns the handler that sanitizes the HTML of a rendered
+// Jupyter notebook in the request body.
+func SanitizeIpynb() http.HandlerFunc {
 	p := ipynbSanitizer()
 
-	return func(c *macaron.Context) {
-		html, err := c.Req.Body().String()
+	return func(w http.ResponseWriter, r *http.Request) {
+		html, err := io.ReadAll(r.Body)
 		if err != nil {
-			c.Error(http.StatusInternalServerError, "read body")
+			log.Error("SanitizeIpynb: read body: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("read body"))
 			return
 		}
-
-		c.PlainText(http.StatusOK, []byte(p.Sanitize(html)))
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		_, _ = w.Write(p.SanitizeBytes(html))
 	}
 }

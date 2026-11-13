@@ -2,11 +2,8 @@ package context
 
 import (
 	stdctx "context"
-	"fmt"
-	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
@@ -15,7 +12,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -30,24 +26,7 @@ type Context struct {
 	IsBasicAuth bool
 	IsTokenAuth bool
 
-	Repo *Repository
-	Org  *Organization
-
 	webHandler http.Handler
-}
-
-// UserID returns ID of current logged in user.
-// It returns 0 if visitor is anonymous.
-func (c *Context) UserID() int64 {
-	if !c.IsLogged {
-		return 0
-	}
-	return c.User.ID
-}
-
-// JSONSuccess responses JSON with status http.StatusOK.
-func (c *Context) JSONSuccess(data any) {
-	c.JSON(http.StatusOK, data)
 }
 
 // RawRedirect simply calls underlying Redirect method with no escape.
@@ -157,47 +136,6 @@ func (c *Context) Error(err error, msg string) {
 	c.serveWeb(wc)
 }
 
-// Errorf renders the 500 response with formatted message.
-func (c *Context) Errorf(err error, format string, args ...any) {
-	c.Error(err, fmt.Sprintf(format, args...))
-}
-
-// NotFoundOrError responses with 404 page for not found error and 500 page otherwise.
-func (c *Context) NotFoundOrError(err error, msg string) {
-	if errx.IsNotFound(err) {
-		c.NotFound()
-		return
-	}
-	c.Error(err, msg)
-}
-
-// NotFoundOrErrorf is same as NotFoundOrError but with formatted message.
-func (c *Context) NotFoundOrErrorf(err error, format string, args ...any) {
-	c.NotFoundOrError(err, fmt.Sprintf(format, args...))
-}
-
-func (c *Context) PlainText(status int, msg string) {
-	c.Render.PlainText(status, []byte(msg))
-}
-
-func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
-	modtime := time.Now()
-	for _, p := range params {
-		switch v := p.(type) {
-		case time.Time:
-			modtime = v
-		}
-	}
-	c.Resp.Header().Set("Content-Description", "File Transfer")
-	c.Resp.Header().Set("Content-Type", "application/octet-stream")
-	c.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
-	c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
-	c.Resp.Header().Set("Expires", "0")
-	c.Resp.Header().Set("Cache-Control", "must-revalidate")
-	c.Resp.Header().Set("Pragma", "public")
-	http.ServeContent(c.Resp, c.Req.Request, name, modtime, r)
-}
-
 // Contexter initializes a classic context for a request. webHandler
 // receives 404 responses so the React frontend can render its own 404 page.
 func Contexter(store Store, webHandler http.Handler) macaron.Handler {
@@ -207,10 +145,6 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 			Session:    sess,
 			Link:       conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
 			webHandler: webHandler,
-			Repo: &Repository{
-				PullRequest: &PullRequest{},
-			},
-			Org: &Organization{},
 		}
 
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
