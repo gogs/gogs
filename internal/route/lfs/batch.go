@@ -7,21 +7,21 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/strx"
 )
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
-func serveBatch(store Store) macaron.Handler {
+func serveBatch(logger *logx.Logger, store Store) macaron.Handler {
 	return func(c *macaron.Context, owner *database.User, repo *database.Repository) {
 		var request batchRequest
 		defer func() { _ = c.Req.Request.Body.Close() }()
 		err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 		if err != nil {
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(logger, c.Resp, http.StatusBadRequest, responseError{
 				Message: strx.ToUpperFirst(err.Error()),
 			})
 			return
@@ -74,8 +74,8 @@ func serveBatch(store Store) macaron.Handler {
 			}
 			stored, err := store.GetLFSObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
 			if err != nil {
-				internalServerError(c.Resp)
-				applog.Logger.Errorf("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
+				internalServerError(logger, c.Resp)
+				logger.Errorf("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
 				return
 			}
 			storedSet := make(map[lfsx.OID]*database.LFSObject, len(stored))
@@ -111,13 +111,13 @@ func serveBatch(store Store) macaron.Handler {
 			}
 
 		default:
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(logger, c.Resp, http.StatusBadRequest, responseError{
 				Message: "Operation not recognized",
 			})
 			return
 		}
 
-		responseJSON(c.Resp, http.StatusOK, batchResponse{
+		responseJSON(logger, c.Resp, http.StatusOK, batchResponse{
 			Transfer: transfer,
 			Objects:  objects,
 		})
@@ -168,13 +168,13 @@ type responseError struct {
 
 const contentType = "application/vnd.git-lfs+json"
 
-func responseJSON(w http.ResponseWriter, status int, v any) {
+func responseJSON(logger *logx.Logger, w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
-		applog.Logger.Errorf("Failed to encode JSON: %v", err)
+		logger.Errorf("Failed to encode JSON: %v", err)
 		return
 	}
 }

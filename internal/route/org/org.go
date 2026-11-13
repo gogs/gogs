@@ -3,7 +3,6 @@ package org
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
@@ -44,7 +43,7 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		}
 		return
 	}
-	applog.Logger.Tracef("Organization created: %s", org.Name)
+	c.Logger.Tracef("Organization created: %s", org.Name)
 
 	c.RedirectSubpath("/org/" + f.OrgName + "/dashboard")
 }

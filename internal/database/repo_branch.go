@@ -10,6 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -150,7 +151,7 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 // If ID is 0, it creates a new record. Otherwise, updates existing record.
 // This function also performs check if whitelist user and team's IDs have been changed
 // to avoid unnecessary whitelist delete and regenerate.
-func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whitelistUserIDs, whitelistTeamIDs string) (err error) {
+func UpdateOrgProtectBranch(logger *logx.Logger, repo *Repository, protectBranch *ProtectBranch, whitelistUserIDs, whitelistTeamIDs string) (err error) {
 	if err = repo.GetOwner(); err != nil {
 		return errors.Newf("GetOwner: %v", err)
 	} else if !repo.Owner.IsOrganization() {
@@ -164,7 +165,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
 		validUserIDs = make([]int64, 0, len(userIDs))
 		for _, userID := range userIDs {
-			if !Handle.Permissions().Authorize(context.TODO(), userID, repo.ID, AccessModeWrite,
+			if !Handle.Permissions().Authorize(context.TODO(), logger, userID, repo.ID, AccessModeWrite,
 				AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

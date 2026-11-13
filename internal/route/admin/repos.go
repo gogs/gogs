@@ -3,7 +3,6 @@ package admin
 import (
 	"github.com/unknwon/paginater"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -36,7 +35,7 @@ func Repos(c *context.Context) {
 			c.Error(err, "list repositories")
 			return
 		}
-		count = database.CountRepositories(true)
+		count = database.CountRepositories(c.Logger, true)
 	} else {
 		repos, count, err = database.SearchRepositoryByName(&database.SearchRepoOptions{
 			Keyword:  keyword,
@@ -70,11 +69,11 @@ func DeleteRepo(c *context.Context) {
 		return
 	}
 
-	if err := database.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
+	if err := database.DeleteRepository(c.Logger, repo.MustOwner().ID, repo.ID); err != nil {
 		c.Error(err, "delete repository")
 		return
 	}
-	applog.Logger.Tracef("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
+	c.Logger.Tracef("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
 	c.JSONSuccess(map[string]any{

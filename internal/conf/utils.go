@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
 )
@@ -18,9 +19,9 @@ func cleanUpOpenSSHVersion(raw string) string {
 }
 
 // openSSHVersion returns string representation of OpenSSH version via command "ssh -V".
-func openSSHVersion() (string, error) {
+func openSSHVersion(logger *logx.Logger) (string, error) {
 	// NOTE: Somehow the version is printed to stderr.
-	_, stderr, err := process.Exec("conf.openSSHVersion", "ssh", "-V")
+	_, stderr, err := process.Exec(logger, "conf.openSSHVersion", "ssh", "-V")
 	if err != nil {
 		return "", errors.Wrap(err, stderr)
 	}

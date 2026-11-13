@@ -3,7 +3,6 @@ package org
 import (
 	"strconv"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -71,7 +70,7 @@ func MembersAction(c *context.Context) {
 	}
 
 	if err != nil {
-		applog.Logger.Errorf("Action(%s): %v", c.Params(":action"), err)
+		c.Logger.Errorf("Action(%s): %v", c.Params(":action"), err)
 		c.JSONSuccess(map[string]any{
 			"ok":  false,
 			"err": err.Error(),
@@ -109,7 +108,7 @@ func Invitation(c *context.Context) {
 			return
 		}
 
-		applog.Logger.Tracef("New member added(%s): %s", org.Name, u.Name)
+		c.Logger.Tracef("New member added(%s): %s", org.Name, u.Name)
 		c.Redirect(c.Org.OrgLink + "/members")
 		return
 	}

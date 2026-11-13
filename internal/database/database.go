@@ -8,12 +8,12 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
+	"gogs.io/gogs/internal/logx"
 )
 
 // Tables is the list of struct-to-table mappings.
@@ -30,14 +30,14 @@ var Tables = []any{
 }
 
 // NewConnection returns a new database connection with the given logger.
-func NewConnection(w logger.Writer) (*gorm.DB, error) {
-	level := logger.Info
+func NewConnection(logger *logx.Logger, w gormlogger.Writer) (*gorm.DB, error) {
+	level := gormlogger.Info
 	if conf.IsProdMode() {
-		level = logger.Warn
+		level = gormlogger.Warn
 	}
 
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
-	logger.Default = logger.New(w, logger.Config{
+	gormlogger.Default = gormlogger.New(w, gormlogger.Config{
 		SlowThreshold: 100 * time.Millisecond,
 		LogLevel:      level,
 	})
@@ -91,7 +91,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "auto migrate %q", name)
 		}
-		applog.Logger.Tracef("Auto migrated %q", name)
+		logger.Tracef("Auto migrated %q", name)
 	}
 
 	loadedLoginSourceFilesStore, err = loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)
@@ -100,13 +100,27 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	}
 
 	// Initialize the database handle.
-	Handle = &DB{db: db}
+	Handle = &DB{db: db, logger: logger}
 	return db, nil
 }
 
 // DB is the database handler for the storage layer.
 type DB struct {
 	db *gorm.DB
+	// logger is for methods whose signatures are fixed by xorm hooks or
+	// templates, so they cannot receive a logger from their caller.
+	logger *logx.Logger
+}
+
+// handleLogger returns the logger of the global database handle. Only methods
+// whose signatures are fixed by xorm hooks or templates use it, because their
+// callers cannot pass a logger. The handle is nil during installation mode and
+// in tests, which get a no-op logger.
+func handleLogger() *logx.Logger {
+	if Handle == nil || Handle.logger == nil {
+		return logx.NewNoop()
+	}
+	return Handle.logger
 }
 
 // Handle is the global database handle. It could be `nil` during the

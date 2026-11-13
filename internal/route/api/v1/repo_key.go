@@ -84,13 +84,13 @@ type createDeployKeyRequest struct {
 }
 
 func createDeployKey(c *context.APIContext, form createDeployKeyRequest) {
-	content, err := database.CheckPublicKeyString(form.Key)
+	content, err := database.CheckPublicKeyString(c.Logger, form.Key)
 	if err != nil {
 		handleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := database.AddDeployKey(c.Repo.Repository.ID, form.Title, content)
+	key, err := database.AddDeployKey(c.Logger, c.Repo.Repository.ID, form.Title, content)
 	if err != nil {
 		handleAddKeyError(c, err)
 		return
@@ -114,7 +114,7 @@ func deleteDeploykey(c *context.APIContext) {
 		return
 	}
 
-	if err := database.DeleteDeployKey(c.User, key.ID); err != nil {
+	if err := database.DeleteDeployKey(c.Logger, c.User, key.ID); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key"))
 		} else {

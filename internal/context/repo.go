@@ -14,6 +14,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/repox"
 )
 
@@ -118,7 +119,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 }
 
 // [0]: issues, [1]: wiki
-func RepoAssignment(pages ...bool) macaron.Handler {
+func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 	return func(c *Context) {
 		var (
 			owner        *database.User
@@ -166,7 +167,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), logger, c.UserID(), repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -179,7 +180,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.Repo.AccessMode == database.AccessModeNone && repo.BaseRepo != nil {
 			mode := min(
 				// Users shouldn't have indirect access level higher than write.
-				database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
+				database.Handle.Permissions().AccessMode(c.Req.Context(), logger, c.UserID(), repo.BaseRepo.ID,
 					database.AccessModeOptions{
 						OwnerID: repo.BaseRepo.OwnerID,
 						Private: repo.BaseRepo.IsPrivate,

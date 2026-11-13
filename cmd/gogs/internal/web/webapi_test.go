@@ -12,6 +12,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/logx"
 )
 
 func TestRequireViewAccess(t *testing.T) {
@@ -20,7 +21,7 @@ func TestRequireViewAccess(t *testing.T) {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoop())
 	require.NoError(t, err)
 
 	// The gate runs before any database or Git access, so these requests are

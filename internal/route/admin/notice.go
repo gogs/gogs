@@ -6,7 +6,6 @@ import (
 
 	"github.com/unknwon/paginater"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -61,7 +60,7 @@ func EmptyNotices(c *context.Context) {
 		return
 	}
 
-	applog.Logger.Tracef("System notices deleted by admin (%s): [start: %d]", c.User.Name, 0)
+	c.Logger.Tracef("System notices deleted by admin (%s): [start: %d]", c.User.Name, 0)
 	c.Flash.Success(c.Tr("admin.notices.delete_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/notices")
 }

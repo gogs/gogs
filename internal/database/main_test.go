@@ -8,19 +8,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
-	"gogs.io/gogs/internal/logx"
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 
 	level := logger.Silent
-	if !testing.Verbose() {
-		applog.Logger = logx.NewNoop()
-	} else {
+	if testing.Verbose() {
 		level = logger.Info
 	}
 

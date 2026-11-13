@@ -10,7 +10,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -73,7 +72,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				return
 			}
 
-			applog.Logger.Tracef("Repository name changed: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newRepoName)
+			c.Logger.Tracef("Repository name changed: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newRepoName)
 		}
 		// In case it's just a case change.
 		repo.Name = newRepoName
@@ -91,15 +90,15 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		visibilityChanged := repo.IsPrivate != f.Private || repo.IsUnlisted != f.Unlisted
 		repo.IsPrivate = f.Private
 		repo.IsUnlisted = f.Unlisted
-		if err := database.UpdateRepository(repo, visibilityChanged); err != nil {
+		if err := database.UpdateRepository(c.Logger, repo, visibilityChanged); err != nil {
 			c.Error(err, "update repository")
 			return
 		}
-		applog.Logger.Tracef("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
+		c.Logger.Tracef("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
 			if err := database.Handle.Actions().RenameRepo(c.Req.Context(), c.User, repo.MustOwner(), oldRepoName, repo); err != nil {
-				applog.Logger.Errorf("create rename repository action: %v", err)
+				c.Logger.Errorf("create rename repository action: %v", err)
 			}
 		}
 
@@ -188,11 +187,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			repo.AllowPublicIssues = false
 		}
 
-		if err := database.UpdateRepository(repo, false); err != nil {
+		if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 			c.Error(err, "update repository")
 			return
 		}
-		applog.Logger.Tracef("Repository advanced settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
+		c.Logger.Tracef("Repository advanced settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.update_settings_success"))
 		c.Redirect(c.Repo.RepoLink + "/settings")
@@ -220,14 +219,14 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 		repo.IsMirror = false
 
-		if _, err := database.CleanUpMigrateInfo(repo); err != nil {
+		if _, err := database.CleanUpMigrateInfo(c.Logger, repo); err != nil {
 			c.Error(err, "clean up migrate info")
 			return
 		} else if err = database.DeleteMirrorByRepoID(c.Repo.Repository.ID); err != nil {
 			c.Error(err, "delete mirror by repository ID")
 			return
 		}
-		applog.Logger.Tracef("Repository converted from mirror to regular: %s/%s", c.Repo.Owner.Name, repo.Name)
+		c.Logger.Tracef("Repository converted from mirror to regular: %s/%s", c.Repo.Owner.Name, repo.Name)
 		c.Flash.Success(c.Tr("repo.settings.convert_succeed"))
 		c.Redirect(conf.Server.Subpath + "/" + c.Repo.Owner.Name + "/" + repo.Name)
 
@@ -262,7 +261,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 			return
 		}
-		applog.Logger.Tracef("Repository transferred: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newOwner)
+		c.Logger.Tracef("Repository transferred: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newOwner)
 		c.Flash.Success(c.Tr("repo.settings.transfer_succeed"))
 		c.Redirect(conf.Server.Subpath + "/" + newOwner + "/" + repo.Name)
 
@@ -283,11 +282,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 		}
 
-		if err := database.DeleteRepository(c.Repo.Owner.ID, repo.ID); err != nil {
+		if err := database.DeleteRepository(c.Logger, c.Repo.Owner.ID, repo.ID); err != nil {
 			c.Error(err, "delete repository")
 			return
 		}
-		applog.Logger.Tracef("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
+		c.Logger.Tracef("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
 		c.Redirect(userx.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
@@ -309,11 +308,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 		}
 
-		repo.DeleteWiki()
-		applog.Logger.Tracef("Repository wiki deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
+		repo.DeleteWiki(c.Logger)
+		c.Logger.Tracef("Repository wiki deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		repo.EnableWiki = false
-		if err := database.UpdateRepository(repo, false); err != nil {
+		if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 			c.Error(err, "update repository")
 			return
 		}
@@ -343,7 +342,7 @@ func SettingsAvatarPost(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	if err := c.Repo.Repository.DeleteAvatar(); err != nil {
+	if err := c.Repo.Repository.DeleteAvatar(c.Logger); err != nil {
 		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
 	}
 	c.RedirectSubpath(c.Repo.RepoLink + "/settings")
@@ -376,7 +375,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *database.Re
 		}
 	}
 
-	if err := database.UpdateRepository(ctxRepo, false); err != nil {
+	if err := database.UpdateRepository(c.Logger, ctxRepo, false); err != nil {
 		return errors.Newf("update repository: %v", err)
 	}
 
@@ -428,8 +427,8 @@ func SettingsCollaborationPost(c *context.Context) {
 	}
 
 	if conf.User.EnableEmailNotification {
-		if err := email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository)); err != nil {
-			applog.Logger.Errorf("Failed to send collaborator mail: %v", err)
+		if err := email.SendCollaboratorMail(c.Logger, database.NewMailerUser(u), database.NewMailerUser(c.User), database.NewMailerRepo(c.Repo.Repository)); err != nil {
+			c.Logger.Errorf("Failed to send collaborator mail: %v", err)
 		}
 	}
 
@@ -442,7 +441,7 @@ func ChangeCollaborationAccessMode(c *context.Context) {
 		c.Repo.AccessMode,
 		c.QueryInt64("uid"),
 		database.AccessMode(c.QueryInt("mode"))); err != nil {
-		applog.Logger.Errorf("ChangeCollaborationAccessMode: %v", err)
+		c.Logger.Errorf("ChangeCollaborationAccessMode: %v", err)
 		return
 	}
 
@@ -450,7 +449,7 @@ func ChangeCollaborationAccessMode(c *context.Context) {
 }
 
 func DeleteCollaboration(c *context.Context) {
-	if err := c.Repo.Repository.DeleteCollaboration(c.QueryInt64("id")); err != nil {
+	if err := c.Repo.Repository.DeleteCollaboration(c.Logger, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteCollaboration: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.settings.remove_collaborator_success"))
@@ -503,7 +502,7 @@ func UpdateDefaultBranch(c *context.Context) {
 		}
 	}
 
-	if err := database.UpdateRepository(c.Repo.Repository, false); err != nil {
+	if err := database.UpdateRepository(c.Logger, c.Repo.Repository, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}
@@ -582,7 +581,7 @@ func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
 	protectBranch.RequirePullRequest = f.RequirePullRequest
 	protectBranch.EnableWhitelist = f.EnableWhitelist
 	if c.Repo.Owner.IsOrganization() {
-		err = database.UpdateOrgProtectBranch(c.Repo.Repository, protectBranch, f.WhitelistUsers, f.WhitelistTeams)
+		err = database.UpdateOrgProtectBranch(c.Logger, c.Repo.Repository, protectBranch, f.WhitelistUsers, f.WhitelistTeams)
 	} else {
 		err = database.UpdateProtectBranch(protectBranch)
 	}
@@ -682,7 +681,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		return
 	}
 
-	content, err := database.CheckPublicKeyString(f.Content)
+	content, err := database.CheckPublicKeyString(c.Logger, f.Content)
 	if err != nil {
 		if database.IsErrKeyUnableVerify(err) {
 			c.Flash.Info(c.Tr("form.unable_verify_ssh_key"))
@@ -695,7 +694,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		}
 	}
 
-	key, err := database.AddDeployKey(c.Repo.Repository.ID, f.Title, content)
+	key, err := database.AddDeployKey(c.Logger, c.Repo.Repository.ID, f.Title, content)
 	if err != nil {
 		c.Data["HasError"] = true
 		switch {
@@ -711,13 +710,13 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		return
 	}
 
-	applog.Logger.Tracef("Deploy key added: %d", c.Repo.Repository.ID)
+	c.Logger.Tracef("Deploy key added: %d", c.Repo.Repository.ID)
 	c.Flash.Success(c.Tr("repo.settings.add_key_success", key.Name))
 	c.Redirect(c.Repo.RepoLink + "/settings/keys")
 }
 
 func DeleteDeployKey(c *context.Context) {
-	if err := database.DeleteDeployKey(c.User, c.QueryInt64("id")); err != nil {
+	if err := database.DeleteDeployKey(c.Logger, c.User, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteDeployKey: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.settings.deploy_key_deletion_success"))

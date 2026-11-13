@@ -10,11 +10,12 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/logx"
 )
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,
 // and makes sure the context user has at least the read access to the repository.
-func repoAssignment() macaron.Handler {
+func repoAssignment(logger *logx.Logger) macaron.Handler {
 	return func(c *context.APIContext) {
 		username := c.Params(":username")
 		reponame := c.Params(":reponame")
@@ -46,7 +47,7 @@ func repoAssignment() macaron.Handler {
 		if c.IsTokenAuth && c.User.IsAdmin {
 			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), logger, c.UserID(), repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -166,7 +167,7 @@ func mustEnableIssues(c *context.APIContext) {
 
 // RegisterRoutes registers all route in API v1 to the web application.
 // FIXME: custom form error response
-func RegisterRoutes(m *macaron.Macaron) {
+func RegisterRoutes(logger *logx.Logger, m *macaron.Macaron) {
 	bind := binding.Bind
 
 	m.Group("/v1", func() {
@@ -244,13 +245,13 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Group("/repos", func() {
 			m.Get("/search", searchRepos)
 
-			m.Get("/:username/:reponame", repoAssignment(), getRepo)
-			m.Get("/:username/:reponame/releases", repoAssignment(), releases)
+			m.Get("/:username/:reponame", repoAssignment(logger), getRepo)
+			m.Get("/:username/:reponame/releases", repoAssignment(logger), releases)
 		})
 
 		m.Group("/repos", func() {
 			m.Post("/migrate", bind(form.MigrateRepo{}), migrate)
-			m.Delete("/:username/:reponame", repoAssignment(), reqRepoOwner(), deleteRepo)
+			m.Delete("/:username/:reponame", repoAssignment(logger), reqRepoOwner(), deleteRepo)
 
 			m.Group("/:username/:reponame", func() {
 				m.Group("/hooks", func() {
@@ -366,7 +367,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Patch("/wiki", reqRepoAdmin(), bind(editWikiRequest{}), wiki)
 				m.Post("/mirror-sync", reqRepoAdmin(), mirrorSync)
 				m.Get("/editorconfig/:filename", context.RepoRef(), getEditorconfig)
-			}, repoAssignment())
+			}, repoAssignment(logger))
 		}, reqToken())
 
 		m.Get("/issues", reqToken(), listUserIssues)

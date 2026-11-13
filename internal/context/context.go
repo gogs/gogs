@@ -13,11 +13,11 @@ import (
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -36,6 +36,8 @@ type Context struct {
 
 	Repo *Repository
 	Org  *Organization
+
+	Logger *logx.Logger
 
 	webHandler http.Handler
 }
@@ -115,7 +117,7 @@ func (c *Context) HasValue(name string) bool {
 
 // HTML responses template with given status.
 func (c *Context) HTML(status int, name string) {
-	applog.Logger.Tracef("Template: %s", name)
+	c.Logger.Tracef("Template: %s", name)
 	c.Context.HTML(status, name)
 }
 
@@ -215,7 +217,7 @@ func (c *Context) serveWeb(wr WebContext) {
 
 // Error renders the 500 page.
 func (c *Context) Error(err error, msg string) {
-	applog.Logger.Errorf("%s: %v", msg, err)
+	c.Logger.Errorf("%s: %v", msg, err)
 
 	c.Title("status.internal_server_error")
 
@@ -269,7 +271,7 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 
 // Contexter initializes a classic context for a request. webHandler
 // receives 404 responses so the React frontend can render its own 404 page.
-func Contexter(store Store, webHandler http.Handler) macaron.Handler {
+func Contexter(logger *logx.Logger, store Store, webHandler http.Handler) macaron.Handler {
 	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash) {
 		c := &Context{
 			Context:    ctx,
@@ -277,6 +279,7 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 			Flash:      f,
 			Session:    sess,
 			Link:       conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Logger:     logger,
 			webHandler: webHandler,
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
@@ -294,7 +297,7 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 		}
 
 		// Get user from session or header when possible
-		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(store, c.Context, c.Session)
+		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(logger, store, c.Context, c.Session)
 
 		if c.User != nil {
 			c.IsLogged = true
@@ -316,7 +319,7 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 			}
 		}
 
-		applog.Logger.Tracef("Session ID: %s", sess.ID())
+		logger.Tracef("Session ID: %s", sess.ID())
 
 		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
 

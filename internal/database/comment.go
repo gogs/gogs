@@ -10,8 +10,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -162,7 +162,7 @@ func (c *Comment) EventTag() string {
 
 // mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
+func (c *Comment) mailParticipants(logger *logx.Logger, e Engine, opType ActionType, issue *Issue) (err error) {
 	mentions := markup.FindAllMentions(c.Content)
 	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
@@ -176,14 +176,14 @@ func (c *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (e
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(issue, c.Poster, mentions); err != nil {
-		applog.Logger.Errorf("mailIssueCommentToParticipants: %v", err)
+	if err = mailIssueCommentToParticipants(logger, issue, c.Poster, mentions); err != nil {
+		logger.Errorf("mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil
 }
 
-func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
+func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
 	comment := &Comment{
 		Type:      opts.Type,
 		PosterID:  opts.Doer.ID,
@@ -271,22 +271,22 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Notify watchers for whatever action comes in, ignore if no action type.
 	if act.OpType > 0 {
 		if err = notifyWatchers(e, act); err != nil {
-			applog.Logger.Errorf("notifyWatchers: %v", err)
+			logger.Errorf("notifyWatchers: %v", err)
 		}
-		if err = comment.mailParticipants(e, act.OpType, opts.Issue); err != nil {
-			applog.Logger.Errorf("MailParticipants: %v", err)
+		if err = comment.mailParticipants(logger, e, act.OpType, opts.Issue); err != nil {
+			logger.Errorf("MailParticipants: %v", err)
 		}
 	}
 
 	return comment, comment.loadAttributes(e)
 }
 
-func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
+func createStatusComment(logger *logx.Logger, e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
 	cmtType := CommentTypeClose
 	if !issue.IsClosed {
 		cmtType = CommentTypeReopen
 	}
-	return createComment(e, &CreateCommentOptions{
+	return createComment(logger, e, &CreateCommentOptions{
 		Type:  cmtType,
 		Doer:  doer,
 		Repo:  repo,
@@ -308,14 +308,14 @@ type CreateCommentOptions struct {
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(opts *CreateCommentOptions) (comment *Comment, err error) {
+func CreateComment(logger *logx.Logger, opts *CreateCommentOptions) (comment *Comment, err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return nil, err
 	}
 
-	comment, err = createComment(sess, opts)
+	comment, err = createComment(logger, sess, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -324,8 +324,8 @@ func CreateComment(opts *CreateCommentOptions) (comment *Comment, err error) {
 }
 
 // CreateIssueComment creates a plain issue comment.
-func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
-	comment, err := CreateComment(&CreateCommentOptions{
+func CreateIssueComment(logger *logx.Logger, doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
+	comment, err := CreateComment(logger, &CreateCommentOptions{
 		Type:        CommentTypeComment,
 		Doer:        doer,
 		Repo:        repo,
@@ -338,21 +338,21 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 	}
 
 	comment.Issue = issue
-	if err = PrepareWebhooks(repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+	if err = PrepareWebhooks(logger, repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:     apiv1types.WebhookIssueCommentCreated,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
-		Repository: repo.APIFormatLegacy(nil),
+		Repository: repo.APIFormatLegacy(logger, nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
+		logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
 	}
 
 	return comment, nil
 }
 
 // CreateRefComment creates a commit reference comment to issue.
-func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
+func CreateRefComment(logger *logx.Logger, doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
 	if commitSHA == "" {
 		return errors.Newf("cannot create reference with empty commit SHA")
 	}
@@ -369,7 +369,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 		return nil
 	}
 
-	_, err = CreateComment(&CreateCommentOptions{
+	_, err = CreateComment(logger, &CreateCommentOptions{
 		Type:      CommentTypeCommitRef,
 		Doer:      doer,
 		Repo:      repo,
@@ -467,14 +467,14 @@ func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
 }
 
 // UpdateComment updates information of comment.
-func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
+func UpdateComment(logger *logx.Logger, doer *User, c *Comment, oldContent string) (err error) {
 	if _, err = x.Id(c.ID).AllCols().Update(c); err != nil {
 		return err
 	}
 
 	if err = c.Issue.LoadAttributes(); err != nil {
-		applog.Logger.Errorf("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
-	} else if err = PrepareWebhooks(c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+		logger.Errorf("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
+	} else if err = PrepareWebhooks(logger, c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:  apiv1types.WebhookIssueCommentEdited,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
@@ -483,17 +483,17 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 				From: oldContent,
 			},
 		},
-		Repository: c.Issue.Repo.APIFormatLegacy(nil),
+		Repository: c.Issue.Repo.APIFormatLegacy(logger, nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
+		logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
 	}
 
 	return nil
 }
 
 // DeleteCommentByID deletes the comment by given ID.
-func DeleteCommentByID(doer *User, id int64) error {
+func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
 	comment, err := GetCommentByID(id)
 	if err != nil {
 		if IsErrCommentNotExist(err) {
@@ -524,19 +524,19 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	_, err = DeleteAttachmentsByComment(comment.ID, true)
 	if err != nil {
-		applog.Logger.Errorf("Failed to delete attachments by comment[%d]: %v", comment.ID, err)
+		logger.Errorf("Failed to delete attachments by comment[%d]: %v", comment.ID, err)
 	}
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
-		applog.Logger.Errorf("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
-	} else if err = PrepareWebhooks(comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+		logger.Errorf("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
+	} else if err = PrepareWebhooks(logger, comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:     apiv1types.WebhookIssueCommentDeleted,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),
-		Repository: comment.Issue.Repo.APIFormatLegacy(nil),
+		Repository: comment.Issue.Repo.APIFormatLegacy(logger, nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
+		logger.Errorf("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
 	}
 	return nil
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -219,7 +218,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		IsPrerelease: f.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = database.NewRelease(c.Req.Context(), c.Repo.GitRepo, rel, attachments); err != nil {
+	if err = database.NewRelease(c.Req.Context(), c.Logger, c.Repo.GitRepo, rel, attachments); err != nil {
 		c.Data["Err_TagName"] = true
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
@@ -231,7 +230,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		}
 		return
 	}
-	applog.Logger.Tracef("Release created: %s/%s:%s", c.User.LowerName, c.Repo.Repository.Name, f.TagName)
+	c.Logger.Tracef("Release created: %s/%s:%s", c.User.LowerName, c.Repo.Repository.Name, f.TagName)
 
 	c.Redirect(c.Repo.RepoLink + "/releases")
 }
@@ -295,7 +294,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	rel.Note = f.Content
 	rel.IsDraft = len(f.Draft) > 0
 	rel.IsPrerelease = f.Prerelease
-	if err = database.UpdateRelease(c.Req.Context(), c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
+	if err = database.UpdateRelease(c.Req.Context(), c.Logger, c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
 		c.Error(err, "update release")
 		return
 	}

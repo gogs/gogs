@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/logx"
 )
 
 func TestPerms(t *testing.T) {
@@ -145,7 +147,7 @@ func permsAccessMode(t *testing.T, ctx context.Context, s *PermissionsStore) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mode := s.AccessMode(ctx, test.userID, test.repoID, test.opts)
+			mode := s.AccessMode(ctx, logx.NewNoop(), test.userID, test.repoID, test.opts)
 			assert.Equal(t, test.wantAccessMode, mode)
 		})
 	}
@@ -226,7 +228,7 @@ func permsAuthorize(t *testing.T, ctx context.Context, s *PermissionsStore) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			authorized := s.Authorize(ctx, test.userID, repo.ID, test.desired,
+			authorized := s.Authorize(ctx, logx.NewNoop(), test.userID, repo.ID, test.desired,
 				AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

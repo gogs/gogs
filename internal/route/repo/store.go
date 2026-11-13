@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/logx"
 )
 
 // Store is the data layer carrier for context middleware. This interface is
@@ -51,11 +52,13 @@ type Store interface {
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
-type store struct{}
+type store struct {
+	logger *logx.Logger
+}
 
 // NewStore returns a new Store using the global database handle.
-func NewStore() Store {
-	return &store{}
+func NewStore(logger *logx.Logger) Store {
+	return &store{logger: logger}
 }
 
 func (*store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.AccessToken, error) {
@@ -70,8 +73,8 @@ func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name strin
 	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
 }
 
-func (*store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
-	return database.Handle.TwoFactors().IsEnabled(ctx, userID)
+func (s *store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
+	return database.Handle.TwoFactors().IsEnabled(ctx, s.logger, userID)
 }
 
 func (*store) GetUserByID(ctx context.Context, id int64) (*database.User, error) {
@@ -86,6 +89,6 @@ func (*store) CreateUser(ctx context.Context, username, email string, opts datab
 	return database.Handle.Users().Create(ctx, username, email, opts)
 }
 
-func (*store) AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error) {
-	return database.Handle.Users().Authenticate(ctx, login, password, loginSourceID)
+func (s *store) AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error) {
+	return database.Handle.Users().Authenticate(ctx, s.logger, login, password, loginSourceID)
 }

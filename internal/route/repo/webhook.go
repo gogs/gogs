@@ -11,7 +11,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -470,7 +469,7 @@ func TestWebhook(c *context.Context) {
 	if c.Repo.Commit == nil {
 		objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 		if err != nil {
-			applog.Logger.Errorf("Failed to get object format: %v", err)
+			c.Logger.Errorf("Failed to get object format: %v", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		}
@@ -542,11 +541,11 @@ func TestWebhook(c *context.Context) {
 				Modified: nameStatus.Modified,
 			},
 		},
-		Repo:   c.Repo.Repository.APIFormatLegacy(nil),
+		Repo:   c.Repo.Repository.APIFormatLegacy(c.Logger, nil),
 		Pusher: apiUser,
 		Sender: apiUser,
 	}
-	if err := database.TestWebhook(c.Repo.Repository, database.HookEventTypePush, p, c.ParamsInt64("id")); err != nil {
+	if err := database.TestWebhook(c.Logger, c.Repo.Repository, database.HookEventTypePush, p, c.ParamsInt64("id")); err != nil {
 		c.Error(err, "test webhook")
 		return
 	}

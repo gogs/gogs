@@ -11,9 +11,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 )
@@ -45,7 +45,7 @@ func writeErrorResponse(w http.ResponseWriter, code int, err error) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
-func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
+func getRepoCommitRaw(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -59,7 +59,7 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 
 	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
 	if err != nil {
-		applog.Logger.Errorf("getRepoCommitRaw: open repository %q/%q: %v", owner.Name, repo.Name, err)
+		logger.Errorf("getRepoCommitRaw: open repository %q/%q: %v", owner.Name, repo.Name, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
 		return
 	}
@@ -69,7 +69,7 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("commit does not exist"))
 			return
 		}
-		applog.Logger.Errorf("getRepoCommitRaw: cat-file commit %q in %q/%q: %v", sha, owner.Name, repo.Name, err)
+		logger.Errorf("getRepoCommitRaw: cat-file commit %q in %q/%q: %v", sha, owner.Name, repo.Name, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "cat-file commit"))
 		return
 	}
@@ -84,7 +84,7 @@ func getRepoCommitRaw(c flamego.Context, repoCtx *repoContext) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	if err = gitRepo.RawDiff(c.Request().Context(), sha, git.RawDiffFormat(format), w, rawOpts...); err != nil {
-		applog.Logger.Errorf("getRepoCommitRaw: get raw diff %s: %v", sha, err)
+		logger.Errorf("getRepoCommitRaw: get raw diff %s: %v", sha, err)
 	}
 }
 
@@ -112,7 +112,7 @@ func resolveRef(ctx context.Context, gitRepo *git.Repository, ref string) (*git.
 	return commit, nil
 }
 
-func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
+func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -132,7 +132,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 
 	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
 	if err != nil {
-		applog.Logger.Errorf("getRepoRawFile: open repository %q/%q: %v", owner.Name, repo.Name, err)
+		logger.Errorf("getRepoRawFile: open repository %q/%q: %v", owner.Name, repo.Name, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
 		return
 	}
@@ -143,7 +143,7 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("ref does not exist"))
 			return
 		}
-		applog.Logger.Errorf("getRepoRawFile: resolve ref %q in %q/%q: %v", ref, owner.Name, repo.Name, err)
+		logger.Errorf("getRepoRawFile: resolve ref %q in %q/%q: %v", ref, owner.Name, repo.Name, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "resolve ref"))
 		return
 	}
@@ -154,14 +154,14 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("file does not exist"))
 			return
 		}
-		applog.Logger.Errorf("getRepoRawFile: blob %s:%s in %q/%q: %v", commit.ID, filepath, owner.Name, repo.Name, err)
+		logger.Errorf("getRepoRawFile: blob %s:%s in %q/%q: %v", commit.ID, filepath, owner.Name, repo.Name, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get blob"))
 		return
 	}
 
 	data, err := blob.Bytes(c.Request().Context())
 	if err != nil {
-		applog.Logger.Errorf("getRepoRawFile: read blob %s:%s: %v", commit.ID, filepath, err)
+		logger.Errorf("getRepoRawFile: read blob %s:%s: %v", commit.ID, filepath, err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "read blob"))
 		return
 	}

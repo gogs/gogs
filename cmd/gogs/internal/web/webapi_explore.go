@@ -9,10 +9,10 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -52,7 +52,7 @@ type exploreRepo struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreRepo], err error) {
+func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreRepo], err error) {
 	page := explorePageParam(c)
 	repos, total, err := database.SearchRepositoryByName(&database.SearchRepoOptions{
 		Keyword:  c.Query("q"),
@@ -62,11 +62,11 @@ func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, 
 		PageSize: conf.UI.ExplorePagingNum,
 	})
 	if err != nil {
-		log.Error("getExploreRepos: search repositories: %v", err)
+		logger.Errorf("getExploreRepos: search repositories: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search repositories")
 	}
 	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
-		log.Error("getExploreRepos: load repository attributes: %v", err)
+		logger.Errorf("getExploreRepos: load repository attributes: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
 
@@ -138,11 +138,11 @@ func searchExploreUsers(ctx context.Context, typ database.UserType, keyword stri
 	return users, database.Handle.Users().Count(ctx), err
 }
 
-func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreUser], err error) {
+func getExploreUsers(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreUser], err error) {
 	page := explorePageParam(c)
 	users, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page)
 	if err != nil {
-		log.Error("getExploreUsers: search users: %v", err)
+		logger.Errorf("getExploreUsers: search users: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search users")
 	}
 
@@ -158,11 +158,11 @@ func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, 
 	return http.StatusOK, newExplorePage(items, page, total), nil
 }
 
-func getExploreOrganizations(c flamego.Context) (statusCode int, resp *explorePage[exploreUser], err error) {
+func getExploreOrganizations(logger *logx.Logger, c flamego.Context) (statusCode int, resp *explorePage[exploreUser], err error) {
 	page := explorePageParam(c)
 	orgs, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeOrganization, c.Query("q"), page)
 	if err != nil {
-		log.Error("getExploreOrganizations: search organizations: %v", err)
+		logger.Errorf("getExploreOrganizations: search organizations: %v", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search organizations")
 	}
 

@@ -8,8 +8,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/logx"
 )
 
 // Provider contains configuration of an SMTP authentication provider.
@@ -26,7 +26,7 @@ func NewProvider(cfg *Config) auth.Provider {
 
 // Authenticate queries if login/password is valid against the SMTP server,
 // and returns queried information when succeeded.
-func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
+func (p *Provider) Authenticate(logger *logx.Logger, login, password string) (*auth.ExternalAccount, error) {
 	// Verify allowed domains
 	if p.config.AllowedDomains != "" {
 		fields := strings.SplitN(login, "@", 3)
@@ -53,7 +53,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}
 
 	if err := p.config.doAuth(smtpAuth); err != nil {
-		applog.Logger.Tracef("SMTP: Authentication failed: %v", err)
+		logger.Tracef("SMTP: Authentication failed: %v", err)
 
 		// Check standard error format first, then fallback to the worse case.
 		tperr, ok := err.(*textproto.Error)

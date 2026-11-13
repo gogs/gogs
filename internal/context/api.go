@@ -9,7 +9,6 @@ import (
 	"github.com/unknwon/paginater"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
@@ -46,7 +45,7 @@ func (c *APIContext) ErrorStatus(status int, err error) {
 
 // Error renders the 500 response.
 func (c *APIContext) Error(err error, msg string) {
-	applog.Logger.Errorf("%s: %v", msg, err)
+	c.Logger.Errorf("%s: %v", msg, err)
 	c.ErrorStatus(
 		http.StatusInternalServerError,
 		errors.New("Something went wrong, please check the server logs for more information."),

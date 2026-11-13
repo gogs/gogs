@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
@@ -181,7 +180,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		}
 	}
 
-	applog.Logger.Tracef("Authentication created by admin(%s): %s", c.User.Name, f.Name)
+	c.Logger.Tracef("Authentication created by admin(%s): %s", c.User.Name, f.Name)
 
 	c.Flash.Success(c.Tr("admin.auths.new_success", f.Name))
 	c.Redirect(conf.Server.Subpath + "/admin/auths")
@@ -265,7 +264,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 		}
 	}
 
-	applog.Logger.Tracef("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
+	c.Logger.Tracef("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/auths/" + strconv.FormatInt(f.ID, 10))
@@ -284,7 +283,7 @@ func DeleteAuthSource(c *context.Context) {
 		})
 		return
 	}
-	applog.Logger.Tracef("Authentication deleted by admin(%s): %d", c.User.Name, id)
+	c.Logger.Tracef("Authentication deleted by admin(%s): %d", c.User.Name, id)
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
 	c.JSONSuccess(map[string]any{

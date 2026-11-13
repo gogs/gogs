@@ -67,7 +67,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 			return
 		}
 
-		count := database.CountUserRepositories(puser.ID, showPrivate)
+		count := database.CountUserRepositories(c.Logger, puser.ID, showPrivate)
 		c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 	}
 

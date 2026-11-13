@@ -7,9 +7,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -327,7 +327,7 @@ func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) 
 }
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
-func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err error) {
+func ChangeMilestoneAssign(logger *logx.Logger, doer *User, issue *Issue, oldMilestoneID int64) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -352,27 +352,27 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			applog.Logger.Errorf("LoadIssue: %v", err)
+			logger.Errorf("LoadIssue: %v", err)
 			return err
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormatLegacy(nil),
+			PullRequest: issue.PullRequest.APIFormat(logger),
+			Repository:  issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		applog.Logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil

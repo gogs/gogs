@@ -3,7 +3,6 @@ package org
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -52,7 +51,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 		// reset c.org.OrgLink with new name
 		c.Org.OrgLink = conf.Server.Subpath + "/org/" + f.Name
-		applog.Logger.Tracef("Organization name changed: %s -> %s", org.Name, f.Name)
+		c.Logger.Tracef("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
 
 	opts := database.UpdateUserOptions{
@@ -99,7 +98,7 @@ func SettingsDelete(c *context.Context) {
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.Logger, c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), http.StatusUnauthorized, tmplOrgSettingsDelete, nil)
 			} else {
@@ -116,7 +115,7 @@ func SettingsDelete(c *context.Context) {
 				c.Error(err, "delete organization")
 			}
 		} else {
-			applog.Logger.Tracef("Organization deleted: %s", org.Name)
+			c.Logger.Tracef("Organization deleted: %s", org.Name)
 			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return

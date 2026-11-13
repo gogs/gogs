@@ -10,6 +10,7 @@ import (
 	"golang.org/x/text/transform"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
 )
@@ -96,7 +97,7 @@ func (f *DiffFile) HighlightClass() string {
 
 // decodeCharsets converts the content of each file in the diff to UTF-8 when
 // the file is detected to be in another encoding.
-func decodeCharsets(diff *Diff) {
+func decodeCharsets(logger *logx.Logger, diff *Diff) {
 	var buf bytes.Buffer
 	for _, file := range diff.Files {
 		buf.Reset()
@@ -107,7 +108,7 @@ func decodeCharsets(diff *Diff) {
 			}
 		}
 
-		charsetLabel, err := tool.DetectEncoding(buf.Bytes())
+		charsetLabel, err := tool.DetectEncoding(logger, buf.Bytes())
 		if charsetLabel == "UTF-8" || err != nil {
 			continue
 		}

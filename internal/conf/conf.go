@@ -18,7 +18,7 @@ import (
 	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/conf"
-	"gogs.io/gogs/internal/applog"
+	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/semverx"
 )
@@ -43,7 +43,7 @@ var File *ini.File
 // NOTE: The order of loading configuration sections matters as one may depend on another.
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
-func Init(customConf string) error {
+func Init(logger *logx.Logger, customConf string) error {
 	data, err := conf.Files.ReadFile("app.ini")
 	if err != nil {
 		return errors.Wrap(err, `read default "app.ini"`)
@@ -145,14 +145,14 @@ func Init(customConf string) error {
 		// the "ssh-keygen" in Windows does not print key type.
 		// See https://github.com/gogs/gogs/issues/4507.
 		if SSH.MinimumKeySizeCheck {
-			sshVersion, err := openSSHVersion()
+			sshVersion, err := openSSHVersion(logger)
 			if err != nil {
 				return errors.Wrap(err, "get OpenSSH version")
 			}
 
 			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
 				if !HookMode {
-					applog.Logger.Warnf(`SSH minimum key size check is forced to be disabled because server is not eligible:
+					logger.Warnf(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
 	2. OpenSSH version is lower than 5.1`)
 				}
@@ -390,7 +390,7 @@ func Init(customConf string) error {
 	handleDeprecated()
 	if !HookMode {
 		for _, warning := range checkInvalidOptions(File) {
-			applog.Logger.Warnf("%s", warning)
+			logger.Warnf("%s", warning)
 		}
 	}
 

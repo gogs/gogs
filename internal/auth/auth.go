@@ -6,6 +6,7 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/logx"
 )
 
 type Type int
@@ -78,7 +79,7 @@ type ExternalAccount struct {
 type Provider interface {
 	// Authenticate performs authentication against an external identity provider
 	// using given credentials and returns queried information of the external account.
-	Authenticate(login, password string) (*ExternalAccount, error)
+	Authenticate(logger *logx.Logger, login, password string) (*ExternalAccount, error)
 
 	// Config returns the underlying configuration of the authenticate provider.
 	Config() any

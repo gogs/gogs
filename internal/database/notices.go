@@ -9,7 +9,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/applog"
+	"gogs.io/gogs/internal/logx"
 )
 
 // NoticesStore is the storage layer for system notices.
@@ -95,11 +95,11 @@ func (n *Notice) AfterFind(*gorm.DB) error {
 
 // RemoveAllWithNotice is a helper function to remove all directories in given
 // path and creates a system notice in case of an error.
-func RemoveAllWithNotice(title, path string) {
+func RemoveAllWithNotice(logger *logx.Logger, title, path string) {
 	if err := os.RemoveAll(path); err != nil {
 		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
 		if err = Handle.Notices().Create(context.Background(), NoticeTypeRepository, desc); err != nil {
-			applog.Logger.Errorf("Failed to create repository notice: %v", err)
+			logger.Errorf("Failed to create repository notice: %v", err)
 		}
 	}
 }

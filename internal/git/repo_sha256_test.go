@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/logx"
 )
 
 // newSHA256TestRepo returns a SHA-256 copy of the test repository. It rewrites
@@ -131,7 +133,7 @@ func TestSHA256Repository(t *testing.T) {
 	})
 
 	t.Run("Diff", func(t *testing.T) {
-		diff, err := r.Diff(ctx, headCommitID, 0, 0, 0)
+		diff, err := r.Diff(ctx, logx.NewNoop(), headCommitID, 0, 0, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, diff.Files)
 		for _, f := range diff.Files {

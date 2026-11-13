@@ -6,7 +6,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/applog"
+	"gogs.io/gogs/internal/logx"
 )
 
 // Access represents the highest access level of a user has to a repository. The
@@ -73,7 +73,7 @@ type AccessModeOptions struct {
 }
 
 // AccessMode returns the access mode of given user has to the repository.
-func (s *PermissionsStore) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
+func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
 	if repoID <= 0 {
 		return AccessModeNone
 	}
@@ -96,7 +96,7 @@ func (s *PermissionsStore) AccessMode(ctx context.Context, userID, repoID int64,
 	err := s.db.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			applog.Logger.Errorf("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
+			logger.Errorf("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
 		}
 		return mode
 	}
@@ -105,8 +105,8 @@ func (s *PermissionsStore) AccessMode(ctx context.Context, userID, repoID int64,
 
 // Authorize returns true if the user has as good as desired access mode to the
 // repository.
-func (s *PermissionsStore) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
-	return desired <= s.AccessMode(ctx, userID, repoID, opts)
+func (s *PermissionsStore) Authorize(ctx context.Context, logger *logx.Logger, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
+	return desired <= s.AccessMode(ctx, logger, userID, repoID, opts)
 }
 
 // SetRepoPerms does a full update to which users have which level of access to
