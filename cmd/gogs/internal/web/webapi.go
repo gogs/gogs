@@ -254,6 +254,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/src", getRepoSrc)
 			f.Get("/src/{path: **}", getRepoSrc)
 			f.Get("/commits/{path: **}", withRepoCode, getRepoCommits)
+			f.Get("/blame/{path: **}", withRepoCode, getRepoBlame)
 			f.Get("/compare/"+compareRangeRoute, withRepoCode, getRepoCompare)
 			f.Group("/wiki", func() {
 				f.Get("", getRepoWiki)

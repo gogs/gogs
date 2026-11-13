@@ -7,6 +7,7 @@ import {
   type RepoCompareData,
   type RepoNewPullData,
   type RepoSrcData,
+  fetchRepoBlame,
   fetchRepoBranchSettings,
   fetchRepoBranches,
   fetchRepoCollaborators,
@@ -42,6 +43,7 @@ import {
 import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/webhooks";
 import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
+import { RepoBlame } from "@/pages/repo/Blame";
 import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCode } from "@/pages/repo/Code";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
@@ -866,6 +868,20 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const repoBlameRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/blame/$",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoBlame(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function Blame() {
+      const { owner, repo } = repoBlameRoute.useParams();
+      const data = repoBlameRoute.useLoaderData();
+      return <RepoBlame key={`${owner}/${repo}@${data.ref}/${data.path}`} owner={owner} name={repo} data={data} />;
+    },
+  });
+
   const repoReleasesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/releases",
@@ -1121,6 +1137,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoCompareRoute,
     repoHomeRoute,
     repoSrcRoute,
+    repoBlameRoute,
     repoCommitsRoute,
     repoStargazersRoute,
     repoWatchersRoute,

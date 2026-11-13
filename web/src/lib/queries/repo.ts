@@ -1189,6 +1189,49 @@ export function fetchRepoSrc(owner: string, name: string, splat: string) {
   return fetchJSON<RepoSrcData>(repoURL(owner, name, `/src/${refPath(splat)}`));
 }
 
+export interface RepoBlameCommit extends RepoCommitListItem {
+  // subject is the first line of the message as plain text.
+  subject: string;
+  // previousSHA is the commit before this one that has the file, at
+  // previousPath, to see the lines before this commit changed them. Both are
+  // left out for the commit that added the file.
+  previousSHA?: string;
+  previousPath?: string;
+}
+
+// RepoBlameHunk is a run of consecutive lines that the same commit last
+// changed.
+export interface RepoBlameHunk {
+  sha: string;
+  startLine: number;
+  lineCount: number;
+}
+
+export interface RepoBlameData {
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  commitID: string;
+  path: string;
+  name: string;
+  size: number;
+  branches: string[];
+  tags: string[];
+  // kind is "text", or why the file has no blame.
+  kind: "text" | "binary" | "too_large";
+  // content is the text of the file, which hunks split into lines.
+  content: string;
+  hunks: RepoBlameHunk[];
+  // commits are the commits of the hunks by their SHA.
+  commits: Record<string, RepoBlameCommit>;
+  tabWidth?: number;
+}
+
+// fetchRepoBlame tells which commit last changed each line of the file at the
+// path after the ref at the start of the splat.
+export function fetchRepoBlame(owner: string, name: string, splat: string) {
+  return fetchJSON<RepoBlameData>(repoURL(owner, name, `/blame/${refPath(splat)}`));
+}
+
 export interface RepoCompareData {
   before: string;
   after: string;
