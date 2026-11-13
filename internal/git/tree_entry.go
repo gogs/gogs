@@ -29,7 +29,7 @@ const (
 type TreeEntry struct {
 	mode EntryMode
 	typ  ObjectType
-	id   Oid
+	id   OID
 	name string
 
 	parent *Tree
@@ -75,7 +75,7 @@ func (e *TreeEntry) Type() ObjectType {
 }
 
 // ID returns the ID of the entry.
-func (e *TreeEntry) ID() Oid {
+func (e *TreeEntry) ID() OID {
 	return e.id
 }
 

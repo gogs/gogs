@@ -12,7 +12,7 @@ import (
 // Commit contains information of a Git commit.
 type Commit struct {
 	// The ID of the commit.
-	ID Oid
+	ID OID
 	//  The author of the commit.
 	Author *Signature
 	// The committer of the commit.
@@ -20,7 +20,7 @@ type Commit struct {
 	// The full commit message.
 	Message string
 
-	parents []Oid
+	parents []OID
 	*Tree
 
 	submodules    *sync.Map
@@ -41,7 +41,7 @@ func (c *Commit) ParentsCount() int {
 
 // ParentID returns the ID of the n-th parent (0-based) of this commit.
 // It returns an ErrParentNotExist if no such parent exists.
-func (c *Commit) ParentID(n int) (Oid, error) {
+func (c *Commit) ParentID(n int) (OID, error) {
 	if n >= len(c.parents) {
 		return nil, ErrParentNotExist
 	}

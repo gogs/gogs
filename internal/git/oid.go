@@ -40,9 +40,9 @@ func IsEmptyID(id string) bool {
 	return id == ObjectFormatSHA1.EmptyID() || id == ObjectFormatSHA256.EmptyID()
 }
 
-// Oid is the ID of a Git object, i.e., a *SHA1 or a *SHA256 depending on the
+// OID is the ID of a Git object, i.e., a *SHA1 or a *SHA256 depending on the
 // object format of the repository.
-type Oid interface {
+type OID interface {
 	// String returns the hex representation of the ID.
 	String() string
 }
@@ -79,9 +79,9 @@ func (s *SHA256) String() string {
 	return s.str
 }
 
-// mustID always returns a new Oid from a 20-byte (SHA-1) or 32-byte (SHA-256)
+// mustID always returns a new OID from a 20-byte (SHA-1) or 32-byte (SHA-256)
 // slice with no validation of input.
-func mustID(b []byte) Oid {
+func mustID(b []byte) OID {
 	if len(b) == 32 {
 		var id SHA256
 		copy(id.bytes[:], b)
@@ -92,24 +92,24 @@ func mustID(b []byte) Oid {
 	return &id
 }
 
-// newID returns a new Oid from a 20-byte (SHA-1) or 32-byte (SHA-256) slice.
-func newID(b []byte) (Oid, error) {
+// newID returns a new OID from a 20-byte (SHA-1) or 32-byte (SHA-256) slice.
+func newID(b []byte) (OID, error) {
 	if len(b) != 20 && len(b) != 32 {
 		return nil, errors.New("length must be 20 or 32")
 	}
 	return mustID(b), nil
 }
 
-// MustIDFromString always returns a new Oid from a hex ID with no validation of
+// MustIDFromString always returns a new OID from a hex ID with no validation of
 // input.
-func MustIDFromString(s string) Oid {
+func MustIDFromString(s string) OID {
 	b, _ := hex.DecodeString(s)
 	return mustID(b)
 }
 
-// newIDFromString returns a new Oid from a hex ID of length 40 (SHA-1) or 64
+// newIDFromString returns a new OID from a hex ID of length 40 (SHA-1) or 64
 // (SHA-256).
-func newIDFromString(s string) (Oid, error) {
+func newIDFromString(s string) (OID, error) {
 	s = strings.TrimSpace(s)
 	if len(s) != 40 && len(s) != 64 {
 		return nil, errors.New("length must be 40 or 64")
