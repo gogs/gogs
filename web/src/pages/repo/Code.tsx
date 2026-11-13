@@ -33,6 +33,7 @@ import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatFileSize } from "@/lib/file-size";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoCommitListItem,
@@ -58,18 +59,6 @@ const ICON_BUTTON_CLASS =
 // splatOf is the route path of a ref, followed by a path when given.
 function splatOf(ref: string, path?: string) {
   return path ? `${ref}/${path}` : ref;
-}
-
-const SIZE_UNITS = ["B", "KiB", "MiB", "GiB"];
-
-function formatFileSize(bytes: number) {
-  let size = bytes;
-  let unit = 0;
-  while (size >= 1024 && unit < SIZE_UNITS.length - 1) {
-    size /= 1024;
-    unit++;
-  }
-  return `${unit ? size.toFixed(1) : size} ${SIZE_UNITS[unit]}`;
 }
 
 // RepoCode browses the files of a repository at a branch, a tag or a commit:
@@ -323,7 +312,7 @@ function CloneMenu({ links, archiveLink }: { links: RepoSrcData["cloneLinks"]; a
   );
 }
 
-function RelativeTime({ when }: { when: string }) {
+export function RelativeTime({ when }: { when: string }) {
   const { t } = useTranslation();
   return (
     <Tooltip>
@@ -334,6 +323,48 @@ function RelativeTime({ when }: { when: string }) {
       </TooltipTrigger>
       <TooltipContent>{formatAbsoluteTime(when)}</TooltipContent>
     </Tooltip>
+  );
+}
+
+const FILE_MODE_CLASS =
+  "bg-(--color-background) px-2.5 py-1.5 hover:bg-(--color-surface) aria-[current=page]:bg-(--color-surface) aria-[current=page]:font-semibold";
+
+// FileModeNav switches a text file between its code and its blame.
+export function FileModeNav({
+  owner,
+  name,
+  splat,
+  mode,
+}: {
+  owner: string;
+  name: string;
+  splat: string;
+  mode: "code" | "blame";
+}) {
+  const { t } = useTranslation();
+  const params = { owner, repo: name, _splat: splat };
+  return (
+    <nav
+      aria-label={t("repo.file_view")}
+      className="flex overflow-hidden rounded-md border border-(--color-border) text-xs [&>*+*]:border-l [&>*+*]:border-(--color-border)"
+    >
+      <Link
+        to="/$owner/$repo/src/$"
+        params={params}
+        aria-current={mode === "code" ? "page" : undefined}
+        className={FILE_MODE_CLASS}
+      >
+        {t("repo.code")}
+      </Link>
+      <Link
+        to="/$owner/$repo/blame/$"
+        params={params}
+        aria-current={mode === "blame" ? "page" : undefined}
+        className={FILE_MODE_CLASS}
+      >
+        {t("repo.blame")}
+      </Link>
+    </nav>
   );
 }
 
@@ -511,7 +542,12 @@ function FileView({
           {lineCount ? `${t(lineCount === 1 ? "repo.file_line" : "repo.file_lines", { count: lineCount })} · ` : null}
           {formatFileSize(file.size)}
         </span>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          {file.kind !== "too_large" && isText ? (
+            <span className="mr-1">
+              <FileModeNav owner={owner} name={name} splat={splat} mode="code" />
+            </span>
+          ) : null}
           <div className="mr-1 flex overflow-hidden rounded-md border border-(--color-border) text-xs [&>*+*]:border-l [&>*+*]:border-(--color-border)">
             {data.refType !== "commit" ? (
               <Link
