@@ -57,6 +57,8 @@ All notable changes to Gogs are documented in this file.
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - `gogs restore` no longer resets some timestamps to the time of the restore, such as when issues and comments were last updated and when mirrors next sync. [#8511](https://github.com/gogs/gogs/pull/8511)
+- `gogs restore` no longer silently drops table rows larger than 64 KiB, such as issues with long descriptions, and every row after them. [#8527](https://github.com/gogs/gogs/pull/8527)
+- `gogs restore` of a backup made by Gogs 0.12 now keeps user passwords, access tokens, stars, and the owners of additional email addresses. [#8527](https://github.com/gogs/gogs/pull/8527)
 
 ### Removed
 
