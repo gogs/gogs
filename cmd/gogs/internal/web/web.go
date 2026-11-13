@@ -354,9 +354,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					})
 
 					m.Group("/git", func() {
-						m.Get("", repo.SettingsGitHooks)
-						m.Combo("/:name").Get(repo.SettingsGitHooksEdit).
-							Post(repo.SettingsGitHooksEditPost)
+						m.Get("", func(c *context.Context) { c.ServeWeb() })
+						m.Get("/:name", func(c *context.Context) { c.ServeWeb() })
 					}, context.GitHookService())
 				})
 

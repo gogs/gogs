@@ -320,6 +320,28 @@ export function deleteRepoDeployKey(owner: string, name: string, id: number) {
   return send("DELETE", repoSettingsURL(owner, name, `/keys/${id}`));
 }
 
+export interface RepoGitHook {
+  name: string;
+  // isActive is false when the hook only has its sample content.
+  isActive: boolean;
+}
+
+export async function fetchRepoGitHooks(owner: string, name: string) {
+  return (await fetchJSON<{ items: RepoGitHook[] }>(repoSettingsURL(owner, name, "/git-hooks"))).items;
+}
+
+export interface RepoGitHookContent extends RepoGitHook {
+  content: string;
+}
+
+export function fetchRepoGitHook(owner: string, name: string, hook: string) {
+  return fetchJSON<RepoGitHookContent>(repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`));
+}
+
+export function updateRepoGitHook(owner: string, name: string, hook: string, content: string) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`), { content });
+}
+
 export interface RepoBranchSettingsData {
   // isEmpty is set for a repository without commits, which has no branches
   // to manage yet.
