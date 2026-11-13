@@ -77,6 +77,9 @@ func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 		c.CreatedUnix = tx.NowFunc().Unix()
 		c.UpdatedUnix = c.CreatedUnix
 	}
+	// Webhook payloads and API responses use the comment just created.
+	c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
 	return nil
 }
 
@@ -168,7 +171,7 @@ func (c *Comment) EventTag() string {
 // and mentioned people.
 func (c *Comment) mailParticipants(tx *gorm.DB, opType ActionType, issue *Issue) (err error) {
 	mentions := markup.FindAllMentions(c.Content)
-	if err = updateIssueMentions(tx, c.IssueID, mentions); err != nil {
+	if err = updateIssueMentions(tx, issue.RepoID, c.IssueID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 

@@ -59,6 +59,9 @@ func (issue *Issue) BeforeCreate(tx *gorm.DB) error {
 		issue.CreatedUnix = tx.NowFunc().Unix()
 		issue.UpdatedUnix = issue.CreatedUnix
 	}
+	// Webhook payloads and API responses use the issue just created.
+	issue.Created = time.Unix(issue.CreatedUnix, 0).Local()
+	issue.Updated = time.Unix(issue.UpdatedUnix, 0).Local()
 	return nil
 }
 
@@ -1115,7 +1118,7 @@ func GetIssueUserPairsByMode(userID, repoID int64, filterMode FilterMode, isClos
 
 // updateIssueMentions extracts mentioned people from content and
 // updates issue-user relations for them.
-func updateIssueMentions(tx *gorm.DB, issueID int64, mentions []string) error {
+func updateIssueMentions(tx *gorm.DB, repoID, issueID int64, mentions []string) error {
 	if len(mentions) == 0 {
 		return nil
 	}
@@ -1143,13 +1146,13 @@ func updateIssueMentions(tx *gorm.DB, issueID int64, mentions []string) error {
 		}
 
 		for _, orgUser := range orgUsers {
-			memberIDs = append(memberIDs, orgUser.ID)
+			memberIDs = append(memberIDs, orgUser.UID)
 		}
 
 		ids = append(ids, memberIDs...)
 	}
 
-	if err := updateIssueUsersByMentions(tx, issueID, ids); err != nil {
+	if err := updateIssueUsersByMentions(tx, repoID, issueID, ids); err != nil {
 		return errors.Newf("UpdateIssueUsersByMentions: %v", err)
 	}
 
@@ -1373,7 +1376,7 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 }
 
 // updateIssueUsersByMentions updates issue-user pairs by mentioning.
-func updateIssueUsersByMentions(tx *gorm.DB, issueID int64, uids []int64) error {
+func updateIssueUsersByMentions(tx *gorm.DB, repoID, issueID int64, uids []int64) error {
 	for _, uid := range uids {
 		iu := new(IssueUser)
 		err := tx.Where(&IssueUser{UserID: uid, IssueID: issueID}).First(iu).Error
@@ -1385,7 +1388,7 @@ func updateIssueUsersByMentions(tx *gorm.DB, issueID int64, uids []int64) error 
 			iu.IsMentioned = true
 			err = tx.Model(iu).Select("*").Updates(iu).Error
 		} else {
-			err = tx.Create(&IssueUser{UserID: uid, IssueID: issueID, IsMentioned: true}).Error
+			err = tx.Create(&IssueUser{UserID: uid, IssueID: issueID, RepoID: repoID, IsMentioned: true}).Error
 		}
 		if err != nil {
 			return err

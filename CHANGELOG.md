@@ -18,6 +18,12 @@ All notable changes to Gogs are documented in this file.
 - `gogs restore` no longer resets some timestamps to the time of the restore, such as when issues and comments were last updated and when mirrors next sync. [#8511](https://github.com/gogs/gogs/pull/8511)
 - `gogs restore` no longer silently drops table rows larger than 64 KiB, such as issues with long descriptions, and every row after them. [#8527](https://github.com/gogs/gogs/pull/8527)
 - `gogs restore` of a backup made by Gogs 0.12 now keeps user passwords, access tokens, stars, and the owners of additional email addresses. [#8527](https://github.com/gogs/gogs/pull/8527)
+- Creating a repository through the API with a name that is already taken returns 422 instead of 500. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Deleting a file that does not exist in the web editor returns 404 instead of 500. [#8528](https://github.com/gogs/gogs/pull/8528)
+- The API no longer allows adding an organization as a repository collaborator. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Repository search on PostgreSQL matches descriptions regardless of case, as on other databases. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Mentioning an organization marks its members as mentioned, instead of unrelated users. [#8528](https://github.com/gogs/gogs/pull/8528)
 
 ### Removed
 

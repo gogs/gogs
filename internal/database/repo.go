@@ -1203,6 +1203,12 @@ func (err ErrReachLimitOfRepo) Error() string {
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	repoPath := RepoPath(owner.Name, opts.Name)
 	if osx.Exist(repoPath) {
+		has, err := isRepositoryExist(Handle.db, owner, opts.Name)
+		if err != nil {
+			return nil, errors.Wrap(err, "check repository existence")
+		} else if has {
+			return nil, ErrRepoAlreadyExist{args: errx.Args{"ownerID": owner.ID, "name": opts.Name}}
+		}
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
 	}
 	if !owner.canCreateRepo() {
@@ -1850,7 +1856,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 		}
 	}
 	if len(opts.Keyword) > 0 {
-		query = query.Where("(repo.lower_name LIKE ? OR repo.description LIKE ?)", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
+		query = query.Where("(repo.lower_name LIKE ? OR LOWER(repo.description) LIKE ?)", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
 	}
 	if opts.OwnerID > 0 {
 		query = query.Where("repo.owner_id = ?", opts.OwnerID)
