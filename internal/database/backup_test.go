@@ -5,10 +5,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
@@ -38,6 +40,62 @@ func TestDumpAndImport(t *testing.T) {
 
 	// Dump and assert golden again to make sure data aren't changed.
 	dumpTables(t, db)
+}
+
+func TestImportGogs012Rows(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+
+	db := newTestDB(t, "importGogs012Rows")
+	ctx := context.Background()
+
+	// Rows as Gogs 0.12 writes them to backup archives.
+	const sha1 = "bea0db4951d32f2d3c99e4394b4e6314882fa746"
+	// The JSON encoder escapes HTML characters, so this content of 40 KB, which
+	// fits into a TEXT column of MySQL, becomes a line of 140 KB.
+	longContent := strings.Repeat("<br>", 10_000)
+	longContentJSON := strings.Repeat(`\u003cbr\u003e`, 10_000)
+	rows := []struct {
+		table any
+		line  string
+	}{
+		{new(User), `{"ID":1,"LowerName":"alice","Name":"alice","Email":"alice@example.com","Passwd":"hashed","Salt":"salt"}`},
+		{new(EmailAddress), `{"ID":1,"UID":1,"Email":"alice2@example.com","IsActivated":true}`},
+		{new(Star), `{"ID":1,"UID":1,"RepoID":1}`},
+		{new(IssueUser), `{"ID":1,"UID":1,"IssueID":1,"RepoID":1}`},
+		{new(AccessToken), `{"ID":1,"UserID":1,"Name":"legacy","Sha1":"` + sha1 + `"}`},
+		{new(Issue), `{"ID":1,"RepoID":1,"Index":1,"Title":"Big","Content":"` + longContentJSON + `"}`},
+	}
+	for _, row := range rows {
+		err := importTable(ctx, db, row.table, strings.NewReader(row.line+"\n"))
+		require.NoError(t, err, getTableType(row.table))
+	}
+
+	var user User
+	require.NoError(t, db.First(&user, 1).Error)
+	assert.Equal(t, "hashed", user.Password)
+
+	var email EmailAddress
+	require.NoError(t, db.First(&email, 1).Error)
+	assert.Equal(t, int64(1), email.UserID)
+
+	var star Star
+	require.NoError(t, db.First(&star, 1).Error)
+	assert.Equal(t, int64(1), star.UserID)
+
+	var issueUser IssueUser
+	require.NoError(t, db.First(&issueUser, 1).Error)
+	assert.Equal(t, int64(1), issueUser.UserID)
+
+	var token AccessToken
+	require.NoError(t, db.First(&token, 1).Error)
+	assert.Equal(t, cryptox.SHA256(sha1), token.SHA256)
+
+	var issue Issue
+	require.NoError(t, db.First(&issue, 1).Error)
+	assert.Equal(t, longContent, issue.Content)
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {

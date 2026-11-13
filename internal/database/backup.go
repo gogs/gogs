@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,6 +20,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/osx"
 )
@@ -145,6 +147,35 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 	return nil
 }
 
+// legacyKeys maps, per table, the JSON keys of fields renamed since Gogs 0.12 to
+// their current names, as archives of Gogs 0.12 have the same format version.
+// encoding/json already matches keys that differ only in case.
+var legacyKeys = map[string]map[string]string{
+	"EmailAddress": {"UID": "UserID"},
+	"IssueUser":    {"UID": "UserID"},
+	"Star":         {"UID": "UserID"},
+	"User":         {"Passwd": "Password"},
+}
+
+func renameKeys(row []byte, renames map[string]string) ([]byte, error) {
+	var fields map[string]json.RawMessage
+	err := json.Unmarshal(row, &fields)
+	if err != nil {
+		return nil, err
+	}
+	for old, current := range renames {
+		value, ok := fields[old]
+		if !ok {
+			continue
+		}
+		delete(fields, old)
+		if _, ok := fields[current]; !ok {
+			fields[current] = value
+		}
+	}
+	return json.Marshal(fields)
+}
+
 func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error {
 	err := db.WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(table).Error
 	if err != nil {
@@ -160,15 +191,31 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		"lfs_object": true,
 	}
 
+	renames := legacyKeys[getTableType(table)]
 	scanner := bufio.NewScanner(r)
+	// A row is a single line, which can exceed the default limit of 64 KiB, e.g.,
+	// a long issue description.
+	scanner.Buffer(nil, math.MaxInt)
 	for scanner.Scan() {
 		// PostgreSQL does not like the null characters (U+0000)
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
+		if renames != nil {
+			cleaned, err = renameKeys(cleaned, renames)
+			if err != nil {
+				return errors.Wrap(err, "rename legacy keys")
+			}
+		}
 
 		elem := reflect.New(reflect.TypeOf(table).Elem())
 		err = json.Unmarshal(cleaned, elem.Interface())
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
+		}
+
+		// Archives of Gogs 0.12 predate the "sha256" column, which migration v20
+		// derives from the "sha1" column.
+		if t, ok := elem.Interface().(*AccessToken); ok && t.SHA256 == "" {
+			t.SHA256 = cryptox.SHA256(t.Sha1)
 		}
 
 		// Insert column values as they are in the archive, so that neither hooks nor
@@ -181,6 +228,9 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		if err != nil {
 			return errors.Wrap(err, "create row")
 		}
+	}
+	if err = scanner.Err(); err != nil {
+		return errors.Wrap(err, "read rows")
 	}
 
 	// PostgreSQL needs manually reset table sequence for auto increment keys
