@@ -19,7 +19,7 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-var commitIDPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+var commitIDPattern = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
 
 // repoRef is a branch, a tag or a commit of a repository, and the path after
 // it in a route.
