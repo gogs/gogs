@@ -61,18 +61,9 @@ func TestSpec(t *testing.T) {
 
 // TestGFMSpec checks the extension examples of the GitHub Flavored Markdown
 // 0.29 specification, from
-// https://github.com/github/cmark-gfm/blob/master/test/spec.txt.
+// https://github.com/github/cmark-gfm/blob/0.29.0.gfm.13/test/spec.txt.
 func TestGFMSpec(t *testing.T) {
-	data, err := os.ReadFile("testdata/gfm_spec.json")
-	require.NoError(t, err)
-	var examples []struct {
-		Markdown  string `json:"markdown"`
-		HTML      string `json:"html"`
-		Example   int    `json:"example"`
-		Section   string `json:"section"`
-		Extension string `json:"extension"`
-	}
-	require.NoError(t, json.Unmarshal(data, &examples))
+	examples := readGFMExtensionExamples(t, "testdata/gfm_spec.txt")
 	require.Len(t, examples, 24)
 
 	// Task lists render with classes and source lines, see
@@ -90,6 +81,63 @@ func TestGFMSpec(t *testing.T) {
 			assert.Equal(t, ex.HTML, got, "%s\n%q", ex.Section, ex.Markdown)
 		})
 	}
+}
+
+type gfmExample struct {
+	Markdown, HTML string
+	// Example is the number of the example in the specification.
+	Example int
+	Section string
+	// Extension is the extension that the specification names for the
+	// example, or "disabled" for the task list examples, which cmark-gfm does
+	// not test.
+	Extension string
+}
+
+// readGFMExtensionExamples reads the examples in the extension sections of the
+// specification in name, in the format of spec.txt of cmark-gfm: an example
+// is the Markdown and the HTML, separated by a line ".", between fences of 32
+// backticks, with "→" in place of tabs.
+func readGFMExtensionExamples(t *testing.T, name string) []gfmExample {
+	data, err := os.ReadFile(name)
+	require.NoError(t, err)
+
+	const fence = "````````````````````````````````"
+	var (
+		examples []gfmExample
+		section  string
+		number   int
+		ex       *gfmExample
+		part     *strings.Builder
+		markdown strings.Builder
+		html     strings.Builder
+	)
+	for _, line := range strings.SplitAfter(string(data), "\n") {
+		switch {
+		case ex == nil && strings.HasPrefix(line, fence+" example"):
+			number++
+			ex = &gfmExample{Example: number, Section: section, Extension: strings.TrimSpace(strings.TrimPrefix(line, fence+" example"))}
+			markdown.Reset()
+			html.Reset()
+			part = &markdown
+		case ex == nil:
+			if strings.HasPrefix(line, "#") {
+				section = strings.TrimSpace(strings.TrimLeft(line, "#"))
+			}
+		case line == fence+"\n" || line == fence:
+			if strings.HasSuffix(ex.Section, "(extension)") {
+				ex.Markdown = strings.ReplaceAll(markdown.String(), "→", "\t")
+				ex.HTML = strings.ReplaceAll(html.String(), "→", "\t")
+				examples = append(examples, *ex)
+			}
+			ex = nil
+		case line == ".\n" && part == &markdown:
+			part = &html
+		default:
+			part.WriteString(line)
+		}
+	}
+	return examples
 }
 
 // TestGitHubRendering checks cases where GitHub's rendering departs from the
