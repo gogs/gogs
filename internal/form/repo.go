@@ -129,39 +129,6 @@ func (f *CreateComment) Validate(ctx *macaron.Context, errs binding.Errors) bind
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// __________       .__
-// \______   \ ____ |  |   ____ _____    ______ ____
-//  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \
-//  |    |   \  ___/|  |_\  ___/ / __ \_\___ \\  ___/
-//  |____|_  /\___  >____/\___  >____  /____  >\___  >
-//         \/     \/          \/     \/     \/     \/
-
-type NewRelease struct {
-	TagName    string `binding:"Required"`
-	Target     string `form:"tag_target" binding:"Required"`
-	Title      string `binding:"Required"`
-	Content    string
-	Draft      string
-	Prerelease bool
-	Files      []string
-}
-
-func (f *NewRelease) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-type EditRelease struct {
-	Title      string `binding:"Required"`
-	Content    string
-	Draft      string
-	Prerelease bool
-	Files      []string
-}
-
-func (f *EditRelease) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 //  __      __.__ __   .__
 // /  \    /  \__|  | _|__|
 // \   \/\/   /  |  |/ /  |
