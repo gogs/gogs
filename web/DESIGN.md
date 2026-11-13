@@ -38,6 +38,7 @@ Use these tokens. Don't introduce raw hex values in components.
 - `--color-secondary` / `--color-secondary-foreground`: neutral support fill. Available for chips, tags, low-emphasis fills.
 - `--color-destructive` / `--color-destructive-foreground`: error and danger. The 404 page uses `text-(--color-destructive)` on the `fatal:` token, always paired with the word itself (color is never the sole signal).
 - `--color-success`: affirmative state for signature verification badges and copy-confirm checkmarks. Lighter in dark mode (`#4ade80`) than light (`#15803d`) so it reads on both backgrounds. Always pair with a label or icon, never color alone.
+- `--color-merged`: merged pull requests, for the Merged pill and the merge box icon. Purple like other forges, darker in light mode (`#6f42c1`) than dark (`#b392f0`) so it keeps 4.5:1 on its own 15% tint. Always pair with a label or icon.
 - `--color-diff-added` / `--color-diff-removed`: diff change markers (the +/- dots in the diff toolbar stats row, and any future per-line tints). Separate from `--color-success`/`--color-destructive` so the diff palette can drift toward the universal git green/red without dragging the success/error semantics along.
 - `--color-ring`: keyboard focus ring color. Don't override per-component. If a default ring looks wrong, fix it at the token level.
 
@@ -107,6 +108,8 @@ Show Markdown that the server rendered and sanitized, e.g., the content of an is
 
 Forms that open or change issues and releases share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set on issues. `useAttachmentUploads` takes `"releases"` to upload under the release attachment limits.
 
+The issue and pull request pages share their parts from `pages/repo/Issue.tsx`: `IssueHeader` for the title, the state pill and a summary, and `IssueConversation` for the comments, the form to comment and the sidebar. The pull request page adds its tabs below the header and its merge box above the form to comment.
+
 ## Repository refs and clone URLs
 
 Pages that show a repository at a branch, a tag or a commit, e.g., the code browser and the commit history, switch it with `RefPicker` from `@/components/RefPicker`, which links each ref to the same page through `renderLink`. Show the clone URL of a repository or a wiki with `CloneBox` from `@/components/CloneBox`. It remembers the protocol the viewer picked under the key the server-rendered pages use.
@@ -123,7 +126,7 @@ When in doubt, hover-test the new control: if the cursor is still an I-beam or a
 
 ## Tabs
 
-Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 320px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.
+Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 320px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row. A tab that counts something (the organization tabs, the pull request tabs) sets `count`, which ends it with a `rounded-full bg-(--color-secondary) px-2 text-xs/5 font-medium tabular-nums` badge. When one tab's path is a prefix of another's, e.g., a pull request and its commits, give its TanStack `Link` `activeOptions={{ exact: true }}`, or it also gets `aria-current="page"` on the longer path.
 
 Switches between sibling views inside a page (labels and milestones, the branch overview and all branches) are a `<nav>` of links in one `rounded-md border border-(--color-input)` group, divided by `border-l`. Each link is `px-3 py-1.5 text-sm` with a leading `size-4` icon. The current one gets `bg-(--color-surface)`, `font-semibold`, foreground text, and `aria-current="page"`. The others are muted.
 

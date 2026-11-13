@@ -372,21 +372,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
-			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
-			// So they can apply their own enable/disable logic on routers.
-			m.Group("/issues", func() {
-				m.Get("/new", repo.MustEnableIssues, func(c *context.Context) { c.ServeWeb() })
-
-				m.Group("/:index", func() {
-					m.Post("/title", repo.UpdateIssueTitle)
-					m.Post("/content", repo.UpdateIssueContent)
-					m.Combo("/comments").Post(bindIgnErr(form.CreateComment{}), repo.NewComment)
-				})
-			})
-			m.Group("/comments/:id", func() {
-				m.Post("", repo.UpdateCommentContent)
-				m.Post("/delete", repo.DeleteComment)
-			})
+			m.Get("/issues/new", repo.MustEnableIssues, func(c *context.Context) { c.ServeWeb() })
 		}, reqSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
 			m.Group("/wiki", func() {
@@ -396,15 +382,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		}, ignSignIn, context.RepoAssignment(false, true))
 
 		m.Group("/:username/:reponame", func() {
-			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
-			// So they can apply their own enable/disable logic on routers.
-			m.Group("/issues", func() {
-				m.Group("/:index", func() {
-					m.Post("/label", repo.UpdateIssueLabel)
-					m.Post("/milestone", repo.UpdateIssueMilestone)
-					m.Post("/assignee", repo.UpdateIssueAssignee)
-				}, reqRepoWriter)
-			})
 			m.Group("/milestones", func() {
 				m.Get("/new", func(c *context.Context) { c.ServeWeb() })
 				m.Get("/:id/edit", func(c *context.Context) {
@@ -455,7 +432,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
 				m.Get("/releases", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
-				m.Get("/pulls/:index", repo.ViewPull)
+				m.Get("/pulls/:index", repo.ServePull)
 			}, context.RepoRef())
 
 			m.Group("/branches", func() {
@@ -475,11 +452,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Get("/forks", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 
 			m.Get("/pulls", repo.MustAllowPulls, repo.ServeIssueList)
-			m.Group("/pulls/:index", func() {
-				m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
-				m.Get("/files", context.RepoRef(), repo.ViewPullFiles)
-				m.Post("/merge", reqRepoWriter, repo.MergePullRequest)
-			}, repo.MustAllowPulls)
+			m.Get("/pulls/:index([0-9]+)\\.diff", flamegoBridger(webHandler))
+			m.Get("/pulls/:index/^:tab(commits|files)$", repo.ServePull)
 
 			m.Get("/src/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 			m.Get("/commits/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
@@ -710,6 +684,7 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
 		f.Get("/compare/"+compareRangeRoute+".diff", getRepoCompareRaw)
+		f.Get("/pulls/{index: /[0-9]+/}.diff", withRepoPulls, withRepoPull, getRepoPullRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
 	}, requireViewAccess, withRepoContext)
 

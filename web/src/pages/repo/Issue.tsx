@@ -1,6 +1,6 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { CircleCheck, CircleDot, Download, GitCommitHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { CircleCheck, CircleDot, Download, GitCommitHorizontal, GitMerge, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { usePageTitle } from "@/lib/page-title";
 import {
   type IssueAttachment,
   type IssueComment,
+  type IssueRef,
   type IssueUser,
   type RepoIssueData,
   createRepoIssueComment,
@@ -38,12 +39,6 @@ import { cn } from "@/lib/utils";
 
 const LINK_CLASS = "hover:text-(--color-primary) hover:underline";
 
-interface IssueRef {
-  owner: string;
-  name: string;
-  index: number;
-}
-
 // useIssueChange makes a change to the issue and loads the page again.
 function useIssueChange<T>(change: (input: T) => Promise<unknown>) {
   const router = useRouter();
@@ -60,91 +55,148 @@ export function RepoIssue({ owner, name, data }: { owner: string; name: string; 
   const { t } = useTranslation();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
   usePageTitle(`${data.title} - ${t("issues")} - ${repo.owner}/${repo.name}`);
-  const ref = { owner: repo.owner, name: repo.name, index: data.index };
+  const ref: IssueRef = { owner: repo.owner, name: repo.name, kind: "issues", index: data.index };
   const commentCount = data.comments.filter((c) => c.type === "comment").length;
-  // The browser looks for the anchor of a link, e.g., to a comment, before
-  // the page renders, so scroll to it once it does.
-  useEffect(() => {
-    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
-  }, []);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RepoHeader repo={repo} activeTab="issues" />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
-        <IssueTitle issueRef={ref} data={data} />
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) pb-4 text-sm text-(--color-muted-foreground)">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium",
-              data.isClosed
-                ? "bg-(--color-secondary) text-(--color-foreground)"
-                : "bg-(--color-success)/15 text-(--color-success)",
-            )}
-          >
-            {data.isClosed ? (
-              <CircleCheck className="size-4" aria-hidden />
-            ) : (
-              <CircleDot className="size-4" aria-hidden />
-            )}
-            {data.isClosed ? t("repo.issues.closed_title") : t("repo.issues.open_title")}
-          </span>
-          <span>
-            <OpenedBy issue={data} />
-            {" · "}
-            {t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(commentCount))}
-          </span>
+        <div className="border-b border-(--color-border) pb-4">
+          <IssueHeader
+            issueRef={ref}
+            data={data}
+            state={data.isClosed ? "closed" : "open"}
+            summary={
+              <>
+                <OpenedBy issue={data} />
+                {" · "}
+                {t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(commentCount))}
+              </>
+            }
+          />
         </div>
+        <IssueConversation issueRef={ref} data={data} className="mt-6" />
+      </main>
+    </div>
+  );
+}
 
-        <div className="mt-6 grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]">
-          <div className="flex min-w-0 flex-col gap-4">
+const STATE_PILLS = {
+  open: {
+    icon: CircleDot,
+    label: "repo.issues.open_title",
+    className: "bg-(--color-success)/15 text-(--color-success)",
+  },
+  closed: {
+    icon: CircleCheck,
+    label: "repo.issues.closed_title",
+    className: "bg-(--color-secondary) text-(--color-foreground)",
+  },
+  merged: { icon: GitMerge, label: "repo.pulls.merged", className: "bg-(--color-merged)/15 text-(--color-merged)" },
+};
+
+// IssueHeader shows the title of an issue or a pull request, its state, and a
+// summary of it.
+export function IssueHeader({
+  issueRef,
+  data,
+  state,
+  summary,
+}: {
+  issueRef: IssueRef;
+  data: RepoIssueData;
+  state: keyof typeof STATE_PILLS;
+  summary: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const pill = STATE_PILLS[state];
+  const Icon = pill.icon;
+  return (
+    <>
+      <IssueTitle issueRef={issueRef} data={data} />
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
+        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium", pill.className)}>
+          <Icon className="size-4" aria-hidden />
+          {t(pill.label)}
+        </span>
+        <span className="min-w-0 wrap-anywhere">{summary}</span>
+      </div>
+    </>
+  );
+}
+
+// IssueConversation shows the content and the comments of an issue or a pull
+// request with the form to comment, and its sidebar. A pull request shows its
+// merge box before the form, and cannot be closed or reopened once merged.
+export function IssueConversation({
+  issueRef,
+  data,
+  mergeBox,
+  canChangeState = data.viewerCanEdit,
+  className,
+}: {
+  issueRef: IssueRef;
+  data: RepoIssueData;
+  mergeBox?: ReactNode;
+  canChangeState?: boolean;
+  className?: string;
+}) {
+  // The browser looks for the anchor of a link, e.g., to a comment, before
+  // the page renders, so scroll to it once it does.
+  useEffect(() => {
+    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, []);
+  const ref = issueRef;
+
+  return (
+    <div className={cn("grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]", className)}>
+      <div className="flex min-w-0 flex-col gap-4">
+        <CommentCard
+          issueRef={ref}
+          anchor={`issue-${data.index}`}
+          poster={data.poster}
+          createdAt={data.createdAt}
+          html={data.contentHTML}
+          attachments={data.attachments}
+          edit={
+            data.viewerCanEdit
+              ? {
+                  content: data.content,
+                  save: (content) => updateRepoIssue(ref, { content }),
+                }
+              : undefined
+          }
+        />
+        {data.comments.map((comment) =>
+          comment.type === "comment" ? (
             <CommentCard
+              key={comment.id}
               issueRef={ref}
-              anchor={`issue-${data.index}`}
-              poster={data.poster}
-              createdAt={data.createdAt}
-              html={data.contentHTML}
-              attachments={data.attachments}
+              anchor={`issuecomment-${comment.id}`}
+              poster={comment.poster}
+              createdAt={comment.createdAt}
+              html={comment.contentHTML ?? ""}
+              tag={comment.tag}
+              attachments={comment.attachments ?? []}
               edit={
-                data.viewerCanEdit
+                comment.viewerCanEdit
                   ? {
-                      content: data.content,
-                      save: (content) => updateRepoIssue(ref.owner, ref.name, ref.index, { content }),
+                      content: comment.content ?? "",
+                      save: (content) => updateRepoIssueComment(ref, comment.id, content),
+                      remove: () => deleteRepoIssueComment(ref, comment.id),
                     }
                   : undefined
               }
             />
-            {data.comments.map((comment) =>
-              comment.type === "comment" ? (
-                <CommentCard
-                  key={comment.id}
-                  issueRef={ref}
-                  anchor={`issuecomment-${comment.id}`}
-                  poster={comment.poster}
-                  createdAt={comment.createdAt}
-                  html={comment.contentHTML ?? ""}
-                  tag={comment.tag}
-                  attachments={comment.attachments ?? []}
-                  edit={
-                    comment.viewerCanEdit
-                      ? {
-                          content: comment.content ?? "",
-                          save: (content) =>
-                            updateRepoIssueComment(ref.owner, ref.name, ref.index, comment.id, content),
-                          remove: () => deleteRepoIssueComment(ref.owner, ref.name, ref.index, comment.id),
-                        }
-                      : undefined
-                  }
-                />
-              ) : (
-                <TimelineEvent key={comment.id} comment={comment} />
-              ),
-            )}
-            <NewComment issueRef={ref} data={data} />
-          </div>
-          <IssueSidebar issueRef={ref} data={data} />
-        </div>
-      </main>
+          ) : (
+            <TimelineEvent key={comment.id} comment={comment} />
+          ),
+        )}
+        {mergeBox}
+        <NewComment issueRef={ref} data={data} canChangeState={canChangeState} />
+      </div>
+      <IssueSidebar issueRef={ref} data={data} />
     </div>
   );
 }
@@ -157,7 +209,7 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(data.title);
   const mutation = useMutation({
-    mutationFn: () => updateRepoIssue(issueRef.owner, issueRef.name, issueRef.index, { title }),
+    mutationFn: () => updateRepoIssue(issueRef, { title }),
     onSuccess: async () => {
       await router.invalidate();
       setEditing(false);
@@ -229,19 +281,21 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
             {t("repo.issues.edit")}
           </Button>
         ) : null}
-        <Button asChild size="sm">
-          <Link to="/$owner/$repo/issues/new" params={{ owner: issueRef.owner, repo: issueRef.name }}>
-            <Plus className="size-4" aria-hidden />
-            {t("repo.issues.new")}
-          </Link>
-        </Button>
+        {issueRef.kind === "issues" ? (
+          <Button asChild size="sm">
+            <Link to="/$owner/$repo/issues/new" params={{ owner: issueRef.owner, repo: issueRef.name }}>
+              <Plus className="size-4" aria-hidden />
+              {t("repo.issues.new")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   );
 }
 
 // UserLink links to the profile of a user, except for deleted users.
-function UserLink({ user, className, children }: { user: IssueUser; className?: string; children: ReactNode }) {
+export function UserLink({ user, className, children }: { user: IssueUser; className?: string; children: ReactNode }) {
   if (user.isGhost) return <span className={className}>{children}</span>;
   return (
     <Link to="/$username" params={{ username: user.name }} className={className}>
@@ -515,7 +569,15 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
 
 // NewComment is the form to comment on the issue, and to close or reopen it,
 // or asks signed-out visitors to sign in.
-function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueData }) {
+function NewComment({
+  issueRef,
+  data,
+  canChangeState,
+}: {
+  issueRef: IssueRef;
+  data: RepoIssueData;
+  canChangeState: boolean;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useUserInfo();
@@ -540,12 +602,9 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
     mutationFn: async (changeState: boolean) => {
       let id: number | undefined;
       if (hasComment) {
-        ({ id } = await createRepoIssueComment(issueRef.owner, issueRef.name, issueRef.index, {
-          content,
-          attachments: uploaded,
-        }));
+        ({ id } = await createRepoIssueComment(issueRef, { content, attachments: uploaded }));
       }
-      if (changeState) await setRepoIssueClosed(issueRef.owner, issueRef.name, issueRef.index, !data.isClosed);
+      if (changeState) await setRepoIssueClosed(issueRef, !data.isClosed);
       return id;
     },
     onSuccess: async (id) => {
@@ -618,7 +677,7 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <AttachFilesButton uploads={uploads} />
             <div className="flex flex-wrap justify-end gap-2">
-              {data.viewerCanEdit ? (
+              {canChangeState ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -649,10 +708,9 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
 // participants of the issue, and lets writers change the first three.
 function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueData }) {
   const { t } = useTranslation();
-  const { owner, name, index } = issueRef;
-  const labels = useIssueChange((ids: number[]) => setRepoIssueLabels(owner, name, index, ids));
-  const milestone = useIssueChange((id: number) => setRepoIssueMilestone(owner, name, index, id));
-  const assignee = useIssueChange((id: number) => setRepoIssueAssignee(owner, name, index, id));
+  const labels = useIssueChange((ids: number[]) => setRepoIssueLabels(issueRef, ids));
+  const milestone = useIssueChange((id: number) => setRepoIssueMilestone(issueRef, id));
+  const assignee = useIssueChange((id: number) => setRepoIssueAssignee(issueRef, id));
 
   return (
     <IssueMeta
