@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AvatarForm } from "@/components/AvatarForm";
+import { CodeEditor } from "@/components/CodeEditor";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CredentialRow, ROW_CLASS } from "@/components/CredentialRow";
 import { CheckboxField, FormAlert, FormField, RadioField } from "@/components/FormField";
@@ -1485,17 +1486,15 @@ export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: st
           <FormAlert message={formError} />
           <div className="flex flex-col gap-5">
             <FormField id="content" label={t("repo.settings.githook_content")} invalid={false}>
-              <textarea
+              <CodeEditor
                 id="content"
-                name="content"
-                rows={20}
-                wrap="off"
-                spellCheck={false}
-                autoCapitalize="off"
-                autoCorrect="off"
-                className={cn(TEXTAREA_CLASS, "overflow-x-auto leading-relaxed whitespace-pre")}
+                label={t("repo.settings.githook_content")}
+                lang="shell"
+                code
+                minLines={20}
+                disabled={update.isPending}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
               />
             </FormField>
             <div className="flex flex-wrap items-center gap-2">
