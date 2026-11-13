@@ -347,10 +347,7 @@ type limitDualWriter struct {
 
 func (w *limitDualWriter) Write(p []byte) (int, error) {
 	if w.N > 0 {
-		limit := int64(len(p))
-		if limit > w.N {
-			limit = w.N
-		}
+		limit := min(int64(len(p)), w.N)
 		n, _ := w.W.Write(p[:limit])
 		w.N -= int64(n)
 	}

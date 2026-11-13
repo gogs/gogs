@@ -65,13 +65,13 @@ type flamegoSessionAdapter struct {
 	sess macaronsession.Store
 }
 
-func (s flamegoSessionAdapter) ID() string                      { return s.sess.ID() }
-func (s flamegoSessionAdapter) Get(key interface{}) interface{} { return s.sess.Get(key) }
-func (s flamegoSessionAdapter) Set(key, val interface{})        { _ = s.sess.Set(key, val) }
-func (s flamegoSessionAdapter) SetFlash(val interface{})        { _ = s.sess.Set("_flash", val) }
-func (s flamegoSessionAdapter) Delete(key interface{})          { _ = s.sess.Delete(key) }
-func (s flamegoSessionAdapter) Flush()                          { _ = s.sess.Flush() }
-func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
+func (s flamegoSessionAdapter) ID() string              { return s.sess.ID() }
+func (s flamegoSessionAdapter) Get(key any) any         { return s.sess.Get(key) }
+func (s flamegoSessionAdapter) Set(key, val any)        { _ = s.sess.Set(key, val) }
+func (s flamegoSessionAdapter) SetFlash(val any)        { _ = s.sess.Set("_flash", val) }
+func (s flamegoSessionAdapter) Delete(key any)          { _ = s.sess.Delete(key) }
+func (s flamegoSessionAdapter) Flush()                  { _ = s.sess.Flush() }
+func (s flamegoSessionAdapter) Encode() ([]byte, error) { return nil, nil }
 
 func enforceWebAPIMaxBodySize(c flamego.Context) {
 	r := c.Request().Request
@@ -85,7 +85,7 @@ func enforceWebAPIMaxBodySize(c flamego.Context) {
 var webAPIValidator = func() *validator.Validate {
 	v := validator.New()
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
 		if name == "-" {
 			return ""
 		}

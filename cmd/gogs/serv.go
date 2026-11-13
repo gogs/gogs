@@ -70,11 +70,9 @@ func setup(cmd *cli.Command, logFile string, connectDB bool) {
 	err = log.NewFile(log.FileConfig{
 		Level:    level,
 		Filename: filepath.Join(conf.Log.RootPath, "hooks", logFile),
-		FileRotationConfig: log.FileRotationConfig{
-			Rotate:  true,
-			Daily:   true,
-			MaxDays: 3,
-		},
+		Rotate:   true,
+		Daily:    true,
+		MaxDays:  3,
 	})
 	if err != nil {
 		fail("Internal error", "Failed to init file logger: %v", err)

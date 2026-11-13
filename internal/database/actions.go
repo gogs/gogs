@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -318,9 +319,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 	}
 
 	// Commits are appended in the reverse order.
-	for i := len(commits) - 1; i >= 0; i-- {
-		c := commits[i]
-
+	for _, c := range slices.Backward(commits) {
 		refMarked := make(map[int64]bool)
 		for _, ref := range issueReferencePattern.FindAllString(c.Message, -1) {
 			ref = strings.TrimSpace(ref)

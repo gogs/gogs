@@ -27,7 +27,7 @@ func SetOutput(output io.Writer) {
 	logOutput = output
 }
 
-func logf(format string, args ...interface{}) {
+func logf(format string, args ...any) {
 	if logOutput == nil {
 		return
 	}

@@ -131,7 +131,7 @@ func getDingtalkPushPayload(p *apiv1types.WebhookPushPayload) *DingtalkPayload {
 
 	var detail strings.Builder
 	for i, commit := range p.Commits {
-		msg := strings.Split(commit.Message, "\n")[0]
+		msg, _, _ := strings.Cut(commit.Message, "\n")
 		commitLink := MarkdownLinkFormatter(commit.URL, commit.ID[:7])
 		fmt.Fprintf(&detail, "> %d. %s %s - %s\n", i, commitLink, commit.Author.Name, msg)
 	}

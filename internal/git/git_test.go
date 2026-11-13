@@ -50,7 +50,7 @@ func TestLog(t *testing.T) {
 
 	tests := []struct {
 		format    string
-		args      []interface{}
+		args      []any
 		expOutput string
 	}{
 		{
@@ -63,7 +63,7 @@ func TestLog(t *testing.T) {
 		},
 		{
 			format:    "val: %v",
-			args:      []interface{}{123},
+			args:      []any{123},
 			expOutput: "[git] val: 123\n",
 		},
 	}

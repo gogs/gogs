@@ -27,7 +27,7 @@ type UserPublicKey struct {
 	Key     string    `json:"key"`
 	URL     string    `json:"url,omitempty"`
 	Title   string    `json:"title,omitempty"`
-	Created time.Time `json:"created_at,omitempty"`
+	Created time.Time `json:"created_at"`
 }
 
 type RepositoryCollaborator struct {
