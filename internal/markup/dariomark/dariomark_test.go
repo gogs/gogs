@@ -347,6 +347,24 @@ func TestAngleDestination(t *testing.T) {
 	assert.Less(t, time.Since(start), 2*time.Second)
 }
 
+func TestEmphasisDelimiterSearch(t *testing.T) {
+	// Every second tilde closer searches for an opener down to the first
+	// tilde, past the "*" runs that never close. Without the first tilde,
+	// the search stops at the previous closer, so the time of that document
+	// is the bound, whatever the speed of the machine.
+	const n = 1 << 15
+	body := strings.Repeat("*x ", n) + strings.Repeat("x~~x ", n)
+	render := func(in string) (string, time.Duration) {
+		start := time.Now()
+		out := HTML([]byte(in), &Options{Strikethrough: true})
+		return string(out), time.Since(start)
+	}
+	_, bound := render("x " + body)
+	got, elapsed := render("~x " + body)
+	assert.Less(t, elapsed, 10*bound+50*time.Millisecond)
+	assert.Equal(t, n/2, strings.Count(got, "<del>"))
+}
+
 func TestImageLinkEscaping(t *testing.T) {
 	opts := postProcessTestOptions()
 	opts.Sanitizer = nil

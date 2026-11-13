@@ -9,12 +9,15 @@ import (
 // "~" that can only open have no node until they match: they stay in the
 // pending text, at the offset start, see materialize.
 type delimiter struct {
-	node              *node
-	start             int32
-	count, origCount  int32
-	prev, next        int32
-	char              byte
-	canOpen, canClose bool
+	node             *node
+	start            int32
+	count, origCount int32
+	prev, next       int32
+	// prevSame and nextSame link the delimiters of the same character, see
+	// processEmphasis.
+	prevSame, nextSame int32
+	char               byte
+	canOpen, canClose  bool
 }
 
 // bracket is an opening bracket on the bracket stack. Its text is not a node
@@ -54,6 +57,8 @@ type inlineParser struct {
 	// delimIndex. delimFirst is the bottom of the stack, or -1.
 	openers    [5]int
 	delimFirst int32
+	// sameTop is the top delimiter of each character, by delimIndex, or -1.
+	sameTop [5]int32
 
 	// stream, when not nil, renders finished inline nodes of the leaf before
 	// its end, see streamFlush. streamAllocs and streamPos are the node
@@ -217,6 +222,7 @@ func (p *parser) parseInlines(parent *node, src []byte, inCell bool) {
 	ip.delims.truncate(0)
 	ip.delimTop, ip.delimFirst = -1, -1
 	ip.openers = [5]int{}
+	ip.sameTop = [5]int32{-1, -1, -1, -1, -1}
 	ip.streamAllocs, ip.streamPos = p.arena.allocs, 0
 	ip.brackets.truncate(0)
 	clear(ip.bracketText)
