@@ -2,8 +2,11 @@ package repo
 
 import (
 	gocontext "context"
+	"net/http"
 	"path"
 	"time"
+
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -160,7 +163,8 @@ func CompareDiff(c *context.Context) {
 		if git.IsErrNoMergeBase(err) {
 			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 			if err != nil {
-				c.Error(err, "get object format")
+				log.Error("Failed to get object format: %v", err)
+				c.Status(http.StatusInternalServerError)
 				return
 			}
 			beforeCommitID = objectFormat.EmptyTreeID()
@@ -168,17 +172,23 @@ func CompareDiff(c *context.Context) {
 
 			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
 			if err != nil {
-				c.Error(err, "list commits")
+				log.Error("Failed to list commits: %v", err)
+				c.Status(http.StatusInternalServerError)
 				return
 			}
 		} else if err != nil {
-			c.Error(err, "get merge base")
+			log.Error("Failed to get merge base: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 	} else {
 		_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
-		if err != nil {
-			c.NotFoundOrError(git.NewError(err), "get base commit")
+		if git.IsErrRevisionNotExist(err) {
+			c.NotFound()
+			return
+		} else if err != nil {
+			log.Error("Failed to get base commit: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 	}
