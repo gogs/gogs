@@ -2,21 +2,9 @@ package repo
 
 import (
 	gocontext "context"
-	"net/http"
-	"path"
-	"time"
 
-	log "unknwon.dev/clog/v2"
-
-	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/tool"
-)
-
-const (
-	DIFF = "repo/diff/page"
 )
 
 // tryGetUserByEmail returns a non-nil value if the email is corresponding to an
@@ -51,104 +39,4 @@ func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit)
 		}
 	}
 	return newCommits
-}
-
-func CompareDiff(c *context.Context) {
-	c.Data["IsDiffCompare"] = true
-	userName := c.Repo.Owner.Name
-	repoName := c.Repo.Repository.Name
-	beforeCommitID := c.Params(":before")
-	afterCommitID := c.Params(":after")
-
-	commit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), afterCommitID)
-	if err != nil {
-		c.NotFoundOrError(git.NewError(err), "get head commit")
-		return
-	}
-
-	// The empty ID is the base of a created branch, e.g., in the news feed, so
-	// compare against where the branch forked from the default branch, or
-	// against the empty tree when it adds nothing to the default branch, e.g.,
-	// it is the default branch, or they share no history, e.g., an orphan branch
-	// or a default branch that does not exist.
-	var commits []*git.Commit
-	baseIsEmptyTree := false
-	if git.IsEmptyID(beforeCommitID) {
-		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
-		if err != nil && !git.IsErrNoMergeBase(err) {
-			log.Error("Failed to get merge base: %v", err)
-			c.Status(http.StatusInternalServerError)
-			return
-		} else if err != nil || beforeCommitID == afterCommitID {
-			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
-			if err != nil {
-				log.Error("Failed to get object format: %v", err)
-				c.Status(http.StatusInternalServerError)
-				return
-			}
-			beforeCommitID = objectFormat.EmptyTreeID()
-			baseIsEmptyTree = true
-
-			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
-			if err != nil {
-				log.Error("Failed to list commits: %v", err)
-				c.Status(http.StatusInternalServerError)
-				return
-			}
-		}
-	} else {
-		_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
-		if git.IsErrRevisionNotExist(err) {
-			c.NotFound()
-			return
-		} else if err != nil {
-			log.Error("Failed to get base commit: %v", err)
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if commits == nil {
-		commits, err = commit.CommitsAfter(c.Req.Context(), beforeCommitID)
-		if err != nil {
-			c.NotFoundOrError(git.NewError(err), "get commits after")
-			return
-		}
-	}
-
-	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
-	defer cancel()
-	diff, err := c.Repo.GitRepo.Diff(ctx,
-		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: beforeCommitID},
-	)
-	if err != nil {
-		c.NotFoundOrError(git.NewError(err), "get diff")
-		return
-	}
-
-	c.Data["IsSplitStyle"] = c.Query("style") == "split"
-	c.Data["CommitRepoLink"] = c.Repo.RepoLink
-	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
-	c.Data["CommitsCount"] = len(commits)
-	c.Data["BeforeCommitID"] = beforeCommitID
-	c.Data["BaseIsEmptyTree"] = baseIsEmptyTree
-	c.Data["AfterCommitID"] = afterCommitID
-	c.Data["Username"] = userName
-	c.Data["Reponame"] = repoName
-	c.Data["IsImageFile"] = func(subpath string) (bool, error) {
-		return commit.IsImageFile(c.Req.Context(), subpath)
-	}
-	c.Data["IsImageFileByIndex"] = func(index string) (bool, error) {
-		return commit.IsImageFileByIndex(c.Req.Context(), index)
-	}
-	c.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
-	c.Data["Commit"] = commit
-	c.Data["Diff"] = diff
-	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", afterCommitID)
-	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", afterCommitID)
-	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", beforeCommitID)
-	c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", beforeCommitID)
-	c.Success(DIFF)
 }

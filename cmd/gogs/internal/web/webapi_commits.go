@@ -125,6 +125,21 @@ type repoCommitListItem struct {
 	Author      repoCommitSignature `json:"author"`
 }
 
+func toCommitListItems(ctx context.Context, repo *database.Repository, commits []*git.Commit) []repoCommitListItem {
+	authors := &commitAuthors{ctx: ctx, users: map[string]*database.User{}}
+	metas := repo.ComposeMetas()
+	items := make([]repoCommitListItem, 0, len(commits))
+	for _, commit := range commits {
+		items = append(items, repoCommitListItem{
+			SHA:         commit.ID.String(),
+			SubjectHTML: template.RenderCommitMessage(false, commit.Message, repo.Link(), metas),
+			IsMerge:     commit.ParentsCount() > 1,
+			Author:      authors.signature(commit.Author),
+		})
+	}
+	return items
+}
+
 type repoCommitsResponse struct {
 	Ref string `json:"ref"`
 	// RefType is "branch", "tag" or "commit".
@@ -168,7 +183,6 @@ func getRepoCommits(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		RefType:  ref.Type,
 		Page:     1,
 		PageSize: conf.UI.User.CommitsPagingNum,
-		Commits:  []repoCommitListItem{},
 	}
 	var commits []*git.Commit
 	if ref.Path == "search" {
@@ -198,16 +212,7 @@ func getRepoCommits(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		resp.HasNext = len(commits) == resp.PageSize
 	}
 
-	authors := &commitAuthors{ctx: ctx, users: map[string]*database.User{}}
-	metas := repo.ComposeMetas()
-	for _, commit := range commits {
-		resp.Commits = append(resp.Commits, repoCommitListItem{
-			SHA:         commit.ID.String(),
-			SubjectHTML: template.RenderCommitMessage(false, commit.Message, repo.Link(), metas),
-			IsMerge:     commit.ParentsCount() > 1,
-			Author:      authors.signature(commit.Author),
-		})
-	}
+	resp.Commits = toCommitListItems(ctx, repo, commits)
 
 	if resp.Branches, err = gitRepo.Branches(ctx); err != nil {
 		log.Error("getRepoCommits: list branches of repo %d: %v", repo.ID, err)
@@ -218,4 +223,95 @@ func getRepoCommits(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list tags")
 	}
 	return http.StatusOK, resp, nil
+}
+
+type repoCompareResponse struct {
+	Before string `json:"before"`
+	After  string `json:"after"`
+	// Base is the commit the changes are compared against: Before, or where
+	// After forked from the default branch when Before is the empty ID.
+	Base string `json:"base"`
+	// BaseIsEmptyTree is true when Base is the empty tree, so the comparison
+	// shows everything After has.
+	BaseIsEmptyTree bool `json:"baseIsEmptyTree"`
+	// Commits are the commits after Base up to After, newest first.
+	Commits []repoCommitListItem `json:"commits"`
+}
+
+// compareRange is the range of commits that a comparison of two commits
+// shows.
+type compareRange struct {
+	base            string
+	baseIsEmptyTree bool
+	after           *git.Commit
+	// commits are the commits after base up to after, newest first.
+	commits []*git.Commit
+}
+
+// resolveCompareRange resolves the comparison from before to after. The empty
+// ID is the base of a created branch, e.g., in the news feed, so the branch is
+// compared against where it forked from the default branch, or against the
+// empty tree when it adds nothing to the default branch, e.g., it is the
+// default branch, or they share no history, e.g., an orphan branch or a
+// default branch that does not exist. It returns git.ErrRevisionNotExist when
+// before or after is not a commit of the repository.
+func resolveCompareRange(ctx context.Context, gitRepo *git.Repository, defaultBranch, before, after string) (*compareRange, error) {
+	afterCommit, err := gitRepo.CatFileCommit(ctx, after)
+	if err != nil {
+		return nil, errors.Wrap(err, "get head commit")
+	}
+	r := &compareRange{base: before, after: afterCommit}
+
+	if git.IsEmptyID(before) {
+		r.base, err = gitRepo.MergeBase(ctx, git.RefsHeads+defaultBranch, after)
+		if err != nil && !git.IsErrNoMergeBase(err) {
+			return nil, errors.Wrap(err, "get merge base")
+		} else if err != nil || r.base == after {
+			objectFormat, err := gitRepo.ObjectFormat(ctx)
+			if err != nil {
+				return nil, errors.Wrap(err, "get object format")
+			}
+			r.base = objectFormat.EmptyTreeID()
+			r.baseIsEmptyTree = true
+			if r.commits, err = gitRepo.RevList(ctx, []string{after}); err != nil {
+				return nil, errors.Wrap(err, "list commits")
+			}
+			return r, nil
+		}
+	} else if _, err = gitRepo.CatFileCommit(ctx, before); err != nil {
+		return nil, errors.Wrap(err, "get base commit")
+	}
+
+	if r.commits, err = afterCommit.CommitsAfter(ctx, r.base); err != nil {
+		return nil, errors.Wrap(err, "list commits")
+	}
+	return r, nil
+}
+
+// getRepoCompare describes the changes from one commit to another, e.g., of a
+// push. The diff itself is served as text by getRepoCompareRaw.
+func getRepoCompare(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCompareResponse, err error) {
+	ctx := c.Request().Context()
+	repo := repoCtx.Repo
+	gitRepo, err := openRepoGit(repoCtx)
+	if err != nil {
+		log.Error("getRepoCompare: open repository %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+	}
+	before, after := c.Param("before"), c.Param("after")
+	r, err := resolveCompareRange(ctx, gitRepo, repo.DefaultBranch, before, after)
+	if err != nil {
+		if git.IsErrRevisionNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("commit does not exist")
+		}
+		log.Error("getRepoCompare: compare %q to %q in repo %d: %v", before, after, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "compare commits")
+	}
+	return http.StatusOK, &repoCompareResponse{
+		Before:          before,
+		After:           after,
+		Base:            r.base,
+		BaseIsEmptyTree: r.baseIsEmptyTree,
+		Commits:         toCommitListItems(ctx, repo, r.commits),
+	}, nil
 }
