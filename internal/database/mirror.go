@@ -523,15 +523,16 @@ func SyncMirrors() {
 				}
 
 				// The commits the branch adds since it forked from the default branch, or
-				// all of its commits when they share no history, which is what the compare
-				// link of the feed shows.
+				// all of its commits when it adds none, e.g., it is the default branch,
+				// or they share no history, which is what the compare link of the feed
+				// shows.
 				rev := refNewCommit.ID.String()
 				mergeBase, err := gitRepo.MergeBase(ctx, git.RefsHeads+m.Repo.DefaultBranch, rev)
-				if err == nil {
-					rev = mergeBase + ".." + rev
-				} else if !git.IsErrNoMergeBase(err) {
+				if err != nil && !git.IsErrNoMergeBase(err) {
 					log.Error("Failed to get merge base [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
 					continue
+				} else if err == nil && mergeBase != rev {
+					rev = mergeBase + ".." + rev
 				}
 				newRefCommitsCount, err = gitRepo.RevListCount(ctx, []string{rev})
 				if err != nil {

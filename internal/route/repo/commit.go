@@ -154,13 +154,18 @@ func CompareDiff(c *context.Context) {
 
 	// The empty ID is the base of a created branch, e.g., in the news feed, so
 	// compare against where the branch forked from the default branch, or
-	// against the empty tree when they share no history, e.g., an orphan branch
+	// against the empty tree when it adds nothing to the default branch, e.g.,
+	// it is the default branch, or they share no history, e.g., an orphan branch
 	// or a default branch that does not exist.
 	var commits []*git.Commit
 	baseIsEmptyTree := false
 	if git.IsEmptyID(beforeCommitID) {
 		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
-		if git.IsErrNoMergeBase(err) {
+		if err != nil && !git.IsErrNoMergeBase(err) {
+			log.Error("Failed to get merge base: %v", err)
+			c.Status(http.StatusInternalServerError)
+			return
+		} else if err != nil || beforeCommitID == afterCommitID {
 			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 			if err != nil {
 				log.Error("Failed to get object format: %v", err)
@@ -176,10 +181,6 @@ func CompareDiff(c *context.Context) {
 				c.Status(http.StatusInternalServerError)
 				return
 			}
-		} else if err != nil {
-			log.Error("Failed to get merge base: %v", err)
-			c.Status(http.StatusInternalServerError)
-			return
 		}
 	} else {
 		_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
