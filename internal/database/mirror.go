@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -555,7 +556,7 @@ func SyncMirrors() {
 			}
 
 			pushCommits := CommitsToPushCommits(commits)
-			if newRefCommitsCount > 0 {
+			if newRefCommitsCount > 0 && newRefCommitsCount <= math.MaxInt {
 				pushCommits.Len = int(newRefCommitsCount)
 			}
 			err = Handle.Actions().MirrorSyncPush(ctx,
