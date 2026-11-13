@@ -12,13 +12,13 @@ export interface PendingFile {
 }
 
 // useAttachmentUploads uploads the files picked to attach to an issue, a
-// comment or a release of the repository as soon as they are picked, within
-// the limits of the settings.
+// comment or a release of the repository, or to commit with the editor, as
+// soon as they are picked, within the limits of the settings.
 export function useAttachmentUploads(
   owner: string,
   name: string,
   settings?: IssueAttachmentSettings,
-  kind: "issues" | "releases" = "issues",
+  kind: "issues" | "releases" | "editor" = "issues",
 ) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<PendingFile[]>([]);

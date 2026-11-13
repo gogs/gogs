@@ -8,6 +8,7 @@ import {
   fetchRepoBranches,
   fetchRepoCollaborators,
   fetchRepoDeployKeys,
+  fetchRepoEditorTarget,
   fetchRepoForkOptions,
   fetchRepoForks,
   fetchRepoGitHook,
@@ -36,6 +37,7 @@ import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoFileDelete, RepoFileEditor, RepoFileUpload } from "@/pages/repo/Editor";
 import { RepoForks } from "@/pages/repo/Forks";
 import { RepoIssue } from "@/pages/repo/Issue";
 import { RepoIssues } from "@/pages/repo/Issues";
@@ -679,6 +681,112 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // The editor pages take the branch followed by the path, and are not found
+  // when nothing of the kind they change is at the path.
+  async function loadEditorTarget(
+    queryClient: QueryClient,
+    params: { owner: string; repo: string; _splat?: string },
+    kind: "file" | "dir",
+  ) {
+    const target = await loadRepoPage(queryClient, params.owner, params.repo, () =>
+      fetchRepoEditorTarget(params.owner, params.repo, params._splat ?? ""),
+    );
+    if (target.kind !== kind) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    return target;
+  }
+
+  const repoFileEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_edit/$",
+    loader: async ({ params, context }) => {
+      const target = await loadEditorTarget((context as RouterContext).queryClient, params, "file");
+      // Only text files can be edited.
+      if (target.content === undefined) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return target;
+    },
+    component: function FileEdit() {
+      const { owner, repo } = repoFileEditRoute.useParams();
+      const target = repoFileEditRoute.useLoaderData();
+      return (
+        <RepoFileEditor
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+          isNew={false}
+        />
+      );
+    },
+  });
+
+  const repoFileNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_new/$",
+    loader: ({ params, context }) => loadEditorTarget((context as RouterContext).queryClient, params, "dir"),
+    component: function FileNew() {
+      const { owner, repo } = repoFileNewRoute.useParams();
+      const target = repoFileNewRoute.useLoaderData();
+      return (
+        <RepoFileEditor
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+          isNew
+        />
+      );
+    },
+  });
+
+  const repoFileDeleteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_delete/$",
+    loader: ({ params, context }) => loadEditorTarget((context as RouterContext).queryClient, params, "file"),
+    component: function FileDelete() {
+      const { owner, repo } = repoFileDeleteRoute.useParams();
+      const target = repoFileDeleteRoute.useLoaderData();
+      return (
+        <RepoFileDelete
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+        />
+      );
+    },
+  });
+
+  const repoFileUploadRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_upload/$",
+    loader: async ({ params, context }) => {
+      const target = await loadEditorTarget((context as RouterContext).queryClient, params, "dir");
+      if (!target.upload) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return target;
+    },
+    component: function FileUpload() {
+      const { owner, repo } = repoFileUploadRoute.useParams();
+      const target = repoFileUploadRoute.useLoaderData();
+      return (
+        <RepoFileUpload
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+        />
+      );
+    },
+  });
+
   // A link to a missing page leads to the list of pages.
   async function fetchWikiPage(owner: string, repo: string, page: string) {
     try {
@@ -786,6 +894,10 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoWikiNewRoute,
     repoWikiPageRoute,
     repoWikiEditRoute,
+    repoFileEditRoute,
+    repoFileNewRoute,
+    repoFileDeleteRoute,
+    repoFileUploadRoute,
     repoLabelsRoute,
     repoMilestonesRoute,
     repoMilestoneNewRoute,
