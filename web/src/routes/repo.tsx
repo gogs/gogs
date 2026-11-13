@@ -26,6 +26,8 @@ import {
   fetchRepoNewRelease,
   fetchRepoPeople,
   fetchRepoProtectedBranch,
+  fetchRepoPull,
+  fetchRepoPullCommits,
   fetchRepoRelease,
   fetchRepoReleases,
   fetchRepoSrc,
@@ -55,6 +57,7 @@ import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
 import { RepoNewIssue } from "@/pages/repo/NewIssue";
 import { type RepoNewIssueSearch, validateRepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
 import { RepoPeople } from "@/pages/repo/People";
+import { RepoPull } from "@/pages/repo/Pull";
 import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
 import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
 import {
@@ -624,24 +627,109 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // issueIndex is the index of the issue or pull request in the path, or throws
+  // `notFound()` when it cannot be one.
+  function issueIndex(raw: string) {
+    const index = Number(raw);
+    if (!Number.isInteger(index) || index <= 0) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    return index;
+  }
+
   const repoIssueRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/issues/$index",
-    loader: ({ params, context }) => {
-      const index = Number(params.index);
-      if (!Number.isInteger(index) || index <= 0) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-        throw notFound();
-      }
-      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoIssue(params.owner, params.repo, index),
-      );
-    },
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoIssue(params.owner, params.repo, issueIndex(params.index)),
+      ),
     component: function Issue() {
       const { owner, repo } = repoIssueRoute.useParams();
       const data = repoIssueRoute.useLoaderData();
       // Start over on another issue, e.g., after following a reference.
       return <RepoIssue key={`${owner}/${repo}#${data.index}`} owner={owner} name={repo} data={data} />;
+    },
+  });
+
+  const repoPullRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/pulls/$index",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoPull(params.owner, params.repo, issueIndex(params.index)),
+      ),
+    component: function Pull() {
+      const { owner, repo } = repoPullRoute.useParams();
+      const data = repoPullRoute.useLoaderData();
+      return (
+        <RepoPull key={`${owner}/${repo}#${data.index}`} owner={owner} name={repo} data={data} tab="conversation" />
+      );
+    },
+  });
+
+  const repoPullCommitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/pulls/$index/commits",
+    loader: ({ params, context }) => {
+      const index = issueIndex(params.index);
+      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
+        const [data, { commits }] = await Promise.all([
+          fetchRepoPull(params.owner, params.repo, index),
+          fetchRepoPullCommits(params.owner, params.repo, index).catch((err: unknown) => {
+            // A broken pull request has no commits to list.
+            if (err instanceof LoaderResponseError && err.status === 404) return { commits: [] };
+            throw err;
+          }),
+        ]);
+        return { data, commits };
+      });
+    },
+    component: function PullCommits() {
+      const { owner, repo } = repoPullCommitsRoute.useParams();
+      const { data, commits } = repoPullCommitsRoute.useLoaderData();
+      return <RepoPull owner={owner} name={repo} data={data} tab="commits" commits={commits} />;
+    },
+  });
+
+  const repoPullFilesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/pulls/$index/files",
+    validateSearch: validateRepoCommitSearch,
+    loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
+    loader: ({ params, deps, context }) => {
+      const index = issueIndex(params.index);
+      // The changes are fetched as raw text, like on the commit page, see
+      // `loadDiffPage`.
+      const rawBase = subUrl(`/${params.owner}/${params.repo}/pulls/${index}.diff`);
+      const rawURL = deps.whitespace ? `${rawBase}?whitespace=${encodeURIComponent(deps.whitespace)}` : rawBase;
+      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
+        const [data, patch] = await Promise.all([
+          fetchRepoPull(params.owner, params.repo, index),
+          fetch(rawURL, { credentials: "same-origin" }).then(async (res) => {
+            // A broken pull request has no changes to show.
+            if (res.status === 404) return null;
+            if (!res.ok) throw await loaderResponseError(res);
+            return res.text();
+          }),
+        ]);
+        return { data, patch };
+      });
+    },
+    component: function PullFiles() {
+      const { owner, repo } = repoPullFilesRoute.useParams();
+      const { data, patch } = repoPullFilesRoute.useLoaderData();
+      return (
+        <RepoPull
+          owner={owner}
+          name={repo}
+          data={data}
+          tab="files"
+          patch={patch}
+          search={repoPullFilesRoute.useSearch()}
+        />
+      );
     },
   });
 
@@ -1010,6 +1098,9 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoPullsRoute,
     repoNewIssueRoute,
     repoIssueRoute,
+    repoPullRoute,
+    repoPullCommitsRoute,
+    repoPullFilesRoute,
     repoForksRoute,
     repoBranchesRoute,
     repoAllBranchesRoute,
