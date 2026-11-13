@@ -1046,10 +1046,55 @@ func templateLabelsAndAssignee(repo *database.Repository, t *issuetemplate.Templ
 	return labelIDs, assigneeID, nil
 }
 
-func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+// newIssueFromRequest checks the form to open an issue or a pull request, and
+// returns the issue to create with its labels. A non-nil resp or err is what to
+// answer with instead.
+func newIssueFromRequest(l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	title := strings.TrimSpace(req.Title)
 	if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
+		return nil, nil, http.StatusBadRequest, resp, nil
+	}
+	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+		return nil, nil, statusCode, nil, err
+	}
+
+	issue = &database.Issue{
+		RepoID:   repo.ID,
+		Title:    title,
+		PosterID: viewer.ID,
+		Poster:   viewer,
+		Content:  req.Content,
+	}
+	// Like the server-rendered page, what only writers can set is left out for
+	// others.
+	if repoCtx.Viewer.CanWrite() {
+		for _, id := range req.LabelIDs {
+			if _, err = database.GetLabelOfRepoByID(repo.ID, id); err != nil {
+				if database.IsErrLabelNotExist(err) {
+					return nil, nil, http.StatusBadRequest, nil, errors.Newf("label %d does not exist", id)
+				}
+				return nil, nil, http.StatusInternalServerError, nil, errors.Wrapf(err, "get label %d", id)
+			}
+		}
+		if statusCode, err = checkIssueMilestone(repo, req.MilestoneID); err == nil {
+			statusCode, err = checkIssueAssignee(repo, req.AssigneeID)
+		}
+		if err != nil {
+			return nil, nil, statusCode, nil, err
+		}
+		labelIDs = req.LabelIDs
+		issue.MilestoneID = req.MilestoneID
+		issue.AssigneeID = req.AssigneeID
+	}
+	return issue, labelIDs, 0, nil, nil
+}
+
+func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+	repo := repoCtx.Repo
+	// The title is checked before the fields of an issue form, so its error
+	// shows first.
+	if resp := textFieldError(l, "title", "repo.milestones.title", strings.TrimSpace(req.Title), 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 
@@ -1096,46 +1141,14 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 			}
 		}
 	}
-	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(l, viewer, repoCtx, req)
+	if resp != nil || err != nil {
 		if statusCode == http.StatusInternalServerError {
-			logger.Error("Failed to check new attachments", "error", err)
+			logger.Error("Failed to check new issue", "repoID", repo.ID, "error", err)
 		}
-		return statusCode, nil, err
+		return statusCode, resp, err
 	}
-
-	issue := &database.Issue{
-		RepoID:   repo.ID,
-		Title:    title,
-		PosterID: viewer.ID,
-		Poster:   viewer,
-		Content:  req.Content,
-	}
-	var labelIDs []int64
-	// Like the server-rendered page, what only writers can set is left out for
-	// others.
-	if repoCtx.Viewer.CanWrite() {
-		for _, id := range req.LabelIDs {
-			if _, err = database.GetLabelOfRepoByID(repo.ID, id); err != nil {
-				if database.IsErrLabelNotExist(err) {
-					return http.StatusBadRequest, nil, errors.Newf("label %d does not exist", id)
-				}
-				logger.Error("Failed to get label", "labelID", id, "error", err)
-				return http.StatusInternalServerError, nil, errors.Wrap(err, "get label")
-			}
-		}
-		if statusCode, err = checkIssueMilestone(repo, req.MilestoneID); err == nil {
-			statusCode, err = checkIssueAssignee(repo, req.AssigneeID)
-		}
-		if err != nil {
-			if statusCode == http.StatusInternalServerError {
-				logger.Error("Failed to check issue milestone and assignee", "error", err)
-			}
-			return statusCode, nil, err
-		}
-		labelIDs = req.LabelIDs
-		issue.MilestoneID = req.MilestoneID
-		issue.AssigneeID = req.AssigneeID
-	} else if tmpl != nil {
+	if tmpl != nil && !repoCtx.Viewer.CanWrite() {
 		// Like on GitHub, the labels and assignees of the template apply to
 		// issues of anyone. Writers choose them on the form instead.
 		if labelIDs, issue.AssigneeID, err = templateLabelsAndAssignee(repo, tmpl); err != nil {
