@@ -238,14 +238,12 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]byte, bool) {
 	opts := markdownOptions(urlPrefix)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
-	opts.Gogs = &dariomark.GogsOptions{
-		URLPrefix: urlPrefix,
-		SpecialLinks: func(text []byte) []dariomark.SpecialLink {
-			return findSpecialLinks(text, urlPrefix, metas)
-		},
+	opts.PostProcess = true
+	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+		return findSpecialLinks(text, urlPrefix, metas)
 	}
 	if sanitizer.ready.Load() {
-		opts.Gogs.Sanitizer = markdownSanitizer
+		opts.Sanitizer = markdownSanitizer
 	}
 	res := dariomark.Render(body, opts)
 	return res.HTML, res.Sanitized

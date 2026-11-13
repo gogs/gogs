@@ -422,8 +422,8 @@ func (ip *inlineParser) taskCheckbox() {
 	ip.pos, ip.textStart, ip.boundary = next, next, next
 }
 
-// walkLinks applies the Gogs link rules to the inline contents of n:
-// relative link destinations are joined with the link base, and autolinks
+// walkLinks applies Options.RelativeLinks and TextAutoLinksInRawAnchors to the
+// inline contents of n: relative link destinations are joined with the link base, and autolinks
 // inside raw HTML anchors become text.
 func (p *parser) walkLinks(n *node, inRawAnchor *bool) {
 	for c := n.first; c != nil; c = c.next {

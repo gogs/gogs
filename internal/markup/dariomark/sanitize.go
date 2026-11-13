@@ -47,12 +47,11 @@ type sanitizeSink struct {
 }
 
 func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
-	g := r.opts.Gogs
-	if g.Sanitizer == nil {
+	if r.opts.Sanitizer == nil {
 		return nil, false
 	}
 	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
-	s := &sanitizeSink{r: r, out: &r.out, san: g.Sanitizer}
+	s := &sanitizeSink{r: r, out: &r.out, san: r.opts.Sanitizer}
 	r.s = s
 	r.sanitizing = true
 	render()
@@ -162,7 +161,7 @@ func (s *sanitizeSink) flush() {
 		s.specialLinks(text)
 		return
 	}
-	// Long text is passed to GogsOptions.SpecialLinks in pieces, which keeps
+	// Long text is passed to Options.SpecialLinks in pieces, which keeps
 	// the memory for the links in each small. See there for the places
 	// where pieces end.
 	start, http := 0, false
@@ -187,7 +186,7 @@ func (s *sanitizeSink) flush() {
 }
 
 // specialLinksPiece is the length from which text is passed to
-// GogsOptions.SpecialLinks in pieces.
+// Options.SpecialLinks in pieces.
 var specialLinksPiece = 32 << 10
 
 // startsReference reports whether c may start a special reference at the
@@ -199,7 +198,7 @@ func startsReference(c byte) bool {
 // specialLinks writes the escaped text with special references rendered as
 // links, as the sanitizer would write the HTML of AppendSpecialLinks.
 func (s *sanitizeSink) specialLinks(text []byte) {
-	f := s.r.opts.Gogs.SpecialLinks
+	f := s.r.opts.SpecialLinks
 	if f == nil {
 		s.out.Write(text)
 		return

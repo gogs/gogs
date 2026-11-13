@@ -67,15 +67,14 @@ func FindAllMentions(content string) []string {
 	var names []string
 	guardRender(body, func() []byte {
 		opts := markdownOptions("")
-		opts.Gogs = &dariomark.GogsOptions{
-			SpecialLinks: func(text []byte) []dariomark.SpecialLink {
-				if bytes.IndexByte(text, '@') >= 0 {
-					for _, m := range findMentions(text) {
-						names = append(names, string(m.Text[1:]))
-					}
+		opts.PostProcess = true
+		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+			if bytes.IndexByte(text, '@') >= 0 {
+				for _, m := range findMentions(text) {
+					names = append(names, string(m.Text[1:]))
 				}
-				return nil
-			},
+			}
+			return nil
 		}
 		dariomark.Render(body, opts)
 		return nil

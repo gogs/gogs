@@ -179,7 +179,7 @@ func FuzzRender(f *testing.F) {
 	} {
 		f.Add(s)
 	}
-	opts := gogsTestOptions()
+	opts := postProcessTestOptions()
 	f.Fuzz(func(t *testing.T, s string) {
 		first := Render([]byte(s), opts)
 		second := Render([]byte(s), opts)
@@ -189,9 +189,9 @@ func FuzzRender(f *testing.F) {
 	})
 }
 
-// gogsTestOptions returns options like those of Gogs, with the sanitizing of
-// documents without raw HTML.
-func gogsTestOptions() *Options {
+// postProcessTestOptions returns options like those of Gogs, with
+// post-processing and the sanitizing of documents without raw HTML.
+func postProcessTestOptions() *Options {
 	return &Options{
 		Tables:        true,
 		Strikethrough: true,
@@ -208,14 +208,12 @@ func gogsTestOptions() *Options {
 		RelativeLinks:     true,
 		LinkBase:          "/user/repo",
 		IsLink:            func(dest []byte) bool { return bytes.Contains(dest, []byte("://")) },
-		Gogs: &GogsOptions{
-			URLPrefix:    "/user/repo",
-			SpecialLinks: func([]byte) []SpecialLink { return nil },
-			Sanitizer: &Sanitizer{
-				AllowURLScheme: func(u *url.URL) bool { return u.Scheme == "http" || u.Scheme == "https" },
-				Text:           regexp.MustCompile(`^[\p{L}\p{N}\s\-_',\[\]!\./\\\(\)]*$`),
-				CodeClass:      regexp.MustCompile(`^language-\w+$`),
-			},
+		PostProcess:       true,
+		SpecialLinks:      func([]byte) []SpecialLink { return nil },
+		Sanitizer: &Sanitizer{
+			AllowURLScheme: func(u *url.URL) bool { return u.Scheme == "http" || u.Scheme == "https" },
+			Text:           regexp.MustCompile(`^[\p{L}\p{N}\s\-_',\[\]!\./\\\(\)]*$`),
+			CodeClass:      regexp.MustCompile(`^language-\w+$`),
 		},
 	}
 }
@@ -302,8 +300,8 @@ func TestAngleDestination(t *testing.T) {
 }
 
 func TestImageLinkEscaping(t *testing.T) {
-	opts := gogsTestOptions()
-	opts.Gogs.Sanitizer = nil
+	opts := postProcessTestOptions()
+	opts.Sanitizer = nil
 	got := string(Render([]byte("![a&quot; id=&quot;x](x.png?a=1&b=2)"), opts).HTML)
 	assert.Equal(t, "<p><a href=\"/user/repo/x.png?a=1&amp;b=2\"><img src=\"/user/repo/x.png?a=1&amp;b=2\" alt=\"a&#34; id=&#34;x\"></a></p>\n", got)
 }
@@ -327,7 +325,7 @@ func TestStreaming(t *testing.T) {
 			b.WriteString(strings.Repeat(u, 1+rng.Intn(4)*rng.Intn(1500)))
 		}
 		in := []byte(b.String())
-		for _, opts := range []*Options{gogsTestOptions(), {Tables: true, Alerts: true, HeadingIDs: true}} {
+		for _, opts := range []*Options{postProcessTestOptions(), {Tables: true, Alerts: true, HeadingIDs: true}} {
 			streamMinSize = len(in) + 1
 			want := Render(in, opts)
 			wantHTML := string(want.HTML)

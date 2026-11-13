@@ -1,7 +1,7 @@
 // Package dariomark renders Markdown to HTML. Dariomark implements CommonMark
 // 0.31.2 and the GitHub Flavored Markdown extensions (tables, strikethrough,
-// task lists and extended autolinks), plus footnotes, GitHub alerts and the
-// Gogs-specific link handling. It is safe for concurrent use and runs in
+// task lists and extended autolinks), plus footnotes, GitHub alerts and
+// special links, e.g., mentions and issue references. It is safe for concurrent use and runs in
 // linear time.
 package dariomark
 
@@ -58,7 +58,9 @@ type Options struct {
 	Typographer Typographer
 
 	// LinkBase, when RelativeLinks is true, is joined with the destinations of
-	// links that are not absolute and do not start with "#".
+	// links that are not absolute and do not start with "#". With
+	// PostProcess, relative image sources are resolved against its raw file
+	// URL.
 	RelativeLinks bool
 	LinkBase      string
 	// IsLink reports whether a link destination is absolute.
@@ -70,16 +72,9 @@ type Options struct {
 	// returned HTML instead.
 	ShortenAutoLink func(url []byte) ([]byte, bool)
 
-	// Gogs post-processing and sanitizing. See Render.
-	Gogs *GogsOptions
-}
-
-// GogsOptions configures the post-processing that turns special references
-// into links and wraps images in links, and the sanitizing of documents
-// without raw HTML.
-type GogsOptions struct {
-	// URLPrefix is the prefix of relative image sources.
-	URLPrefix string
+	// PostProcess turns special references in text into links and wraps
+	// standalone images in links to themselves, see Render.
+	PostProcess bool
 	// SpecialLinks returns the mentions, issue references and commit SHAs in
 	// the HTML-escaped text that render as links, in order and without
 	// overlaps.
@@ -91,12 +86,13 @@ type GogsOptions struct {
 	// pieces as it would the whole text: references other than URLs do not
 	// contain spaces, and the start of the text counts as a space.
 	SpecialLinks func(text []byte) []SpecialLink
-	// Sanitizer, if not nil, enables sanitizing documents without raw HTML.
+	// Sanitizer, if not nil, enables sanitizing documents without raw HTML
+	// with PostProcess.
 	Sanitizer *Sanitizer
 }
 
 // SpecialLink is a reference in text that renders as a link, see
-// GogsOptions.SpecialLinks.
+// Options.SpecialLinks.
 type SpecialLink struct {
 	// Start and End are the offsets of the reference in the text.
 	Start, End int
@@ -134,7 +130,8 @@ func AppendSpecialLinks(dst, text []byte, links []SpecialLink) []byte {
 type Result struct {
 	HTML []byte
 	// Sanitized reports whether HTML has been sanitized, which happens for
-	// documents without raw HTML when Options.Gogs is set.
+	// documents without raw HTML when Options.PostProcess and Options.Sanitizer
+	// are set.
 	Sanitized bool
 	// Headings are the headings of the document in order, when
 	// Options.HeadingIDs is set. They are the entries of a table of contents.
@@ -155,13 +152,14 @@ var parserPool = sync.Pool{New: func() any { return new(parser) }}
 
 // Render renders the Markdown source to HTML.
 //
-// Without Options.Gogs, raw HTML is passed through, and the output is not
-// sanitized.
+// Without Options.PostProcess, raw HTML is passed through, and the output is
+// not sanitized.
 //
-// With Options.Gogs, the output is post-processed: special references in text
+// With Options.PostProcess, the output is post-processed: special references in text
 // become links, standalone images are wrapped in links to themselves, and
 // links, code and preformatted text are left alone. Documents without raw
-// HTML are sanitized while rendering, and Result.Sanitized is true. Other
+// HTML are sanitized while rendering when Options.Sanitizer is set, and
+// Result.Sanitized is true. Other
 // documents must be sanitized by the caller.
 func Render(src []byte, opts *Options) Result {
 	p := parserPool.Get().(*parser)
@@ -177,7 +175,7 @@ func Render(src []byte, opts *Options) Result {
 
 	r := &p.r
 	r.init(p, opts)
-	if opts.Gogs == nil {
+	if !opts.PostProcess {
 		r.renderHTML(doc)
 		return Result{HTML: r.out.Bytes(), Headings: r.headingList()}
 	}
@@ -208,7 +206,7 @@ func (p *parser) renderStream(src []byte) Result {
 	opts := p.opts
 	r := &p.r
 	r.init(p, opts)
-	if opts.Gogs != nil {
+	if opts.PostProcess {
 		// Raw HTML stops the sanitizing render, which then starts over.
 		if out, ok := r.renderSanitized(func() {
 			p.parse(src, r.renderClosed)
@@ -225,7 +223,7 @@ func (p *parser) renderStream(src []byte) Result {
 	r.out.Grow(len(src) + len(src)/4)
 	r.s = &r.html
 	p.parse(src, r.renderClosed)
-	if opts.Gogs == nil {
+	if !opts.PostProcess {
 		return Result{HTML: r.out.Bytes(), Headings: r.headingList()}
 	}
 	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headingList()}
@@ -234,7 +232,7 @@ func (p *parser) renderStream(src []byte) Result {
 // HTML renders the Markdown source to HTML without post-processing.
 func HTML(src []byte, opts *Options) []byte {
 	o := *opts
-	o.Gogs = nil
+	o.PostProcess = false
 	return Render(src, &o).HTML
 }
 

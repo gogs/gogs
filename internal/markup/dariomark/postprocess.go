@@ -8,7 +8,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// postProcess applies GogsOptions to the HTML of a document with raw HTML. It
+// postProcess applies Options.PostProcess to the HTML of a document with raw HTML. It
 // tokenizes the whole output because raw HTML can change how the HTML that
 // follows it is tokenized.
 //
@@ -86,7 +86,7 @@ func isNoEndTag(name string) bool {
 }
 
 func (r *renderer) specialLinks(text []byte) []byte {
-	if f := r.opts.Gogs.SpecialLinks; f != nil {
+	if f := r.opts.SpecialLinks; f != nil {
 		if links := f(text); len(links) > 0 {
 			return AppendSpecialLinks(nil, text, links)
 		}
@@ -96,7 +96,7 @@ func (r *renderer) specialLinks(text []byte) []byte {
 
 // imageLink writes an image wrapped in a link to its source and reports
 // whether it did. Relative sources are resolved against the raw file URL of
-// GogsOptions.URLPrefix. Images without a source or with a data URI are not
+// Options.LinkBase. Images without a source or with a data URI are not
 // wrapped.
 func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
 	var src, alt string
@@ -111,7 +111,7 @@ func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
 	if src == "" || strings.HasPrefix(src, "data:") {
 		return false
 	}
-	prefix := r.opts.Gogs.URLPrefix
+	prefix := r.opts.LinkBase
 	relative := r.opts.IsLink == nil || !r.opts.IsLink([]byte(src))
 	if relative {
 		prefix = strings.Replace(prefix, "/src/", "/raw/", 1)
