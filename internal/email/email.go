@@ -20,10 +20,7 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-// Translator is the minimal locale-translation contract used by mail
-// composition. It decouples this package from any specific web framework so
-// callers can pass either macaron.Context or, post-migration, Flamego's
-// i18n.Locale.
+// Translator translates the messages of mail to the language of the recipient.
 type Translator interface {
 	Tr(format string, args ...any) string
 }

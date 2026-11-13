@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/i18n"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -63,9 +63,6 @@ func (c *pageContext) serveWeb(wc context.WebContext) {
 	wc.SubURL = conf.Server.Subpath
 	r := c.Request().Request
 	ctx := stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)
-	// The web app checks what the viewer may see, e.g., when a page that is not
-	// found falls through to it.
-	ctx = stdctx.WithValue(ctx, context.UserKey{}, c.User)
 	c.webApp.ServeHTTP(c.ResponseWriter(), r.WithContext(ctx))
 }
 

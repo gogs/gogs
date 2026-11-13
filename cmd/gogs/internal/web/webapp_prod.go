@@ -10,6 +10,7 @@ import (
 	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/public"
 )
@@ -35,7 +36,7 @@ func mountWebAppRoutes(f *flamego.Flame) (http.Handler, error) {
 		return nil, errors.Wrap(err, `read "dist/index.html"`)
 	}
 
-	inject, err := readInjectContent()
+	inject, err := readInjectContent(conf.CustomDir())
 	if err != nil {
 		return nil, errors.Wrap(err, "read inject content")
 	}

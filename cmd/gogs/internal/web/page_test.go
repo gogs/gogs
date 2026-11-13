@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/i18n"
 	"github.com/stretchr/testify/assert"
 	unknwoni18n "github.com/unknwon/i18n"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 )
 
 func TestPageAccess(t *testing.T) {

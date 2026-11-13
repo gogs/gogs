@@ -207,7 +207,7 @@ This page covers common problems you may encounter when installing, configuring,
     **Error**:
 
     ```text
-    [Macaron] PANIC: session(start): mkdir data: permission denied
+    PANIC: session: load: read: create parent directory: mkdir data: permission denied
     ```
 
     **Possible cause**: Gogs creates a `data` subdirectory in the same directory as the Gogs binary. The process does not have write permission to that directory.
