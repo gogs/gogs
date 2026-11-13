@@ -227,51 +227,62 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 }
 
 func TestRenderSha1CurrentPattern(t *testing.T) {
-	metas := map[string]string{
+	sha1Metas := map[string]string{
 		"repoLink": "/someuser/somerepo",
 	}
+	sha256Metas := map[string]string{
+		"repoLink":     "/someuser/somerepo",
+		"objectFormat": "sha256",
+	}
+	const sha256ID = "6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321"
 
 	tests := []struct {
 		desc   string
 		input  string
-		prefix string
+		metas  map[string]string
 		expVal string
 	}{
 		{
 			desc:   "Full SHA (40 symbols)",
 			input:  "ad8ced4f57d9068cb2874557245be3c7f341149d",
-			prefix: metas["repoLink"],
+			metas:  sha1Metas,
 			expVal: `<a href="/someuser/somerepo/commit/ad8ced4f57d9068cb2874557245be3c7f341149d"><code>ad8ced4f57</code></a>`,
 		},
 		{
 			desc:   "Short SHA (8 symbols)",
 			input:  "ad8ced4f",
-			prefix: metas["repoLink"],
+			metas:  sha1Metas,
 			expVal: `<a href="/someuser/somerepo/commit/ad8ced4f"><code>ad8ced4f</code></a>`,
 		},
 		{
-			desc:   "Full SHA-256 (64 symbols)",
-			input:  "6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321",
-			prefix: metas["repoLink"],
-			expVal: `<a href="/someuser/somerepo/commit/6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321"><code>6ef19b4122</code></a>`,
+			desc:   "Full SHA-256 (64 symbols) in a SHA-256 repository",
+			input:  sha256ID,
+			metas:  sha256Metas,
+			expVal: `<a href="/someuser/somerepo/commit/` + sha256ID + `"><code>6ef19b4122</code></a>`,
+		},
+		{
+			desc:   "64 symbols in a SHA-1 repository, e.g., a checksum",
+			input:  sha256ID,
+			metas:  sha1Metas,
+			expVal: sha256ID,
 		},
 		{
 			desc:   "Hex string longer than 40 symbols but not 64",
 			input:  "ad8ced4f57d9068cb2874557245be3c7f341149dabcde",
-			prefix: metas["repoLink"],
+			metas:  sha256Metas,
 			expVal: "ad8ced4f57d9068cb2874557245be3c7f341149dabcde",
 		},
 		{
 			desc:   "9 digits",
 			input:  "123456789",
-			prefix: metas["repoLink"],
+			metas:  sha1Metas,
 			expVal: "123456789",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			assert.Equal(t, test.expVal, string(RenderSha1CurrentPattern([]byte(test.input), test.prefix)))
+			assert.Equal(t, test.expVal, string(RenderSha1CurrentPattern([]byte(test.input), test.metas)))
 		})
 	}
 }

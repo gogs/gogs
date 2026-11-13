@@ -52,7 +52,8 @@ var (
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern by converting string to a number.
 	// Only full SHA-256 commit IDs are longer than 40, so other hex strings, e.g.,
-	// checksums of 41 to 63 characters, are not mistaken for commit IDs.
+	// checksums of 41 to 63 characters, are not mistaken for commit IDs. Those of
+	// 64 characters are only linked in SHA-256 repositories.
 	Sha1CurrentPattern = lazyregexp.New(`\b(?:[0-9a-f]{7,40}|[0-9a-f]{64})\b`)
 )
 
@@ -147,14 +148,18 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[stri
 	return rawBytes
 }
 
-// RenderSha1CurrentPattern renders commit IDs to corresponding links that assumes in the same repository.
-func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
+// RenderSha1CurrentPattern renders commit IDs to corresponding links that assumes
+// in the same repository, i.e., metas["repoLink"]. Hex strings of 64 characters
+// are only rendered when metas["objectFormat"] is "sha256".
+func RenderSha1CurrentPattern(rawBytes []byte, metas map[string]string) []byte {
 	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes), func(m string) string {
 		if v, _ := strconv.Atoi(m); v > 0 {
 			return m
+		} else if len(m) == 64 && metas["objectFormat"] != "sha256" {
+			return m
 		}
 
-		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSHA1(m))
+		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, metas["repoLink"], m, tool.ShortSHA1(m))
 	}))
 }
 
@@ -168,7 +173,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
 	rawBytes = RenderCrossReferenceIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, metas["repoLink"])
+	rawBytes = RenderSha1CurrentPattern(rawBytes, metas)
 	return rawBytes
 }
 
