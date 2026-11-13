@@ -32,7 +32,8 @@
   pre,
   kbd,
   samp,
-  diffs-container {
+  diffs-container,
+  .cm-editor {
     font-variant-ligatures: none;
   }
 }
