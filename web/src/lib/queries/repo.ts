@@ -633,16 +633,108 @@ export async function renderRepoMarkdown(owner: string, name: string, text: stri
   return (await submit<{ html: string }>("POST", repoURL(owner, name, "/markdown"), { text })).html;
 }
 
-// uploadRepoIssueAttachment uploads a file to attach to a comment, and returns
-// its UUID.
-export async function uploadRepoIssueAttachment(owner: string, name: string, file: File) {
+// uploadRepoAttachment uploads a file to attach to an issue, a comment or a
+// release, and returns its UUID.
+export async function uploadRepoAttachment(owner: string, name: string, kind: "issues" | "releases", file: File) {
   const body = new FormData();
   body.append("file", file);
-  const res = await fetch(repoURL(owner, name, "/issues/attachments"), {
+  const res = await fetch(repoURL(owner, name, `/${kind}/attachments`), {
     method: "POST",
     credentials: "same-origin",
     body,
   });
   if (!res.ok) throw await loaderResponseError(res);
   return ((await res.json()) as { uuid: string }).uuid;
+}
+
+export interface RepoReleaseAttachment {
+  uuid: string;
+  name: string;
+  url: string;
+}
+
+export interface RepoRelease {
+  tagName: string;
+  sha: string;
+  // The fields below are left out for a tag that has no release.
+  title?: string;
+  target?: string;
+  isDraft?: boolean;
+  isPrerelease?: boolean;
+  publisher?: { name: string; avatarURL: string; isGhost?: boolean };
+  createdAt?: string;
+  noteHTML?: string;
+  attachments?: RepoReleaseAttachment[];
+  // numCommitsBehind is how many commits the target branch is ahead of the
+  // release.
+  numCommitsBehind?: number;
+}
+
+export interface RepoReleasesData {
+  releases: RepoRelease[];
+  // previousAfter is the "after" of the previous page when hasPrevious is set.
+  hasPrevious: boolean;
+  previousAfter: string;
+  // nextAfter is left out on the last page.
+  nextAfter?: string;
+  viewerCanWrite: boolean;
+  isMirror: boolean;
+}
+
+// releaseTagPath encodes a tag name, which may contain slashes, for a path.
+export function releaseTagPath(tag: string) {
+  return tag.split("/").map(encodeURIComponent).join("/");
+}
+
+export function fetchRepoReleases(owner: string, name: string, after?: string) {
+  const query = after ? `?${new URLSearchParams({ after }).toString()}` : "";
+  return fetchJSON<RepoReleasesData>(repoURL(owner, name, `/releases${query}`));
+}
+
+export interface RepoReleaseFormOptions {
+  branches: string[];
+  defaultBranch: string;
+  attachment?: IssueAttachmentSettings;
+}
+
+export function fetchRepoNewRelease(owner: string, name: string) {
+  return fetchJSON<RepoReleaseFormOptions>(repoURL(owner, name, "/releases/new"));
+}
+
+export interface RepoReleaseEdit {
+  tagName: string;
+  target: string;
+  title: string;
+  content: string;
+  isDraft: boolean;
+  isPrerelease: boolean;
+  attachments: RepoReleaseAttachment[];
+  attachment?: IssueAttachmentSettings;
+}
+
+export function fetchRepoRelease(owner: string, name: string, tag: string) {
+  return fetchJSON<RepoReleaseEdit>(repoURL(owner, name, `/releases/edit/${releaseTagPath(tag)}`));
+}
+
+export interface RepoReleaseForm {
+  // tagName and target are only read when a release is created.
+  tagName?: string;
+  target?: string;
+  title: string;
+  content: string;
+  isDraft: boolean;
+  isPrerelease: boolean;
+  attachments: string[];
+}
+
+export function createRepoRelease(owner: string, name: string, form: RepoReleaseForm) {
+  return submit<void>("POST", repoURL(owner, name, "/releases"), form);
+}
+
+export function updateRepoRelease(owner: string, name: string, tag: string, form: RepoReleaseForm) {
+  return submit<void>("PATCH", repoURL(owner, name, `/releases/edit/${releaseTagPath(tag)}`), form);
+}
+
+export function deleteRepoRelease(owner: string, name: string, tag: string) {
+  return send("DELETE", repoURL(owner, name, `/releases/edit/${releaseTagPath(tag)}`));
 }
