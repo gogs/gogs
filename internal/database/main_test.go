@@ -6,11 +6,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/testx"
 )
@@ -46,8 +48,12 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// newTestDB returns a new test database with the schema created by migrations.
 func newTestDB(t *testing.T, suite string) *gorm.DB {
-	return dbtest.NewDB(t, suite, Tables...)
+	db := dbtest.NewDB(t, suite)
+	err := migrations.Migrate(db)
+	require.NoError(t, err)
+	return db
 }
 
 func clearTables(t *testing.T, db *gorm.DB) error {

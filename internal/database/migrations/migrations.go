@@ -1,101 +1,106 @@
 package migrations
 
 import (
+	"context"
+	"database/sql"
+	"embed"
+	"regexp"
+	"strings"
+
 	"github.com/cockroachdb/errors"
+	"github.com/pressly/goose/v3"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 )
 
+// minDBVersion is the oldest version of the legacy "version" table that can be
+// migrated, i.e., the version of Gogs 0.12.
 const minDBVersion = 19
 
-type Migration interface {
-	Description() string
-	Migrate(*gorm.DB) error
+// newMigrations returns the sequence of migrations to run against the given
+// database. Add new migrations to the bottom of the list with the next version.
+//
+// Versions continue the numbering of the legacy "version" table, which the
+// migrations used before they were tracked by goose in "goose_db_version". All
+// migrations up to v23 check whether their change is already in place, so that
+// they also run safely on databases migrated by the legacy runner.
+func newMigrations(db *gorm.DB) []*goose.Migration {
+	return []*goose.Migration{
+		newMigration(db, 19, "create missing tables", createBaselineTables),
+		newMigration(db, 20, "migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
+		newMigration(db, 21, "add index to action.user_id", addIndexToActionUserID),
+		// NOTE: There was a bug in calculating the value of the legacy
+		// "version.version" column after a migration is done, thus some instances are
+		// on v21 but some are on v22. The noop v22 makes sure every instance runs
+		// every later migration.
+		newMigration(db, 22, "noop", func(*gorm.DB) error { return nil }),
+		newMigration(db, 23, "add repository.is_unlisted", addRepositoryIsUnlisted),
+	}
 }
 
-type migration struct {
-	description string
-	migrate     func(*gorm.DB) error
+var errMigrationSkipped = errors.New("the migration has been skipped")
+
+func newMigration(db *gorm.DB, version int64, description string, migrate func(*gorm.DB) error) *goose.Migration {
+	return goose.NewGoMigration(
+		version,
+		&goose.GoFunc{
+			// Migrations manage their own transactions through the given GORM handle.
+			RunDB: func(ctx context.Context, _ *sql.DB) error {
+				log.Info("Migration: %s", description)
+				err := migrate(db.WithContext(ctx))
+				if err == errMigrationSkipped {
+					log.Trace("The migration %q has been skipped", description)
+					return nil
+				}
+				return err
+			},
+		},
+		nil,
+	)
 }
 
-func NewMigration(desc string, fn func(*gorm.DB) error) Migration {
-	return &migration{desc, fn}
+// Migrate migrates the database schema and/or data to the current version.
+func Migrate(db *gorm.DB) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return errors.Wrap(err, "get underlying *sql.DB")
+	}
+
+	dialect, ok := map[string]goose.Dialect{
+		"mysql":    goose.DialectMySQL,
+		"postgres": goose.DialectPostgres,
+		"sqlite":   goose.DialectSQLite3,
+	}[db.Name()]
+	if !ok {
+		return errors.Newf("unsupported dialect %q", db.Name())
+	}
+
+	provider, err := goose.NewProvider(
+		dialect,
+		sqlDB,
+		nil,
+		goose.WithDisableGlobalRegistry(true),
+		goose.WithGoMigrations(newMigrations(db)...),
+	)
+	if err != nil {
+		return errors.Wrap(err, "new goose provider")
+	}
+
+	_, err = provider.Up(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "run migrations")
+	}
+	return nil
 }
 
-func (m *migration) Description() string {
-	return m.description
-}
-
-func (m *migration) Migrate(db *gorm.DB) error {
-	return m.migrate(db)
-}
-
-// Version represents the version table. It should have only one row with `id == 1`.
+// Version represents the legacy "version" table. It should have only one row
+// with `id == 1`.
 type Version struct {
 	ID      int64
 	Version int64
 }
 
-// This is a sequence of migrations. Add new migrations to the bottom of the list.
-// If you want to "retire" a migration, remove it from the top of the list and
-// update _MIN_VER_DB accordingly
-var migrations = []Migration{
-	// v0 -> v4 : before 0.6.0 -> last support 0.7.33
-	// v4 -> v10: before 0.7.0 -> last support 0.9.141
-	// v10 -> v19: before 0.11.55 -> last support 0.12.0
-
-	// Add new migration here, example:
-	// v18 -> v19:v0.11.55
-	// NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
-
-	// v19 -> v20:v0.13.0
-	NewMigration("migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
-	// v20 -> v21:v0.13.0
-	NewMigration("add index to action.user_id", addIndexToActionUserID),
-	// v21 -> v22:v0.13.0
-	//
-	// NOTE: There was a bug in calculating the value of the `version.version`
-	// column after a migration is done, thus some instances are on v21 but some are
-	// on v22. Let's make a noop v22 to make sure every instance will not miss a
-	// real future migration.
-	NewMigration("noop", func(*gorm.DB) error { return nil }),
-	// v22 -> v23:v0.15.0
-	NewMigration("add repository.is_unlisted", addRepositoryIsUnlisted),
-}
-
-var errMigrationSkipped = errors.New("the migration has been skipped")
-
-// Migrate migrates the database schema and/or data to the current version.
-func Migrate(db *gorm.DB) error {
-	// NOTE: GORM has problem migrating tables that happen to have columns with the
-	// same name, see https://github.com/gogs/gogs/issues/7056.
-	if !db.Migrator().HasTable(new(Version)) {
-		err := db.AutoMigrate(new(Version))
-		if err != nil {
-			return errors.Wrap(err, `auto migrate "version" table`)
-		}
-	}
-
-	var current Version
-	err := db.Where("id = ?", 1).First(&current).Error
-	if err == gorm.ErrRecordNotFound {
-		err = db.Create(
-			&Version{
-				ID:      1,
-				Version: int64(minDBVersion + len(migrations)),
-			},
-		).Error
-		if err != nil {
-			return errors.Wrap(err, "create the version record")
-		}
-		return nil
-
-	} else if err != nil {
-		return errors.Wrap(err, "get the version record")
-	}
-
-	if minDBVersion > current.Version {
-		log.Fatal(`
+const tooOldMessage = `
 Hi there, thank you for using Gogs for so long!
 However, Gogs has stopped supporting auto-migration from your previously installed version.
 But the good news is, it's very easy to fix this problem!
@@ -118,30 +123,68 @@ Once finished downloading:
 4. Now it's time to put back the release archive you originally intent to upgrade.
 5. Enjoy!
 
-In case you're stilling getting this notice, go through instructions again until it disappears.`)
-		return nil
-	}
+In case you're stilling getting this notice, go through instructions again until it disappears.`
 
-	if int(current.Version-minDBVersion) > len(migrations) {
-		// User downgraded Gogs.
-		current.Version = int64(len(migrations) + minDBVersion)
-		return db.Where("id = ?", current.ID).Updates(current).Error
-	}
+//go:embed baseline/*.sql
+var baselineFS embed.FS
 
-	for _, m := range migrations[current.Version-minDBVersion:] {
-		log.Info("Migration: %s", m.Description())
-		if err = m.Migrate(db); err != nil {
-			if err != errMigrationSkipped {
-				return errors.Wrap(err, "do migrate")
-			}
-			log.Trace("The migration %q has been skipped", m.Description())
-		}
+var baselineTablePattern = regexp.MustCompile("^CREATE (?:TABLE|(?:UNIQUE )?INDEX \\S+ ON) [`\"]?(\\w+)")
 
-		current.Version++
-		err = db.Where("id = ?", current.ID).Updates(current).Error
+// createBaselineTables refuses databases older than Gogs 0.12, then creates the
+// tables that do not exist yet, as Gogs created them on a new installation at
+// schema version 22. It never changes existing tables, whose columns later
+// migrations bring up to date.
+func createBaselineTables(db *gorm.DB) error {
+	if db.Migrator().HasTable(new(Version)) {
+		var current Version
+		err := db.Where("id = ?", 1).Find(&current).Error
 		if err != nil {
-			return errors.Wrap(err, "update the version record")
+			return errors.Wrap(err, "get the legacy version record")
+		}
+		if current.ID != 0 && current.Version < minDBVersion {
+			return errors.New(tooOldMessage)
 		}
 	}
-	return nil
+
+	name := map[string]string{"mysql": "mysql", "postgres": "postgres", "sqlite": "sqlite3"}[db.Name()]
+	data, err := baselineFS.ReadFile("baseline/" + name + ".sql")
+	if err != nil {
+		return errors.Wrap(err, "read baseline")
+	}
+
+	var stmts []string
+	exists := make(map[string]bool)
+	for _, stmt := range strings.Split(string(data), ";\n") {
+		stmt = strings.TrimSpace(stmt)
+		for strings.HasPrefix(stmt, "--") {
+			_, stmt, _ = strings.Cut(stmt, "\n")
+			stmt = strings.TrimSpace(stmt)
+		}
+		if stmt == "" {
+			continue
+		}
+
+		m := baselineTablePattern.FindStringSubmatch(stmt)
+		if m == nil {
+			return errors.Newf("unrecognized baseline statement: %s", stmt)
+		}
+		table := m[1]
+		if _, ok := exists[table]; !ok {
+			exists[table] = db.Migrator().HasTable(table)
+		}
+		if !exists[table] {
+			stmts = append(stmts, stmt)
+		}
+	}
+
+	// MySQL commits each statement on its own, PostgreSQL and SQLite create all
+	// tables or none.
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, stmt := range stmts {
+			if err := tx.Exec(stmt).Error; err != nil {
+				return errors.Wrapf(err, "exec %q", stmt)
+			}
+		}
+		return nil
+	})
 }
