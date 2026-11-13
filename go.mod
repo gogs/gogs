@@ -37,6 +37,7 @@ require (
 	github.com/niklasfasching/go-org v1.9.1
 	github.com/olekukonko/tablewriter v1.1.3
 	github.com/pquerna/otp v1.5.0
+	github.com/pressly/goose/v3 v3.26.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
@@ -133,6 +134,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mattn/go-sqlite3 v1.14.24 // indirect
+	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
@@ -149,6 +151,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
+	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
@@ -160,6 +163,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
