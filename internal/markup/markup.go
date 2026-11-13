@@ -455,8 +455,8 @@ const (
 	// right away.
 	largeRenderSize = 64 << 10
 	// renderBudget is the total input size of large documents rendered at the
-	// same time. Rendering takes up to about 250 times the input in memory for
-	// hostile documents, so concurrent large renders stay around 2 GB. A
+	// same time. Rendering takes up to about 360 times the input in memory for
+	// hostile documents, so concurrent large renders stay under 3 GB. A
 	// document larger than the budget waits until it can be rendered alone.
 	renderBudget = 8 << 20
 )

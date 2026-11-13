@@ -23,7 +23,6 @@ All notable changes to Gogs are documented in this file.
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
-- Mentions and issue references are now linked where they appear, e.g., in `@alice @alicia` both names are linked, and a reference that also appears earlier as part of a word is still linked. [#8519](https://github.com/gogs/gogs/pull/8519)
 
 ### Fixed
 
@@ -33,6 +32,7 @@ All notable changes to Gogs are documented in this file.
 - Ordered lists in Markdown that start at a number other than 1, e.g., `10.`, now show that number instead of starting at 1. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Protocol-relative links in Markdown, e.g., `//example.com/page`, now point to that site instead of a path in the repository. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Mentions in code, link text and URLs of issues and comments no longer notify the mentioned users, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Mentions and issue references are now linked where they appear, e.g., in `@alice @alicia` both names are linked, and a reference that also appears earlier as part of a word is still linked. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Viewing a diff that renames a file whose name contains special characters (e.g., a double quote) no longer crashes the server. [#8437](https://github.com/gogs/gogs/pull/8437)
 - Migrating an empty repository no longer fails. [#8440](https://github.com/gogs/gogs/pull/8440)
 - Previewing changes to a file in the web editor no longer fails when a tag has the same name as the file. [#8440](https://github.com/gogs/gogs/pull/8440)
