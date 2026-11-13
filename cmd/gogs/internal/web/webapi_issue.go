@@ -767,51 +767,58 @@ type repoNewIssueRequest struct {
 	Attachments []string `json:"attachments"`
 }
 
-func postRepoIssue(l i18n.Locale, user *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+// newIssueFromRequest checks the form to open an issue or a pull request, and
+// returns the issue to create with its labels. A non-nil resp or err is what to
+// answer with instead.
+func newIssueFromRequest(l i18n.Locale, user *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	title := strings.TrimSpace(req.Title)
 	if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
-		return http.StatusBadRequest, resp, nil
+		return nil, nil, http.StatusBadRequest, resp, nil
 	}
 	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
-		if statusCode == http.StatusInternalServerError {
-			log.Error("postRepoIssue: %v", err)
-		}
-		return statusCode, nil, err
+		return nil, nil, statusCode, nil, err
 	}
 
-	issue := &database.Issue{
+	issue = &database.Issue{
 		RepoID:   repo.ID,
 		Title:    title,
 		PosterID: user.ID,
 		Poster:   user,
 		Content:  req.Content,
 	}
-	var labelIDs []int64
 	// Like the server-rendered page, what only writers can set is left out for
 	// others.
 	if repoCtx.Viewer.CanWrite() {
 		for _, id := range req.LabelIDs {
 			if _, err = database.GetLabelOfRepoByID(repo.ID, id); err != nil {
 				if database.IsErrLabelNotExist(err) {
-					return http.StatusBadRequest, nil, errors.Newf("label %d does not exist", id)
+					return nil, nil, http.StatusBadRequest, nil, errors.Newf("label %d does not exist", id)
 				}
-				log.Error("postRepoIssue: get label %d: %v", id, err)
-				return http.StatusInternalServerError, nil, errors.Wrap(err, "get label")
+				return nil, nil, http.StatusInternalServerError, nil, errors.Wrapf(err, "get label %d", id)
 			}
 		}
 		if statusCode, err = checkIssueMilestone(repo, req.MilestoneID); err == nil {
 			statusCode, err = checkIssueAssignee(repo, req.AssigneeID)
 		}
 		if err != nil {
-			if statusCode == http.StatusInternalServerError {
-				log.Error("postRepoIssue: %v", err)
-			}
-			return statusCode, nil, err
+			return nil, nil, statusCode, nil, err
 		}
 		labelIDs = req.LabelIDs
 		issue.MilestoneID = req.MilestoneID
 		issue.AssigneeID = req.AssigneeID
+	}
+	return issue, labelIDs, 0, nil, nil
+}
+
+func postRepoIssue(l i18n.Locale, user *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+	repo := repoCtx.Repo
+	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(l, user, repoCtx, req)
+	if resp != nil || err != nil {
+		if statusCode == http.StatusInternalServerError {
+			log.Error("postRepoIssue: %v", err)
+		}
+		return statusCode, resp, err
 	}
 
 	// Creating the issue notifies watchers and webhooks about the repository

@@ -5,6 +5,7 @@ import { LoaderResponseError, loadSignedInPage, loaderResponseError } from "@/li
 import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
   type RepoCompareData,
+  type RepoNewPullData,
   type RepoSrcData,
   fetchRepoBranchSettings,
   fetchRepoBranches,
@@ -23,6 +24,7 @@ import {
   fetchRepoMilestones,
   fetchRepoNewIssue,
   fetchRepoNewOptions,
+  fetchRepoNewPull,
   fetchRepoNewRelease,
   fetchRepoPeople,
   fetchRepoProtectedBranch,
@@ -56,6 +58,7 @@ import { RepoMilestoneEditor, RepoMilestones, type RepoMilestonesSearch } from "
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
 import { RepoNewIssue } from "@/pages/repo/NewIssue";
 import { type RepoNewIssueSearch, validateRepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
+import { RepoNewPull } from "@/pages/repo/NewPull";
 import { RepoPeople } from "@/pages/repo/People";
 import { RepoPull } from "@/pages/repo/Pull";
 import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
@@ -148,39 +151,66 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     component: RepoCommit,
   });
 
+  // Comparing two full commit IDs shows the changes between them, the same as
+  // the server route in `web.go`. Comparing branches, written as
+  // "<base>...[<owner>:]<head>", opens a pull request.
   const repoCompareRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/$owner/$repo/compare/$range",
+    path: "/$owner/$repo/compare/$",
     validateSearch: validateRepoCommitSearch,
-    // Only full commit IDs are compared here, the same as the server route in
-    // `web.go`. Comparing branches goes to the pull request compare page.
-    params: {
-      parse: (raw: { owner: string; repo: string; range: string }) => {
-        if (!COMPARE_RANGE_RE.test(raw.range)) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-          throw notFound();
-        }
-        return raw;
-      },
-      stringify: (params: { owner: string; repo: string; range: string }) => params,
-    },
     loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
-    loader: ({ params, deps, context }) =>
-      loadDiffPage<RepoCompareData>(
-        (context as RouterContext).queryClient,
-        params.owner,
-        params.repo,
-        `/compare/${params.range}`,
-        deps.whitespace,
-      ),
+    loader: async ({
+      params,
+      deps,
+      context,
+    }): Promise<
+      | { kind: "commits"; data: RepoCompareData & { patch: string } }
+      | { kind: "pull"; range: string; data: RepoNewPullData; patch: string | null }
+    > => {
+      const queryClient = (context as RouterContext).queryClient;
+      const range = params._splat ?? "";
+      if (COMPARE_RANGE_RE.test(range)) {
+        const data = await loadDiffPage<RepoCompareData>(
+          queryClient,
+          params.owner,
+          params.repo,
+          `/compare/${range}`,
+          deps.whitespace,
+        );
+        return { kind: "commits" as const, data };
+      }
+      return loadRepoPage(queryClient, params.owner, params.repo, async () => {
+        const data = await fetchRepoNewPull(params.owner, params.repo, range);
+        let patch: string | null = null;
+        if (data.diff) {
+          // The changes are fetched as raw text from the repository of the
+          // head branch, like on the commit page, see `loadDiffPage`.
+          const { owner, name, base, head } = data.diff;
+          const rawBase = subUrl(`/${owner}/${name}/compare/${base}...${head}.diff`);
+          const res = await fetch(
+            deps.whitespace ? `${rawBase}?whitespace=${encodeURIComponent(deps.whitespace)}` : rawBase,
+            { credentials: "same-origin" },
+          );
+          if (!res.ok) throw await loaderResponseError(res);
+          patch = await res.text();
+        }
+        return { kind: "pull" as const, range, data, patch };
+      });
+    },
     component: function Compare() {
       const { owner, repo } = repoCompareRoute.useParams();
-      return (
-        <RepoCompare
+      const loaded = repoCompareRoute.useLoaderData();
+      const search: RepoCommitSearch = repoCompareRoute.useSearch();
+      return loaded.kind === "commits" ? (
+        <RepoCompare owner={owner} name={repo} data={loaded.data} search={search} />
+      ) : (
+        <RepoNewPull
+          key={`${owner}/${repo}/${loaded.range}`}
           owner={owner}
           name={repo}
-          data={repoCompareRoute.useLoaderData()}
-          search={repoCompareRoute.useSearch()}
+          data={loaded.data}
+          patch={loaded.patch}
+          search={search}
         />
       );
     },

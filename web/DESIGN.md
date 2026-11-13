@@ -112,7 +112,7 @@ The issue and pull request pages share their parts from `pages/repo/Issue.tsx`: 
 
 ## Repository refs and clone URLs
 
-Pages that show a repository at a branch, a tag or a commit, e.g., the code browser and the commit history, switch it with `RefPicker` from `@/components/RefPicker`, which links each ref to the same page through `renderLink`. Show the clone URL of a repository or a wiki with `CloneBox` from `@/components/CloneBox`. It remembers the protocol the viewer picked under the key the server-rendered pages use.
+Pages that show a repository at a branch, a tag or a commit, e.g., the code browser and the commit history, switch it with `RefPicker` from `@/components/RefPicker`, which links each ref to the same page through `renderLink`. Without `tags`, it picks only branches, under the `label` it is given, e.g., the base and the compared branch of a new pull request. Show the clone URL of a repository or a wiki with `CloneBox` from `@/components/CloneBox`. It remembers the protocol the viewer picked under the key the server-rendered pages use.
 
 ## Translated markup
 

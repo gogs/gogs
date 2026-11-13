@@ -370,6 +370,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withRepoWriter)
 		}
 		f.Group("/issues/{index}", issueChanges, withRepoIssues, withRepoIssue)
+		f.Group("/pulls", func() {
+			f.Get("/new/{range: **}", getRepoNewPull)
+			f.Post("", bindJSON(repoNewPullRequest{}), postRepoPull)
+		}, withRepoPulls)
 		f.Group("/pulls/{index}", func() {
 			issueChanges()
 			f.Group("", func() {

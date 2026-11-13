@@ -164,6 +164,7 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/acme/widgets/wiki/source",
 		"/api/web/acme/widgets/editor/master/README.md",
 		"/api/web/acme/widgets/editor-indent",
+		"/api/web/acme/widgets/pulls/new/master...feature/login",
 	}
 	tests := []struct {
 		name                     string
