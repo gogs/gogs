@@ -8,7 +8,7 @@ import (
 	. "gogs.io/gogs/internal/markup"
 )
 
-func Test_IsReadmeFile(t *testing.T) {
+func TestIsReadmeFile(t *testing.T) {
 	tests := []struct {
 		name   string
 		expVal bool
@@ -31,7 +31,7 @@ func Test_IsReadmeFile(t *testing.T) {
 	}
 }
 
-func Test_FindAllMentions(t *testing.T) {
+func TestFindAllMentions(t *testing.T) {
 	tests := []struct {
 		input      string
 		expMatches []string
@@ -40,6 +40,10 @@ func Test_FindAllMentions(t *testing.T) {
 		{input: "@unknwon what do you think?", expMatches: []string{"unknwon"}},
 		{input: "Hi @unknwon, sounds good to me", expMatches: []string{"unknwon"}},
 		{input: "cc/ @unknwon @eddycjy", expMatches: []string{"unknwon", "eddycjy"}},
+		{input: "# @unknwon\n\n> * @eddycjy", expMatches: []string{"unknwon", "eddycjy"}},
+		{input: "<b>x</b> @unknwon", expMatches: []string{"unknwon"}},
+		{input: "<script>@unknwon</script> <textarea>@eddycjy</textarea>"},
+		{input: "`@unknwon` [@eddycjy](https://example.com/@a) https://example.com/@b\n\n    @c\n\n```\n@d\n```"},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -48,7 +52,7 @@ func Test_FindAllMentions(t *testing.T) {
 	}
 }
 
-func Test_RenderIssueIndexPattern(t *testing.T) {
+func TestRenderIssueIndexPattern(t *testing.T) {
 	urlPrefix := "/prefix"
 	t.Run("render to internal issue tracker", func(t *testing.T) {
 		tests := []struct {

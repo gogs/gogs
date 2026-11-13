@@ -37,7 +37,6 @@ require (
 	github.com/olekukonko/tablewriter v1.1.3
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/russross/blackfriday v1.6.0
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
 	github.com/stretchr/testify v1.12.1
@@ -55,6 +54,7 @@ require (
 	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.39.0
 	golang.org/x/net v0.59.0
+	golang.org/x/sync v0.23.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/text v0.42.0
 	gopkg.in/macaron.v1 v1.5.1
@@ -153,7 +153,6 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261110000943-09e21b237f2c // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261110000943-09e21b237f2c // indirect
 	google.golang.org/grpc v1.83.2 // indirect

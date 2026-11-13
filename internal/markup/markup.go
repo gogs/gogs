@@ -2,6 +2,7 @@ package markup
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"slices"
@@ -9,10 +10,11 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+	"golang.org/x/sync/semaphore"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/markup/dariomark"
 )
 
 // IsReadmeFile reports whether name looks like a README file based on its extension.
@@ -57,14 +59,40 @@ var (
 	Sha1CurrentPattern = lazyregexp.New(`\b(?:[0-9a-f]{7,40}|[0-9a-f]{64})\b`)
 )
 
-// FindAllMentions matches mention patterns in given content
-// and returns a list of found user names without @ prefix.
+// FindAllMentions returns the user names, without "@", of the mentions that
+// render as links in content, which is Markdown. Mentions in code and links
+// are not included.
 func FindAllMentions(content string) []string {
-	mentions := MentionPattern.FindAllString(content, -1)
-	for i := range mentions {
-		mentions[i] = mentions[i][strings.Index(mentions[i], "@")+1:] // Strip @ character
+	body := bytes.TrimPrefix([]byte(content), utf8BOM)
+	var names []string
+	guardRender(body, func() []byte {
+		opts := markdownOptions("")
+		opts.PostProcess = true
+		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+			if bytes.IndexByte(text, '@') >= 0 {
+				for _, m := range findMentions(text) {
+					names = append(names, string(m.Text[1:]))
+				}
+			}
+			return nil
+		}
+		dariomark.Render(body, opts)
+		return nil
+	})
+	return names
+}
+
+// findMentions returns the mentions in text.
+func findMentions(text []byte) []linkSpan {
+	var spans []linkSpan
+	for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(text, -1) {
+		// The pattern requires a character before the "@", which is not part
+		// of the mention.
+		start := loc[3]
+		m := text[start:loc[1]]
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
 	}
-	return mentions
+	return spans
 }
 
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
@@ -94,87 +122,161 @@ func expand(template string, match map[string]string) string {
 	return strings.NewReplacer(pairs...).Replace(template)
 }
 
-// RenderIssueIndexPattern renders issue indexes to corresponding links.
-func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+// linkSpan is a reference found in text and the link that replaces it.
+type linkSpan = dariomark.SpecialLink
+
+// findIssueIndexes returns the spans of skip merged with the issue references
+// in text that do not overlap them.
+func findIssueIndexes(text []byte, urlPrefix string, metas map[string]string, skip []linkSpan) []linkSpan {
 	urlPrefix = cutoutVerbosePrefix(urlPrefix)
 
 	pattern := IssueNumericPattern
-	if metas["style"] == IssueNameStyleAlphanumeric {
+	alphanumeric := metas["style"] == IssueNameStyleAlphanumeric
+	if alphanumeric {
 		pattern = IssueAlphanumericPattern
 	}
 
-	ms := pattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		if m[0] == ' ' || m[0] == '(' || m[0] == '[' {
-			// ignore leading space, opening parentheses, or opening square brackets
-			m = m[1:]
+	// External issue tracker formats are expanded with a copy of metas, so
+	// that callers sharing metas between renders are not affected.
+	var match map[string]string
+	if metas["format"] != "" {
+		match = make(map[string]string, len(metas)+1)
+		for k, v := range metas {
+			match[k] = v
 		}
-		var link string
-		if metas == nil || metas["format"] == "" {
-			link = fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)
-		} else {
-			// Support for external issue tracker
-			if metas["style"] == IssueNameStyleAlphanumeric {
-				metas["index"] = string(m)
-			} else {
-				metas["index"] = string(m[1:])
-			}
-			link = fmt.Sprintf(`<a href="%s">%s</a>`, expand(metas["format"], metas), m)
-		}
-		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
-	return rawBytes
+
+	var spans []linkSpan
+	for _, loc := range pattern.FindAllIndex(text, -1) {
+		start := loc[0]
+		if c := text[start]; c == ' ' || c == '(' || c == '[' {
+			start++
+		}
+		m := text[start:loc[1]]
+		var href []byte
+		if match == nil {
+			href = fmt.Appendf(nil, "%s/issues/%s", html.EscapeString(urlPrefix), m[1:])
+		} else {
+			if alphanumeric {
+				match["index"] = string(m)
+			} else {
+				match["index"] = string(m[1:])
+			}
+			href = []byte(html.EscapeString(expand(metas["format"], match)))
+		}
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: href, Text: m})
+	}
+	return mergeSpans(skip, spans)
 }
 
-// Note: this section is for purpose of increase performance and
-// reduce memory allocation at runtime since they are constant literals.
-var pound = []byte("#")
+// mergeSpans returns the spans of both sorted lists, dropping the spans of
+// more that overlap a span of spans.
+func mergeSpans(spans, more []linkSpan) []linkSpan {
+	if len(more) == 0 {
+		return spans
+	}
+	merged := make([]linkSpan, 0, len(spans)+len(more))
+	i := 0
+	for _, s := range more {
+		for i < len(spans) && spans[i].End <= s.Start {
+			merged = append(merged, spans[i])
+			i++
+		}
+		if i < len(spans) && spans[i].Start < s.End {
+			continue
+		}
+		merged = append(merged, s)
+	}
+	return append(merged, spans[i:]...)
+}
+
+// replaceSpans returns text with each span replaced by its link.
+func replaceSpans(text []byte, spans []linkSpan) []byte {
+	if len(spans) == 0 {
+		return text
+	}
+	return dariomark.AppendSpecialLinks(make([]byte, 0, len(text)+len(spans)*48), text, spans)
+}
+
+// RenderIssueIndexPattern renders issue indexes to corresponding links.
+func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	return replaceSpans(rawBytes, findIssueIndexes(rawBytes, urlPrefix, metas, nil))
+}
+
+// findCrossReferences returns the spans of skip merged with the references to
+// issues of other repositories in text that do not overlap them.
+func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
+	var spans []linkSpan
+	for _, loc := range CrossReferenceIssueNumericPattern.FindAllIndex(text, -1) {
+		start := loc[0]
+		if c := text[start]; c == ' ' || c == '(' {
+			start++
+		}
+		m := text[start:loc[1]]
+		delim := bytes.IndexByte(m, '#')
+		href := fmt.Appendf(nil, "%s%s/issues/%s", html.EscapeString(conf.Server.ExternalURL), m[:delim], m[delim+1:])
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: href, Text: m})
+	}
+	return mergeSpans(skip, spans)
+}
 
 // RenderCrossReferenceIssueIndexPattern renders issue indexes from other repositories to corresponding links.
 func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[string]string) []byte {
-	ms := CrossReferenceIssueNumericPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		if m[0] == ' ' || m[0] == '(' {
-			m = m[1:] // ignore leading space or opening parentheses
+	return replaceSpans(rawBytes, findCrossReferences(rawBytes, nil))
+}
+
+// findSha1s returns the spans of skip merged with the commit IDs in text that
+// do not overlap them.
+func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan {
+	var spans []linkSpan
+	for _, loc := range Sha1CurrentPattern.FindAllIndex(text, -1) {
+		m := text[loc[0]:loc[1]]
+		if v, _ := strconv.Atoi(string(m)); v > 0 {
+			continue
+		} else if len(m) == 64 && metas["objectFormat"] != "sha256" {
+			continue
 		}
-
-		delimIdx := bytes.Index(m, pound)
-		repo := string(m[:delimIdx])
-		index := string(m[delimIdx+1:])
-
-		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, conf.Server.ExternalURL, repo, index, m)
-		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
+		href := fmt.Appendf(nil, "%s/commit/%s", html.EscapeString(metas["repoLink"]), m)
+		spans = append(spans, linkSpan{Start: loc[0], End: loc[1], Href: href, Text: m[:min(len(m), 10)], Code: true})
 	}
-	return rawBytes
+	return mergeSpans(skip, spans)
 }
 
 // RenderSha1CurrentPattern renders commit IDs to corresponding links that assumes
 // in the same repository, i.e., metas["repoLink"]. Hex strings of 64 characters
 // are only rendered when metas["objectFormat"] is "sha256".
 func RenderSha1CurrentPattern(rawBytes []byte, metas map[string]string) []byte {
-	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes), func(m string) string {
-		if v, _ := strconv.Atoi(m); v > 0 {
-			return m
-		} else if len(m) == 64 && metas["objectFormat"] != "sha256" {
-			return m
-		}
-
-		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, metas["repoLink"], m, tool.ShortSHA1(m))
-	}))
+	return replaceSpans(rawBytes, findSha1s(rawBytes, metas, nil))
 }
 
 // RenderSpecialLink renders mentions, indexes and commit IDs to corresponding links.
+// It replaces each reference where it is found, in a single pass, and a
+// reference that overlaps an earlier kind of reference is left as text.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	ms := MentionPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		m = m[bytes.Index(m, []byte("@")):]
-		rawBytes = bytes.ReplaceAll(rawBytes, m, fmt.Appendf(nil, `<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m))
-	}
+	return replaceSpans(rawBytes, findSpecialLinks(rawBytes, urlPrefix, metas))
+}
 
-	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderCrossReferenceIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, metas)
-	return rawBytes
+// findSpecialLinks returns the mentions, issue references, cross-references
+// and commit IDs in text, see RenderSpecialLink.
+func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string) []linkSpan {
+	kinds := specialLinkKinds(rawBytes, metas)
+	if kinds == 0 {
+		return nil
+	}
+	var spans []linkSpan
+	if kinds&linkMention != 0 {
+		spans = findMentions(rawBytes)
+	}
+	if kinds&linkIssue != 0 {
+		spans = findIssueIndexes(rawBytes, urlPrefix, metas, spans)
+	}
+	if kinds&linkCrossReference != 0 {
+		spans = findCrossReferences(rawBytes, spans)
+	}
+	if kinds&linkCommit != 0 {
+		spans = findSha1s(rawBytes, metas, spans)
+	}
+	return spans
 }
 
 var (
@@ -347,7 +449,28 @@ func Detect(filename string) Type {
 	}
 }
 
+const (
+	// largeRenderSize is the input size from which a render takes part of
+	// renderBudget. Smaller documents, such as most comments, are rendered
+	// right away.
+	largeRenderSize = 64 << 10
+	// renderBudget is the total input size of large documents rendered at the
+	// same time. Rendering takes up to about 360 times the input in memory for
+	// hostile documents, so concurrent large renders stay under 3 GB. A
+	// document larger than the budget waits until it can be rendered alone.
+	renderBudget = 8 << 20
+)
+
+var renderSemaphore = semaphore.NewWeighted(renderBudget)
+
+// utf8BOM is the byte order mark that some editors write at the start of
+// files. It is not part of the content.
+var utf8BOM = []byte("\ufeff")
+
 // Render takes a string or []byte and renders to sanitized HTML in given type of syntax with special links.
+//
+// A document larger than [ui] MAX_DISPLAY_FILE_SIZE is shown as escaped plain
+// text instead of being rendered.
 func Render(typ Type, input any, urlPrefix string, metas map[string]string) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {
@@ -359,17 +482,43 @@ func Render(typ Type, input any, urlPrefix string, metas map[string]string) []by
 		panic(fmt.Sprintf("unrecognized input content type: %T", input))
 	}
 
+	if typ != TypeMarkdown && typ != TypeOrgMode {
+		return rawBytes // Do nothing if syntax type is not recognized
+	}
+	rawBytes = bytes.TrimPrefix(rawBytes, utf8BOM)
+	return guardRender(rawBytes, func() []byte {
+		return render(typ, rawBytes, urlPrefix, metas)
+	})
+}
+
+// guardRender returns body as escaped plain text when it is larger than [ui]
+// MAX_DISPLAY_FILE_SIZE, and otherwise calls render within renderBudget.
+func guardRender(body []byte, render func() []byte) []byte {
+	if conf.UI.MaxDisplayFileSize > 0 && int64(len(body)) > conf.UI.MaxDisplayFileSize {
+		return []byte("<pre>" + html.EscapeString(string(body)) + "</pre>")
+	}
+	if len(body) >= largeRenderSize {
+		weight := int64(min(len(body), renderBudget))
+		// Acquire only fails when its context is done, which never happens.
+		_ = renderSemaphore.Acquire(context.Background(), weight)
+		defer renderSemaphore.Release(weight)
+	}
+	return render()
+}
+
+func render(typ Type, rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:
-		rawHTML = RawMarkdown(rawBytes, urlPrefix)
+		var sanitized bool
+		rawHTML, sanitized = renderMarkdown(rawBytes, urlPrefix, metas)
+		if sanitized {
+			return rawHTML
+		}
 	case TypeOrgMode:
 		rawHTML = RawOrgMode(rawBytes, urlPrefix)
-	default:
-		return rawBytes // Do nothing if syntax type is not recognized
+		rawHTML = postProcessHTML(rawHTML, urlPrefix, metas)
 	}
-
-	rawHTML = postProcessHTML(rawHTML, urlPrefix, metas)
 	return SanitizeBytes(rawHTML)
 }
