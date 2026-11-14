@@ -14,10 +14,12 @@ import (
 	"gogs.io/gogs/public"
 )
 
-func mountWebAppRoutes(f *flamego.Flame) error {
+// mountWebAppRoutes mounts the assets and the catch-all route of the web app,
+// and returns the handler that renders its pages.
+func mountWebAppRoutes(f *flamego.Flame) (http.Handler, error) {
 	webFS, err := fs.Sub(public.WebAssets, "dist")
 	if err != nil {
-		return errors.Wrap(err, "load embedded web assets")
+		return nil, errors.Wrap(err, "load embedded web assets")
 	}
 	// Index is set to a sentinel that does not exist in the FS so flamego.Static
 	// never serves the raw index.html for "/" requests. The catch-all below
@@ -30,15 +32,15 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 
 	index, err := public.WebAssets.ReadFile("dist/index.html")
 	if err != nil {
-		return errors.Wrap(err, `read "dist/index.html"`)
+		return nil, errors.Wrap(err, `read "dist/index.html"`)
 	}
 
 	inject, err := readInjectContent()
 	if err != nil {
-		return errors.Wrap(err, "read inject content")
+		return nil, errors.Wrap(err, "read inject content")
 	}
 
-	f.Get("/{**}", func(w http.ResponseWriter, r *http.Request) {
+	webApp := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		wc := context.WebContextFrom(r)
 		body, err := renderIndex(index, wc, inject)
 		if err != nil {
@@ -61,5 +63,6 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		w.WriteHeader(status)
 		_, _ = w.Write(body)
 	})
-	return nil
+	f.Get("/{**}", webApp.ServeHTTP)
+	return webApp, nil
 }

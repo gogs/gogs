@@ -2,6 +2,7 @@ package repo
 
 import (
 	stdctx "context"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,26 +11,10 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
 )
-
-func MustBeNotEmpty(c *context.Context) {
-	if c.Repo.Repository.IsEmpty {
-		c.NotFound()
-	}
-}
-
-func Download(c *context.Context) {
-	archivePath, name, err := PrepareArchive(c.Req.Context(), c.Repo.GitRepo, c.Repo.Repository.Name, c.Params("*"))
-	if err != nil {
-		c.NotFoundOrError(err, "prepare archive")
-		return
-	}
-	c.ServeFile(archivePath, name)
-}
 
 type archiveNotExistError struct {
 	error
@@ -124,4 +109,16 @@ func PrepareArchive(ctx stdctx.Context, gitRepo *git.Repository, repoName, uri s
 		}
 	}
 	return archivePath, repoName + "-" + refName + ext, nil
+}
+
+// ServeArchive serves the archive file at the path as a download with the name.
+func ServeArchive(w http.ResponseWriter, r *http.Request, archivePath, name string) {
+	w.Header().Set("Content-Description", "File Transfer")
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
+	w.Header().Set("Content-Transfer-Encoding", "binary")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Cache-Control", "must-revalidate")
+	w.Header().Set("Pragma", "public")
+	http.ServeFile(w, r, archivePath)
 }
