@@ -121,3 +121,51 @@ export function fetchUserRepos(username: string, page?: number) {
   const url = subUrl(`/api/web/users/${encodeURIComponent(username)}/repos`);
   return fetchJSON<OwnerReposPage>(page ? `${url}?page=${page}` : url);
 }
+
+export interface DashboardRepo {
+  owner: string;
+  name: string;
+  isPrivate: boolean;
+  isFork: boolean;
+  isMirror: boolean;
+  starCount: number;
+}
+
+export interface DashboardData {
+  kind: "user" | "organization";
+  id: number;
+  name: string;
+  avatarURL: string;
+  // The organizations of the signed-in user, whichever dashboard this is.
+  organizations: { name: string; avatarURL: string; repoCount: number }[];
+  repos: DashboardRepo[];
+  repoCount: number;
+  hasMoreRepos: boolean;
+  // Only on the dashboard of the signed-in user.
+  collaborativeRepos?: DashboardRepo[];
+  mirrors: { name: string; isPrivate: boolean; intervalHours: number }[];
+}
+
+// The dashboard of the signed-in user, or of one of their organizations.
+function dashboardURL(org?: string) {
+  return subUrl(org ? `/api/web/orgs/${encodeURIComponent(org)}/dashboard` : "/api/web/dashboard");
+}
+
+export function dashboardQuery(org?: string) {
+  return queryOptions({
+    queryKey: ["dashboard", org ?? ""] as const,
+    queryFn: ({ signal }) => fetchJSON<DashboardData>(dashboardURL(org), { signal }),
+  });
+}
+
+export function dashboardActivityQuery(org?: string) {
+  return infiniteQueryOptions({
+    queryKey: ["dashboard", org ?? "", "activity"] as const,
+    queryFn: ({ pageParam, signal }) => {
+      const url = `${dashboardURL(org)}/activity`;
+      return fetchJSON<ActivityFeedPage>(pageParam ? `${url}?afterID=${pageParam}` : url, { signal });
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextAfterID,
+  });
+}

@@ -2,7 +2,6 @@ package user
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 	"slices"
 
@@ -14,8 +13,6 @@ import (
 )
 
 const (
-	tmplUserDashboard       = "user/dashboard/dashboard"
-	tmplUserDashboardFeeds  = "user/dashboard/feeds"
 	tmplUserDashboardIssues = "user/dashboard/issues"
 )
 
@@ -48,136 +45,6 @@ func getDashboardContextUser(c *context.Context) *database.User {
 	c.Data["Orgs"] = orgs
 
 	return ctxUser
-}
-
-// retrieveFeeds loads feeds from database by given context user.
-// The user could be organization so it is not always the logged in user,
-// which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(c *context.Context, ctxUser *database.User, userID int64) {
-	afterID := c.QueryInt64("after_id")
-
-	var err error
-	var actions []*database.Action
-	if ctxUser.IsOrganization() {
-		actions, err = database.Handle.Actions().ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
-	} else {
-		actions, err = database.Handle.Actions().ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, false)
-	}
-	if err != nil {
-		c.Error(err, "list actions")
-		return
-	}
-
-	// Check access of private repositories.
-	feeds := make([]*database.Action, 0, len(actions))
-	unameAvatars := make(map[string]string)
-	for _, act := range actions {
-		// Cache results to reduce queries.
-		_, ok := unameAvatars[act.ActUserName]
-		if !ok {
-			u, err := database.Handle.Users().GetByUsername(c.Req.Context(), act.ActUserName)
-			if err != nil {
-				if database.IsErrUserNotExist(err) {
-					continue
-				}
-				c.Error(err, "get user by name")
-				return
-			}
-			unameAvatars[act.ActUserName] = u.AvatarURLPath()
-		}
-
-		act.ActAvatar = unameAvatars[act.ActUserName]
-		feeds = append(feeds, act)
-	}
-	c.Data["Feeds"] = feeds
-	if len(feeds) > 0 {
-		afterID := feeds[len(feeds)-1].ID
-		c.Data["AfterID"] = afterID
-		c.Header().Set("X-AJAX-URL", fmt.Sprintf("%s?after_id=%d", c.Data["Link"], afterID))
-	}
-}
-
-func Dashboard(c *context.Context) {
-	ctxUser := getDashboardContextUser(c)
-	if c.Written() {
-		return
-	}
-
-	retrieveFeeds(c, ctxUser, c.User.ID)
-	if c.Written() {
-		return
-	}
-
-	if c.Req.Header.Get("X-AJAX") == "true" {
-		c.Success(tmplUserDashboardFeeds)
-		return
-	}
-
-	c.Data["Title"] = ctxUser.DisplayName() + " - " + c.Tr("dashboard")
-	c.Data["PageIsDashboard"] = true
-	c.Data["PageIsNews"] = true
-
-	// Only user can have collaborative repositories.
-	if !ctxUser.IsOrganization() {
-		collaborateRepos, err := database.Handle.Repositories().GetByCollaboratorID(c.Req.Context(), c.User.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
-		if err != nil {
-			c.Error(err, "get accessible repositories by collaborator")
-			return
-		} else if err = database.RepositoryList(collaborateRepos).LoadAttributes(); err != nil {
-			c.Error(err, "load attributes")
-			return
-		}
-		c.Data["CollaborativeRepos"] = collaborateRepos
-	}
-
-	var err error
-	var repos, mirrors []*database.Repository
-	var repoCount int64
-	if ctxUser.IsOrganization() {
-		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, conf.UI.User.RepoPagingNum)
-		if err != nil {
-			c.Error(err, "get user repositories")
-			return
-		}
-
-		mirrors, err = ctxUser.GetUserMirrorRepositories(c.User.ID)
-		if err != nil {
-			c.Error(err, "get user mirror repositories")
-			return
-		}
-	} else {
-		repos, err = database.GetUserRepositories(
-			&database.UserRepoOptions{
-				UserID:   ctxUser.ID,
-				Private:  true,
-				Page:     1,
-				PageSize: conf.UI.User.RepoPagingNum,
-			},
-		)
-		if err != nil {
-			c.Error(err, "get repositories")
-			return
-		}
-		repoCount = int64(ctxUser.NumRepos)
-
-		mirrors, err = database.GetUserMirrorRepositories(ctxUser.ID)
-		if err != nil {
-			c.Error(err, "get mirror repositories")
-			return
-		}
-	}
-	c.Data["Repos"] = repos
-	c.Data["RepoCount"] = repoCount
-	c.Data["MaxShowRepoNum"] = conf.UI.User.RepoPagingNum
-
-	if err := database.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
-		c.Error(err, "load attributes")
-		return
-	}
-	c.Data["MirrorCount"] = len(mirrors)
-	c.Data["Mirrors"] = mirrors
-
-	c.Success(tmplUserDashboard)
 }
 
 func Issues(c *context.Context) {

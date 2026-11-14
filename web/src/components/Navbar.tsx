@@ -35,7 +35,9 @@ export function Navbar() {
         <div className="hidden flex-1 items-center gap-1 sm:flex">
           {user ? (
             <>
-              <NavLink href="/">{t("dashboard")}</NavLink>
+              <NavLink href="/" spa>
+                {t("dashboard")}
+              </NavLink>
               <NavLink href="/issues">{t("issues")}</NavLink>
               <NavLink href="/pulls">{t("pull_requests")}</NavLink>
               <NavLink href="/explore/repos" spa>
@@ -104,7 +106,7 @@ export function Navbar() {
                       </MobileLink>
                     )}
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <MobileLink href="/" onClick={() => setOpen(false)}>
+                    <MobileLink href="/" spa onClick={() => setOpen(false)}>
                       {t("dashboard")}
                     </MobileLink>
                     <MobileLink href="/issues" onClick={() => setOpen(false)}>
