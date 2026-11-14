@@ -99,3 +99,19 @@ func TestWebLocales(t *testing.T) {
 	assert.Contains(t, string(out), `"localeURL":"/gogs`+webLocaleURL("de-DE")+`"`)
 	assert.Contains(t, string(out), `<link rel="preload" as="fetch" crossorigin href="/gogs`+webLocaleURL("de-DE")+`">`)
 }
+
+func TestRenderIndex_serverError(t *testing.T) {
+	shell := `<html><head>{{.WebContext}}</head><body><div id="root"></div></body></html>`
+	got, err := renderIndex([]byte(shell), context.WebContext{
+		Lang:  "en-US",
+		Page:  context.WebPageServerError,
+		Error: `open </script><script>alert(1)</script>: no such file`,
+	}, injectContent{})
+	require.NoError(t, err)
+
+	out := string(got)
+	assert.Contains(t, out, `"page":"serverError"`)
+	// The reason is arbitrary text, so it must stay inside the context script.
+	assert.Equal(t, 1, strings.Count(out, "</script>"))
+	assert.Contains(t, out, `open \u003c/script\u003e\u003cscript\u003ealert(1)\u003c/script\u003e: no such file`)
+}

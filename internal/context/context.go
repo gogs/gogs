@@ -162,7 +162,20 @@ type WebContext struct {
 	Lang       string
 	SubURL     string
 	StatusCode int
+	// Page is the page the shell shows in place of the one at the path, e.g.,
+	// WebPageServerError.
+	Page string
+	// Error is the reason of a server error, for viewers allowed to see it.
+	Error string
+	// Version is the version of Gogs, for site admins on a server error.
+	Version string
 }
+
+// Pages the server shows through the shell regardless of the path.
+const (
+	WebPageServerError   = "serverError"
+	WebPageProhibitLogin = "prohibitLogin"
+)
 
 // WebContextKey is the request context key for WebContext values. Exported
 // so callers outside this package (e.g. the web NotFound handler) can attach
@@ -217,13 +230,20 @@ func (c *Context) serveWeb(wr WebContext) {
 func (c *Context) Error(err error, msg string) {
 	log.ErrorDepth(4, "%s: %v", msg, err)
 
-	c.Title("status.internal_server_error")
-
+	wc := WebContext{
+		Lang:       c.Language(),
+		SubURL:     conf.Server.Subpath,
+		StatusCode: http.StatusInternalServerError,
+		Page:       WebPageServerError,
+	}
 	// Only in non-production mode or admin can see the actual error message.
 	if !conf.IsProdMode() || (c.IsLogged && c.User.IsAdmin) {
-		c.Data["ErrorMsg"] = err
+		wc.Error = err.Error()
 	}
-	c.HTML(http.StatusInternalServerError, fmt.Sprintf("status/%d", http.StatusInternalServerError))
+	if c.IsLogged && c.User.IsAdmin {
+		wc.Version = conf.App.Version
+	}
+	c.serveWeb(wc)
 }
 
 // Errorf renders the 500 response with formatted message.
