@@ -491,7 +491,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
 			m.Get("/commit/:sha([a-f0-9]{7,64})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 
-			m.Get("/compare/:before([a-z0-9]{64}|[a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{64}|[a-z0-9]{40})", repo.MustBeNotEmpty, context.RepoRef(), repo.CompareDiff)
+			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})\\.diff", flamegoBridger(webHandler))
+			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
 			m.Get("", repo.Home)
@@ -710,6 +711,7 @@ func newRoutingHandler() (http.Handler, error) {
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
+		f.Get("/compare/"+compareRangeRoute+".diff", getRepoCompareRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
 	}, requireViewAccess, withRepoContext)
 

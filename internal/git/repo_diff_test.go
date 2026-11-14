@@ -320,6 +320,28 @@ index e69de29bb2d1d6434b8b29ae775ad8c2e48c5391..00000000000000000000000000000000
 		},
 		{
 			rev:      "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
+			diffType: RawDiffNormal,
+			opt:      RawDiffOptions{Base: "ebbbf773431ba07510251bb03f9525c7bab2b13a"},
+			expOutput: `diff --git a/fix.txt b/fix.txt
+deleted file mode 100644
+index e69de29bb2d1d6434b8b29ae775ad8c2e48c5391..0000000000000000000000000000000000000000
+diff --git a/pom.xml b/pom.xml
+index ee791befa844ff420940305ca6435b5a27a44ece..99975710477a65b89233b2d12bf60f7c0ffc1f5c 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -1,7 +1,7 @@
+ <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+-  <groupId>com.ambientideas</groupId>
++  <groupId>com.github</groupId>
+   <artifactId>egitdemo</artifactId>
+   <packaging>jar</packaging>
+   <version>1.0-SNAPSHOT</version>
+`,
+		},
+		{
+			rev:      "978fb7f6388b49b532fbef8b856681cfa6fcaa0a",
 			diffType: RawDiffPatch,
 			expOutput: `Date: Sun, 9 Feb 2020 17:22:24 +0800
 Subject: [PATCH] Delete fix.txt

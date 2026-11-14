@@ -79,6 +79,9 @@ const (
 type RawDiffOptions struct {
 	// Additional arguments to be passed right after the subcommand, e.g., "-w".
 	Args []string
+	// Base is the revision to diff against instead of the first parent. It is
+	// only supported by RawDiffNormal.
+	Base string
 }
 
 // RawDiff dumps diff of repository in given revision directly to given
@@ -100,7 +103,9 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 	var args []string
 	switch diffType {
 	case RawDiffNormal:
-		if commit.ParentsCount() == 0 {
+		if opt.Base != "" {
+			args = []string{"diff", "--full-index", "-M", opt.Base, "--end-of-options", rev}
+		} else if commit.ParentsCount() == 0 {
 			args = []string{"show", "--full-index", "--end-of-options", rev}
 		} else {
 			c, err := commit.Parent(ctx, 0)
@@ -110,6 +115,9 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 			args = []string{"diff", "--full-index", "-M", c.ID.String(), "--end-of-options", rev}
 		}
 	case RawDiffPatch:
+		if opt.Base != "" {
+			return errors.New("base is only supported by RawDiffNormal")
+		}
 		if commit.ParentsCount() == 0 {
 			args = []string{"format-patch", "--full-index", "--no-signoff", "--no-signature", "--stdout", "--root", "--end-of-options", rev}
 		} else {

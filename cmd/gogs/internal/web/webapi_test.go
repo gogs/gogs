@@ -29,8 +29,10 @@ func TestRequireViewAccess(t *testing.T) {
 	paths := []string{
 		"/alice/repo/raw/main/README.md",
 		"/alice/repo/commit/0123456789abcdef0123456789abcdef01234567.diff",
+		"/alice/repo/compare/0123456789abcdef0123456789abcdef01234567...89abcdef0123456789abcdef0123456789abcdef.diff",
 		"/api/web/alice/repo/header",
 		"/api/web/alice/repo/commit/0123456789abcdef0123456789abcdef01234567",
+		"/api/web/alice/repo/compare/0123456789abcdef0123456789abcdef01234567...89abcdef0123456789abcdef0123456789abcdef",
 		"/api/web/explore/repos",
 		"/api/web/explore/users",
 		"/api/web/explore/organizations",
