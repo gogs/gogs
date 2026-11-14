@@ -9,12 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
@@ -23,10 +21,9 @@ import (
 )
 
 const (
-	EMPTY    = "repo/empty"
-	HOME     = "repo/home"
-	WATCHERS = "repo/watchers"
-	FORKS    = "repo/forks"
+	EMPTY = "repo/empty"
+	HOME  = "repo/home"
+	FORKS = "repo/forks"
 )
 
 func renderDirectory(c *context.Context, treeLink string) {
@@ -302,38 +299,6 @@ func Home(c *context.Context) {
 	c.Data["TreeNames"] = treeNames
 	c.Data["BranchLink"] = branchLink
 	c.Success(HOME)
-}
-
-func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*database.User, error), tpl string) {
-	page := c.QueryInt("page")
-	if page <= 0 {
-		page = 1
-	}
-	pager := paginater.New(total, database.ItemsPerPage, page, 5)
-	c.Data["Page"] = pager
-
-	items, err := getter(pager.Current())
-	if err != nil {
-		c.Error(err, "getter")
-		return
-	}
-	c.Data["Cards"] = items
-
-	c.Success(tpl)
-}
-
-func Watchers(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.watchers")
-	c.Data["CardsTitle"] = c.Tr("repo.watchers")
-	c.Data["PageIsWatchers"] = true
-	RenderUserCards(c, c.Repo.Repository.NumWatches, c.Repo.Repository.GetWatchers, WATCHERS)
-}
-
-func Stars(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.stargazers")
-	c.Data["CardsTitle"] = c.Tr("repo.stargazers")
-	c.Data["PageIsStargazers"] = true
-	RenderUserCards(c, c.Repo.Repository.NumStars, c.Repo.Repository.GetStargazers, WATCHERS)
 }
 
 func Forks(c *context.Context) {

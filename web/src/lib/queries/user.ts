@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
 import type { RepoListItemData } from "@/components/RepoListItem";
+import type { UserListPage } from "@/components/UserListItem";
 import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
 
@@ -211,4 +212,9 @@ export function fetchDashboardIssues(
   }
   const qs = params.toString();
   return fetchJSON<DashboardIssuesData>(`${dashboardURL(org)}/${kind}${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchUserPeople(username: string, list: "followers" | "following", page?: number) {
+  const url = subUrl(`/api/web/users/${encodeURIComponent(username)}/${list}`);
+  return fetchJSON<UserListPage>(page ? `${url}?page=${page}` : url);
 }
