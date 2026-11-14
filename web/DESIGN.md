@@ -99,6 +99,10 @@ Show code with syntax highlighting, e.g., the payload of a webhook delivery, wit
 
 Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a plain `<textarea>`. It is the one editor of the app, built on CodeMirror 6. Markdown wraps like prose and Tab moves focus. `code` lays out source code with line numbers and Tab indents, and Escape then Tab leaves it. Token colors are the `--code-*` variables in `index.css`. Plain text fields, such as descriptions and SSH keys, stay textareas.
 
+## Rendered Markdown
+
+Show Markdown that the server rendered and sanitized, e.g., the content of an issue and its comments, with `Markdown` from `@/components/Markdown`. It styles the HTML with the `markdown` class in `index.css`, and highlights fenced code blocks that name a language with `CodeBlock`. Previews of Markdown being written go through the same component, so they look like the result.
+
 ## Translated markup
 
 Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.

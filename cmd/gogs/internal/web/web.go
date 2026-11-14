@@ -372,7 +372,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 		m.Group("/:username/:reponame", func() {
 			m.Get("/issues", repo.MustEnableIssues, repo.ServeIssueList)
-			m.Get("/issues/:index", repo.ViewIssue)
+			m.Get("/issues/:index", repo.ServeIssue)
 			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {

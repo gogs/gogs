@@ -470,3 +470,126 @@ export interface RepoFork {
 export async function fetchRepoForks(owner: string, name: string) {
   return (await fetchJSON<{ items: RepoFork[] }>(repoURL(owner, name, "/forks"))).items;
 }
+
+export interface IssueUser {
+  name: string;
+  avatarURL: string;
+  // isGhost marks a deleted user, who has no profile.
+  isGhost?: boolean;
+}
+
+export interface IssueAttachment {
+  name: string;
+  url: string;
+  isImage: boolean;
+}
+
+export interface IssueComment {
+  id: number;
+  type: "comment" | "reopen" | "close" | "commit_ref";
+  poster: IssueUser;
+  createdAt: string;
+  // contentHTML is the rendered content of a comment, or the link to the
+  // commit of a commit reference.
+  contentHTML?: string;
+  // content is the Markdown of a comment, only sent to viewers who can edit
+  // it.
+  content?: string;
+  tag?: "owner" | "writer" | "poster";
+  attachments?: IssueAttachment[];
+  viewerCanEdit?: boolean;
+}
+
+export interface RepoIssueData {
+  index: number;
+  title: string;
+  isClosed: boolean;
+  poster: IssueUser;
+  createdAt: string;
+  contentHTML: string;
+  content: string;
+  attachments: IssueAttachment[];
+  comments: IssueComment[];
+  labels: IssueLabel[];
+  milestone?: { id: number; name: string };
+  assignee?: { id: number; name: string; avatarURL: string };
+  // labelOptions, milestoneOptions and assigneeOptions are what writers can
+  // set on the issue, and are only sent to them.
+  labelOptions?: IssueLabel[];
+  milestoneOptions?: { id: number; name: string; isClosed: boolean }[];
+  assigneeOptions?: { id: number; name: string; avatarURL: string }[];
+  participants: IssueUser[];
+  // attachment is how files can be attached to comments, only sent to
+  // signed-in viewers when attachments are enabled.
+  attachment?: { allowedTypes: string[]; maxSize: number; maxFiles: number };
+  viewerCanEdit: boolean;
+  viewerCanWrite: boolean;
+}
+
+export function fetchRepoIssue(owner: string, name: string, index: number) {
+  return fetchJSON<RepoIssueData>(repoURL(owner, name, `/issues/${index}`));
+}
+
+export function updateRepoIssue(
+  owner: string,
+  name: string,
+  index: number,
+  form: { title?: string; content?: string },
+) {
+  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}`), form);
+}
+
+export function setRepoIssueClosed(owner: string, name: string, index: number, closed: boolean) {
+  return send(closed ? "PUT" : "DELETE", repoURL(owner, name, `/issues/${index}/closed`));
+}
+
+export function createRepoIssueComment(
+  owner: string,
+  name: string,
+  index: number,
+  form: { content: string; attachments: string[] },
+) {
+  return submit<{ id: number }>("POST", repoURL(owner, name, `/issues/${index}/comments`), form);
+}
+
+export function updateRepoIssueComment(owner: string, name: string, index: number, id: number, content: string) {
+  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content });
+}
+
+export function deleteRepoIssueComment(owner: string, name: string, index: number, id: number) {
+  return send("DELETE", repoURL(owner, name, `/issues/${index}/comments/${id}`));
+}
+
+export function setRepoIssueLabels(owner: string, name: string, index: number, ids: number[]) {
+  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/labels`), { ids });
+}
+
+// setRepoIssueMilestone sets the milestone of the issue, or clears it with 0.
+export function setRepoIssueMilestone(owner: string, name: string, index: number, id: number) {
+  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/milestone`), { id });
+}
+
+// setRepoIssueAssignee sets the assignee of the issue, or clears it with 0.
+export function setRepoIssueAssignee(owner: string, name: string, index: number, id: number) {
+  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/assignee`), { id });
+}
+
+// renderRepoMarkdown renders Markdown the way the issues of the repository
+// are.
+export async function renderRepoMarkdown(owner: string, name: string, text: string) {
+  return (await submit<{ html: string }>("POST", repoURL(owner, name, "/markdown"), { text })).html;
+}
+
+// uploadRepoIssueAttachment uploads a file to attach to a comment, and returns
+// its UUID.
+export async function uploadRepoIssueAttachment(owner: string, name: string, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(repoURL(owner, name, "/issues/attachments"), {
+    method: "POST",
+    credentials: "same-origin",
+    body,
+  });
+  if (!res.ok) throw await loaderResponseError(res);
+  return ((await res.json()) as { uuid: string }).uuid;
+}
