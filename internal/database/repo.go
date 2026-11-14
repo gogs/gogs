@@ -945,12 +945,24 @@ func writeDelegateHook(repoPath string, name git.HookName) error {
 // path needs, and removes the others, because Git starts a process for every
 // hook, and for the update hook, once for every reference a push updates. A
 // hook is needed when the repository has a custom hook of the same name. The
-// pre-receive hook is also needed when the repository has a protected branch,
-// because it enforces the protection.
-func syncDelegateHooks(repoPath string, hasProtectedBranch bool) error {
+// pre-receive hook is also needed when hasProtectedBranch reports that the
+// repository has a protected branch, because it enforces the protection.
+//
+// Saving the protection of a branch, maybe in another process, installs the
+// pre-receive hook before it commits and syncs after it. So that a sync running
+// at the same time never leaves a protected branch without the hook, the
+// protection is checked again after the hook was removed, and the hook is put
+// back when a branch has been protected in the meantime.
+func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error)) error {
 	for _, name := range git.ServerSideHooks {
-		needed := osx.IsFile(filepath.Join(repoPath, "custom_hooks", string(name))) ||
-			(name == git.HookPreReceive && hasProtectedBranch)
+		needed := osx.IsFile(filepath.Join(repoPath, "custom_hooks", string(name)))
+		if !needed && name == git.HookPreReceive {
+			protected, err := hasProtectedBranch()
+			if err != nil {
+				return err
+			}
+			needed = protected
+		}
 		if needed {
 			if err := writeDelegateHook(repoPath, name); err != nil {
 				return err
@@ -962,35 +974,38 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch bool) error {
 		if err := os.Remove(hookPath); err != nil && !os.IsNotExist(err) {
 			return errors.Wrapf(err, "remove delegate hook %q", hookPath)
 		}
+		if name != git.HookPreReceive {
+			continue
+		}
+		protected, err := hasProtectedBranch()
+		if err != nil {
+			return err
+		}
+		if protected {
+			if err = writeDelegateHook(repoPath, name); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
-
-// delegateHooksPool serializes syncing the delegate hooks of a repository with
-// saving the protection of its branches. Otherwise a sync that read no protected
-// branch could remove the pre-receive hook that a concurrent save just
-// installed, and leave the branch protected but not enforced.
-var delegateHooksPool = sync.NewExclusivePool()
 
 // SyncDelegateHooks installs the delegate hooks that the repository and its
 // wiki need, and removes the others. It must be called whenever their custom
 // hooks or the protection of the branches of the repository change.
 func (r *Repository) SyncDelegateHooks() error {
-	delegateHooksPool.CheckIn(strconv.FormatInt(r.ID, 10))
-	defer delegateHooksPool.CheckOut(strconv.FormatInt(r.ID, 10))
-	return r.syncDelegateHooks()
-}
-
-func (r *Repository) syncDelegateHooks() error {
-	hasProtectedBranch, err := x.Where("repo_id = ? AND protected = ?", r.ID, true).Exist(new(ProtectBranch))
-	if err != nil {
-		return errors.Wrap(err, "check protected branches")
+	hasProtectedBranch := func() (bool, error) {
+		has, err := x.Where("repo_id = ? AND protected = ?", r.ID, true).Exist(new(ProtectBranch))
+		if err != nil {
+			return false, errors.Wrap(err, "check protected branches")
+		}
+		return has, nil
 	}
-	if err = syncDelegateHooks(r.RepoPath(), hasProtectedBranch); err != nil {
+	if err := syncDelegateHooks(r.RepoPath(), hasProtectedBranch); err != nil {
 		return err
 	}
 	if r.HasWiki() {
-		return syncDelegateHooks(r.WikiPath(), false)
+		return syncDelegateHooks(r.WikiPath(), func() (bool, error) { return false, nil })
 	}
 	return nil
 }

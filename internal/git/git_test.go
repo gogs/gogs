@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	stdlog "log"
 	"os"
@@ -18,6 +19,12 @@ const repoPath = "testdata/testrepo.git"
 var testrepo *Repository
 
 func TestMain(m *testing.M) {
+	// TestRunReceivePack has Git run this binary as its receive-pack.
+	if out := os.Getenv("GOGS_TEST_RECEIVE_PACK_OUT"); out != "" {
+		runReceivePackForTest(out)
+		return
+	}
+
 	flag.Parse()
 
 	if testing.Verbose() {
@@ -90,4 +97,24 @@ func TestConfig(t *testing.T) {
 	got, err = ConfigGet(ctx, "gogs.test")
 	require.NoError(t, err)
 	assert.Equal(t, "some value", got)
+}
+
+// runReceivePackForTest serves the push for the repository in the last argument
+// over stdin and stdout, and writes the applied updates to out as JSON.
+func runReceivePackForTest(out string) {
+	applied, err := RunReceivePack(context.Background(), os.Args[len(os.Args)-1], ServiceOptions{
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	})
+	if err != nil {
+		stdlog.Fatal(err)
+	}
+	p, err := json.Marshal(applied)
+	if err != nil {
+		stdlog.Fatal(err)
+	}
+	if err = os.WriteFile(out, p, 0o644); err != nil {
+		stdlog.Fatal(err)
+	}
 }

@@ -148,18 +148,23 @@ type RefUpdate struct {
 }
 
 // RunReceivePack runs "git receive-pack" for the repository in given path like
-// RunService, and returns the reference updates of the push that were applied,
+// RunService, and returns the reference updates of the push that Git applied,
 // which is what Git passes to the post-receive hook. The updates are returned
 // even with an error, because Git may have applied some of them before it
 // failed.
 func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]RefUpdate, error) {
-	commands := &receivePackCommandsReader{r: opts.Stdin}
+	push := &receivePackPush{inAdvertisement: !opts.StatelessRPC}
 	if opts.Stdin != nil {
-		opts.Stdin = commands
+		opts.Stdin = receivePackRequestReader{r: opts.Stdin, push: push}
 	}
+	opts.Stdout = receivePackResponseWriter{w: opts.Stdout, push: push}
 	err := RunService(ctx, ServiceReceivePack, path, opts)
 
-	applied, checkErr := appliedRefUpdates(ctx, path, commands.updates())
+	updates, applied, reported := push.result()
+	var checkErr error
+	if !reported {
+		applied, checkErr = appliedRefUpdates(ctx, path, updates)
+	}
 	if err != nil {
 		return applied, err
 	}
@@ -172,8 +177,8 @@ func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]Re
 var refUpdatesBatchSize = 1000
 
 // appliedRefUpdates returns the updates that the references in the repository
-// in given path reflect. Git checks the old ID of every update it applies, so
-// an update whose reference now has the new ID is one that Git applied.
+// in given path reflect. It is only used when Git did not report which updates
+// it applied, because another push may change the references in the meantime.
 func appliedRefUpdates(ctx context.Context, path string, updates []RefUpdate) ([]RefUpdate, error) {
 	if len(updates) == 0 {
 		return nil, nil
@@ -209,67 +214,209 @@ func appliedRefUpdates(ctx context.Context, path string, updates []RefUpdate) ([
 	return applied, nil
 }
 
-// receivePackCommandsReader passes on what a client sends to "git
-// receive-pack" and records the reference updates it asks for, which come as
-// pkt-lines of "<old-id> <new-id> <ref-name>" before the first flush-pkt.
+// receivePackPush records a push from the pkt-lines that pass between the
+// client and "git receive-pack": the reference updates the client asks for,
+// and the report of Git on which of them it applied.
 //
-// Docs: https://git-scm.com/docs/pack-protocol#_reference_update_request_and_packfile_transfer
-type receivePackCommandsReader struct {
-	r io.Reader
+// Docs: https://git-scm.com/docs/pack-protocol#_pushing_data_to_a_server
+type receivePackPush struct {
+	mu sync.Mutex
 
-	// The bytes of a pkt-line that has not been read in full yet.
-	pending []byte
+	// The bytes of a pkt-line from the client that was not read in full yet.
+	request     []byte
+	requestDone bool
+	commands    []RefUpdate
+	// The capabilities that the client asks for.
+	capabilities []string
 
-	mu       sync.Mutex
-	done     bool
-	commands []RefUpdate
+	// The bytes of a pkt-line from Git that was not written in full yet.
+	response []byte
+	// Whether Git still writes the advertisement of references, which comes
+	// first unless the service is stateless.
+	inAdvertisement bool
+	// The bytes of the report that were unwrapped from the sideband but not
+	// parsed yet.
+	report     []byte
+	reportDone bool
+	// Whether the response is broken, i.e., there is no report to trust.
+	responseBroken bool
+	// The references that Git reported it updated.
+	updated map[string]bool
 }
 
-func (r *receivePackCommandsReader) Read(p []byte) (int, error) {
+type receivePackRequestReader struct {
+	r    io.Reader
+	push *receivePackPush
+}
+
+func (r receivePackRequestReader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if !r.done && n > 0 {
-		r.pending = append(r.pending, p[:n]...)
-		r.parse()
+	if n > 0 {
+		r.push.mu.Lock()
+		r.push.parseRequest(p[:n])
+		r.push.mu.Unlock()
 	}
 	return n, err
 }
 
-// parse records the commands in complete pkt-lines of pending, and stops at the
-// flush-pkt that ends them or at anything that is not a pkt-line.
-func (r *receivePackCommandsReader) parse() {
-	for len(r.pending) >= 4 {
-		size, err := strconv.ParseUint(string(r.pending[:4]), 16, 16)
-		// A size below 4 is the flush-pkt or another special packet.
-		if err != nil || size < 4 {
-			r.done = true
-			r.pending = nil
+type receivePackResponseWriter struct {
+	w    io.Writer
+	push *receivePackPush
+}
+
+func (w receivePackResponseWriter) Write(p []byte) (int, error) {
+	w.push.mu.Lock()
+	w.push.parseResponse(p)
+	w.push.mu.Unlock()
+	if w.w == nil {
+		return len(p), nil
+	}
+	return w.w.Write(p)
+}
+
+// readPktLine returns the payload of the first pkt-line in b and its length in
+// bytes, which is 0 when b does not hold a whole pkt-line yet. A length of 4
+// with a nil payload is a flush-pkt or another special packet.
+func readPktLine(b []byte) (payload []byte, n int, err error) {
+	if len(b) < 4 {
+		return nil, 0, nil
+	}
+	size, err := strconv.ParseUint(string(b[:4]), 16, 16)
+	if err != nil {
+		return nil, 0, errors.New("invalid pkt-line length")
+	}
+	if size < 4 {
+		return nil, 4, nil
+	}
+	if len(b) < int(size) {
+		return nil, 0, nil
+	}
+	return b[4:size], int(size), nil
+}
+
+// parseRequest records the commands, i.e., the pkt-lines of "<old-id> <new-id>
+// <ref-name>" before the first flush-pkt, and the capabilities after the NUL of
+// the first pkt-line.
+func (p *receivePackPush) parseRequest(b []byte) {
+	if p.requestDone {
+		return
+	}
+	p.request = append(p.request, b...)
+	for {
+		payload, n, err := readPktLine(p.request)
+		if err != nil || (n > 0 && payload == nil) {
+			p.requestDone = true
+			p.request = nil
+			return
+		} else if n == 0 {
 			return
 		}
-		if len(r.pending) < int(size) {
-			break
-		}
+		p.request = p.request[n:]
 
-		line := string(r.pending[4:size])
-		r.pending = r.pending[size:]
-		// The first command carries the capabilities of the client after a NUL.
-		line, _, _ = strings.Cut(line, "\x00")
+		line, capabilities, hasCapabilities := strings.Cut(string(payload), "\x00")
+		if hasCapabilities && p.capabilities == nil {
+			p.capabilities = strings.Fields(capabilities)
+		}
+		// Other lines, e.g., "shallow <id>" and those of a push certificate, are not
+		// commands. Git rejects reference names with wildcards, which would also
+		// make the lookup of the applied updates match other references.
 		fields := strings.Fields(line)
-		// Other lines, e.g., "shallow <id>", are not commands. Git rejects reference
-		// names with wildcards, which would also make the lookup of the applied
-		// updates match other references.
 		if len(fields) == 3 && isID(fields[0]) && isID(fields[1]) &&
 			strings.HasPrefix(fields[2], "refs/") && !strings.ContainsAny(fields[2], `*?[\`) {
-			r.commands = append(r.commands, RefUpdate{OldID: fields[0], NewID: fields[1], RefName: fields[2]})
+			p.commands = append(p.commands, RefUpdate{OldID: fields[0], NewID: fields[1], RefName: fields[2]})
 		}
 	}
 }
 
-func (r *receivePackCommandsReader) updates() []RefUpdate {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.commands
+// parseResponse records the references in the report of Git, i.e., the
+// pkt-lines of "ok <ref-name>" before the flush-pkt that ends it, which Git
+// wraps in sideband packets of band 1 when the client asks for a sideband.
+func (p *receivePackPush) parseResponse(b []byte) {
+	if p.reportDone || p.responseBroken {
+		return
+	}
+	p.response = append(p.response, b...)
+
+	useSideband := slices.Contains(p.capabilities, "side-band-64k") || slices.Contains(p.capabilities, "side-band")
+	for {
+		payload, n, err := readPktLine(p.response)
+		if err != nil {
+			p.responseBroken = true
+			return
+		} else if n == 0 {
+			return
+		}
+		raw := p.response[:n]
+		p.response = p.response[n:]
+
+		switch {
+		case p.inAdvertisement:
+			p.inAdvertisement = payload != nil
+			continue
+		case !useSideband:
+			p.report = append(p.report, raw...)
+		case payload == nil:
+			// The sideband ended before the report did.
+			p.responseBroken = true
+			return
+		case len(payload) > 0 && payload[0] == 1:
+			p.report = append(p.report, payload[1:]...)
+		case len(payload) > 0 && payload[0] == 3:
+			p.responseBroken = true
+			return
+		default:
+			// Progress messages
+			continue
+		}
+		p.parseReport()
+		if p.reportDone || p.responseBroken {
+			return
+		}
+	}
+}
+
+// parseReport records the references in the complete pkt-lines of the report.
+func (p *receivePackPush) parseReport() {
+	for {
+		payload, n, err := readPktLine(p.report)
+		if err != nil {
+			p.responseBroken = true
+			return
+		} else if n == 0 {
+			return
+		}
+		p.report = p.report[n:]
+		if payload == nil {
+			p.reportDone = true
+			p.report = nil
+			return
+		}
+
+		// Other lines are "unpack <result>", "ng <ref-name> <reason>", and the
+		// "option" lines of report-status-v2.
+		if name, ok := strings.CutPrefix(strings.TrimSuffix(string(payload), "\n"), "ok "); ok {
+			if p.updated == nil {
+				p.updated = make(map[string]bool)
+			}
+			p.updated[name] = true
+		}
+	}
+}
+
+// result returns the reference updates that the client asked for, and when Git
+// reported which of them it applied, those updates.
+func (p *receivePackPush) result() (updates, applied []RefUpdate, reported bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.reportDone {
+		return p.commands, nil, false
+	}
+	for _, update := range p.commands {
+		if p.updated[update.RefName] {
+			applied = append(applied, update)
+		}
+	}
+	return p.commands, applied, true
 }
 
 // isID returns true if s is a hex object ID of any object format.
