@@ -77,6 +77,12 @@ Anchor links inside the form aren't covered by `disabled`. For each, set `tabInd
 
 Swap the submit label to a present-continuous string ("Signing in…", "Verifying…") while submitting. Keep idle and active strings as separate locale keys.
 
+## Settings pages
+
+The settings pages of users and organizations use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem`, and mark the link to a destructive page, e.g., deleting the account, with `destructive`. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.
+
+Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a popover with `ConfirmButton`, not a modal. Deleting an account asks for the password instead, with `DeleteForm`.
+
 ## Interactive affordances
 
 Tailwind 4's preflight removes the browser default `cursor: pointer` on `<button>`. Without it, controls visually read as static text. Apply `cursor-pointer` on every interactive element that isn't a plain link: buttons, custom clickable rows, menu triggers, anything whose `onClick` activates an action. `<a href>` keeps the link cursor automatically.
