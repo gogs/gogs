@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -166,12 +167,34 @@ func postDiscord(client *http.Client, url string, payload any) (int64, error) {
 	return -1, nil
 }
 
-// webhookHandler posts one formatted line to Slack or Discord.
+type webhookPoster interface {
+	post(level, message string) error
+}
+
+type webhookMessage struct {
+	level string
+	text  string
+}
+
+// webhookHandler queues one formatted line per record for Slack or Discord.
+// A single goroutine posts them, so callers only wait when the queue is full.
 type webhookHandler struct {
-	level   slog.Level
-	slack   *slackHandler
-	discord *discordHandler
-	attrs   []slog.Attr
+	level slog.Level
+	queue chan<- webhookMessage
+	attrs []slog.Attr
+}
+
+func newWebhookHandler(level slog.Level, poster webhookPoster, bufferLen int64) *webhookHandler {
+	queue := make(chan webhookMessage, bufferLen)
+	go func() {
+		for m := range queue {
+			if err := poster.post(m.level, m.text); err != nil {
+				// Logging this through the logger could loop back into the webhook.
+				fmt.Fprintf(os.Stderr, "Failed to post log message to webhook: %v\n", err)
+			}
+		}
+	}()
+	return &webhookHandler{level: level, queue: queue}
 }
 
 func (h *webhookHandler) Enabled(_ context.Context, level slog.Level) bool {
@@ -192,16 +215,7 @@ func (h *webhookHandler) Handle(_ context.Context, r slog.Record) error {
 		})
 		msg = b.String()
 	}
-	level := r.Level.String()
-	var err error
-	if h.slack != nil {
-		err = h.slack.post(level, msg)
-	} else {
-		err = h.discord.post(level, msg)
-	}
-	if err != nil {
-		return errors.Wrap(err, "post webhook")
-	}
+	h.queue <- webhookMessage{level: r.Level.String(), text: msg}
 	return nil
 }
 

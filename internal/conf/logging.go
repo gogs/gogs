@@ -33,8 +33,8 @@ type FileRotation struct {
 	MaxDays  int64
 }
 
-// loggerConf is one configured sink. Buffer is kept so the admin page still
-// shows the value from app.ini. It is not applied: charmlog writes synchronously.
+// loggerConf is one configured sink. Buffer is the queue length of the Slack
+// and Discord sinks. Console and file sinks write synchronously.
 type loggerConf struct {
 	Name     string
 	Level    string
@@ -158,9 +158,9 @@ func newLogHandler(c *loggerConf) (slog.Handler, error) {
 		}
 		return newCharmHandler(w, level, IsProdMode()), nil
 	case ModeSlack:
-		return &webhookHandler{level: level, slack: newSlackHandler(c.URL)}, nil
+		return newWebhookHandler(level, newSlackHandler(c.URL), c.Buffer), nil
 	case ModeDiscord:
-		return &webhookHandler{level: level, discord: newDiscordHandler(c.URL, c.Username)}, nil
+		return newWebhookHandler(level, newDiscordHandler(c.URL, c.Username), c.Buffer), nil
 	}
 	return nil, errors.Newf("unknown mode %q", c.Name)
 }
@@ -210,7 +210,8 @@ func parseLevel(s string) slog.Level {
 	case "error":
 		return slog.LevelError
 	case "fatal":
-		return slog.LevelError + 4
+		// logx.FatalContext logs at the error level before exiting.
+		return slog.LevelError
 	default:
 		return slog.LevelDebug
 	}

@@ -69,7 +69,9 @@ func FuncMap(logger *logx.Logger) []template.FuncMap {
 			"LoadTimes": func(startTime time.Time) string {
 				return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 			},
-			"AvatarLink":       tool.AvatarLink,
+			"AvatarLink": func(email string) string {
+				return tool.AvatarLink(logger, email)
+			},
 			"AppendAvatarSize": tool.AppendAvatarSize,
 			"Safe":             Safe,
 			"Escape":           template.HTMLEscapeString,
