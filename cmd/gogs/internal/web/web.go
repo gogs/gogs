@@ -312,6 +312,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Group("/:org", func() {
 				m.Get("/teams/new", func(c *context.Context) { c.ServeWeb() })
 				m.Get("/teams/:team/edit", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/teams/:team/delete", func(c *context.Context) { c.ServeWeb() })
 
 				m.Group("/settings", func() {
 					m.Combo("").Get(org.Settings).

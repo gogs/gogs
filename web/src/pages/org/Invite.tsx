@@ -40,9 +40,11 @@ export function OrgInvite({ org: orgName }: { org: string }) {
     <main className="flex-1">
       <OrgHeader org={org} activeTab="people" />
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-        <form onSubmit={onSubmit} noValidate className="max-w-xl">
+        <form onSubmit={onSubmit} noValidate>
           <fieldset disabled={mutation.isPending} className="contents">
-            <h2 className="mb-4 text-xl font-semibold">{t("org.invite_someone")}</h2>
+            <h2 className="mb-4 border-b border-(--color-border) pb-3 text-xl font-semibold">
+              {t("org.invite_someone")}
+            </h2>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="username">{t("username")}</Label>
               <div className="flex flex-wrap gap-2">

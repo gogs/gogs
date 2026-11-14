@@ -13,7 +13,7 @@ import { userProfileQuery } from "@/lib/queries/user";
 import { OrgInvite } from "@/pages/org/Invite";
 import { OrgMembers } from "@/pages/org/Members";
 import { OrgTeam, type TeamPageData } from "@/pages/org/Team";
-import { TeamForm } from "@/pages/org/TeamForm";
+import { TeamDelete, TeamForm } from "@/pages/org/TeamForm";
 import { OrgTeams } from "@/pages/org/Teams";
 
 interface RouterContext {
@@ -157,5 +157,36 @@ export function createOrgRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [membersRoute, teamsRoute, teamRoute, teamReposRoute, inviteRoute, newTeamRoute, editTeamRoute];
+  const deleteTeamRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/teams/$team/delete",
+    loader: ({ params, context }) => {
+      const { queryClient } = context as RouterContext;
+      return loadOrgPage(queryClient, params.org, async () => {
+        const [, team] = await Promise.all([
+          requireOwner(queryClient, params.org),
+          fetchOrgTeam(params.org, params.team),
+        ]);
+        // The owners team cannot be deleted.
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        if (team.isOwnerTeam) throw notFound();
+        return team;
+      });
+    },
+    component: function DeleteTeam() {
+      const { org } = deleteTeamRoute.useParams();
+      return <TeamDelete org={org} team={deleteTeamRoute.useLoaderData()} />;
+    },
+  });
+
+  return [
+    membersRoute,
+    teamsRoute,
+    teamRoute,
+    teamReposRoute,
+    inviteRoute,
+    newTeamRoute,
+    editTeamRoute,
+    deleteTeamRoute,
+  ];
 }

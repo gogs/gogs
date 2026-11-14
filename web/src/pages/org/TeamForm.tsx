@@ -1,10 +1,19 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type ComponentProps, type FormEvent, type ReactElement, cloneElement, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  type FormEvent,
+  type ReactElement,
+  type ReactNode,
+  cloneElement,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { OrgHeader } from "@/components/OrgHeader";
+import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,112 +76,175 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
     save.mutate();
   };
 
+  const formElement = (
+    <form onSubmit={onSubmit} noValidate>
+      <fieldset disabled={save.isPending} className="contents">
+        {team ? null : <h2 className={HEADING}>{title}</h2>}
+        {formError ? (
+          <div
+            role="alert"
+            className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
+          >
+            {formError}
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-5">
+          <Field
+            id="teamName"
+            label={t("org.team_name")}
+            helper={t("org.team_name_helper")}
+            error={fieldErrors.teamName}
+            invalid={"teamName" in fieldErrors}
+          >
+            <Input
+              ref={teamNameRef}
+              id="teamName"
+              name="teamName"
+              autoComplete="off"
+              required
+              autoFocus={!isOwnerTeam}
+              readOnly={isOwnerTeam}
+              value={form.teamName}
+              onChange={(e) => setForm({ ...form, teamName: e.target.value })}
+              className={isOwnerTeam ? "bg-(--color-surface) text-(--color-muted-foreground)" : undefined}
+            />
+          </Field>
+          <Field
+            id="description"
+            label={t("org.team_desc")}
+            helper={t("org.team_desc_helper")}
+            error={fieldErrors.description}
+            invalid={"description" in fieldErrors}
+          >
+            <Input
+              ref={descriptionRef}
+              id="description"
+              name="description"
+              autoComplete="off"
+              autoFocus={isOwnerTeam}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </Field>
+          {isOwnerTeam ? null : (
+            <fieldset className="flex flex-col gap-3">
+              <legend className="mb-3 text-sm font-medium">{t("org.team_permission_desc")}</legend>
+              {PERMISSIONS.map((permission) => (
+                <label key={permission} className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="radio"
+                    name="permission"
+                    value={permission}
+                    checked={form.permission === permission}
+                    onChange={() => setForm({ ...form, permission })}
+                    aria-describedby={`permission-${permission}-helper`}
+                    className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary)"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium">{t(`org.teams.${permission}_access`)}</span>
+                    <span
+                      id={`permission-${permission}-helper`}
+                      className="mt-0.5 block text-(--color-muted-foreground)"
+                    >
+                      {t(`org.teams.${permission}_access_helper`)}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          )}
+          <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
+            <Button type="submit" variant="outline">
+              {team ? t("org.teams.update_settings") : t("org.create_new_team")}
+            </Button>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+  );
+
   return (
     <main className="flex-1">
       <OrgHeader org={org} activeTab="teams" />
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-        <form onSubmit={onSubmit} noValidate className="max-w-xl">
-          <fieldset disabled={save.isPending} className="contents">
-            <h2 className="mb-4 text-xl font-semibold wrap-anywhere">
-              {team ? (
-                <>
-                  <Link
-                    to="/org/$org/teams/$team"
-                    params={{ org: orgName, team: team.lowerName }}
-                    className="text-(--color-primary) hover:underline"
-                  >
-                    {team.name}
-                  </Link>
-                  <span className="text-(--color-muted-foreground)" aria-hidden>
-                    {" / "}
-                  </span>
-                </>
-              ) : null}
-              {title}
-            </h2>
-            {formError ? (
-              <div
-                role="alert"
-                className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
-              >
-                {formError}
-              </div>
-            ) : null}
-            <div className="flex flex-col gap-5">
-              <Field
-                id="teamName"
-                label={t("org.team_name")}
-                helper={t("org.team_name_helper")}
-                error={fieldErrors.teamName}
-                invalid={"teamName" in fieldErrors}
-              >
-                <Input
-                  ref={teamNameRef}
-                  id="teamName"
-                  name="teamName"
-                  autoComplete="off"
-                  required
-                  autoFocus={!isOwnerTeam}
-                  readOnly={isOwnerTeam}
-                  value={form.teamName}
-                  onChange={(e) => setForm({ ...form, teamName: e.target.value })}
-                  className={isOwnerTeam ? "bg-(--color-surface) text-(--color-muted-foreground)" : undefined}
-                />
-              </Field>
-              <Field
-                id="description"
-                label={t("org.team_desc")}
-                helper={t("org.team_desc_helper")}
-                error={fieldErrors.description}
-                invalid={"description" in fieldErrors}
-              >
-                <Input
-                  ref={descriptionRef}
-                  id="description"
-                  name="description"
-                  autoComplete="off"
-                  autoFocus={isOwnerTeam}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                />
-              </Field>
-              {isOwnerTeam ? null : (
-                <fieldset className="flex flex-col gap-3">
-                  <legend className="mb-3 text-sm font-medium">{t("org.team_permission_desc")}</legend>
-                  {PERMISSIONS.map((permission) => (
-                    <label key={permission} className="flex cursor-pointer items-start gap-3">
-                      <input
-                        type="radio"
-                        name="permission"
-                        value={permission}
-                        checked={form.permission === permission}
-                        onChange={() => setForm({ ...form, permission })}
-                        aria-describedby={`permission-${permission}-helper`}
-                        className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary)"
-                      />
-                      <span className="text-sm">
-                        <span className="font-medium">{t(`org.teams.${permission}_access`)}</span>
-                        <span
-                          id={`permission-${permission}-helper`}
-                          className="mt-0.5 block text-(--color-muted-foreground)"
-                        >
-                          {t(`org.teams.${permission}_access_helper`)}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-              )}
-              <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
-                <Button type="submit" variant="outline">
-                  {team ? t("org.teams.update_settings") : t("org.create_new_team")}
-                </Button>
-                {team && !isOwnerTeam ? <DeleteTeamButton org={orgName} team={team} /> : null}
-              </div>
-            </div>
-          </fieldset>
-        </form>
-      </div>
+      {team ? (
+        <TeamSettingsLayout org={orgName} team={team} active="options">
+          {formElement}
+        </TeamSettingsLayout>
+      ) : (
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">{formElement}</div>
+      )}
+    </main>
+  );
+}
+
+const HEADING = "mb-4 border-b border-(--color-border) pb-3 text-xl font-semibold wrap-anywhere";
+
+// TeamSettingsLayout heads the settings pages of a team, with links between
+// them. The owners team cannot be deleted, so it has no link to do so.
+function TeamSettingsLayout({
+  org,
+  team,
+  active,
+  children,
+}: {
+  org: string;
+  team: OrgTeamDetail;
+  active: "options" | "delete";
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const titles = { options: t("org.settings.options"), delete: t("org.teams.delete_team_title") };
+  return (
+    <SettingsLayout
+      label={t("org.teams.settings")}
+      nav={
+        <>
+          <SettingsNavItem active={active === "options"}>
+            <Link to="/org/$org/teams/$team/edit" params={{ org, team: team.lowerName }}>
+              {titles.options}
+            </Link>
+          </SettingsNavItem>
+          {team.isOwnerTeam ? null : (
+            <SettingsNavItem active={active === "delete"} destructive>
+              <Link to="/org/$org/teams/$team/delete" params={{ org, team: team.lowerName }}>
+                {titles.delete}
+              </Link>
+            </SettingsNavItem>
+          )}
+        </>
+      }
+    >
+      <h2 className={HEADING}>
+        <Link
+          to="/org/$org/teams/$team"
+          params={{ org, team: team.lowerName }}
+          className="text-(--color-primary) hover:underline"
+        >
+          {team.name}
+        </Link>
+        <span className="text-(--color-muted-foreground)" aria-hidden>
+          {" / "}
+        </span>
+        {titles[active]}
+      </h2>
+      {children}
+    </SettingsLayout>
+  );
+}
+
+// TeamDelete deletes a team other than the owners team. Only owners get here.
+export function TeamDelete({ org: orgName, team }: { org: string; team: OrgTeamDetail }) {
+  const { t } = useTranslation();
+  const { data: org } = useSuspenseQuery(userProfileQuery(orgName));
+  usePageTitle(`${team.name} ${t("org.teams.delete_team_title")} - ${org.fullName || org.name}`);
+  if (org.kind !== "organization") return null;
+  return (
+    <main className="flex-1">
+      <OrgHeader org={org} activeTab="teams" />
+      <TeamSettingsLayout org={orgName} team={team} active="delete">
+        <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("org.teams.delete_team_desc")}</p>
+        <DeleteTeamButton org={orgName} team={team} />
+      </TeamSettingsLayout>
     </main>
   );
 }
