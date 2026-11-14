@@ -21,11 +21,6 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 		return
 	}
 
-	if puser.IsOrganization() {
-		showOrgProfile(c)
-		return
-	}
-
 	c.ServeWeb()
 }
 

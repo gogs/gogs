@@ -17,7 +17,6 @@ const (
 	tmplUserDashboard       = "user/dashboard/dashboard"
 	tmplUserDashboardFeeds  = "user/dashboard/feeds"
 	tmplUserDashboardIssues = "user/dashboard/issues"
-	tmplOrgHome             = "org/home"
 )
 
 // getDashboardContextUser finds out dashboard is viewing as which context user.
@@ -378,61 +377,6 @@ func ShowSSHKeys(c *context.Context, uid int64) {
 		buf.WriteString("\n")
 	}
 	c.PlainText(http.StatusOK, buf.String())
-}
-
-func showOrgProfile(c *context.Context) {
-	c.SetParams(":org", c.Params(":username"))
-	context.HandleOrgAssignment(c)
-	if c.Written() {
-		return
-	}
-
-	org := c.Org.Organization
-	c.Data["Title"] = org.FullName
-
-	page := c.QueryInt("page")
-	if page <= 0 {
-		page = 1
-	}
-
-	var (
-		repos []*database.Repository
-		count int64
-		err   error
-	)
-	if c.IsLogged && !c.User.IsAdmin {
-		repos, count, err = org.GetUserRepositories(c.User.ID, page, conf.UI.User.RepoPagingNum)
-		if err != nil {
-			c.Error(err, "get user repositories")
-			return
-		}
-		c.Data["Repos"] = repos
-	} else {
-		showPrivate := c.IsLogged && c.User.IsAdmin
-		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
-			UserID:   org.ID,
-			Private:  showPrivate,
-			Page:     page,
-			PageSize: conf.UI.User.RepoPagingNum,
-		})
-		if err != nil {
-			c.Error(err, "get user repositories")
-			return
-		}
-		c.Data["Repos"] = repos
-		count = database.CountUserRepositories(org.ID, showPrivate)
-	}
-	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
-
-	if err := org.GetMembers(12); err != nil {
-		c.Error(err, "get members")
-		return
-	}
-	c.Data["Members"] = org.Members
-
-	c.Data["Teams"] = org.Teams
-
-	c.Success(tmplOrgHome)
 }
 
 func Email2User(c *context.Context) {

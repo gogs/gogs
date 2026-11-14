@@ -177,8 +177,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Group("/users/{username}", func() {
 			f.Get("", getUserProfile)
 			f.Get("/repos", getUserProfileRepos)
-			f.Get("/activity", getUserProfileActivity)
-			f.Combo("/follow").Post(postUserFollow).Delete(deleteUserFollow)
+			f.Get("/activity", requireIndividualUser, getUserProfileActivity)
+			f.Combo("/follow", requireIndividualUser).Post(postUserFollow).Delete(deleteUserFollow)
 		}, requireViewAccess, withProfileUser)
 	}, enforceWebAPIMaxBodySize)
 }

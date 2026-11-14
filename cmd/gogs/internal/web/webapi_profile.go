@@ -20,14 +20,13 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-// profileUser is the individual user whose profile is requested.
+// profileUser is the user or organization whose profile is requested.
 type profileUser struct {
 	*database.User
 }
 
-// withProfileUser maps the individual user named by the `username` path
-// parameter as *profileUser. Organizations have their own home page, so they
-// are not found here.
+// withProfileUser maps the user or organization named by the `username` path
+// parameter as *profileUser.
 func withProfileUser(c flamego.Context) {
 	w := c.ResponseWriter()
 	name := c.Param("username")
@@ -41,11 +40,15 @@ func withProfileUser(c flamego.Context) {
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get user"))
 		return
 	}
-	if u.IsOrganization() {
-		writeErrorResponse(w, http.StatusNotFound, errors.New("user does not exist"))
-		return
-	}
 	c.Map(&profileUser{u})
+}
+
+// requireIndividualUser turns away requests for organizations, which have no
+// activity or followers.
+func requireIndividualUser(c flamego.Context, puser *profileUser) {
+	if puser.IsOrganization() {
+		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("user does not exist"))
+	}
 }
 
 // canSeePrivate returns true if the viewer may see the private repositories and
@@ -60,6 +63,8 @@ type userProfileOrg struct {
 }
 
 type userProfile struct {
+	// Kind is "user", telling individual users apart from organizations.
+	Kind string `json:"kind"`
 	exploreUser
 	FollowerCount     int              `json:"followerCount"`
 	FollowingCount    int              `json:"followingCount"`
@@ -68,7 +73,13 @@ type userProfile struct {
 	ViewerIsFollowing bool             `json:"viewerIsFollowing"`
 }
 
-func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userProfile, err error) {
+// getUserProfile returns the profile of a user, or the home page of an
+// organization.
+func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp any, err error) {
+	if puser.IsOrganization() {
+		return getOrgProfile(viewer, puser)
+	}
+
 	ctx := c.Request().Context()
 	orgs, err := database.GetOrgsByUserID(puser.ID, puser.canSeePrivate(viewer))
 	if err != nil {
@@ -77,6 +88,7 @@ func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser
 	}
 
 	profile := &userProfile{
+		Kind:           "user",
 		exploreUser:    toExploreUser(puser.User),
 		FollowerCount:  puser.NumFollowers,
 		FollowingCount: puser.NumFollowing,
@@ -102,13 +114,24 @@ func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser
 
 func getUserProfileRepos(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
 	page := pageParam(c)
-	showPrivate := puser.canSeePrivate(viewer)
-	repos, err := database.GetUserRepositories(&database.UserRepoOptions{
-		UserID:   puser.ID,
-		Private:  showPrivate,
-		Page:     page,
-		PageSize: conf.UI.User.RepoPagingNum,
-	})
+	var (
+		repos []*database.Repository
+		total int64
+	)
+	if puser.IsOrganization() && viewer != nil && !viewer.IsAdmin {
+		// Signed-in users see the public repositories of the organization and
+		// those of their teams.
+		repos, total, err = puser.GetUserRepositories(viewer.ID, page, conf.UI.User.RepoPagingNum)
+	} else {
+		showPrivate := puser.canSeePrivate(viewer)
+		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
+			UserID:   puser.ID,
+			Private:  showPrivate,
+			Page:     page,
+			PageSize: conf.UI.User.RepoPagingNum,
+		})
+		total = database.CountUserRepositories(puser.ID, showPrivate)
+	}
 	if err != nil {
 		log.Error("getUserProfileRepos: get repositories of user %d: %v", puser.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repositories")
@@ -116,7 +139,6 @@ func getUserProfileRepos(c flamego.Context, viewer *database.User, puser *profil
 	for _, repo := range repos {
 		repo.Owner = puser.User
 	}
-	total := database.CountUserRepositories(puser.ID, showPrivate)
 	return http.StatusOK, newListPage(toExploreRepos(repos), page, total, conf.UI.User.RepoPagingNum), nil
 }
 
@@ -341,4 +363,99 @@ func postUserFollow(c flamego.Context, viewer *database.User, puser *profileUser
 
 func deleteUserFollow(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
 	return userFollowAction(c.Request().Context(), viewer, puser, false)
+}
+
+type orgProfileMember struct {
+	Name      string `json:"name"`
+	FullName  string `json:"fullName,omitempty"`
+	AvatarURL string `json:"avatarURL"`
+}
+
+type orgProfileTeam struct {
+	Name        string `json:"name"`
+	LowerName   string `json:"lowerName"`
+	MemberCount int    `json:"memberCount"`
+	RepoCount   int    `json:"repoCount"`
+}
+
+type orgProfile struct {
+	// Kind is "organization", telling organizations apart from individual users.
+	Kind string `json:"kind"`
+	exploreUser
+	ID          int64              `json:"id"`
+	Description string             `json:"description,omitempty"`
+	Members     []orgProfileMember `json:"members"`
+	// The member and team counts and the teams are only shown to members.
+	MemberCount    int              `json:"memberCount,omitempty"`
+	TeamCount      int              `json:"teamCount,omitempty"`
+	Teams          []orgProfileTeam `json:"teams,omitempty"`
+	ViewerIsMember bool             `json:"viewerIsMember"`
+	ViewerIsOwner  bool             `json:"viewerIsOwner"`
+}
+
+// orgMembersShown is the number of members listed on the home page of an
+// organization, matching the server-rendered page.
+const orgMembersShown = 12
+
+func getOrgProfile(user *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
+	profile := &orgProfile{
+		Kind:        "organization",
+		exploreUser: toExploreUser(org.User),
+		ID:          org.ID,
+		Description: org.Description,
+		Members:     []orgProfileMember{},
+	}
+	// The avatar is shown at 100px wide, so request it for 2x displays.
+	profile.AvatarURL = tool.AppendAvatarSize(org.AvatarURLPath(), 200)
+	profile.Website = org.Website
+	if user != nil {
+		// Admins have the access of owners.
+		profile.ViewerIsOwner = user.IsAdmin || org.IsOwnedBy(user.ID)
+		profile.ViewerIsMember = profile.ViewerIsOwner || org.IsOrgMember(user.ID)
+	}
+
+	if err = org.GetMembers(orgMembersShown); err != nil {
+		log.Error("getOrgProfile: get members of organization %d: %v", org.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get members")
+	}
+	for _, m := range org.Members {
+		// Members see everyone, others only the public members.
+		if !profile.ViewerIsMember && !m.IsPublicMember(org.ID) {
+			continue
+		}
+		member := toExploreUser(m)
+		profile.Members = append(profile.Members, orgProfileMember{
+			Name:      member.Name,
+			FullName:  member.FullName,
+			AvatarURL: member.AvatarURL,
+		})
+	}
+
+	if !profile.ViewerIsMember {
+		return http.StatusOK, profile, nil
+	}
+	profile.MemberCount = org.NumMembers
+	profile.TeamCount = org.NumTeams
+	// Owners see every team, other members only their own.
+	var teams []*database.Team
+	if profile.ViewerIsOwner {
+		err = org.GetTeams()
+		teams = org.Teams
+	} else {
+		teams, err = org.GetUserTeams(user.ID)
+	}
+	if err != nil {
+		log.Error("getOrgProfile: get teams of organization %d: %v", org.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get teams")
+	}
+	profile.Teams = make([]orgProfileTeam, 0, len(teams))
+	for _, team := range teams {
+		profile.Teams = append(profile.Teams, orgProfileTeam{
+			Name:        team.Name,
+			LowerName:   team.LowerName,
+			MemberCount: team.NumMembers,
+			RepoCount:   team.NumRepos,
+		})
+	}
+	return http.StatusOK, profile, nil
 }
