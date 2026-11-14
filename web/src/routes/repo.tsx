@@ -24,6 +24,9 @@ import {
   fetchRepoProtectedBranch,
   fetchRepoRelease,
   fetchRepoReleases,
+  fetchRepoWiki,
+  fetchRepoWikiPageSource,
+  fetchRepoWikiPages,
   repoHeaderQuery,
   repoSettingsQuery,
 } from "@/lib/queries/repo";
@@ -54,6 +57,8 @@ import {
   RepoGitHooks,
   RepoOptions,
 } from "@/pages/repo/Settings";
+import { RepoWiki, RepoWikiEditor, RepoWikiPages } from "@/pages/repo/Wiki";
+import { wikiPageName } from "@/pages/repo/Wiki.path";
 
 // Match the legacy server-side route constraint (see `web.go` near the
 // `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
@@ -674,6 +679,94 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // A link to a missing page leads to the list of pages.
+  async function fetchWikiPage(owner: string, repo: string, page: string) {
+    try {
+      return await fetchRepoWiki(owner, repo, page);
+    } catch (err) {
+      if (err instanceof LoaderResponseError && err.errorField === "page does not exist") {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ to: "/$owner/$repo/wiki/_pages", params: { owner, repo } });
+      }
+      throw err;
+    }
+  }
+
+  const repoWikiRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchWikiPage(params.owner, params.repo, "Home"),
+      ),
+    component: function Wiki() {
+      const { owner, repo } = repoWikiRoute.useParams();
+      return <RepoWiki owner={owner} name={repo} data={repoWikiRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoWikiPageRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/$page",
+    loader: ({ params, context, location }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchWikiPage(params.owner, params.repo, wikiPageName(location.pathname, 0)),
+      ),
+    component: function WikiPage() {
+      const { owner, repo } = repoWikiPageRoute.useParams();
+      const data = repoWikiPageRoute.useLoaderData();
+      return <RepoWiki key={data.page?.name} owner={owner} name={repo} data={data} />;
+    },
+  });
+
+  const repoWikiPagesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/_pages",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoWikiPages(params.owner, params.repo),
+      ),
+    component: function WikiPages() {
+      const { owner, repo } = repoWikiPagesRoute.useParams();
+      return <RepoWikiPages owner={owner} name={repo} data={repoWikiPagesRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoWikiNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/_new",
+    loader: async ({ params, context }) => {
+      const data = await loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoWikiPages(params.owner, params.repo),
+      );
+      if (!data.viewerCanWrite) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return data;
+    },
+    component: function WikiNew() {
+      const { owner, repo } = repoWikiNewRoute.useParams();
+      // The first page is the home page of the wiki.
+      const defaultTitle = repoWikiNewRoute.useLoaderData().pages.length ? "" : "Home";
+      return <RepoWikiEditor key={`${owner}/${repo}`} owner={owner} name={repo} defaultTitle={defaultTitle} />;
+    },
+  });
+
+  const repoWikiEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/$page/_edit",
+    loader: ({ params, context, location }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoWikiPageSource(params.owner, params.repo, wikiPageName(location.pathname, 1)),
+      ),
+    component: function WikiEdit() {
+      const { owner, repo } = repoWikiEditRoute.useParams();
+      const page = repoWikiEditRoute.useLoaderData();
+      return <RepoWikiEditor key={page.name} owner={owner} name={repo} page={page} />;
+    },
+  });
+
   return [
     repoCommitRoute,
     repoStargazersRoute,
@@ -688,6 +781,11 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoReleasesRoute,
     repoReleaseNewRoute,
     repoReleaseEditRoute,
+    repoWikiRoute,
+    repoWikiPagesRoute,
+    repoWikiNewRoute,
+    repoWikiPageRoute,
+    repoWikiEditRoute,
     repoLabelsRoute,
     repoMilestonesRoute,
     repoMilestoneNewRoute,

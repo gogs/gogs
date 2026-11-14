@@ -33,6 +33,7 @@ export function MarkdownEditor({
   autoFocus,
   disabled,
   uploads,
+  minLines,
 }: {
   repo: RepoRef;
   label: string;
@@ -43,6 +44,7 @@ export function MarkdownEditor({
   disabled?: boolean;
   // uploads attaches the files pasted or dropped into the editor.
   uploads?: AttachmentUploads;
+  minLines?: number;
 }) {
   const { t } = useTranslation();
   const id = useId();
@@ -91,6 +93,7 @@ export function MarkdownEditor({
             onChange={onChange}
             autoFocus={autoFocus}
             disabled={disabled}
+            minLines={minLines}
             onFiles={uploads?.settings ? uploads.add : undefined}
             aria-invalid={Boolean(error) || undefined}
             aria-describedby={error ? `${id}-error` : undefined}

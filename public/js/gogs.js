@@ -310,11 +310,6 @@ function initRepository() {
     });
   }
 
-  // Wiki
-  if ($(".repository.wiki.view").length > 0) {
-    initFilterSearchDropdown(".choose.page .dropdown");
-  }
-
   // Issues
   if ($(".repository.view.issue").length > 0) {
     // Edit issue title
@@ -523,69 +518,6 @@ function initRepository() {
       } else {
         $(".commit.description.field").hide();
       }
-    });
-  }
-}
-
-function initWikiForm() {
-  var $editArea = $(".repository.wiki textarea#edit_area");
-  if ($editArea.length > 0) {
-    new SimpleMDE({
-      autoDownloadFontAwesome: false,
-      element: $editArea[0],
-      forceSync: true,
-      previewRender: function(plainText, preview) {
-        // Async method
-        setTimeout(function() {
-          // FIXME: still send render request when return back to edit mode
-          $.post(
-            $editArea.data("url"),
-            {
-              mode: "gfm",
-              context: $editArea.data("context"),
-              text: plainText
-            },
-            function(data) {
-              preview.innerHTML = '<div class="markdown">' + data + "</div>";
-              emojify.run($(".editor-preview")[0]);
-            }
-          );
-        }, 0);
-
-        return "Loading...";
-      },
-      renderingConfig: {
-        singleLineBreaks: false
-      },
-      indentWithTabs: false,
-      tabSize: 4,
-      spellChecker: false,
-      toolbar: [
-        "bold",
-        "italic",
-        "strikethrough",
-        "|",
-        "heading-1",
-        "heading-2",
-        "heading-3",
-        "heading-bigger",
-        "heading-smaller",
-        "|",
-        "code",
-        "quote",
-        "|",
-        "unordered-list",
-        "ordered-list",
-        "|",
-        "link",
-        "image",
-        "table",
-        "horizontal-rule",
-        "|",
-        "clean-block",
-        "preview",
-        "fullscreen"
-      ]
     });
   }
 }
@@ -1237,7 +1169,6 @@ $(document).ready(function() {
 
   initCommentForm();
   initRepository();
-  initWikiForm();
   initEditForm();
   initEditor();
   initCodeView();

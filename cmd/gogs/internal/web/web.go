@@ -390,9 +390,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		}, reqSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
 			m.Group("/wiki", func() {
-				m.Get("/?:page", repo.Wiki)
-				m.Get("/_pages", repo.WikiPages)
-			}, repo.MustEnableWiki, context.RepoRef())
+				m.Get("/?:page", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/_pages", func(c *context.Context) { c.ServeWeb() })
+			}, repo.MustEnableWiki)
 		}, ignSignIn, context.RepoAssignment(false, true))
 
 		m.Group("/:username/:reponame", func() {
@@ -478,14 +478,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			})
 
 			m.Group("/wiki", func() {
-				m.Group("", func() {
-					m.Combo("/_new").Get(repo.NewWiki).
-						Post(bindIgnErr(form.NewWiki{}), repo.NewWikiPost)
-					m.Combo("/:page/_edit").Get(repo.EditWiki).
-						Post(bindIgnErr(form.NewWiki{}), repo.EditWikiPost)
-					m.Post("/:page/delete", repo.DeleteWikiPagePost)
-				}, reqSignIn, reqRepoWriter)
-			}, repo.MustEnableWiki, context.RepoRef())
+				m.Get("/_new", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/:page/_edit", func(c *context.Context) { c.ServeWeb() })
+			}, reqSignIn, reqRepoWriter, repo.MustEnableWiki)
 
 			m.Get("/archive/*", repo.MustBeNotEmpty, repo.Download)
 			m.Get("/forks", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
