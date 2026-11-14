@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -135,35 +136,97 @@ func SetEngine(logger *logx.Logger) (*gorm.DB, error) {
 	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
-	xormWriter := &xormLogWriter{logger: logger.Scoped("xorm")}
+	xormLevel := core.LOG_DEBUG
 	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(xormWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
-	} else {
-		x.SetLogger(xorm.NewSimpleLogger(xormWriter))
+		xormLevel = core.LOG_ERR
 	}
+	x.SetLogger(&xormLogger{logger: logger.Scoped("xorm"), level: xormLevel})
 	x.ShowSQL(true)
 
-	return NewConnection(logger, dbx.NewLogger(logger.Scoped("gorm")))
+	return NewConnection(logger)
 }
 
-// xormLogWriter sends xorm's log lines through the process logger. xorm only
-// accepts an io.Writer, so the level is chosen from the line prefix.
-type xormLogWriter struct {
-	logger *logx.Logger
+// xormLogger sends xorm's logs through the process logger, one structured
+// line per query.
+type xormLogger struct {
+	logger  *logx.Logger
+	level   core.LogLevel
+	showSQL bool
 }
 
-func (w *xormLogWriter) Write(p []byte) (int, error) {
-	msg := strings.TrimRight(string(p), "\n")
-	switch {
-	case strings.Contains(msg, "[error]"):
-		w.logger.Error(msg)
-	case strings.Contains(msg, "[warn]"):
-		w.logger.Warn(msg)
-	default:
-		w.logger.Debug(msg)
+var _ core.ILogger = (*xormLogger)(nil)
+
+// maxXormArgLength caps each logged query argument, so a large value such as a
+// webhook payload does not fill the log.
+const maxXormArgLength = 200
+
+func (l *xormLogger) log(level core.LogLevel, msg string) {
+	if level < l.level {
+		return
 	}
-	return len(p), nil
+	switch level {
+	case core.LOG_ERR:
+		l.logger.Error(msg)
+	case core.LOG_WARNING:
+		l.logger.Warn(msg)
+	default:
+		// xorm logs queries at its info level, which is debug output for Gogs.
+		l.logger.Debug(msg)
+	}
 }
+
+func (l *xormLogger) Debug(v ...any) { l.log(core.LOG_DEBUG, fmt.Sprint(v...)) }
+func (l *xormLogger) Debugf(format string, v ...any) {
+	l.log(core.LOG_DEBUG, fmt.Sprintf(format, v...))
+}
+func (l *xormLogger) Error(v ...any)                 { l.log(core.LOG_ERR, fmt.Sprint(v...)) }
+func (l *xormLogger) Errorf(format string, v ...any) { l.log(core.LOG_ERR, fmt.Sprintf(format, v...)) }
+func (l *xormLogger) Info(v ...any)                  { l.log(core.LOG_INFO, fmt.Sprint(v...)) }
+func (l *xormLogger) Warn(v ...any)                  { l.log(core.LOG_WARNING, fmt.Sprint(v...)) }
+func (l *xormLogger) Warnf(format string, v ...any) {
+	l.log(core.LOG_WARNING, fmt.Sprintf(format, v...))
+}
+
+func (l *xormLogger) Infof(format string, v ...any) {
+	if l.level > core.LOG_INFO {
+		return
+	}
+	// xorm logs every query as "[SQL] %v %#v" with the query and its arguments.
+	if strings.HasPrefix(format, "[SQL] ") && len(v) > 0 {
+		attrs := []any{"sql", v[0]}
+		if args, ok := v[len(v)-1].([]any); ok && len(v) > 1 {
+			attrs = append(attrs, "args", formatXormArgs(args))
+		}
+		l.logger.Debug("Query", attrs...)
+		return
+	}
+	l.log(core.LOG_INFO, fmt.Sprintf(format, v...))
+}
+
+func formatXormArgs(args []any) string {
+	parts := make([]string, len(args))
+	for i, arg := range args {
+		s, ok := arg.(string)
+		if !ok {
+			parts[i] = fmt.Sprintf("%v", arg)
+			continue
+		}
+		if len(s) > maxXormArgLength {
+			s = fmt.Sprintf("%s... (%d bytes)", s[:maxXormArgLength], len(s))
+		}
+		parts[i] = strconv.Quote(s)
+	}
+	return "[" + strings.Join(parts, ", ") + "]"
+}
+
+func (l *xormLogger) Level() core.LogLevel      { return l.level }
+func (l *xormLogger) SetLevel(lv core.LogLevel) { l.level = lv }
+
+func (l *xormLogger) ShowSQL(show ...bool) {
+	l.showSQL = len(show) == 0 || show[0]
+}
+
+func (l *xormLogger) IsShowSQL() bool { return l.showSQL }
 
 func NewEngine(logger *logx.Logger) error {
 	db, err := SetEngine(logger)

@@ -222,7 +222,7 @@ func (c *Context) serveWeb(wr WebContext) {
 
 // Error renders the 500 page.
 func (c *Context) Error(err error, msg string) {
-	c.Logger.Error("Internal server error", "operation", msg, "error", err)
+	c.Logger.Error("Internal server error", "method", c.Req.Method, "path", c.Req.URL.Path, "operation", msg, "error", err)
 
 	wc := WebContext{
 		Lang:       c.Language(),

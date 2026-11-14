@@ -45,7 +45,7 @@ func (c *APIContext) ErrorStatus(status int, err error) {
 
 // Error renders the 500 response.
 func (c *APIContext) Error(err error, msg string) {
-	c.Logger.Error("Internal server error", "operation", msg, "error", err)
+	c.Logger.Error("Internal server error", "method", c.Req.Method, "path", c.Req.URL.Path, "operation", msg, "error", err)
 	c.ErrorStatus(
 		http.StatusInternalServerError,
 		errors.New("Something went wrong, please check the server logs for more information."),
