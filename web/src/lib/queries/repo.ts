@@ -766,6 +766,45 @@ export function deleteRepoPullBranch(issue: IssueRef) {
   return send("DELETE", issueURL(issue, "/branch"));
 }
 
+export interface RepoNewPullData extends IssueMetaOptions {
+  baseBranch: string;
+  // head names the head branch as the URL of the comparison does, with its
+  // owner when it is in a fork.
+  head: string;
+  headOwner: string;
+  headName: string;
+  headBranch: string;
+  // branches are those of the repository to merge into, and headBranches
+  // those of the repository of the head branch.
+  branches: string[];
+  headBranches: string[];
+  // state is "unrelated" when the branches have no common history, "even"
+  // when the head branch has nothing to merge, and "exists" when an open
+  // pull request has the same branches.
+  state: "unrelated" | "even" | "exists" | "ready";
+  pullIndex?: number;
+  commits: RepoCommitListItem[];
+  // diff is what the pull request would change, unless there is nothing to
+  // merge, in the repository of the head branch.
+  diff?: { base: string; head: string; owner: string; name: string };
+  // title and template prefill the form from the templates of the default
+  // branch.
+  title: string;
+  template: string;
+  attachment?: IssueAttachmentSettings;
+  viewerCanWrite: boolean;
+}
+
+// fetchRepoNewPull compares the branches of the range, written as
+// "<base>...[<owner>:]<head>", to open a pull request from them.
+export function fetchRepoNewPull(owner: string, name: string, range: string) {
+  return fetchJSON<RepoNewPullData>(repoURL(owner, name, `/pulls/new/${refPath(range)}`));
+}
+
+export function createRepoPull(owner: string, name: string, form: RepoNewIssueForm & { base: string; head: string }) {
+  return submit<{ index: number }>("POST", repoURL(owner, name, "/pulls"), form);
+}
+
 // renderRepoMarkdown renders Markdown the way the issues of the repository
 // are.
 export async function renderRepoMarkdown(owner: string, name: string, text: string) {

@@ -21,7 +21,6 @@ import (
 	"github.com/flamego/cache"
 	"github.com/flamego/captcha"
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/binding"
 	macaroncache "github.com/go-macaron/cache"
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
@@ -39,7 +38,6 @@ import (
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
@@ -84,8 +82,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
-
-	bindIgnErr := binding.BindIgnErr
 
 	m.SetAutoHead(true)
 
@@ -229,10 +225,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				}
 			})
 		}, ignSignIn)
-
-		m.Group("", func() {
-			m.Post("/issues/attachments", repo.UploadIssueAttachment)
-		}, reqSignIn)
 
 		m.Group("/:username", func() {
 			m.Post("/action/:action", user.Action)
@@ -404,11 +396,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				m.Get("/edit/*", func(c *context.Context) { c.ServeWeb() })
 			}, repo.MustBeNotEmpty, reqRepoWriter)
 
-			// FIXME: Should use c.Repo.PullRequest to unify the template. Same-repo PR URLs include a
-			// redundant head user, e.g. /org1/test-repo/compare/master...org1:develop should be
-			// /org1/test-repo/compare/master...develop.
-			m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
-				Post(bindIgnErr(form.NewIssue{}), repo.CompareAndPullRequestPost)
+			m.Get("/compare/*", repo.MustAllowPulls, func(c *context.Context) { c.ServeWeb() })
 
 			m.Group("", func() {
 				m.Get("/_edit/*", func(c *context.Context) { c.ServeWeb() })
