@@ -43,14 +43,6 @@ func withProfileUser(c flamego.Context) {
 	c.Map(&profileUser{u})
 }
 
-// requireIndividualUser turns away requests for organizations, which have no
-// activity or followers.
-func requireIndividualUser(c flamego.Context, puser *profileUser) {
-	if puser.IsOrganization() {
-		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("user does not exist"))
-	}
-}
-
 // canSeePrivate returns true if the viewer may see the private repositories and
 // organization memberships of the profile user.
 func (p *profileUser) canSeePrivate(viewer *database.User) bool {
@@ -311,6 +303,11 @@ func issueInfo(act *database.Action) string {
 }
 
 func getUserProfileActivity(c flamego.Context, l i18n.Locale, viewer *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
+	// Organizations have no activity tab.
+	if puser.IsOrganization() {
+		return http.StatusNotFound, nil, errors.New("user does not exist")
+	}
+
 	ctx := c.Request().Context()
 	afterID, _ := strconv.ParseInt(c.Query("afterID"), 10, 64)
 	actions, err := database.Handle.Actions().ListByUser(ctx, puser.ID, cmp.Or(viewer, &database.User{}).ID, afterID, true)
@@ -331,6 +328,10 @@ type userFollowResponse struct {
 }
 
 func userFollowAction(ctx context.Context, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
+	// Organizations cannot be followed.
+	if puser.IsOrganization() {
+		return http.StatusNotFound, nil, errors.New("user does not exist")
+	}
 	// Match the authentication requirement of the server-rendered follow form.
 	if viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
