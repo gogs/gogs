@@ -241,6 +241,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/new", getRepoNew)
 			f.Post("/create", bindJSON(repoCreateRequest{}), postRepoCreate)
 			f.Post("/migrate", bindJSON(repoMigrateRequest{}), postRepoMigrate)
+			f.Combo("/fork/{id}", withForkBaseRepo).Get(getRepoFork).Post(bindJSON(repoForkRequest{}), postRepoFork)
 		}, requireSignIn)
 		f.Post("/orgs", requireSignIn, bindJSON(orgCreateRequest{}), postOrg)
 		f.Group("/orgs/{org}", func() {

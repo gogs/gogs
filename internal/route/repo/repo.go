@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,37 +21,6 @@ func MustBeNotEmpty(c *context.Context) {
 	if c.Repo.Repository.IsEmpty {
 		c.NotFound()
 	}
-}
-
-func checkContextUser(c *context.Context, uid int64) *database.User {
-	orgs, err := database.GetOwnedOrgsByUserIDDesc(c.User.ID, "updated_unix")
-	if err != nil {
-		c.Error(err, "get owned organization by user ID")
-		return nil
-	}
-	c.Data["Orgs"] = orgs
-
-	// Not equal means current user is an organization.
-	if uid == c.User.ID || uid == 0 {
-		return c.User
-	}
-
-	org, err := database.Handle.Users().GetByID(c.Req.Context(), uid)
-	if database.IsErrUserNotExist(err) {
-		return c.User
-	}
-
-	if err != nil {
-		c.Error(err, "get user by ID")
-		return nil
-	}
-
-	// Check ownership of organization.
-	if !org.IsOrganization() || !(c.User.IsAdmin || org.IsOwnedBy(c.User.ID)) {
-		c.Status(http.StatusForbidden)
-		return nil
-	}
-	return org
 }
 
 func Action(c *context.Context) {

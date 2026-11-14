@@ -135,6 +135,7 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/admin/repos",
 		"/api/web/admin/notices",
 		"/api/web/repo/new",
+		"/api/web/repo/fork/1",
 	}
 	tests := []struct {
 		name                     string

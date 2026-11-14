@@ -142,3 +142,29 @@ export function createRepo(form: RepoCreateForm) {
 export function migrateRepo(form: RepoMigrateForm) {
   return submit<{ owner: string; name: string }>("POST", subUrl("/api/web/repo/migrate"), form);
 }
+
+export interface RepoForkOptions {
+  base: {
+    owner: string;
+    name: string;
+    description: string;
+    isPrivate: boolean;
+    isUnlisted: boolean;
+  };
+  owners: RepoNewOwner[];
+}
+
+export function fetchRepoForkOptions(id: number) {
+  return fetchJSON<RepoForkOptions>(subUrl(`/api/web/repo/fork/${id}`));
+}
+
+export interface RepoForkForm {
+  ownerID: number;
+  name: string;
+  description: string;
+}
+
+// forkRepo forks a repository, or finds the owner's existing fork of it.
+export function forkRepo(id: number, form: RepoForkForm) {
+  return submit<{ owner: string; name: string }>("POST", subUrl(`/api/web/repo/fork/${id}`), form);
+}
