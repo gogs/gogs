@@ -1,0 +1,7 @@
+{{template "header"}}
+
+{{Tr "mail.issue.mentioned" .Doer.DisplayName}}
+
+{{template "issue" .}}
+
+{{template "footer"}}

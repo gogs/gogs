@@ -1,14 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>{{.Username}}, welcome to {{AppName}}</title>
-</head>
-
-<body>
-	<p>Hi <b>{{.Username}}</b>, this is your registration confirmation email for {{AppName}}!</p>
-	<p>You can now login via username: {{.Username}}.</p>
-	<p><a href="{{AppURL}}user/sign-in">{{AppURL}}user/sign-in</a></p>
-	<p>© {{Year}} <a target="_blank" rel="noopener noreferrer" href="{{AppURL}}">{{AppName}}</a></p>
-</body>
-</html>
+{{template "header" (Tr "mail.register_notify")}}
+<p>{{Tr "mail.greeting" .Username}}</p>
+<p>{{Tr "mail.register_notify.body" AppName .Username}}</p>
+{{template "button" (dict "URL" (printf "%suser/sign-in" AppURL) "Label" (Tr "mail.register_notify.action"))}}
+{{template "footer"}}

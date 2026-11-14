@@ -1,0 +1,5 @@
+{{template "header"}}
+
+{{template "issue" .}}
+
+{{template "footer"}}

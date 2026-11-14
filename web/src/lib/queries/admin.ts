@@ -339,3 +339,27 @@ export function updateAdminAuthSource(id: number, form: AdminAuthSourceForm) {
 export function deleteAdminAuthSource(id: number) {
   return send("DELETE", adminURL(`/auths/${id}`));
 }
+
+// AdminEmailPreview is an email the server sends, composed with made-up data.
+export interface AdminEmailPreview {
+  // The names of all emails, e.g., "auth/activate".
+  names: string[];
+  langs: { lang: string; name: string }[];
+  name: string;
+  lang: string;
+  // Why the email could not be composed, e.g., a broken custom template.
+  error?: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+// fetchAdminEmailPreview composes an email. The language is not called "lang",
+// which the server takes to switch the language of the site.
+export function fetchAdminEmailPreview(search: { name?: string; language?: string }) {
+  const query = new URLSearchParams();
+  if (search.name) query.set("name", search.name);
+  if (search.language) query.set("language", search.language);
+  const qs = query.toString();
+  return fetchJSON<AdminEmailPreview>(adminURL("/emails") + (qs ? `?${qs}` : ""));
+}

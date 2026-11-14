@@ -282,6 +282,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Post("/operations/{name}", postAdminOperation)
 			f.Get("/config", getAdminConfig)
 			f.Post("/config/test-mail", bindJSON(adminTestMailRequest{}), postAdminTestMail)
+			f.Get("/emails", getAdminEmailPreview)
 			f.Get("/monitor", getAdminMonitor)
 			f.Combo("/auths").Get(getAdminAuthSources).Post(requireRecentAuth, bindJSON(adminAuthSourceRequest{}), postAdminAuthSource)
 			f.Combo("/auths/{id}", withAdminTargetAuthSource).
