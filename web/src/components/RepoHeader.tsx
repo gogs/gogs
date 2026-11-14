@@ -59,7 +59,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
   const user = useUserInfo();
   const queryClient = useQueryClient();
-  const signedIn = user !== null;
+  const authenticated = user !== null;
   const signInHref = subUrl(
     `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`,
   );
@@ -142,10 +142,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <SplitActionButton
               countHref={`${repoLink}/watchers`}
-              onAction={signedIn ? () => watchMutation.mutate() : undefined}
+              onAction={authenticated ? () => watchMutation.mutate() : undefined}
               signInHref={signInHref}
               disabled={watchMutation.isPending}
-              signedIn={signedIn}
+              authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_watch")}
               icon={Bell}
               label={repo.viewerIsWatching ? t("repo.unwatch") : t("repo.watch")}
@@ -156,10 +156,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             />
             <SplitActionButton
               countHref={`${repoLink}/stars`}
-              onAction={signedIn ? () => starMutation.mutate() : undefined}
+              onAction={authenticated ? () => starMutation.mutate() : undefined}
               signInHref={signInHref}
               disabled={starMutation.isPending}
-              signedIn={signedIn}
+              authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_star")}
               icon={Star}
               label={repo.viewerIsStarring ? t("repo.starred") : t("repo.star")}
@@ -173,9 +173,9 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               // Fork still goes through the legacy "choose where to fork to"
               // page (not yet migrated). Treat it as a navigation link, not a
               // one-click action.
-              actionHref={signedIn ? subUrl(`/repo/fork/${repo.id}`) : undefined}
+              actionHref={authenticated ? subUrl(`/repo/fork/${repo.id}`) : undefined}
               signInHref={signInHref}
-              signedIn={signedIn}
+              authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_fork")}
               icon={GitFork}
               label={t("repo.fork")}
@@ -349,20 +349,20 @@ interface SplitActionButtonProps {
   // URL for the count half (always renders as `<a>`).
   countHref: string;
   // When set, the action half fires this callback on click (used for
-  // signed-in users with a real mutation in flight).
+  // authenticated viewers with a real mutation in flight).
   onAction?: () => void;
   // Fallback href for the action half when `onAction` is not set (legacy
-  // page-navigation actions like Fork). Only used when the viewer is signed
-  // in; `signInHref` takes over when signed out.
+  // page-navigation actions like Fork). Only used when the viewer is
+  // authenticated; `signInHref` takes over when unauthenticated.
   actionHref?: string;
-  // Where to send signed-out viewers when they click the action half. The
+  // Where to send unauthenticated viewers when they click the action half. The
   // half renders disabled-looking but stays clickable so the affordance
   // works without forcing the viewer to dig for a sign-in button.
   signInHref?: string;
-  // Whether the viewer is signed in. Drives both the click target and the
+  // Whether the viewer is authenticated. Drives both the click target and the
   // disabled-looking styling + sign-in tooltip below.
-  signedIn?: boolean;
-  // Tooltip text shown when signed out. Should explain the gated action,
+  authenticated?: boolean;
+  // Tooltip text shown when unauthenticated. Should explain the gated action,
   // e.g. "Sign in to watch this repository".
   signInTooltip?: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean; fill?: string }>;
@@ -382,7 +382,7 @@ function SplitActionButton({
   onAction,
   actionHref,
   signInHref,
-  signedIn = true,
+  authenticated = true,
   signInTooltip,
   icon: Icon,
   label,
@@ -405,7 +405,7 @@ function SplitActionButton({
   );
 
   let action: ReactNode;
-  if (!signedIn) {
+  if (!authenticated) {
     const href = signInHref ?? countHref;
     action = (
       <Tooltip>

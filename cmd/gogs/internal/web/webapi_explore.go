@@ -16,23 +16,24 @@ import (
 	"gogs.io/gogs/internal/markup"
 )
 
-type explorePage[T any] struct {
+// listPage is one page of a paginated list.
+type listPage[T any] struct {
 	Items      []T `json:"items"`
 	Page       int `json:"page"`
 	TotalPages int `json:"totalPages"`
 }
 
-func newExplorePage[T any](items []T, page int, total int64) *explorePage[T] {
-	pageSize := int64(max(conf.UI.ExplorePagingNum, 1))
-	totalPages := int((total + pageSize - 1) / pageSize)
-	return &explorePage[T]{
+func newListPage[T any](items []T, page int, total int64, pageSize int) *listPage[T] {
+	size := int64(max(pageSize, 1))
+	totalPages := int((total + size - 1) / size)
+	return &listPage[T]{
 		Items:      items,
 		Page:       min(page, max(totalPages, 1)),
 		TotalPages: totalPages,
 	}
 }
 
-func explorePageParam(c flamego.Context) int {
+func pageParam(c flamego.Context) int {
 	return max(c.QueryInt("page"), 1)
 }
 
@@ -52,8 +53,8 @@ type exploreRepo struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreRepo], err error) {
-	page := explorePageParam(c)
+func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, resp *listPage[exploreRepo], err error) {
+	page := pageParam(c)
 	repos, total, err := database.SearchRepositoryByName(&database.SearchRepoOptions{
 		Keyword:  c.Query("q"),
 		UserID:   cmp.Or(viewer, &database.User{}).ID,
@@ -70,6 +71,11 @@ func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, 
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
 
+	return http.StatusOK, newListPage(toExploreRepos(repos), page, total, conf.UI.ExplorePagingNum), nil
+}
+
+// toExploreRepos converts repositories with their owners loaded.
+func toExploreRepos(repos []*database.Repository) []exploreRepo {
 	items := make([]exploreRepo, 0, len(repos))
 	for _, repo := range repos {
 		items = append(items, exploreRepo{
@@ -86,7 +92,7 @@ func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, 
 			UpdatedAt:       repo.Updated.UTC(),
 		})
 	}
-	return http.StatusOK, newExplorePage(items, page, total), nil
+	return items
 }
 
 type exploreUser struct {
@@ -138,8 +144,8 @@ func searchExploreUsers(ctx context.Context, typ database.UserType, keyword stri
 	return users, database.Handle.Users().Count(ctx), err
 }
 
-func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreUser], err error) {
-	page := explorePageParam(c)
+func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, resp *listPage[exploreUser], err error) {
+	page := pageParam(c)
 	users, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page)
 	if err != nil {
 		log.Error("getExploreUsers: search users: %v", err)
@@ -149,17 +155,17 @@ func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, 
 	items := make([]exploreUser, 0, len(users))
 	for _, u := range users {
 		item := toExploreUser(u)
-		// Email addresses are only shown to signed-in viewers.
+		// Email addresses are only shown to authenticated viewers.
 		if viewer != nil {
 			item.Email = u.Email
 		}
 		items = append(items, item)
 	}
-	return http.StatusOK, newExplorePage(items, page, total), nil
+	return http.StatusOK, newListPage(items, page, total, conf.UI.ExplorePagingNum), nil
 }
 
-func getExploreOrganizations(c flamego.Context) (statusCode int, resp *explorePage[exploreUser], err error) {
-	page := explorePageParam(c)
+func getExploreOrganizations(c flamego.Context) (statusCode int, resp *listPage[exploreUser], err error) {
+	page := pageParam(c)
 	orgs, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeOrganization, c.Query("q"), page)
 	if err != nil {
 		log.Error("getExploreOrganizations: search organizations: %v", err)
@@ -173,5 +179,5 @@ func getExploreOrganizations(c flamego.Context) (statusCode int, resp *explorePa
 		item.Description = org.Description
 		items = append(items, item)
 	}
-	return http.StatusOK, newExplorePage(items, page, total), nil
+	return http.StatusOK, newListPage(items, page, total, conf.UI.ExplorePagingNum), nil
 }

@@ -33,6 +33,9 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/explore/repos",
 		"/api/web/explore/users",
 		"/api/web/explore/organizations",
+		"/api/web/users/alice",
+		"/api/web/users/alice/repos",
+		"/api/web/users/alice/activity",
 	}
 	tests := []struct {
 		name                     string

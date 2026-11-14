@@ -1,50 +1,19 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import {
-  BookMarked,
-  Building2,
-  Clock,
-  EyeOff,
-  GitFork,
-  Link as LinkIcon,
-  Lock,
-  Mail,
-  MapPin,
-  Menu,
-  Search,
-  Star,
-  User,
-} from "lucide-react";
+import { BookMarked, Building2, Clock, Link as LinkIcon, Mail, MapPin, Search, User } from "lucide-react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { type PageTab, PageTabs } from "@/components/PageTabs";
 import { Pagination } from "@/components/Pagination";
+import { RepoListItem, type RepoListItemData } from "@/components/RepoListItem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 import type { ExploreKind, ExploreSearch } from "./Explore.search";
-
-export interface ExploreRepo {
-  owner: string;
-  name: string;
-  // Sanitized by the server, safe to render as HTML.
-  descriptionHTML: string;
-  avatarURL?: string;
-  isPrivate: boolean;
-  isUnlisted: boolean;
-  isFork: boolean;
-  isMirror: boolean;
-  starCount: number;
-  forkCount: number;
-  updatedAt: string;
-}
 
 export interface ExploreUser {
   name: string;
@@ -64,14 +33,8 @@ interface ExploreList<T> {
 }
 
 export type ExplorePage =
-  | ({ kind: "repos" } & ExploreList<ExploreRepo>)
+  | ({ kind: "repos" } & ExploreList<RepoListItemData>)
   | ({ kind: "users" | "organizations" } & ExploreList<ExploreUser>);
-
-interface ExploreTab {
-  kind: ExploreKind;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-}
 
 const route = getRouteApi("/explore/$kind");
 
@@ -84,10 +47,10 @@ export function Explore() {
   const navigate = useNavigate({ from: "/explore/$kind" });
   usePageTitle(t("explore"));
 
-  const tabs: ExploreTab[] = [
-    { kind: "repos", label: t("explore.repos"), icon: BookMarked },
-    { kind: "users", label: t("explore.users"), icon: User },
-    { kind: "organizations", label: t("explore.organizations"), icon: Building2 },
+  const tabs: PageTab<ExploreKind>[] = [
+    { key: "repos", label: t("explore.repos"), icon: BookMarked },
+    { key: "users", label: t("explore.users"), icon: User },
+    { key: "organizations", label: t("explore.organizations"), icon: Building2 },
   ];
 
   function onSearch(event: FormEvent<HTMLFormElement>) {
@@ -99,30 +62,15 @@ export function Explore() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
       <h1 className="mb-3 text-xl font-semibold">{t("explore")}</h1>
-      <nav aria-label={t("explore")} className="mb-4 flex border-b border-(--color-border)">
-        {tabs.map(({ kind, label, icon: Icon }) => {
-          const active = kind === data.kind;
-          return (
-            <Link
-              key={kind}
-              to="/explore/$kind"
-              params={{ kind }}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "-mb-px items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
-                active
-                  ? "flex border-(--color-primary) font-semibold text-(--color-foreground)"
-                  : "hidden border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground) sm:flex",
-              )}
-            >
-              <Icon className="size-4" aria-hidden />
-              {label}
-            </Link>
-          );
-        })}
-        {/* Only the active tab fits inline next to the menu at 375px. */}
-        <TabsOverflowMenu tabs={tabs.filter((tab) => tab.kind !== data.kind)} />
-      </nav>
+      <PageTabs
+        label={t("explore")}
+        tabs={tabs}
+        active={data.kind}
+        // Only the active tab fits next to the menu at 320px.
+        inline={1}
+        renderLink={(tab, props) => <Link to="/explore/$kind" params={{ kind: tab.key }} {...props} />}
+        className="mb-4 border-b border-(--color-border)"
+      />
 
       <form role="search" onSubmit={onSearch} className="flex gap-2">
         <div className="relative min-w-0 flex-1">
@@ -146,7 +94,7 @@ export function Explore() {
 
       <ul className="mt-4 border-t border-(--color-border)">
         {data.kind === "repos"
-          ? data.items.map((repo) => <RepoItem key={`${repo.owner}/${repo.name}`} repo={repo} />)
+          ? data.items.map((repo) => <RepoListItem key={`${repo.owner}/${repo.name}`} repo={repo} showOwner />)
           : data.items.map((user) => (
               <UserItem key={user.name} user={user} organization={data.kind === "organizations"} />
             ))}
@@ -158,124 +106,6 @@ export function Explore() {
         </div>
       ) : null}
     </main>
-  );
-}
-
-function TabsOverflowMenu({ tabs }: { tabs: ExploreTab[] }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={t("more_tabs")}
-          className="-mb-px flex cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground) sm:hidden"
-        >
-          <Menu className="size-4" aria-hidden />
-          <span>{t("more")}</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-56 p-1">
-        {tabs.map(({ kind, label, icon: Icon }) => (
-          <Link
-            key={kind}
-            to="/explore/$kind"
-            params={{ kind }}
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-(--color-foreground) hover:bg-(--color-surface)"
-          >
-            <Icon className="size-4" aria-hidden />
-            {label}
-          </Link>
-        ))}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function RepoItem({ repo }: { repo: ExploreRepo }) {
-  const { t } = useTranslation();
-  const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
-  return (
-    <li className="flex gap-3 border-b border-(--color-border) py-4">
-      {repo.avatarURL ? (
-        <img
-          src={repo.avatarURL}
-          alt=""
-          className="mt-1.25 size-10 shrink-0 rounded-md border border-(--color-border) object-cover"
-        />
-      ) : (
-        <span className="mt-0.75 grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
-          <BookMarked className="size-10" strokeWidth={1.5} aria-hidden />
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="flex min-w-0 items-center gap-0.5">
-            <a href={repoLink} className="min-w-0 break-all text-(--color-primary) hover:underline">
-              {repo.owner} / <span className="font-semibold">{repo.name}</span>
-            </a>
-            <RepoMarker repo={repo} />
-          </span>
-          <span className="ml-auto flex items-center gap-3 text-xs tabular-nums text-(--color-muted-foreground)">
-            <span className="inline-flex items-center gap-1">
-              <Star className="size-3.5" aria-hidden />
-              <span className="sr-only">{t("repo.stargazers")}</span>
-              {repo.starCount}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <GitFork className="size-3.5" aria-hidden />
-              <span className="sr-only">{t("repo.forks")}</span>
-              {repo.forkCount}
-            </span>
-          </span>
-        </div>
-        {repo.descriptionHTML ? (
-          <p
-            className="mt-1 text-sm break-words text-(--color-foreground)"
-            dangerouslySetInnerHTML={{ __html: repo.descriptionHTML }}
-          />
-        ) : null}
-        <p className="mt-1 text-xs text-(--color-muted-foreground)">
-          {t("org.repo_updated")}{" "}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <time dateTime={repo.updatedAt}>{formatRelativeTime(t, repo.updatedAt)}</time>
-            </TooltipTrigger>
-            <TooltipContent>{formatAbsoluteTime(repo.updatedAt)}</TooltipContent>
-          </Tooltip>
-        </p>
-      </div>
-    </li>
-  );
-}
-
-// RepoMarker shows the first applicable of private, unlisted, fork and mirror,
-// in the same precedence as the legacy list.
-function RepoMarker({ repo }: { repo: ExploreRepo }) {
-  const { t } = useTranslation();
-  let marker: { icon: ComponentType<{ className?: string }>; label: string } | null = null;
-  if (repo.isPrivate) marker = { icon: Lock, label: t("repo.visibility_private") };
-  else if (repo.isUnlisted) marker = { icon: EyeOff, label: t("repo.unlisted") };
-  else if (repo.isFork) marker = { icon: GitFork, label: t("repo.fork") };
-  else if (repo.isMirror) marker = { icon: LinkIcon, label: t("mirror") };
-  if (!marker) return null;
-
-  const Icon = marker.icon;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          role="img"
-          aria-label={marker.label}
-          className="grid size-6 place-items-center rounded text-(--color-muted-foreground)"
-        >
-          <Icon className="size-3.5" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{marker.label}</TooltipContent>
-    </Tooltip>
   );
 }
 

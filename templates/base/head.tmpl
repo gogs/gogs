@@ -13,12 +13,6 @@
 
 	<!-- Open Graph Tags -->
 	{{if .PageIsAdmin}}
-	{{else if .PageIsUserProfile}}
-		<meta property="og:url" content="{{.Owner.HTMLURL}}" />
-		<meta property="og:type" content="profile" />
-		<meta property="og:title" content="{{.Owner.Name}}{{if .Owner.FullName}} ({{.Owner.FullName}}){{end}}">
-		<meta property="og:description" content="{{.Owner.Name}} has {{.Owner.NumFollowers}} followers and is following {{.Owner.NumFollowing}} people.">
-		<meta property="og:image" content="{{.Owner.AvatarURL}}" />
 	{{else if .Repository}}
 		<meta property="og:url" content="{{.Repository.HTMLURL}}" />
 		<meta property="og:type" content="object" />
