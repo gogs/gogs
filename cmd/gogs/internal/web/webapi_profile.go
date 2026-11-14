@@ -383,9 +383,8 @@ type orgProfile struct {
 	// Kind is "organization", telling organizations apart from individual users.
 	Kind string `json:"kind"`
 	exploreUser
-	ID          int64              `json:"id"`
-	Description string             `json:"description,omitempty"`
-	Members     []orgProfileMember `json:"members"`
+	ID      int64              `json:"id"`
+	Members []orgProfileMember `json:"members"`
 	// The member and team counts and the teams are only shown to members.
 	MemberCount    int              `json:"memberCount,omitempty"`
 	TeamCount      int              `json:"teamCount,omitempty"`
@@ -403,9 +402,9 @@ func getOrgProfile(viewer *database.User, org *profileUser) (statusCode int, res
 		Kind:        "organization",
 		exploreUser: toExploreUser(org.User),
 		ID:          org.ID,
-		Description: org.Description,
 		Members:     []orgProfileMember{},
 	}
+	profile.Description = org.Description
 	// The avatar is shown at 100px wide, so request it for 2x displays.
 	profile.AvatarURL = tool.AppendAvatarSize(org.AvatarURLPath(), 200)
 	profile.Website = org.Website

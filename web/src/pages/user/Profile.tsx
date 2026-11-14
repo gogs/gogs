@@ -44,7 +44,6 @@ const route = getRouteApi("/$username");
 const JOINED_DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", month: "short", day: "2-digit" });
 
 export function Profile() {
-  const { t } = useTranslation();
   const { username } = route.useParams();
   const data = route.useLoaderData();
   const { data: profile } = useSuspenseQuery(userProfileQuery(username));
@@ -54,7 +53,11 @@ export function Profile() {
     // The loader always loads the repositories of organizations.
     return data.tab === "repos" ? <OrgHome org={profile} repos={data.repos} /> : null;
   }
+  return <UserProfile username={username} profile={profile} data={data} />;
+}
 
+function UserProfile({ username, profile, data }: { username: string; profile: UserProfileData; data: ProfilePage }) {
+  const { t } = useTranslation();
   const tabs = [
     { key: "repos", label: t("user.repositories"), icon: BookMarked },
     { key: "activity", label: t("user.activity"), icon: Activity },
