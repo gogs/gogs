@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, useSuspenseInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, getRouteApi } from "@tanstack/react-router";
+import { Link, getRouteApi, useRouter } from "@tanstack/react-router";
 import {
   Activity,
   BookMarked,
@@ -113,10 +113,9 @@ function ProfileActivity({ username }: { username: string }) {
   );
 }
 
-function ProfileSidebar({ profile }: { profile: UserProfileData }) {
+export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
   const { t } = useTranslation();
   const isWebsiteLink = profile.website ? /^https?:\/\//i.test(profile.website) : false;
-  const homeLink = subUrl(`/${profile.name}`);
   const authenticated = useUserInfo() !== null;
 
   return (
@@ -187,21 +186,29 @@ function ProfileSidebar({ profile }: { profile: UserProfileData }) {
           </Fact>
         ) : null}
         <Fact icon={Users}>
-          <a href={`${homeLink}/followers`} className="group hover:text-(--color-primary)">
+          <Link
+            to="/$username/followers"
+            params={{ username: profile.name }}
+            className="group hover:text-(--color-primary)"
+          >
             <span className="font-semibold tabular-nums">{profile.followerCount}</span>{" "}
             <span className="text-(--color-muted-foreground) group-hover:text-(--color-primary)">
               {t("user.followers")}
             </span>
-          </a>
+          </Link>
           <span className="text-(--color-muted-foreground)" aria-hidden>
             {" · "}
           </span>
-          <a href={`${homeLink}/following`} className="group hover:text-(--color-primary)">
+          <Link
+            to="/$username/following"
+            params={{ username: profile.name }}
+            className="group hover:text-(--color-primary)"
+          >
             <span className="font-semibold tabular-nums">{profile.followingCount}</span>{" "}
             <span className="text-(--color-muted-foreground) group-hover:text-(--color-primary)">
               {t("user.following")}
             </span>
-          </a>
+          </Link>
         </Fact>
       </ul>
 
@@ -235,6 +242,7 @@ function ProfileSidebar({ profile }: { profile: UserProfileData }) {
 function FollowButton({ profile }: { profile: UserProfileData }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const mutation = useMutation({
     mutationFn: async () => {
       const next = !profile.viewerIsFollowing;
@@ -249,6 +257,8 @@ function FollowButton({ profile }: { profile: UserProfileData }) {
         (prev: OwnerProfileData | undefined): OwnerProfileData | undefined =>
           prev?.kind === "user" ? { ...prev, viewerIsFollowing: next, followerCount: result.followerCount } : prev,
       );
+      // Reload the follower list when it is on the page.
+      void router.invalidate();
     },
     onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
   });

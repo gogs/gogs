@@ -1,11 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { type AnyRoute, createRoute, notFound } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
-import { repoHeaderQuery } from "@/lib/queries/repo";
+import { type PageSearch, validatePageSearch } from "@/lib/page-search";
+import { fetchRepoPeople, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoPeople } from "@/pages/repo/People";
 
 // Match the legacy server-side route constraint (see `web.go` near the
 // `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
@@ -69,5 +71,60 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     component: RepoCommit,
   });
 
-  return [repoCommitRoute];
+  async function loadPeople(
+    queryClient: QueryClient,
+    owner: string,
+    repo: string,
+    list: "stargazers" | "watchers",
+    page: number | undefined,
+  ) {
+    try {
+      const [, data] = await Promise.all([
+        queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
+        fetchRepoPeople(owner, repo, list, page),
+      ]);
+      return data;
+    } catch (err) {
+      if (err instanceof LoaderResponseError && err.status === 404) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
+        // The viewer is not allowed to see site content. Reload the page so the
+        // server sends them to sign in, account activation, or the login
+        // prohibited page.
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ href: window.location.href, reloadDocument: true });
+      }
+      throw err;
+    }
+  }
+
+  const repoStargazersRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/stars",
+    validateSearch: validatePageSearch,
+    loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
+    loader: ({ params, deps, context }) =>
+      loadPeople((context as RouterContext).queryClient, params.owner, params.repo, "stargazers", deps.page),
+    component: function RepoStargazers() {
+      const { owner, repo } = repoStargazersRoute.useParams();
+      return <RepoPeople owner={owner} name={repo} list="stargazers" data={repoStargazersRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoWatchersRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/watchers",
+    validateSearch: validatePageSearch,
+    loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
+    loader: ({ params, deps, context }) =>
+      loadPeople((context as RouterContext).queryClient, params.owner, params.repo, "watchers", deps.page),
+    component: function RepoWatchers() {
+      const { owner, repo } = repoWatchersRoute.useParams();
+      return <RepoPeople owner={owner} name={repo} list="watchers" data={repoWatchersRoute.useLoaderData()} />;
+    },
+  });
+
+  return [repoCommitRoute, repoStargazersRoute, repoWatchersRoute];
 }

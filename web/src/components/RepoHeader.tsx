@@ -44,7 +44,8 @@ export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settin
 
 export interface RepoHeaderProps {
   repo: RepoHeaderData;
-  activeTab: RepoTab;
+  // Pages outside the tabs, e.g., the stargazers, leave it out.
+  activeTab?: RepoTab;
 }
 
 function formatCount(n: number): string {
@@ -236,7 +237,7 @@ function RepoTabs({
   t,
 }: {
   repo: RepoHeaderData;
-  activeTab: RepoTab;
+  activeTab?: RepoTab;
   repoLink: string;
   t: TFunction;
 }) {
@@ -279,7 +280,7 @@ function RepoTabs({
   );
 }
 
-function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab: RepoTab; t: TFunction }) {
+function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab?: RepoTab; t: TFunction }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>

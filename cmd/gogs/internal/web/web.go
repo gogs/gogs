@@ -195,9 +195,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("", func() {
 			m.Group("/:username", func() {
 				m.Get("", user.Profile)
-				m.Get("/followers", user.Followers)
-				m.Get("/following", user.Following)
-				m.Get("/stars", user.Stars)
+				m.Get("/^:type(followers|following)$", func(c *context.Context) { c.ServeWeb() })
 			}, context.InjectParamsUser())
 
 			m.Get("/attachments/:uuid", func(c *context.Context) {
@@ -546,8 +544,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
 			m.Get("", repo.Home)
-			m.Get("/stars", repo.Stars)
-			m.Get("/watchers", repo.Watchers)
+			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })
 		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(), context.RepoRef())
 		// ***** END: Repository *****
 

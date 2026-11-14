@@ -168,6 +168,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)
+			f.Get("/stargazers", getRepoStargazers)
+			f.Get("/watchers", getRepoWatchers)
+			f.Delete("/watchers/{username}", deleteRepoWatcher)
 		}, requireViewAccess, withRepoContext)
 		f.Group("/explore", func() {
 			f.Get("/repos", getExploreRepos)
@@ -178,6 +181,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("", getUserProfile)
 			f.Get("/repos", getUserProfileRepos)
 			f.Get("/activity", requireIndividualUser, getUserProfileActivity)
+			f.Get("/followers", requireIndividualUser, getUserFollowers)
+			f.Get("/following", requireIndividualUser, getUserFollowing)
 			f.Combo("/follow", requireIndividualUser).Post(postUserFollow).Delete(deleteUserFollow)
 		}, requireViewAccess, withProfileUser)
 		dashboardRoutes := func() {
