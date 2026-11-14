@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["dist", "eslint.config.js", ".prettierrc.js", "vite.config.ts", "scripts/**"],
+    ignores: ["dist", "eslint.config.js", ".prettierrc.js", "vite.config.ts"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

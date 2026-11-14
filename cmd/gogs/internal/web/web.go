@@ -907,11 +907,13 @@ func readInjectContent() (injectContent, error) {
 func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
-		Lang   string `json:"lang"`
-		SubURL string `json:"subURL"`
+		Lang     string            `json:"lang"`
+		SubURL   string            `json:"subURL"`
+		Messages map[string]string `json:"messages"`
 	}{
-		Lang:   wc.Lang,
-		SubURL: wc.SubURL,
+		Lang:     wc.Lang,
+		SubURL:   wc.SubURL,
+		Messages: webLocaleMessages(wc.Lang),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

@@ -8,6 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/unknwon/i18n"
+	"unknwon.dev/ini/v2"
+
+	embedconf "gogs.io/gogs/conf"
 
 	"gogs.io/gogs/internal/context"
 )
@@ -58,5 +62,37 @@ func TestRenderIndex_entrypointPaths(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, string(got), test.want)
 		})
+	}
+}
+
+func TestRenderIndex_messages(t *testing.T) {
+	en := "explore = Explore\n[repo]\nfork = Fork\n"
+	require.NoError(t, i18n.SetMessage("en-US", []byte(en)))
+	require.NoError(t, i18n.SetMessage("de-DE", []byte("explore = Erkunden\n")))
+	i18n.SetDefaultLang("en-US")
+
+	got := webLocaleMessages("de-DE")
+	assert.Equal(t, "Erkunden", got["explore"])
+	assert.Equal(t, "Fork", got["repo.fork"], "missing keys fall back to en-US")
+
+	out, err := renderIndex([]byte(`<head>{{.WebContext}}</head>`), context.WebContext{Lang: "de-DE"}, injectContent{})
+	require.NoError(t, err)
+	assert.Contains(t, string(out), `"explore":"Erkunden"`)
+}
+
+// Every key the web app uses must exist in en-US, which other locales fall back
+// to.
+func TestWebLocaleKeys_inEnglish(t *testing.T) {
+	data, err := embedconf.Files.ReadFile("locale/locale_en-US.ini")
+	require.NoError(t, err)
+	f, err := ini.Load(data)
+	require.NoError(t, err)
+
+	for _, key := range webLocaleKeys {
+		section, name := ini.DefaultSection, key
+		if i := strings.IndexByte(key, '.'); i > 0 {
+			section, name = key[:i], key[i+1:]
+		}
+		assert.True(t, f.Section(section).HasKey(name), key)
 	}
 }
