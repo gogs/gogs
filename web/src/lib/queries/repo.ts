@@ -961,3 +961,49 @@ export function uploadRepoFiles(
 export function deleteRepoEditorUpload(owner: string, name: string, uuid: string) {
   return send("DELETE", repoURL(owner, name, `/editor/uploads/${encodeURIComponent(uuid)}`));
 }
+
+export interface RepoCommitAuthor {
+  name: string;
+  email: string;
+  when: string;
+  avatarURL: string;
+  // profileURL is set when the email belongs to a user.
+  profileURL?: string;
+}
+
+export interface RepoCommitListItem {
+  sha: string;
+  // subjectHTML is the first line of the message, with links to the issues
+  // it mentions.
+  subjectHTML: string;
+  isMerge: boolean;
+  author: RepoCommitAuthor;
+}
+
+export interface RepoCommitsData {
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  // path is the file or directory whose history is listed, empty for the
+  // whole repository.
+  path: string;
+  // search is set for a search of the commit messages, which lists every
+  // match instead of a page.
+  search: boolean;
+  keyword: string;
+  commits: RepoCommitListItem[];
+  page: number;
+  hasNext: boolean;
+  branches: string[];
+  tags: string[];
+}
+
+// fetchRepoCommits lists the commits of the ref at the start of the path,
+// which is followed by the path whose history to list, or by "search" to
+// search the messages for the keyword.
+export function fetchRepoCommits(owner: string, name: string, splat: string, search: { page?: number; q?: string }) {
+  const query = new URLSearchParams();
+  if (search.page) query.set("page", String(search.page));
+  if (search.q) query.set("q", search.q);
+  const qs = query.size ? `?${query.toString()}` : "";
+  return fetchJSON<RepoCommitsData>(repoURL(owner, name, `/commits/${refPath(splat)}${qs}`));
+}
