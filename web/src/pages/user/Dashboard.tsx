@@ -21,7 +21,7 @@ export function Dashboard({ org }: { org?: string }) {
   usePageTitle(`${data.name} - ${t("dashboard")}`);
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <h1 className="sr-only">{t("dashboard")}</h1>
       <aside className="min-w-0">
         <ContextSwitcher data={data} page="dashboard" />

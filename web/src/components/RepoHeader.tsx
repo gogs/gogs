@@ -37,8 +37,9 @@ import { cn } from "@/lib/utils";
 
 // Mobile collapses the tab strip after this many items into a hamburger
 // overflow menu. The active tab is always pulled into the inline group so the
-// user can see the active indicator without opening the menu.
-const MOBILE_INLINE_LIMIT = 3;
+// user can see the active indicator without opening the menu. At 320px wide,
+// only the widest tab with its count fits next to the menu.
+const MOBILE_INLINE_LIMIT = 1;
 
 export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settings";
 
@@ -258,7 +259,7 @@ function RepoTabs({
 
   return (
     <>
-      {/* Mobile: first 3 inline + hamburger overflow for the rest. */}
+      {/* Mobile: the inline tabs + hamburger overflow for the rest. */}
       <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label={t("repository")}>
         {mobileInline.map((tab) => (
           <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
@@ -288,7 +289,7 @@ function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab
         <button
           type="button"
           aria-label={t("more_tabs")}
-          className="flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
+          className="flex shrink-0 cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
         >
           <Menu className="size-4" aria-hidden />
           <span>{t("more")}</span>

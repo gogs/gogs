@@ -85,7 +85,16 @@ When in doubt, hover-test the new control: if the cursor is still an I-beam or a
 
 ## Tabs
 
-Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 375px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.
+Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 320px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.
+
+## Narrow screens
+
+Every page works at 320px wide, the width the WCAG reflow criterion requires. Only content that is meant to scroll does so sideways: code and diffs. Tab rows fold into a "More" menu instead (see Tabs).
+
+- **Wrap long text with `wrap-anywhere`, not `break-all`.** Names, URLs and emails break at hyphens and slashes first, and mid-word only when nothing else fits. `break-all` splits ordinary words, e.g., "Joined o / n". Terminal frames keep `break-all`, since real terminals wrap anywhere, but translated prose inside them does not.
+- **Keep a label and its value in one box.** Inside a flex row, wrap them in a single `<span>` so they wrap together as text instead of as two squeezed columns.
+- **Top-align page grids that fill the height.** A `grid flex-1` page stretches its rows over the leftover height when it stacks on narrow screens, which shows as a gap between the sidebar and the content. Add `content-start`.
+- **Truncate chips such as labels** with `max-w-full truncate` rather than letting a rounded pill wrap.
 
 ## Tooltips
 
@@ -104,4 +113,4 @@ WCAG 2.2 AA is the floor. Apply these patterns in components:
 - **Touch targets are 24×24 CSS px at minimum.** Compact chrome (settings cog, hamburger) uses `size-9` (36px). Full-width tap rows in popovers and the mobile menu use `px-2 py-1.5`, which yields ~28px in height. The full row width gives the tap area enough horizontal slack to clear the minimum comfortably. Exception: edge-seam affordances like the resize handle in `ResizableSidebar` stay visually thin (4–8px) and rely on a keyboard fallback (`tabIndex={0}` plus arrow-key handlers) for accessibility. The handle is desktop-only (`lg:block`), so the 24px tap floor for touch users does not apply.
 - **Color is never the sole signal.** The current-item indicator in the language list is a ✓ icon, not just a color shift. The destructive token is paired with the word `fatal:` in the 404 terminal, not just red text. The theme toggle has Sun/Moon/Monitor icons alongside the label.
 - **Respect `prefers-reduced-motion`.** Popover animations from `tw-animate-css` honor this by default. If hand-rolling animations, gate them behind `motion-safe:`.
-- **Test before merging:** tab through the new UI with the keyboard only; resize to 375px; toggle dark mode; check focus rings are visible against both themes.
+- **Test before merging:** tab through the new UI with the keyboard only; resize to 320px and check nothing but code and diffs scrolls sideways; toggle dark mode; check focus rings are visible against both themes.
