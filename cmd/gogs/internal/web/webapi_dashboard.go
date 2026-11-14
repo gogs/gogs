@@ -137,7 +137,7 @@ func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User,
 	ctx := c.Request().Context()
 	dc, err := newDashboardContext(ctx, viewer, owner)
 	if err != nil {
-		log.Error("getDashboard: get context of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get dashboard context of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get context")
 	}
 
@@ -278,18 +278,18 @@ type dashboardIssues struct {
 	Repos []dashboardIssueRepo `json:"repos"`
 }
 
-func getDashboardIssues(c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
-	return listDashboardIssues(c, viewer, owner, false)
+func getDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
+	return listDashboardIssues(logger, c, viewer, owner, false)
 }
 
-func getDashboardPulls(c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
-	return listDashboardIssues(c, viewer, owner, true)
+func getDashboardPulls(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
+	return listDashboardIssues(logger, c, viewer, owner, true)
 }
 
 // listDashboardIssues lists the issues or pull requests of the dashboard owner,
 // filtered and sorted like the server-rendered page by the `type`, `repo`,
 // `state`, `sort` and `page` query parameters.
-func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashboardOwner, isPull bool) (statusCode int, resp *dashboardIssues, err error) {
+func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner, isPull bool) (statusCode int, resp *dashboardIssues, err error) {
 	filterMode := database.FilterModeYourRepos
 	if !owner.IsOrganization() {
 		switch mode := database.FilterMode(c.Query("type")); mode {
@@ -304,10 +304,10 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 	if repoID > 0 {
 		repo, err := database.GetRepositoryByID(repoID)
 		if err != nil && !database.IsErrRepoNotExist(err) {
-			log.Error("listDashboardIssues: get repository %d: %v", repoID, err)
+			logger.Error("Failed to get repository", "repoID", repoID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 		}
-		if err != nil || (!repo.IsOwnedBy(owner.ID) && !repo.HasAccess(owner.ID)) {
+		if err != nil || (!repo.IsOwnedBy(owner.ID) && !repo.HasAccess(logger, owner.ID)) {
 			return http.StatusNotFound, nil, errors.New("repository does not exist")
 		}
 	}
@@ -324,13 +324,13 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 		})
 	}
 	if err != nil {
-		log.Error("listDashboardIssues: get repositories of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get repositories of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repositories")
 	}
 
 	dc, err := newDashboardContext(c.Request().Context(), viewer, owner)
 	if err != nil {
-		log.Error("listDashboardIssues: get context of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get dashboard context of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get context")
 	}
 	resp = &dashboardIssues{
@@ -368,7 +368,7 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 	if !isPull {
 		repoIDs, err = database.FilterRepositoryWithIssues(repoIDs)
 		if err != nil {
-			log.Error("listDashboardIssues: filter repositories with issues: %v", err)
+			logger.Error("Failed to filter repositories with issues", "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "filter repositories")
 		}
 	}
@@ -394,7 +394,7 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 	}
 	issues, err := database.Issues(opts)
 	if err != nil {
-		log.Error("listDashboardIssues: list issues of user %d: %v", owner.ID, err)
+		logger.Error("Failed to list issues of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list issues")
 	}
 
