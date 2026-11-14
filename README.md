@@ -31,37 +31,28 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💌 Features
 
-**🗂️ Code hosting**
-
-- Clone and push over SSH, HTTP and HTTPS, with an optional built-in SSH server.
-- Git LFS, deploy keys and server-side Git hooks.
-- Migrate and mirror repositories, including their wikis, from other code hosts.
-- Edit files and wiki pages right in the browser.
-- Render Markdown, Jupyter Notebooks and PDFs.
-
-**🤝 Collaboration**
-
-- Issues, pull requests, wikis and protected branches.
-- Organizations, teams and per-repository collaborators.
-- Dashboards, user profiles and activity timelines.
-
-**🔌 Integrations**
-
-- Repository and organization webhooks, with native Slack, Discord and DingTalk support.
-- A REST [API](https://gogs.io/api-reference) for automation.
-- Prometheus metrics for monitoring.
-
-**🔐 Authentication**
-
-- Sign in with LDAP, SMTP, PAM, reverse proxy, GitHub.com or GitHub Enterprise.
-- Optional two-factor authentication with TOTP and recovery codes.
-
-**⚙️ Operations**
-
-- A single binary on Linux, macOS, Windows and ARM, or the official Docker image.
-- PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
-- Customize templates, static files and much more.
-- Available in over [31 languages](https://crowdin.com/project/gogs).
+- Code hosting
+  - Clone and push over SSH, HTTP and HTTPS, with an optional built-in SSH server.
+  - Git LFS, deploy keys and server-side Git hooks.
+  - Migrate and mirror repositories, including their wikis, from other code hosts.
+  - Edit files and wiki pages right in the browser.
+  - Render Markdown, Jupyter Notebooks and PDFs.
+- Collaboration
+  - Issues, pull requests, wikis and protected branches.
+  - Organizations, teams and per-repository collaborators.
+  - Dashboards, user profiles and activity timelines.
+- Integrations
+  - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
+  - A REST [API](https://gogs.io/api-reference) for automation.
+  - Prometheus metrics for monitoring.
+- Authentication
+  - Sign in with LDAP, SMTP, PAM, reverse proxy, GitHub.com or GitHub Enterprise.
+  - Optional two-factor authentication with TOTP and recovery codes.
+- Operations
+  - A single binary on Linux, macOS, Windows and ARM, or the official Docker image.
+  - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
+  - Customize templates, static files and much more.
+  - Available in over [31 languages](https://crowdin.com/project/gogs).
 
 ## 💾 Hardware requirements
 
