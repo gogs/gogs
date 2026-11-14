@@ -202,8 +202,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/issues", getDashboardIssues)
 			f.Get("/pulls", getDashboardPulls)
 		}
-		f.Group("/dashboard", dashboardRoutes, requireViewAccess, withDashboardOwner)
-		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireViewAccess, withDashboardOwner)
+		f.Group("/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
+		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
 		f.Group("/orgs/{org}", func() {
 			f.Get("/members", getOrgMembers)
 			f.Delete("/members/{username}", deleteOrgMember)
