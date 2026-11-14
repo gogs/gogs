@@ -103,6 +103,8 @@ Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a
 
 Show Markdown that the server rendered and sanitized, e.g., the content of an issue and its comments, with `Markdown` from `@/components/Markdown`. It styles the HTML with the `markdown` class in `index.css`, and highlights fenced code blocks that name a language with `CodeBlock`. Previews of Markdown being written go through the same component, so they look like the result.
 
+Forms that open or change issues share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set.
+
 ## Translated markup
 
 Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.

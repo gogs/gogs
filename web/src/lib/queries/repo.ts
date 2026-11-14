@@ -500,7 +500,22 @@ export interface IssueComment {
   viewerCanEdit?: boolean;
 }
 
-export interface RepoIssueData {
+export interface IssueAttachmentSettings {
+  allowedTypes: string[];
+  // maxSize is the largest file in bytes.
+  maxSize: number;
+  maxFiles: number;
+}
+
+// IssueMetaOptions are the labels, milestones and assignees that writers can
+// set on issues.
+export interface IssueMetaOptions {
+  labelOptions?: IssueLabel[];
+  milestoneOptions?: { id: number; name: string; isClosed: boolean }[];
+  assigneeOptions?: { id: number; name: string; avatarURL: string }[];
+}
+
+export interface RepoIssueData extends IssueMetaOptions {
   index: number;
   title: string;
   isClosed: boolean;
@@ -513,21 +528,59 @@ export interface RepoIssueData {
   labels: IssueLabel[];
   milestone?: { id: number; name: string };
   assignee?: { id: number; name: string; avatarURL: string };
-  // labelOptions, milestoneOptions and assigneeOptions are what writers can
-  // set on the issue, and are only sent to them.
-  labelOptions?: IssueLabel[];
-  milestoneOptions?: { id: number; name: string; isClosed: boolean }[];
-  assigneeOptions?: { id: number; name: string; avatarURL: string }[];
   participants: IssueUser[];
   // attachment is how files can be attached to comments, only sent to
   // signed-in viewers when attachments are enabled.
-  attachment?: { allowedTypes: string[]; maxSize: number; maxFiles: number };
+  attachment?: IssueAttachmentSettings;
   viewerCanEdit: boolean;
   viewerCanWrite: boolean;
 }
 
 export function fetchRepoIssue(owner: string, name: string, index: number) {
   return fetchJSON<RepoIssueData>(repoURL(owner, name, `/issues/${index}`));
+}
+
+export interface RepoNewIssueOptions extends IssueMetaOptions {
+  // defaultBranch is where the issue template is read from, only sent to
+  // viewers who can read the repository.
+  defaultBranch?: string;
+  attachment?: IssueAttachmentSettings;
+  viewerCanWrite: boolean;
+}
+
+// The files the issue template is read from, in the order the server-rendered
+// page looked for them.
+const ISSUE_TEMPLATE_FILES = ["ISSUE_TEMPLATE.md", ".gogs/ISSUE_TEMPLATE.md", ".github/ISSUE_TEMPLATE.md"];
+
+// fetchRepoNewIssue loads what the form to open an issue offers, along with
+// the issue template of the repository, if any.
+export async function fetchRepoNewIssue(owner: string, name: string) {
+  const options = await fetchJSON<RepoNewIssueOptions>(repoURL(owner, name, "/issues/new"));
+  let template = "";
+  if (options.defaultBranch) {
+    const branch = encodeURIComponent(options.defaultBranch);
+    const found = await Promise.all(
+      ISSUE_TEMPLATE_FILES.map(async (file) => {
+        const res = await fetch(subUrl(`/${owner}/${name}/raw/${branch}/${file}`), { credentials: "same-origin" });
+        return res.ok ? res.text() : null;
+      }),
+    );
+    template = found.find((text) => text !== null) ?? "";
+  }
+  return { ...options, template };
+}
+
+export interface RepoNewIssueForm {
+  title: string;
+  content: string;
+  labelIDs: number[];
+  milestoneID: number;
+  assigneeID: number;
+  attachments: string[];
+}
+
+export function createRepoIssue(owner: string, name: string, form: RepoNewIssueForm) {
+  return submit<{ index: number }>("POST", repoURL(owner, name, "/issues"), form);
 }
 
 export function updateRepoIssue(

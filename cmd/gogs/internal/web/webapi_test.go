@@ -43,6 +43,7 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/alice/repo/watchers",
 		"/api/web/alice/repo/issues",
 		"/api/web/alice/repo/issues/1",
+		"/api/web/alice/repo/issues/new",
 		"/api/web/alice/repo/pulls",
 		"/api/web/alice/repo/forks",
 	}

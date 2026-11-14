@@ -13,6 +13,7 @@ import {
   fetchRepoLabels,
   fetchRepoMilestone,
   fetchRepoMilestones,
+  fetchRepoNewIssue,
   fetchRepoNewOptions,
   fetchRepoPeople,
   repoHeaderQuery,
@@ -30,6 +31,8 @@ import { type RepoIssuesSearch, validateRepoIssuesSearch } from "@/pages/repo/Is
 import { RepoLabels } from "@/pages/repo/Labels";
 import { RepoMilestoneEditor, RepoMilestones, type RepoMilestonesSearch } from "@/pages/repo/Milestones";
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
+import { RepoNewIssue } from "@/pages/repo/NewIssue";
+import { type RepoNewIssueSearch, validateRepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
 import { RepoPeople } from "@/pages/repo/People";
 import { RepoCollaboration, RepoDeployKeys, RepoOptions } from "@/pages/repo/Settings";
 
@@ -441,6 +444,29 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
   const repoIssuesRoute = createIssueListRoute("issues");
   const repoPullsRoute = createIssueListRoute("pulls");
 
+  const repoNewIssueRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/issues/new",
+    validateSearch: validateRepoNewIssueSearch,
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoNewIssue(params.owner, params.repo),
+      ),
+    component: function NewIssue() {
+      const { owner, repo } = repoNewIssueRoute.useParams();
+      const search: RepoNewIssueSearch = repoNewIssueRoute.useSearch();
+      return (
+        <RepoNewIssue
+          key={`${owner}/${repo}`}
+          owner={owner}
+          name={repo}
+          options={repoNewIssueRoute.useLoaderData()}
+          search={search}
+        />
+      );
+    },
+  });
+
   const repoIssueRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/issues/$index",
@@ -481,6 +507,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoWatchersRoute,
     repoIssuesRoute,
     repoPullsRoute,
+    repoNewIssueRoute,
     repoIssueRoute,
     repoForksRoute,
     repoLabelsRoute,

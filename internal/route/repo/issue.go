@@ -19,21 +19,12 @@ import (
 )
 
 const (
-	tmplRepoIssueNew  = "repo/issue/new"
 	tmplRepoIssueView = "repo/issue/view"
-
-	IssueTemplateKey = "IssueTemplate"
 )
 
 var (
 	ErrFileTypeForbidden = errors.New("file type is not allowed")
 	ErrTooManyFiles      = errors.New("maximum number of files to upload exceeded")
-
-	IssueTemplateCandidates = []string{
-		"ISSUE_TEMPLATE.md",
-		".gogs/ISSUE_TEMPLATE.md",
-		".github/ISSUE_TEMPLATE.md",
-	}
 )
 
 func MustEnableIssues(c *context.Context) {
@@ -150,24 +141,6 @@ func setTemplateIfExists(c *context.Context, ctxDataKey string, possibleFiles []
 	}
 }
 
-func NewIssue(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.issues.new")
-	c.Data["PageIsIssueList"] = true
-	c.Data["RequireHighlightJS"] = true
-	c.Data["RequireSimpleMDE"] = true
-	c.Data["title"] = c.Query("title")
-	c.Data["content"] = c.Query("content")
-	setTemplateIfExists(c, IssueTemplateKey, IssueTemplateCandidates)
-	renderAttachmentSettings(c)
-
-	RetrieveRepoMetas(c, c.Repo.Repository)
-	if c.Written() {
-		return
-	}
-
-	c.Success(tmplRepoIssueNew)
-}
-
 func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int64) {
 	var (
 		repo = c.Repo.Repository
@@ -220,46 +193,6 @@ func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int
 	}
 
 	return labelIDs, milestoneID, assigneeID
-}
-
-func NewIssuePost(c *context.Context, f form.NewIssue) {
-	c.Data["Title"] = c.Tr("repo.issues.new")
-	c.Data["PageIsIssueList"] = true
-	c.Data["RequireHighlightJS"] = true
-	c.Data["RequireSimpleMDE"] = true
-	renderAttachmentSettings(c)
-
-	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(c, f)
-	if c.Written() {
-		return
-	}
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplRepoIssueNew)
-		return
-	}
-
-	var attachments []string
-	if conf.Attachment.Enabled {
-		attachments = f.Files
-	}
-
-	issue := &database.Issue{
-		RepoID:      c.Repo.Repository.ID,
-		Title:       f.Title,
-		PosterID:    c.User.ID,
-		Poster:      c.User,
-		MilestoneID: milestoneID,
-		AssigneeID:  assigneeID,
-		Content:     f.Content,
-	}
-	if err := database.NewIssue(c.Repo.Repository, issue, labelIDs, attachments); err != nil {
-		c.Error(err, "new issue")
-		return
-	}
-
-	log.Trace("Issue created: %d/%d", c.Repo.Repository.ID, issue.ID)
-	c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 }
 
 func uploadAttachment(c *context.Context, allowedTypes []string) {
