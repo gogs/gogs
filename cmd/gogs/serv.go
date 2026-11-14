@@ -56,10 +56,9 @@ func fail(logger *logx.Logger, userMessage, errMessage string, args ...any) {
 
 // setup returns the hook file logger, which replaces the given console logger.
 func setup(logger *logx.Logger, cmd *cli.Command, logFile string, connectDB bool) *logx.Logger {
-	// The delegate hooks and the "authorized_keys" file run Gogs with the garbage
-	// collector turned off, because collecting garbage slows down the startup more
-	// than it saves. It is turned back on for the work, e.g., of a large push, and
-	// for the custom hooks the process runs.
+	// The delegate hooks run Gogs with the garbage collector turned off, because
+	// collecting garbage slows down the startup more than it saves. It is turned
+	// back on for the work and for the custom hooks the process runs.
 	if os.Getenv("GOGC") == "off" {
 		debug.SetGCPercent(100)
 		_ = os.Unsetenv("GOGC")

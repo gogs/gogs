@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -165,6 +166,11 @@ func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]Re
 	return applied, checkErr
 }
 
+// refUpdatesBatchSize is how many reference names are looked up per Git
+// command, which keeps the arguments of a push of many references under the
+// size limit of the operating system.
+var refUpdatesBatchSize = 1000
+
 // appliedRefUpdates returns the updates that the references in the repository
 // in given path reflect. Git checks the old ID of every update it applies, so
 // an update whose reference now has the new ID is one that Git applied.
@@ -173,19 +179,23 @@ func appliedRefUpdates(ctx context.Context, path string, updates []RefUpdate) ([
 		return nil, nil
 	}
 
-	args := []string{"for-each-ref", "--format=%(objectname) %(refname)"}
-	for _, update := range updates {
-		args = append(args, update.RefName)
-	}
-	stdout, err := exec(ctx, path, args, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "list references")
-	}
+	// A name also matches the references below it, e.g., "refs/heads/a" matches
+	// "refs/heads/a/b", so the result is matched by the exact name.
 	current := make(map[string]string, len(updates))
-	for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
-		id, name, ok := strings.Cut(line, " ")
-		if ok {
-			current[name] = id
+	for batch := range slices.Chunk(updates, refUpdatesBatchSize) {
+		args := []string{"for-each-ref", "--format=%(objectname) %(refname)", "--end-of-options"}
+		for _, update := range batch {
+			args = append(args, update.RefName)
+		}
+		stdout, err := exec(ctx, path, args, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "list references")
+		}
+		for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
+			id, name, ok := strings.Cut(line, " ")
+			if ok {
+				current[name] = id
+			}
 		}
 	}
 

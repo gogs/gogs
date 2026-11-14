@@ -966,10 +966,22 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch bool) error {
 	return nil
 }
 
+// delegateHooksPool serializes syncing the delegate hooks of a repository with
+// saving the protection of its branches. Otherwise a sync that read no protected
+// branch could remove the pre-receive hook that a concurrent save just
+// installed, and leave the branch protected but not enforced.
+var delegateHooksPool = sync.NewExclusivePool()
+
 // SyncDelegateHooks installs the delegate hooks that the repository and its
 // wiki need, and removes the others. It must be called whenever their custom
 // hooks or the protection of the branches of the repository change.
 func (r *Repository) SyncDelegateHooks() error {
+	delegateHooksPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer delegateHooksPool.CheckOut(strconv.FormatInt(r.ID, 10))
+	return r.syncDelegateHooks()
+}
+
+func (r *Repository) syncDelegateHooks() error {
 	hasProtectedBranch, err := x.Where("repo_id = ? AND protected = ?", r.ID, true).Exist(new(ProtectBranch))
 	if err != nil {
 		return errors.Wrap(err, "check protected branches")

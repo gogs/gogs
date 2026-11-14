@@ -134,6 +134,11 @@ func TestRunService(t *testing.T) {
 
 func TestRunReceivePack(t *testing.T) {
 	ctx := context.Background()
+	// Every push of the test updates more than one reference, so the lookup of
+	// the applied updates takes more than one batch.
+	oldBatchSize := refUpdatesBatchSize
+	refUpdatesBatchSize = 1
+	defer func() { refUpdatesBatchSize = oldBatchSize }()
 
 	remotePath := filepath.Join(t.TempDir(), "remote.git")
 	require.NoError(t, Init(ctx, remotePath, InitOptions{Bare: true}))
