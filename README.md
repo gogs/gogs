@@ -32,35 +32,29 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 ## 💌 Features
 
 - Code hosting
-  - Clone and push over SSH, HTTP and HTTPS, with deploy keys and a built-in SSH server.
-  - Git LFS, stored locally or in any S3-compatible bucket\*.
-  - Migrate and mirror repositories from other code hosts.
-  - Edit files right in the browser.
-  - Render Markdown, Jupyter Notebooks and PDFs, plus rich diffs for images and Markdown\*.
-  - Search code in a repository or across your whole instance.\*
-  - Blame view to see who changed every line.\*
+  - Git over SSH and HTTP(S), with deploy keys and LFS (local or S3\*).
+  - Migrate and mirror from other code hosts.
+  - Browse, edit, search\* and blame\* code right in the browser.
+  - Rendered Markdown, Jupyter Notebooks and PDFs, with rich diffs\*.
 - Collaboration
   - Issues, wikis and pull requests, with inline reviews\* and stacks\*.
-  - Protected branches, with required code owner reviews\* and signed commits\*.
-  - Organizations, teams and per-repository collaborators.
-  - Dashboards, user profiles and activity timelines.
+  - Protected branches, with code owners\* and signed commits\*.
+  - Organizations, teams and collaborators.
 - Interface
-  - Light and dark themes.
-  - Available in over [31 languages](https://crowdin.com/project/gogs), including emails\*.
-  - A command palette to jump to repositories, files, issues and code.\*
+  - Dashboards, profiles and activity timelines.
+  - Light and dark themes, a command palette\* and over [31 languages](https://crowdin.com/project/gogs).
 - Integrations
-  - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
-  - Server-side Git hooks.
-  - A REST [API](https://gogs.io/api-reference) for automation, GitHub-compatible\* so your existing tools just work.
+  - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
+  - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
-  - Multi-factor authentication with TOTP, recovery codes and passkeys\*.
-  - Keep accounts safe with sudo mode\*, session management\*, security alerts\* and breached password detection\*.
+  - Two-factor authentication and passkeys\*.
+  - Sudo mode\*, session management\*, security alerts\* and breached password detection\*.
 - Operations
-  - Runs anywhere: a single binary on Linux, macOS, Windows and ARM, a Docker image, or Kubernetes at scale\*.
-  - Works with PostgreSQL, MySQL, MariaDB, SQLite3 and compatible databases.
-  - Make it yours with custom templates, emails and static files, and preview every email in the admin panel\*.
-  - Observability with OpenTelemetry and Prometheus, plus a built-in trace viewer\*.
+  - Single binary, Docker or Kubernetes\*, on Linux, macOS, Windows and ARM.
+  - PostgreSQL, MySQL, MariaDB or SQLite3.
+  - Custom templates, emails and static files.
+  - OpenTelemetry and Prometheus, plus a built-in trace viewer\*.
 
 <sub>* In development.</sub>
 
