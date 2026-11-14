@@ -3,6 +3,7 @@ import { Activity, Check, ChevronDown, CircleDot, GitPullRequest, Plus } from "l
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DashboardContextData } from "@/lib/queries/user";
@@ -117,28 +118,15 @@ export function OrgNav({ name, page }: { name: string; page: DashboardPage }) {
   return (
     // The button wraps above the tabs when both do not fit in one row.
     <div className="flex flex-wrap-reverse items-end justify-end gap-x-3 gap-y-2 border-b border-(--color-border)">
-      <nav aria-label={name} className="mr-auto flex max-w-full overflow-x-auto">
-        {tabs.map(({ key, label, icon: Icon }) => {
-          const active = key === page;
-          return (
-            <Link
-              key={key}
-              to={ORG_PATHS[key]}
-              params={{ org: name }}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
-                active
-                  ? "border-(--color-primary) font-semibold text-(--color-foreground)"
-                  : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
-              )}
-            >
-              <Icon className="size-4" aria-hidden />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
+      <PageTabs
+        label={name}
+        tabs={tabs}
+        active={page}
+        // Only the active tab fits next to the menu at 320px.
+        inline={1}
+        renderLink={(tab, props) => <Link to={ORG_PATHS[tab.key]} params={{ org: name }} {...props} />}
+        className="mr-auto max-w-full"
+      />
       <Button asChild variant="outline" size="sm" className="mb-1.5 shrink-0">
         <Link to="/$username" params={{ username: name }}>
           {t("home.view_home").replace(/%(?:\[1\])?s/, name)}
