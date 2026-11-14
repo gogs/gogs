@@ -1,14 +1,30 @@
+import i18n from "@/lib/i18n";
 import { loaderResponseError } from "@/lib/loader-error";
+import { ReauthCancelledError, confirmIdentity } from "@/lib/reauth";
+
+// request sends a request to the web API. When the server first needs the
+// viewer to confirm who they are, it asks them and sends the request again.
+async function request(url: string, init: RequestInit = {}): Promise<Response> {
+  const res = await fetch(url, { ...init, credentials: "same-origin" });
+  if (res.status !== 403) return res;
+  const body = (await res
+    .clone()
+    .json()
+    .catch(() => ({}))) as { reauthRequired?: boolean };
+  if (!body.reauthRequired) return res;
+  if (!(await confirmIdentity())) throw new ReauthCancelledError(i18n.t("auth.reauth_cancelled"));
+  return fetch(url, { ...init, credentials: "same-origin" });
+}
 
 export async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "same-origin" });
+  const res = await request(url);
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as T;
 }
 
 // send makes a change that answers with no content.
 export async function send(method: "POST" | "PUT" | "DELETE", url: string) {
-  const res = await fetch(url, { method, credentials: "same-origin" });
+  const res = await request(url, { method });
   if (!res.ok) throw await loaderResponseError(res);
 }
 
@@ -25,9 +41,8 @@ export class FormError extends Error {
 }
 
 export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await request(url, {
     method,
-    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -44,7 +59,7 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
 export async function uploadAvatar(url: string, file: File) {
   const body = new FormData();
   body.append("avatar", file);
-  const res = await fetch(url, { method: "PUT", credentials: "same-origin", body });
+  const res = await request(url, { method: "PUT", body });
   if (!res.ok) throw await loaderResponseError(res);
 }
 

@@ -16,6 +16,7 @@ import { Toaster } from "sonner";
 
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { ReauthDialog } from "@/components/ReauthDialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import type { UserInfo } from "@/lib/user-info";
@@ -152,6 +153,7 @@ export function AppRouter({ user }: { user: UserInfo | null }) {
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
           <Toaster position="bottom-right" closeButton richColors />
+          <ReauthDialog />
         </TooltipProvider>
       </WorkerPoolContextProvider>
     </QueryClientProvider>

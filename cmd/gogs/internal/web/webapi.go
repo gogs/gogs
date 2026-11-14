@@ -164,6 +164,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Post("/complete", bindJSON(userActivateCompleteRequest{}), postUserActivateComplete)
 			})
 			f.Post("/sign-out", postUserSignOut)
+			f.Group("/reauth", func() {
+				f.Combo("").Get(getUserReauth).Post(bindJSON(userReauthPasswordRequest{}), postUserReauth)
+				f.Post("/passcode", bindJSON(userReauthPasscodeRequest{}), postUserReauthPasscode)
+				f.Post("/passkey/challenge", postUserReauthPasskeyChallenge)
+				f.Post("/passkey", postUserReauthPasskey)
+			}, requireSignIn)
 			f.Delete("", requireSignIn, bindJSON(userDeleteRequest{}), deleteUser)
 			f.Group("/settings", func() {
 				f.Combo("").Get(getUserSettings).Patch(bindJSON(userSettingsRequest{}), patchUserSettings)
@@ -172,21 +178,24 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Get("/repositories", getUserSettingsRepos)
 				f.Delete("/repositories/{id}", deleteUserSettingsRepo)
 				f.Get("/organizations", getUserSettingsOrgs)
-				f.Combo("/emails").Get(getUserEmails).Post(bindJSON(userEmailRequest{}), postUserEmail)
-				f.Delete("/emails/{email}", deleteUserEmail)
-				f.Put("/emails/{email}/primary", putUserEmailPrimary)
-				f.Combo("/ssh-keys").Get(getUserSSHKeys).Post(bindJSON(userSSHKeyRequest{}), postUserSSHKey)
-				f.Delete("/ssh-keys/{id}", deleteUserSSHKey)
+				f.Combo("/emails").Get(getUserEmails).Post(requireRecentAuth, bindJSON(userEmailRequest{}), postUserEmail)
+				f.Delete("/emails/{email}", requireRecentAuth, deleteUserEmail)
+				f.Put("/emails/{email}/primary", requireRecentAuth, putUserEmailPrimary)
+				f.Combo("/ssh-keys").Get(getUserSSHKeys).Post(requireRecentAuth, bindJSON(userSSHKeyRequest{}), postUserSSHKey)
+				f.Delete("/ssh-keys/{id}", requireRecentAuth, deleteUserSSHKey)
 				f.Group("/two-factor", func() {
-					f.Combo("").Get(getUserTwoFactor).Post(bindJSON(userTwoFactorRequest{}), postUserTwoFactor).Delete(deleteUserTwoFactor)
+					f.Combo("").
+						Get(getUserTwoFactor).
+						Post(requireRecentAuth, bindJSON(userTwoFactorRequest{}), postUserTwoFactor).
+						Delete(requireRecentAuth, deleteUserTwoFactor)
 					f.Get("/enrollment", getUserTwoFactorEnrollment)
-					f.Combo("/recovery-codes").Get(getUserRecoveryCodes).Post(postUserRecoveryCodes)
+					f.Combo("/recovery-codes", requireRecentAuth).Get(getUserRecoveryCodes).Post(postUserRecoveryCodes)
 				})
-				f.Combo("/passkeys").Get(getUserPasskeys).Post(bindJSON(userPasskeyRequest{}), postUserPasskey)
-				f.Post("/passkeys/registration", bindJSON(userPasskeyRegistrationRequest{}), postUserPasskeyRegistration)
-				f.Delete("/passkeys/{id}", deleteUserPasskey)
-				f.Combo("/tokens").Get(getUserAccessTokens).Post(bindJSON(userAccessTokenRequest{}), postUserAccessToken)
-				f.Delete("/tokens/{id}", deleteUserAccessToken)
+				f.Combo("/passkeys").Get(getUserPasskeys).Post(requireRecentAuth, bindJSON(userPasskeyRequest{}), postUserPasskey)
+				f.Post("/passkeys/registration", requireRecentAuth, bindJSON(userPasskeyRegistrationRequest{}), postUserPasskeyRegistration)
+				f.Delete("/passkeys/{id}", requireRecentAuth, deleteUserPasskey)
+				f.Combo("/tokens").Get(getUserAccessTokens).Post(requireRecentAuth, bindJSON(userAccessTokenRequest{}), postUserAccessToken)
+				f.Delete("/tokens/{id}", requireRecentAuth, deleteUserAccessToken)
 			}, requireSignIn)
 		})
 		f.Group("/{owner}/{repo}", func() {
@@ -220,21 +229,21 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withRepoMilestone)
 		}, requireSignIn, withRepoContext, withRepoWriter)
 		f.Group("/{owner}/{repo}", func() {
-			f.Delete("", bindJSON(repoConfirmRequest{}), deleteRepo)
+			f.Delete("", requireRecentAuth, bindJSON(repoConfirmRequest{}), deleteRepo)
 			f.Group("/settings", func() {
 				f.Combo("").Get(getRepoSettings).Patch(bindJSON(repoSettingsRequest{}), patchRepoSettings)
 				f.Put("/mirror", bindJSON(repoMirrorRequest{}), putRepoMirror)
 				f.Post("/mirror/sync", postRepoMirrorSync)
 				f.Put("/advanced", bindJSON(repoAdvancedSettings{}), putRepoAdvanced)
 				f.Post("/convert", bindJSON(repoConfirmRequest{}), postRepoConvert)
-				f.Post("/transfer", bindJSON(repoTransferRequest{}), postRepoTransfer)
+				f.Post("/transfer", requireRecentAuth, bindJSON(repoTransferRequest{}), postRepoTransfer)
 				f.Delete("/wiki", bindJSON(repoConfirmRequest{}), deleteRepoWiki)
 				f.Combo("/collaborators").Get(getRepoCollaborators).Post(bindJSON(repoCollaboratorRequest{}), postRepoCollaborator)
 				f.Combo("/collaborators/{username}").
 					Patch(bindJSON(repoCollaboratorModeRequest{}), patchRepoCollaborator).
 					Delete(deleteRepoCollaborator)
-				f.Combo("/keys").Get(getRepoDeployKeys).Post(bindJSON(userSSHKeyRequest{}), postRepoDeployKey)
-				f.Delete("/keys/{id}", deleteRepoDeployKey)
+				f.Combo("/keys").Get(getRepoDeployKeys).Post(requireRecentAuth, bindJSON(userSSHKeyRequest{}), postRepoDeployKey)
+				f.Delete("/keys/{id}", requireRecentAuth, deleteRepoDeployKey)
 				f.Group("/hooks", func() {
 					f.Combo("").Get(getWebhooks).Post(bindJSON(webhookRequest{}), postWebhook)
 					f.Group("/{id}", func() {
@@ -272,17 +281,17 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/config", getAdminConfig)
 			f.Post("/config/test-mail", bindJSON(adminTestMailRequest{}), postAdminTestMail)
 			f.Get("/monitor", getAdminMonitor)
-			f.Combo("/auths").Get(getAdminAuthSources).Post(bindJSON(adminAuthSourceRequest{}), postAdminAuthSource)
+			f.Combo("/auths").Get(getAdminAuthSources).Post(requireRecentAuth, bindJSON(adminAuthSourceRequest{}), postAdminAuthSource)
 			f.Combo("/auths/{id}", withAdminTargetAuthSource).
 				Get(getAdminAuthSource).
-				Patch(bindJSON(adminAuthSourceRequest{}), patchAdminAuthSource).
-				Delete(deleteAdminAuthSource)
-			f.Combo("/users").Get(getAdminUsers).Post(bindJSON(adminUserCreateRequest{}), postAdminUser)
+				Patch(requireRecentAuth, bindJSON(adminAuthSourceRequest{}), patchAdminAuthSource).
+				Delete(requireRecentAuth, deleteAdminAuthSource)
+			f.Combo("/users").Get(getAdminUsers).Post(requireRecentAuth, bindJSON(adminUserCreateRequest{}), postAdminUser)
 			f.Get("/user-options", getAdminUserOptions)
 			f.Combo("/users/{id}", withAdminTargetUser).
 				Get(getAdminUser).
-				Patch(bindJSON(adminUserUpdateRequest{}), patchAdminUser).
-				Delete(deleteAdminUser)
+				Patch(requireRecentAuth, bindJSON(adminUserUpdateRequest{}), patchAdminUser).
+				Delete(requireRecentAuth, deleteAdminUser)
 			f.Get("/orgs", getAdminOrgs)
 			f.Get("/repos", getAdminRepos)
 			f.Delete("/repos/{id}", deleteAdminRepo)

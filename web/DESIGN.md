@@ -85,6 +85,10 @@ The settings pages of users, organizations and repositories, and the admin panel
 
 Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a popover with `ConfirmButton`, not a modal. After such an action empties the page of a paginated list, move to the previous page instead of showing an empty one. Deleting an account asks for the password instead, with `DeleteForm`, and the danger zone of a repository asks for its name in the popover.
 
+## Confirming who you are
+
+Actions that change how to sign in to or access an account or its data, e.g., adding an SSH key, turning off two-factor authentication or deleting a repository, need the viewer to have confirmed who they are in the last 15 minutes. Signing in counts. Gate their routes with `requireRecentAuth` on the server. The client needs nothing more: `request` in `@/lib/queries/request` opens `ReauthDialog` when the server asks, and sends the request again once the viewer confirmed. A cancelled confirmation fails the request with `ReauthCancelledError`, whose message the page shows like any other error.
+
 ## Lists
 
 Lists that can be searched by keyword take `q` and `page` search params, validated with `validateListSearch` from `@/lib/page-search`, and search with `SearchForm` from `@/components/SearchForm`, which starts over from the first page.
