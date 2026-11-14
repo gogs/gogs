@@ -2,25 +2,48 @@ import { type AnyRoute, createRoute } from "@tanstack/react-router";
 
 import { loadSignedInPage } from "@/lib/loader-error";
 import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
-import { fetchAdminNotices, fetchAdminOrgs, fetchAdminRepos, fetchAdminUsers } from "@/lib/queries/admin";
+import {
+  fetchAdminNotices,
+  fetchAdminOrgs,
+  fetchAdminRepos,
+  fetchAdminUser,
+  fetchAdminUserOptions,
+  fetchAdminUsers,
+} from "@/lib/queries/admin";
 import { AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
-
-type AdminUsersSearch = ListSearch & { deleted?: true };
+import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
   const usersRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin/users",
-    // Deleting a user on their edit page lands here with `deleted`.
-    validateSearch: (search: Record<string, unknown>): AdminUsersSearch => ({
-      ...validateListSearch(search),
-      ...(search.deleted === 1 || search.deleted === "1" ? { deleted: true } : {}),
-    }),
-    loaderDeps: ({ search }: { search: AdminUsersSearch }) => ({ q: search.q, page: search.page }),
+    validateSearch: validateListSearch,
+    loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
     loader: ({ deps }) => loadSignedInPage(() => fetchAdminUsers(deps)),
     component: function Users() {
-      const search: AdminUsersSearch = usersRoute.useSearch();
-      return <AdminUsers list={usersRoute.useLoaderData()} search={search} deleted={search.deleted === true} />;
+      const search: ListSearch = usersRoute.useSearch();
+      return <AdminUsers list={usersRoute.useLoaderData()} search={search} />;
+    },
+  });
+
+  const userNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/users/new",
+    loader: () => loadSignedInPage(fetchAdminUserOptions),
+    component: function UserNew() {
+      return <AdminUserNew options={userNewRoute.useLoaderData()} />;
+    },
+  });
+
+  const userEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/users/$id",
+    loader: ({ params }) =>
+      loadSignedInPage(() => Promise.all([fetchAdminUser(Number(params.id)), fetchAdminUserOptions()])),
+    component: function UserEdit() {
+      const [user, options] = userEditRoute.useLoaderData();
+      // Remount for another user so the form starts from their values.
+      return <AdminUserEdit key={user.id} user={user} options={options} />;
     },
   });
 
@@ -59,5 +82,5 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [usersRoute, orgsRoute, reposRoute, noticesRoute];
+  return [usersRoute, userNewRoute, userEditRoute, orgsRoute, reposRoute, noticesRoute];
 }

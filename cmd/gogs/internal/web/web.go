@@ -143,10 +143,19 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Get("/monitor", admin.Monitor)
 
 			m.Get("/^:page(users|orgs|repos|notices)$", func(c *context.Context) { c.ServeWeb() })
-			m.Group("/users", func() {
-				m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(form.AdminCrateUser{}), admin.NewUserPost)
-				m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(form.AdminEditUser{}), admin.EditUserPost)
-				m.Post("/:userid/delete", admin.DeleteUser)
+			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/users/:userid", func(c *context.Context) {
+				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
+				if err != nil {
+					c.NotFoundOrError(err, "get user by ID")
+					return
+				}
+				// Organizations have their own settings.
+				if user.IsOrganization() {
+					c.NotFound()
+					return
+				}
+				c.ServeWeb()
 			})
 
 			m.Group("/auths", func() {

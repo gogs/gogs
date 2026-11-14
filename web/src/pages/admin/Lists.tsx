@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Pencil, Plus } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -93,37 +93,21 @@ function useReloadList(current: number) {
   };
 }
 
-// AdminUsers lists the users of the site. deleted is true right after a user
-// was deleted from their edit page.
-export function AdminUsers({
-  list,
-  search,
-  deleted,
-}: {
-  list: AdminList<AdminUser>;
-  search: ListSearch;
-  deleted: boolean;
-}) {
+// AdminUsers lists the users of the site.
+export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; search: ListSearch }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!deleted) return;
-    toast.success(t("admin.users.deletion_success"));
-    void navigate({ to: "/admin/users", search: { q: search.q, page: search.page }, replace: true });
-  }, [deleted, navigate, search.q, search.page, t]);
 
   return (
-    <AdminLayout active="users">
+    <AdminLayout active="users" wide>
       <AdminListHeading
         title={t("admin.users")}
         total={list.total}
         action={
           <Button asChild variant="outline" size="sm">
-            <a href={subUrl("/admin/users/new")}>
+            <Link to="/admin/users/new">
               <Plus className="size-4" aria-hidden />
               {t("admin.users.new_account")}
-            </a>
+            </Link>
           </Button>
         }
       />
@@ -159,10 +143,14 @@ export function AdminUsers({
               </div>
             </div>
             <Button asChild variant="outline" size="sm" className="shrink-0">
-              <a href={subUrl(`/admin/users/${user.id}`)} aria-label={`${t("admin.users.edit")} ${user.name}`}>
+              <Link
+                to="/admin/users/$id"
+                params={{ id: String(user.id) }}
+                aria-label={`${t("admin.users.edit")} ${user.name}`}
+              >
                 <Pencil className="size-3.5" aria-hidden />
                 {t("admin.users.edit")}
-              </a>
+              </Link>
             </Button>
           </li>
         )}
@@ -175,7 +163,7 @@ export function AdminUsers({
 export function AdminOrgs({ list, search }: { list: AdminList<AdminOrg>; search: ListSearch }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="orgs">
+    <AdminLayout active="orgs" wide>
       <AdminListHeading title={t("admin.organizations")} total={list.total} />
       <SearchForm q={search.q} />
       <ListBody list={list}>
@@ -233,7 +221,7 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
   const reload = useReloadList(list.page);
   const description = `${t("repo.settings.delete_desc")} ${t("repo.settings.delete_notices_2").replace(/^-\s*/, "")}`;
   return (
-    <AdminLayout active="repos">
+    <AdminLayout active="repos" wide>
       <AdminListHeading title={t("admin.repositories")} total={list.total} />
       <SearchForm q={search.q} />
       <ListBody list={list}>
@@ -342,7 +330,7 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
   };
 
   return (
-    <AdminLayout active="notices">
+    <AdminLayout active="notices" wide>
       <AdminListHeading
         title={t("admin.notices")}
         total={list.total}
