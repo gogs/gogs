@@ -4,6 +4,8 @@ import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-
 import { LoaderResponseError, loadSignedInPage, loaderResponseError } from "@/lib/loader-error";
 import { type PageSearch, validatePageSearch } from "@/lib/page-search";
 import {
+  fetchRepoBranchSettings,
+  fetchRepoBranches,
   fetchRepoCollaborators,
   fetchRepoDeployKeys,
   fetchRepoForkOptions,
@@ -17,6 +19,7 @@ import {
   fetchRepoNewOptions,
   fetchRepoNewRelease,
   fetchRepoPeople,
+  fetchRepoProtectedBranch,
   fetchRepoRelease,
   fetchRepoReleases,
   repoHeaderQuery,
@@ -25,6 +28,7 @@ import {
 import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/webhooks";
 import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
+import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoForks } from "@/pages/repo/Forks";
@@ -39,7 +43,13 @@ import { type RepoNewIssueSearch, validateRepoNewIssueSearch } from "@/pages/rep
 import { RepoPeople } from "@/pages/repo/People";
 import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
 import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
-import { RepoCollaboration, RepoDeployKeys, RepoOptions } from "@/pages/repo/Settings";
+import {
+  RepoBranchProtection,
+  RepoBranchSettings,
+  RepoCollaboration,
+  RepoDeployKeys,
+  RepoOptions,
+} from "@/pages/repo/Settings";
 
 // Match the legacy server-side route constraint (see `web.go` near the
 // `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
@@ -271,6 +281,45 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       const { owner, repo } = repoSettingsRoute.useParams();
       // Start over when the repository changes, e.g., after renaming it.
       return <RepoOptions key={`${owner}/${repo}`} owner={owner} name={repo} />;
+    },
+  });
+
+  const repoBranchSettingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/branches",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoBranchSettings(params.owner, params.repo),
+      ),
+    component: function BranchSettings() {
+      const { owner, repo } = repoBranchSettingsRoute.useParams();
+      const settings = repoBranchSettingsRoute.useLoaderData();
+      // Start over once the default branch is saved, so the choice shows it.
+      return <RepoBranchSettings key={settings.defaultBranch} owner={owner} name={repo} settings={settings} />;
+    },
+  });
+
+  // Branch names can contain slashes, so the branch is the rest of the path.
+  const repoBranchProtectionRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/branches/$",
+    // Without a branch the path is the branch settings, which a splat would
+    // otherwise take over.
+    params: { parse: (params) => (params._splat ? params : false) },
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoProtectedBranch(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function BranchProtection() {
+      const { owner, repo, _splat: branch } = repoBranchProtectionRoute.useParams();
+      return (
+        <RepoBranchProtection
+          key={`${owner}/${repo}@${branch}`}
+          owner={owner}
+          name={repo}
+          branch={repoBranchProtectionRoute.useLoaderData()}
+        />
+      );
     },
   });
 
@@ -506,6 +555,32 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const repoBranchesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/branches",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoBranches(params.owner, params.repo),
+      ),
+    component: function Branches() {
+      const { owner, repo } = repoBranchesRoute.useParams();
+      return <RepoBranches owner={owner} name={repo} view="overview" data={repoBranchesRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoAllBranchesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/branches/all",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoBranches(params.owner, params.repo),
+      ),
+    component: function AllBranches() {
+      const { owner, repo } = repoAllBranchesRoute.useParams();
+      return <RepoBranches owner={owner} name={repo} view="all" data={repoAllBranchesRoute.useLoaderData()} />;
+    },
+  });
+
   const repoReleasesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/releases",
@@ -571,6 +646,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoNewIssueRoute,
     repoIssueRoute,
     repoForksRoute,
+    repoBranchesRoute,
+    repoAllBranchesRoute,
     repoReleasesRoute,
     repoReleaseNewRoute,
     repoReleaseEditRoute,
@@ -583,6 +660,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoForkRoute,
     repoSettingsRoute,
     repoCollaborationRoute,
+    repoBranchSettingsRoute,
+    repoBranchProtectionRoute,
     repoDeployKeysRoute,
     repoWebhooksRoute,
     repoWebhookNewRoute,

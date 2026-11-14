@@ -320,8 +320,75 @@ export function deleteRepoDeployKey(owner: string, name: string, id: number) {
   return send("DELETE", repoSettingsURL(owner, name, `/keys/${id}`));
 }
 
+export interface RepoBranchSettingsData {
+  // isEmpty is set for a repository without commits, which has no branches
+  // to manage yet.
+  isEmpty: boolean;
+  defaultBranch: string;
+  branches: string[];
+  protectedBranches: string[];
+}
+
+export function fetchRepoBranchSettings(owner: string, name: string) {
+  return fetchJSON<RepoBranchSettingsData>(repoSettingsURL(owner, name, "/branches"));
+}
+
+export function updateRepoDefaultBranch(owner: string, name: string, branch: string) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, "/default-branch"), { branch });
+}
+
+export interface RepoProtectedBranchForm {
+  protected: boolean;
+  requirePullRequest: boolean;
+  enableWhitelist: boolean;
+  whitelistUserIDs: number[];
+  whitelistTeamIDs: number[];
+}
+
+export interface RepoProtectedBranch extends RepoProtectedBranchForm {
+  name: string;
+  // The options are only sent for repositories of organizations, which alone
+  // can let people and teams push past the protection.
+  userOptions?: { id: number; name: string; avatarURL: string }[];
+  teamOptions?: { id: number; name: string }[];
+}
+
+export function fetchRepoProtectedBranch(owner: string, name: string, branch: string) {
+  return fetchJSON<RepoProtectedBranch>(repoSettingsURL(owner, name, `/branches/${refPath(branch)}`));
+}
+
+export function updateRepoProtectedBranch(owner: string, name: string, branch: string, form: RepoProtectedBranchForm) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, `/branches/${refPath(branch)}`), form);
+}
+
+// refPath encodes the name of a branch or a tag, which may contain slashes,
+// for a path.
+export function refPath(ref: string) {
+  return ref.split("/").map(encodeURIComponent).join("/");
+}
+
 function repoURL(owner: string, name: string, path: string) {
   return subUrl(`/api/web/${owner}/${name}${path}`);
+}
+
+export interface RepoBranch {
+  name: string;
+  isProtected: boolean;
+  commitID: string;
+  committedAt: string;
+  committerName: string;
+}
+
+export interface RepoBranchesData {
+  defaultBranch: string;
+  branches: RepoBranch[];
+  viewerCanWrite: boolean;
+  allowsPulls: boolean;
+  viewerCanChangeDefault: boolean;
+}
+
+export function fetchRepoBranches(owner: string, name: string) {
+  return fetchJSON<RepoBranchesData>(repoURL(owner, name, "/branches"));
 }
 
 export interface RepoLabel {
@@ -681,11 +748,6 @@ export interface RepoReleasesData {
   isMirror: boolean;
 }
 
-// releaseTagPath encodes a tag name, which may contain slashes, for a path.
-export function releaseTagPath(tag: string) {
-  return tag.split("/").map(encodeURIComponent).join("/");
-}
-
 export function fetchRepoReleases(owner: string, name: string, after?: string) {
   const query = after ? `?${new URLSearchParams({ after }).toString()}` : "";
   return fetchJSON<RepoReleasesData>(repoURL(owner, name, `/releases${query}`));
@@ -713,7 +775,7 @@ export interface RepoReleaseEdit {
 }
 
 export function fetchRepoRelease(owner: string, name: string, tag: string) {
-  return fetchJSON<RepoReleaseEdit>(repoURL(owner, name, `/releases/edit/${releaseTagPath(tag)}`));
+  return fetchJSON<RepoReleaseEdit>(repoURL(owner, name, `/releases/edit/${refPath(tag)}`));
 }
 
 export interface RepoReleaseForm {
@@ -732,9 +794,9 @@ export function createRepoRelease(owner: string, name: string, form: RepoRelease
 }
 
 export function updateRepoRelease(owner: string, name: string, tag: string, form: RepoReleaseForm) {
-  return submit<void>("PATCH", repoURL(owner, name, `/releases/edit/${releaseTagPath(tag)}`), form);
+  return submit<void>("PATCH", repoURL(owner, name, `/releases/edit/${refPath(tag)}`), form);
 }
 
 export function deleteRepoRelease(owner: string, name: string, tag: string) {
-  return send("DELETE", repoURL(owner, name, `/releases/edit/${releaseTagPath(tag)}`));
+  return send("DELETE", repoURL(owner, name, `/releases/edit/${refPath(tag)}`));
 }
