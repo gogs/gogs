@@ -1,5 +1,3 @@
-import { subUrl } from "@/lib/url";
-
 export function Footer() {
   return (
     <footer className="mt-8 border-t border-(--color-border)">
@@ -26,9 +24,6 @@ export function Footer() {
           </a>
         </div>
       </div>
-      <a href={subUrl("/assets/librejs/librejs.html")} className="hidden" data-jslicense="1">
-        JavaScript Licenses
-      </a>
     </footer>
   );
 }

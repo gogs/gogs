@@ -1,4 +1,4 @@
-import type { SelectedLineRange } from "@pierre/diffs";
+import { type SelectedLineRange, getFiletypeFromFileName } from "@pierre/diffs";
 import { File as CodeFile } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -21,8 +21,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CloneBox } from "@/components/CloneBox";
@@ -38,6 +37,8 @@ import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoCommitListItem,
   type RepoFile,
+  type RepoNotebook,
+  type RepoNotebookOutput,
   type RepoSrcData,
   type RepoTreeEntry,
   refPath,
@@ -47,6 +48,8 @@ import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
+
+const PdfView = lazy(() => import("@/components/PdfView"));
 
 const LINK_CLASS = "text-(--color-primary) hover:underline";
 const ICON_BUTTON_CLASS =
@@ -592,7 +595,7 @@ function FileBody({ file, rawURL }: { file: RepoFile; rawURL: string }) {
     case "markup":
       return <Markdown html={file.html ?? ""} className="p-4 sm:p-6" />;
     case "notebook":
-      return <NotebookView rawURL={rawURL} />;
+      return file.notebook ? <NotebookView notebook={file.notebook} rawURL={rawURL} /> : null;
     case "image":
       return (
         <div className="grid place-items-center bg-(--color-background) p-4">
@@ -609,11 +612,9 @@ function FileBody({ file, rawURL }: { file: RepoFile; rawURL: string }) {
       );
     case "pdf":
       return (
-        <iframe
-          title={file.name}
-          src={subUrl(`/plugins/pdfjs-5.2.133/web/viewer.html?file=${encodeURIComponent(rawURL)}`)}
-          className="block h-[80vh] w-full"
-        />
+        <Suspense fallback={null}>
+          <PdfView url={rawURL} />
+        </Suspense>
       );
     default:
       return (
@@ -697,113 +698,112 @@ function SourceView({ file }: { file: RepoFile }) {
   );
 }
 
-const NOTEBOOK_SCRIPTS = [
-  "/plugins/dompurify-3.4.8/purify.min.js",
-  "/plugins/marked-4.3.0/marked.min.js",
-  "/plugins/notebookjs-0.8.3/notebook.min.js",
-];
-
-interface NotebookGlobal {
-  nb: { parse: (notebook: unknown) => { render: () => HTMLElement } };
-}
-
-let notebookScripts: Promise<void> | undefined;
-
-// loadNotebookScripts loads notebook.js with the libraries it renders
-// Markdown cells with, once.
-function loadNotebookScripts() {
-  notebookScripts ??= NOTEBOOK_SCRIPTS.reduce(
-    (previous, src) =>
-      previous.then(
-        () =>
-          new Promise<void>((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = subUrl(src);
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error(`load ${src}`));
-            document.head.append(script);
-          }),
-      ),
-    Promise.resolve(),
-  );
-  return notebookScripts;
-}
-
-// NotebookView renders a Jupyter notebook with notebook.js, sanitized by the
-// server like the server-rendered pages, and highlights its input cells.
-function NotebookView({ rawURL }: { rawURL: string }) {
-  const { t } = useTranslation();
-  const container = useRef<HTMLDivElement>(null);
-  const [html, setHTML] = useState<string>();
-  const [failed, setFailed] = useState(false);
-  const [cells, setCells] = useState<{ node: Element; code: string }[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [notebook] = await Promise.all([
-          fetch(rawURL, { credentials: "same-origin" }).then((res) => res.json() as Promise<unknown>),
-          loadNotebookScripts(),
-        ]);
-        const rendered = (window as unknown as NotebookGlobal).nb.parse(notebook).render();
-        const res = await fetch(subUrl("/-/api/sanitize_ipynb"), {
-          method: "POST",
-          credentials: "same-origin",
-          body: rendered.outerHTML,
-        });
-        if (!res.ok) throw new Error(`sanitize notebook: ${res.status}`);
-        const sanitized = await res.text();
-        if (!cancelled) setHTML(sanitized);
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [rawURL]);
-
-  useEffect(() => {
-    const root = container.current;
-    if (!root || html === undefined) return;
-    // Set outside of React, which would otherwise put the input cells back
-    // over their highlighted code.
-    root.innerHTML = html;
-    // Relative image sources resolve against the notebook's directory.
-    const dir = rawURL.slice(0, rawURL.lastIndexOf("/"));
-    for (const img of Array.from(root.querySelectorAll<HTMLImageElement>(".nb-markdown-cell img"))) {
-      const src = img.getAttribute("src") ?? "";
-      if (src && !src.startsWith("/") && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(src))
-        img.setAttribute("src", `${dir}/${src}`);
-    }
-    setCells(
-      Array.from(root.querySelectorAll(".nb-input pre")).map((pre) => {
-        const code = pre.textContent ?? "";
-        pre.replaceChildren();
-        return { node: pre, code };
-      }),
-    );
-  }, [html, rawURL]);
-
-  if (failed) {
-    return (
-      <div className="flex flex-col items-center gap-3 px-4 py-10 text-sm">
-        <Button asChild variant="outline" size="sm">
-          <a href={rawURL} rel="nofollow">
-            {t("repo.file_view_raw")}
-          </a>
-        </Button>
-      </div>
-    );
+// resolveImages points relative image sources in the Markdown of a notebook at
+// the files next to it, e.g., "img/plot.png".
+function resolveImages(html: string, dir: string) {
+  if (!html.includes("<img")) return html;
+  const body = new DOMParser().parseFromString(html, "text/html").body;
+  for (const img of Array.from(body.querySelectorAll("img"))) {
+    const src = img.getAttribute("src") ?? "";
+    if (src && !/^([a-z][a-z0-9+.-]*:|\/|#)/i.test(src)) img.setAttribute("src", `${dir}/${src}`);
   }
+  return body.innerHTML;
+}
+
+// NotebookPrompt labels the input or output of a code cell like Jupyter, e.g.,
+// "In [3]:".
+function NotebookPrompt({ label, count }: { label?: "In" | "Out"; count?: number }) {
   return (
-    <>
-      <div ref={container} className="markdown notebook p-4 sm:p-6" />
-      {cells.map((cell, i) =>
-        createPortal(<CodeBlock code={cell.code.replace(/\n$/, "")} lang="python" />, cell.node, i),
-      )}
-    </>
+    <div className="font-mono text-xs text-(--color-muted-foreground) sm:pt-2 sm:text-right">
+      {label ? `${label} [${count ?? " "}]:` : null}
+    </div>
+  );
+}
+
+const NOTEBOOK_ROW = "flex flex-col gap-1 sm:grid sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-3";
+
+// themeAnsiColors replaces the 256-color and true-color codes of ANSI escape
+// sequences with the default color, so text only takes the 16 colors of the
+// theme, which stay readable in both modes.
+function themeAnsiColors(text: string) {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[([\d;]*)m/g, (_, params: string) => {
+    const codes = params.split(";");
+    const kept: string[] = [];
+    for (let i = 0; i < codes.length; i++) {
+      if ((codes[i] === "38" || codes[i] === "48") && (codes[i + 1] === "5" || codes[i + 1] === "2")) {
+        kept.push(codes[i] === "38" ? "39" : "49");
+        i += codes[i + 1] === "5" ? 2 : 4;
+        continue;
+      }
+      kept.push(codes[i]);
+    }
+    return `\x1b[${kept.join(";")}m`;
+  });
+}
+
+function NotebookOutputView({ output }: { output: RepoNotebookOutput }) {
+  const { t } = useTranslation();
+  switch (output.type) {
+    case "text":
+    case "error":
+      return (
+        <CodeBlock
+          code={themeAnsiColors(output.text ?? "").replace(/\n$/, "")}
+          lang="ansi"
+          className={cn("rounded-none border-0", output.type === "error" && "border-l-2 border-(--color-destructive)")}
+        />
+      );
+    case "image":
+      return <img src={output.src} alt={t("repo.notebook_output_image")} className="max-w-full bg-white" />;
+    case "html":
+      return <Markdown html={output.html ?? ""} className="overflow-x-auto" />;
+  }
+}
+
+// NotebookView shows a Jupyter notebook from the cells the server parsed, with
+// Markdown and HTML it rendered and sanitized.
+function NotebookView({ notebook, rawURL }: { notebook: RepoNotebook; rawURL: string }) {
+  const lang = getFiletypeFromFileName(`cell${notebook.fileExtension || ".py"}`);
+  const dir = rawURL.slice(0, rawURL.lastIndexOf("/"));
+  return (
+    <div className="flex flex-col gap-4 p-4 sm:p-6">
+      {notebook.cells.map((cell, i) => {
+        switch (cell.type) {
+          case "markdown":
+            return (
+              <div key={i} className={NOTEBOOK_ROW}>
+                <NotebookPrompt />
+                <Markdown html={resolveImages(cell.html ?? "", dir)} />
+              </div>
+            );
+          case "raw":
+            return (
+              <div key={i} className={NOTEBOOK_ROW}>
+                <NotebookPrompt />
+                <pre className="font-mono text-xs whitespace-pre-wrap">{cell.source}</pre>
+              </div>
+            );
+          case "code":
+            return (
+              <div key={i} className="flex flex-col gap-2">
+                <div className={NOTEBOOK_ROW}>
+                  <NotebookPrompt label="In" count={cell.executionCount} />
+                  <CodeBlock code={cell.source ?? ""} lang={lang} />
+                </div>
+                {cell.outputs?.map((output, j) => (
+                  <div key={j} className={NOTEBOOK_ROW}>
+                    <NotebookPrompt label={output.executionCount ? "Out" : undefined} count={output.executionCount} />
+                    <div className="min-w-0">
+                      <NotebookOutputView output={output} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+        }
+      })}
+    </div>
   );
 }
 

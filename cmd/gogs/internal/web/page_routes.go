@@ -309,10 +309,7 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 		f.Get("/{type: /(stars|watchers)/}", serveWeb)
 	}, serveGoGet, page, ignSignIn, withPageRepo(false, false))
 
-	f.Group("/-", func() {
-		f.Get("/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
-		f.Post("/api/sanitize_ipynb", app.SanitizeIpynb())
-	})
+	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
 }
 
 // serveUserProfile serves the profile page of a user or an organization, and the
