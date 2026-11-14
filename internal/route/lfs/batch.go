@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -15,13 +15,13 @@ import (
 )
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
-func serveBatch(store Store) macaron.Handler {
-	return func(c *macaron.Context, owner *database.User, repo *database.Repository) {
+func serveBatch(store Store) flamego.Handler {
+	return func(c flamego.Context, owner *database.User, repo *database.Repository) {
 		var request batchRequest
-		defer func() { _ = c.Req.Request.Body.Close() }()
-		err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
+		defer func() { _ = c.Request().Request.Body.Close() }()
+		err := json.NewDecoder(c.Request().Request.Body).Decode(&request)
 		if err != nil {
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: strx.ToUpperFirst(err.Error()),
 			})
 			return
@@ -72,9 +72,9 @@ func serveBatch(store Store) macaron.Handler {
 			for _, obj := range request.Objects {
 				oids = append(oids, obj.Oid)
 			}
-			stored, err := store.GetLFSObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
+			stored, err := store.GetLFSObjectsByOIDs(c.Request().Context(), repo.ID, oids...)
 			if err != nil {
-				internalServerError(c.Resp)
+				internalServerError(c.ResponseWriter())
 				log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
 				return
 			}
@@ -111,13 +111,13 @@ func serveBatch(store Store) macaron.Handler {
 			}
 
 		default:
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: "Operation not recognized",
 			})
 			return
 		}
 
-		responseJSON(c.Resp, http.StatusOK, batchResponse{
+		responseJSON(c.ResponseWriter(), http.StatusOK, batchResponse{
 			Transfer: transfer,
 			Objects:  objects,
 		})

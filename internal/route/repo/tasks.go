@@ -3,31 +3,31 @@ package repo
 import (
 	"net/http"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 )
 
-func TriggerTask(c *macaron.Context) {
+func TriggerTask(c flamego.Context) {
 	branch := c.Query("branch")
 	pusherID := c.QueryInt64("pusher")
 	secret := c.Query("secret")
 	if branch == "" || pusherID <= 0 || secret == "" {
-		c.Error(http.StatusBadRequest, "Incomplete branch, pusher or secret")
+		writeError(c.ResponseWriter(), http.StatusBadRequest, "Incomplete branch, pusher or secret")
 		return
 	}
 
-	username := c.Params(":username")
-	reponame := c.Params(":reponame")
+	username := c.Param("owner")
+	reponame := c.Param("repo")
 
-	owner, err := database.Handle.Users().GetByUsername(c.Req.Context(), username)
+	owner, err := database.Handle.Users().GetByUsername(c.Request().Context(), username)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			c.Error(http.StatusBadRequest, "Owner does not exist")
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Owner does not exist")
 		} else {
-			c.Status(http.StatusInternalServerError)
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 			log.Error("Failed to get user [name: %s]: %v", username, err)
 		}
 		return
@@ -36,27 +36,27 @@ func TriggerTask(c *macaron.Context) {
 	// 🚨 SECURITY: No need to check existence of the repository if the client
 	// can't even get the valid secret. Mostly likely not a legitimate request.
 	if secret != cryptox.MD5(owner.Salt) {
-		c.Error(http.StatusBadRequest, "Invalid secret")
+		writeError(c.ResponseWriter(), http.StatusBadRequest, "Invalid secret")
 		return
 	}
 
-	repo, err := database.Handle.Repositories().GetByName(c.Req.Context(), owner.ID, reponame)
+	repo, err := database.Handle.Repositories().GetByName(c.Request().Context(), owner.ID, reponame)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
-			c.Error(http.StatusBadRequest, "Repository does not exist")
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Repository does not exist")
 		} else {
-			c.Status(http.StatusInternalServerError)
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 			log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
 		}
 		return
 	}
 
-	pusher, err := database.Handle.Users().GetByID(c.Req.Context(), pusherID)
+	pusher, err := database.Handle.Users().GetByID(c.Request().Context(), pusherID)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			c.Error(http.StatusBadRequest, "Pusher does not exist")
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Pusher does not exist")
 		} else {
-			c.Status(http.StatusInternalServerError)
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 			log.Error("Failed to get user [id: %d]: %v", pusherID, err)
 		}
 		return
@@ -66,5 +66,5 @@ func TriggerTask(c *macaron.Context) {
 
 	go database.HookQueue.Add(repo.ID)
 	go database.AddTestPullRequestTask(pusher, repo.ID, branch, true)
-	c.Status(http.StatusAccepted)
+	c.ResponseWriter().WriteHeader(http.StatusAccepted)
 }

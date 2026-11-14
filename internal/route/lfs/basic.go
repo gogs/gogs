@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/database"
@@ -39,15 +39,15 @@ func (h *basicHandler) Storager(storage lfsx.Storage) lfsx.Storager {
 }
 
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Repository, oid lfsx.OID) {
-	object, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, oid)
+func (h *basicHandler) serveDownload(c flamego.Context, repo *database.Repository, oid lfsx.OID) {
+	object, err := h.store.GetLFSObjectByOID(c.Request().Context(), repo.ID, oid)
 	if err != nil {
 		if database.IsErrLFSObjectNotExist(err) {
-			responseJSON(c.Resp, http.StatusNotFound, responseError{
+			responseJSON(c.ResponseWriter(), http.StatusNotFound, responseError{
 				Message: "Object does not exist",
 			})
 		} else {
-			internalServerError(c.Resp)
+			internalServerError(c.ResponseWriter())
 			log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		}
 		return
@@ -55,16 +55,16 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 
 	s := h.Storager(object.Storage)
 	if s == nil {
-		internalServerError(c.Resp)
+		internalServerError(c.ResponseWriter())
 		log.Error("Failed to locate the object [repo_id: %d, oid: %s]: storage %q not found", object.RepoID, object.OID, object.Storage)
 		return
 	}
 
-	c.Header().Set("Content-Type", "application/octet-stream")
-	c.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
-	c.Status(http.StatusOK)
+	c.ResponseWriter().Header().Set("Content-Type", "application/octet-stream")
+	c.ResponseWriter().Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
+	c.ResponseWriter().WriteHeader(http.StatusOK)
 
-	err = s.Download(object.OID, c.Resp)
+	err = s.Download(object.OID, c.ResponseWriter())
 	if err != nil {
 		log.Error("Failed to download object [oid: %s]: %v", object.OID, err)
 		return
@@ -72,90 +72,90 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *database.Reposito
 }
 
 // PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func (h *basicHandler) serveUpload(c *macaron.Context, repo *database.Repository, oid lfsx.OID) {
+func (h *basicHandler) serveUpload(c flamego.Context, repo *database.Repository, oid lfsx.OID) {
 	// NOTE: LFS client will retry upload the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
-	_, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, oid)
+	_, err := h.store.GetLFSObjectByOID(c.Request().Context(), repo.ID, oid)
 	if err == nil {
 		// Object exists, drain the request body and we're good.
-		_, _ = io.Copy(io.Discard, c.Req.Request.Body)
-		c.Req.Request.Body.Close()
-		c.Status(http.StatusOK)
+		_, _ = io.Copy(io.Discard, c.Request().Request.Body)
+		c.Request().Request.Body.Close()
+		c.ResponseWriter().WriteHeader(http.StatusOK)
 		return
 	} else if !database.IsErrLFSObjectNotExist(err) {
-		internalServerError(c.Resp)
+		internalServerError(c.ResponseWriter())
 		log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return
 	}
 
 	s := h.DefaultStorager()
-	written, err := s.Upload(oid, c.Req.Request.Body)
+	written, err := s.Upload(oid, c.Request().Request.Body)
 	if err != nil {
 		if err == lfsx.ErrInvalidOID || err == lfsx.ErrOIDMismatch {
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: err.Error(),
 			})
 		} else {
-			internalServerError(c.Resp)
+			internalServerError(c.ResponseWriter())
 			log.Error("Failed to upload object [storage: %s, oid: %s]: %v", s.Storage(), oid, err)
 		}
 		return
 	}
 
-	err = h.store.CreateLFSObject(c.Req.Context(), repo.ID, oid, written, s.Storage())
+	err = h.store.CreateLFSObject(c.Request().Context(), repo.ID, oid, written, s.Storage())
 	if err != nil {
 		// NOTE: It is OK to leave the file when the whole operation failed
 		// with a DB error, a retry on client side will skip the upload as
 		// the file already exists on disk.
-		internalServerError(c.Resp)
+		internalServerError(c.ResponseWriter())
 		log.Error("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return
 	}
-	c.Status(http.StatusOK)
+	c.ResponseWriter().WriteHeader(http.StatusOK)
 
 	log.Trace("[LFS] Object created %q", oid)
 }
 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
-func (h *basicHandler) serveVerify(c *macaron.Context, repo *database.Repository) {
+func (h *basicHandler) serveVerify(c flamego.Context, repo *database.Repository) {
 	var request basicVerifyRequest
-	defer func() { _ = c.Req.Request.Body.Close() }()
+	defer func() { _ = c.Request().Request.Body.Close() }()
 
-	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
+	err := json.NewDecoder(c.Request().Request.Body).Decode(&request)
 	if err != nil {
-		responseJSON(c.Resp, http.StatusBadRequest, responseError{
+		responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 			Message: strx.ToUpperFirst(err.Error()),
 		})
 		return
 	}
 
 	if !lfsx.ValidOID(request.Oid) {
-		responseJSON(c.Resp, http.StatusBadRequest, responseError{
+		responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 			Message: "Invalid oid",
 		})
 		return
 	}
 
-	object, err := h.store.GetLFSObjectByOID(c.Req.Context(), repo.ID, request.Oid)
+	object, err := h.store.GetLFSObjectByOID(c.Request().Context(), repo.ID, request.Oid)
 	if err != nil {
 		if database.IsErrLFSObjectNotExist(err) {
-			responseJSON(c.Resp, http.StatusNotFound, responseError{
+			responseJSON(c.ResponseWriter(), http.StatusNotFound, responseError{
 				Message: "Object does not exist",
 			})
 		} else {
-			internalServerError(c.Resp)
+			internalServerError(c.ResponseWriter())
 			log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, request.Oid, err)
 		}
 		return
 	}
 
 	if object.Size != request.Size {
-		responseJSON(c.Resp, http.StatusBadRequest, responseError{
+		responseJSON(c.ResponseWriter(), http.StatusBadRequest, responseError{
 			Message: "Object size mismatch",
 		})
 		return
 	}
-	c.Status(http.StatusOK)
+	c.ResponseWriter().WriteHeader(http.StatusOK)
 }
 
 type basicVerifyRequest struct {
