@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,6 +130,74 @@ func TestRunService(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, stderr.String(), "does not appear to be a git repository")
 	})
+}
+
+func TestRunReceivePack(t *testing.T) {
+	ctx := context.Background()
+
+	remotePath := filepath.Join(t.TempDir(), "remote.git")
+	require.NoError(t, Init(ctx, remotePath, InitOptions{Bare: true}))
+	// Rejects only the update of this one branch, so the rest of the push goes on.
+	err := os.WriteFile(filepath.Join(remotePath, "hooks", "update"),
+		[]byte("#!/bin/sh\ntest \"$1\" != refs/heads/rejected\n"), 0o755)
+	require.NoError(t, err)
+
+	var applied []RefUpdate
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/info/refs") {
+			w.Header().Set("Content-Type", "application/x-git-receive-pack-advertisement")
+			_, _ = w.Write([]byte("001f# service=git-receive-pack\n0000"))
+			assert.NoError(t, RunService(ctx, ServiceReceivePack, remotePath, ServiceOptions{
+				StatelessRPC:  true,
+				AdvertiseRefs: true,
+				Stdout:        w,
+			}))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-git-receive-pack-result")
+		var err error
+		applied, err = RunReceivePack(ctx, remotePath, ServiceOptions{
+			StatelessRPC: true,
+			Stdin:        r.Body,
+			Stdout:       w,
+		})
+		assert.NoError(t, err)
+	}))
+	defer server.Close()
+
+	localPath := t.TempDir()
+	git := func(args ...string) string {
+		args = append([]string{"-c", "user.name=alice", "-c", "user.email=alice@example.com"}, args...)
+		stdout, _ := exec(ctx, localPath, args, nil)
+		return strings.TrimSpace(string(stdout))
+	}
+	empty := ObjectFormatSHA1.EmptyID()
+	git("init", "--initial-branch=main")
+	git("commit", "--allow-empty", "-m", "first")
+	first := git("rev-parse", "HEAD")
+	git("branch", "rejected")
+	git("tag", "v1")
+
+	git("push", server.URL, "main", "rejected", "v1")
+	assert.ElementsMatch(t,
+		[]RefUpdate{
+			{OldID: empty, NewID: first, RefName: "refs/heads/main"},
+			{OldID: empty, NewID: first, RefName: "refs/tags/v1"},
+		},
+		applied,
+	)
+
+	git("commit", "--allow-empty", "-m", "second")
+	second := git("rev-parse", "HEAD")
+	git("push", server.URL, "main", ":refs/tags/v1")
+	assert.ElementsMatch(t,
+		[]RefUpdate{
+			{OldID: first, NewID: second, RefName: "refs/heads/main"},
+			{OldID: first, NewID: empty, RefName: "refs/tags/v1"},
+		},
+		applied,
+	)
 }
 
 func TestRunService_IdleTimeout(t *testing.T) {

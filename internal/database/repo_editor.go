@@ -132,17 +132,17 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 // commitAndPush creates a commit on top of the parent, or a root commit when
 // the parent is nil, with the changes that change makes to the index of a
 // temporary repository, and pushes it to the branch of the repository at
-// repoPath with the environment variables. When the changes leave the tree of
-// the parent as it was, it pushes the parent as is. The committer may be nil to
-// use the one from Git configuration.
-func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) error {
+// repoPath with the environment variables, and returns the ID of the pushed
+// commit. When the changes leave the tree of the parent as it was, it pushes the
+// parent as is. The committer may be nil to use the one from Git configuration.
+func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) (string, error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
 
 	tmpRepo, cleanup, err := newTemporaryRepository(ctx, repoPath)
 	if err != nil {
-		return errors.Wrap(err, "create temporary repository")
+		return "", errors.Wrap(err, "create temporary repository")
 	}
 	defer cleanup()
 
@@ -150,22 +150,22 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 	if parent != nil {
 		parents = []string{parent.ID.String()}
 		if err = tmpRepo.ReadTree(ctx, parents[0]); err != nil {
-			return errors.Wrap(err, "read tree")
+			return "", errors.Wrap(err, "read tree")
 		}
 	}
 	if err = change(tmpRepo); err != nil {
-		return err
+		return "", err
 	}
 	tree, err := tmpRepo.WriteTree(ctx)
 	if err != nil {
-		return errors.Wrap(err, "write tree")
+		return "", errors.Wrap(err, "write tree")
 	}
 
 	unchanged := false
 	if parent != nil {
 		parentTree, err := tmpRepo.RevParse(ctx, parents[0]+"^{tree}")
 		if err != nil {
-			return errors.Wrap(err, "get tree of parent")
+			return "", errors.Wrap(err, "get tree of parent")
 		}
 		unchanged = tree == parentTree
 	}
@@ -176,7 +176,7 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 	} else {
 		message = git.CleanupMessage(message)
 		if message == "" {
-			return errors.New("empty commit message")
+			return "", errors.New("empty commit message")
 		}
 		commitID, err = tmpRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
 			Parents:   parents,
@@ -184,15 +184,15 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 			Committer: committer,
 		})
 		if err != nil {
-			return errors.Wrap(err, "commit tree")
+			return "", errors.Wrap(err, "commit tree")
 		}
 	}
 
 	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, git.PushOptions{Envs: envs})
 	if err != nil {
-		return errors.Newf("git push origin %s: %v", branch, err)
+		return "", errors.Newf("git push origin %s: %v", branch, err)
 	}
-	return nil
+	return commitID, nil
 }
 
 // commitToBranch creates a commit on top of the old branch with the changes
@@ -207,8 +207,18 @@ func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, 
 	if err != nil {
 		return errors.Wrapf(err, "get commit of branch %q", oldBranch)
 	}
-	if newBranch != oldBranch && !gitRepo.IsValidBranchName(ctx, newBranch) {
-		return errors.Newf("invalid branch name %q", newBranch)
+
+	// Git rejects the push when another one updates the branch in the meantime,
+	// because the new commit no longer fast-forwards it.
+	update := git.RefUpdate{OldID: parent.ID.String(), RefName: git.RefsHeads + newBranch}
+	if newBranch != oldBranch {
+		if !gitRepo.IsValidBranchName(ctx, newBranch) {
+			return errors.Newf("invalid branch name %q", newBranch)
+		}
+		update.OldID, err = branchID(ctx, gitRepo, newBranch)
+		if err != nil {
+			return err
+		}
 	}
 
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
@@ -220,9 +230,38 @@ func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, 
 		RepoName:  r.Name,
 		RepoPath:  r.RepoPath(),
 	})
-	return commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, envs, func(tmpRepo *git.Repository) error {
+	update.NewID, err = commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, envs, func(tmpRepo *git.Repository) error {
 		return change(tmpRepo, parent)
 	})
+	if err != nil {
+		return err
+	}
+	if update.NewID != update.OldID {
+		// Like the push itself, recording it must not stop midway.
+		ctx = context.WithoutCancel(ctx)
+		PushUpdates(ctx, doer, r.MustOwner().Name, r.Name, []git.RefUpdate{update}, func(branch string) {
+			TriggerPushTasks(doer, r.ID, branch)
+		})
+	}
+	return nil
+}
+
+// branchID returns the ID of the commit of the branch, or the empty ID when the
+// branch does not exist.
+func branchID(ctx context.Context, repo *git.Repository, branch string) (string, error) {
+	if !git.RepoHasBranch(ctx, repo.Path(), branch) {
+		format, err := repo.ObjectFormat(ctx)
+		if err != nil {
+			return "", errors.Wrap(err, "get object format")
+		}
+		return format.EmptyID(), nil
+	}
+
+	commit, err := repo.BranchCommit(ctx, branch)
+	if err != nil {
+		return "", errors.Wrapf(err, "get commit of branch %q", branch)
+	}
+	return commit.ID.String(), nil
 }
 
 // treeEntry returns the entry at the path in the tree of the commit, or nil if

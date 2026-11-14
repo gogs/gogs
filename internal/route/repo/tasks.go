@@ -64,7 +64,6 @@ func TriggerTask(c *macaron.Context) {
 
 	log.Trace("TriggerTask: %s/%s@%s by %q", owner.Name, repo.Name, branch, pusher.Name)
 
-	go database.HookQueue.Add(repo.ID)
-	go database.AddTestPullRequestTask(pusher, repo.ID, branch, true)
+	database.TriggerPushTasks(pusher, repo.ID, branch)
 	c.Status(http.StatusAccepted)
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/git"
 )
@@ -32,6 +33,35 @@ func CommitsToPushCommits(commits []*git.Commit) *PushCommits {
 		pcs[i] = CommitToPushCommit(commits[i])
 	}
 	return &PushCommits{len(pcs), pcs, "", nil}
+}
+
+// PushUpdates calls PushUpdate for each reference update of a push by the
+// pusher to the repository, and then calls trigger with the short name of the
+// reference, e.g., TriggerPushTasks. Failures are logged, because the push has
+// already happened.
+func PushUpdates(ctx context.Context, pusher *User, ownerName, repoName string, updates []git.RefUpdate, trigger func(refName string)) {
+	for _, update := range updates {
+		err := PushUpdate(ctx, PushUpdateOptions{
+			OldCommitID:  update.OldID,
+			NewCommitID:  update.NewID,
+			FullRefspec:  update.RefName,
+			PusherID:     pusher.ID,
+			PusherName:   pusher.Name,
+			RepoUserName: ownerName,
+			RepoName:     repoName,
+		})
+		if err != nil {
+			log.Error("Failed to update for push to %s/%s [ref: %s]: %v", ownerName, repoName, update.RefName, err)
+		}
+		trigger(git.RefShortName(update.RefName))
+	}
+}
+
+// TriggerPushTasks queues the webhook deliveries of the repository and the
+// tests of pull requests affected by the push to the branch.
+func TriggerPushTasks(pusher *User, repoID int64, branch string) {
+	go HookQueue.Add(repoID)
+	go AddTestPullRequestTask(pusher, repoID, branch, true)
 }
 
 type PushUpdateOptions struct {

@@ -2,24 +2,28 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/git"
-)
-
-const (
-	accessDeniedMessage = "Repository does not exist or you do not have access"
+	"gogs.io/gogs/internal/ssh"
 )
 
 var servCommand = cli.Command{
@@ -52,6 +56,14 @@ func fail(userMessage, errMessage string, args ...any) {
 }
 
 func setup(cmd *cli.Command, logFile string, connectDB bool) {
+	// The delegate hooks and the "authorized_keys" file run Gogs with the garbage
+	// collector turned off, because collecting garbage slows down the startup more
+	// than it saves. It is turned back on for the work, e.g., of a large push, and
+	// for the custom hooks the process runs.
+	if os.Getenv("GOGC") == "off" {
+		debug.SetGCPercent(100)
+		_ = os.Unsetenv("GOGC")
+	}
 	conf.HookMode = true
 
 	customConf := configFromLineage(cmd)
@@ -92,38 +104,6 @@ func setup(cmd *cli.Command, logFile string, connectDB bool) {
 	}
 }
 
-func parseSSHCmd(cmd string) (string, string) {
-	ss := strings.SplitN(cmd, " ", 2)
-	if len(ss) != 2 {
-		return "", ""
-	}
-	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
-}
-
-func checkDeployKey(key *database.PublicKey, repo *database.Repository) {
-	// Check if this deploy key belongs to current repository.
-	if !database.HasDeployKey(key.ID, repo.ID) {
-		fail("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
-	}
-
-	// Update deploy key activity.
-	deployKey, err := database.GetDeployKeyByRepo(key.ID, repo.ID)
-	if err != nil {
-		fail("Internal error", "GetDeployKey: %v", err)
-	}
-
-	deployKey.Updated = time.Now()
-	if err = database.UpdateDeployKey(deployKey); err != nil {
-		fail("Internal error", "UpdateDeployKey: %v", err)
-	}
-}
-
-var allowedCommands = map[string]database.AccessMode{
-	"git-upload-pack":    database.AccessModeRead,
-	"git-upload-archive": database.AccessModeRead,
-	"git-receive-pack":   database.AccessModeWrite,
-}
-
 func runServ(ctx context.Context, cmd *cli.Command) error {
 	setup(cmd, "serv.log", true)
 
@@ -137,148 +117,73 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	sshCmd := os.Getenv("SSH_ORIGINAL_COMMAND")
-	if sshCmd == "" {
-		println("Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
-		println("If this is unexpected, please log in with password and setup Gogs under another user.")
-		return nil
-	}
-
-	verb, args := parseSSHCmd(sshCmd)
+	verb, _, _ := strings.Cut(sshCmd, " ")
 	// Hooks that Git runs record their spans under this one.
 	ctx = startProcessSpan(ctx, "ssh "+verb, time.Second)
 	defer endProcessSpan()
 
-	repoFullName := strings.ToLower(strings.Trim(args, "'"))
-	repoFields := strings.SplitN(repoFullName, "/", 2)
-	if len(repoFields) != 2 {
-		fail("Invalid repository path", "Invalid repository path: %v", args)
-	}
-	ownerName := strings.ToLower(repoFields[0])
-	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
-	repoName = strings.TrimSuffix(repoName, ".wiki")
-
-	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
-	if err != nil {
-		if database.IsErrUserNotExist(err) {
-			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
-		}
-		fail("Internal error", "Failed to get repository owner '%s': %v", ownerName, err)
-	}
-
-	repo, err := database.GetRepositoryByName(owner.ID, repoName)
-	if err != nil {
-		if database.IsErrRepoNotExist(err) {
-			fail(accessDeniedMessage, "Repository does not exist: %s/%s", owner.Name, repoName)
-		}
-		fail("Internal error", "Failed to get repository: %v", err)
-	}
-	repo.Owner = owner
-
-	requestMode, ok := allowedCommands[verb]
-	if !ok {
-		fail("Unknown git command", "Unknown git command '%s'", verb)
-	}
-
-	// Prohibit push to mirror repositories.
-	if requestMode > database.AccessModeRead && repo.IsMirror {
-		fail("Mirror repository is read-only", "")
-	}
-
-	// Allow anonymous (user is nil) clone for public repositories.
-	var user *database.User
-
 	keyID, _ := strconv.ParseInt(strings.TrimPrefix(cmd.Args().Get(0), "key-"), 10, 64)
-	key, err := database.GetPublicKeyByID(keyID)
-	if err != nil {
-		fail("Invalid key ID", "Invalid key ID '%s': %v", cmd.Args().Get(0), err)
-	}
-
-	if requestMode == database.AccessModeWrite || repo.IsPrivate {
-		// Check deploy key or user key.
-		if key.IsDeployKey() {
-			if key.Mode < requestMode {
-				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
-			}
-			checkDeployKey(key, repo)
-		} else {
-			user, err = database.Handle.Users().GetByKeyID(ctx, key.ID)
-			if err != nil {
-				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
-			}
-			if user.IsDisabled() {
-				fail(accessDeniedMessage, "User '%s' is disabled", user.Name)
-			}
-
-			mode := database.Handle.Permissions().AccessMode(ctx, user.ID, repo.ID,
-				database.AccessModeOptions{
-					OwnerID: repo.OwnerID,
-					Private: repo.IsPrivate,
-				},
-			)
-			if mode < requestMode {
-				clientMessage := accessDeniedMessage
-				if mode >= database.AccessModeRead {
-					clientMessage = "You do not have sufficient authorization for this action"
-				}
-				fail(clientMessage,
-					"User '%s' does not have level '%v' access to repository '%s'",
-					user.Name, requestMode, repoFullName)
-			}
-		}
-	} else {
-		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
-		// A deploy key doesn't represent a signed in user, so in a site with Auth.RequireSignInView enabled,
-		// we should give read access only in repositories where this deploy key is in use. In other cases,
-		// a server or system using an active deploy key can get read access to all repositories on a Gogs instance.
-		if conf.Auth.RequireSigninView {
-			if key.IsDeployKey() {
-				checkDeployKey(key, repo)
-			} else {
-				keyOwner, err := database.Handle.Users().GetByKeyID(ctx, key.ID)
-				if err != nil {
-					fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
-				}
-				if keyOwner.IsDisabled() {
-					fail(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
-				}
-			}
-		}
-	}
-
-	// Update user key activity.
-	if key.ID > 0 {
-		key, err := database.GetPublicKeyByID(key.ID)
-		if err != nil {
-			fail("Internal error", "GetPublicKeyByID: %v", err)
-		}
-
-		key.Updated = time.Now()
-		if err = database.UpdatePublicKey(key); err != nil {
-			fail("Internal error", "UpdatePublicKey: %v", err)
-		}
-	}
-
-	var envs []string
-	if requestMode == database.AccessModeWrite {
-		envs = database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
-			AuthUser:  user,
-			OwnerName: owner.Name,
-			OwnerSalt: owner.Salt,
-			RepoID:    repo.ID,
-			RepoName:  repo.Name,
-			RepoPath:  repo.RepoPath(),
-		})
-	}
-	err = git.RunService(ctx, git.Service(strings.TrimPrefix(verb, "git-")), filepath.Join(conf.Repository.Root, repoFullName), git.ServiceOptions{
-		Stdin:    os.Stdin,
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
-		Protocol: os.Getenv("GIT_PROTOCOL"),
-		Envs:     envs,
+	err := ssh.Serve(ctx, ssh.ServeOptions{
+		KeyID:            keyID,
+		Command:          sshCmd,
+		Protocol:         os.Getenv("GIT_PROTOCOL"),
+		Stdin:            os.Stdin,
+		Stdout:           os.Stdout,
+		Stderr:           os.Stderr,
+		TriggerPushTasks: triggerPushTasks,
 	})
-	if err != nil {
-		fail("Internal error", "Failed to execute git command: %v", err)
+	if err == nil {
+		return nil
 	}
 
+	var serveErr *ssh.ServeError
+	if !errors.As(err, &serveErr) {
+		fail("Internal error", "%v", err)
+	} else if serveErr.Err == nil {
+		fail(serveErr.UserMessage, "")
+	}
+	fail(serveErr.UserMessage, "%v", serveErr.Err)
 	return nil
+}
+
+// triggerPushTasks asks the web server, which runs the tasks, to run the ones
+// of a push, e.g., webhook deliveries.
+func triggerPushTasks(pusher *database.User, repo *database.Repository, branch string) {
+	ctx := context.Background()
+	q := make(url.Values)
+	q.Add("branch", branch)
+	q.Add("secret", cryptox.MD5(repo.Owner.Salt))
+	q.Add("pusher", strconv.FormatInt(pusher.ID, 10))
+	reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, repo.Owner.Name, repo.Name, q.Encode())
+	log.Trace("Trigger task: %s", reqURL)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		log.Error("Failed to trigger task: %v", err)
+		return
+	}
+	req.Header.Set("User-Agent", "GogsServer")
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
+		},
+		// The trigger endpoint is local and never redirects legitimately, so a
+		// redirect response is reported as a failure instead of being followed.
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error("Failed to trigger task: %v", err)
+		return
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		log.Error("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
+	}
 }

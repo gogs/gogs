@@ -911,36 +911,70 @@ func cleanUpMigrateGitConfig(configPath string) error {
 	return nil
 }
 
+// The delegate hooks pass on to "gogs hook". A hook process spends most of its
+// time starting up, when Go would otherwise collect garbage, and exits before it
+// uses much memory, so the garbage collector is turned off for it.
 var hooksTpls = map[git.HookName]string{
-	"pre-receive":  "#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n",
-	"update":       "#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n",
-	"post-receive": "#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n",
+	"pre-receive":  "#!/usr/bin/env %s\nGOGC=off \"%s\" hook --config='%s' pre-receive\n",
+	"update":       "#!/usr/bin/env %s\nGOGC=off \"%s\" hook --config='%s' update $1 $2 $3\n",
+	"post-receive": "#!/usr/bin/env %s\nGOGC=off \"%s\" hook --config='%s' post-receive\n",
 }
 
-func createDelegateHooks(repoPath string) (err error) {
+func writeDelegateHook(repoPath string, name git.HookName) error {
+	hookPath := filepath.Join(repoPath, "hooks", string(name))
+	err := os.WriteFile(hookPath,
+		fmt.Appendf(nil, hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
+		os.ModePerm)
+	if err != nil {
+		return errors.Wrapf(err, "write delegate hook %q", hookPath)
+	}
+	return nil
+}
+
+// syncDelegateHooks installs the delegate hooks that the repository in given
+// path needs, and removes the others, because Git starts a process for every
+// hook, and for the update hook, once for every reference a push updates. A
+// hook is needed when the repository has a custom hook of the same name. The
+// pre-receive hook is also needed when the repository has a protected branch,
+// because it enforces the protection.
+func syncDelegateHooks(repoPath string, hasProtectedBranch bool) error {
 	for _, name := range git.ServerSideHooks {
-		hookPath := filepath.Join(repoPath, "hooks", string(name))
-		if err = os.WriteFile(hookPath,
-			fmt.Appendf(nil, hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
-			os.ModePerm); err != nil {
-			return errors.Newf("create delegate hook '%s': %v", hookPath, err)
+		needed := osx.IsFile(filepath.Join(repoPath, "custom_hooks", string(name))) ||
+			(name == git.HookPreReceive && hasProtectedBranch)
+		if needed {
+			if err := writeDelegateHook(repoPath, name); err != nil {
+				return err
+			}
+			continue
 		}
+
+		hookPath := filepath.Join(repoPath, "hooks", string(name))
+		if err := os.Remove(hookPath); err != nil && !os.IsNotExist(err) {
+			return errors.Wrapf(err, "remove delegate hook %q", hookPath)
+		}
+	}
+	return nil
+}
+
+// SyncDelegateHooks installs the delegate hooks that the repository and its
+// wiki need, and removes the others. It must be called whenever their custom
+// hooks or the protection of the branches of the repository change.
+func (r *Repository) SyncDelegateHooks() error {
+	hasProtectedBranch, err := x.Where("repo_id = ? AND protected = ?", r.ID, true).Exist(new(ProtectBranch))
+	if err != nil {
+		return errors.Wrap(err, "check protected branches")
+	}
+	if err = syncDelegateHooks(r.RepoPath(), hasProtectedBranch); err != nil {
+		return err
+	}
+	if r.HasWiki() {
+		return syncDelegateHooks(r.WikiPath(), false)
 	}
 	return nil
 }
 
 // Finish migrating repository and/or wiki with things that don't need to be done for mirrors.
 func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
-	repoPath := repo.RepoPath()
-	if err := createDelegateHooks(repoPath); err != nil {
-		return repo, errors.Newf("createDelegateHooks: %v", err)
-	}
-	if repo.HasWiki() {
-		if err := createDelegateHooks(repo.WikiPath()); err != nil {
-			return repo, errors.Newf("createDelegateHooks.(wiki): %v", err)
-		}
-	}
-
 	if err := cleanUpMigrateGitConfig(repo.GitConfigPath()); err != nil {
 		return repo, errors.Newf("cleanUpMigrateGitConfig: %v", err)
 	}
@@ -956,13 +990,14 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 // initRepoCommit commits the files to the default branch of the empty
 // repository at repoPath.
 func initRepoCommit(ctx context.Context, repoPath string, files map[string][]byte, author *git.Signature) error {
-	return commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, nil, func(tmpRepo *git.Repository) error {
+	_, err := commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, nil, func(tmpRepo *git.Repository) error {
 		indexFiles := make([]git.IndexFile, 0, len(files))
 		for name, data := range files {
 			indexFiles = append(indexFiles, git.IndexFile{Path: name, Content: bytes.NewReader(data)})
 		}
 		return errors.Wrap(tmpRepo.AddToIndex(ctx, indexFiles...), "add files")
 	})
+	return err
 }
 
 type CreateRepoOptionsLegacy struct {
@@ -1063,8 +1098,6 @@ func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, 
 	// Init bare new repository.
 	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
-	} else if err = createDelegateHooks(repoPath); err != nil {
-		return errors.Newf("createDelegateHooks: %v", err)
 	}
 
 	// Set default branch
@@ -2041,20 +2074,13 @@ func ReinitMissingRepositories() error {
 	return nil
 }
 
-// SyncRepositoryHooks rewrites all repositories' pre-receive, update and post-receive hooks
-// to make sure the binary and custom conf path are up-to-date.
+// SyncRepositoryHooks rewrites the delegate hooks of all repositories to make
+// sure the binary and custom conf path are up-to-date, and that every repository
+// has only the delegate hooks it needs.
 func SyncRepositoryHooks() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean any) error {
-			repo := bean.(*Repository)
-			if err := createDelegateHooks(repo.RepoPath()); err != nil {
-				return err
-			}
-
-			if repo.HasWiki() {
-				return createDelegateHooks(repo.WikiPath())
-			}
-			return nil
+			return bean.(*Repository).SyncDelegateHooks()
 		})
 }
 
@@ -2571,10 +2597,6 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
 		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
-	}
-
-	if err = createDelegateHooks(repoPath); err != nil {
-		return nil, errors.Newf("createDelegateHooks: %v", err)
 	}
 
 	if err = sess.Commit(); err != nil {

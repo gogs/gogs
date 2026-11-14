@@ -24,10 +24,12 @@ All notable changes to Gogs are documented in this file.
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Pushes are up to three times faster, and clones and fetches over the built-in SSH server are faster. Existing repositories get the faster pushes once an admin runs `gogs admin resync-hooks` or "Resync pre-receive, update and post-receive hooks of all repositories" in the admin dashboard after upgrading. [#8552](https://github.com/gogs/gogs/pull/8552)
 
 ### Fixed
 
 - Markdown files starting with a byte order mark now render their first line correctly, e.g., a leading heading is no longer shown as plain text. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Git operations that fail over the built-in SSH server now exit with a failure status on the client. [#8552](https://github.com/gogs/gogs/pull/8552)
 - Code blocks in languages whose names contain symbols, e.g., `c++` and `c#`, now keep their language for syntax highlighting. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Relative links in issue notification emails now point to the repository instead of a broken `http:/` address. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Ordered lists in Markdown that start at a number other than 1, e.g., `10.`, now show that number instead of starting at 1. [#8519](https://github.com/gogs/gogs/pull/8519)

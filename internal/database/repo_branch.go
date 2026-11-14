@@ -127,6 +127,14 @@ func IsBranchOfRepoRequirePullRequest(repoID int64, name string) bool {
 // UpdateProtectBranch saves branch protection options.
 // If ID is 0, it creates a new record. Otherwise, updates existing record.
 func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
+	repo, err := GetRepositoryByID(protectBranch.RepoID)
+	if err != nil {
+		return errors.Wrap(err, "get repository")
+	}
+	if err = enforceProtectBranch(repo, protectBranch); err != nil {
+		return err
+	}
+
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -143,7 +151,20 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 		return errors.Newf("update: %v", err)
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return err
+	}
+	return repo.SyncDelegateHooks()
+}
+
+// enforceProtectBranch installs the pre-receive hook that enforces the
+// protection of the branch before it is saved, so that a failure leaves the
+// branch unprotected rather than protected but not enforced.
+func enforceProtectBranch(repo *Repository, protectBranch *ProtectBranch) error {
+	if !protectBranch.Protected {
+		return nil
+	}
+	return writeDelegateHook(repo.RepoPath(), git.HookPreReceive)
 }
 
 // UpdateOrgProtectBranch saves branch protection options of organizational repository.
@@ -155,6 +176,9 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		return errors.Newf("GetOwner: %v", err)
 	} else if !repo.Owner.IsOrganization() {
 		return errors.Newf("expect repository owner to be an organization")
+	}
+	if err = enforceProtectBranch(repo, protectBranch); err != nil {
+		return err
 	}
 
 	hasUsersChanged := false
@@ -257,7 +281,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		}
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return err
+	}
+	return repo.SyncDelegateHooks()
 }
 
 // GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repository.
