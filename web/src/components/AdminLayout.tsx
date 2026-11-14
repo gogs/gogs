@@ -6,19 +6,29 @@ import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
 import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
 
-export type AdminPage = "dashboard" | "users" | "orgs" | "repos" | "auths" | "config" | "notices" | "monitor";
+export type AdminPage =
+  | "dashboard"
+  | "operations"
+  | "users"
+  | "orgs"
+  | "repos"
+  | "auths"
+  | "config"
+  | "notices"
+  | "monitor";
 
 // NAV lists the pages of the admin panel in the order of the server-rendered
 // menu. Pages without `spa` are still served by the server.
 const NAV: { page: AdminPage; path: string; label: string; spa?: true }[] = [
-  { page: "dashboard", path: "", label: "admin.dashboard" },
+  { page: "dashboard", path: "", label: "admin.dashboard", spa: true },
+  { page: "operations", path: "/operations", label: "admin.dashboard.operations", spa: true },
   { page: "users", path: "/users", label: "admin.users", spa: true },
   { page: "orgs", path: "/orgs", label: "admin.organizations", spa: true },
   { page: "repos", path: "/repos", label: "admin.repositories", spa: true },
   { page: "auths", path: "/auths", label: "admin.authentication" },
-  { page: "config", path: "/config", label: "admin.config" },
+  { page: "config", path: "/config", label: "admin.config", spa: true },
   { page: "notices", path: "/notices", label: "admin.notices", spa: true },
-  { page: "monitor", path: "/monitor", label: "admin.monitor" },
+  { page: "monitor", path: "/monitor", label: "admin.monitor", spa: true },
 ];
 
 // AdminLayout heads the pages of the admin panel, with links between them.

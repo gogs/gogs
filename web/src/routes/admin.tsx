@@ -3,6 +3,9 @@ import { type AnyRoute, createRoute } from "@tanstack/react-router";
 import { loadSignedInPage } from "@/lib/loader-error";
 import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
+  fetchAdminConfig,
+  fetchAdminDashboard,
+  fetchAdminMonitor,
   fetchAdminNotices,
   fetchAdminOrgs,
   fetchAdminRepos,
@@ -11,9 +14,43 @@ import {
   fetchAdminUsers,
 } from "@/lib/queries/admin";
 import { AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
+import { AdminConfig, AdminDashboard, AdminMonitor, AdminOperations } from "@/pages/admin/System";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
+  const dashboardRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin",
+    loader: () => loadSignedInPage(fetchAdminDashboard),
+    component: function Dashboard() {
+      return <AdminDashboard dashboard={dashboardRoute.useLoaderData()} />;
+    },
+  });
+
+  const operationsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/operations",
+    component: AdminOperations,
+  });
+
+  const configRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/config",
+    loader: () => loadSignedInPage(fetchAdminConfig),
+    component: function Config() {
+      return <AdminConfig config={configRoute.useLoaderData()} />;
+    },
+  });
+
+  const monitorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/monitor",
+    loader: () => loadSignedInPage(fetchAdminMonitor),
+    component: function Monitor() {
+      return <AdminMonitor monitor={monitorRoute.useLoaderData()} />;
+    },
+  });
+
   const usersRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin/users",
@@ -82,5 +119,16 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [usersRoute, userNewRoute, userEditRoute, orgsRoute, reposRoute, noticesRoute];
+  return [
+    dashboardRoute,
+    operationsRoute,
+    configRoute,
+    monitorRoute,
+    usersRoute,
+    userNewRoute,
+    userEditRoute,
+    orgsRoute,
+    reposRoute,
+    noticesRoute,
+  ];
 }

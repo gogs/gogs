@@ -15,6 +15,8 @@ Use mono only for content that **is** code, not for UI chrome (navbars, buttons,
 
 Don't mix sans and mono within the same UI surface for arbitrary reasons. If a component is showing code, all of it goes mono.
 
+Inline code within text is a chip, `rounded bg-(--color-surface) px-1 font-mono`, so it reads as code without relying on the font alone. Give it `text-(--color-foreground)` when it sits in muted text, and `box-decoration-clone` when a long value may wrap.
+
 ## Color hierarchy
 
 Palettes are adapted from [Pierre Theme](https://github.com/pierrecomputer/theme)'s "Light" and "Dark" (non-soft) variants. Text, link, border, and input tokens are darkened in light mode and lightened in dark mode from Pierre's values, so every text pair meets 4.5:1 and input edges meet 3:1 against the page background. Check a changed token against both floors before landing it. Dark mode is opt-in via the `.dark` class on `:root` (see `lib/theme.ts`), not media-query driven, so the user's stored preference always wins. The `@custom-variant dark` rule in `index.css` lets utilities like `dark:...` target the same class.
@@ -86,6 +88,10 @@ Actions that cannot be taken back, such as deleting a team or leaving a reposito
 ## Lists
 
 Lists that can be searched by keyword take `q` and `page` search params, validated with `validateListSearch` from `@/lib/page-search`, and search with `SearchForm` from `@/components/SearchForm`, which starts over from the first page.
+
+## Reports
+
+Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
 
 ## Translated markup
 

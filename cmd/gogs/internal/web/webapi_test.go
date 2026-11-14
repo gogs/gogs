@@ -123,6 +123,9 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/orgs/acme/teams/owners",
 		"/api/web/orgs/acme/teams/owners/members",
 		"/api/web/orgs/acme/teams/owners/repos",
+		"/api/web/admin/dashboard",
+		"/api/web/admin/config",
+		"/api/web/admin/monitor",
 		"/api/web/admin/users",
 		"/api/web/admin/users/1",
 		"/api/web/admin/user-options",
@@ -183,6 +186,11 @@ func TestRequireAdmin(t *testing.T) {
 		method string
 		path   string
 	}{
+		{http.MethodGet, "/api/web/admin/dashboard"},
+		{http.MethodPost, "/api/web/admin/operations/delete-inactive-users"},
+		{http.MethodGet, "/api/web/admin/config"},
+		{http.MethodPost, "/api/web/admin/config/test-mail"},
+		{http.MethodGet, "/api/web/admin/monitor"},
 		{http.MethodGet, "/api/web/admin/users"},
 		{http.MethodPost, "/api/web/admin/users"},
 		{http.MethodGet, "/api/web/admin/users/1"},
