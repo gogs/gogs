@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"log/slog"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -144,11 +146,75 @@ func Test_parseLevel(t *testing.T) {
 		{"Info", slog.LevelInfo},
 		{"warning", slog.LevelWarn},
 		{"error", slog.LevelError},
-		{"fatal", slog.LevelError + 4},
+		{"fatal", slog.LevelError},
 	}
 	for _, test := range tests {
 		assert.Equal(t, test.want, parseLevel(test.in), test.in)
 	}
+}
+
+func Test_rotatingWriter(t *testing.T) {
+	t.Run("resumes after a failed rotation", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows cannot remove a file that is still open")
+		}
+
+		filename := filepath.Join(t.TempDir(), "gogs.log")
+		w, err := newRotatingWriter(filename, FileRotation{Rotate: true, MaxSize: 10})
+		require.NoError(t, err)
+
+		// Renaming a missing file fails, so the rotation triggered by this write fails.
+		require.NoError(t, os.Remove(filename))
+		_, err = w.Write([]byte("triggers rotation\n"))
+		require.Error(t, err)
+
+		_, err = w.Write([]byte("second\n"))
+		require.NoError(t, err)
+		_, err = w.Write([]byte("third\n"))
+		require.NoError(t, err)
+
+		rotated, err := os.ReadFile(filename + "." + time.Now().Format(dateFormat))
+		require.NoError(t, err)
+		assert.Equal(t, "second\n", string(rotated), "rotation is retried")
+
+		current, err := os.ReadFile(filename)
+		require.NoError(t, err)
+		assert.Equal(t, "third\n", string(current))
+	})
+}
+
+type blockingPoster struct {
+	release  chan struct{}
+	received chan string
+}
+
+func (p *blockingPoster) post(level, message string) error {
+	<-p.release
+	p.received <- level + " " + message
+	return nil
+}
+
+func Test_webhookHandler(t *testing.T) {
+	poster := &blockingPoster{
+		release:  make(chan struct{}),
+		received: make(chan string, 1),
+	}
+	logger := newLogger(newWebhookHandler(slog.LevelError, poster, 10))
+
+	logged := make(chan struct{})
+	go func() {
+		logger.Info("below level")
+		logger.Error("Failed to deliver", "userID", 1)
+		close(logged)
+	}()
+	select {
+	case <-logged:
+	case <-time.After(5 * time.Second):
+		t.Fatal("logging waited for the webhook post")
+	}
+
+	close(poster.release)
+	assert.Equal(t, "ERROR Failed to deliver userID=1", <-poster.received)
 }
 
 func Test_newLogger(t *testing.T) {

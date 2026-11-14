@@ -63,10 +63,11 @@ func setup(logger *logx.Logger, cmd *cli.Command, logFile string, connectDB bool
 	if _, err = conf.InitLogging(logger, true); err != nil {
 		fail(logger, "Internal error", "Failed to init logging: %v", err)
 	}
-	logger, err = conf.InitHookLogging(filepath.Join(conf.Log.RootPath, "hooks", logFile))
+	hookLogger, err := conf.InitHookLogging(filepath.Join(conf.Log.RootPath, "hooks", logFile))
 	if err != nil {
 		fail(logger, "Internal error", "Failed to init hook logging: %v", err)
 	}
+	logger = hookLogger
 
 	if !connectDB {
 		return logger

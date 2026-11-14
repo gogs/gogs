@@ -98,6 +98,14 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// A failed rotation leaves no open file. Reopen it so logging resumes, and
+	// rotation is retried, once the cause is gone.
+	if w.file == nil {
+		if err := w.open(); err != nil {
+			return 0, err
+		}
+	}
+
 	n, err := w.file.Write(p)
 	if err != nil || !w.config.Rotate {
 		return n, err
@@ -136,17 +144,16 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 }
 
 func (w *rotatingWriter) rotate(date time.Time) error {
-	if err := w.file.Close(); err != nil {
+	err := w.file.Close()
+	w.file = nil
+	if err != nil {
 		return errors.Wrap(err, "close current file")
 	}
 	dest := rotateFilename(w.filename, date.Format(dateFormat))
 	if err := os.Rename(w.filename, dest); err != nil {
 		return errors.Wrapf(err, "rename %q", w.filename)
 	}
-	if err := w.open(); err != nil {
-		return err
-	}
-	return nil
+	return w.open()
 }
 
 func (w *rotatingWriter) deleteOutdated() error {
