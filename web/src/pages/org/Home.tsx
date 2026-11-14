@@ -149,7 +149,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
                   <li key={team.lowerName} className="text-sm">
                     <a
                       href={`${orgLink}/teams/${team.lowerName}`}
-                      className="font-semibold break-all text-(--color-primary) hover:underline"
+                      className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
                     >
                       {team.name}
                     </a>
@@ -204,10 +204,11 @@ function SectionHeader({
 
 function Meta({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <li className="flex min-w-0 items-center gap-1.5 break-all">
-      {icon}
+    <li className="flex min-w-0 items-start gap-1.5">
+      {/* Keeps the icon on the first line when the text wraps. */}
+      <span className="mt-0.5 flex shrink-0">{icon}</span>
       <span className="sr-only">{label}</span>
-      {children}
+      <span className="min-w-0 wrap-anywhere">{children}</span>
     </li>
   );
 }

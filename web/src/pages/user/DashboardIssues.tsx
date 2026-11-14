@@ -31,7 +31,7 @@ export function DashboardIssues({
   const isOrg = data.kind === "organization";
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <h1 className="sr-only">{title}</h1>
       <aside className="min-w-0">
         <ContextSwitcher data={data} page={kind} />
@@ -253,7 +253,7 @@ function IssueRow({ issue, kind, showRepo }: { issue: DashboardIssue; kind: "iss
           {issue.labels.map((label) => (
             <span
               key={label.name}
-              className="ml-1.5 inline-block rounded-full px-2 text-xs/5 font-medium align-text-bottom"
+              className="ml-1.5 inline-block max-w-full truncate rounded-full px-2 align-text-bottom text-xs/5 font-medium"
               style={{ backgroundColor: label.color, color: label.textColor }}
             >
               {label.name}
