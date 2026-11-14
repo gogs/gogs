@@ -19,6 +19,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/email"
 )
 
 // Session keys of the WebAuthn ceremonies in progress, each holding the JSON of
@@ -201,7 +202,7 @@ type userPasskeyRequest struct {
 
 // postUserPasskey adds the passkey the browser created for the registration
 // in progress to the signed-in user.
-func postUserPasskey(c flamego.Context, sess session.Session, l i18n.Locale, user *database.User, req userPasskeyRequest) (statusCode int, resp any, err error) {
+func postUserPasskey(c flamego.Context, sess session.Session, mc *macaron.Context, l i18n.Locale, user *database.User, req userPasskeyRequest) (statusCode int, resp any, err error) {
 	data, ok := takePasskeySession(sess, passkeyRegistrationSessionKey)
 	if !ok {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings.passkey_add_failed")}, nil
@@ -230,6 +231,7 @@ func postUserPasskey(c flamego.Context, sess session.Session, l i18n.Locale, use
 		log.Error("postUserPasskey: create passkey for user %d: %v", user.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create passkey")
 	}
+	alertUser(mc, user, user.Email, email.AlertPasskeyAdded, req.PasskeyName)
 	return http.StatusCreated, nil, nil
 }
 
@@ -321,7 +323,7 @@ func postUserSignInPasskey(c flamego.Context, sess session.Session, mc *macaron.
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "mark passkey used")
 	}
 
-	if err = completeSignIn(sess, mc, owner.User); err != nil {
+	if err = completeSignIn(sess, mc, owner.User, true); err != nil {
 		log.Error("postUserSignInPasskey: complete sign-in of user %d: %v", owner.ID, err)
 		return http.StatusInternalServerError, nil, err
 	}

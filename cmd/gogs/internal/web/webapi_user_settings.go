@@ -15,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
@@ -178,6 +179,7 @@ func putUserPassword(c flamego.Context, sess session.Session, mc *macaron.Contex
 		log.Error("putUserPassword: start login session of user %d: %v", user.ID, err)
 		return http.StatusInternalServerError, nil, err
 	}
+	alertUser(mc, user, user.Email, email.AlertPasswordChanged, "")
 	return http.StatusNoContent, nil, nil
 }
 

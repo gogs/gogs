@@ -1,0 +1,3 @@
+{{template "header" (Tr "mail.security.new_sign_in")}}
+{{template "security_alert" (dict "Alert" . "Body" (Tr "mail.security.new_sign_in.body" AppName) "Path" "user/settings/sessions" "Label" (Tr "mail.security.review_sessions"))}}
+{{template "footer"}}

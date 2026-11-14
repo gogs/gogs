@@ -92,7 +92,7 @@ func postUserEmail(c flamego.Context, mc *macaron.Context, ca cache.Cache, l i18
 
 // putUserEmailPrimary makes a confirmed email address of the signed-in user
 // their primary one.
-func putUserEmailPrimary(c flamego.Context, user *database.User) (statusCode int, resp any, err error) {
+func putUserEmailPrimary(c flamego.Context, mc *macaron.Context, user *database.User) (statusCode int, resp any, err error) {
 	address := c.Param("email")
 	err = database.Handle.Users().MarkEmailPrimary(c.Request().Context(), user.ID, address)
 	if err != nil {
@@ -104,6 +104,11 @@ func putUserEmailPrimary(c flamego.Context, user *database.User) (statusCode int
 		}
 		log.Error("putUserEmailPrimary: make %q primary for user %d: %v", address, user.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "make email primary")
+	}
+	// Tell the address the account no longer answers to, as whoever took the
+	// account would not alert themselves.
+	if !strings.EqualFold(address, user.Email) {
+		alertUser(mc, user, user.Email, email.AlertEmailChanged, address)
 	}
 	return http.StatusNoContent, nil, nil
 }
@@ -157,7 +162,7 @@ type userSSHKeyRequest struct {
 	Content  string `json:"content" validate:"required"`
 }
 
-func postUserSSHKey(l i18n.Locale, user *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
+func postUserSSHKey(mc *macaron.Context, l i18n.Locale, user *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
 	content, err := database.CheckPublicKeyString(req.Content)
 	if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
@@ -176,6 +181,7 @@ func postUserSSHKey(l i18n.Locale, user *database.User, req userSSHKeyRequest) (
 		log.Error("postUserSSHKey: add key for user %d: %v", user.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add public key")
 	}
+	alertUser(mc, user, user.Email, email.AlertSSHKeyAdded, req.SSHTitle)
 	return http.StatusCreated, nil, nil
 }
 
@@ -288,7 +294,7 @@ func postUserTwoFactor(c flamego.Context, sess session.Session, l i18n.Locale, u
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteUserTwoFactor(c flamego.Context, user *database.User) (statusCode int, resp any, err error) {
+func deleteUserTwoFactor(c flamego.Context, mc *macaron.Context, user *database.User) (statusCode int, resp any, err error) {
 	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), user.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
@@ -296,6 +302,7 @@ func deleteUserTwoFactor(c flamego.Context, user *database.User) (statusCode int
 		log.Error("deleteUserTwoFactor: disable two-factor authentication for user %d: %v", user.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete two factor")
 	}
+	alertUser(mc, user, user.Email, email.AlertTwoFactorDisabled, "")
 	return http.StatusNoContent, nil, nil
 }
 
@@ -381,7 +388,7 @@ type userAccessTokenCreated struct {
 	Token string `json:"token"`
 }
 
-func postUserAccessToken(c flamego.Context, l i18n.Locale, user *database.User, req userAccessTokenRequest) (statusCode int, resp any, err error) {
+func postUserAccessToken(c flamego.Context, mc *macaron.Context, l i18n.Locale, user *database.User, req userAccessTokenRequest) (statusCode int, resp any, err error) {
 	t, err := database.Handle.AccessTokens().Create(c.Request().Context(), user.ID, req.TokenName)
 	if err != nil {
 		if database.IsErrAccessTokenAlreadyExist(err) {
@@ -391,6 +398,7 @@ func postUserAccessToken(c flamego.Context, l i18n.Locale, user *database.User, 
 		log.Error("postUserAccessToken: create token for user %d: %v", user.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create access token")
 	}
+	alertUser(mc, user, user.Email, email.AlertAccessTokenAdded, req.TokenName)
 	return http.StatusCreated, &userAccessTokenCreated{Token: t.Sha1}, nil
 }
 
