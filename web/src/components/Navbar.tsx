@@ -38,8 +38,12 @@ export function Navbar() {
               <NavLink href="/" spa>
                 {t("dashboard")}
               </NavLink>
-              <NavLink href="/issues">{t("issues")}</NavLink>
-              <NavLink href="/pulls">{t("pull_requests")}</NavLink>
+              <NavLink href="/issues" spa>
+                {t("issues")}
+              </NavLink>
+              <NavLink href="/pulls" spa>
+                {t("pull_requests")}
+              </NavLink>
               <NavLink href="/explore/repos" spa>
                 {t("explore")}
               </NavLink>
@@ -109,10 +113,10 @@ export function Navbar() {
                     <MobileLink href="/" spa onClick={() => setOpen(false)}>
                       {t("dashboard")}
                     </MobileLink>
-                    <MobileLink href="/issues" onClick={() => setOpen(false)}>
+                    <MobileLink href="/issues" spa onClick={() => setOpen(false)}>
                       {t("issues")}
                     </MobileLink>
-                    <MobileLink href="/pulls" onClick={() => setOpen(false)}>
+                    <MobileLink href="/pulls" spa onClick={() => setOpen(false)}>
                       {t("pull_requests")}
                     </MobileLink>
                     <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
