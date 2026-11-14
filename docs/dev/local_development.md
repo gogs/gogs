@@ -27,9 +27,9 @@ Gogs has the following dependencies:
 - [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
 - [go-mockgen](https://github.com/derision-test/go-mockgen)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
-    - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
+    - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v12 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
-    - [MariaDB](https://mariadb.org/) with `TYPE = mysql` (v10.3 or higher)
+    - [MariaDB](https://mariadb.org/) with `TYPE = mysql` (v10.6 or higher)
     - [SQLite3](https://www.sqlite.org/index.html)
 
 ### macOS
