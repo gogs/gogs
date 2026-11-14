@@ -158,11 +158,11 @@ function RepoItem({ repo }: { repo: ExploreRepo }) {
         <img
           src={repo.avatarURL}
           alt=""
-          className="size-10 shrink-0 rounded-md border border-(--color-border) object-cover"
+          className="mt-1 size-10 shrink-0 rounded-md border border-(--color-border) object-cover"
         />
       ) : (
-        <span className="grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
-          <BookMarked className="size-9" strokeWidth={1.5} aria-hidden />
+        <span className="mt-0.5 grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
+          <BookMarked className="size-10" strokeWidth={1.5} aria-hidden />
         </span>
       )}
       <div className="min-w-0 flex-1">
@@ -243,7 +243,7 @@ function UserItem({ user, organization }: { user: ExploreUser; organization: boo
         src={user.avatarURL}
         alt=""
         className={cn(
-          "size-10 shrink-0 border border-(--color-border) object-cover",
+          "mt-1 size-10 shrink-0 border border-(--color-border) object-cover",
           organization ? "rounded-md" : "rounded-full",
         )}
       />
