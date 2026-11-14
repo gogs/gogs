@@ -1,14 +1,10 @@
 package context
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 	"net/url"
 	"strings"
 
-	"github.com/cockroachdb/errors"
-	"github.com/editorconfig/editorconfig-core-go/v2"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/database"
@@ -69,25 +65,6 @@ func (r *Repository) HasAccess() bool {
 // CanEnableEditor returns true if repository is editable and user has proper access level.
 func (r *Repository) CanEnableEditor() bool {
 	return r.Repository.CanEnableEditor() && r.IsViewBranch && r.IsWriter() && !r.Repository.IsBranchRequirePullRequest(r.BranchName)
-}
-
-// Editorconfig returns the ".editorconfig" definition if found in the HEAD of the default branch.
-func (r *Repository) Editorconfig(ctx context.Context) (*editorconfig.Editorconfig, error) {
-	commit, err := r.GitRepo.BranchCommit(ctx, r.Repository.DefaultBranch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get commit of branch %q ", r.Repository.DefaultBranch)
-	}
-
-	entry, err := commit.TreeEntry(ctx, ".editorconfig")
-	if err != nil {
-		return nil, errors.Wrap(err, "get .editorconfig")
-	}
-
-	p, err := entry.Blob().Bytes(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "read .editorconfig")
-	}
-	return editorconfig.Parse(bytes.NewReader(p))
 }
 
 // MakeURL accepts a string or url.URL as argument and returns escaped URL prepended with repository URL.

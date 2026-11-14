@@ -45,19 +45,6 @@ func (c *Context) UserID() int64 {
 	return c.User.ID
 }
 
-func (c *Context) GetErrMsg() string {
-	return c.Data["ErrorMsg"].(string)
-}
-
-// HasError returns true if error occurs in form validation.
-func (c *Context) HasError() bool {
-	hasErr, ok := c.Data["HasError"]
-	if !ok {
-		return false
-	}
-	return hasErr.(bool)
-}
-
 // JSONSuccess responses JSON with status http.StatusOK.
 func (c *Context) JSONSuccess(data any) {
 	c.JSON(http.StatusOK, data)

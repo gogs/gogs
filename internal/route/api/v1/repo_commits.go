@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/route/api/v1/types"
@@ -15,7 +14,7 @@ import (
 const mediaApplicationSHA = "application/vnd.gogs.sha"
 
 // getAllCommits returns a slice of commits starting from HEAD.
-func getAllCommits(c *context.APIContext) {
+func getAllCommits(c *apiContext) {
 	// Get pagesize, set default if it is not specified.
 	pageSize := c.QueryInt("pageSize")
 	if pageSize == 0 {
@@ -24,7 +23,7 @@ func getAllCommits(c *context.APIContext) {
 
 	// The response object returned as JSON
 	result := make([]*types.Commit, 0, pageSize)
-	commits, err := git.RepoLog(c.Req.Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
+	commits, err := git.RepoLog(c.Request().Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
 	}
@@ -42,14 +41,13 @@ func getAllCommits(c *context.APIContext) {
 }
 
 // getSingleCommit will return a single Commit object based on the specified SHA.
-func getSingleCommit(c *context.APIContext) {
-	if strings.Contains(c.Req.Header.Get("Accept"), mediaApplicationSHA) {
-		c.SetParams("*", c.Params(":sha"))
-		getReferenceSHA(c)
+func getSingleCommit(c *apiContext) {
+	if strings.Contains(c.Request().Header.Get("Accept"), mediaApplicationSHA) {
+		serveReferenceSHA(c, c.Param("sha"))
 		return
 	}
 
-	commit, err := git.RepoCatFileCommit(c.Req.Context(), c.Repo.Repository.RepoPath(), c.Params(":sha"))
+	commit, err := git.RepoCatFileCommit(c.Request().Context(), c.Repo.Repository.RepoPath(), c.Param("sha"))
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get commit")
 		return
@@ -62,14 +60,17 @@ func getSingleCommit(c *context.APIContext) {
 	c.JSONSuccess(apiCommit)
 }
 
-func getReferenceSHA(c *context.APIContext) {
+func getReferenceSHA(c *apiContext) {
+	serveReferenceSHA(c, c.Param("**"))
+}
+
+func serveReferenceSHA(c *apiContext, ref string) {
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
 		c.Error(err, "open repository")
 		return
 	}
 
-	ref := c.Params("*")
 	refType := 0 // 0-unknown, 1-branch, 2-tag
 	if after, ok := strings.CutPrefix(ref, git.RefsHeads); ok {
 		ref = after
@@ -78,9 +79,9 @@ func getReferenceSHA(c *context.APIContext) {
 		ref = after
 		refType = 2
 	} else {
-		if gitRepo.HasBranch(c.Req.Context(), ref) {
+		if gitRepo.HasBranch(c.Request().Context(), ref) {
 			refType = 1
-		} else if gitRepo.HasTag(c.Req.Context(), ref) {
+		} else if gitRepo.HasTag(c.Request().Context(), ref) {
 			refType = 2
 		} else {
 			c.NotFound()
@@ -91,9 +92,9 @@ func getReferenceSHA(c *context.APIContext) {
 	var sha string
 	switch refType {
 	case 1:
-		sha, err = gitRepo.BranchCommitID(c.Req.Context(), ref)
+		sha, err = gitRepo.BranchCommitID(c.Request().Context(), ref)
 	case 2:
-		sha, err = gitRepo.TagCommitID(c.Req.Context(), ref)
+		sha, err = gitRepo.TagCommitID(c.Request().Context(), ref)
 	}
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get reference commit ID")
@@ -103,10 +104,10 @@ func getReferenceSHA(c *context.APIContext) {
 }
 
 // gitCommitToApiCommit is a helper function to convert git commit object to API commit.
-func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*types.Commit, error) {
+func gitCommitToAPICommit(commit *git.Commit, c *apiContext) (*types.Commit, error) {
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *types.User
-	author, err := database.Handle.Users().GetByEmail(c.Req.Context(), commit.Author.Email)
+	author, err := database.Handle.Users().GetByEmail(c.Request().Context(), commit.Author.Email)
 	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
 	} else if err == nil {
@@ -117,7 +118,7 @@ func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*types.Com
 	if commit.Committer.Email == commit.Author.Email {
 		apiCommitter = apiAuthor
 	} else {
-		committer, err := database.Handle.Users().GetByEmail(c.Req.Context(), commit.Committer.Email)
+		committer, err := database.Handle.Users().GetByEmail(c.Request().Context(), commit.Committer.Email)
 		if err != nil && !database.IsErrUserNotExist(err) {
 			return nil, err
 		} else if err == nil {

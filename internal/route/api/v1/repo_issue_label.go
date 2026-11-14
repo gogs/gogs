@@ -3,13 +3,12 @@ package v1
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listIssueLabels(c *context.APIContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func listIssueLabels(c *apiContext) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -26,8 +25,8 @@ type issueLabelsRequest struct {
 	Labels []int64 `json:"labels"`
 }
 
-func addIssueLabels(c *context.APIContext, form issueLabelsRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func addIssueLabels(c *apiContext, form issueLabelsRequest) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -57,14 +56,14 @@ func addIssueLabels(c *context.APIContext, form issueLabelsRequest) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func deleteIssueLabel(c *context.APIContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func deleteIssueLabel(c *apiContext) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
-	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		if database.IsErrLabelNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -82,8 +81,8 @@ func deleteIssueLabel(c *context.APIContext) {
 	c.NoContent()
 }
 
-func replaceIssueLabels(c *context.APIContext, form issueLabelsRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -113,8 +112,8 @@ func replaceIssueLabels(c *context.APIContext, form issueLabelsRequest) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func clearIssueLabels(c *context.APIContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func clearIssueLabels(c *apiContext) {
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return

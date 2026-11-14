@@ -3,12 +3,11 @@ package v1
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listCollaborators(c *context.APIContext) {
+func listCollaborators(c *apiContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
 		c.Error(err, "get collaborators")
@@ -26,8 +25,8 @@ type addCollaboratorRequest struct {
 	Permission *string `json:"permission"`
 }
 
-func addCollaborator(c *context.APIContext, form addCollaboratorRequest) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+func addCollaborator(c *apiContext, form addCollaboratorRequest) {
+	collaborator, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -52,8 +51,8 @@ func addCollaborator(c *context.APIContext, form addCollaboratorRequest) {
 	c.NoContent()
 }
 
-func isCollaborator(c *context.APIContext) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+func isCollaborator(c *apiContext) {
+	collaborator, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -70,8 +69,8 @@ func isCollaborator(c *context.APIContext) {
 	}
 }
 
-func deleteCollaborator(c *context.APIContext) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+func deleteCollaborator(c *apiContext) {
+	collaborator, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)

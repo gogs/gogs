@@ -4,9 +4,8 @@ import (
 	gocontext "context"
 	"net/http"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -24,9 +23,9 @@ func newAccessTokensHandler(s AccessTokensStore) *accessTokensHandler {
 	}
 }
 
-func (h *accessTokensHandler) List() macaron.Handler {
-	return func(c *context.APIContext) {
-		tokens, err := h.store.ListAccessTokens(c.Req.Context(), c.User.ID)
+func (h *accessTokensHandler) List() flamego.Handler {
+	return func(c *apiContext) {
+		tokens, err := h.store.ListAccessTokens(c.Request().Context(), c.User.ID)
 		if err != nil {
 			c.Error(err, "list access tokens")
 			return
@@ -44,12 +43,12 @@ func (h *accessTokensHandler) List() macaron.Handler {
 }
 
 type createAccessTokenRequest struct {
-	Name string `json:"name" binding:"Required"`
+	Name string `json:"name" validate:"required"`
 }
 
-func (h *accessTokensHandler) Create() macaron.Handler {
-	return func(c *context.APIContext, form createAccessTokenRequest) {
-		t, err := h.store.CreateAccessToken(c.Req.Context(), c.User.ID, form.Name)
+func (h *accessTokensHandler) Create() flamego.Handler {
+	return func(c *apiContext, form createAccessTokenRequest) {
+		t, err := h.store.CreateAccessToken(c.Request().Context(), c.User.ID, form.Name)
 		if err != nil {
 			if database.IsErrAccessTokenAlreadyExist(err) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, err)

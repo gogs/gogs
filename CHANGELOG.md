@@ -24,6 +24,7 @@ All notable changes to Gogs are documented in this file.
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
+- API v1 request validation errors now respond with the same `{"message", "url"}` body as other API errors, keeping the same status codes. [#8454](https://github.com/gogs/gogs/pull/8454)
 
 ### Fixed
 
@@ -53,6 +54,7 @@ All notable changes to Gogs are documented in this file.
 - When the first branch pushed to an empty repository has a different name than the repository's default branch, it now becomes the default branch, so cloning checks it out instead of producing an empty working tree. Mirrors whose default branch no longer exists now follow the default branch of the source repository. [#8497](https://github.com/gogs/gogs/pull/8497)
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
+- Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 
 ### Removed
 
