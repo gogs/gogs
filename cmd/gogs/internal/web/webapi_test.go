@@ -7,13 +7,30 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/flamego/flamego"
+	"github.com/flamego/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	unknwoni18n "github.com/unknwon/i18n"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 )
+
+type testUserKey struct{}
+
+// newTestRoutingHandler returns the routing handler that takes the signed-in
+// user of a request from its context value of testUserKey.
+func newTestRoutingHandler() (http.Handler, error) {
+	localizer := func(c flamego.Context) {
+		c.Map(i18n.Locale{Locale: unknwoni18n.Locale{Lang: "en-US"}})
+	}
+	return newRoutingHandler(localizer, session.Sessioner(), func(c flamego.Context) {
+		user, _ := c.Request().Context().Value(testUserKey{}).(*database.User)
+		c.Map(user, authMethod{})
+	})
+}
 
 func TestRequireViewAccess(t *testing.T) {
 	beforeSigninView, beforeConfirmation := conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation
@@ -21,7 +38,7 @@ func TestRequireViewAccess(t *testing.T) {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
 
-	handler, err := newRoutingHandler()
+	handler, err := newTestRoutingHandler()
 	require.NoError(t, err)
 
 	// The gate runs before any database or Git access, so these requests are
@@ -94,7 +111,7 @@ func TestRequireViewAccess(t *testing.T) {
 			for _, path := range paths {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
 				if test.viewer != nil {
-					req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, test.viewer))
+					req = req.WithContext(stdctx.WithValue(req.Context(), testUserKey{}, test.viewer))
 				}
 				resp := httptest.NewRecorder()
 				handler.ServeHTTP(resp, req)
@@ -115,7 +132,7 @@ func TestRequireSignIn(t *testing.T) {
 	// sites that do not require signing in to view content.
 	conf.Auth.RequireSigninView = false
 
-	handler, err := newRoutingHandler()
+	handler, err := newTestRoutingHandler()
 	require.NoError(t, err)
 
 	paths := []string{
@@ -198,7 +215,7 @@ func TestRequireSignIn(t *testing.T) {
 			for _, path := range paths {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
 				if test.user != nil {
-					req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, test.user))
+					req = req.WithContext(stdctx.WithValue(req.Context(), testUserKey{}, test.user))
 				}
 				resp := httptest.NewRecorder()
 				handler.ServeHTTP(resp, req)
@@ -210,7 +227,7 @@ func TestRequireSignIn(t *testing.T) {
 }
 
 func TestRequireAdmin(t *testing.T) {
-	handler, err := newRoutingHandler()
+	handler, err := newTestRoutingHandler()
 	require.NoError(t, err)
 
 	// A signed-in user who is not a site admin reaches none of the admin panel,
@@ -245,7 +262,7 @@ func TestRequireAdmin(t *testing.T) {
 	user := &database.User{ID: 2, IsActive: true}
 	for _, r := range requests {
 		req := httptest.NewRequest(r.method, r.path, strings.NewReader(`{"ids":[1]}`))
-		req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, user))
+		req = req.WithContext(stdctx.WithValue(req.Context(), testUserKey{}, user))
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, req)
 		assert.Equal(t, http.StatusForbidden, resp.Code, r.method+" "+r.path)

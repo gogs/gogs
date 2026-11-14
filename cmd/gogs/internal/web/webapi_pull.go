@@ -7,11 +7,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/i18n"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/i18n"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 

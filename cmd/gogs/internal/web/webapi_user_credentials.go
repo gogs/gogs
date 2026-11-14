@@ -13,15 +13,14 @@ import (
 	"github.com/flamego/cache"
 	"github.com/flamego/flamego"
 	"github.com/flamego/session"
-	"github.com/go-macaron/i18n"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -66,7 +65,7 @@ type userEmailAddedResponse struct {
 
 // postUserEmail adds an email address to the signed-in user, and sends it a
 // confirmation link when the site requires one.
-func postUserEmail(c flamego.Context, mc *macaron.Context, ca cache.Cache, l i18n.Locale, user *database.User, req userEmailRequest) (statusCode int, resp any, err error) {
+func postUserEmail(c flamego.Context, ca cache.Cache, l i18n.Locale, user *database.User, req userEmailRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	err = database.Handle.Users().AddEmail(ctx, user.ID, req.Email, !conf.Auth.RequireEmailConfirmation)
 	if err != nil {
@@ -81,7 +80,7 @@ func postUserEmail(c flamego.Context, mc *macaron.Context, ca cache.Cache, l i18
 		return http.StatusCreated, &userEmailAddedResponse{}, nil
 	}
 
-	if err := email.SendActivateEmailMail(mc, database.NewMailerUser(user), req.Email); err != nil {
+	if err := email.SendActivateEmailMail(l, database.NewMailerUser(user), req.Email); err != nil {
 		log.Error("postUserEmail: send confirmation mail to user %d: %v", user.ID, err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(user.ID), 1, 180*time.Second); err != nil {

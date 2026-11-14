@@ -12,7 +12,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/fatih/color"
-	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
 	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"

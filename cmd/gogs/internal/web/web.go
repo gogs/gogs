@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"io"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -20,11 +19,9 @@ import (
 	"github.com/flamego/cache"
 	"github.com/flamego/captcha"
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/gzip"
-	"github.com/go-macaron/i18n"
-	"github.com/go-macaron/session"
+	"github.com/flamego/session"
+	"github.com/klauspost/compress/gzhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
@@ -35,6 +32,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
@@ -63,48 +61,18 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		defer shutdownTracing(5 * time.Second)
 	}
 
-	m, err := newMacaron()
+	sessionOpts, err := parseSessionOptions()
 	if err != nil {
-		return errors.Wrap(err, "initialize macaron")
+		return errors.Wrap(err, "parse session options")
 	}
-
-	webHandler, err := newRoutingHandler()
+	localizer, err := newLocalizer()
+	if err != nil {
+		return errors.Wrap(err, "initialize localizer")
+	}
+	f, err := newRoutingHandler(localizer, session.Sessioner(sessionOpts), authenticator(context.NewStore()))
 	if err != nil {
 		return errors.Wrap(err, "initialize web handler")
 	}
-	apiV1Handler := newAPIV1Handler()
-
-	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
-
-	m.SetAutoHead(true)
-
-	m.Group("", func() {
-		// TODO: Without session
-		m.Any("/api/v1/*", ignSignIn, apiV1Bridger(apiV1Handler))
-		m.Any("/", flamegoBridger(webHandler))
-		m.Any("/*", flamegoBridger(webHandler))
-	},
-		session.Sessioner(session.Options{
-			Provider:       conf.Session.Provider,
-			ProviderConfig: conf.Session.ProviderConfig,
-			CookieName:     conf.Session.CookieName,
-			CookiePath:     conf.Server.Subpath,
-			Gclifetime:     conf.Session.GCInterval,
-			Maxlifetime:    conf.Session.MaxLifeTime,
-			Secure:         conf.Session.CookieSecure,
-			CookieLifeTime: 86400 * conf.Security.LoginRememberDays,
-		}),
-		context.Contexter(context.NewStore(), webHandler),
-	)
-
-	// Git over HTTP and LFS authenticate requests on their own, without sessions.
-	m.Group("/:username/:reponame", func() {
-		m.Get("/tasks/trigger", webHandler.ServeHTTP)
-		m.Any("/info/lfs/*", webHandler.ServeHTTP)
-		m.Route("/info/refs", "GET,OPTIONS", webHandler.ServeHTTP)
-		m.Route("/git-upload-pack", "POST,OPTIONS", webHandler.ServeHTTP)
-		m.Route("/git-receive-pack", "POST,OPTIONS", webHandler.ServeHTTP)
-	})
 
 	// Flag for port number in case first time run conflict.
 	if portOverride > 0 {
@@ -122,9 +90,12 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	}
 	log.Info("Available on %s", conf.Server.ExternalURL)
 
-	var handler http.Handler = m
+	var handler http.Handler = f
+	if conf.Server.EnableGzip {
+		handler = gzhttp.GzipHandler(handler)
+	}
 	if shutdownTracing != nil {
-		handler = newTracingHandler(m)
+		handler = newTracingHandler(handler)
 	}
 
 	server := &http.Server{Addr: listenAddr, Handler: handler}
@@ -222,9 +193,20 @@ func newTracingHandler(h http.Handler) http.Handler {
 	}))
 }
 
-func newRoutingHandler() (http.Handler, error) {
+// newRoutingHandler returns the handler of all routes. The localizer maps the
+// i18n.Locale of each request. Except for Git over HTTP and LFS, which
+// authenticate requests on their own, the routes have sessions started by
+// sessioner, and authenticate maps the signed-in user (*database.User, nil for
+// anonymous visitors) and the authMethod.
+func newRoutingHandler(localizer, sessioner, authenticate flamego.Handler) (*flamego.Flame, error) {
 	f := flamego.New()
 	f.AutoHead(true)
+	if conf.Server.Protocol == "fcgi" && conf.Server.Subpath != "" {
+		f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, conf.Server.Subpath)
+			return false
+		})
+	}
 	// Like Macaron did, a trailing slash of a page path is ignored, e.g.,
 	// "/alice/widgets/" is the page of "/alice/widgets".
 	f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
@@ -234,9 +216,47 @@ func newRoutingHandler() (http.Handler, error) {
 		}
 		return false
 	})
+	if !conf.Server.DisableRouterLog {
+		f.Use(flamego.Logger())
+	}
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
-	f.Use(flamegoInjector)
-	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
+	f.Use(func(w http.ResponseWriter) {
+		// 🚨 SECURITY: Prevent MIME type sniffing in some browsers,
+		// see https://github.com/gogs/gogs/issues/5397 for details.
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "deny")
+	})
+
+	// Serve files under the custom directory first to make it possible to
+	// override files under "public".
+	f.Use(flamego.Static(flamego.StaticOptions{
+		Directory:     filepath.Join(conf.CustomDir(), "public"),
+		EnableLogging: !conf.Server.DisableRouterLog,
+	}))
+	var publicFS http.FileSystem
+	if !conf.Server.LoadAssetsFromDisk {
+		publicFS = http.FS(public.Files)
+	}
+	f.Use(flamego.Static(flamego.StaticOptions{
+		Directory:     filepath.Join(conf.WorkDir(), "public"),
+		FileSystem:    publicFS,
+		SetETag:       true,
+		EnableLogging: !conf.Server.DisableRouterLog,
+	}))
+	f.Use(flamego.Static(flamego.StaticOptions{
+		Directory:     conf.Picture.AvatarUploadPath,
+		Prefix:        conf.UsersAvatarPathPrefix,
+		SetETag:       true,
+		EnableLogging: !conf.Server.DisableRouterLog,
+	}))
+	f.Use(flamego.Static(flamego.StaticOptions{
+		Directory:     conf.Picture.RepositoryAvatarUploadPath,
+		Prefix:        database.RepoAvatarURLPrefix,
+		SetETag:       true,
+		EnableLogging: !conf.Server.DisableRouterLog,
+	}))
+
+	f.Use(localizer)
 
 	cacherOpts, err := parseCacheOptions(conf.Cache)
 	if err != nil {
@@ -263,27 +283,37 @@ func newRoutingHandler() (http.Handler, error) {
 		_ = json.NewEncoder(w).Encode(resp)
 	})
 
-	f.Get("/redirect", getRedirect)
-	f.Get("/robots.txt", getRobotsTxt)
+	f.Get("/healthcheck", healthCheck)
+	mountGitHTTPRoutes(f)
 
-	// The captcha middleware writes the response. This route exists so the request reaches it.
-	f.Get("/captcha/image.jpeg", func() {})
+	var webApp http.Handler
 
-	f.Group("/{owner}/{repo}", func() {
-		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
-		f.Get("/compare/"+compareRangeRoute+".diff", getRepoCompareRaw)
-		f.Get("/pulls/{index: /[0-9]+/}.diff", withRepoPulls, withRepoPull, getRepoPullRaw)
-		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
-	}, requireViewAccess, withRepoContext)
+	f.Group("", func() {
+		f.Get("/redirect", getRedirect)
+		f.Get("/robots.txt", getRobotsTxt)
 
-	mountWebLocaleRoutes(f)
-	mountWebAPIRoutes(f)
-	webApp, err := mountWebAppRoutes(f)
+		// The captcha middleware writes the response. This route exists so the request reaches it.
+		f.Get("/captcha/image.jpeg", func() {})
+
+		f.Group("/{owner}/{repo}", func() {
+			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
+			f.Get("/compare/"+compareRangeRoute+".diff", getRepoCompareRaw)
+			f.Get("/pulls/{index: /[0-9]+/}.diff", withRepoPulls, withRepoPull, getRepoPullRaw)
+			f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
+		}, requireViewAccess, withRepoContext)
+
+		mountWebLocaleRoutes(f)
+		mountWebAPIRoutes(f)
+		webApp, err = mountWebAppRoutes(f)
+		if err != nil {
+			return
+		}
+		f.Any("/api/v1/{**}", newPageContexter(webApp), apiV1Access, apiV1Bridger(newAPIV1Handler()))
+		mountPageRoutes(f, webApp)
+	}, sessioner, authenticate, corsHeaders, captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
-	mountPageRoutes(f, webApp)
-	mountGitHTTPRoutes(f)
 	return f, nil
 }
 
@@ -305,13 +335,12 @@ func mountGitHTTPRoutes(f *flamego.Flame) {
 }
 
 // newAPIV1Handler returns the handler of API v1 routes. It is separate from the
-// web handler so that requests the web handler receives, e.g., through
-// Context.ServeWeb, never reach API v1 routes without the sign-in and
-// authentication checks done by Macaron.
+// routing handler so that apiV1Bridger can normalize the request path before
+// the routes are matched.
 func newAPIV1Handler() http.Handler {
 	f := flamego.New()
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
-	f.Use(flamegoInjector)
+	f.Use(apiV1Injector)
 	apiv1.RegisterRoutes(f)
 	return f
 }
@@ -332,62 +361,8 @@ func getRobotsTxt(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
 }
 
-// newMacaron initializes Macaron instance.
-func newMacaron() (*macaron.Macaron, error) {
-	m := macaron.New()
-	if !conf.Server.DisableRouterLog {
-		m.Use(macaron.Logger())
-	}
-	m.Use(macaron.Recovery())
-	if conf.Server.EnableGzip {
-		m.Use(gzip.Gziper())
-	}
-	if conf.Server.Protocol == "fcgi" {
-		m.SetURLPrefix(conf.Server.Subpath)
-	}
-
-	// Register custom middleware first to make it possible to override files under "public".
-	m.Use(macaron.Static(
-		filepath.Join(conf.CustomDir(), "public"),
-		macaron.StaticOptions{
-			SkipLogging: conf.Server.DisableRouterLog,
-		},
-	))
-	var publicFs http.FileSystem
-	if !conf.Server.LoadAssetsFromDisk {
-		publicFs = http.FS(public.Files)
-	}
-	m.Use(macaron.Static(
-		filepath.Join(conf.WorkDir(), "public"),
-		macaron.StaticOptions{
-			ETag:        true,
-			SkipLogging: conf.Server.DisableRouterLog,
-			FileSystem:  publicFs,
-		},
-	))
-
-	m.Use(macaron.Static(
-		conf.Picture.AvatarUploadPath,
-		macaron.StaticOptions{
-			ETag:        true,
-			Prefix:      conf.UsersAvatarPathPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
-		},
-	))
-	m.Use(macaron.Static(
-		conf.Picture.RepositoryAvatarUploadPath,
-		macaron.StaticOptions{
-			ETag:        true,
-			Prefix:      database.RepoAvatarURLPrefix,
-			SkipLogging: conf.Server.DisableRouterLog,
-		},
-	))
-
-	// The sign-in checks, the go-get page and the public SSH keys still write
-	// JSON and plain text through Macaron's renderer, which no page template is
-	// rendered with anymore.
-	m.Use(macaron.Renderer(macaron.RenderOptions{TemplateFileSystem: noTemplates{}}))
-
+// newLocalizer returns the middleware that maps the i18n.Locale of each request.
+func newLocalizer() (flamego.Handler, error) {
 	localeNames, err := embedconf.FileNames("locale")
 	if err != nil {
 		return nil, errors.Wrap(err, "list locale files")
@@ -400,30 +375,18 @@ func newMacaron() (*macaron.Macaron, error) {
 		}
 	}
 	customLocaleDir := filepath.Join(conf.CustomDir(), "conf", "locale")
-	m.Use(i18n.I18n(i18n.Options{
+	webLocales, err = loadWebLocales(customLocaleDir, conf.I18n.Langs)
+	if err != nil {
+		return nil, errors.Wrap(err, "load web locales")
+	}
+	return i18n.Localizer(i18n.Options{
 		SubURL:          conf.Server.Subpath,
 		Files:           localeFiles,
 		CustomDirectory: customLocaleDir,
 		Langs:           conf.I18n.Langs,
 		Names:           conf.I18n.Names,
 		DefaultLang:     "en-US",
-		Redirect:        true,
-	}))
-	webLocales, err = loadWebLocales(customLocaleDir, conf.I18n.Langs)
-	if err != nil {
-		return nil, errors.Wrap(err, "load web locales")
-	}
-	m.Route("/healthcheck", http.MethodHead+","+http.MethodGet, healthCheck)
-	return m, nil
-}
-
-// noTemplates is a template file system without templates.
-type noTemplates struct{}
-
-func (noTemplates) ListFiles() []macaron.TemplateFile { return nil }
-
-func (noTemplates) Get(name string) (io.Reader, error) {
-	return nil, errors.Newf("template %q does not exist", name)
+	})
 }
 
 // injectContent holds the custom content spliced into the React shell.
@@ -434,13 +397,13 @@ type injectContent struct {
 
 // readInjectContent reads the head and footer injection templates from the
 // custom directory, falling back to the empty embedded defaults.
-func readInjectContent() (injectContent, error) {
-	customDir := filepath.Join(conf.CustomDir(), "templates")
-	head, err := templates.ReadInjectFile(customDir, "head.tmpl")
+func readInjectContent(customDir string) (injectContent, error) {
+	templatesDir := filepath.Join(customDir, "templates")
+	head, err := templates.ReadInjectFile(templatesDir, "head.tmpl")
 	if err != nil {
 		return injectContent{}, errors.Wrap(err, "read head injection")
 	}
-	footer, err := templates.ReadInjectFile(customDir, "footer.tmpl")
+	footer, err := templates.ReadInjectFile(templatesDir, "footer.tmpl")
 	if err != nil {
 		return injectContent{}, errors.Wrap(err, "read footer injection")
 	}
@@ -529,14 +492,12 @@ func initServices(customConf string) error {
 	log.Trace("Build commit: %s", conf.BuildCommit)
 
 	if conf.IsProdMode() {
-		macaron.Env = macaron.PROD
 		flamego.SetEnv(flamego.EnvTypeProd)
-		macaron.ColorLog = false
 		git.SetOutput(nil)
 	} else {
 		git.SetOutput(os.Stdout)
 	}
-	log.Info("Run mode: %s", strings.Title(macaron.Env))
+	log.Info("Run mode: %s", strings.Title(string(flamego.Env())))
 
 	if conf.Email.Enabled {
 		log.Trace("Email service is enabled")
