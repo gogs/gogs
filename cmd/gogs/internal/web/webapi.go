@@ -162,6 +162,15 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Post("/complete", bindJSON(userActivateCompleteRequest{}), postUserActivateComplete)
 			})
 			f.Post("/sign-out", postUserSignOut)
+			f.Delete("", requireSignIn, bindJSON(userDeleteRequest{}), deleteUser)
+			f.Group("/settings", func() {
+				f.Combo("").Get(getUserSettings).Patch(bindJSON(userSettingsRequest{}), patchUserSettings)
+				f.Put("/gravatar", bindJSON(userGravatarRequest{}), putUserGravatar)
+				f.Put("/password", bindJSON(userPasswordRequest{}), putUserPassword)
+				f.Get("/repositories", getUserSettingsRepos)
+				f.Delete("/repositories/{id}", deleteUserSettingsRepo)
+				f.Get("/organizations", getUserSettingsOrgs)
+			}, requireSignIn)
 		})
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("/header", getRepoHeader)
@@ -213,6 +222,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withOrgTeam)
 		}, requireSignIn, withOrgMembership)
 	}, enforceWebAPIMaxBodySize)
+	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireSignIn).
+		Put(putUserAvatar).
+		Delete(deleteUserAvatar)
 	f.Combo("/api/web/orgs/{org}/settings/avatar", limitAvatarUpload, requireSignIn, withOrgMembership).
 		Put(putOrgAvatar).
 		Delete(deleteOrgAvatar)

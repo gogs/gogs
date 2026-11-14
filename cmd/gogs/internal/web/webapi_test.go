@@ -92,8 +92,9 @@ func TestRequireSignIn(t *testing.T) {
 	t.Cleanup(func() {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
-	// Dashboards and the people and teams of organizations need a signed-in
-	// user even on sites that do not require signing in to view content.
+	// Dashboards, user settings, and the people and teams of organizations need
+	// a signed-in user even on sites that do not require signing in to view
+	// content.
 	conf.Auth.RequireSigninView = false
 
 	handler, err := newRoutingHandler()
@@ -109,6 +110,9 @@ func TestRequireSignIn(t *testing.T) {
 		"/api/web/orgs/acme/dashboard/issues",
 		"/api/web/orgs/acme/dashboard/pulls",
 		"/api/web/orgs/acme/settings",
+		"/api/web/user/settings",
+		"/api/web/user/settings/repositories",
+		"/api/web/user/settings/organizations",
 		"/api/web/orgs/acme/members",
 		"/api/web/orgs/acme/teams",
 		"/api/web/orgs/acme/teams/owners",

@@ -23,6 +23,7 @@ import { createExploreRoutes } from "@/routes/explore";
 import { createOrgRoutes } from "@/routes/org";
 import { createProfileRoutes } from "@/routes/profile";
 import { createRepoRoutes } from "@/routes/repo";
+import { createSettingsRoutes } from "@/routes/settings";
 import { createUserRoutes } from "@/routes/user";
 
 interface RouterContext {
@@ -48,6 +49,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const routeTree = rootRoute.addChildren([
   ...createDashboardRoutes(rootRoute),
   ...createUserRoutes(rootRoute),
+  ...createSettingsRoutes(rootRoute),
   ...createExploreRoutes(rootRoute),
   ...createOrgRoutes(rootRoute),
   ...createRepoRoutes(rootRoute),
