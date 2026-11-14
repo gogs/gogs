@@ -35,17 +35,27 @@ export function Navbar() {
         <div className="hidden flex-1 items-center gap-1 sm:flex">
           {user ? (
             <>
-              <NavLink href="/">{t("dashboard")}</NavLink>
-              <NavLink href="/issues">{t("issues")}</NavLink>
-              <NavLink href="/pulls">{t("pull_requests")}</NavLink>
-              <NavLink href="/explore/repos">{t("explore")}</NavLink>
+              <NavLink href="/" spa>
+                {t("dashboard")}
+              </NavLink>
+              <NavLink href="/issues" spa>
+                {t("issues")}
+              </NavLink>
+              <NavLink href="/pulls" spa>
+                {t("pull_requests")}
+              </NavLink>
+              <NavLink href="/explore/repos" spa>
+                {t("explore")}
+              </NavLink>
             </>
           ) : (
             <>
               <NavLink href="/" spa>
                 {t("home")}
               </NavLink>
-              <NavLink href="/explore/repos">{t("explore")}</NavLink>
+              <NavLink href="/explore/repos" spa>
+                {t("explore")}
+              </NavLink>
               <NavLink href="https://gogs.io" external>
                 {t("help")}
               </NavLink>
@@ -100,16 +110,16 @@ export function Navbar() {
                       </MobileLink>
                     )}
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <MobileLink href="/" onClick={() => setOpen(false)}>
+                    <MobileLink href="/" spa onClick={() => setOpen(false)}>
                       {t("dashboard")}
                     </MobileLink>
-                    <MobileLink href="/issues" onClick={() => setOpen(false)}>
+                    <MobileLink href="/issues" spa onClick={() => setOpen(false)}>
                       {t("issues")}
                     </MobileLink>
-                    <MobileLink href="/pulls" onClick={() => setOpen(false)}>
+                    <MobileLink href="/pulls" spa onClick={() => setOpen(false)}>
                       {t("pull_requests")}
                     </MobileLink>
-                    <MobileLink href="/explore/repos" onClick={() => setOpen(false)}>
+                    <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
                       {t("explore")}
                     </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
@@ -145,7 +155,7 @@ export function Navbar() {
                     <MobileLink href="/" spa onClick={() => setOpen(false)}>
                       {t("home")}
                     </MobileLink>
-                    <MobileLink href="/explore/repos" onClick={() => setOpen(false)}>
+                    <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
                       {t("explore")}
                     </MobileLink>
                     <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>

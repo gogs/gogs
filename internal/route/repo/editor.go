@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
@@ -53,9 +53,9 @@ func editFile(c *context.Context, isNewFile bool) {
 	treeNames, treePaths := getParentTreeFields(c.Repo.TreePath)
 
 	if !isNewFile {
-		entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
+		entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), c.Repo.TreePath)
 		if err != nil {
-			c.NotFoundOrError(gitx.NewError(err), "get tree entry")
+			c.NotFoundOrError(git.NewError(err), "get tree entry")
 			return
 		}
 
@@ -66,13 +66,13 @@ func editFile(c *context.Context, isNewFile bool) {
 		}
 
 		blob := entry.Blob()
-		p, err := blob.Bytes()
+		p, err := blob.Bytes(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get blob data")
 			return
 		}
 
-		c.Data["FileSize"] = blob.Size()
+		c.Data["FileSize"] = blob.Size(c.Req.Context())
 		c.Data["FileName"] = blob.Name()
 
 		// Only text file are editable online.
@@ -165,7 +165,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+		if _, err := c.Repo.Repository.GetBranch(c.Req.Context(), branchName); err == nil {
 			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorEdit, &f)
 			return
@@ -175,9 +175,9 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	var newTreePath string
 	for index, part := range treeNames {
 		newTreePath = path.Join(newTreePath, part)
-		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
+		entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), newTreePath)
 		if err != nil {
-			if gitx.IsErrRevisionNotExist(err) {
+			if git.IsErrRevisionNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}
@@ -206,9 +206,9 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	if !isNewFile {
-		entry, err := c.Repo.Commit.TreeEntry(oldTreePath)
+		entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), oldTreePath)
 		if err != nil {
-			if gitx.IsErrRevisionNotExist(err) {
+			if git.IsErrRevisionNotExist(err) {
 				c.FormErr("TreePath")
 				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), http.StatusNotFound, tmplEditorEdit, &f)
 			} else {
@@ -225,7 +225,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		}
 
 		if lastCommit != c.Repo.CommitID {
-			files, err := c.Repo.Commit.FilesChangedAfter(lastCommit)
+			files, err := c.Repo.Commit.FilesChangedAfter(c.Req.Context(), lastCommit)
 			if err != nil {
 				c.Error(err, "get changed files")
 				return
@@ -240,9 +240,9 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 
 	if oldTreePath != f.TreePath {
 		// We have a new filename (rename or completely new file) so we need to make sure it doesn't already exist, can't clobber.
-		entry, err := c.Repo.Commit.TreeEntry(f.TreePath)
+		entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), f.TreePath)
 		if err != nil {
-			if !gitx.IsErrRevisionNotExist(err) {
+			if !git.IsErrRevisionNotExist(err) {
 				c.Error(err, "get tree entry")
 				return
 			}
@@ -268,7 +268,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UpdateRepoFile(c.User, database.UpdateRepoFileOptions{
+	if err := c.Repo.Repository.UpdateRepoFile(c.Req.Context(), c.User, database.UpdateRepoFileOptions{
 		OldBranch:   oldBranchName,
 		NewBranch:   branchName,
 		OldTreeName: oldTreePath,
@@ -302,7 +302,7 @@ func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Repo.TreePath)
 
-	entry, err := c.Repo.Commit.TreeEntry(treePath)
+	entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), treePath)
 	if err != nil {
 		c.Error(err, "get tree entry")
 		return
@@ -311,7 +311,7 @@ func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 		return
 	}
 
-	diff, err := c.Repo.Repository.GetDiffPreview(c.Repo.BranchName, treePath, f.Content)
+	diff, err := c.Repo.Repository.GetDiffPreview(c.Req.Context(), c.Repo.BranchName, treePath, f.Content)
 	if err != nil {
 		c.Error(err, "get diff preview")
 		return
@@ -362,7 +362,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	}
 
 	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+		if _, err := c.Repo.Repository.GetBranch(c.Req.Context(), branchName); err == nil {
 			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorDelete, &f)
 			return
@@ -379,7 +379,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.DeleteRepoFile(c.User, database.DeleteRepoFileOptions{
+	if err := c.Repo.Repository.DeleteRepoFile(c.Req.Context(), c.User, database.DeleteRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -460,7 +460,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}
 
 	if oldBranchName != branchName {
-		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+		if _, err := c.Repo.Repository.GetBranch(c.Req.Context(), branchName); err == nil {
 			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), http.StatusUnprocessableEntity, tmplEditorUpload, &f)
 			return
@@ -470,9 +470,9 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	var newTreePath string
 	for _, part := range treeNames {
 		newTreePath = path.Join(newTreePath, part)
-		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
+		entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), newTreePath)
 		if err != nil {
-			if gitx.IsErrRevisionNotExist(err) {
+			if git.IsErrRevisionNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}
@@ -499,7 +499,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UploadRepoFiles(c.User, database.UploadRepoFileOptions{
+	if err := c.Repo.Repository.UploadRepoFiles(c.Req.Context(), c.User, database.UploadRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,

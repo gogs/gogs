@@ -31,19 +31,31 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💌 Features
 
-- User dashboard, user profile and activity timeline.
-- Access repositories via SSH, HTTP and HTTPS protocols.
-- User, organization and repository management.
-- Repository and organization webhooks, including Slack, Discord and Dingtalk.
-- Repository Git hooks, deploy keys and Git LFS.
-- Repository issues, pull requests, wiki, protected branches and collaboration.
-- Migrate and mirror repositories with wiki from other code hosts.
-- Web editor for quick editing repository files and wiki.
-- Jupyter Notebook and PDF rendering.
-- Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
-- Customize HTML templates, static files and many others.
-- Rich database backend support, including PostgreSQL, MySQL, MariaDB, SQLite3 or any database backend that speaks one of those protocols.
-- Have localization over [31 languages](https://crowdin.com/project/gogs).
+- Code hosting
+  - Git over SSH and HTTP(S), with deploy keys and LFS (local or S3\*).
+  - Migrate and mirror from other code hosts.
+  - Browse, edit, search\* and blame\* code right in the browser.
+  - Rendered Markdown, Jupyter Notebooks and PDFs, with rich diffs\*.
+- Collaboration
+  - Issues, wikis and pull requests, with inline reviews\* and stacks\*.
+  - Protected branches, with code owners\* and signed commits\*.
+  - Organizations, teams and collaborators.
+- Interface
+  - Dashboards, profiles and activity timelines.
+  - Light and dark themes, a command palette\* and over [31 languages](https://crowdin.com/project/gogs).
+- Integrations
+  - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
+  - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
+- Security
+  - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
+  - Two-factor authentication and passkeys\*.
+  - Session management\*, security alerts\* and breached password detection\*.
+- Operations
+  - Single binary, Docker or Kubernetes\*, on Linux, macOS, Windows and ARM.
+  - PostgreSQL, MySQL or SQLite3.
+  - OpenTelemetry with a built-in trace viewer\*.
+
+<sub>* In development.</sub>
 
 ## 💾 Hardware requirements
 
@@ -53,37 +65,13 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💻 Browser support
 
-- Please see [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) for specific versions of supported browsers.
-- The smallest resolution officially supported is **1024*768**, however the UI may still look right in smaller resolutions, but no promises or fixes.
+- Any modern browser works, with Chrome 111, Edge 111, Firefox 128 and Safari 16.4 (including iOS) as the minimum versions.
+- The UI is mobile-friendly and works on screens as narrow as 375px.
+- WebAssembly SIMD makes syntax highlighting in diffs faster, but is not required.
 
 ## 📜 Installation
 
 Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
-
-### Deploy to cloud
-
-- [Cloudron](https://www.cloudron.io/store/gogs.html)
-- [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
-- [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
-
-### Tutorials
-
-- [Private Git Web Portal in Raspberry PI With Gogs](https://peppe8o.com/private-git-web-portal-in-raspberry-pi-with-gogs/)
-- [How To Set Up Gogs on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-set-up-gogs-on-ubuntu-14-04)
-- [Run your own GitHub-like service with the help of Docker](https://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
-- [Dockerized Gogs git server and alpine postgres in 20 minutes or less](https://garthwaite.org/docker-gogs.html)
-- [Host Your Own Private GitHub with Gogs](https://eladnava.com/host-your-own-private-github-with-gogs-io/)
-- [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/) (Chinese)
-- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](https://my.oschina.net/luyao/blog/375654) (Chinese)
-- [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
-- [How to install Gogs on a Linux Server (DigitalOcean)](https://www.youtube.com/watch?v=deSfX0gqefE)
-
-## 📦 Software, service and product support
-
-- [Jenkins](https://plugins.jenkins.io/gogs-webhook/) (CI)
-- [Puppet](https://forge.puppet.com/modules/Siteminds/gogs) (IT)
-- [Synology](https://www.synology.com) (Docker)
-- [Syncloud](https://syncloud.org/) (App Store)
 
 ## 🙇‍♂️ Acknowledgments
 

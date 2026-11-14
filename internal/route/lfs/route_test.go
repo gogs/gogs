@@ -120,6 +120,41 @@ func TestAuthenticate(t *testing.T) {
 			expHeader:     http.Header{},
 			expBody:       "ID: 1, Name: unknwon",
 		},
+		{
+			name: "user with prohibited login by username and password",
+			header: http.Header{
+				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
+			},
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.IsTwoFactorEnabledFunc.SetDefaultReturn(false)
+				mockStore.AuthenticateUserFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon", ProhibitLogin: true}, nil)
+				return mockStore
+			},
+			expStatusCode: http.StatusForbidden,
+			expHeader: http.Header{
+				"Content-Type": []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"User account is disabled"}` + "\n",
+		},
+		{
+			name: "user with prohibited login by access token",
+			header: http.Header{
+				"Authorization": []string{"Basic dXNlcm5hbWU="},
+			},
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetAccessTokenBySHA1Func.SetDefaultReturn(&database.AccessToken{}, nil)
+				mockStore.AuthenticateUserFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
+				mockStore.GetUserByIDFunc.SetDefaultReturn(&database.User{ID: 1, Name: "unknwon", ProhibitLogin: true}, nil)
+				return mockStore
+			},
+			expStatusCode: http.StatusForbidden,
+			expHeader: http.Header{
+				"Content-Type": []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"User account is disabled"}` + "\n",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -28,7 +28,8 @@ export function Landing() {
               height="378"
               className="mx-auto block h-auto w-full max-w-[450px] [image-rendering:pixelated]"
             />
-            <span className="-mt-1 block text-center text-base text-(--color-foreground) sm:text-lg">
+            {/* The tagline is prose, so it wraps between words unlike the terminal output around it. */}
+            <span className="-mt-1 block text-center text-base wrap-anywhere text-(--color-foreground) [word-break:normal] sm:text-lg">
               {t("app_desc")}
             </span>
             {"\n"}
@@ -39,7 +40,7 @@ export function Landing() {
             {"\n"}
             <CmdLink href="/user/sign-up" cmd="sign-up" desc={t("register")} spa />
             {"\n"}
-            <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} />
+            <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} spa />
             {"\n"}
             <CmdLink href="https://gogs.io" cmd="help" desc={t("help")} external />
             {"\n"}

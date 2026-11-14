@@ -2,15 +2,16 @@ package repo
 
 import (
 	gocontext "context"
+	"net/http"
 	"path"
 	"time"
 
-	"github.com/gogs/git-module"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -47,7 +48,7 @@ func renderCommits(c *context.Context, filename string) {
 		pageSize = conf.UI.User.CommitsPagingNum
 	}
 
-	commits, err := c.Repo.Commit.CommitsByPage(page, pageSize, git.CommitsByPageOptions{Path: filename})
+	commits, err := c.Repo.Commit.CommitsByPage(c.Req.Context(), page, pageSize, git.CommitsByPageOptions{Path: filename})
 	if err != nil {
 		c.Error(err, "paging commits")
 		return
@@ -84,7 +85,7 @@ func SearchCommits(c *context.Context) {
 		return
 	}
 
-	commits, err := c.Repo.Commit.SearchCommits(keyword)
+	commits, err := c.Repo.Commit.SearchCommits(c.Req.Context(), keyword)
 	if err != nil {
 		c.Error(err, "search commits")
 		return
@@ -145,24 +146,70 @@ func CompareDiff(c *context.Context) {
 	beforeCommitID := c.Params(":before")
 	afterCommitID := c.Params(":after")
 
-	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
+	commit, err := c.Repo.GitRepo.CatFileCommit(c.Req.Context(), afterCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get head commit")
+		c.NotFoundOrError(git.NewError(err), "get head commit")
 		return
 	}
 
-	diff, err := gitx.RepoDiff(c.Repo.GitRepo,
+	// The empty ID is the base of a created branch, e.g., in the news feed, so
+	// compare against where the branch forked from the default branch, or
+	// against the empty tree when it adds nothing to the default branch, e.g.,
+	// it is the default branch, or they share no history, e.g., an orphan branch
+	// or a default branch that does not exist.
+	var commits []*git.Commit
+	baseIsEmptyTree := false
+	if git.IsEmptyID(beforeCommitID) {
+		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
+		if err != nil && !git.IsErrNoMergeBase(err) {
+			log.Error("Failed to get merge base: %v", err)
+			c.Status(http.StatusInternalServerError)
+			return
+		} else if err != nil || beforeCommitID == afterCommitID {
+			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
+			if err != nil {
+				log.Error("Failed to get object format: %v", err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+			beforeCommitID = objectFormat.EmptyTreeID()
+			baseIsEmptyTree = true
+
+			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
+			if err != nil {
+				log.Error("Failed to list commits: %v", err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+		}
+	} else {
+		_, err = c.Repo.GitRepo.CatFileCommit(c.Req.Context(), beforeCommitID)
+		if git.IsErrRevisionNotExist(err) {
+			c.NotFound()
+			return
+		} else if err != nil {
+			log.Error("Failed to get base commit: %v", err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if commits == nil {
+		commits, err = commit.CommitsAfter(c.Req.Context(), beforeCommitID)
+		if err != nil {
+			c.NotFoundOrError(git.NewError(err), "get commits after")
+			return
+		}
+	}
+
+	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
+	defer cancel()
+	diff, err := c.Repo.GitRepo.Diff(ctx,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: beforeCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
+		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get diff")
-		return
-	}
-
-	commits, err := commit.CommitsAfter(beforeCommitID)
-	if err != nil {
-		c.NotFoundOrError(gitx.NewError(err), "get commits after")
+		c.NotFoundOrError(git.NewError(err), "get diff")
 		return
 	}
 
@@ -171,11 +218,16 @@ func CompareDiff(c *context.Context) {
 	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 	c.Data["BeforeCommitID"] = beforeCommitID
+	c.Data["BaseIsEmptyTree"] = baseIsEmptyTree
 	c.Data["AfterCommitID"] = afterCommitID
 	c.Data["Username"] = userName
 	c.Data["Reponame"] = repoName
-	c.Data["IsImageFile"] = commit.IsImageFile
-	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
+	c.Data["IsImageFile"] = func(subpath string) (bool, error) {
+		return commit.IsImageFile(c.Req.Context(), subpath)
+	}
+	c.Data["IsImageFileByIndex"] = func(index string) (bool, error) {
+		return commit.IsImageFileByIndex(c.Req.Context(), index)
+	}
 	c.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
 	c.Data["Commit"] = commit
 	c.Data["Diff"] = diff

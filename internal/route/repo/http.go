@@ -3,15 +3,14 @@ package repo
 import (
 	"bytes"
 	"compress/gzip"
+	gocontext "context"
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -20,6 +19,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/tool"
@@ -72,7 +72,7 @@ func HTTPContexter(store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
+			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent, Git-Protocol")
 			if c.Req.Method == "OPTIONS" {
 				c.Status(http.StatusOK)
 				return
@@ -177,6 +177,11 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
+		if authUser.IsDisabled() {
+			askCredentials(c, http.StatusForbidden, "User account is disabled")
+			return
+		}
+
 		log.Trace("[Git] Authenticated user: %s", authUser.Name)
 
 		mode := database.AccessModeWrite
@@ -210,10 +215,9 @@ Please create and use personal access token on user settings page`)
 }
 
 type serviceHandler struct {
-	w    http.ResponseWriter
-	r    *http.Request
-	dir  string
-	file string
+	w   http.ResponseWriter
+	r   *http.Request
+	dir string
 
 	authUser  *database.User
 	ownerName string
@@ -226,28 +230,6 @@ func (h *serviceHandler) setHeaderNoCache() {
 	h.w.Header().Set("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	h.w.Header().Set("Pragma", "no-cache")
 	h.w.Header().Set("Cache-Control", "no-cache, max-age=0, must-revalidate")
-}
-
-func (h *serviceHandler) setHeaderCacheForever() {
-	now := time.Now().Unix()
-	expires := now + 31536000
-	h.w.Header().Set("Date", fmt.Sprintf("%d", now))
-	h.w.Header().Set("Expires", fmt.Sprintf("%d", expires))
-	h.w.Header().Set("Cache-Control", "public, max-age=31536000")
-}
-
-func (h *serviceHandler) sendFile(contentType string) {
-	reqFile := path.Join(h.dir, h.file)
-	fi, err := os.Stat(reqFile)
-	if os.IsNotExist(err) {
-		h.w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	h.w.Header().Set("Content-Type", contentType)
-	h.w.Header().Set("Content-Length", fmt.Sprintf("%d", fi.Size()))
-	h.w.Header().Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
-	http.ServeFile(h.w, h.r, reqFile)
 }
 
 func serviceRPC(h serviceHandler, service string) {
@@ -274,23 +256,33 @@ func serviceRPC(h serviceHandler, service string) {
 		}
 	}
 
-	var stderr bytes.Buffer
-	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
+	var envs []string
 	if service == "receive-pack" {
-		cmd.Env = append(os.Environ(), database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
+		envs = database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
 			AuthUser:  h.authUser,
 			OwnerName: h.ownerName,
 			OwnerSalt: h.ownerSalt,
 			RepoID:    h.repoID,
 			RepoName:  h.repoName,
 			RepoPath:  h.dir,
-		})...)
+		})
 	}
-	cmd.Dir = h.dir
-	cmd.Stdout = h.w
-	cmd.Stderr = &stderr
-	cmd.Stdin = reqBody
-	if err = cmd.Run(); err != nil {
+	// A client disconnecting must not kill Git midway through a push, e.g., while
+	// running hooks after refs were updated.
+	ctx := h.r.Context()
+	if service == "receive-pack" {
+		ctx = gocontext.WithoutCancel(ctx)
+	}
+	var stderr bytes.Buffer
+	err = git.RunService(ctx, git.Service(service), h.dir, git.ServiceOptions{
+		StatelessRPC: true,
+		Stdin:        reqBody,
+		Stdout:       h.w,
+		Stderr:       &stderr,
+		Protocol:     h.r.Header.Get("Git-Protocol"),
+		Envs:         envs,
+	})
+	if err != nil {
 		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -313,21 +305,6 @@ func getServiceType(r *http.Request) string {
 	return strings.TrimPrefix(serviceType, "git-")
 }
 
-// FIXME: use process module
-func gitCommand(dir string, args ...string) []byte {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	out, err := cmd.Output()
-	if err != nil {
-		log.Error("Git: %v - %s", err, out)
-	}
-	return out
-}
-
-func updateServerInfo(dir string) []byte {
-	return gitCommand(dir, "update-server-info")
-}
-
 func packetWrite(str string) []byte {
 	s := strconv.FormatInt(int64(len(str)+4), 16)
 	if len(s)%4 != 0 {
@@ -340,42 +317,26 @@ func getInfoRefs(h serviceHandler) {
 	h.setHeaderNoCache()
 	service := getServiceType(h.r)
 	if service != "upload-pack" && service != "receive-pack" {
-		updateServerInfo(h.dir)
-		h.sendFile("text/plain; charset=utf-8")
+		http.Error(h.w, "Missing or unsupported service", http.StatusBadRequest)
 		return
 	}
 
-	refs := gitCommand(h.dir, service, "--stateless-rpc", "--advertise-refs", ".")
+	var refs, stderr bytes.Buffer
+	err := git.RunService(h.r.Context(), git.Service(service), h.dir, git.ServiceOptions{
+		StatelessRPC:  true,
+		AdvertiseRefs: true,
+		Stdout:        &refs,
+		Stderr:        &stderr,
+		Protocol:      h.r.Header.Get("Git-Protocol"),
+	})
+	if err != nil {
+		log.Error("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
+	}
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service))
 	h.w.WriteHeader(http.StatusOK)
 	_, _ = h.w.Write(packetWrite("# service=git-" + service + "\n"))
 	_, _ = h.w.Write([]byte("0000"))
-	_, _ = h.w.Write(refs)
-}
-
-func getTextFile(h serviceHandler) {
-	h.setHeaderNoCache()
-	h.sendFile("text/plain")
-}
-
-func getInfoPacks(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("text/plain; charset=utf-8")
-}
-
-func getLooseObject(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("application/x-git-loose-object")
-}
-
-func getPackFile(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("application/x-git-packed-objects")
-}
-
-func getIdxFile(h serviceHandler) {
-	h.setHeaderCacheForever()
-	h.sendFile("application/x-git-packed-objects-toc")
+	_, _ = h.w.Write(refs.Bytes())
 }
 
 var routes = []struct {
@@ -386,14 +347,6 @@ var routes = []struct {
 	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
 	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
 	{lazyregexp.New("(.*?)/info/refs$"), "GET", getInfoRefs},
-	{lazyregexp.New("(.*?)/HEAD$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/alternates$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
-	{lazyregexp.New("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
-	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
-	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
 }
 
 func getGitRepoPath(dir string) (string, error) {
@@ -434,7 +387,6 @@ func HTTP(c *HTTPContext) {
 			return
 		}
 
-		file := strings.TrimPrefix(reqPath, cleaned)
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
@@ -443,10 +395,9 @@ func HTTP(c *HTTPContext) {
 		}
 
 		route.handler(serviceHandler{
-			w:    c.Resp,
-			r:    c.Req.Request,
-			dir:  dir,
-			file: file,
+			w:   c.Resp,
+			r:   c.Req.Request,
+			dir: dir,
 
 			authUser:  c.AuthUser,
 			ownerName: c.OwnerName,

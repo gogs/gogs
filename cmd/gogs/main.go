@@ -4,7 +4,9 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/urfave/cli/v3"
 	log "unknwon.dev/clog/v2"
@@ -21,12 +23,12 @@ var webCommand = cli.Command{
 	Name:        "web",
 	Usage:       "Start the web server",
 	Description: "Serves the web interface, API, and HTTP Git endpoints.",
-	Action: func(_ context.Context, cmd *cli.Command) error {
+	Action: func(ctx context.Context, cmd *cli.Command) error {
 		var portOverride int
 		if cmd.IsSet("port") {
 			portOverride = cmd.Int("port")
 		}
-		return web.Run(configFromLineage(cmd), portOverride)
+		return web.Run(ctx, configFromLineage(cmd), portOverride)
 	},
 	Flags: []cli.Flag{
 		intFlag("port, p", 3000, "Alternative listening port to use"),
@@ -49,7 +51,13 @@ func main() {
 			&restoreCommand,
 		},
 	}
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		// A second signal stops Gogs right away.
+		stop()
+	}()
+	if err := cmd.Run(ctx, os.Args); err != nil {
 		log.Fatal("Failed to start application: %v", err)
 	}
 }

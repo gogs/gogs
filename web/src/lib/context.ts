@@ -4,6 +4,8 @@
 export interface WebContext {
   lang: string;
   subURL: string;
+  // localeURL is where the translations of the active locale are served.
+  localeURL: string;
 }
 
 declare global {
@@ -14,12 +16,13 @@ declare global {
 
 function read(): WebContext {
   if (typeof window === "undefined") {
-    return { lang: "en-US", subURL: "" };
+    return { lang: "en-US", subURL: "", localeURL: "" };
   }
   const ctx = window.__webContext ?? {};
   return {
     lang: ctx.lang || "en-US",
     subURL: ctx.subURL ?? "",
+    localeURL: ctx.localeURL ?? "",
   };
 }
 

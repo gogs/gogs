@@ -7,13 +7,13 @@ import (
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#get-branch
 func getBranch(c *context.APIContext) {
-	branch, err := c.Repo.Repository.GetBranch(c.Params("*"))
+	branch, err := c.Repo.Repository.GetBranch(c.Req.Context(), c.Params("*"))
 	if err != nil {
 		c.NotFoundOrError(err, "get branch")
 		return
 	}
 
-	commit, err := branch.GetCommit()
+	commit, err := branch.GetCommit(c.Req.Context())
 	if err != nil {
 		c.Error(err, "get commit")
 		return
@@ -24,7 +24,7 @@ func getBranch(c *context.APIContext) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-branches
 func listBranches(c *context.APIContext) {
-	branches, err := c.Repo.Repository.GetBranches()
+	branches, err := c.Repo.Repository.GetBranches(c.Req.Context())
 	if err != nil {
 		c.Error(err, "get branches")
 		return
@@ -32,7 +32,7 @@ func listBranches(c *context.APIContext) {
 
 	apiBranches := make([]*types.RepositoryBranch, len(branches))
 	for i := range branches {
-		commit, err := branches[i].GetCommit()
+		commit, err := branches[i].GetCommit(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get commit")
 			return

@@ -37,9 +37,9 @@
 		{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
 		<span class="time-desc">
 			{{if gt .Issue.Poster.ID 0}}
-				{{$.i18n.Tr "repo.issues.opened_by" $createdStr .Issue.Poster.HomeURLPath .Issue.Poster.Name | Safe}}
+				{{$.i18n.Tr "repo.issues.opened_by" $createdStr (Escape .Issue.Poster.HomeURLPath) (Escape .Issue.Poster.Name) | Safe}}
 			{{else}}
-				{{$.i18n.Tr "repo.issues.opened_by_fake" $createdStr .Issue.Poster.Name | Safe}}
+				{{$.i18n.Tr "repo.issues.opened_by_fake" $createdStr (Escape .Issue.Poster.Name) | Safe}}
 			{{end}}
 			·
 			{{$.i18n.Tr "repo.issues.num_comments" .Issue.NumComments}}

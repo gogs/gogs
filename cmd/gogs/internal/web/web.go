@@ -1,9 +1,11 @@
 package web
 
 import (
+	gocontext "context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
@@ -22,11 +25,12 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/gogs/git-module"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
@@ -35,6 +39,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
@@ -52,11 +57,20 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-// Run starts the web server with the given configuration path and port override.
-func Run(configPath string, portOverride int) error {
+// Run starts the web server with the given configuration path and port
+// override, and stops it when the context is done.
+func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	err := initServices(configPath)
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
+	}
+	shutdownTracing, err := tracing.Init(ctx)
+	if err != nil {
+		return errors.Wrap(err, "initialize tracing")
+	}
+	if shutdownTracing != nil {
+		// Stopping Gogs must not wait long on a collector that is down.
+		defer shutdownTracing(5 * time.Second)
 	}
 
 	m, err := newMacaron()
@@ -82,11 +96,9 @@ func Run(configPath string, portOverride int) error {
 			m.Get("", func(c *context.Context) {
 				c.Redirect(conf.Server.Subpath + "/explore/repos")
 			})
-			m.Get("/repos", route.ExploreRepos)
-			m.Get("/users", route.ExploreUsers)
-			m.Get("/organizations", route.ExploreOrganizations)
+			m.Get("/^:type(repos|users|organizations)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn)
-		m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
+		m.Get("/^:type(issues|pulls)$", reqSignIn, func(c *context.Context) { c.ServeWeb() })
 
 		// ***** START: User *****
 		m.Group("/user/settings", func() {
@@ -132,6 +144,10 @@ func Run(configPath string, portOverride int) error {
 		m.Group("/user", func() {
 			m.Any("/activate_email", user.ActivateEmail)
 			m.Get("/email2user", user.Email2User)
+			// The pages for signing in stay reachable when the site requires signing in to
+			// view content. Without this route they would match "/:username/:reponame" and
+			// its sign-in toggle.
+			m.Get("/^:page(sign-in|sign-up|mfa|reset-password|activate)$", func(c *context.Context) { c.ServeWeb() })
 		})
 		// ***** END: User *****
 
@@ -179,9 +195,7 @@ func Run(configPath string, portOverride int) error {
 		m.Group("", func() {
 			m.Group("/:username", func() {
 				m.Get("", user.Profile)
-				m.Get("/followers", user.Followers)
-				m.Get("/following", user.Following)
-				m.Get("/stars", user.Stars)
+				m.Get("/^:type(followers|following)$", func(c *context.Context) { c.ServeWeb() })
 			}, context.InjectParamsUser())
 
 			m.Get("/attachments/:uuid", func(c *context.Context) {
@@ -284,19 +298,15 @@ func Run(configPath string, portOverride int) error {
 			})
 
 			m.Group("/:org", func() {
-				m.Get("/dashboard", user.Dashboard)
-				m.Get("/^:type(issues|pulls)$", user.Issues)
-				m.Get("/members", org.Members)
-				m.Post("/members/action/:action", org.MembersAction)
-
-				m.Get("/teams", org.Teams)
+				m.Get("/dashboard", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/^:type(issues|pulls)$", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/members", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/teams", func(c *context.Context) { c.ServeWeb() })
 			}, context.OrgAssignment(true))
 
 			m.Group("/:org", func() {
-				m.Get("/teams/:team", org.TeamMembers)
-				m.Get("/teams/:team/repositories", org.TeamRepositories)
-				m.Post("/teams/:team/action/:action", org.TeamsAction)
-				m.Post("/teams/:team/action/repo/:action", org.TeamsRepoAction)
+				m.Get("/teams/:team", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/teams/:team/repositories", func(c *context.Context) { c.ServeWeb() })
 			}, context.OrgAssignment(true, false, true))
 
 			m.Group("/:org", func() {
@@ -442,7 +452,7 @@ func Run(configPath string, portOverride int) error {
 				m.Post("/delete", repo.DeleteRelease)
 				m.Get("/edit/*", repo.EditRelease)
 				m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-			}, repo.MustBeNotBare, reqRepoWriter, func(c *context.Context) {
+			}, repo.MustBeNotEmpty, reqRepoWriter, func(c *context.Context) {
 				c.Data["PageIsViewFiles"] = true
 			})
 
@@ -472,7 +482,7 @@ func Run(configPath string, portOverride int) error {
 						return
 					}
 				})
-			}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
+			}, repo.MustBeNotEmpty, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
 				if !c.Repo.CanEnableEditor() {
 					c.NotFound()
 					return
@@ -484,7 +494,7 @@ func Run(configPath string, portOverride int) error {
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
-				m.Get("/releases", repo.MustBeNotBare, repo.Releases)
+				m.Get("/releases", repo.MustBeNotEmpty, repo.Releases)
 				m.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
 				m.Get("/pulls/:index", repo.ViewPull)
 			}, context.RepoRef())
@@ -493,7 +503,7 @@ func Run(configPath string, portOverride int) error {
 				m.Get("", repo.Branches)
 				m.Get("/all", repo.AllBranches)
 				m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
-			}, repo.MustBeNotBare, func(c *context.Context) {
+			}, repo.MustBeNotEmpty, func(c *context.Context) {
 				c.Data["PageIsViewFiles"] = true
 			})
 
@@ -507,7 +517,7 @@ func Run(configPath string, portOverride int) error {
 				}, reqSignIn, reqRepoWriter)
 			}, repo.MustEnableWiki, context.RepoRef())
 
-			m.Get("/archive/*", repo.MustBeNotBare, repo.Download)
+			m.Get("/archive/*", repo.MustBeNotEmpty, repo.Download)
 
 			m.Group("/pulls/:index", func() {
 				m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
@@ -519,19 +529,18 @@ func Run(configPath string, portOverride int) error {
 				m.Get("/src/*", repo.Home)
 				m.Get("/commits/*", repo.RefCommits)
 				m.Get("/forks", repo.Forks)
-			}, repo.MustBeNotBare, context.RepoRef())
+			}, repo.MustBeNotEmpty, context.RepoRef())
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
-			m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", flamegoBridger(webHandler))
+			m.Get("/commit/:sha([a-f0-9]{7,64})\\.:ext(patch|diff)", flamegoBridger(webHandler))
 			// Constrain SHA shape so non-matching `/commit/...` paths 404 instead of loading the SPA with a bad param.
-			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.MustBeNotBare, func(c *context.Context) { c.ServeWeb() })
+			m.Get("/commit/:sha([a-f0-9]{7,64})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 
-			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
+			m.Get("/compare/:before([a-z0-9]{64}|[a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{64}|[a-z0-9]{40})", repo.MustBeNotEmpty, context.RepoRef(), repo.CompareDiff)
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
 			m.Get("", repo.Home)
-			m.Get("/stars", repo.Stars)
-			m.Get("/watchers", repo.Watchers)
+			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })
 		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(), context.RepoRef())
 		// ***** END: Repository *****
 
@@ -575,16 +584,8 @@ func Run(configPath string, portOverride int) error {
 
 		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
-		m.Route("/HEAD", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
 		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/alternates", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/http-alternates", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/packs", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/info/*", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/:prefix([0-9a-f]{2})/:suffix([0-9a-f]{38})", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}).pack", "GET,OPTIONS", gitHTTP...)
-		m.Route("/objects/pack/pack-:sha([0-9a-f]{40}).idx", "GET,OPTIONS", gitHTTP...)
 	})
 
 	// ***************************
@@ -615,9 +616,16 @@ func Run(configPath string, portOverride int) error {
 	}
 	log.Info("Available on %s", conf.Server.ExternalURL)
 
+	var handler http.Handler = m
+	if shutdownTracing != nil {
+		handler = newTracingHandler(m)
+	}
+
+	server := &http.Server{Addr: listenAddr, Handler: handler}
+	serve := server.ListenAndServe
+	stop := server.Close
 	switch conf.Server.Protocol {
 	case "http":
-		err = http.ListenAndServe(listenAddr, m)
 
 	case "https":
 		tlsMinVersion := tls.VersionTLS12
@@ -631,26 +639,32 @@ func Run(configPath string, portOverride int) error {
 		case "TLS10":
 			tlsMinVersion = tls.VersionTLS10
 		}
-		server := &http.Server{
-			Addr: listenAddr,
-			TLSConfig: &tls.Config{
-				MinVersion:               uint16(tlsMinVersion),
-				CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
-				PreferServerCipherSuites: true,
-				CipherSuites: []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				},
-			}, Handler: m,
+		server.TLSConfig = &tls.Config{
+			MinVersion:               uint16(tlsMinVersion),
+			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			},
 		}
-		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+		serve = func() error {
+			return server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+		}
 
 	case "fcgi":
-		err = fcgi.Serve(nil, m)
+		// The web server is started by a FastCGI server, which passes the listener
+		// as standard input.
+		listener, err := net.FileListener(os.Stdin)
+		if err != nil {
+			return errors.Wrap(err, "listen on standard input")
+		}
+		serve = func() error { return fcgi.Serve(listener, handler) }
+		stop = listener.Close
 
 	case "unix":
 		if osx.Exist(listenAddr) {
@@ -666,27 +680,45 @@ func Run(configPath string, portOverride int) error {
 			return errors.Wrap(err, "listen on Unix network")
 		}
 
-		// FIXME: add proper implementation of signal capture on all protocols
-		// execute this on SIGTERM or SIGINT: listener.Close()
 		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
 			return errors.Wrap(err, "change permission of Unix domain socket")
 		}
-		err = http.Serve(listener, m)
+		serve = func() error { return server.Serve(listener) }
 
 	default:
 		return errors.Newf("unexpected server protocol: %s", conf.Server.Protocol)
 	}
 
-	if err != nil {
+	served := make(chan error, 1)
+	go func() {
+		served <- serve()
+	}()
+	select {
+	case err = <-served:
 		return errors.Wrap(err, "start server")
+	case <-ctx.Done():
+		if err = stop(); err != nil {
+			return errors.Wrap(err, "stop server")
+		}
+		return nil
 	}
+}
 
-	return nil
+// newTracingHandler returns a handler that records a span for every request, so
+// that the spans of what the request runs, e.g., Git operations, are grouped
+// under it.
+func newTracingHandler(h http.Handler) http.Handler {
+	return otelhttp.NewHandler(h, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+		if r.Pattern != "" {
+			return r.Pattern
+		}
+		return r.Method + " " + r.URL.Path
+	}))
 }
 
 func newRoutingHandler() (http.Handler, error) {
 	f := flamego.New()
-	f.Use(recovery())
+	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
 	f.Use(flamegoInjector)
 	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
 
@@ -722,10 +754,11 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Get("/captcha/image.jpeg", func() {})
 
 	f.Group("/{owner}/{repo}", func() {
-		f.Get("/commit/{sha: /[0-9a-f]{7,40}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
+		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
-	}, withRepoContext)
+	}, requireViewAccess, withRepoContext)
 
+	mountWebLocaleRoutes(f)
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
 	if err != nil {
@@ -824,15 +857,20 @@ func newMacaron() (*macaron.Macaron, error) {
 			return nil, errors.Wrapf(err, "read locale file %q", name)
 		}
 	}
+	customLocaleDir := filepath.Join(conf.CustomDir(), "conf", "locale")
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.Server.Subpath,
 		Files:           localeFiles,
-		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		CustomDirectory: customLocaleDir,
 		Langs:           conf.I18n.Langs,
 		Names:           conf.I18n.Names,
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
+	webLocales, err = loadWebLocales(customLocaleDir, conf.I18n.Langs)
+	if err != nil {
+		return nil, errors.Wrap(err, "load web locales")
+	}
 	m.Use(macaroncache.Cacher(macaroncache.Options{
 		Adapter:       conf.Cache.Adapter,
 		AdapterConfig: conf.Cache.Host,
@@ -842,32 +880,65 @@ func newMacaron() (*macaron.Macaron, error) {
 	return m, nil
 }
 
+// injectContent holds the custom content spliced into the React shell.
+type injectContent struct {
+	head   string
+	footer string
+}
+
+// readInjectContent reads the head and footer injection templates from the
+// custom directory, falling back to the empty embedded defaults.
+func readInjectContent() (injectContent, error) {
+	customDir := filepath.Join(conf.CustomDir(), "templates")
+	head, err := templates.ReadInjectFile(customDir, "head.tmpl")
+	if err != nil {
+		return injectContent{}, errors.Wrap(err, "read head injection")
+	}
+	footer, err := templates.ReadInjectFile(customDir, "footer.tmpl")
+	if err != nil {
+		return injectContent{}, errors.Wrap(err, "read footer injection")
+	}
+	return injectContent{head: string(head), footer: string(footer)}, nil
+}
+
 // renderIndex returns the index.html shell with per-request substitutions
-// applied for the given WebContext.
-func renderIndex(index []byte, wc context.WebContext) ([]byte, error) {
+// applied for the given WebContext. The inject argument supplies the custom
+// head and footer content to splice into the shell.
+func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
-		Lang   string `json:"lang"`
-		SubURL string `json:"subURL"`
+		Lang      string `json:"lang"`
+		SubURL    string `json:"subURL"`
+		LocaleURL string `json:"localeURL"`
 	}{
-		Lang:   wc.Lang,
-		SubURL: wc.SubURL,
+		Lang:      wc.Lang,
+		SubURL:    wc.SubURL,
+		LocaleURL: wc.SubURL + webLocaleURL(wc.Lang),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")
 	}
-	script := `<script>window.__webContext=` + string(payload) +
+	// Start loading the translations alongside the bundle that needs them.
+	script := `<link rel="preload" as="fetch" crossorigin href="` + html.EscapeString(wc.SubURL+webLocaleURL(wc.Lang)) + `">` +
+		`<script>window.__webContext=` + string(payload) +
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
 
 	pairs := []string{
-		"{{.WebContext}}", script,
+		// Append the head injection after the web context script so custom
+		// tags land inside <head>. The footer injection replaces the closing
+		// body tag to land just before </body>.
+		"{{.WebContext}}", script + inject.head,
+		"</body>", inject.footer + "</body>",
+		// Make entrypoint paths absolute, so pages nested below the root (e.g.,
+		// "/user/sign-in") load them from the assets directory rather than one
+		// relative to the page. Other bundled assets stay relative to the
+		// entrypoint that references them.
+		`src="./assets/`, `src="` + wc.SubURL + `/assets/`,
+		`href="./assets/`, `href="` + wc.SubURL + `/assets/`,
 	}
 	if wc.SubURL != "" {
-		// Prefix entrypoint paths with the subpath for non-root mounts. Other
-		// bundled assets stay relative to the entrypoint that references them.
+		// Prefix Vite's absolute root paths with the subpath for non-root mounts.
 		pairs = append(pairs,
-			`src="./assets/`, `src="`+wc.SubURL+`/assets/`,
-			`href="./assets/`, `href="`+wc.SubURL+`/assets/`,
 			`src="/src/`, `src="`+wc.SubURL+`/src/`,
 			`href="/img/`, `href="`+wc.SubURL+`/img/`,
 		)

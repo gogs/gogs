@@ -11,4 +11,5 @@ PermitRootLogin no
 AuthorizedKeysFile	.ssh/authorized_keys
 PasswordAuthentication no
 PermitUserEnvironment yes
+AcceptEnv GIT_PROTOCOL
 AllowUsers git

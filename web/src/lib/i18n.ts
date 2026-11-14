@@ -1,39 +1,8 @@
-import i18n from "i18next";
+import { i18n as diffsI18n } from "@pierre/diffs";
+import i18n, { t } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import { webContext } from "@/lib/context";
-import bgBG from "@/locales/bg-BG.json";
-import csCZ from "@/locales/cs-CZ.json";
-import deDE from "@/locales/de-DE.json";
-import enGB from "@/locales/en-GB.json";
-import enUS from "@/locales/en-US.json";
-import esES from "@/locales/es-ES.json";
-import faIR from "@/locales/fa-IR.json";
-import fiFI from "@/locales/fi-FI.json";
-import frFR from "@/locales/fr-FR.json";
-import glES from "@/locales/gl-ES.json";
-import huHU from "@/locales/hu-HU.json";
-import idID from "@/locales/id-ID.json";
-import itIT from "@/locales/it-IT.json";
-import jaJP from "@/locales/ja-JP.json";
-import koKR from "@/locales/ko-KR.json";
-import lvLV from "@/locales/lv-LV.json";
-import mnMN from "@/locales/mn-MN.json";
-import nlNL from "@/locales/nl-NL.json";
-import plPL from "@/locales/pl-PL.json";
-import ptBR from "@/locales/pt-BR.json";
-import ptPT from "@/locales/pt-PT.json";
-import roRO from "@/locales/ro-RO.json";
-import ruRU from "@/locales/ru-RU.json";
-import skSK from "@/locales/sk-SK.json";
-import srSP from "@/locales/sr-SP.json";
-import svSE from "@/locales/sv-SE.json";
-import trTR from "@/locales/tr-TR.json";
-import ukUA from "@/locales/uk-UA.json";
-import viVN from "@/locales/vi-VN.json";
-import zhCN from "@/locales/zh-CN.json";
-import zhHK from "@/locales/zh-HK.json";
-import zhTW from "@/locales/zh-TW.json";
 
 // Toggle via `?i18n_debug=1` to wrap every translated string with its key
 // for visual inspection. Read once at module load so it survives navigation
@@ -49,47 +18,50 @@ if (showKeys) {
   });
 }
 
+// The server builds the translations from its locale files and preloads them
+// from the page, so this fetch is usually answered from that preload or the
+// cache. Without them, the app still renders and shows the keys.
+async function loadMessages(): Promise<Record<string, string>> {
+  try {
+    const resp = await fetch(webContext.localeURL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return (await resp.json()) as Record<string, string>;
+  } catch (err) {
+    console.error("Failed to load translations:", err);
+    return {};
+  }
+}
+
 // eslint-disable-next-line import/no-named-as-default-member
-void i18n.use(initReactI18next).init({
-  resources: {
-    "bg-BG": { translation: bgBG },
-    "cs-CZ": { translation: csCZ },
-    "de-DE": { translation: deDE },
-    "en-GB": { translation: enGB },
-    "en-US": { translation: enUS },
-    "es-ES": { translation: esES },
-    "fa-IR": { translation: faIR },
-    "fi-FI": { translation: fiFI },
-    "fr-FR": { translation: frFR },
-    "gl-ES": { translation: glES },
-    "hu-HU": { translation: huHU },
-    "id-ID": { translation: idID },
-    "it-IT": { translation: itIT },
-    "ja-JP": { translation: jaJP },
-    "ko-KR": { translation: koKR },
-    "lv-LV": { translation: lvLV },
-    "mn-MN": { translation: mnMN },
-    "nl-NL": { translation: nlNL },
-    "pl-PL": { translation: plPL },
-    "pt-BR": { translation: ptBR },
-    "pt-PT": { translation: ptPT },
-    "ro-RO": { translation: roRO },
-    "ru-RU": { translation: ruRU },
-    "sk-SK": { translation: skSK },
-    "sr-SP": { translation: srSP },
-    "sv-SE": { translation: svSE },
-    "tr-TR": { translation: trTR },
-    "uk-UA": { translation: ukUA },
-    "vi-VN": { translation: viVN },
-    "zh-CN": { translation: zhCN },
-    "zh-HK": { translation: zhHK },
-    "zh-TW": { translation: zhTW },
-  },
+await i18n.use(initReactI18next).init({
+  resources: { [webContext.lang]: { translation: await loadMessages() } },
   lng: webContext.lang,
-  fallbackLng: "en-US",
+  // The server already fills keys missing from the active locale with en-US.
+  fallbackLng: false,
   interpolation: { escapeValue: false, prefix: "{", suffix: "}" },
   returnNull: false,
   postProcess: showKeys ? ["i18n-debug"] : undefined,
 });
+
+// Pierre's diff view reads its text from a package-wide store of ICU
+// MessageFormat templates, so it is filled once here rather than per page.
+// `#` is ICU's placeholder for the plural count.
+try {
+  diffsI18n.set({
+    locale: webContext.lang,
+    translations: {
+      unmodifiedLines: `{count, plural, one {${t("repo.diff.unmodified_line", { count: "#" })}} other {${t("repo.diff.unmodified_lines", { count: "#" })}}}`,
+      // Intentionally blank. The `[data-unmodified-lines]:empty` rule in the
+      // commit page's diff CSS keeps the separator clickable without a label.
+      unknownUnmodifiedLines: "",
+      expandAll: t("repo.diff.expand_all"),
+      noNewlineAtEndOfFile: t("repo.diff.no_newline_at_eof"),
+    },
+  });
+} catch (err) {
+  // Pierre rejects templates with braces outside its ICU subset. Fall back to
+  // its English text rather than failing app startup over one translation.
+  console.error("Failed to set diff translations:", err);
+}
 
 export default i18n;

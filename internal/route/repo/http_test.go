@@ -30,27 +30,6 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 			want:    "git-receive-pack",
 		},
 		{
-			name:    "head",
-			urlPath: "/owner/repo/HEAD",
-			owner:   "owner",
-			repo:    "repo",
-			want:    "HEAD",
-		},
-		{
-			name:    "objects info wildcard",
-			urlPath: "/owner/repo/objects/info/exclude",
-			owner:   "owner",
-			repo:    "repo",
-			want:    "objects/info/exclude",
-		},
-		{
-			name:    "loose object",
-			urlPath: "/owner/repo/objects/ab/cdef0123456789abcdef0123456789abcdef",
-			owner:   "owner",
-			repo:    "repo",
-			want:    "objects/ab/cdef0123456789abcdef0123456789abcdef",
-		},
-		{
 			name:    "with subpath",
 			urlPath: "/gogs/owner/repo/info/refs",
 			subpath: "/gogs",

@@ -14,3 +14,7 @@ Link to the issue: <!-- paste the issue link here, or put "n/a" if not applicabl
 ## Test plan
 
 <!-- Please provide concrete but concise steps to proof things are working as stated, see an example in https://github.com/gogs/gogs/pull/7345 -->
+
+## AI usage
+
+<!-- You must disclose any and all use of AI in PRs to help us assess how to review it. -->

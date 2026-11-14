@@ -19,6 +19,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -47,12 +48,24 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 			defer func() {
 				_ = ch.Close()
 			}()
+			// The Git protocol the client asks for, e.g., "version=2".
+			var gitProtocol string
 			for req := range in {
 				payload := cleanCommand(string(req.Payload))
 				switch req.Type {
 				case "env":
-					// We only need to accept the request and do nothing since whatever environment
-					// variables being set here won't be used in subsequent commands anyway.
+					var env struct{ Name, Value string }
+					if err := ssh.Unmarshal(req.Payload, &env); err != nil {
+						log.Error("SSH: Unmarshal env: %v", err)
+						_ = req.Reply(false, nil)
+						continue
+					}
+					// Other environment variables are not passed on to Git.
+					accepted := env.Name == "GIT_PROTOCOL" && git.IsSupportedProtocol(env.Value)
+					if accepted {
+						gitProtocol = env.Value
+					}
+					_ = req.Reply(accepted, nil)
 
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
@@ -62,6 +75,9 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					log.Trace("SSH: Arguments: %v", args)
 					cmd := exec.Command(conf.AppPath(), args...)
 					cmd.Env = append(os.Environ(), "SSH_ORIGINAL_COMMAND="+cmdName)
+					if gitProtocol != "" {
+						cmd.Env = append(cmd.Env, "GIT_PROTOCOL="+gitProtocol)
+					}
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
@@ -91,6 +107,10 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						input.Close()
 					}()
 					_, _ = io.Copy(ch, stdout)
+					// When the client is gone, the copy stops early. Closing the pipe makes
+					// the next write of the command fail, so that it exits rather than
+					// waiting forever for someone to read its output.
+					_ = stdout.Close()
 					_, _ = io.Copy(ch.Stderr(), stderr)
 
 					if err = cmd.Wait(); err != nil {
@@ -157,10 +177,8 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 // Listen starts a SSH server listens on given port.
 func Listen(opts conf.SSHOpts, appDataPath string) {
 	config := &ssh.ServerConfig{
-		Config: ssh.Config{
-			Ciphers: opts.ServerCiphers,
-			MACs:    opts.ServerMACs,
-		},
+		Ciphers: opts.ServerCiphers,
+		MACs:    opts.ServerMACs,
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			pkey, err := database.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {

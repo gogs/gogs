@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"gopkg.in/ini.v1"
+	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
@@ -125,11 +125,10 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			return filepath.SkipDir
 		}
 
-		authSource, err := ini.Load(path)
+		authSource, err := ini.Load(path, ini.NameMapping(ini.TitleUnderscore))
 		if err != nil {
 			return errors.Wrap(err, "load file")
 		}
-		authSource.NameMapper = ini.TitleUnderscore
 
 		// Set general attributes
 		s := authSource.Section("")

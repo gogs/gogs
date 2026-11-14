@@ -20,16 +20,16 @@ Gogs is built and runs as a single binary and meant to be cross platform. Theref
 
 Gogs has the following dependencies:
 
-- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
-- [Go](https://golang.org/doc/install) (v1.20 or higher)
+- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v2.43.1 or higher)
+- [Go](https://golang.org/doc/install) (v1.27 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [Moon](https://moonrepo.dev/docs/install)
 - [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
 - [go-mockgen](https://github.com/derision-test/go-mockgen)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
-    - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
+    - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v12 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
-    - [MariaDB](https://mariadb.org/) with `TYPE = mysql` (v10.3 or higher)
+    - [MariaDB](https://mariadb.org/) with `TYPE = mysql` (v10.6 or higher)
     - [SQLite3](https://www.sqlite.org/index.html)
 
 ### macOS

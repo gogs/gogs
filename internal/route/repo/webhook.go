@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -162,16 +163,14 @@ func toHookEvent(f form.Webhook) *database.HookEvent {
 		PushOnly:       f.PushOnly(),
 		SendEverything: f.SendEverything(),
 		ChooseEvents:   f.ChooseEvents(),
-		HookEvents: database.HookEvents{
-			Create:       f.Create,
-			Delete:       f.Delete,
-			Fork:         f.Fork,
-			Push:         f.Push,
-			Issues:       f.Issues,
-			IssueComment: f.IssueComment,
-			PullRequest:  f.PullRequest,
-			Release:      f.Release,
-		},
+		Create:         f.Create,
+		Delete:         f.Delete,
+		Fork:           f.Fork,
+		Push:           f.Push,
+		Issues:         f.Issues,
+		IssueComment:   f.IssueComment,
+		PullRequest:    f.PullRequest,
+		Release:        f.Release,
 	}
 }
 
@@ -469,7 +468,13 @@ func TestWebhook(c *context.Context) {
 	// Grab latest commit or fake one if it's empty repository.
 
 	if c.Repo.Commit == nil {
-		commitID = git.EmptyID
+		objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
+		if err != nil {
+			log.Error("Failed to get object format: %v", err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		commitID = objectFormat.EmptyID()
 		commitMessage = "This is a fake commit"
 		ghost := database.NewGhostUser()
 		author = &git.Signature{
@@ -505,7 +510,7 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		nameStatus, err = c.Repo.Commit.ShowNameStatus()
+		nameStatus, err = c.Repo.Commit.ShowNameStatus(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get changed files")
 			return

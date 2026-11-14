@@ -37,14 +37,17 @@ import { cn } from "@/lib/utils";
 
 // Mobile collapses the tab strip after this many items into a hamburger
 // overflow menu. The active tab is always pulled into the inline group so the
-// user can see the active indicator without opening the menu.
-const MOBILE_INLINE_LIMIT = 3;
+// user can see the active indicator without opening the menu. At 375px wide,
+// a second tab does not fit next to the menu when the active one is the
+// widest, e.g., pull requests with its count.
+const MOBILE_INLINE_LIMIT = 1;
 
 export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settings";
 
 export interface RepoHeaderProps {
   repo: RepoHeaderData;
-  activeTab: RepoTab;
+  // Pages outside the tabs, e.g., the stargazers, leave it out.
+  activeTab?: RepoTab;
 }
 
 function formatCount(n: number): string {
@@ -59,7 +62,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
   const user = useUserInfo();
   const queryClient = useQueryClient();
-  const signedIn = user !== null;
+  const authenticated = user !== null;
   const signInHref = subUrl(
     `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`,
   );
@@ -142,10 +145,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <SplitActionButton
               countHref={`${repoLink}/watchers`}
-              onAction={signedIn ? () => watchMutation.mutate() : undefined}
+              onAction={authenticated ? () => watchMutation.mutate() : undefined}
               signInHref={signInHref}
               disabled={watchMutation.isPending}
-              signedIn={signedIn}
+              authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_watch")}
               icon={Bell}
               label={repo.viewerIsWatching ? t("repo.unwatch") : t("repo.watch")}
@@ -156,10 +159,10 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
             />
             <SplitActionButton
               countHref={`${repoLink}/stars`}
-              onAction={signedIn ? () => starMutation.mutate() : undefined}
+              onAction={authenticated ? () => starMutation.mutate() : undefined}
               signInHref={signInHref}
               disabled={starMutation.isPending}
-              signedIn={signedIn}
+              authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_star")}
               icon={Star}
               label={repo.viewerIsStarring ? t("repo.starred") : t("repo.star")}
@@ -173,9 +176,9 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               // Fork still goes through the legacy "choose where to fork to"
               // page (not yet migrated). Treat it as a navigation link, not a
               // one-click action.
-              actionHref={signedIn ? subUrl(`/repo/fork/${repo.id}`) : undefined}
+              actionHref={authenticated ? subUrl(`/repo/fork/${repo.id}`) : undefined}
               signInHref={signInHref}
-              signedIn={signedIn}
+              authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_fork")}
               icon={GitFork}
               label={t("repo.fork")}
@@ -236,28 +239,26 @@ function RepoTabs({
   t,
 }: {
   repo: RepoHeaderData;
-  activeTab: RepoTab;
+  activeTab?: RepoTab;
   repoLink: string;
   t: TFunction;
 }) {
   const tabs = buildTabs(repo, repoLink, t);
 
   // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
-  // fold into a hamburger overflow. If the active tab is past the cutoff,
-  // swap it into the last inline slot so the indicator stays visible without
-  // opening the menu.
+  // fold into a hamburger overflow in their original order. If the active tab
+  // is past the cutoff, it takes the last inline slot so the indicator stays
+  // visible without opening the menu.
   const activeIndex = tabs.findIndex((t) => t.key === activeTab);
   let mobileInline = tabs.slice(0, MOBILE_INLINE_LIMIT);
-  let mobileOverflow = tabs.slice(MOBILE_INLINE_LIMIT);
   if (activeIndex >= MOBILE_INLINE_LIMIT) {
-    const swappedOut = mobileInline[MOBILE_INLINE_LIMIT - 1];
     mobileInline = [...mobileInline.slice(0, MOBILE_INLINE_LIMIT - 1), tabs[activeIndex]];
-    mobileOverflow = mobileOverflow.map((t) => (t.key === tabs[activeIndex].key ? swappedOut : t));
   }
+  const mobileOverflow = tabs.filter((tab) => !mobileInline.includes(tab));
 
   return (
     <>
-      {/* Mobile: first 3 inline + hamburger overflow for the rest. */}
+      {/* Mobile: the inline tabs + hamburger overflow for the rest. */}
       <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label={t("repository")}>
         {mobileInline.map((tab) => (
           <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
@@ -279,7 +280,7 @@ function RepoTabs({
   );
 }
 
-function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab: RepoTab; t: TFunction }) {
+function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab?: RepoTab; t: TFunction }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -287,7 +288,7 @@ function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab
         <button
           type="button"
           aria-label={t("more_tabs")}
-          className="flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
+          className="flex shrink-0 cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)"
         >
           <Menu className="size-4" aria-hidden />
           <span>{t("more")}</span>
@@ -349,20 +350,20 @@ interface SplitActionButtonProps {
   // URL for the count half (always renders as `<a>`).
   countHref: string;
   // When set, the action half fires this callback on click (used for
-  // signed-in users with a real mutation in flight).
+  // authenticated viewers with a real mutation in flight).
   onAction?: () => void;
   // Fallback href for the action half when `onAction` is not set (legacy
-  // page-navigation actions like Fork). Only used when the viewer is signed
-  // in; `signInHref` takes over when signed out.
+  // page-navigation actions like Fork). Only used when the viewer is
+  // authenticated; `signInHref` takes over when unauthenticated.
   actionHref?: string;
-  // Where to send signed-out viewers when they click the action half. The
+  // Where to send unauthenticated viewers when they click the action half. The
   // half renders disabled-looking but stays clickable so the affordance
   // works without forcing the viewer to dig for a sign-in button.
   signInHref?: string;
-  // Whether the viewer is signed in. Drives both the click target and the
+  // Whether the viewer is authenticated. Drives both the click target and the
   // disabled-looking styling + sign-in tooltip below.
-  signedIn?: boolean;
-  // Tooltip text shown when signed out. Should explain the gated action,
+  authenticated?: boolean;
+  // Tooltip text shown when unauthenticated. Should explain the gated action,
   // e.g. "Sign in to watch this repository".
   signInTooltip?: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean; fill?: string }>;
@@ -382,7 +383,7 @@ function SplitActionButton({
   onAction,
   actionHref,
   signInHref,
-  signedIn = true,
+  authenticated = true,
   signInTooltip,
   icon: Icon,
   label,
@@ -405,7 +406,7 @@ function SplitActionButton({
   );
 
   let action: ReactNode;
-  if (!signedIn) {
+  if (!authenticated) {
     const href = signInHref ?? countHref;
     action = (
       <Tooltip>

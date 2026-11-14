@@ -17,12 +17,12 @@ import (
 	macaronsession "github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 )
 
 type (
-	webAPIUserKey    struct{}
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
@@ -31,21 +31,29 @@ type (
 func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
 	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
-		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
+		ctx = stdctx.WithValue(ctx, context.UserKey{}, c.User)
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
-		webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
+		req := c.Req.WithContext(ctx)
+		webHandler.ServeHTTP(c.Resp, req)
+		// Flamego's route, e.g., "GET /api/web/{owner}/{repo}/header", is more
+		// specific than the Macaron route that bridges to it, e.g.,
+		// "GET /api/web/*". Copy it to the outer request, the one the tracing
+		// handler reads.
+		if req.Pattern != "" {
+			c.Req.Pattern = req.Pattern
+		}
 	}
 }
 
 func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
-	user, _ := ctx.Value(webAPIUserKey{}).(*database.User)
+	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(user, sess, mc, l)
+	c.Map(viewer, sess, mc, l)
 	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 
@@ -57,13 +65,41 @@ type flamegoSessionAdapter struct {
 	sess macaronsession.Store
 }
 
-func (s flamegoSessionAdapter) ID() string                      { return s.sess.ID() }
-func (s flamegoSessionAdapter) Get(key interface{}) interface{} { return s.sess.Get(key) }
-func (s flamegoSessionAdapter) Set(key, val interface{})        { _ = s.sess.Set(key, val) }
-func (s flamegoSessionAdapter) SetFlash(val interface{})        { _ = s.sess.Set("_flash", val) }
-func (s flamegoSessionAdapter) Delete(key interface{})          { _ = s.sess.Delete(key) }
-func (s flamegoSessionAdapter) Flush()                          { _ = s.sess.Flush() }
-func (s flamegoSessionAdapter) Encode() ([]byte, error)         { return nil, nil }
+func (s flamegoSessionAdapter) ID() string              { return s.sess.ID() }
+func (s flamegoSessionAdapter) Get(key any) any         { return s.sess.Get(key) }
+func (s flamegoSessionAdapter) Set(key, val any)        { _ = s.sess.Set(key, val) }
+func (s flamegoSessionAdapter) SetFlash(val any)        { _ = s.sess.Set("_flash", val) }
+func (s flamegoSessionAdapter) Delete(key any)          { _ = s.sess.Delete(key) }
+func (s flamegoSessionAdapter) Flush()                  { _ = s.sess.Flush() }
+func (s flamegoSessionAdapter) Encode() ([]byte, error) { return nil, nil }
+
+// requireViewAccess turns away the same viewers as the sign-in toggle of the
+// server-rendered pages: disabled users and, when the site requires signing in
+// to view any content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous visitors. Mount
+// it on every route that serves site content, but not on the routes visitors
+// need to sign in.
+func requireViewAccess(c flamego.Context, viewer *database.User) {
+	w := c.ResponseWriter()
+	switch {
+	case viewer != nil && viewer.ProhibitLogin:
+		writeErrorResponse(w, http.StatusForbidden, errors.New("login prohibited"))
+	case viewer != nil && viewer.IsDisabled():
+		writeErrorResponse(w, http.StatusForbidden, errors.New("account not activated"))
+	case viewer == nil && conf.Auth.RequireSigninView:
+		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
+	}
+}
+
+// requireAuthenticated is requireViewAccess for routes that also turn away
+// unauthenticated viewers on sites that do not require signing in to view
+// content.
+func requireAuthenticated(c flamego.Context, viewer *database.User) {
+	if viewer == nil {
+		writeErrorResponse(c.ResponseWriter(), http.StatusUnauthorized, errors.New("authentication required"))
+		return
+	}
+	requireViewAccess(c, viewer)
+}
 
 func enforceWebAPIMaxBodySize(c flamego.Context) {
 	r := c.Request().Request
@@ -77,7 +113,7 @@ func enforceWebAPIMaxBodySize(c flamego.Context) {
 var webAPIValidator = func() *validator.Validate {
 	v := validator.New()
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
 		if name == "-" {
 			return ""
 		}
@@ -140,10 +176,47 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		})
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("/header", getRepoHeader)
-			f.Get("/commit/{sha: /[0-9a-f]{7,40}/}", getRepoCommit)
+			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)
-		}, withRepoContext)
+			f.Get("/stargazers", getRepoStargazers)
+			f.Get("/watchers", getRepoWatchers)
+			f.Delete("/watchers/{username}", deleteRepoWatcher)
+		}, requireViewAccess, withRepoContext)
+		f.Group("/explore", func() {
+			f.Get("/repos", getExploreRepos)
+			f.Get("/users", getExploreUsers)
+			f.Get("/organizations", getExploreOrganizations)
+		}, requireViewAccess)
+		f.Group("/users/{username}", func() {
+			f.Get("", getUserProfile)
+			f.Get("/repos", getUserProfileRepos)
+			f.Get("/activity", getUserProfileActivity)
+			f.Get("/followers", getUserFollowers)
+			f.Get("/following", getUserFollowing)
+			f.Combo("/follow").Post(postUserFollow).Delete(deleteUserFollow)
+		}, requireViewAccess, withProfileUser)
+		dashboardRoutes := func() {
+			f.Get("", getDashboard)
+			f.Get("/activity", getDashboardActivity)
+			f.Get("/issues", getDashboardIssues)
+			f.Get("/pulls", getDashboardPulls)
+		}
+		f.Group("/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
+		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
+		f.Group("/orgs/{org}", func() {
+			f.Get("/members", getOrgMembers)
+			f.Delete("/members/{username}", deleteOrgMember)
+			f.Combo("/members/{username}/public").Put(putOrgMemberPublic).Delete(deleteOrgMemberPublic)
+			f.Get("/teams", getOrgTeams)
+			f.Group("/teams/{team}", func() {
+				f.Get("", getOrgTeam)
+				f.Get("/members", getOrgTeamMembers)
+				f.Combo("/members/{username}").Put(putOrgTeamMember).Delete(deleteOrgTeamMember)
+				f.Get("/repos", getOrgTeamRepos)
+				f.Combo("/repos/{repo}").Put(putOrgTeamRepo).Delete(deleteOrgTeamRepo)
+			}, withOrgTeam)
+		}, requireAuthenticated, withOrgMembership)
 	}, enforceWebAPIMaxBodySize)
 }
 

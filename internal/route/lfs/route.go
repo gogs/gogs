@@ -93,6 +93,13 @@ func authenticate(store Store) macaron.Handler {
 			}
 		}
 
+		if user.IsDisabled() {
+			responseJSON(c.Resp, http.StatusForbidden, responseError{
+				Message: "User account is disabled",
+			})
+			return
+		}
+
 		log.Trace("[LFS] Authenticated user: %s", user.Name)
 
 		c.Map(user)

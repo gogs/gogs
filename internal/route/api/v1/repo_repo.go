@@ -11,6 +11,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -158,24 +159,26 @@ func listOrgRepositories(c *context.APIContext) {
 }
 
 type createRepoRequest struct {
-	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Description string `json:"description" binding:"MaxSize(255)"`
-	Private     bool   `json:"private"`
-	AutoInit    bool   `json:"auto_init"`
-	Gitignores  string `json:"gitignores"`
-	License     string `json:"license"`
-	Readme      string `json:"readme"`
+	Name         string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Description  string `json:"description" binding:"MaxSize(255)"`
+	Private      bool   `json:"private"`
+	AutoInit     bool   `json:"auto_init"`
+	Gitignores   string `json:"gitignores"`
+	License      string `json:"license"`
+	Readme       string `json:"readme"`
+	ObjectFormat string `json:"object_format" binding:"OmitEmpty;In(sha1,sha256)"`
 }
 
 func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoRequest) {
-	repo, err := database.CreateRepository(c.User, owner, database.CreateRepoOptionsLegacy{
-		Name:        opt.Name,
-		Description: opt.Description,
-		Gitignores:  opt.Gitignores,
-		License:     opt.License,
-		Readme:      opt.Readme,
-		IsPrivate:   opt.Private,
-		AutoInit:    opt.AutoInit,
+	repo, err := database.CreateRepository(c.Req.Context(), c.User, owner, database.CreateRepoOptionsLegacy{
+		Name:         opt.Name,
+		Description:  opt.Description,
+		Gitignores:   opt.Gitignores,
+		License:      opt.License,
+		Readme:       opt.Readme,
+		IsPrivate:    opt.Private,
+		AutoInit:     opt.AutoInit,
+		ObjectFormat: git.ObjectFormat(opt.ObjectFormat),
 	})
 	if err != nil {
 		if database.IsErrRepoAlreadyExist(err) ||
@@ -278,7 +281,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.User, ctxUser, database.MigrateRepoOptions{
+	repo, err := database.MigrateRepository(c.Req.Context(), c.User, ctxUser, database.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,

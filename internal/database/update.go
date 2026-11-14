@@ -2,11 +2,11 @@ package database
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
+
+	"gogs.io/gogs/internal/git"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -46,27 +46,14 @@ type PushUpdateOptions struct {
 
 // PushUpdate must be called for any push actions in order to generate necessary
 // push action history feeds.
-func PushUpdate(opts PushUpdateOptions) (err error) {
-	ctx := context.TODO()
-
-	isNewRef := strings.HasPrefix(opts.OldCommitID, git.EmptyID)
-	isDelRef := strings.HasPrefix(opts.NewCommitID, git.EmptyID)
+func PushUpdate(ctx context.Context, opts PushUpdateOptions) (err error) {
+	isNewRef := git.IsEmptyID(opts.OldCommitID)
+	isDelRef := git.IsEmptyID(opts.NewCommitID)
 	if isNewRef && isDelRef {
-		return errors.Newf("both old and new revisions are %q", git.EmptyID)
+		return errors.New("both old and new revisions are empty")
 	}
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
-
-	gitUpdate := exec.Command("git", "update-server-info")
-	gitUpdate.Dir = repoPath
-	if err = gitUpdate.Run(); err != nil {
-		return errors.Newf("run 'git update-server-info': %v", err)
-	}
-
-	gitRepo, err := git.Open(repoPath)
-	if err != nil {
-		return errors.Newf("open repository: %v", err)
-	}
 
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {
@@ -78,7 +65,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return errors.Newf("GetRepositoryByName: %v", err)
 	}
 
-	if err = repo.UpdateSize(); err != nil {
+	if err = repo.UpdateSize(ctx); err != nil {
 		return errors.Newf("UpdateSize: %v", err)
 	}
 
@@ -99,23 +86,30 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return nil
 	}
 
+	if !isDelRef && strings.HasPrefix(opts.FullRefspec, git.RefsHeads) {
+		err = repo.setDefaultBranchIfMissing(ctx, git.RefShortName(opts.FullRefspec))
+		if err != nil {
+			return errors.Wrap(err, "set default branch")
+		}
+	}
+
 	var commits []*git.Commit
 	// Skip read parent commits when delete branch
 	if !isDelRef {
 		// Push new branch
-		newCommit, err := gitRepo.CatFileCommit(opts.NewCommitID)
+		newCommit, err := git.RepoCatFileCommit(ctx, repoPath, opts.NewCommitID)
 		if err != nil {
 			return errors.Newf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}
 
 		if isNewRef {
-			commits, err = newCommit.Ancestors(git.LogOptions{MaxCount: 9})
+			commits, err = newCommit.Ancestors(ctx, git.LogOptions{MaxCount: 9})
 			if err != nil {
 				return errors.Newf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}
 			commits = append([]*git.Commit{newCommit}, commits...)
 		} else {
-			commits, err = newCommit.CommitsAfter(opts.OldCommitID)
+			commits, err = newCommit.CommitsAfter(ctx, opts.OldCommitID)
 			if err != nil {
 				return errors.Newf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
 			}

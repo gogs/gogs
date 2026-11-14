@@ -6,10 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -279,7 +278,7 @@ func toRepository(repo *database.Repository, perm *types.RepositoryPermission) *
 		Description:   repo.Description,
 		Private:       repo.IsPrivate,
 		Fork:          repo.IsFork,
-		Empty:         repo.IsBare,
+		Empty:         repo.IsEmpty,
 		Mirror:        repo.IsMirror,
 		Size:          repo.Size,
 		HTMLURL:       repo.HTMLURL(),

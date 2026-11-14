@@ -4,23 +4,61 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.15.0+dev (`main`)
 
+### Added
+
+- Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Task list items in Markdown show their checkbox in place of the list bullet, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
+- Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
+- Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
+
 ### Changed
 
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
+- The minimum required Git version on the server is now 2.43.1. Gogs refuses to start with an older Git. [#8437](https://github.com/gogs/gogs/pull/8437)
+- The minimum supported database versions are now PostgreSQL 12 and MariaDB 10.6. MySQL 5.7 is still supported. [#8546](https://github.com/gogs/gogs/pull/8546)
+- Git operations are now stopped when they exceed `[git.timeout]` or `[cron.repo_health_check] TIMEOUT`, and a timeout of zero now means no timeout. The defaults of `[git.timeout] MIRROR` and `GC` are raised to 600 seconds. Git fetches and pushes over HTTP and SSH are stopped after 30 minutes without any data transferred. [#8441](https://github.com/gogs/gogs/pull/8441)
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
+- New repositories now use `main` as the default branch. Existing repositories keep their current default branch. Set `[repository] DEFAULT_BRANCH = master` to keep the previous behavior. [#8497](https://github.com/gogs/gogs/pull/8497)
+- Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
 
 ### Fixed
 
-- Fix database deadlock in mail notifications for comments. [#8375](https://github.com/gogs/gogs/issues/8375)
+- Commenting on, closing, or reopening an issue, including with `fixes #N` in a pushed commit, no longer hangs the server when using SQLite with email notifications enabled. [#8395](https://github.com/gogs/gogs/pull/8395)
+- Markdown files starting with a byte order mark now render their first line correctly, e.g., a leading heading is no longer shown as plain text. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Code blocks in languages whose names contain symbols, e.g., `c++` and `c#`, now keep their language for syntax highlighting. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Relative links in issue notification emails now point to the repository instead of a broken `http:/` address. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Ordered lists in Markdown that start at a number other than 1, e.g., `10.`, now show that number instead of starting at 1. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Protocol-relative links in Markdown, e.g., `//example.com/page`, now point to that site instead of a path in the repository. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Mentions in code, link text and URLs of issues and comments no longer notify the mentioned users, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Mentions and issue references are now linked where they appear, e.g., in `@alice @alicia` both names are linked, and a reference that also appears earlier as part of a word is still linked. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Viewing a diff that renames a file whose name contains special characters (e.g., a double quote) no longer crashes the server. [#8437](https://github.com/gogs/gogs/pull/8437)
+- Migrating an empty repository no longer fails. [#8440](https://github.com/gogs/gogs/pull/8440)
+- Previewing changes to a file in the web editor no longer fails when a tag has the same name as the file. [#8440](https://github.com/gogs/gogs/pull/8440)
+- Files whose names start with a double quote are no longer listed with a wrong name. [#8441](https://github.com/gogs/gogs/pull/8441)
+- Diffs no longer show a wrong name for files whose path contains " b/", e.g., `foo b/bar.txt`. [#8441](https://github.com/gogs/gogs/pull/8441)
+- Downloading a repository archive that times out no longer leaves a broken archive that later downloads receive. [#8437](https://github.com/gogs/gogs/pull/8437)
+- A file whose only change is its mode (e.g., made executable) no longer hides the next file in a diff. [#8441](https://github.com/gogs/gogs/pull/8441)
+- Editing files in the web editor no longer fails after the repository or its owner was renamed. [#8446](https://github.com/gogs/gogs/pull/8446)
+- Files created or uploaded in the web editor are no longer silently left out of the commit when their path matches `.gitignore`. [#8446](https://github.com/gogs/gogs/pull/8446)
+- Commits made in the web editor or the wiki no longer lose the author email when the full name contains `<`. [#8446](https://github.com/gogs/gogs/pull/8446)
+- Merging several pull requests at the same time no longer fails. [#8446](https://github.com/gogs/gogs/pull/8446)
+- The compare link in the news feed for a branch created by a mirror sync no longer leads to an error page. It now shows the commits of the branch since it forked from the default branch, or all of its commits when it adds none or they share no history, and the news feed counts the same commits when the branch is created. Comparing against a commit that does not exist now shows a not found page. [#8510](https://github.com/gogs/gogs/pull/8510)
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
-- _Security:_ Argument injection through a crafted commit or branch reference on several repository API endpoints allowed an authenticated user with read access to leak internal server details to the error logs. [#8393](https://github.com/gogs/gogs/pull/8393) - [GHSA-mxrh-2rxr-6mqc](https://github.com/gogs/gogs/security/advisories/GHSA-mxrh-2rxr-6mqc)
-- _Security:_ Argument injection through a crafted branch name when creating a pull request allowed an authenticated user with write access to write files to arbitrary paths on the server. [#8390](https://github.com/gogs/gogs/pull/8390) - [GHSA-2grc-qr7q-6m36](https://github.com/gogs/gogs/security/advisories/GHSA-2grc-qr7q-6m36)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
+- `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
+- Mirrors of an empty repository now show their content once the source repository receives commits. [#8497](https://github.com/gogs/gogs/pull/8497)
+- When the first branch pushed to an empty repository has a different name than the repository's default branch, it now becomes the default branch, so cloning checks it out instead of producing an empty working tree. Mirrors whose default branch no longer exists now follow the default branch of the source repository. [#8497](https://github.com/gogs/gogs/pull/8497)
+- The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
+- Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 
 ### Removed
 
 - The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)
-- Support for customizing pages with Go template files stops being possible.
+- Support for overriding full page templates (e.g., `custom/templates/home.tmpl`), as the web interface no longer renders pages from server-side templates. Content injection through `custom/templates/inject/head.tmpl` and `custom/templates/inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides remain supported. [#8392](https://github.com/gogs/gogs/pull/8392)
 - Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)
 - Support for `memcache` as the cache adapter. [#8270](https://github.com/gogs/gogs/pull/8270)
 - The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
@@ -28,6 +66,28 @@ All notable changes to Gogs are documented in this file.
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
 - CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 - Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
+
+## 0.14.4
+
+### Changed
+
+- Lowering `[auth] ACTIVATE_CODE_LIVES` or `[auth] RESET_PASSWORD_CODE_LIVES` now also shortens the lifetime of activation, email confirmation, and password reset links already sent. [#8478](https://github.com/gogs/gogs/pull/8478)
+
+### Fixed
+
+- _Security:_ On Windows hosts, a user creating a repository with initial files or initializing its labels could read files on the server, including the configuration file. [#8488](https://github.com/gogs/gogs/pull/8488) - [GHSA-fv2v-vwmj-j74p](https://github.com/gogs/gogs/security/advisories/GHSA-fv2v-vwmj-j74p)
+- _Security:_ Referencing an issue in a commit message added a comment to it even when the pusher could not access its repository, letting anyone post into issues of private repositories. [#8486](https://github.com/gogs/gogs/pull/8486) - [GHSA-53f6-cgcf-gp6v](https://github.com/gogs/gogs/security/advisories/GHSA-53f6-cgcf-gp6v)
+- _Security:_ Viewing an Org-mode file could show the contents of arbitrary files on the server, including the configuration file. [#8484](https://github.com/gogs/gogs/pull/8484) - [GHSA-hr26-3fq5-9365](https://github.com/gogs/gogs/security/advisories/GHSA-hr26-3fq5-9365)
+- _Security:_ On Windows hosts, an authenticated user with write access could still write files into a repository's `.git` directory through other names for it, leading to code execution on the server. [#8483](https://github.com/gogs/gogs/pull/8483) - [GHSA-hc35-pcqw-5xjq](https://github.com/gogs/gogs/security/advisories/GHSA-hc35-pcqw-5xjq)
+- _Security:_ A username containing HTML, which could come from an external login source such as LDAP, was rendered as markup on issue and pull request pages and in the dashboard issue and pull request lists. [#8482](https://github.com/gogs/gogs/pull/8482) - [GHSA-vhf5-f34f-vhq9](https://github.com/gogs/gogs/security/advisories/GHSA-vhf5-f34f-vhq9)
+- _Security:_ Webhooks, repository migrations, and mirrors could reach services on the Gogs host through the IPv6 address `[::]`, bypassing the local network restriction. [#8481](https://github.com/gogs/gogs/pull/8481) - [GHSA-799r-mx22-r63q](https://github.com/gogs/gogs/security/advisories/GHSA-799r-mx22-r63q)
+- _Security:_ Any signed-in user who knew the UUID of an attachment in another repository, including a private one, could move it to their own issue, comment, or release to download it, in some cases removing it from the original. [#8480](https://github.com/gogs/gogs/pull/8480) - [GHSA-p92p-7887-3g33](https://github.com/gogs/gogs/security/advisories/GHSA-p92p-7887-3g33)
+- _Security:_ A password reset link could be used to sign in as the user without their password or two-factor authentication. Activation, email confirmation, and password reset links sent before upgrading no longer work. [#8472](https://github.com/gogs/gogs/pull/8472) - [GHSA-pmfh-wh5m-gmjm](https://github.com/gogs/gogs/security/advisories/GHSA-pmfh-wh5m-gmjm)
+- _Security:_ Accounts with login prohibited or not activated kept repository access through access tokens, passwords, and SSH keys. [#8439](https://github.com/gogs/gogs/pull/8439) - [GHSA-f9cv-gfvg-3464](https://github.com/gogs/gogs/security/advisories/GHSA-f9cv-gfvg-3464)
+- _Security:_ On Windows hosts, an authenticated user with write access could write files into a repository's `.git` directory through a crafted tree path. [#8408](https://github.com/gogs/gogs/pull/8408) - [GHSA-85m5-cfw6-3cx8](https://github.com/gogs/gogs/security/advisories/GHSA-85m5-cfw6-3cx8)
+- _Security:_ Argument injection through a crafted commit or branch reference on several repository API endpoints allowed an authenticated user with read access to leak internal server details to the error logs. [#8393](https://github.com/gogs/gogs/pull/8393) - [GHSA-mxrh-2rxr-6mqc](https://github.com/gogs/gogs/security/advisories/GHSA-mxrh-2rxr-6mqc)
+- _Security:_ Argument injection through a crafted branch name when creating a pull request allowed an authenticated user with write access to write files to arbitrary paths on the server. [#8390](https://github.com/gogs/gogs/pull/8390) - [GHSA-2grc-qr7q-6m36](https://github.com/gogs/gogs/security/advisories/GHSA-2grc-qr7q-6m36)
+- Organization member and team actions, such as removing a member or leaving a team, failed with "Bad Request: no CSRF token present". [#8399](https://github.com/gogs/gogs/issues/8399)
 
 ## 0.14.3
 

@@ -72,19 +72,19 @@
   --color-card-foreground: #0a0a0a;
   --color-popover: #ffffff;
   --color-popover-foreground: #0a0a0a;
-  --color-primary: #009fff;
+  --color-primary: #0b6bcb;
   --color-primary-foreground: #ffffff;
   --color-secondary: #f5f5f5;
   --color-secondary-foreground: #0a0a0a;
   --color-surface: #f5f5f5;
-  --color-muted-foreground: #737373;
+  --color-muted-foreground: #525252;
   --color-destructive: #d52c36;
   --color-destructive-foreground: #ffffff;
   --color-success: #15803d;
   --color-diff-added: #16a34a;
   --color-diff-removed: #dc2626;
-  --color-border: #e5e5e5;
-  --color-input: #d4d4d4;
+  --color-border: #d4d4d4;
+  --color-input: #8f8f8f;
   --color-ring: #009fff;
 }
 
@@ -97,19 +97,19 @@
   --color-card-foreground: #fafafa;
   --color-popover: #171717;
   --color-popover-foreground: #fafafa;
-  --color-primary: #009fff;
-  --color-primary-foreground: #ffffff;
+  --color-primary: #33b1ff;
+  --color-primary-foreground: #0a0a0a;
   --color-secondary: #1d1d1d;
   --color-secondary-foreground: #fafafa;
-  --color-surface: #1d1d1d;
-  --color-muted-foreground: #8a8a8a;
+  --color-surface: #212121;
+  --color-muted-foreground: #a3a3a3;
   --color-destructive: #ff6762;
   --color-destructive-foreground: #ffffff;
   --color-success: #4ade80;
   --color-diff-added: #4ade80;
   --color-diff-removed: #f87171;
-  --color-border: #1d1d1d;
-  --color-input: #262626;
+  --color-border: #2e2e2e;
+  --color-input: #666666;
   --color-ring: #009fff;
 }
 

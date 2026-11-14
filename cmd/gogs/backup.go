@@ -12,8 +12,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/urfave/cli/v3"
-	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
+	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -43,6 +43,9 @@ const (
 	currentBackupFormatVersion = 1
 	archiveRootDir             = "gogs-backup"
 )
+
+// backupDataDirs are the directories under the app data path that are included in a backup and restored from it.
+var backupDataDirs = []string{"ssh", "attachments", "avatars", "repo-avatars"}
 
 func runBackup(ctx context.Context, cmd *cli.Command) error {
 	zip.Verbose = cmd.Bool("verbose")
@@ -106,7 +109,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		// Data files
-		for _, dir := range []string{"ssh", "attachments", "avatars", "repo-avatars"} {
+		for _, dir := range backupDataDirs {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if !osx.IsDir(dirPath) {
 				continue

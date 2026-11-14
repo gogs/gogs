@@ -99,9 +99,7 @@ func validate(errs binding.Errors, data map[string]any, f Form, l macaron.Locale
 		typ = typ.Elem()
 	}
 
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-
+	for field := range typ.Fields() {
 		fieldName := field.Tag.Get("form")
 		// Allow ignored fields in the struct
 		if fieldName == "-" {

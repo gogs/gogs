@@ -193,6 +193,14 @@
     list-style-type: none;
   }
 
+  .task-list-item {
+    list-style-type: none;
+
+    input[type="checkbox"] {
+      margin: 0 0.2em 0.25em -1.4em;
+    }
+  }
+
   ul ul,
   ul ol,
   ol ol,
@@ -204,6 +212,13 @@
   ol ol,
   ul ol {
     list-style-type: lower-roman;
+  }
+
+  ul ul ol,
+  ul ol ol,
+  ol ul ol,
+  ol ol ol {
+    list-style-type: lower-alpha;
   }
 
   li > p {
@@ -239,6 +254,63 @@
 
   blockquote > :last-child {
     margin-bottom: 0;
+  }
+
+  .markdown-alert {
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid #d0d7de;
+
+    > :first-child {
+      margin-top: 0;
+    }
+
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .markdown-alert-title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    line-height: 1;
+
+    &:before {
+      margin-right: 8px;
+      font: normal normal normal 16px/1 Octicons;
+      -webkit-font-smoothing: antialiased;
+    }
+  }
+
+  .alert-variant(@name; @color; @icon) {
+    .markdown-alert-@{name} {
+      border-left-color: @color;
+
+      .markdown-alert-title {
+        color: @color;
+
+        &:before {
+          content: @icon;
+          // Hides the icon glyph from screen readers that support alternative text.
+          content: @icon / "";
+        }
+      }
+    }
+  }
+  .alert-variant(note; #0969da; "\f059");
+  .alert-variant(tip; #1a7f37; "\f000");
+  .alert-variant(important; #8250df; "\f04f");
+  .alert-variant(warning; #9a6700; "\f02d");
+  .alert-variant(caution; #d1242f; "\f08f");
+
+  .footnotes {
+    font-size: 14px;
+    color: #636c76;
+
+    hr {
+      height: 1px;
+    }
   }
 
   table {

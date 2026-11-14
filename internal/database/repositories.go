@@ -57,7 +57,7 @@ func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) 
 		Private:       r.IsPrivate,
 		Fork:          r.IsFork,
 		Parent:        opt.Parent,
-		Empty:         r.IsBare,
+		Empty:         r.IsEmpty,
 		Mirror:        r.IsMirror,
 		Size:          r.Size,
 		HTMLURL:       repox.HTMLURL(owner.Name, r.Name),
@@ -337,7 +337,7 @@ func (s *RepositoriesStore) Star(ctx context.Context, userID, repoID int64) erro
 	})
 }
 
-// Touch updates the updated time to the current time and removes the bare state
+// Touch updates the updated time to the current time and removes the empty state
 // of the given repository.
 func (s *RepositoriesStore) Touch(ctx context.Context, id int64) error {
 	return s.db.WithContext(ctx).

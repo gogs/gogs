@@ -17,12 +17,10 @@ import (
 	"golang.org/x/text/transform"
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
@@ -73,6 +71,7 @@ func FuncMap() []template.FuncMap {
 			"AvatarLink":       tool.AvatarLink,
 			"AppendAvatarSize": tool.AppendAvatarSize,
 			"Safe":             Safe,
+			"Escape":           template.HTMLEscapeString,
 			"Sanitize":         bluemonday.UGCPolicy().Sanitize,
 			"Str2HTML":         Str2HTML,
 			"NewLine2br":       NewLine2br,
@@ -128,7 +127,7 @@ func FuncMap() []template.FuncMap {
 				}
 				return "tab-size-8"
 			},
-			"InferSubmoduleURL": gitx.InferSubmoduleURL,
+			"InferSubmoduleURL": git.InferSubmoduleURL,
 		}}
 	})
 	return funcMap

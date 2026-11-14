@@ -1,4 +1,4 @@
-import { Binary, FileCode2, History, Loader2, MoreHorizontal, Pencil, Trash2, UnfoldVertical } from "lucide-react";
+import { Binary, FileCode2, History, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { type ButtonHTMLAttributes, type Ref, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,11 +16,6 @@ export interface FileHeaderMenuProps {
   // and routing through a SHA returns 404.
   editFileHref?: string;
   deleteFileHref?: string;
-  // Mobile-only "Expand all lines" surfaced inside the menu (only visible
-  // below `lg`). The desktop chrome renders the button inline in the right-
-  // side metadata, so it's hidden on desktop here to avoid double-listing.
-  onExpandAllLines?: () => void;
-  expandAllLinesState?: "loading" | "done";
 }
 
 // Per-file overflow menu rendered into Pierre's `renderHeaderMetadata` slot.
@@ -33,13 +28,9 @@ export function FileHeaderMenu({
   historyHref,
   editFileHref,
   deleteFileHref,
-  onExpandAllLines,
-  expandAllLinesState,
 }: FileHeaderMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const expandLoading = expandAllLinesState === "loading";
-  const expandDone = expandAllLinesState === "done";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -53,31 +44,6 @@ export function FileHeaderMenu({
       </Tooltip>
       <PopoverContent align="end" sideOffset={4} className="w-48 p-1 text-sm">
         <ul className="flex flex-col">
-          {onExpandAllLines ? (
-            <li className="lg:hidden">
-              <button
-                type="button"
-                disabled={expandLoading || expandDone}
-                onClick={() => {
-                  onExpandAllLines();
-                  setOpen(false);
-                }}
-                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
-              >
-                {expandLoading ? (
-                  <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
-                ) : (
-                  <UnfoldVertical className="size-3.5 shrink-0" aria-hidden />
-                )}
-                <span>{expandDone ? t("repo.diff.all_lines_expanded") : t("repo.diff.expand_all_lines")}</span>
-              </button>
-            </li>
-          ) : null}
-          {onExpandAllLines ? (
-            <li role="presentation" className="lg:hidden">
-              <hr className="my-1 border-t border-(--color-border)" />
-            </li>
-          ) : null}
           <li>
             <a href={viewFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
               <FileCode2 className="size-3.5 shrink-0" aria-hidden />

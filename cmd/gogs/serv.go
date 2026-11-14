@@ -4,17 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel/codes"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 )
 
 const (
@@ -44,6 +45,8 @@ func fail(userMessage, errMessage string, args ...any) {
 		log.Error(errMessage, args...)
 	}
 
+	processSpan.SetStatus(codes.Error, userMessage)
+	endProcessSpan()
 	log.Stop()
 	os.Exit(1)
 }
@@ -67,11 +70,9 @@ func setup(cmd *cli.Command, logFile string, connectDB bool) {
 	err = log.NewFile(log.FileConfig{
 		Level:    level,
 		Filename: filepath.Join(conf.Log.RootPath, "hooks", logFile),
-		FileRotationConfig: log.FileRotationConfig{
-			Rotate:  true,
-			Daily:   true,
-			MaxDays: 3,
-		},
+		Rotate:   true,
+		Daily:    true,
+		MaxDays:  3,
 	})
 	if err != nil {
 		fail("Internal error", "Failed to init file logger: %v", err)
@@ -143,6 +144,10 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	verb, args := parseSSHCmd(sshCmd)
+	// Hooks that Git runs record their spans under this one.
+	ctx = startProcessSpan(ctx, "ssh "+verb, time.Second)
+	defer endProcessSpan()
+
 	repoFullName := strings.ToLower(strings.Trim(args, "'"))
 	repoFields := strings.SplitN(repoFullName, "/", 2)
 	if len(repoFields) != 2 {
@@ -200,6 +205,9 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 			if err != nil {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
+			if user.IsDisabled() {
+				fail(accessDeniedMessage, "User '%s' is disabled", user.Name)
+			}
 
 			mode := database.Handle.Permissions().AccessMode(ctx, user.ID, repo.ID,
 				database.AccessModeOptions{
@@ -222,8 +230,18 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 		// A deploy key doesn't represent a signed in user, so in a site with Auth.RequireSignInView enabled,
 		// we should give read access only in repositories where this deploy key is in use. In other cases,
 		// a server or system using an active deploy key can get read access to all repositories on a Gogs instance.
-		if key.IsDeployKey() && conf.Auth.RequireSigninView {
-			checkDeployKey(key, repo)
+		if conf.Auth.RequireSigninView {
+			if key.IsDeployKey() {
+				checkDeployKey(key, repo)
+			} else {
+				keyOwner, err := database.Handle.Users().GetByKeyID(ctx, key.ID)
+				if err != nil {
+					fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
+				}
+				if keyOwner.IsDisabled() {
+					fail(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
+				}
+			}
 		}
 	}
 
@@ -240,33 +258,25 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
-	// Special handle for Windows.
-	if conf.IsWindowsRuntime() {
-		verb = strings.Replace(verb, "-", " ", 1)
-	}
-
-	var gitCmd *exec.Cmd
-	verbs := strings.Split(verb, " ")
-	if len(verbs) == 2 {
-		gitCmd = exec.Command(verbs[0], verbs[1], repoFullName)
-	} else {
-		gitCmd = exec.Command(verb, repoFullName)
-	}
+	var envs []string
 	if requestMode == database.AccessModeWrite {
-		gitCmd.Env = append(os.Environ(), database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
+		envs = database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
 			AuthUser:  user,
 			OwnerName: owner.Name,
 			OwnerSalt: owner.Salt,
 			RepoID:    repo.ID,
 			RepoName:  repo.Name,
 			RepoPath:  repo.RepoPath(),
-		})...)
+		})
 	}
-	gitCmd.Dir = conf.Repository.Root
-	gitCmd.Stdout = os.Stdout
-	gitCmd.Stdin = os.Stdin
-	gitCmd.Stderr = os.Stderr
-	if err = gitCmd.Run(); err != nil {
+	err = git.RunService(ctx, git.Service(strings.TrimPrefix(verb, "git-")), filepath.Join(conf.Repository.Root, repoFullName), git.ServiceOptions{
+		Stdin:    os.Stdin,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		Protocol: os.Getenv("GIT_PROTOCOL"),
+		Envs:     envs,
+	})
+	if err != nil {
 		fail("Internal error", "Failed to execute git command: %v", err)
 	}
 

@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -21,13 +21,8 @@ type Branch struct {
 	Commit      *git.Commit
 }
 
-func GetBranchesByPath(path string) ([]*Branch, error) {
-	gitRepo, err := git.Open(path)
-	if err != nil {
-		return nil, errors.Newf("open repository: %v", err)
-	}
-
-	names, err := gitRepo.Branches()
+func GetBranchesByPath(ctx context.Context, path string) ([]*Branch, error) {
+	names, err := git.RepoBranches(ctx, path)
 	if err != nil {
 		return nil, errors.Newf("list branches")
 	}
@@ -61,8 +56,8 @@ func (ErrBranchNotExist) NotFound() bool {
 	return true
 }
 
-func (r *Repository) GetBranch(name string) (*Branch, error) {
-	if !git.RepoHasBranch(r.RepoPath(), name) {
+func (r *Repository) GetBranch(ctx context.Context, name string) (*Branch, error) {
+	if !git.RepoHasBranch(ctx, r.RepoPath(), name) {
 		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return &Branch{
@@ -71,16 +66,12 @@ func (r *Repository) GetBranch(name string) (*Branch, error) {
 	}, nil
 }
 
-func (r *Repository) GetBranches() ([]*Branch, error) {
-	return GetBranchesByPath(r.RepoPath())
+func (r *Repository) GetBranches(ctx context.Context) ([]*Branch, error) {
+	return GetBranchesByPath(ctx, r.RepoPath())
 }
 
-func (br *Branch) GetCommit() (*git.Commit, error) {
-	gitRepo, err := git.Open(br.RepoPath)
-	if err != nil {
-		return nil, errors.Newf("open repository: %v", err)
-	}
-	return gitRepo.BranchCommit(br.Name)
+func (br *Branch) GetCommit(ctx context.Context) (*git.Commit, error) {
+	return git.RepoBranchCommit(ctx, br.RepoPath, br.Name)
 }
 
 type ProtectBranchWhitelist struct {

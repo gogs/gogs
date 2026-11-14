@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/git-module"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
@@ -318,9 +319,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 	}
 
 	// Commits are appended in the reverse order.
-	for i := len(commits) - 1; i >= 0; i-- {
-		c := commits[i]
-
+	for _, c := range slices.Backward(commits) {
 		refMarked := make(map[int64]bool)
 		for _, ref := range issueReferencePattern.FindAllString(c.Message, -1) {
 			ref = strings.TrimSpace(ref)
@@ -344,6 +343,12 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 					continue
 				}
 				return err
+			}
+
+			// 🚨 SECURITY: Only reference issues of repositories the pusher can read,
+			// otherwise anyone could post comments into private repositories.
+			if issue.RepoID != repo.ID && !issue.Repo.HasAccess(doer.ID) {
+				continue
 			}
 
 			if refMarked[issue.ID] {
@@ -471,8 +476,8 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
 
-	isNewRef := opts.OldCommitID == git.EmptyID
-	isDelRef := opts.NewCommitID == git.EmptyID
+	isNewRef := git.IsEmptyID(opts.OldCommitID)
+	isDelRef := git.IsEmptyID(opts.NewCommitID)
 
 	// If not the first commit, set the compare URL.
 	if !isNewRef && !isDelRef {
@@ -631,7 +636,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, opts PushTagOptions) error {
 
 	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
-	if opts.NewCommitID == git.EmptyID {
+	if git.IsEmptyID(opts.NewCommitID) {
 		err = PrepareWebhooks(
 			opts.Repo,
 			HookEventTypeDelete,
@@ -884,7 +889,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 
 		nameStatus := &git.NameStatus{}
 		if !testx.InTest {
-			nameStatus, err = git.ShowNameStatus(repoPath, commit.Sha1)
+			nameStatus, err = git.RepoShowNameStatus(ctx, repoPath, commit.Sha1)
 			if err != nil {
 				return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
 			}

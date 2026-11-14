@@ -34,7 +34,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version: 1.26.x
+          go-version: 1.27.x
       - name: Check Go module tidiness and generated files
         shell: bash
         run: |
@@ -57,7 +57,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [ 1.26.x ]
+        go-version: [ 1.27.x ]
         platform: [ ubuntu-latest, macos-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -68,8 +68,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
+      - name: Show test report
+        if: ${{ !cancelled() }}
         run: |
-          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
           go install github.com/mfridman/tparse@latest
           tparse -all -file=test-report.json
       - name: Send email on failure
@@ -85,7 +87,7 @@ jobs:
     name: Test Windows
     strategy:
       matrix:
-        go-version: [ 1.26.x ]
+        go-version: [ 1.27.x ]
         platform: [ windows-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -108,12 +110,12 @@ jobs:
     name: Postgres
     strategy:
       matrix:
-        go-version: [ 1.26.x ]
+        go-version: [ 1.27.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     services:
       postgres:
-        image: postgres:9.6
+        image: postgres:12
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
@@ -131,10 +133,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: |
-          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
-          go install github.com/mfridman/tparse@latest
-          tparse -all -file=test-report.json
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
         env:
           GOGS_DATABASE_TYPE: postgres
           PGPORT: 5432
@@ -142,12 +141,17 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGSSLMODE: disable
+      - name: Show test report
+        if: ${{ !cancelled() }}
+        run: |
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json
 
   mysql:
     name: MySQL
     strategy:
       matrix:
-        go-version: [ 1.26.x ]
+        go-version: [ 1.27.x ]
         platform: [ ubuntu-22.04 ] # Use the lowest version possible for backwards compatibility
     runs-on: ${{ matrix.platform }}
     steps:
@@ -160,13 +164,15 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: |
-          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
-          go install github.com/mfridman/tparse@latest
-          tparse -all -file=test-report.json
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
         env:
           GOGS_DATABASE_TYPE: mysql
           MYSQL_USER: root
           MYSQL_PASSWORD: root
           MYSQL_HOST: localhost
           MYSQL_PORT: 3306
+      - name: Show test report
+        if: ${{ !cancelled() }}
+        run: |
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json

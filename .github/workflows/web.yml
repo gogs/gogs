@@ -9,7 +9,6 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
-      - 'conf/locale/locale_*.ini'
       - '.github/workflows/web.yml'
   pull_request:
     paths:
@@ -17,7 +16,6 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
-      - 'conf/locale/locale_*.ini'
       - '.github/workflows/web.yml'
 
 permissions:

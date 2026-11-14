@@ -103,6 +103,14 @@
 						</div>
 					</div>
 					<div class="inline field">
+						<label for="object_format">{{.i18n.Tr "repo.object_format"}}</label>
+						<select id="object_format" name="object_format">
+							<option value="sha1">SHA-1</option>
+							<option value="sha256" {{if eq .object_format "sha256"}}selected{{end}}>SHA-256</option>
+						</select>
+						<span class="help">{{.i18n.Tr "repo.object_format_helper"}}</span>
+					</div>
+					<div class="inline field">
 						<div class="ui checkbox" id="auto-init">
 							<input class="hidden" name="auto_init" type="checkbox" tabindex="0" {{if .auto_init}}checked{{end}}>
 							<label>{{.i18n.Tr "repo.auto_init"}}</label>

@@ -201,8 +201,15 @@ func (c *Context) ServeWeb() {
 	})
 }
 
+// UserKey is the request context key for the signed-in user (*database.User) of
+// a request handed to the web handler.
+type UserKey struct{}
+
 func (c *Context) serveWeb(wr WebContext) {
 	ctx := stdctx.WithValue(c.Req.Context(), WebContextKey{}, wr)
+	// The web handler checks what the viewer may see, e.g., when a page that is
+	// not found falls through to it.
+	ctx = stdctx.WithValue(ctx, UserKey{}, c.User)
 	c.webHandler.ServeHTTP(c.Resp, c.Req.WithContext(ctx))
 }
 

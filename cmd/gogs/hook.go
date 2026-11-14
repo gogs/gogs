@@ -6,22 +6,26 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
-
+	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/httplib"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -60,11 +64,13 @@ var (
 	}
 )
 
-func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
+func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(cmd, "pre-receive.log", true)
+	ctx = startProcessSpan(ctx, "hook pre-receive", time.Second)
+	defer endProcessSpan()
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
@@ -118,16 +124,16 @@ func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
 		}
 
 		// check and deletion
-		if newCommitID == git.EmptyID {
+		if git.IsEmptyID(newCommitID) {
 			fail(fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 
 		// Check force push
-		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
-			RunInDir(database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName)))
+		repoPath := database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+		removedCommits, err := git.RepoRevListCount(ctx, repoPath, []string{oldCommitID, "^" + newCommitID})
 		if err != nil {
 			fail("Internal error", "Failed to detect force push: %v", err)
-		} else if len(output) > 0 {
+		} else if removedCommits > 0 {
 			fail(fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
 		}
 	}
@@ -153,7 +159,7 @@ func runHookPreReceive(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func runHookUpdate(_ context.Context, cmd *cli.Command) error {
+func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
@@ -171,6 +177,12 @@ func runHookUpdate(_ context.Context, cmd *cli.Command) error {
 		return nil
 	}
 
+	// Git runs the hook for every ref it updates, so it is only traced when it
+	// runs a custom hook, and gives up exporting sooner, to keep exporting spans
+	// from slowing down every push.
+	_ = startProcessSpan(ctx, "hook update", 300*time.Millisecond)
+	defer endProcessSpan()
+
 	var hookCmd *exec.Cmd
 	if conf.IsWindowsRuntime() {
 		hookCmd = exec.Command("bash.exe", append([]string{"custom_hooks/update"}, args...)...)
@@ -187,11 +199,13 @@ func runHookUpdate(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
+func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(cmd, "post-receive.log", true)
+	ctx = startProcessSpan(ctx, "hook post-receive", time.Second)
+	defer endProcessSpan()
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
@@ -225,7 +239,7 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 			RepoUserName: os.Getenv(database.EnvRepoOwnerName),
 			RepoName:     os.Getenv(database.EnvRepoName),
 		}
-		if err := database.PushUpdate(options); err != nil {
+		if err := database.PushUpdate(ctx, options); err != nil {
 			log.Error("PushUpdate: %v", err)
 		}
 
@@ -237,10 +251,27 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
-		resp, err := httplib.Get(reqURL).
-			SetTLSClientConfig(&tls.Config{
-				InsecureSkipVerify: true,
-			}).Response()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+		if err != nil {
+			log.Error("Failed to trigger task: %v", err)
+			continue
+		}
+		req.Header.Set("User-Agent", "GogsServer")
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+		client := &http.Client{
+			Timeout: 60 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+				DisableKeepAlives: true,
+			},
+			// The trigger endpoint is local and never redirects legitimately, so a
+			// redirect response is reported as a failure instead of being followed.
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+		resp, err := client.Do(req)
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
@@ -270,4 +301,38 @@ func runHookPostReceive(_ context.Context, cmd *cli.Command) error {
 		fail("Internal error", "Failed to execute custom post-receive hook: %v", err)
 	}
 	return nil
+}
+
+// The span of the running hook or serv process, and the function that ends it
+// and exports it. fail uses them because it exits without returning.
+var (
+	processSpan    = trace.SpanFromContext(context.Background())
+	endProcessSpan = func() {}
+)
+
+// startProcessSpan starts the span of the process when tracing is enabled. For
+// a hook, it is under the span of the Git process that runs the hook, which Git
+// passes on through the TRACEPARENT and TRACESTATE environment variables. The
+// Git client waits for the process to exit, so exporting its spans gives up
+// after the timeout to not hold up the push for long on a collector that is
+// down.
+func startProcessSpan(ctx context.Context, name string, exportTimeout time.Duration) context.Context {
+	shutdown, err := tracing.Init(ctx)
+	if err != nil {
+		log.Error("Failed to initialize tracing: %v", err)
+		return ctx
+	} else if shutdown == nil {
+		return ctx
+	}
+
+	ctx = propagation.TraceContext{}.Extract(ctx, propagation.MapCarrier{
+		"traceparent": os.Getenv("TRACEPARENT"),
+		"tracestate":  os.Getenv("TRACESTATE"),
+	})
+	ctx, processSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, name)
+	endProcessSpan = func() {
+		processSpan.End()
+		shutdown(exportTimeout)
+	}
+	return ctx
 }

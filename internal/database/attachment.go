@@ -111,14 +111,19 @@ func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
 	return attach, nil
 }
 
-func getAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, error) {
+// unboundAttachmentCond matches attachments that are not yet linked to any
+// issue, comment, or release. Attachments carry no owner, so only unbound ones
+// may be linked to prevent claiming attachments of other repositories by UUID.
+const unboundAttachmentCond = "issue_id = 0 AND comment_id = 0 AND release_id = 0"
+
+func getUnboundAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, error) {
 	if len(uuids) == 0 {
 		return []*Attachment{}, nil
 	}
 
-	// Silently drop invalid uuids.
+	// Silently drop invalid and already bound uuids.
 	attachments := make([]*Attachment, 0, len(uuids))
-	return attachments, e.In("uuid", uuids).Find(&attachments)
+	return attachments, e.Where(unboundAttachmentCond).In("uuid", uuids).Find(&attachments)
 }
 
 // GetAttachmentByUUID returns attachment by given UUID.

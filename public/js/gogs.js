@@ -1525,30 +1525,6 @@ $(document).ready(function() {
     showMessageMaxLength(512, "description", "descLength");
   }
 
-  // AJAX load buttons
-  $(".ajax-load-button").click(function() {
-    var $this = $(this);
-    $this.addClass("disabled");
-
-    $.ajax({
-      url: $this.data("url"),
-      headers: {
-        "X-AJAX": "true"
-      }
-    }).done(function(data, status, request) {
-      $(data).insertBefore($this);
-
-      // Update new URL or remove self if no more feeds
-      var url = request.getResponseHeader("X-AJAX-URL");
-      if (url) {
-        $this.data("url", url);
-        $this.removeClass("disabled");
-      } else {
-        $this.remove();
-      }
-    });
-  });
-
   // Helpers
   $(".delete-button").click(function() {
     var $this = $(this);
@@ -1628,6 +1604,23 @@ $(document).ready(function() {
       .find("h1, h2, h3, h4, h5, h6")
       .each(function() {
         var node = $(this);
+        // Rendered Markdown headings have an id like "user-content-setup", as
+        // on GitHub. The wrapper gets "setup", so links to "#setup" work.
+        var id = node.attr("id");
+        if (id && id.indexOf("user-content-") === 0) {
+          var slug = id.slice("user-content-".length);
+          var wrap = document.createElement("div");
+          wrap.id = slug;
+          wrap.className = "anchor-wrap";
+          node.wrap(wrap);
+          var anchor = document.createElement("a");
+          anchor.className = "anchor";
+          anchor.href = "#" + encodeURIComponent(slug);
+          anchor.setAttribute("aria-label", "Link to this section");
+          anchor.innerHTML = '<span class="octicon octicon-link"></span>';
+          node.append(anchor);
+          return;
+        }
         var val = encodeURIComponent(
           node
             .text()

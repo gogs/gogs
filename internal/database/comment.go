@@ -63,7 +63,7 @@ type Comment struct {
 	UpdatedUnix int64
 
 	// Reference issue in commit message
-	CommitSHA string `xorm:"VARCHAR(40)"`
+	CommitSHA string `xorm:"VARCHAR(64)"`
 
 	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
 
@@ -219,17 +219,9 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			return nil, err
 		}
 
-		// Check attachments
-		attachments := make([]*Attachment, 0, len(opts.Attachments))
-		for _, uuid := range opts.Attachments {
-			attach, err := getAttachmentByUUID(e, uuid)
-			if err != nil {
-				if IsErrAttachmentNotExist(err) {
-					continue
-				}
-				return nil, errors.Newf("getAttachmentByUUID [%s]: %v", uuid, err)
-			}
-			attachments = append(attachments, attach)
+		attachments, err := getUnboundAttachmentsByUUIDs(e, opts.Attachments)
+		if err != nil {
+			return nil, errors.Newf("getUnboundAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
 
 		for i := range attachments {

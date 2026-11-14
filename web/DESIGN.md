@@ -17,7 +17,7 @@ Don't mix sans and mono within the same UI surface for arbitrary reasons. If a c
 
 ## Color hierarchy
 
-Palettes are adapted from [Pierre Theme](https://github.com/pierrecomputer/theme)'s "Light" and "Dark" (non-soft) variants. The dark-mode input background is bumped slightly above Pierre's value (`#262626` instead of `#1d1d1d`) so form fields read as edged elements outside an IDE panel context. Dark mode is opt-in via the `.dark` class on `:root` (see `lib/theme.ts`), not media-query driven, so the user's stored preference always wins. The `@custom-variant dark` rule in `index.css` lets utilities like `dark:...` target the same class.
+Palettes are adapted from [Pierre Theme](https://github.com/pierrecomputer/theme)'s "Light" and "Dark" (non-soft) variants. Text, link, border, and input tokens are darkened in light mode and lightened in dark mode from Pierre's values, so every text pair meets 4.5:1 and input edges meet 3:1 against the page background. Check a changed token against both floors before landing it. Dark mode is opt-in via the `.dark` class on `:root` (see `lib/theme.ts`), not media-query driven, so the user's stored preference always wins. The `@custom-variant dark` rule in `index.css` lets utilities like `dark:...` target the same class.
 
 Use these tokens. Don't introduce raw hex values in components.
 
@@ -32,7 +32,7 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Accents and state**
 
-- `--color-primary` / `--color-primary-foreground`: brand blue (`#009fff` in both modes). Reserved for genuine brand emphasis. Don't use it to mean "primary action" between two peer links (see the peer-item rule below). Note: white-on-primary contrast is 2.84:1, which is below WCAG AA in both modes since the token is identical light and dark. Avoid using primary as a fill for body-sized text. Use it for chrome accents, ring/focus, and large CTAs only.
+- `--color-primary` / `--color-primary-foreground`: brand blue, deepened to `#0b6bcb` in light mode and lightened to `#33b1ff` in dark mode so it reads as link text. `--color-primary-foreground` flips to near-black in dark mode to keep button labels readable on the lighter fill. Reserved for genuine brand emphasis. Don't use it to mean "primary action" between two peer links (see the peer-item rule below).
 - `--color-secondary` / `--color-secondary-foreground`: neutral support fill. Available for chips, tags, low-emphasis fills.
 - `--color-destructive` / `--color-destructive-foreground`: error and danger. The 404 page uses `text-(--color-destructive)` on the `fatal:` token, always paired with the word itself (color is never the sole signal).
 - `--color-success`: affirmative state for signature verification badges and copy-confirm checkmarks. Lighter in dark mode (`#4ade80`) than light (`#15803d`) so it reads on both backgrounds. Always pair with a label or icon, never color alone.
@@ -41,7 +41,7 @@ Use these tokens. Don't introduce raw hex values in components.
 
 **Structure**
 
-- `--color-border`: soft container and divider lines. Used for the navbar bottom border, popover edges, card outlines, mobile-menu separators. Deliberately low-contrast (close to `--color-secondary`) so chrome reads as quiet boundary, not as a hard rule.
+- `--color-border`: soft container and divider lines. Used for the navbar bottom border, popover edges, card outlines, mobile-menu separators. Quieter than `--color-input` so chrome reads as a boundary, not as a hard rule, but still visible against the page background in both modes.
 - `--color-input`: input field borders. Similar weight to `--color-border` but kept as a separate token so form fields can drift independently if needed.
 
 **The terminal frame is the exception.** Faux-CLI surfaces (`Landing.tsx`, `NotFound.tsx`, `ServerError.tsx`) wrap their output in a heavy outline so it actually looks like a terminal window. That frame uses `border-(--color-foreground)/80` (light) and the regular `--color-border` token (dark) directly, instead of the shared chrome token.
@@ -83,6 +83,19 @@ Tailwind 4's preflight removes the browser default `cursor: pointer` on `<button
 
 When in doubt, hover-test the new control: if the cursor is still an I-beam or arrow, add `cursor-pointer`.
 
+## Tabs
+
+Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 375px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.
+
+## Narrow screens
+
+Every page works at 375px wide. Only content that is meant to scroll does so sideways: code and diffs. Tab rows fold into a "More" menu instead (see Tabs).
+
+- **Wrap long text with `wrap-anywhere`, not `break-all`.** Names, URLs and emails break at hyphens and slashes first, and mid-word only when nothing else fits. `break-all` splits ordinary words, e.g., "Joined o / n". Terminal frames keep `break-all`, since real terminals wrap anywhere, but translated prose inside them does not.
+- **Keep a label and its value in one box.** Inside a flex row, wrap them in a single `<span>` so they wrap together as text instead of as two squeezed columns.
+- **Top-align page grids that fill the height.** A `grid flex-1` page stretches its rows over the leftover height when it stacks on narrow screens, which shows as a gap between the sidebar and the content. Add `content-start`.
+- **Truncate chips such as labels** with `max-w-full truncate` rather than letting a rounded pill wrap.
+
 ## Tooltips
 
 Use the `Tooltip` component from `@/components/ui/tooltip` (built on `@radix-ui/react-tooltip`) for any hover hint. Never use the native HTML `title` attribute: it renders unstyled, has inconsistent timing across browsers, and is invisible on touch. The tooltip provider lives at the router root, so `Tooltip`/`TooltipTrigger`/`TooltipContent` work anywhere downstream.
@@ -100,4 +113,4 @@ WCAG 2.2 AA is the floor. Apply these patterns in components:
 - **Touch targets are 24×24 CSS px at minimum.** Compact chrome (settings cog, hamburger) uses `size-9` (36px). Full-width tap rows in popovers and the mobile menu use `px-2 py-1.5`, which yields ~28px in height. The full row width gives the tap area enough horizontal slack to clear the minimum comfortably. Exception: edge-seam affordances like the resize handle in `ResizableSidebar` stay visually thin (4–8px) and rely on a keyboard fallback (`tabIndex={0}` plus arrow-key handlers) for accessibility. The handle is desktop-only (`lg:block`), so the 24px tap floor for touch users does not apply.
 - **Color is never the sole signal.** The current-item indicator in the language list is a ✓ icon, not just a color shift. The destructive token is paired with the word `fatal:` in the 404 terminal, not just red text. The theme toggle has Sun/Moon/Monitor icons alongside the label.
 - **Respect `prefers-reduced-motion`.** Popover animations from `tw-animate-css` honor this by default. If hand-rolling animations, gate them behind `motion-safe:`.
-- **Test before merging:** tab through the new UI with the keyboard only; resize to 375px; toggle dark mode; check focus rings are visible against both themes.
+- **Test before merging:** tab through the new UI with the keyboard only; resize to 375px and check nothing but code and diffs scrolls sideways; toggle dark mode; check focus rings are visible against both themes.

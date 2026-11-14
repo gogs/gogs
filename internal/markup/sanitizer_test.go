@@ -8,7 +8,7 @@ import (
 	. "gogs.io/gogs/internal/markup"
 )
 
-func Test_Sanitizer(t *testing.T) {
+func TestSanitizer(t *testing.T) {
 	NewSanitizer()
 	tests := []struct {
 		input  string
@@ -21,11 +21,28 @@ func Test_Sanitizer(t *testing.T) {
 		{input: `<code class="random string"></code>`, expVal: `<code></code>`},
 		{input: `<code class="language-random ui tab active menu attached animating sidebar following bar center"></code>`, expVal: `<code></code>`},
 		{input: `<code class="language-go"></code>`, expVal: `<code class="language-go"></code>`},
+		{input: `<code class="language-c++"></code>`, expVal: `<code class="language-c++"></code>`},
+		{input: `<code class="language-c#"></code>`, expVal: `<code class="language-c#"></code>`},
+
+		// Ordered list start
+		{input: `<ol start="10"><li>x</li></ol>`, expVal: `<ol start="10"><li>x</li></ol>`},
+		{input: `<ol start="1; x"><li>x</li></ol>`, expVal: `<ol><li>x</li></ol>`},
+		{input: `<ul start="10"><li>x</li></ul>`, expVal: `<ul><li>x</li></ul>`},
 
 		// Input checkbox
 		{input: `<input type="hidden">`, expVal: ``},
 		{input: `<input type="checkbox">`, expVal: `<input type="checkbox">`},
 		{input: `<input checked disabled autofocus>`, expVal: `<input checked="" disabled="">`},
+
+		// Alerts
+		{input: `<div class="markdown-alert markdown-alert-warning"><p class="markdown-alert-title">Warning</p></div>`, expVal: `<div class="markdown-alert markdown-alert-warning"><p class="markdown-alert-title">Warning</p></div>`},
+		{input: `<div class="markdown-alert markdown-alert-warning ui modal"></div>`, expVal: `<div></div>`},
+		{input: `<p class="footnotes"></p>`, expVal: `<p></p>`},
+
+		// Footnotes
+		{input: `<div class="footnotes" role="doc-endnotes"></div>`, expVal: `<div class="footnotes" role="doc-endnotes"></div>`},
+		{input: `<a href="#user-content-fn:1" class="footnote-ref" role="doc-noteref">1</a>`, expVal: `<a href="#user-content-fn:1" class="footnote-ref" role="doc-noteref" rel="nofollow">1</a>`},
+		{input: `<a href="#x" class="footnotes" role="button">1</a>`, expVal: `<a href="#x" rel="nofollow">1</a>`},
 
 		// Data URIs: safe image types should be allowed
 		{input: `<img src="data:image/png;base64,abc">`, expVal: `<img src="data:image/png;base64,abc">`},

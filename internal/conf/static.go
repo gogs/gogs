@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gogs/go-libravatar"
-	"gopkg.in/ini.v1"
+	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/conf"
 )
@@ -443,7 +443,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		"service": "auth",
 	}
 	for oldSection, newSection := range renamedSections {
-		if len(config.Section(oldSection).KeyStrings()) > 0 {
+		if len(config.Section(oldSection).KeyNames()) > 0 {
 			warnings = append(warnings, fmt.Sprintf("section [%s] is invalid, use [%s] instead", oldSection, newSection))
 		}
 	}
@@ -474,10 +474,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		// Warning is best-effort, OK to skip on error.
 		return warnings
 	}
-	defaultConfig, err := ini.LoadSources(
-		ini.LoadOptions{IgnoreInlineComment: true},
-		defaultConfigData,
-	)
+	defaultConfig, err := ini.Load(defaultConfigData, ini.IgnoreInlineComment(true))
 	if err != nil {
 		// Warning is best-effort, OK to skip on error.
 		return warnings

@@ -109,7 +109,7 @@ func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName s
 		if errKill := Kill(pid); errKill != nil {
 			log.Error("Failed to kill timeout process [pid: %d, desc: %s]: %v", pid, desc, errKill)
 		}
-		<-done
+		<-done //nolint:errcheck
 		return "", ErrExecTimeout.Error(), ErrExecTimeout
 	case err = <-done:
 	}

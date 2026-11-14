@@ -6,3 +6,7 @@ public/css/themes/** linguist-vendored
 public/css/semantic-* linguist-vendored
 public/js/libs/** linguist-vendored
 public/js/semantic-* linguist-vendored
+
+# Specification examples are compared byte for byte, so their line endings
+# must not be converted on checkout.
+internal/markup/dariomark/testdata/** -text
