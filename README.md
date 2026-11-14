@@ -33,36 +33,29 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 - Code hosting
   - Clone and push over SSH, HTTP and HTTPS, with an optional built-in SSH server.
-  - Git LFS, deploy keys and server-side Git hooks.
-  - Store Git LFS objects in S3-compatible storage.\*
-  - Migrate and mirror repositories, including their wikis, from other code hosts.
-  - Edit files and wiki pages right in the browser.
+  - Git LFS with local or S3-compatible\* storage, deploy keys and server-side Git hooks.
+  - Migrate and mirror repositories from other code hosts.
+  - Edit files right in the browser.
   - Render Markdown, Jupyter Notebooks and PDFs.
   - Search code in one repository or across all of them.\*
   - See who last changed each line with blame.\*
   - Compare images and rendered Markdown in diffs.\*
 - Collaboration
-  - Issues, pull requests, wikis and protected branches.
+  - Issues, wikis, and pull requests with inline reviews\* and stacks\*.
   - Organizations, teams and per-repository collaborators.
   - Dashboards, user profiles and activity timelines.
-  - Review pull requests with inline comments, threads, approvals and requested reviewers.\*
-  - Follow stacked pull requests as a tree.\*
-  - Require code owner reviews and signed commits on protected branches.\*
+  - Protected branches, with required code owner reviews and signed commits.\*
   - Work with repositories across federated Gogs instances.\*
 - Interface
   - Light and dark themes.
   - Jump to repositories, files, issues and code from a command palette.\*
 - Integrations
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
-  - A REST [API](https://gogs.io/api-reference) for automation.
-  - A GitHub-compatible REST API, so existing GitHub clients and tools work with Gogs.\*
+  - A REST [API](https://gogs.io/api-reference) for automation, with GitHub compatibility\*.
   - Prometheus metrics for monitoring.
 - Security
-  - Sign in with LDAP, SMTP, PAM or a reverse proxy.
-  - Sign in with OAuth 2.0 and OpenID Connect providers.\*
-  - Sign in with SAML 2.0.\*
+  - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\*, SAML 2.0\* or passkeys\*.
   - Optional two-factor authentication with TOTP and recovery codes.
-  - Sign in with passkeys.\*
   - Confirm who you are before sensitive actions.\*
   - See and sign out the browsers signed in to your account.\*
   - Get emails about changes to the security of your account.\*
