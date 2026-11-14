@@ -58,7 +58,9 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - A GitHub-compatible REST API, so existing GitHub clients and tools work with Gogs.\*
   - Prometheus metrics for monitoring.
 - Security
-  - Sign in with LDAP, SMTP, PAM, reverse proxy, GitHub.com or GitHub Enterprise.
+  - Sign in with LDAP, SMTP, PAM or a reverse proxy.
+  - Sign in with OAuth 2.0 and OpenID Connect providers.\*
+  - Sign in with SAML 2.0.\*
   - Optional two-factor authentication with TOTP and recovery codes.
   - Sign in with passkeys.\*
   - Confirm who you are before sensitive actions.\*
