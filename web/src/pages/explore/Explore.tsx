@@ -161,7 +161,7 @@ function RepoItem({ repo }: { repo: ExploreRepo }) {
           className="size-10 shrink-0 rounded-md border border-(--color-border) object-cover"
         />
       ) : (
-        <span className="grid size-10 shrink-0 place-items-center rounded-md bg-(--color-surface) text-(--color-muted-foreground)">
+        <span className="grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
           <BookMarked className="size-5" aria-hidden />
         </span>
       )}
