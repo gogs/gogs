@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ActivityFeed } from "@/components/ActivityFeed";
+import { PageTabs } from "@/components/PageTabs";
 import { Pagination } from "@/components/Pagination";
 import { RepoListItem } from "@/components/RepoListItem";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,6 @@ import {
 } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
-import { cn } from "@/lib/utils";
 
 export type ProfilePage = { tab: "repos"; repos: UserReposPage } | { tab: "activity" };
 
@@ -49,40 +49,28 @@ export function Profile() {
   usePageTitle(profile.fullName || profile.name);
 
   const tabs = [
-    { key: "repos", label: t("user.repositories"), icon: BookMarked, search: {} },
-    { key: "activity", label: t("user.activity"), icon: Activity, search: { tab: "activity" as const } },
-  ];
+    { key: "repos", label: t("user.repositories"), icon: BookMarked },
+    { key: "activity", label: t("user.activity"), icon: Activity },
+  ] as const;
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <ProfileSidebar profile={profile} />
       <section className="min-w-0">
-        <nav
-          aria-label={profile.fullName || profile.name}
-          className="flex overflow-x-auto border-b border-(--color-border)"
-        >
-          {tabs.map(({ key, label, icon: Icon, search }) => {
-            const active = key === data.tab;
-            return (
-              <Link
-                key={key}
-                to="/$username"
-                params={{ username }}
-                search={search}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
-                  active
-                    ? "border-(--color-primary) font-semibold text-(--color-foreground)"
-                    : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+        <PageTabs
+          label={profile.fullName || profile.name}
+          tabs={tabs}
+          active={data.tab}
+          renderLink={(tab, props) => (
+            <Link
+              to="/$username"
+              params={{ username }}
+              search={tab.key === "activity" ? { tab: "activity" } : {}}
+              {...props}
+            />
+          )}
+          className="border-b border-(--color-border)"
+        />
         {data.tab === "repos" ? (
           <>
             <ul>
