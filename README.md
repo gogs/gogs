@@ -34,22 +34,30 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Code hosting
   - Clone and push over SSH, HTTP and HTTPS, with an optional built-in SSH server.
   - Git LFS, deploy keys and server-side Git hooks.
+  - Store Git LFS objects in S3-compatible storage.\*
   - Migrate and mirror repositories, including their wikis, from other code hosts.
   - Edit files and wiki pages right in the browser.
   - Render Markdown, Jupyter Notebooks and PDFs.
   - Search code in one repository or across all of them.\*
   - See who last changed each line with blame.\*
-  - Compare images before and after in diffs.\*
+  - Compare images and rendered Markdown in diffs.\*
 - Collaboration
   - Issues, pull requests, wikis and protected branches.
   - Organizations, teams and per-repository collaborators.
   - Dashboards, user profiles and activity timelines.
+  - Review pull requests with inline comments, threads, approvals and requested reviewers.\*
+  - Follow stacked pull requests as a tree.\*
+  - Require code owner reviews and signed commits on protected branches.\*
+  - Work with repositories across federated Gogs instances.\*
+- Interface
+  - Light and dark themes.
   - Jump to repositories, files, issues and code from a command palette.\*
 - Integrations
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
   - A REST [API](https://gogs.io/api-reference) for automation.
+  - A GitHub-compatible REST API, so existing GitHub clients and tools work with Gogs.\*
   - Prometheus metrics for monitoring.
-- Authentication
+- Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, GitHub.com or GitHub Enterprise.
   - Optional two-factor authentication with TOTP and recovery codes.
   - Sign in with passkeys.\*
@@ -57,11 +65,14 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - See and sign out the browsers signed in to your account.\*
   - Get emails about changes to the security of your account.\*
   - Require a minimum password length and optionally reject leaked passwords.\*
+  - Block pushes with secrets, get alerts for vulnerable dependencies, and see static analysis results.\*
 - Operations
   - A single binary on Linux, macOS, Windows and ARM, or the official Docker image.
+  - Scale out across nodes on Kubernetes.\*
   - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
   - Customize templates, static files and much more.
   - Translated emails, previewed in the admin panel.\*
+  - Trace requests from the admin panel.\*
   - Available in over [31 languages](https://crowdin.com/project/gogs).
 
 <sub>* In development.</sub>
