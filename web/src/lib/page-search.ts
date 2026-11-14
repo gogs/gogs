@@ -45,3 +45,54 @@ export function validateBranchesSearch(search: Record<string, unknown>): Branche
 export function validateFlag(value: unknown): true | undefined {
   return value === true || value === "true" ? true : undefined;
 }
+
+// Search params of the admin dashboard. The last hour of server health stays
+// implicit.
+export interface DashboardSearch {
+  health?: "24h";
+}
+
+export function validateDashboardSearch(search: Record<string, unknown>): DashboardSearch {
+  return { health: search.health === "24h" ? "24h" : undefined };
+}
+
+// Search params of the traces of the admin panel. The overview of the last
+// hour stays implicit. The other params filter the search.
+export interface TraceSearch {
+  view?: "search";
+  range?: "15m";
+  q?: string;
+  route?: string;
+  minMs?: number;
+  status?: "5xx" | "4xx";
+  sort?: "slowest";
+  // A window of start times, as Unix milliseconds.
+  from?: number;
+  to?: number;
+}
+
+export function validateTraceSearch(search: Record<string, unknown>): TraceSearch {
+  const first = (value: unknown) => (Array.isArray(value) ? (value as unknown[])[0] : value);
+  const text = (value: unknown) => {
+    const v = first(value);
+    // The router turns URL values like `?q=1` into numbers, see validateListSearch.
+    const s = v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
+    return s.trim() || undefined;
+  };
+  const positive = (value: unknown) => {
+    const n = Number(first(value));
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
+  const status = first(search.status);
+  return {
+    view: first(search.view) === "search" ? "search" : undefined,
+    range: first(search.range) === "15m" ? "15m" : undefined,
+    q: text(search.q),
+    route: text(search.route),
+    minMs: positive(search.minMs),
+    status: status === "5xx" || status === "4xx" ? status : undefined,
+    sort: first(search.sort) === "slowest" ? "slowest" : undefined,
+    from: positive(search.from),
+    to: positive(search.to),
+  };
+}

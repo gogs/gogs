@@ -147,6 +147,12 @@ The issue and pull request pages share their parts from `pages/repo/Issue.tsx`: 
 
 Pages that show a repository at a branch, a tag or a commit, e.g., the code browser and the commit history, switch it with `RefPicker` from `@/components/RefPicker`, which links each ref to the same page through `renderLink`. Without `tags`, it picks only branches, under the `label` it is given, e.g., the base and the compared branch of a new pull request. Show the clone URL of a repository or a wiki with `CloneBox` from `@/components/CloneBox`. It remembers the protocol the viewer picked under the key the server-rendered pages use.
 
+## Charts
+
+Charts of the admin panel, e.g., on the traces page and the server health of the dashboard, are hand-drawn SVG, without a chart library. Each SVG stretches to its box with `preserveAspectRatio="none"`, so lines take `vectorEffect="non-scaling-stroke"`, and dots are zero-length lines with round caps, which keep their shape at any width. The chart itself is `role="img"` with an `aria-label` that says what it shows, or `role="slider"` when the arrow keys move a cursor along it. Its legend pairs every color with a shape, a line or a label. Plots of single traces or measurements start their time axis at the first one, with a window of at least 5 minutes, rather than at the start of the range, so a server that started recently does not squeeze them into the right edge.
+
+Switch a page between ranges, e.g., the last hour and the last day, with `RangeLinks` from `@/pages/admin/Health`: links that set a search param, so the route loader fetches the range.
+
 ## Translated markup
 
 Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.

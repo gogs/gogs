@@ -184,3 +184,21 @@ func (db *DB) Uploads() *UploadsStore {
 func (db *DB) Users() *UsersStore {
 	return newUsersStore(db.db)
 }
+
+// ConnectionsInUse returns how many database connections are in use, across
+// the pools of both ORMs, and how many they may open at most, or 0 when there
+// is no limit.
+func ConnectionsInUse() (inUse, limit int) {
+	if x != nil {
+		inUse += x.DB().Stats().InUse
+	}
+	if Handle != nil {
+		if sqlDB, err := Handle.db.DB(); err == nil {
+			inUse += sqlDB.Stats().InUse
+		}
+	}
+	if conf.Database.MaxOpenConns > 0 {
+		limit = 2 * conf.Database.MaxOpenConns
+	}
+	return inUse, limit
+}

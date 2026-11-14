@@ -341,3 +341,208 @@ export function updateAdminAuthSource(id: number, form: AdminAuthSourceForm) {
 export function deleteAdminAuthSource(id: number) {
   return send("DELETE", adminURL(`/auths/${id}`));
 }
+
+// AdminSpanKind is what a span of a trace measures: the request itself, a Git
+// operation, or other Go code.
+export type AdminSpanKind = "request" | "git" | "other";
+
+// AdminTraceRoute is what the traces of a route are grouped under. A "route" is
+// a matched route pattern, e.g., "GET /api/web/{owner}/{repo}/header". "other"
+// groups the requests whose route is not known, e.g., pages served by Macaron,
+// under their method, which is the name. "background" is work that no request
+// started, e.g., a mirror sync, named after what it ran.
+export interface AdminTraceRoute {
+  name: string;
+  kind: "route" | "other" | "background";
+  method: string;
+}
+
+export interface AdminTraceRouteStat extends AdminTraceRoute {
+  requests: number;
+  errors: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms: number;
+  totalMs: number;
+}
+
+export interface AdminTraceOperationStat {
+  name: string;
+  kind: AdminSpanKind;
+  calls: number;
+  p50Ms: number;
+  p95Ms: number;
+  // The time spent in the operation itself, without the operations it ran.
+  selfMs: number;
+}
+
+export type AdminTraceRange = "15m" | "1h";
+
+// AdminTraceOverview aggregates every request of the range, not only the kept
+// traces.
+export interface AdminTraceOverview {
+  // False when tracing is turned off in the configuration, and then everything
+  // else is empty.
+  enabled: boolean;
+  // The time on the server.
+  now: string;
+  maxAgeMinutes: number;
+  range: AdminTraceRange;
+  requests: number;
+  errors: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms: number;
+  // The time all requests of the range took together.
+  totalMs: number;
+  // The time spent in every span of the range, each without the spans it
+  // started, which is what the shares of operations are out of.
+  spanSelfMs: number;
+  // Five-minute buckets, oldest first.
+  buckets: { start: string; requests: number; p95Ms: number }[];
+  routes: AdminTraceRouteStat[];
+  operations: AdminTraceOperationStat[];
+}
+
+export function fetchAdminTraceOverview(range: AdminTraceRange) {
+  return fetchJSON<AdminTraceOverview>(subUrl(`/api/web/admin/traces/overview?range=${range}`));
+}
+
+// AdminTraceKept tells why a trace was kept: it failed, it was slow, or it was
+// sampled from the rest.
+export type AdminTraceKept = "failed" | "slow" | "sampled";
+
+export interface AdminTraceSummary {
+  id: string;
+  route: AdminTraceRoute;
+  method: string;
+  path: string;
+  // Zero for background work.
+  status: number;
+  start: string;
+  durationMs: number;
+  spanCount: number;
+  error: boolean;
+  kept: AdminTraceKept;
+}
+
+export type AdminTraceStatusFilter = "all" | "5xx" | "4xx";
+export type AdminTraceSort = "recent" | "slowest";
+
+export interface AdminTraceSearchParams {
+  // A trace ID, or its first 8 or more characters. Other filters are ignored
+  // when it is set.
+  q?: string;
+  route?: string;
+  minMs?: number;
+  status?: AdminTraceStatusFilter;
+  sort?: AdminTraceSort;
+  // A window of start times, as Unix milliseconds, e.g., a moment picked on the
+  // server health charts.
+  from?: number;
+  to?: number;
+}
+
+export interface AdminTraceSearch {
+  enabled: boolean;
+  // The time on the server.
+  now: string;
+  // The first 50 matches.
+  traces: AdminTraceSummary[];
+  // The number of all matches.
+  total: number;
+  // Up to 2,000 matches for the scatter plot.
+  points: { id: string; start: string; durationMs: number; status: number; error: boolean }[];
+  // The routes of the kept traces, for the route filter.
+  routes: AdminTraceRoute[];
+  // When the oldest kept trace started, or null when none is kept.
+  oldest: string | null;
+  maxAgeMinutes: number;
+  // The duration from which a request is always kept, or 0 when only failed
+  // requests and the slowest of each route are.
+  slowThresholdMs: number;
+}
+
+export function fetchAdminTraceSearch(params: AdminTraceSearchParams) {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.route) query.set("route", params.route);
+  if (params.minMs) query.set("minMs", String(params.minMs));
+  if (params.status && params.status !== "all") query.set("status", params.status);
+  if (params.sort && params.sort !== "recent") query.set("sort", params.sort);
+  if (params.from) query.set("from", String(params.from));
+  if (params.to) query.set("to", String(params.to));
+  const qs = query.toString();
+  return fetchJSON<AdminTraceSearch>(subUrl("/api/web/admin/traces") + (qs ? `?${qs}` : ""));
+}
+
+export interface AdminSpan {
+  id: string;
+  // Empty for the root span.
+  parentId: string;
+  name: string;
+  kind: AdminSpanKind;
+  // From the start of the trace.
+  startMs: number;
+  durationMs: number;
+  // Empty when the span did not fail.
+  error: string;
+  attributes: { key: string; value: string }[];
+}
+
+export interface AdminTrace extends AdminTraceSummary {
+  // Ordered by start, the root first.
+  spans: AdminSpan[];
+  // Spans left out past the limit of spans per trace.
+  droppedSpans: number;
+  // How this trace compares to the other requests of its route in the last
+  // hour, or null when there are none.
+  routeStats: { requests: number; p50Ms: number; p95Ms: number; fasterPercent: number } | null;
+  // The last hour of every span name in this trace.
+  operations: Record<string, { calls: number; p50Ms: number; p95Ms: number }>;
+}
+
+export function fetchAdminTrace(id: string) {
+  return fetchJSON<AdminTrace>(subUrl(`/api/web/admin/traces/${encodeURIComponent(id)}`));
+}
+
+export type AdminHealthRange = "1h" | "24h";
+
+// AdminHealthKey names a measurement of the server. Units: requests per second,
+// milliseconds for p95 and GC pauses, bytes for the heap, and counts for the
+// rest.
+export type AdminHealthKey =
+  | "requests"
+  | "p95"
+  | "heap"
+  | "goroutines"
+  | "gcPause"
+  | "dbConnections"
+  | "gitProcesses"
+  | "openFiles"
+  | "mirrorQueue";
+
+export interface AdminHealthSeries {
+  key: AdminHealthKey;
+  // [Unix milliseconds, value] pairs, oldest first. Times without a sample,
+  // e.g., before the server started, have no point.
+  points: [number, number][];
+  // The most the value can be, e.g., the size of the connection pool, or 0
+  // when there is no limit.
+  limit: number;
+}
+
+export interface AdminHealth {
+  range: AdminHealthRange;
+  // How far apart the points are.
+  stepSeconds: number;
+  start: string;
+  end: string;
+  // Measurements the server cannot take, e.g., open files outside Linux, or
+  // requests while tracing is off, are left out.
+  series: AdminHealthSeries[];
+}
+
+export function fetchAdminHealth(range: AdminHealthRange) {
+  return fetchJSON<AdminHealth>(subUrl(`/api/web/admin/health?range=${range}`));
+}

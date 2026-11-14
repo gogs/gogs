@@ -419,6 +419,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				Get(getAdminAuthSource).
 				Patch(bindJSON(adminAuthSourceRequest{}), patchAdminAuthSource).
 				Delete(deleteAdminAuthSource)
+			f.Get("/health", getAdminHealth)
+			f.Get("/traces", getAdminTraces)
+			f.Get("/traces/overview", getAdminTraceOverview)
+			f.Get("/traces/{id}", getAdminTrace)
 			f.Combo("/users").Get(getAdminUsers).Post(bindJSON(adminUserCreateRequest{}), postAdminUser)
 			f.Get("/user-options", getAdminUserOptions)
 			f.Combo("/users/{id}", withAdminTargetUser).

@@ -64,3 +64,8 @@ func (q *UniqueQueue) Add(id any) {
 func (q *UniqueQueue) Remove(id any) {
 	q.table.Stop(fmt.Sprintf("%v", id))
 }
+
+// Len returns how many IDs are waiting in the queue.
+func (q *UniqueQueue) Len() int {
+	return len(q.queue)
+}

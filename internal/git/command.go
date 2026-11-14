@@ -23,6 +23,13 @@ import (
 // holds the output open.
 var waitDelay = time.Minute
 
+var runningCommands atomic.Int64
+
+// RunningCommands returns how many Git commands are running.
+func RunningCommands() int64 {
+	return runningCommands.Load()
+}
+
 // WithTimeout returns a copy of ctx that times out after the given duration. A
 // timeout of zero or less returns ctx unchanged, i.e., no timeout.
 func WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -54,6 +61,9 @@ func newCommand(ctx context.Context, dir string, args []string, envs []string) *
 // creates, because os/exec drops what is left in them a fixed delay after the
 // command exited, even while a slow writer, e.g., a client, is still taking it.
 func runCommand(ctx context.Context, c *osexec.Cmd) (err error) {
+	runningCommands.Add(1)
+	defer runningCommands.Add(-1)
+
 	ctx, span := tracer.Start(ctx, "git "+subcommand(c.Args[1:]), trace.WithAttributes(attribute.String("git.dir", c.Dir)))
 	defer func() {
 		if c.ProcessState != nil {

@@ -9,10 +9,13 @@ import { FormAlert, FormField } from "@/components/FormField";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { fill } from "@/lib/format";
 import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
   type AdminDashboard as AdminDashboardData,
+  type AdminHealth,
+  type AdminHealthRange,
   type AdminMonitor as AdminMonitorData,
   type AdminOperation,
   type AdminReportRow,
@@ -23,6 +26,7 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
+import { ServerHealth } from "@/pages/admin/Health";
 
 const ROW_CLASS = "border-b border-(--color-border) py-3";
 
@@ -135,7 +139,15 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
 
 // AdminDashboard shows how the site was built, what its database holds and how
 // the server is doing.
-export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData }) {
+export function AdminDashboard({
+  dashboard,
+  health,
+  healthRange,
+}: {
+  dashboard: AdminDashboardData;
+  health: AdminHealth;
+  healthRange: AdminHealthRange;
+}) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="dashboard">
@@ -176,7 +188,19 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
           <RichText text={dashboard.statistics} />
         </p>
       </Section>
-      <Report section={dashboard.systemStatus} />
+      <ServerHealth health={health} range={healthRange}>
+        <details className="mt-4 text-sm">
+          <summary className="cursor-pointer text-(--color-muted-foreground) hover:text-(--color-foreground)">
+            {fill(
+              t("admin.health.all_numbers"),
+              dashboard.systemStatus.groups.reduce((n, group) => n + group.length, 0),
+            )}
+          </summary>
+          <div className="mt-4">
+            <Report section={dashboard.systemStatus} />
+          </div>
+        </details>
+      </ServerHealth>
     </AdminLayout>
   );
 }
