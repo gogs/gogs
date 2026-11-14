@@ -11,11 +11,12 @@ import {
   type LucideIcon,
   MessagesSquare,
 } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { DiffWorkspace } from "@/components/DiffWorkspace";
+import { PageTabs } from "@/components/PageTabs";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,12 @@ function PullSummary({ data }: { data: RepoPullData }) {
 // PullTabs links the tabs of the pull request, with the number of comments,
 // commits and changed files. A broken pull request has no commits or files to
 // show.
+const PULL_TAB_PATHS = {
+  conversation: "/$owner/$repo/pulls/$index",
+  commits: "/$owner/$repo/pulls/$index/commits",
+  files: "/$owner/$repo/pulls/$index/files",
+} as const;
+
 function PullTabs({
   issueRef,
   data,
@@ -174,85 +181,48 @@ function PullTabs({
   const { t } = useTranslation();
   const params = { owner: issueRef.owner, repo: issueRef.name, index: String(issueRef.index) };
   const commentCount = data.comments.filter((c) => c.type === "comment").length;
-  // Scroll the tabs so the active one is fully visible on narrow screens,
-  // without scrolling the page, which may be at the anchor of a comment.
-  const navRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const nav = navRef.current;
-    const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (!nav || !active) return;
-    const overflow = active.offsetLeft + active.offsetWidth - nav.clientWidth;
-    if (overflow > 0) nav.scrollLeft = overflow + parseFloat(getComputedStyle(nav).paddingRight);
-  }, [tab]);
   const tabs = [
     {
       key: "conversation",
-      to: "/$owner/$repo/pulls/$index",
       icon: MessagesSquare,
       label: t("repo.pulls.tab_conversation"),
       count: commentCount,
     },
     {
       key: "commits",
-      to: "/$owner/$repo/pulls/$index/commits",
       icon: GitCommitHorizontal,
       label: t("repo.pulls.tab_commits"),
       count: data.pull.commitCount,
+      disabled: !data.pull.diff,
     },
     {
       key: "files",
-      to: "/$owner/$repo/pulls/$index/files",
       icon: FileDiff,
       label: t("repo.pulls.tab_files"),
       count: data.pull.fileCount,
+      disabled: !data.pull.diff,
     },
   ] as const;
 
   return (
-    <nav
-      ref={navRef}
-      aria-label={t("pull_requests")}
-      className="relative mt-4 -mx-4 flex overflow-x-auto border-b border-(--color-border) px-4 sm:mx-0 sm:px-0"
-    >
-      {tabs.map(({ key, to, icon: Icon, label, count }) => {
-        const active = key === tab;
-        const className = cn(
-          "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
-          active
-            ? "border-(--color-primary) font-semibold text-(--color-foreground)"
-            : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
-        );
-        const content = (
-          <>
-            <Icon className="size-4" aria-hidden />
-            {label}
-            <span className="rounded-full bg-(--color-secondary) px-2 text-xs/5 font-medium tabular-nums text-(--color-secondary-foreground)">
-              {count}
-            </span>
-          </>
-        );
-        if (key !== "conversation" && !data.pull.diff) {
-          return (
-            <span key={key} aria-disabled className={cn(className, "cursor-not-allowed opacity-60")}>
-              {content}
-            </span>
-          );
-        }
-        return (
-          <Link
-            key={key}
-            to={to}
-            params={params}
-            // The conversation path is a prefix of the other tabs, so only an
-            // exact match is the current page.
-            activeOptions={{ exact: true }}
-            className={className}
-          >
-            {content}
-          </Link>
-        );
-      })}
-    </nav>
+    <PageTabs
+      label={t("pull_requests")}
+      tabs={tabs}
+      active={tab}
+      // Only the active tab with its count fits next to the menu at 320px.
+      inline={1}
+      renderLink={(item, props) => (
+        <Link
+          to={PULL_TAB_PATHS[item.key]}
+          params={params}
+          // The conversation path is a prefix of the other tabs, so only an
+          // exact match is the current page.
+          activeOptions={{ exact: true }}
+          {...props}
+        />
+      )}
+      className="mt-4 border-b border-(--color-border)"
+    />
   );
 }
 
