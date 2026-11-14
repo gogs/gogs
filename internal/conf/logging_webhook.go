@@ -9,10 +9,13 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 )
 
 // slackColors follows the order Debug, Info, Warn, Error, Fatal.
@@ -174,10 +177,21 @@ type webhookPoster interface {
 type webhookMessage struct {
 	level string
 	text  string
+	// posted is closed once the message is posted, when the logger waits for it.
+	posted chan struct{}
 }
 
+// fatalFuncName is the function slog records as the caller of a record logged
+// by logx.FatalContext, which exits the process right after logging it.
+var fatalFuncName = runtime.FuncForPC(reflect.ValueOf((*logx.Logger).FatalContext).Pointer()).Name()
+
+// fatalFlushTimeout bounds how long a fatal record delays the exit while the
+// queue is posted.
+const fatalFlushTimeout = 10 * time.Second
+
 // webhookHandler queues one formatted line per record for Slack or Discord.
-// A single goroutine posts them, so callers only wait when the queue is full.
+// A single goroutine posts them, so callers only wait when the queue is full,
+// or for a fatal record until it and everything queued before it are posted.
 type webhookHandler struct {
 	level slog.Level
 	queue chan<- webhookMessage
@@ -191,6 +205,9 @@ func newWebhookHandler(level slog.Level, poster webhookPoster, bufferLen int64) 
 			if err := poster.post(m.level, m.text); err != nil {
 				// Logging this through the logger could loop back into the webhook.
 				fmt.Fprintf(os.Stderr, "Failed to post log message to webhook: %v\n", err)
+			}
+			if m.posted != nil {
+				close(m.posted)
 			}
 		}
 	}()
@@ -215,7 +232,17 @@ func (h *webhookHandler) Handle(_ context.Context, r slog.Record) error {
 		})
 		msg = b.String()
 	}
-	h.queue <- webhookMessage{level: r.Level.String(), text: msg}
+	m := webhookMessage{level: r.Level.String(), text: msg}
+	if runtime.FuncForPC(r.PC).Name() == fatalFuncName {
+		m.posted = make(chan struct{})
+	}
+	h.queue <- m
+	if m.posted != nil {
+		select {
+		case <-m.posted:
+		case <-time.After(fatalFlushTimeout):
+		}
+	}
 	return nil
 }
 
