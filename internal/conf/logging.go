@@ -124,10 +124,10 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 	return lc, hasConsole, nil
 }
 
-// InitLogging builds the process logger from the loaded configuration. The
-// given logger reports progress. When hookMode is true, it only stores the root
-// path and returns the given logger, so SSH clients do not receive server logs
-// until the caller installs a hook file logger.
+// InitLogging builds the process logger from the loaded configuration. When
+// hookMode is true, it only stores the root path and returns the given logger,
+// so SSH clients do not receive server logs until the caller installs a hook
+// file logger.
 func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 	logConf, _, err := initLogConf(File, hookMode)
 	if err != nil {
@@ -149,12 +149,15 @@ func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 			return nil, errors.Wrapf(err, "init %s logger", c.Name)
 		}
 		handlers = append(handlers, h)
-		logger.Debug("Log mode enabled", "mode", c.Name, "logLevel", c.Level)
 	}
 	if len(handlers) == 0 {
 		handlers = append(handlers, newConsoleHandler(os.Stdout, slog.LevelDebug, IsProdMode()))
 	}
-	return newLogger(handlers...), nil
+	configured := newLogger(handlers...)
+	for _, c := range logConf.Configs {
+		configured.Debug("Log mode enabled", "mode", c.Name, "logLevel", c.Level)
+	}
+	return configured, nil
 }
 
 func newLogHandler(c *loggerConf) (slog.Handler, error) {

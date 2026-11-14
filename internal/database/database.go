@@ -30,11 +30,13 @@ var Tables = []any{
 	new(Passkey),
 }
 
-// NewConnection returns a new database connection with the given logger.
-func NewConnection(logger *logx.Logger) (*gorm.DB, error) {
-	level := gormlogger.Info
-	if conf.IsProdMode() {
-		level = gormlogger.Warn
+// NewConnection returns a new database connection with the given logger. When
+// logQueries is true, every query is logged at the debug level. Otherwise only
+// failed and slow queries are.
+func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
+	level := gormlogger.Warn
+	if logQueries {
+		level = gormlogger.Info
 	}
 
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.

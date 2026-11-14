@@ -62,7 +62,7 @@ func TestLogger_ParamsFilter(t *testing.T) {
 		wantValues bool
 	}{
 		{name: "values are hidden when only failures are logged", level: gormlogger.Warn},
-		{name: "values are shown when every query is logged", level: gormlogger.Info, wantValues: true},
+		{name: "values are only on the debug line when every query is logged", level: gormlogger.Info, wantValues: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -77,13 +77,22 @@ func TestLogger_ParamsFilter(t *testing.T) {
 			err = db.Exec("INSERT INTO secret VALUES (?, ?)", "alice", "hashed-password").Error
 			require.Error(t, err)
 
-			out := buf.String()
-			assert.Contains(t, out, `"msg":"Query failed"`)
+			var failedLine, debugLines string
+			for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+				if strings.Contains(line, `"level":"ERROR"`) {
+					failedLine = line
+				} else {
+					debugLines += line
+				}
+			}
+			assert.Contains(t, failedLine, `"msg":"Query failed"`)
+			// Error lines may reach Slack or Discord, so they never carry values.
+			assert.NotContains(t, failedLine, "hashed-password")
 			if test.wantValues {
-				assert.Contains(t, out, "hashed-password")
+				assert.Contains(t, debugLines, "hashed-password")
 			} else {
-				assert.NotContains(t, out, "hashed-password")
-				assert.Contains(t, out, "VALUES (?, ?)")
+				assert.Empty(t, debugLines)
+				assert.Contains(t, failedLine, "VALUES (?, ?)")
 			}
 		})
 	}

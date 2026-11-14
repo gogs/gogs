@@ -147,7 +147,7 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 		return errors.Wrap(err, "init logging")
 	}
 
-	if _, err = database.SetEngine(logger); err != nil {
+	if _, err = database.SetEngine(logger, false); err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
@@ -180,7 +180,7 @@ func adminDashboardOperation(operation func(*logx.Logger) error, successMessage 
 			return errors.Wrap(err, "init logging")
 		}
 
-		if _, err = database.SetEngine(logger); err != nil {
+		if _, err = database.SetEngine(logger, false); err != nil {
 			return errors.Wrap(err, "set engine")
 		}
 

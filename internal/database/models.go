@@ -119,7 +119,10 @@ func NewTestEngine() error {
 	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
-func SetEngine(logger *logx.Logger) (*gorm.DB, error) {
+// SetEngine connects to the database. When logQueries is true, every query is
+// logged at the debug level. Otherwise only failed and slow queries are, which
+// suits commands whose console output is read by people, such as backups.
+func SetEngine(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	var err error
 	x, err = getEngine()
 	if err != nil {
@@ -136,14 +139,14 @@ func SetEngine(logger *logx.Logger) (*gorm.DB, error) {
 	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
-	xormLevel := core.LOG_DEBUG
-	if conf.IsProdMode() {
-		xormLevel = core.LOG_ERR
+	xormLevel := core.LOG_ERR
+	if logQueries {
+		xormLevel = core.LOG_DEBUG
 	}
 	x.SetLogger(&xormLogger{logger: logger.Scoped("xorm"), level: xormLevel})
 	x.ShowSQL(true)
 
-	return NewConnection(logger)
+	return NewConnection(logger, logQueries)
 }
 
 // xormLogger sends xorm's logs through the process logger, one structured
@@ -229,7 +232,7 @@ func (l *xormLogger) ShowSQL(show ...bool) {
 func (l *xormLogger) IsShowSQL() bool { return l.showSQL }
 
 func NewEngine(logger *logx.Logger) error {
-	db, err := SetEngine(logger)
+	db, err := SetEngine(logger, !conf.IsProdMode())
 	if err != nil {
 		return err
 	}

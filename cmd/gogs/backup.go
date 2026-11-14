@@ -59,7 +59,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 		return errors.Wrap(err, "init logging")
 	}
 
-	conn, err := database.SetEngine(logger)
+	conn, err := database.SetEngine(logger, false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}

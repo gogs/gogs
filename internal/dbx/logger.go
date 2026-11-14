@@ -69,25 +69,28 @@ func (l *Logger) Trace(_ context.Context, begin time.Time, fc func() (sql string
 	}
 
 	elapsed := time.Since(begin)
-	// FileWithLineNum skips its caller's frame, so it must be called here and
-	// not inside the closure below.
-	source := utils.FileWithLineNum()
-	attrs := func() []any {
-		sql, rows := fc()
-		attrs := []any{"sql", sql, "rows", rows, "elapsed", elapsed.String(), "source", source}
-		if err != nil {
-			attrs = append(attrs, "error", err)
-		}
-		return attrs
+	notFound := errors.Is(err, gormlogger.ErrRecordNotFound)
+	failed := err != nil && !notFound && l.level >= gormlogger.Error
+	slow := !failed && l.slowThreshold > 0 && elapsed > l.slowThreshold && l.level >= gormlogger.Warn
+	if !failed && !slow && l.level < gormlogger.Info {
+		return
 	}
 
-	notFound := errors.Is(err, gormlogger.ErrRecordNotFound)
+	sql, rows := fc()
+	attrs := []any{"sql", sql, "rows", rows, "elapsed", elapsed.String(), "source", utils.FileWithLineNum()}
+	if err != nil {
+		attrs = append(attrs, "error", err)
+	}
+	if l.level >= gormlogger.Info {
+		// The SQL includes its values (see ParamsFilter), so it stays on this debug
+		// line and off the error and warning that Slack or Discord may receive.
+		l.logger.Debug("Query", attrs...)
+		attrs = attrs[2:]
+	}
 	switch {
-	case err != nil && !notFound && l.level >= gormlogger.Error:
-		l.logger.Error("Query failed", attrs()...)
-	case l.slowThreshold > 0 && elapsed > l.slowThreshold && l.level >= gormlogger.Warn:
-		l.logger.Warn("Slow query", append(attrs(), "threshold", l.slowThreshold.String())...)
-	case l.level >= gormlogger.Info:
-		l.logger.Debug("Query", attrs()...)
+	case failed:
+		l.logger.Error("Query failed", attrs...)
+	case slow:
+		l.logger.Warn("Slow query", append(attrs, "threshold", l.slowThreshold.String())...)
 	}
 }
