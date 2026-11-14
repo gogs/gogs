@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { cn } from "@/lib/utils";
@@ -7,8 +8,21 @@ type Segment = { html: string } | { code: string; lang: string };
 
 // splitCodeBlocks splits rendered Markdown at its top-level fenced code blocks
 // that name a language, so they can be highlighted.
-function splitCodeBlocks(html: string): Segment[] {
+function splitCodeBlocks(html: string, anchorLabel: string): Segment[] {
   const body = new DOMParser().parseFromString(html, "text/html").body;
+  // Headings have an id like "user-content-setup", as on GitHub. Their anchor
+  // gets "setup", so links to "#setup" work.
+  for (const heading of Array.from(body.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6"))) {
+    if (!heading.id.startsWith("user-content-")) continue;
+    const slug = heading.id.slice("user-content-".length);
+    const anchor = document.createElement("a");
+    anchor.id = slug;
+    anchor.href = `#${encodeURIComponent(slug)}`;
+    anchor.className = "heading-anchor";
+    anchor.setAttribute("aria-label", anchorLabel);
+    anchor.textContent = "#";
+    heading.append(anchor);
+  }
   const segments: Segment[] = [];
   let pending = "";
   for (const node of Array.from(body.childNodes)) {
@@ -34,7 +48,9 @@ function splitCodeBlocks(html: string): Segment[] {
 // Markdown shows Markdown that the server rendered and sanitized, e.g., the
 // content of an issue, highlighting its code blocks like CodeBlock.
 export function Markdown({ html, className }: { html: string; className?: string }) {
-  const segments = useMemo(() => splitCodeBlocks(html), [html]);
+  const { t } = useTranslation();
+  const anchorLabel = t("link_to_section");
+  const segments = useMemo(() => splitCodeBlocks(html, anchorLabel), [html, anchorLabel]);
   return (
     <div className={cn("markdown", className)}>
       {segments.map((segment, i) =>

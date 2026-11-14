@@ -392,4 +392,78 @@ diffs-container {
   .markdown :where(hr) {
     border-color: var(--color-border);
   }
+  .markdown :where(ul ul, ol ul) {
+    list-style: circle;
+  }
+  .markdown :where(ol ol, ul ol) {
+    list-style: lower-roman;
+  }
+  .markdown :where(ul ul ol, ul ol ol, ol ul ol, ol ol ol) {
+    list-style: lower-alpha;
+  }
+  .markdown :where(.markdown-alert) {
+    border-left: 4px solid var(--alert-color);
+    padding: 0.5rem 1rem;
+  }
+  .markdown :where(.markdown-alert > * + *) {
+    margin-top: 0.75rem;
+  }
+  .markdown :where(.markdown-alert-title) {
+    color: var(--alert-color);
+    font-weight: 600;
+  }
+  .markdown :where(.markdown-alert-note) {
+    --alert-color: var(--color-primary);
+  }
+  .markdown :where(.markdown-alert-tip) {
+    --alert-color: var(--color-success);
+  }
+  .markdown :where(.markdown-alert-important) {
+    --alert-color: #8250df;
+  }
+  .markdown :where(.markdown-alert-warning) {
+    --alert-color: #9a6700;
+  }
+  .markdown :where(.markdown-alert-caution) {
+    --alert-color: var(--color-destructive);
+  }
+  :root.dark .markdown :where(.markdown-alert-important) {
+    --alert-color: #b392f0;
+  }
+  :root.dark .markdown :where(.markdown-alert-warning) {
+    --alert-color: #e3b341;
+  }
+  .markdown :where(.footnotes) {
+    border-top: 1px solid var(--color-border);
+    padding-top: 0.75rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.8125rem;
+  }
+  .markdown :where(.footnote-ref) {
+    font-size: 0.75em;
+    vertical-align: super;
+    text-decoration: none;
+  }
+  .markdown :where(.footnote-backref) {
+    text-decoration: none;
+  }
+  .markdown :where(h1, h2, h3, h4, h5, h6):has(> .heading-anchor) {
+    position: relative;
+  }
+  .markdown :where(.heading-anchor) {
+    margin-left: 0.375rem;
+    color: var(--color-muted-foreground);
+    font-weight: 400;
+    text-decoration: none;
+    opacity: 0;
+  }
+  .markdown :where(h1, h2, h3, h4, h5, h6):hover > .heading-anchor,
+  .markdown .heading-anchor:focus-visible {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .markdown .heading-anchor {
+      opacity: 1;
+    }
+  }
 }
