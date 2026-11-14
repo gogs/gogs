@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-const MARKUP = /(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<b>.*?<\/b>|<strong>.*?<\/strong>)/;
+const MARKUP = /(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<b>.*?<\/b>|<strong>.*?<\/strong>|<span\b[^>]*>.*?<\/span>)/;
 const LINK_CLASS = "text-(--color-primary) underline underline-offset-2";
 
 // RichText renders a translated sentence that carries the markup the
-// server-rendered pages used: links, inline code and bold text. Translations
+// server-rendered pages used: links, inline code, and bold or highlighted text. Translations
 // keep Go placeholders in that markup, so links take their targets from
 // `links`, in order, and code takes its content from `code`. App paths
 // navigate within the app.
@@ -32,7 +32,8 @@ export function RichText({ text, links = [], code }: { text: string; links?: str
         </code>
       );
     }
-    if (part.startsWith("<b>") || part.startsWith("<strong>")) {
+    // Highlighted words, e.g., "Private" in a colored span, show in bold.
+    if (part.startsWith("<b>") || part.startsWith("<strong>") || part.startsWith("<span")) {
       return <strong key={i}>{inner}</strong>;
     }
     return part;
