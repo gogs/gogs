@@ -39,6 +39,7 @@
   "repo.unlisted": "Listaamaton",
   "repo.stargazers": "Tähtiharrastajat",
   "repo.forks": "Haarautukset",
+  "repo.no_desc": "Ei kuvausta",
   "status.page_not_found": "Sivua ei löydy",
   "status.internal_server_error": "Sisäinen palvelinvirhe",
   "auth.auth_source": "Todennuslähde",

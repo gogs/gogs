@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Yıldızlayanlar",
   "repo.forks": "Çatallamalar",
+  "repo.no_desc": "Açıklama Yok",
   "status.page_not_found": "Sayfa Bulunamadı",
   "status.internal_server_error": "İç Sunucu Hatası.",
   "auth.auth_source": "Yetkilendirme Kaynağı",

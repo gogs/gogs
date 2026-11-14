@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Polubienia",
   "repo.forks": "Forki",
+  "repo.no_desc": "Brak opisu",
   "status.page_not_found": "Strona nie została znaleziona",
   "status.internal_server_error": "Wewnętrzny błąd serwera",
   "auth.auth_source": "Źródło uwierzytelniania",

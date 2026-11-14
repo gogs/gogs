@@ -39,6 +39,7 @@
   "repo.unlisted": "Nelistat",
   "repo.stargazers": "Privitorii de stele",
   "repo.forks": "Bifurcații",
+  "repo.no_desc": "Fără Descriere",
   "status.page_not_found": "Pagina nu a fost găsită",
   "status.internal_server_error": "Eroare internă de server",
   "auth.auth_source": "Sursa de autentificare",

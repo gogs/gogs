@@ -39,6 +39,7 @@
   "repo.unlisted": "Вне списка",
   "repo.stargazers": "Звездочеты",
   "repo.forks": "Ответвления",
+  "repo.no_desc": "Нет описания",
   "status.page_not_found": "Страница не найдена",
   "status.internal_server_error": "Внутренняя ошибка сервера",
   "auth.auth_source": "Тип аутентификации",

@@ -39,6 +39,7 @@
   "repo.unlisted": "Поза списком",
   "repo.stargazers": "Шанувальники",
   "repo.forks": "Відгалуження",
+  "repo.no_desc": "Без опису",
   "status.page_not_found": "Сторінку не знайдено",
   "status.internal_server_error": "Внутрішня помилка серверу",
   "auth.auth_source": "Джерело автентифікації",

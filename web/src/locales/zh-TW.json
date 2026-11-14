@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "稱讚者",
   "repo.forks": "派生倉庫",
+  "repo.no_desc": "暫無描述",
   "status.page_not_found": "找不到頁面",
   "status.internal_server_error": "內部伺服器錯誤",
   "auth.auth_source": "認證來源",

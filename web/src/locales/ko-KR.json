@@ -39,6 +39,7 @@
   "repo.unlisted": "비공개",
   "repo.stargazers": "별을 준 사람들",
   "repo.forks": "포크",
+  "repo.no_desc": "설명 없음",
   "status.page_not_found": "페이지를 찾을 수 없음",
   "status.internal_server_error": "내부 서버 오류",
   "auth.auth_source": "인증 소스 편집",

@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "スターゲイザー",
   "repo.forks": "フォーク",
+  "repo.no_desc": "説明なし",
   "status.page_not_found": "ページが見つかりません",
   "status.internal_server_error": "サーバ内部エラー",
   "auth.auth_source": "認証ソース",

@@ -39,6 +39,7 @@
   "repo.unlisted": "列表隐藏",
   "repo.stargazers": "称赞者",
   "repo.forks": "派生仓库",
+  "repo.no_desc": "暂无描述",
   "status.page_not_found": "页面未找到",
   "status.internal_server_error": "内部服务器错误",
   "auth.auth_source": "认证源",

@@ -74,6 +74,7 @@ const KEYS = [
   "repo.unlisted",
   "repo.stargazers",
   "repo.forks",
+  "repo.no_desc",
   "status.page_not_found",
   "status.internal_server_error",
   "auth.auth_source",

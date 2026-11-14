@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "ستاره شناسان",
   "repo.forks": "انشعاب ها",
+  "repo.no_desc": "بدون توضیح",
   "status.page_not_found": "صفحه مورد نظر یافت نشد.",
   "status.internal_server_error": "خطای داخلی سرور",
   "auth.auth_source": "محل احراز هویت",

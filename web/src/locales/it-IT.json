@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Fan",
   "repo.forks": "Fork",
+  "repo.no_desc": "Nessuna descrizione",
   "status.page_not_found": "Pagina Non Trovata",
   "status.internal_server_error": "Errore Interno del Server",
   "auth.auth_source": "Fonte di autenticazione",

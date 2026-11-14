@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Stargazers",
   "repo.forks": "Forks",
+  "repo.no_desc": "Geen omschrijving",
   "status.page_not_found": "Pagina niet gevonden",
   "status.internal_server_error": "Interne Server Fout",
   "auth.auth_source": "Authenticatiebron",

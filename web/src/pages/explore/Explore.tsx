@@ -50,6 +50,7 @@ export interface ExploreUser {
   location?: string;
   email?: string;
   website?: string;
+  description?: string;
   createdAt?: string;
 }
 
@@ -158,10 +159,10 @@ function RepoItem({ repo }: { repo: ExploreRepo }) {
         <img
           src={repo.avatarURL}
           alt=""
-          className="mt-1.5 size-10 shrink-0 rounded-md border border-(--color-border) object-cover"
+          className="mt-1 size-10 shrink-0 rounded-md border border-(--color-border) object-cover"
         />
       ) : (
-        <span className="mt-1 grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
+        <span className="mt-0.5 grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
           <BookMarked className="size-10" strokeWidth={1.5} aria-hidden />
         </span>
       )}
@@ -243,7 +244,7 @@ function UserItem({ user, organization }: { user: ExploreUser; organization: boo
         src={user.avatarURL}
         alt=""
         className={cn(
-          "mt-1.5 size-10 shrink-0 border border-(--color-border) object-cover",
+          "mt-1 size-10 shrink-0 border border-(--color-border) object-cover",
           organization ? "rounded-md" : "rounded-full",
         )}
       />
@@ -254,6 +255,13 @@ function UserItem({ user, organization }: { user: ExploreUser; organization: boo
           </a>
           {user.fullName ? <span className="text-sm text-(--color-muted-foreground)">{user.fullName}</span> : null}
         </p>
+        {organization ? (
+          user.description ? (
+            <p className="mt-1 text-sm break-words text-(--color-foreground)">{user.description}</p>
+          ) : (
+            <p className="mt-1 text-sm text-(--color-muted-foreground) italic">{t("repo.no_desc")}</p>
+          )
+        ) : null}
         <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-muted-foreground)">
           {user.location ? (
             <Meta icon={MapPin} label={t("settings.location")}>

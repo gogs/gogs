@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Zvaigžņdevēji",
   "repo.forks": "Atdalītie repozitoriji",
+  "repo.no_desc": "Nav apraksta",
   "status.page_not_found": "Page Not Found",
   "status.internal_server_error": "Internal Server Error",
   "auth.auth_source": "Autentificēšanas avots",

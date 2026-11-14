@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Csillagvizsgálók",
   "repo.forks": "Másolások",
+  "repo.no_desc": "Nincs leírás",
   "status.page_not_found": "Az oldal nem található",
   "status.internal_server_error": "Belső kiszolgálóhiba",
   "auth.auth_source": "Hitelesítési forrás",

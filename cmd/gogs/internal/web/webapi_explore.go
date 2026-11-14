@@ -97,13 +97,15 @@ func getExploreRepos(c flamego.Context, user *database.User) (statusCode int, re
 }
 
 type exploreUser struct {
-	Name      string     `json:"name"`
-	FullName  string     `json:"fullName,omitempty"`
-	AvatarURL string     `json:"avatarURL"`
-	Location  string     `json:"location,omitempty"`
-	Email     string     `json:"email,omitempty"`
-	Website   string     `json:"website,omitempty"`
-	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	Name      string `json:"name"`
+	FullName  string `json:"fullName,omitempty"`
+	AvatarURL string `json:"avatarURL"`
+	Location  string `json:"location,omitempty"`
+	Email     string `json:"email,omitempty"`
+	Website   string `json:"website,omitempty"`
+	// Description is only set for organizations.
+	Description string     `json:"description,omitempty"`
+	CreatedAt   *time.Time `json:"createdAt,omitempty"`
 }
 
 func toExploreUser(u *database.User) exploreUser {
@@ -176,6 +178,7 @@ func getExploreOrganizations(c flamego.Context) (statusCode int, resp *explorePa
 	for _, org := range orgs {
 		item := toExploreUser(org)
 		item.Website = org.Website
+		item.Description = org.Description
 		items = append(items, item)
 	}
 	return http.StatusOK, newExplorePage(items, page, total), nil

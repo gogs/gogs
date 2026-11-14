@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Онцлох жагсаалтад нэмсэн хэрэглэгчид",
   "repo.forks": "Салаанууд",
+  "repo.no_desc": "Тайлбар байхгүй",
   "status.page_not_found": "Хуудас олдсонгүй",
   "status.internal_server_error": "Сервертэй холбогдоход алдаа гарлаа.",
   "auth.auth_source": "Баталгаажуулалтын эх сурвалж",

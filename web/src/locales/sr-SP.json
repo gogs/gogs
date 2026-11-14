@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Пратиоци",
   "repo.forks": "Огранци",
+  "repo.no_desc": "Нема описа",
   "status.page_not_found": "Page Not Found",
   "status.internal_server_error": "Internal Server Error",
   "auth.auth_source": "Извор аутентикације",

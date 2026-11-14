@@ -39,6 +39,7 @@
   "repo.unlisted": "Tidak terdaftar",
   "repo.stargazers": "Stargazers",
   "repo.forks": "Forks",
+  "repo.no_desc": "Tidak Ada Deskripsi",
   "status.page_not_found": "Halaman tidak ditemukan",
   "status.internal_server_error": "Kesalahan Server Internal",
   "auth.auth_source": "Sumber Autentikasi",

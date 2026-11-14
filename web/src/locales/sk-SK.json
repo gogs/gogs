@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Sledujúci",
   "repo.forks": "Forky",
+  "repo.no_desc": "Žiadny popis",
   "status.page_not_found": "Page Not Found",
   "status.internal_server_error": "Internal Server Error",
   "auth.auth_source": "Zdroj overovania",

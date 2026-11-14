@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Харесващи",
   "repo.forks": "Разклонения",
+  "repo.no_desc": "Няма описание",
   "status.page_not_found": "Страницата не е намерена",
   "status.internal_server_error": "Вътрешна грешка в сървър",
   "auth.auth_source": "Източник за удостоверяване",

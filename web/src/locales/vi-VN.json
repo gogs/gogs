@@ -39,6 +39,7 @@
   "repo.unlisted": "Riêng tư",
   "repo.stargazers": "Stargazers",
   "repo.forks": "Forks",
+  "repo.no_desc": "Không có mô tả",
   "status.page_not_found": "Không tìm thấy trang này!",
   "status.internal_server_error": "Lỗi nội bộ máy chủ.",
   "auth.auth_source": "Authentication Source",

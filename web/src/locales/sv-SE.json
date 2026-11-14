@@ -39,6 +39,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Stjärnmärkare",
   "repo.forks": "Forks",
+  "repo.no_desc": "Ingen beskrivning",
   "status.page_not_found": "Sidan hittades inte",
   "status.internal_server_error": "Internt serverfel",
   "auth.auth_source": "Autentiseringskälla",
