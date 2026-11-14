@@ -38,8 +38,12 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/users/alice/activity",
 		"/api/web/dashboard",
 		"/api/web/dashboard/activity",
+		"/api/web/dashboard/issues",
+		"/api/web/dashboard/pulls",
 		"/api/web/orgs/acme/dashboard",
 		"/api/web/orgs/acme/dashboard/activity",
+		"/api/web/orgs/acme/dashboard/issues",
+		"/api/web/orgs/acme/dashboard/pulls",
 	}
 	tests := []struct {
 		name                     string
@@ -102,8 +106,12 @@ func TestDashboardAuthentication(t *testing.T) {
 	for _, path := range []string{
 		"/api/web/dashboard",
 		"/api/web/dashboard/activity",
+		"/api/web/dashboard/issues",
+		"/api/web/dashboard/pulls",
 		"/api/web/orgs/acme/dashboard",
 		"/api/web/orgs/acme/dashboard/activity",
+		"/api/web/orgs/acme/dashboard/issues",
+		"/api/web/orgs/acme/dashboard/pulls",
 	} {
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))
