@@ -18,6 +18,7 @@ import { webContext } from "@/lib/context";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
+import { createAdminRoutes } from "@/routes/admin";
 import { createDashboardRoutes } from "@/routes/dashboard";
 import { createExploreRoutes } from "@/routes/explore";
 import { createOrgRoutes } from "@/routes/org";
@@ -50,6 +51,7 @@ const routeTree = rootRoute.addChildren([
   ...createDashboardRoutes(rootRoute),
   ...createUserRoutes(rootRoute),
   ...createSettingsRoutes(rootRoute),
+  ...createAdminRoutes(rootRoute),
   ...createExploreRoutes(rootRoute),
   ...createOrgRoutes(rootRoute),
   ...createRepoRoutes(rootRoute),

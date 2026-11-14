@@ -79,9 +79,13 @@ Swap the submit label to a present-continuous string ("Signing in…", "Verifyin
 
 ## Settings pages
 
-The settings pages of users and organizations use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem`, and mark the link to a destructive page, e.g., deleting the account, with `destructive`. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.
+The settings pages of users and organizations, and the admin panel, use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Pages that hold a list instead of a form, such as the lists of the admin panel, pass `wide` to use the full width. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem`, and mark the link to a destructive page, e.g., deleting the account, with `destructive`. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.
 
-Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a popover with `ConfirmButton`, not a modal. Deleting an account asks for the password instead, with `DeleteForm`.
+Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a popover with `ConfirmButton`, not a modal. After such an action empties the page of a paginated list, move to the previous page instead of showing an empty one. Deleting an account asks for the password instead, with `DeleteForm`.
+
+## Lists
+
+Lists that can be searched by keyword take `q` and `page` search params, validated with `validateListSearch` from `@/lib/page-search`, and search with `SearchForm` from `@/components/SearchForm`, which starts over from the first page.
 
 ## Translated markup
 

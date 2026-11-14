@@ -1,6 +1,6 @@
-import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
+import { type AnyRoute, createRoute } from "@tanstack/react-router";
 
-import { LoaderResponseError } from "@/lib/loader-error";
+import { loadSignedInPage } from "@/lib/loader-error";
 import {
   fetchAccessTokens,
   fetchRecoveryCodes,
@@ -29,32 +29,11 @@ import {
   UserTwoFactorEnable,
 } from "@/pages/user/SettingsSecurity";
 
-// loadSettingsPage maps the errors of loading a settings page to router
-// signals.
-async function loadSettingsPage<T>(load: () => Promise<T>): Promise<T> {
-  try {
-    return await load();
-  } catch (err) {
-    if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-      // The viewer is signed out, has not confirmed their email, or is
-      // prohibited from signing in. Reload the page so the server sends them to
-      // sign in, account activation, or the login prohibited page.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ href: window.location.href, reloadDocument: true });
-    }
-    if (err instanceof LoaderResponseError && err.status === 404) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-      throw notFound();
-    }
-    throw err;
-  }
-}
-
 export function createSettingsRoutes(rootRoute: AnyRoute) {
   const profileRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings",
-    loader: () => loadSettingsPage(fetchUserSettings),
+    loader: () => loadSignedInPage(fetchUserSettings),
     component: function Profile() {
       return <UserProfileSettings settings={profileRoute.useLoaderData()} />;
     },
@@ -63,7 +42,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const avatarRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/avatar",
-    loader: () => loadSettingsPage(fetchUserSettings),
+    loader: () => loadSignedInPage(fetchUserSettings),
     component: function Avatar() {
       return <UserAvatarSettings settings={avatarRoute.useLoaderData()} />;
     },
@@ -72,7 +51,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const passwordRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/password",
-    loader: () => loadSettingsPage(fetchUserSettings),
+    loader: () => loadSignedInPage(fetchUserSettings),
     component: function Password() {
       return <UserPasswordSettings isLocal={passwordRoute.useLoaderData().isLocal} />;
     },
@@ -84,7 +63,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
     // The link that confirms an email address lands here with `activated`.
     validateSearch: (search: Record<string, unknown>): { activated?: true } =>
       search.activated === 1 || search.activated === "1" ? { activated: true } : {},
-    loader: () => loadSettingsPage(fetchUserEmails),
+    loader: () => loadSignedInPage(fetchUserEmails),
     component: function Emails() {
       const search: { activated?: true } = emailRoute.useSearch();
       return <UserEmailSettings emails={emailRoute.useLoaderData()} activated={search.activated === true} />;
@@ -94,7 +73,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const sshRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/ssh",
-    loader: () => loadSettingsPage(fetchSSHKeys),
+    loader: () => loadSignedInPage(fetchSSHKeys),
     component: function SSHKeys() {
       return <UserSSHKeySettings keys={sshRoute.useLoaderData()} />;
     },
@@ -103,7 +82,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const securityRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/security",
-    loader: () => loadSettingsPage(fetchTwoFactorEnabled),
+    loader: () => loadSignedInPage(fetchTwoFactorEnabled),
     component: function Security() {
       return <UserSecuritySettings enabled={securityRoute.useLoaderData()} />;
     },
@@ -112,7 +91,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const twoFactorEnableRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/security/two_factor_enable",
-    loader: () => loadSettingsPage(fetchTwoFactorEnrollment),
+    loader: () => loadSignedInPage(fetchTwoFactorEnrollment),
     component: function TwoFactorEnable() {
       return <UserTwoFactorEnable enrollment={twoFactorEnableRoute.useLoaderData()} />;
     },
@@ -121,7 +100,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const recoveryCodesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/security/two_factor_recovery_codes",
-    loader: () => loadSettingsPage(fetchRecoveryCodes),
+    loader: () => loadSignedInPage(fetchRecoveryCodes),
     component: function RecoveryCodes() {
       return <UserRecoveryCodes codes={recoveryCodesRoute.useLoaderData()} />;
     },
@@ -130,7 +109,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const applicationsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/applications",
-    loader: () => loadSettingsPage(fetchAccessTokens),
+    loader: () => loadSignedInPage(fetchAccessTokens),
     component: function Applications() {
       return <UserTokenSettings tokens={applicationsRoute.useLoaderData()} />;
     },
@@ -139,7 +118,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const reposRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/repositories",
-    loader: () => loadSettingsPage(fetchSettingsRepos),
+    loader: () => loadSignedInPage(fetchSettingsRepos),
     component: function Repos() {
       return <UserRepoSettings repos={reposRoute.useLoaderData()} />;
     },
@@ -148,7 +127,7 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const orgsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/organizations",
-    loader: () => loadSettingsPage(fetchSettingsOrgs),
+    loader: () => loadSignedInPage(fetchSettingsOrgs),
     component: function Orgs() {
       return <UserOrgSettings orgs={orgsRoute.useLoaderData()} />;
     },

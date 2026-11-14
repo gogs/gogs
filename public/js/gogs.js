@@ -1059,49 +1059,6 @@ function initAdmin() {
       $("#security_protocol").change(onSecurityProtocolChange);
     }
   }
-
-  // Notice
-  if ($(".admin.notice")) {
-    var $detailModal = $("#detail-modal");
-
-    // Attach view detail modals
-    $(".view-detail").click(function() {
-      $detailModal.find(".content p").text($(this).data("content"));
-      $detailModal.modal("show");
-      return false;
-    });
-
-    // Select actions
-    var $checkboxes = $(".select.table .ui.checkbox");
-    $(".select.action").click(function() {
-      switch ($(this).data("action")) {
-        case "select-all":
-          $checkboxes.checkbox("check");
-          break;
-        case "deselect-all":
-          $checkboxes.checkbox("uncheck");
-          break;
-        case "inverse":
-          $checkboxes.checkbox("toggle");
-          break;
-      }
-    });
-    $("#delete-selection").click(function() {
-      var $this = $(this);
-      $this.addClass("loading disabled");
-      var ids = [];
-      $checkboxes.each(function() {
-        if ($(this).checkbox("is checked")) {
-          ids.push($(this).data("id"));
-        }
-      });
-      $.post($this.data("link"), {
-        ids: ids
-      }).done(function() {
-        window.location.href = $this.data("redirect");
-      });
-    });
-  }
 }
 
 function buttonsClickOnEnter() {

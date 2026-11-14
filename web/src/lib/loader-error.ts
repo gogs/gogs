@@ -1,3 +1,5 @@
+import { notFound, redirect } from "@tanstack/react-router";
+
 // LoaderResponseError carries enough of a failed loader fetch for the route
 // error component to render a useful message: the HTTP status, the parsed
 // `error` field when the body is JSON-shaped like the webapi 4xx/5xx
@@ -31,4 +33,25 @@ export async function loaderResponseError(res: Response): Promise<LoaderResponse
     }
   }
   return new LoaderResponseError(res.status, body, errorField);
+}
+
+// loadSignedInPage maps the errors of loading a page that needs a signed-in
+// user, e.g., a settings page, to router signals.
+export async function loadSignedInPage<T>(load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch (err) {
+    if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
+      // The viewer is signed out, has not confirmed their email, or is
+      // prohibited from signing in. Reload the page so the server sends them to
+      // sign in, account activation, or the login prohibited page.
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+      throw redirect({ href: window.location.href, reloadDocument: true });
+    }
+    if (err instanceof LoaderResponseError && err.status === 404) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    throw err;
+  }
 }
