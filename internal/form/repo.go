@@ -129,48 +129,6 @@ func (f *CreateComment) Validate(ctx *macaron.Context, errs binding.Errors) bind
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-//    _____  .__.__                   __
-//   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
-//  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
-// /    Y    \  |  |_\  ___/ \___ \  |  | (  <_> )   |  \  ___/
-// \____|__  /__|____/\___  >____  > |__|  \____/|___|  /\___  >
-//         \/             \/     \/                   \/     \/
-
-type CreateMilestone struct {
-	Title    string `binding:"Required;MaxSize(50)"`
-	Content  string
-	Deadline string
-}
-
-func (f *CreateMilestone) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-// .____          ___.          .__
-// |    |   _____ \_ |__   ____ |  |
-// |    |   \__  \ | __ \_/ __ \|  |
-// |    |___ / __ \| \_\ \  ___/|  |__
-// |_______ (____  /___  /\___  >____/
-//         \/    \/    \/     \/
-
-type CreateLabel struct {
-	ID    int64
-	Title string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_title"`
-	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
-}
-
-func (f *CreateLabel) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-type InitializeLabels struct {
-	TemplateName string `binding:"Required"`
-}
-
-func (f *InitializeLabels) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 // __________       .__
 // \______   \ ____ |  |   ____ _____    ______ ____
 //  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \

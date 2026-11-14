@@ -192,7 +192,24 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/stargazers", getRepoStargazers)
 			f.Get("/watchers", getRepoWatchers)
 			f.Delete("/watchers/{username}", deleteRepoWatcher)
+			f.Group("", func() {
+				f.Get("/labels", getRepoLabels)
+				f.Get("/milestones", getRepoMilestones)
+			}, withIssueTracker)
 		}, requireViewAccess, withRepoContext)
+		f.Group("/{owner}/{repo}", func() {
+			f.Post("/labels", bindJSON(repoLabelRequest{}), postRepoLabel)
+			f.Post("/labels/initialize", bindJSON(repoLabelsInitializeRequest{}), postRepoLabelsInitialize)
+			f.Combo("/labels/{id}", withRepoLabel).Patch(bindJSON(repoLabelRequest{}), patchRepoLabel).Delete(deleteRepoLabel)
+			f.Post("/milestones", bindJSON(repoMilestoneRequest{}), postRepoMilestone)
+			f.Group("/milestones/{id}", func() {
+				f.Combo("").
+					Get(getRepoMilestone).
+					Patch(bindJSON(repoMilestoneRequest{}), patchRepoMilestone).
+					Delete(deleteRepoMilestone)
+				f.Combo("/closed").Put(putRepoMilestoneClosed).Delete(deleteRepoMilestoneClosed)
+			}, withRepoMilestone)
+		}, requireSignIn, withRepoContext, withRepoWriter)
 		f.Group("/{owner}/{repo}", func() {
 			f.Delete("", bindJSON(repoConfirmRequest{}), deleteRepo)
 			f.Group("/settings", func() {

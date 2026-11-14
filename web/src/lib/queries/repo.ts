@@ -318,3 +318,107 @@ export function addRepoDeployKey(owner: string, name: string, form: { title: str
 export function deleteRepoDeployKey(owner: string, name: string, id: number) {
   return send("DELETE", repoSettingsURL(owner, name, `/keys/${id}`));
 }
+
+function repoURL(owner: string, name: string, path: string) {
+  return subUrl(`/api/web/${owner}/${name}${path}`);
+}
+
+export interface RepoLabel {
+  id: number;
+  name: string;
+  // color is a hex color, e.g., "#70c24a".
+  color: string;
+  openIssueCount: number;
+}
+
+export interface RepoLabelsData {
+  items: RepoLabel[];
+  // templates are the predefined sets of labels, only sent to viewers who can
+  // add them.
+  templates?: string[];
+  viewerCanWrite: boolean;
+}
+
+export interface RepoLabelForm {
+  name: string;
+  color: string;
+}
+
+export function fetchRepoLabels(owner: string, name: string) {
+  return fetchJSON<RepoLabelsData>(repoURL(owner, name, "/labels"));
+}
+
+export function createRepoLabel(owner: string, name: string, form: RepoLabelForm) {
+  return submit<void>("POST", repoURL(owner, name, "/labels"), form);
+}
+
+export function updateRepoLabel(owner: string, name: string, id: number, form: RepoLabelForm) {
+  return submit<void>("PATCH", repoURL(owner, name, `/labels/${id}`), form);
+}
+
+export function deleteRepoLabel(owner: string, name: string, id: number) {
+  return send("DELETE", repoURL(owner, name, `/labels/${id}`));
+}
+
+export function initializeRepoLabels(owner: string, name: string, template: string) {
+  return submit<void>("POST", repoURL(owner, name, "/labels/initialize"), { template });
+}
+
+export interface RepoMilestone {
+  id: number;
+  name: string;
+  descriptionHTML?: string;
+  // deadline is a date, e.g., "2026-12-31", and is left out when there is
+  // none.
+  deadline?: string;
+  isOverdue: boolean;
+  isClosed: boolean;
+  closedAt?: string;
+  openIssueCount: number;
+  closedIssueCount: number;
+  completeness: number;
+}
+
+export interface RepoMilestonesData {
+  items: RepoMilestone[];
+  page: number;
+  totalPages: number;
+  openCount: number;
+  closedCount: number;
+  viewerCanWrite: boolean;
+}
+
+export interface RepoMilestoneForm {
+  title: string;
+  description: string;
+  // deadline is a date, e.g., "2026-12-31", or empty for none.
+  deadline: string;
+}
+
+export function fetchRepoMilestones(owner: string, name: string, closed: boolean, page?: number) {
+  const params = new URLSearchParams();
+  if (closed) params.set("state", "closed");
+  if (page) params.set("page", String(page));
+  const query = params.toString();
+  return fetchJSON<RepoMilestonesData>(repoURL(owner, name, `/milestones${query ? `?${query}` : ""}`));
+}
+
+export function fetchRepoMilestone(owner: string, name: string, id: number) {
+  return fetchJSON<RepoMilestoneForm>(repoURL(owner, name, `/milestones/${id}`));
+}
+
+export function createRepoMilestone(owner: string, name: string, form: RepoMilestoneForm) {
+  return submit<void>("POST", repoURL(owner, name, "/milestones"), form);
+}
+
+export function updateRepoMilestone(owner: string, name: string, id: number, form: RepoMilestoneForm) {
+  return submit<void>("PATCH", repoURL(owner, name, `/milestones/${id}`), form);
+}
+
+export function setRepoMilestoneClosed(owner: string, name: string, id: number, closed: boolean) {
+  return send(closed ? "PUT" : "DELETE", repoURL(owner, name, `/milestones/${id}/closed`));
+}
+
+export function deleteRepoMilestone(owner: string, name: string, id: number) {
+  return send("DELETE", repoURL(owner, name, `/milestones/${id}`));
+}

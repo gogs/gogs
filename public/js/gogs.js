@@ -327,65 +327,6 @@ function initRepository() {
     });
   }
 
-  // Labels
-  if ($(".repository.labels").length > 0) {
-    // Create label
-    var $newLabelPanel = $(".new-label.segment");
-    $(".new-label.button").click(function() {
-      $newLabelPanel.show();
-    });
-    $(".new-label.segment .cancel").click(function() {
-      $newLabelPanel.hide();
-    });
-
-    $(".color-picker").each(function() {
-      $(this).minicolors();
-    });
-    $(".precolors .color").click(function() {
-      var color_hex = $(this).data("color-hex");
-      $(".color-picker").val(color_hex);
-      $(".minicolors-swatch-color").css("background-color", color_hex);
-    });
-    $(".edit-label-button").click(function() {
-      $("#label-modal-id").val($(this).data("id"));
-      $(".edit-label .new-label-input").val($(this).data("title"));
-      $(".edit-label .color-picker").val($(this).data("color"));
-      $(".minicolors-swatch-color").css(
-        "background-color",
-        $(this).data("color")
-      );
-      $(".edit-label.modal")
-        .modal({
-          onApprove: function() {
-            $(".edit-label.form").submit();
-          }
-        })
-        .modal("show");
-      return false;
-    });
-  }
-
-  // Milestones
-  if ($(".repository.milestones").length > 0) {
-  }
-  if ($(".repository.new.milestone").length > 0) {
-    var $datepicker = $(".milestone.datepicker");
-    $datepicker.datetimepicker({
-      lang: $datepicker.data("lang"),
-      inline: true,
-      timepicker: false,
-      startDate: $datepicker.data("start-date"),
-      formatDate: "Y-m-d",
-      onSelectDate: function(ct) {
-        $("#deadline").val(ct.dateFormat("Y-m-d"));
-      }
-    });
-    $("#clear-date").click(function() {
-      $("#deadline").val("");
-      return false;
-    });
-  }
-
   // Issues
   if ($(".repository.view.issue").length > 0) {
     // Edit issue title

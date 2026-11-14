@@ -32,7 +32,8 @@
   pre,
   kbd,
   samp,
-  diffs-container {
+  diffs-container,
+  .cm-editor {
     font-variant-ligatures: none;
   }
 }
@@ -86,6 +87,16 @@
   --color-border: #d4d4d4;
   --color-input: #8f8f8f;
   --color-ring: #009fff;
+
+  /* Token colors of CodeEditor, Pierre Light hues darkened where needed to
+     reach 4.5:1 against the background. */
+  --code-keyword: #d32a61;
+  --code-string: #148638;
+  --code-number: #157f9e;
+  --code-variable: #ae5f1e;
+  --code-function: #693acf;
+  --code-type: #a631be;
+  --code-escape: #0e8171;
 }
 
 :root.dark {
@@ -111,6 +122,14 @@
   --color-border: #2e2e2e;
   --color-input: #666666;
   --color-ring: #009fff;
+
+  --code-keyword: #ff678d;
+  --code-string: #5ecc71;
+  --code-number: #68cdf2;
+  --code-variable: #ffa359;
+  --code-function: #9d6afb;
+  --code-type: #d568ea;
+  --code-escape: #61d5c0;
 }
 
 @layer base {
@@ -210,4 +229,60 @@ diffs-container {
      card's top edge), no rounded host corners frame the gap. The header
      carries its own rounded top corners in both docked and sticky state. */
   border-radius: 0 0 3px 3px;
+}
+
+/* Highlighting of CodeEditor, which marks tokens with the .tok-* classes of
+   @lezer/highlight. Markdown stays close to plain text: markup characters are
+   muted and only the emphasis shows. */
+@layer components {
+  .cm-editor {
+    .tok-keyword,
+    .tok-operator.tok-definition {
+      color: var(--code-keyword);
+    }
+    .tok-string {
+      color: var(--code-string);
+    }
+    .tok-string2 {
+      color: var(--code-escape);
+    }
+    .tok-number,
+    .tok-atom,
+    .tok-bool {
+      color: var(--code-number);
+    }
+    .tok-variableName2,
+    .tok-variableName.tok-definition {
+      color: var(--code-variable);
+    }
+    .tok-propertyName,
+    .tok-macroName {
+      color: var(--code-function);
+    }
+    .tok-typeName,
+    .tok-className {
+      color: var(--code-type);
+    }
+    .tok-comment,
+    .tok-meta,
+    .tok-punctuation,
+    .tok-url,
+    .tok-quote {
+      color: var(--color-muted-foreground);
+    }
+    .tok-heading,
+    .tok-strong {
+      font-weight: 600;
+    }
+    .tok-emphasis {
+      font-style: italic;
+    }
+    .tok-link {
+      text-decoration: underline;
+    }
+    .tok-monospace {
+      background-color: var(--color-surface);
+      border-radius: 0.25rem;
+    }
+  }
 }
