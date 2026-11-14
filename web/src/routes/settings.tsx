@@ -1,7 +1,17 @@
-import { type AnyRoute, createRoute, redirect } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { LoaderResponseError } from "@/lib/loader-error";
-import { fetchSettingsOrgs, fetchSettingsRepos, fetchUserSettings } from "@/lib/queries/settings";
+import {
+  fetchAccessTokens,
+  fetchRecoveryCodes,
+  fetchSSHKeys,
+  fetchSettingsOrgs,
+  fetchSettingsRepos,
+  fetchTwoFactorEnabled,
+  fetchTwoFactorEnrollment,
+  fetchUserEmails,
+  fetchUserSettings,
+} from "@/lib/queries/settings";
 import {
   UserAvatarSettings,
   UserDelete,
@@ -10,6 +20,14 @@ import {
   UserProfileSettings,
   UserRepoSettings,
 } from "@/pages/user/Settings";
+import {
+  UserEmailSettings,
+  UserRecoveryCodes,
+  UserSSHKeySettings,
+  UserSecuritySettings,
+  UserTokenSettings,
+  UserTwoFactorEnable,
+} from "@/pages/user/SettingsSecurity";
 
 // loadSettingsPage maps the errors of loading a settings page to router
 // signals.
@@ -23,6 +41,10 @@ async function loadSettingsPage<T>(load: () => Promise<T>): Promise<T> {
       // sign in, account activation, or the login prohibited page.
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
       throw redirect({ href: window.location.href, reloadDocument: true });
+    }
+    if (err instanceof LoaderResponseError && err.status === 404) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
     }
     throw err;
   }
@@ -56,6 +78,64 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  const emailRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/email",
+    // The link that confirms an email address lands here with `activated`.
+    validateSearch: (search: Record<string, unknown>): { activated?: true } =>
+      search.activated === 1 || search.activated === "1" ? { activated: true } : {},
+    loader: () => loadSettingsPage(fetchUserEmails),
+    component: function Emails() {
+      const search: { activated?: true } = emailRoute.useSearch();
+      return <UserEmailSettings emails={emailRoute.useLoaderData()} activated={search.activated === true} />;
+    },
+  });
+
+  const sshRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/ssh",
+    loader: () => loadSettingsPage(fetchSSHKeys),
+    component: function SSHKeys() {
+      return <UserSSHKeySettings keys={sshRoute.useLoaderData()} />;
+    },
+  });
+
+  const securityRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/security",
+    loader: () => loadSettingsPage(fetchTwoFactorEnabled),
+    component: function Security() {
+      return <UserSecuritySettings enabled={securityRoute.useLoaderData()} />;
+    },
+  });
+
+  const twoFactorEnableRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/security/two_factor_enable",
+    loader: () => loadSettingsPage(fetchTwoFactorEnrollment),
+    component: function TwoFactorEnable() {
+      return <UserTwoFactorEnable enrollment={twoFactorEnableRoute.useLoaderData()} />;
+    },
+  });
+
+  const recoveryCodesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/security/two_factor_recovery_codes",
+    loader: () => loadSettingsPage(fetchRecoveryCodes),
+    component: function RecoveryCodes() {
+      return <UserRecoveryCodes codes={recoveryCodesRoute.useLoaderData()} />;
+    },
+  });
+
+  const applicationsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user/settings/applications",
+    loader: () => loadSettingsPage(fetchAccessTokens),
+    component: function Applications() {
+      return <UserTokenSettings tokens={applicationsRoute.useLoaderData()} />;
+    },
+  });
+
   const reposRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/repositories",
@@ -80,5 +160,18 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
     component: UserDelete,
   });
 
-  return [profileRoute, avatarRoute, passwordRoute, reposRoute, orgsRoute, deleteRoute];
+  return [
+    profileRoute,
+    avatarRoute,
+    passwordRoute,
+    emailRoute,
+    sshRoute,
+    securityRoute,
+    twoFactorEnableRoute,
+    recoveryCodesRoute,
+    applicationsRoute,
+    reposRoute,
+    orgsRoute,
+    deleteRoute,
+  ];
 }

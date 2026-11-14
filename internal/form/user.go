@@ -30,27 +30,11 @@ func (f *Avatar) Validate(ctx *macaron.Context, errs binding.Errors) binding.Err
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type AddEmail struct {
-	Email string `binding:"Required;Email;MaxSize(254)"`
-}
-
-func (f *AddEmail) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 type AddSSHKey struct {
 	Title   string `binding:"Required;MaxSize(50)"`
 	Content string `binding:"Required"`
 }
 
 func (f *AddSSHKey) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-type NewAccessToken struct {
-	Name string `binding:"Required"`
-}
-
-func (f *NewAccessToken) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

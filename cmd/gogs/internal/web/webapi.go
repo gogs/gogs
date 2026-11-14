@@ -170,6 +170,18 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Get("/repositories", getUserSettingsRepos)
 				f.Delete("/repositories/{id}", deleteUserSettingsRepo)
 				f.Get("/organizations", getUserSettingsOrgs)
+				f.Combo("/emails").Get(getUserEmails).Post(bindJSON(userEmailRequest{}), postUserEmail)
+				f.Delete("/emails/{email}", deleteUserEmail)
+				f.Put("/emails/{email}/primary", putUserEmailPrimary)
+				f.Combo("/ssh-keys").Get(getUserSSHKeys).Post(bindJSON(userSSHKeyRequest{}), postUserSSHKey)
+				f.Delete("/ssh-keys/{id}", deleteUserSSHKey)
+				f.Group("/two-factor", func() {
+					f.Combo("").Get(getUserTwoFactor).Post(bindJSON(userTwoFactorRequest{}), postUserTwoFactor).Delete(deleteUserTwoFactor)
+					f.Get("/enrollment", getUserTwoFactorEnrollment)
+					f.Combo("/recovery-codes").Get(getUserRecoveryCodes).Post(postUserRecoveryCodes)
+				})
+				f.Combo("/tokens").Get(getUserAccessTokens).Post(bindJSON(userAccessTokenRequest{}), postUserAccessToken)
+				f.Delete("/tokens/{id}", deleteUserAccessToken)
 			}, requireSignIn)
 		})
 		f.Group("/{owner}/{repo}", func() {

@@ -1,19 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { type FormEvent, type ReactNode, useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AvatarForm } from "@/components/AvatarForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { DeleteForm } from "@/components/DeleteForm";
-import { FormField } from "@/components/FormField";
-import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
+import { FormAlert, FormField } from "@/components/FormField";
+import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { usePageTitle } from "@/lib/page-title";
 import { removeOrgMember } from "@/lib/queries/org";
-import { FormError } from "@/lib/queries/request";
+import { FormError, formErrors } from "@/lib/queries/request";
 import {
   type SettingsOrg,
   type SettingsRepo,
@@ -32,63 +31,6 @@ import { userProfileQuery } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { RepoIcon } from "@/pages/user/Dashboard";
-
-type SettingsPage = "profile" | "avatar" | "password" | "repositories" | "organizations" | "delete";
-
-// NAV lists the settings pages in the order of the server-rendered menu. The
-// ones without a page are still served by the server-rendered pages.
-const NAV: { path: string; label: string; page?: SettingsPage }[] = [
-  { path: "", label: "settings.profile", page: "profile" },
-  { path: "/avatar", label: "settings.avatar", page: "avatar" },
-  { path: "/password", label: "settings.password", page: "password" },
-  { path: "/email", label: "settings.emails" },
-  { path: "/ssh", label: "settings.ssh_keys" },
-  { path: "/security", label: "settings.security" },
-  { path: "/repositories", label: "settings.repos", page: "repositories" },
-  { path: "/organizations", label: "settings.orgs", page: "organizations" },
-  { path: "/applications", label: "settings.applications" },
-  { path: "/delete", label: "settings.delete", page: "delete" },
-];
-
-const ALERT_CLASS =
-  "mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)";
-
-// UserSettingsLayout heads the settings pages of the viewer, with links
-// between them.
-function UserSettingsLayout({ active, children }: { active: SettingsPage; children: ReactNode }) {
-  const { t } = useTranslation();
-  const current = t(NAV.find((item) => item.page === active)?.label ?? "settings");
-  usePageTitle(current);
-  return (
-    <main className="flex-1">
-      <SettingsLayout
-        label={t("settings")}
-        current={current}
-        nav={NAV.map((item) => (
-          <SettingsNavItem key={item.path} active={item.page === active} destructive={item.page === "delete"}>
-            {item.page ? (
-              <Link to={`/user/settings${item.path}`} activeOptions={{ exact: true }}>
-                {t(item.label)}
-              </Link>
-            ) : (
-              <a href={subUrl(`/user/settings${item.path}`)}>{t(item.label)}</a>
-            )}
-          </SettingsNavItem>
-        ))}
-      >
-        {children}
-      </SettingsLayout>
-    </main>
-  );
-}
-
-// formErrors returns the messages for the fields of a failed form, and the
-// message for the whole form when no field is to blame.
-function formErrors(error: Error | null) {
-  const fields = error instanceof FormError ? error.fields : {};
-  const formError = error && Object.keys(fields).length === 0 ? error.message : null;
-  return { fields, formError };
-}
 
 const PROFILE_FIELDS = ["name", "fullName", "website", "location"] as const;
 
@@ -143,11 +85,7 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
         <fieldset disabled={save.isPending} className="contents">
           <h1 className="mb-2 text-xl font-semibold">{t("settings.public_profile")}</h1>
           <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("settings.profile_desc")}</p>
-          {formError ? (
-            <div role="alert" className={ALERT_CLASS}>
-              {formError}
-            </div>
-          ) : null}
+          <FormAlert message={formError} />
           <div className="flex flex-col gap-5">
             <FormField
               id="name"
@@ -238,11 +176,7 @@ function GravatarForm({ email: initialEmail }: { email: string }) {
   return (
     <form onSubmit={onSubmit} noValidate className="mt-8 border-t border-(--color-border) pt-6">
       <fieldset disabled={save.isPending} className="contents">
-        {formError ? (
-          <div role="alert" className={ALERT_CLASS}>
-            {formError}
-          </div>
-        ) : null}
+        <FormAlert message={formError} />
         <div className="flex flex-col gap-3">
           <FormField
             id="avatarEmail"
@@ -312,11 +246,7 @@ export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
       {isLocal ? (
         <form onSubmit={onSubmit} noValidate>
           <fieldset disabled={save.isPending} className="contents">
-            {formError ? (
-              <div role="alert" className={ALERT_CLASS}>
-                {formError}
-              </div>
-            ) : null}
+            <FormAlert message={formError} />
             <div className="flex flex-col gap-5">
               <FormField
                 id="oldPassword"
