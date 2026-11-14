@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   Building2,
   ChevronDown,
@@ -8,15 +8,18 @@ import {
   LogOut,
   Menu,
   Plus,
+  Search,
   UserCog,
   User as UserIcon,
 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchInput } from "@/components/CodeSearchInput";
+import { CommandPalette } from "@/components/CommandPalette";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { paletteShortcut } from "@/lib/palette";
+import { signOut } from "@/lib/sign-out";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
@@ -24,6 +27,7 @@ import type { UserInfo } from "@/lib/user-info";
 export function Navbar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const user = useUserInfo();
 
   return (
@@ -64,7 +68,28 @@ export function Navbar() {
           )}
         </div>
 
-        <NavSearch />
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          aria-keyshortcuts={paletteShortcut.aria}
+          className="hidden h-8 w-48 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
+        >
+          <Search className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1 truncate text-left">{t("palette.placeholder")}</span>
+          <kbd className="shrink-0 rounded border border-(--color-border) px-1.5 font-sans text-[11px] leading-5">
+            {paletteShortcut.label}
+          </kbd>
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          aria-label={t("palette.title")}
+          aria-keyshortcuts={paletteShortcut.aria}
+          className="ml-auto inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
+        >
+          <Search className="size-[18px]" aria-hidden />
+        </button>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
         <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <SettingsMenu />
@@ -85,7 +110,7 @@ export function Navbar() {
           )}
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:hidden">
+        <div className="flex shrink-0 items-center gap-1 sm:hidden">
           <SettingsMenu />
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger
@@ -185,23 +210,6 @@ export function Navbar() {
         </div>
       </nav>
     </header>
-  );
-}
-
-// NavSearch searches the code of all repositories the viewer can read.
-function NavSearch() {
-  const navigate = useNavigate();
-  // Start empty again after each search.
-  const location = useRouterState({ select: (state) => state.location.href });
-  const onSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const q = (new FormData(event.currentTarget).get("q") as string | null)?.trim() ?? "";
-    void navigate({ to: "/search", search: { q: q || undefined } });
-  };
-  return (
-    <form role="search" onSubmit={onSearch} className="hidden w-48 shrink md:flex lg:w-64">
-      <CodeSearchInput key={location} query="" global compact />
-    </form>
   );
 }
 
@@ -379,27 +387,6 @@ function SignOutForm({ children }: { children: React.ReactNode }) {
       {children}
     </form>
   );
-}
-
-async function signOut() {
-  let redirectTo = subUrl("/");
-  try {
-    const res = await fetch(subUrl("/api/web/user/sign-out"), {
-      method: "POST",
-      credentials: "same-origin",
-    });
-    if (res.ok && res.status !== 204) {
-      const body = (await res.json().catch(() => null)) as {
-        redirectTo?: string;
-      } | null;
-      if (body?.redirectTo) {
-        redirectTo = body.redirectTo;
-      }
-    }
-  } catch (err) {
-    console.error("signOut: request failed", err);
-  }
-  window.location.assign(redirectTo);
 }
 
 function MobileLink({

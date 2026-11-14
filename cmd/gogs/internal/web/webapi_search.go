@@ -171,6 +171,12 @@ func getRepoSearch(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 	}
 
 	query := parseCodeQuery(c.Query("q"))
+	// A smaller limit, e.g., for showing a few matches as the viewer types,
+	// makes the search stop sooner.
+	limit := c.QueryInt("limit")
+	if limit <= 0 || limit > codeSearchMaxResults {
+		limit = codeSearchMaxResults
+	}
 	resp = &repoSearchResponse{
 		Ref:     ref.Name,
 		RefType: ref.Type,
@@ -186,8 +192,8 @@ func getRepoSearch(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 		}
 		searchCtx, cancel := context.WithTimeout(ctx, codeSearchTimeout)
 		results, truncated, err := gitRepo.Grep(searchCtx, ref.Commit.ID.String(), query.Keyword, git.GrepOptions{
-			MaxResults:        codeSearchMaxResults,
-			MaxResultsPerFile: codeSearchMaxResultsPerFile,
+			MaxResults:        limit,
+			MaxResultsPerFile: min(limit, codeSearchMaxResultsPerFile),
 			ContextLines:      codeSearchContextLines,
 			Pathspecs:         query.pathspecs(),
 		})
@@ -313,26 +319,15 @@ func codeSearchRepos(ctx context.Context, user *database.User, query codeQuery) 
 
 	var candidates []*database.Repository
 	if query.Repo != "" {
-		ownerName, name := path.Split(query.Repo)
-		owner, err := database.Handle.Users().GetByUsername(ctx, strings.TrimSuffix(ownerName, "/"))
-		if database.IsErrUserNotExist(err) {
-			return nil, nil
-		} else if err != nil {
-			return nil, errors.Wrap(err, "get owner")
-		}
-		repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, name)
-		if database.IsErrRepoNotExist(err) {
-			return nil, nil
-		} else if err != nil {
+		repo, err := repoByFullName(ctx, query.Repo)
+		if err != nil {
 			return nil, errors.Wrap(err, "get repository")
+		} else if repo == nil {
+			return nil, nil
 		}
-		repo.Owner = owner
 		candidates = []*database.Repository{repo}
 	} else {
-		opts := &database.SearchRepoOptions{OrderBy: "updated_unix DESC", PageSize: 100}
-		if user != nil {
-			opts.UserID = user.ID
-		}
+		var ownerID int64
 		if query.Owner != "" {
 			owner, err := database.Handle.Users().GetByUsername(ctx, query.Owner)
 			if database.IsErrUserNotExist(err) {
@@ -340,20 +335,11 @@ func codeSearchRepos(ctx context.Context, user *database.User, query codeQuery) 
 			} else if err != nil {
 				return nil, errors.Wrap(err, "get owner")
 			}
-			opts.OwnerID = owner.ID
+			ownerID = owner.ID
 		}
-		for opts.Page = 1; len(candidates) < codeSearchMaxRepos; opts.Page++ {
-			repos, _, err := database.SearchRepositoryByName(opts)
-			if err != nil {
-				return nil, errors.Wrap(err, "search repositories")
-			}
-			if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
-				return nil, errors.Wrap(err, "load repository attributes")
-			}
-			candidates = append(candidates, repos...)
-			if len(repos) < opts.PageSize {
-				break
-			}
+		var err error
+		if candidates, err = viewerRepoCandidates(user, ownerID); err != nil {
+			return nil, errors.Wrap(err, "list repositories")
 		}
 	}
 
@@ -367,6 +353,128 @@ func codeSearchRepos(ctx context.Context, user *database.User, query codeQuery) 
 		repos = append(repos, repo)
 	}
 	return repos, nil
+}
+
+// repoByFullName returns the repository of the "owner/name", with its owner
+// loaded, or nil when there is none.
+func repoByFullName(ctx context.Context, fullName string) (*database.Repository, error) {
+	ownerName, name := path.Split(fullName)
+	owner, err := database.Handle.Users().GetByUsername(ctx, strings.TrimSuffix(ownerName, "/"))
+	if database.IsErrUserNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "get owner")
+	}
+	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, name)
+	if database.IsErrRepoNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "get repository")
+	}
+	repo.Owner = owner
+	return repo, nil
+}
+
+// issueSearchLimit is how many issues and pull requests a search lists, which
+// is for picking one rather than browsing.
+const issueSearchLimit = 10
+
+type issueSearchItem struct {
+	// Repo is the "owner/name" of the repository.
+	Repo     string `json:"repo"`
+	Index    int64  `json:"index"`
+	Title    string `json:"title"`
+	IsPull   bool   `json:"isPull"`
+	IsClosed bool   `json:"isClosed"`
+}
+
+type issueSearchResponse struct {
+	Items []issueSearchItem `json:"items"`
+}
+
+// getIssueSearch finds the issues and the pull requests whose titles contain
+// the "q" query, or whose number it is, in the repositories the viewer can
+// see them in, or only in the "owner/name" of the "repo" query.
+func getIssueSearch(c flamego.Context, user *database.User) (statusCode int, resp *issueSearchResponse, err error) {
+	ctx := c.Request().Context()
+	resp = &issueSearchResponse{Items: []issueSearchItem{}}
+	keyword := strings.TrimSpace(c.Query("q"))
+	if keyword == "" {
+		return http.StatusOK, resp, nil
+	}
+
+	var candidates []*database.Repository
+	if fullName := c.Query("repo"); fullName != "" {
+		repo, err := repoByFullName(ctx, fullName)
+		if err != nil {
+			log.Error("getIssueSearch: get repository %q: %v", fullName, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
+		} else if repo == nil {
+			return http.StatusOK, resp, nil
+		}
+		candidates = []*database.Repository{repo}
+	} else if candidates, err = viewerRepoCandidates(user, 0); err != nil {
+		log.Error("getIssueSearch: list repositories: %v", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")
+	}
+
+	// 🚨 SECURITY: Check what the viewer can see of each repository, like the
+	// issue and the pull request lists do.
+	opts := database.SearchIssuesOptions{Keyword: keyword, Limit: issueSearchLimit}
+	repos := make(map[int64]*database.Repository, len(candidates))
+	for _, repo := range candidates {
+		viewer := newViewer(ctx, user, repo.Owner, repo)
+		if repo.EnableIssues && !repo.EnableExternalTracker && (viewer.CanRead() || repo.CanGuestViewIssues()) {
+			opts.IssueRepoIDs = append(opts.IssueRepoIDs, repo.ID)
+			repos[repo.ID] = repo
+		}
+		if viewer.CanRead() && repo.AllowsPulls() {
+			opts.PullRepoIDs = append(opts.PullRepoIDs, repo.ID)
+			repos[repo.ID] = repo
+		}
+	}
+	issues, err := database.SearchIssues(opts)
+	if err != nil {
+		log.Error("getIssueSearch: search %q: %v", keyword, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "search issues")
+	}
+	for _, issue := range issues {
+		repo := repos[issue.RepoID]
+		resp.Items = append(resp.Items, issueSearchItem{
+			Repo:     repo.Owner.Name + "/" + repo.Name,
+			Index:    issue.Index,
+			Title:    issue.Title,
+			IsPull:   issue.IsPull,
+			IsClosed: issue.IsClosed,
+		})
+	}
+	return http.StatusOK, resp, nil
+}
+
+// viewerRepoCandidates lists the repositories the user can see in lists, the
+// most recently updated first, at most codeSearchMaxRepos of them, with their
+// owners loaded. The list also has private repositories whose wiki or issues
+// are public, so callers check what the user can read of each.
+func viewerRepoCandidates(user *database.User, ownerID int64) ([]*database.Repository, error) {
+	opts := &database.SearchRepoOptions{OrderBy: "updated_unix DESC", PageSize: 100, OwnerID: ownerID}
+	if user != nil {
+		opts.UserID = user.ID
+	}
+	var candidates []*database.Repository
+	for opts.Page = 1; len(candidates) < codeSearchMaxRepos; opts.Page++ {
+		repos, _, err := database.SearchRepositoryByName(opts)
+		if err != nil {
+			return nil, errors.Wrap(err, "search repositories")
+		}
+		if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
+			return nil, errors.Wrap(err, "load repository attributes")
+		}
+		candidates = append(candidates, repos...)
+		if len(repos) < opts.PageSize {
+			break
+		}
+	}
+	return candidates, nil
 }
 
 // truncateLine cuts a long line, e.g., of minified code, to the length shown,

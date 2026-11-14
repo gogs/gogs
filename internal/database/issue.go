@@ -3,12 +3,14 @@ package database
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
+	"xorm.io/builder"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
@@ -973,6 +975,65 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 	}
 
 	return sess
+}
+
+// SearchIssuesOptions narrows down a search of issues and pull requests.
+type SearchIssuesOptions struct {
+	// IssueRepoIDs are the repositories whose issues to search, and
+	// PullRepoIDs those whose pull requests to search.
+	IssueRepoIDs []int64
+	PullRepoIDs  []int64
+	// Keyword is matched against titles, ignoring case. When it is a number,
+	// with or without "#", the issue with that number matches first.
+	Keyword string
+	Limit   int
+}
+
+// SearchIssues returns the issues and pull requests that match the keyword,
+// open ones first, then the most recently updated.
+func SearchIssues(opts SearchIssuesOptions) ([]*Issue, error) {
+	keyword := strings.TrimSpace(opts.Keyword)
+	if keyword == "" || opts.Limit <= 0 {
+		return []*Issue{}, nil
+	}
+	scope := builder.NewCond()
+	if len(opts.IssueRepoIDs) > 0 {
+		scope = scope.Or(builder.Eq{"is_pull": false}.And(builder.In("repo_id", opts.IssueRepoIDs)))
+	}
+	if len(opts.PullRepoIDs) > 0 {
+		scope = scope.Or(builder.Eq{"is_pull": true}.And(builder.In("repo_id", opts.PullRepoIDs)))
+	}
+	if !scope.IsValid() {
+		return []*Issue{}, nil
+	}
+
+	issues := make([]*Issue, 0, opts.Limit)
+	if index, err := strconv.ParseInt(strings.TrimPrefix(keyword, "#"), 10, 64); err == nil && index > 0 {
+		// The bean condition quotes the column, which is a reserved word in
+		// some databases.
+		if err = x.Where(scope).Limit(opts.Limit).Find(&issues, &Issue{Index: index}); err != nil {
+			return nil, errors.Wrap(err, "find by index")
+		}
+	}
+
+	var byTitle []*Issue
+	err := x.Where(scope).
+		And(builder.Like{"LOWER(name)", strings.ToLower(keyword)}).
+		OrderBy("is_closed ASC, updated_unix DESC").
+		Limit(opts.Limit).
+		Find(&byTitle)
+	if err != nil {
+		return nil, errors.Wrap(err, "find by title")
+	}
+	for _, issue := range byTitle {
+		if len(issues) == opts.Limit {
+			break
+		}
+		if !slices.ContainsFunc(issues, func(found *Issue) bool { return found.ID == issue.ID }) {
+			issues = append(issues, issue)
+		}
+	}
+	return issues, nil
 }
 
 // IssuesCount returns the number of issues by given conditions.

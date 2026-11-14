@@ -1,7 +1,8 @@
 import { loaderResponseError } from "@/lib/loader-error";
 
-export async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "same-origin" });
+// A signal cancels the request, e.g., when the answer is no longer needed.
+export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { credentials: "same-origin", signal });
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as T;
 }
