@@ -15,7 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -37,8 +37,9 @@ import { cn } from "@/lib/utils";
 
 // Mobile collapses the tab strip after this many items into a hamburger
 // overflow menu. The active tab is always pulled into the inline group so the
-// user can see the active indicator without opening the menu.
-const MOBILE_INLINE_LIMIT = 3;
+// user can see the active indicator without opening the menu. At 320px wide,
+// only the widest tab with its count fits next to the menu.
+const MOBILE_INLINE_LIMIT = 1;
 
 export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settings";
 
@@ -248,16 +249,6 @@ function RepoTabs({
   // swap it into the last inline slot so the indicator stays visible without
   // opening the menu.
   const activeIndex = tabs.findIndex((t) => t.key === activeTab);
-  // Scroll the inline tabs so the active one is fully visible, since it can
-  // sit in the last inline slot past the edge of narrow screens.
-  const inlineRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const scroller = inlineRef.current;
-    const active = scroller?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (!scroller || !active) return;
-    const overflow = active.offsetLeft + active.offsetWidth - scroller.clientWidth;
-    if (overflow > 0) scroller.scrollLeft = overflow;
-  }, [activeTab]);
   let mobileInline = tabs.slice(0, MOBILE_INLINE_LIMIT);
   let mobileOverflow = tabs.slice(MOBILE_INLINE_LIMIT);
   if (activeIndex >= MOBILE_INLINE_LIMIT) {
@@ -268,16 +259,13 @@ function RepoTabs({
 
   return (
     <>
-      {/* Mobile: first 3 inline + hamburger overflow for the rest. The inline
-          tabs scroll when they do not fit, keeping the overflow menu in view. */}
+      {/* Mobile: the inline tabs + hamburger overflow for the rest. */}
       <nav className="-mb-px flex items-end gap-1 sm:hidden" aria-label={t("repository")}>
-        <div ref={inlineRef} className="relative flex min-w-0 flex-1 overflow-x-auto">
-          {mobileInline.map((tab) => (
-            <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
-              {tab.label}
-            </TabLink>
-          ))}
-        </div>
+        {mobileInline.map((tab) => (
+          <TabLink key={tab.key} href={tab.href} icon={tab.icon} active={activeTab === tab.key} badge={tab.badge}>
+            {tab.label}
+          </TabLink>
+        ))}
         {mobileOverflow.length > 0 ? <OverflowMenu tabs={mobileOverflow} activeTab={activeTab} t={t} /> : null}
       </nav>
 
