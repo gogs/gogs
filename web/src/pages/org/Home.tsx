@@ -14,7 +14,6 @@ import { subUrl } from "@/lib/url";
 // profiles of individual users.
 export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerReposPage }) {
   const { t } = useTranslation();
-  const orgLink = subUrl(`/org/${org.name}`);
   const isWebsiteLink = org.website ? /^https?:\/\//i.test(org.website) : false;
 
   return (
@@ -32,13 +31,14 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               {org.viewerIsOwner ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <a
-                      href={`${orgLink}/settings`}
+                    <Link
+                      to="/org/$org/settings"
+                      params={{ org: org.name }}
                       aria-label={t("org.settings")}
                       className="grid size-8 shrink-0 place-items-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                     >
                       <Settings className="size-4" aria-hidden />
-                    </a>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent>{t("org.settings")}</TooltipContent>
                 </Tooltip>

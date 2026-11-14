@@ -119,7 +119,7 @@ export class FormError extends Error {
   }
 }
 
-async function submit<T>(method: "POST" | "PATCH", url: string, body: unknown): Promise<T> {
+async function submit<T>(method: "POST" | "PATCH" | "DELETE", url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
     credentials: "same-origin",
@@ -130,6 +130,7 @@ async function submit<T>(method: "POST" | "PATCH", url: string, body: unknown): 
     const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
     throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {});
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
@@ -164,4 +165,56 @@ export function addOrgTeamRepo(org: string, team: string, repo: string) {
 
 export function removeOrgTeamRepo(org: string, team: string, repo: string) {
   return send("DELETE", teamURL(org, team, `/repos/${encodeURIComponent(repo)}`));
+}
+
+// createOrg creates an organization owned by the viewer and returns its name.
+export async function createOrg(orgName: string) {
+  return (await submit<{ name: string }>("POST", subUrl("/api/web/orgs"), { orgName })).name;
+}
+
+export interface OrgSettingsData {
+  name: string;
+  fullName: string;
+  description: string;
+  website: string;
+  location: string;
+  avatarURL: string;
+  hasCustomAvatar: boolean;
+  // Only sent to site admins.
+  maxRepoCreation?: number;
+}
+
+export interface OrgSettingsForm {
+  name: string;
+  fullName: string;
+  description: string;
+  website: string;
+  location: string;
+  maxRepoCreation?: number;
+}
+
+export function fetchOrgSettings(org: string) {
+  return fetchJSON<OrgSettingsData>(orgURL(org, "/settings"));
+}
+
+// updateOrgSettings changes the organization and returns its name, which
+// changes when it is renamed.
+export async function updateOrgSettings(org: string, form: OrgSettingsForm) {
+  return (await submit<{ name: string }>("PATCH", orgURL(org, "/settings"), form)).name;
+}
+
+export async function uploadOrgAvatar(org: string, file: File) {
+  const body = new FormData();
+  body.append("avatar", file);
+  const res = await fetch(orgURL(org, "/settings/avatar"), { method: "PUT", credentials: "same-origin", body });
+  if (!res.ok) throw await loaderResponseError(res);
+}
+
+export function deleteOrgAvatar(org: string) {
+  return send("DELETE", orgURL(org, "/settings/avatar"));
+}
+
+// deleteOrg deletes the organization once the viewer confirms their password.
+export function deleteOrg(org: string, password: string) {
+  return submit<void>("DELETE", orgURL(org, ""), { password });
 }

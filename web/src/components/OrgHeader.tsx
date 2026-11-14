@@ -1,23 +1,25 @@
 import { Link } from "@tanstack/react-router";
-import { User, Users } from "lucide-react";
+import { Settings, User, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { PageTabs } from "@/components/PageTabs";
+import { type PageTab, PageTabs } from "@/components/PageTabs";
 import type { OrgProfileData } from "@/lib/queries/user";
 
 const ORG_TAB_PATHS = {
   people: "/org/$org/members",
   teams: "/org/$org/teams",
+  settings: "/org/$org/settings",
 } as const;
 
 // OrgHeader heads the pages of an organization that only its members see,
 // with tabs for its people and its teams.
-export function OrgHeader({ org, activeTab }: { org: OrgProfileData; activeTab: "people" | "teams" }) {
+export function OrgHeader({ org, activeTab }: { org: OrgProfileData; activeTab: "people" | "teams" | "settings" }) {
   const { t } = useTranslation();
-  const tabs = [
+  const tabs: PageTab<keyof typeof ORG_TAB_PATHS>[] = [
     { key: "people", icon: User, label: t("org.people"), count: org.memberCount },
     { key: "teams", icon: Users, label: t("org.teams"), count: org.teamCount },
-  ] as const;
+    ...(org.viewerIsOwner ? [{ key: "settings" as const, icon: Settings, label: t("org.settings") }] : []),
+  ];
 
   return (
     <div className="border-b border-(--color-border)">
@@ -41,8 +43,8 @@ export function OrgHeader({ org, activeTab }: { org: OrgProfileData; activeTab: 
           label={org.fullName || org.name}
           tabs={tabs}
           active={activeTab}
-          // Both tabs with their counts fit at 320px.
-          inline={2}
+          // People and teams with their counts fit at 320px, but not next to the menu.
+          inline={tabs.length > 2 ? 1 : 2}
           renderLink={(tab, props) => <Link to={ORG_TAB_PATHS[tab.key]} params={{ org: org.name }} {...props} />}
         />
       </div>

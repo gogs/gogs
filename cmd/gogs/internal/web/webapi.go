@@ -204,7 +204,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		}
 		f.Group("/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireAuthenticated, withDashboardOwner)
+		f.Post("/orgs", requireAuthenticated, bindJSON(orgCreateRequest{}), postOrg)
 		f.Group("/orgs/{org}", func() {
+			f.Delete("", bindJSON(orgDeleteRequest{}), deleteOrg)
+			f.Combo("/settings").Get(getOrgSettings).Patch(bindJSON(orgSettingsRequest{}), patchOrgSettings)
 			f.Get("/members", getOrgMembers)
 			f.Combo("/members/{username}").Put(putOrgMember).Delete(deleteOrgMember)
 			f.Combo("/members/{username}/public").Put(putOrgMemberPublic).Delete(deleteOrgMemberPublic)
@@ -221,6 +224,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
 	}, enforceWebAPIMaxBodySize)
+	f.Combo("/api/web/orgs/{org}/settings/avatar", limitAvatarUpload, requireAuthenticated, withOrgMembership).
+		Put(putOrgAvatar).
+		Delete(deleteOrgAvatar)
 }
 
 // fieldErrors maps JSON field names to per-field localized messages. A non-nil
