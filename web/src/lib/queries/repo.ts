@@ -14,6 +14,7 @@ export interface RepoHeaderData {
   avatarURL: string;
   visibility: "public" | "private";
   viewerCanAdminister: boolean;
+  viewerCanWrite: boolean;
   issuesEnabled: boolean;
   pullRequestsEnabled: boolean;
   wikiEnabled: boolean;
@@ -25,6 +26,9 @@ export interface RepoHeaderData {
   viewerIsWatching: boolean;
   viewerIsStarring: boolean;
   mirrorOf?: string;
+  // defaultBranch and cloneLinks are set for viewers who can read the code.
+  defaultBranch?: string;
+  cloneLinks?: RepoCloneLinks;
 }
 
 export function repoHeaderQuery(owner: string, name: string) {
@@ -1239,6 +1243,44 @@ export interface CodeSearchData {
 export function fetchRepoSearch(owner: string, name: string, splat: string, q?: string) {
   const qs = q ? `?${new URLSearchParams({ q }).toString()}` : "";
   return fetchJSON<RepoSearchData>(repoURL(owner, name, `/search/${refPath(splat)}${qs}`));
+}
+
+// fetchRepoSearchPreview lists the first few lines of the default branch
+// that contain the keyword, e.g., as the viewer types.
+export function fetchRepoSearchPreview(owner: string, name: string, q: string, limit: number, signal?: AbortSignal) {
+  const query = new URLSearchParams({ q, limit: String(limit) });
+  return fetchJSON<RepoSearchData>(repoURL(owner, name, `/search?${query.toString()}`), signal);
+}
+
+export interface RepoPathsData {
+  ref: string;
+  commitID: string;
+  paths: string[];
+  // truncated is set when the tree has more files than paths lists.
+  truncated: boolean;
+}
+
+// fetchRepoPaths lists the paths of every file of the default branch.
+export function fetchRepoPaths(owner: string, name: string, signal?: AbortSignal) {
+  return fetchJSON<RepoPathsData>(repoURL(owner, name, "/paths"), signal);
+}
+
+export interface IssueSearchItem {
+  // repo is the "owner/name" of the repository.
+  repo: string;
+  index: number;
+  title: string;
+  isPull: boolean;
+  isClosed: boolean;
+}
+
+// fetchIssueSearch finds the issues and pull requests whose titles contain
+// the keyword, or whose number it is, in every repository the viewer can see
+// them in, or only in the "owner/name" of repo.
+export function fetchIssueSearch(q: string, repo?: string, signal?: AbortSignal) {
+  const query = new URLSearchParams({ q });
+  if (repo) query.set("repo", repo);
+  return fetchJSON<{ items: IssueSearchItem[] }>(subUrl(`/api/web/search/issues?${query.toString()}`), signal);
 }
 
 export interface RepoCompareData {

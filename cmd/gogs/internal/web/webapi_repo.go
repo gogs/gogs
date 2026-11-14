@@ -34,8 +34,13 @@ type repoHeader struct {
 	WikiEnabled          bool   `json:"wikiEnabled"`
 
 	ViewerCanAdminister bool `json:"viewerCanAdminister"`
+	ViewerCanWrite      bool `json:"viewerCanWrite"`
 	ViewerIsWatching    bool `json:"viewerIsWatching"`
 	ViewerIsStarring    bool `json:"viewerIsStarring"`
+	// DefaultBranch and CloneLinks are set for viewers who can read the
+	// code.
+	DefaultBranch string          `json:"defaultBranch,omitempty"`
+	CloneLinks    *repoCloneLinks `json:"cloneLinks,omitempty"`
 }
 
 func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
@@ -73,8 +78,13 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 		WikiEnabled:          wikiEnabled,
 
 		ViewerCanAdminister: repoCtx.Viewer.CanAdminister(),
+		ViewerCanWrite:      repoCtx.Viewer.CanWrite(),
 		ViewerIsWatching:    database.IsWatching(repoCtx.Viewer.ID(), repo.ID),
 		ViewerIsStarring:    database.IsStarring(repoCtx.Viewer.ID(), repo.ID),
+	}
+	if repoCtx.Viewer.CanRead() {
+		resp.DefaultBranch = repo.DefaultBranch
+		resp.CloneLinks = repoCloneLinksOf(owner.Name, repo.Name, false)
 	}
 
 	if repo.IsMirror {

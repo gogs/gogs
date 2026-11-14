@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { BookMarked, Building2, FileCode, Search, User, X } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { fetchJSON } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
+import { useDebounced } from "@/lib/use-debounced";
 import { cn } from "@/lib/utils";
 
 type QualifierKey = "org" | "user" | "repo" | "path";
@@ -43,17 +44,6 @@ interface Suggestion {
 
 interface ExploreList<T> {
   items: T[];
-}
-
-// useDebounced returns the value once it stopped changing for a moment, so
-// that typing does not ask the server at every key.
-function useDebounced<T>(value: T, delay = 150) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
 }
 
 // useValueSuggestions suggests the values of a qualifier from the owners and
@@ -103,15 +93,12 @@ export function CodeSearchInput({
   query,
   global,
   autoFocus,
-  compact,
 }: {
   query: string;
   // global is set for a search of all repositories, which takes org:, user:
   // and repo: besides path:.
   global?: boolean;
   autoFocus?: boolean;
-  // compact fits the box in the navbar.
-  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const listID = useId();
@@ -231,7 +218,7 @@ export function CodeSearchInput({
   };
 
   return (
-    <div className={cn("relative min-w-0 flex-1", compact && "w-full")}>
+    <div className="relative min-w-0 flex-1">
       <div
         className={cn(
           "flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-(--color-input) bg-(--color-background) py-0.5 pr-1 pl-2.5 text-sm",
@@ -300,10 +287,7 @@ export function CodeSearchInput({
         role="listbox"
         aria-label={t("repo.code_search.suggestions")}
         hidden={!expanded}
-        className={cn(
-          "absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) p-1 text-sm text-(--color-popover-foreground) shadow-md",
-          compact && "min-w-72",
-        )}
+        className="absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) p-1 text-sm text-(--color-popover-foreground) shadow-md"
       >
         {suggestions.map((suggestion, i) => (
           <li
