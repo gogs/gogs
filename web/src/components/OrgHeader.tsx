@@ -2,16 +2,21 @@ import { Link } from "@tanstack/react-router";
 import { User, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { PageTabs } from "@/components/PageTabs";
 import type { OrgProfileData } from "@/lib/queries/user";
-import { cn } from "@/lib/utils";
+
+const ORG_TAB_PATHS = {
+  people: "/org/$org/members",
+  teams: "/org/$org/teams",
+} as const;
 
 // OrgHeader heads the pages of an organization that only its members see,
 // with tabs for its people and its teams.
 export function OrgHeader({ org, activeTab }: { org: OrgProfileData; activeTab: "people" | "teams" }) {
   const { t } = useTranslation();
   const tabs = [
-    { key: "people", to: "/org/$org/members", icon: User, label: t("org.people"), count: org.memberCount },
-    { key: "teams", to: "/org/$org/teams", icon: Users, label: t("org.teams"), count: org.teamCount },
+    { key: "people", icon: User, label: t("org.people"), count: org.memberCount },
+    { key: "teams", icon: Users, label: t("org.teams"), count: org.teamCount },
   ] as const;
 
   return (
@@ -32,33 +37,14 @@ export function OrgHeader({ org, activeTab }: { org: OrgProfileData; activeTab: 
             {org.fullName || org.name}
           </Link>
         </h1>
-        <nav aria-label={org.fullName || org.name} className="-mb-px flex overflow-x-auto">
-          {tabs.map(({ key, to, icon: Icon, label, count }) => {
-            const active = key === activeTab;
-            return (
-              <Link
-                key={key}
-                to={to}
-                params={{ org: org.name }}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
-                  active
-                    ? "border-(--color-primary) font-semibold text-(--color-foreground)"
-                    : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-                {label}
-                {count !== undefined ? (
-                  <span className="rounded-full bg-(--color-secondary) px-2 text-xs/5 font-medium tabular-nums text-(--color-secondary-foreground)">
-                    {count}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
+        <PageTabs
+          label={org.fullName || org.name}
+          tabs={tabs}
+          active={activeTab}
+          // Both tabs with their counts fit at 320px.
+          inline={2}
+          renderLink={(tab, props) => <Link to={ORG_TAB_PATHS[tab.key]} params={{ org: org.name }} {...props} />}
+        />
       </div>
     </div>
   );
