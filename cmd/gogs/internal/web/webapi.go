@@ -196,6 +196,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Delete("/passkeys/{id}", requireRecentAuth, deleteUserPasskey)
 				f.Combo("/tokens").Get(getUserAccessTokens).Post(requireRecentAuth, bindJSON(userAccessTokenRequest{}), postUserAccessToken)
 				f.Delete("/tokens/{id}", requireRecentAuth, deleteUserAccessToken)
+				f.Combo("/sessions").Get(getUserLoginSessions).Delete(deleteUserLoginSessions)
+				f.Delete("/sessions/{id}", deleteUserLoginSession)
 			}, requireSignIn)
 		})
 		f.Group("/{owner}/{repo}", func() {

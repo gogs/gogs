@@ -29,7 +29,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 9
+	const wantTables = 10
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -167,6 +167,16 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Size:      100,
 			Storage:   lfsx.StorageLocal,
 			CreatedAt: time.Unix(1588568886, 0).UTC(),
+		},
+
+		&LoginSession{
+			ID:           1,
+			UserID:       1,
+			TokenHash:    cryptox.SHA256("e2a3c6f9-5d8b-4c41-9a07-3b1f2d6e8c55"),
+			UserAgent:    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Safari/605.1.15",
+			IP:           "203.0.113.7",
+			CreatedUnix:  1588568886,
+			LastSeenUnix: 1588572486, // 1 hour later
 		},
 
 		&LoginSource{
