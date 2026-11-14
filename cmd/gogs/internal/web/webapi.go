@@ -149,6 +149,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
 				Post(bindJSON(userSignInRequest{}), postUserSignIn)
+			f.Post("/sign-in/passkey/challenge", postUserSignInPasskeyChallenge)
+			f.Post("/sign-in/passkey", postUserSignInPasskey)
 			f.Group("/mfa", func() {
 				f.Combo("").
 					Get(getUserMFA).
@@ -180,6 +182,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					f.Get("/enrollment", getUserTwoFactorEnrollment)
 					f.Combo("/recovery-codes").Get(getUserRecoveryCodes).Post(postUserRecoveryCodes)
 				})
+				f.Combo("/passkeys").Get(getUserPasskeys).Post(bindJSON(userPasskeyRequest{}), postUserPasskey)
+				f.Post("/passkeys/registration", bindJSON(userPasskeyRegistrationRequest{}), postUserPasskeyRegistration)
+				f.Delete("/passkeys/{id}", deleteUserPasskey)
 				f.Combo("/tokens").Get(getUserAccessTokens).Post(bindJSON(userAccessTokenRequest{}), postUserAccessToken)
 				f.Delete("/tokens/{id}", deleteUserAccessToken)
 			}, requireSignIn)
