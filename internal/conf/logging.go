@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -74,6 +75,9 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 
 	for i := range modes {
 		modes[i] = strings.ToLower(strings.TrimSpace(modes[i]))
+		if slices.Contains(lc.Modes, modes[i]) {
+			continue
+		}
 		secName := "log." + modes[i]
 		sec, err := cfg.GetSection(secName)
 		if err != nil {
@@ -83,7 +87,7 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 		c := &loggerConf{
 			Name:   modes[i],
 			Level:  strings.ToLower(sec.Key("LEVEL").MustString(parentLevel)),
-			Buffer: sec.Key("BUFFER_LEN").MustInt64(cfg.Section("log").Key("BUFFER_LEN").MustInt64(100)),
+			Buffer: max(sec.Key("BUFFER_LEN").MustInt64(cfg.Section("log").Key("BUFFER_LEN").MustInt64(100)), 0),
 		}
 		switch modes[i] {
 		case ModeConsole:
@@ -104,6 +108,9 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 			c.Username = sec.Key("USERNAME").String()
 		default:
 			continue
+		}
+		if (modes[i] == ModeSlack || modes[i] == ModeDiscord) && c.URL == "" {
+			return nil, hasConsole, errors.Errorf("missing URL in configuration section [%s] for %q logger", secName, modes[i])
 		}
 
 		lc.Modes = append(lc.Modes, modes[i])

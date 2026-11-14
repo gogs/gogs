@@ -63,6 +63,53 @@ LEVEL = error
 		assert.Equal(t, "error", got.Configs[0].Level)
 	})
 
+	t.Run("duplicate modes", func(t *testing.T) {
+		f, err := ini.Load([]byte(`
+[log]
+MODE = file, console, File
+
+[log.file]
+[log.console]
+`))
+		require.NoError(t, err)
+
+		got, _, err := initLogConf(f, false)
+		require.NoError(t, err)
+		assert.Equal(t, []string{ModeFile, ModeConsole}, got.Modes)
+		assert.Len(t, got.Configs, 2)
+	})
+
+	t.Run("negative buffer length", func(t *testing.T) {
+		f, err := ini.Load([]byte(`
+[log]
+MODE = slack
+BUFFER_LEN = -1
+
+[log.slack]
+URL = https://slack.com
+`))
+		require.NoError(t, err)
+
+		got, _, err := initLogConf(f, false)
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), got.Configs[0].Buffer)
+	})
+
+	t.Run("missing webhook URL", func(t *testing.T) {
+		f, err := ini.Load([]byte(`
+[log]
+MODE = console, discord
+
+[log.console]
+[log.discord]
+`))
+		require.NoError(t, err)
+
+		got, _, err := initLogConf(f, false)
+		assert.EqualError(t, err, `missing URL in configuration section [log.discord] for "discord" logger`)
+		assert.Nil(t, got)
+	})
+
 	f, err := ini.Load([]byte(`
 [log]
 ROOT_PATH = log
@@ -166,7 +213,9 @@ func Test_rotatingWriter(t *testing.T) {
 		// Renaming a missing file fails, so the rotation triggered by this write fails.
 		require.NoError(t, os.Remove(filename))
 		_, err = w.Write([]byte("triggers rotation\n"))
-		require.Error(t, err)
+		require.NoError(t, err)
+		_, err = os.Stat(filename)
+		require.True(t, os.IsNotExist(err), "rotation should have failed")
 
 		_, err = w.Write([]byte("second\n"))
 		require.NoError(t, err)
@@ -180,6 +229,40 @@ func Test_rotatingWriter(t *testing.T) {
 		current, err := os.ReadFile(filename)
 		require.NoError(t, err)
 		assert.Equal(t, "third\n", string(current))
+	})
+
+	t.Run("drops lines it cannot write", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows cannot remove a directory with an open file")
+		}
+
+		dir := filepath.Join(t.TempDir(), "log")
+		filename := filepath.Join(dir, "gogs.log")
+		w, err := newRotatingWriter(filename, FileRotation{Rotate: true, MaxSize: 10})
+		require.NoError(t, err)
+		logger := newLogger(newCharmHandler(w, slog.LevelDebug, false))
+
+		// The rotation fails and the log directory cannot be recreated, so no
+		// file can be opened for the next line.
+		require.NoError(t, os.RemoveAll(dir))
+		require.NoError(t, os.WriteFile(dir, nil, 0o600))
+		logger.Info("triggers rotation")
+		logger.Info("dropped")
+
+		require.NoError(t, os.Remove(dir))
+		logger.Info("written")
+
+		// The retried rotation may have moved the line to a rotated file.
+		files, err := filepath.Glob(filename + "*")
+		require.NoError(t, err)
+		var logged strings.Builder
+		for _, f := range files {
+			data, err := os.ReadFile(f)
+			require.NoError(t, err)
+			logged.Write(data)
+		}
+		assert.NotContains(t, logged.String(), "dropped")
+		assert.Contains(t, logged.String(), "written")
 	})
 }
 

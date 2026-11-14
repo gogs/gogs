@@ -40,9 +40,6 @@ func newRotatingWriter(filename string, cfg FileRotation) (io.Writer, error) {
 }
 
 func (w *rotatingWriter) init() error {
-	if err := os.MkdirAll(filepath.Dir(w.filename), os.ModePerm); err != nil {
-		return errors.Wrap(err, "create log directory")
-	}
 	if err := w.open(); err != nil {
 		return err
 	}
@@ -53,6 +50,9 @@ func (w *rotatingWriter) init() error {
 }
 
 func (w *rotatingWriter) open() error {
+	if err := os.MkdirAll(filepath.Dir(w.filename), os.ModePerm); err != nil {
+		return errors.Wrap(err, "create log directory")
+	}
 	file, err := os.OpenFile(w.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o660)
 	if err != nil {
 		return errors.Wrapf(err, "open %q", w.filename)
@@ -94,6 +94,10 @@ func (w *rotatingWriter) initRotation() error {
 	return nil
 }
 
+// Write always reports the whole line as written. charmlog keeps unwritten
+// bytes and sends them again with the next line, and nothing in the logging
+// path can report the error (in hook mode stdout and stderr belong to the SSH
+// client). So a line that cannot be written is dropped, like clog did.
 func (w *rotatingWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -102,13 +106,13 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 	// rotation is retried, once the cause is gone.
 	if w.file == nil {
 		if err := w.open(); err != nil {
-			return 0, err
+			return len(p), nil
 		}
 	}
 
 	n, err := w.file.Write(p)
 	if err != nil || !w.config.Rotate {
-		return n, err
+		return len(p), nil
 	}
 
 	w.currentSize += int64(n)
@@ -126,21 +130,19 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 		(w.config.MaxLines > 0 && w.currentLines >= w.config.MaxLines):
 		rotateDate = now
 	default:
-		return n, err
+		return len(p), nil
 	}
 
-	if rerr := w.rotate(rotateDate); rerr != nil {
-		return n, rerr
+	if err := w.rotate(rotateDate); err != nil {
+		return len(p), nil
 	}
 	w.openDay = now.Day()
 	w.currentSize = 0
 	w.currentLines = 0
 	if w.config.MaxDays > 0 {
-		if rerr := w.deleteOutdated(); rerr != nil {
-			return n, errors.Wrap(rerr, "delete outdated files")
-		}
+		_ = w.deleteOutdated()
 	}
-	return n, nil
+	return len(p), nil
 }
 
 func (w *rotatingWriter) rotate(date time.Time) error {
