@@ -13,11 +13,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strx"
@@ -526,7 +526,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 	// Only update issues via commits when internal issue tracker is enabled
 	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
 		if err = updateCommitReferencesToIssues(logger, pusher, opts.Repo, opts.Commits.Commits); err != nil {
-			logger.Errorf("update commit references to issues: %v", err)
+			logger.Error("Failed to update commit references to issues", "error", err)
 		}
 	}
 
@@ -810,7 +810,7 @@ func (a *Action) GetIssueTitle() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		handleLogger().Errorf("Failed to get issue title [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
+		handleLogger().Error("Failed to get issue title", "repoID", a.RepoID, "index", index, "error", err)
 		return "error getting issue"
 	}
 	return issue.Title
@@ -820,7 +820,7 @@ func (a *Action) GetIssueContent() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		handleLogger().Errorf("Failed to get issue content [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
+		handleLogger().Error("Failed to get issue content", "repoID", a.RepoID, "index", index, "error", err)
 		return "error getting issue"
 	}
 	return issue.Content
@@ -930,7 +930,7 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 		if err != nil {
 			pcs.avatars[email] = tool.AvatarLink(handleLogger(), email)
 			if !IsErrUserNotExist(err) {
-				handleLogger().Errorf("Failed to get user [email: %s]: %v", email, err)
+				handleLogger().Error("Failed to get user", "email", email, "error", err)
 			}
 		} else {
 			pcs.avatars[email] = u.AvatarURLPath()

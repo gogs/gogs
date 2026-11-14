@@ -57,6 +57,6 @@ func main() {
 		stop()
 	}()
 	if err := cmd.Run(ctx, os.Args); err != nil {
-		conf.NewConsoleLogger().Fatalf("Failed to start application: %v", err)
+		conf.NewConsoleLogger().FatalContext(context.Background(), "Failed to start application", "error", err)
 	}
 }

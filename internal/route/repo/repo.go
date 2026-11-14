@@ -80,7 +80,7 @@ func Download(c *context.Context) {
 		archivePath = filepath.Join(c.Repo.GitRepo.Path(), "archives", "targz")
 		archiveFormat = git.ArchiveTarGz
 	default:
-		c.Logger.Tracef("Unknown format: %s", uri)
+		c.Logger.Debug("Unknown archive format", "uri", uri)
 		c.NotFound()
 		return
 	}

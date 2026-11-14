@@ -13,8 +13,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 // Init exports spans, e.g., of requests and Git operations, over OTLP when an
@@ -53,7 +52,7 @@ func Init(ctx context.Context, logger *logx.Logger) (shutdown func(timeout time.
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		if err := provider.Shutdown(ctx); err != nil {
-			logger.Warnf("Failed to export the remaining spans: %v", err)
+			logger.Warn("Failed to export the remaining spans", "error", err)
 		}
 	}, nil
 }

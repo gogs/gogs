@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/strx"
 )
 
@@ -75,7 +75,7 @@ func serveBatch(logger *logx.Logger, store Store) macaron.Handler {
 			stored, err := store.GetLFSObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
 			if err != nil {
 				internalServerError(logger, c.Resp)
-				logger.Errorf("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
+				logger.Error("Failed to get objects", "repoID", repo.ID, "oids", oids, "error", err)
 				return
 			}
 			storedSet := make(map[lfsx.OID]*database.LFSObject, len(stored))
@@ -174,7 +174,7 @@ func responseJSON(logger *logx.Logger, w http.ResponseWriter, status int, v any)
 
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
-		logger.Errorf("Failed to encode JSON: %v", err)
+		logger.Error("Failed to encode JSON", "error", err)
 		return
 	}
 }

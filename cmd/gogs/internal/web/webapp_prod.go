@@ -8,9 +8,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/public"
 )
 
@@ -42,7 +42,7 @@ func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) error {
 		wc := context.WebContextFrom(r)
 		body, err := renderIndex(index, wc, inject)
 		if err != nil {
-			logger.Errorf("Failed to render index: %v", err)
+			logger.Error("Failed to render index", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}

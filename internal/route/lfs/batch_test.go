@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 )
 
 func TestServeBatch(t *testing.T) {
@@ -120,12 +120,11 @@ func TestServeBatch(t *testing.T) {
 			}
 
 			m := macaron.New()
-			m.Map(logx.NewNoop())
 			m.Use(func(c *macaron.Context) {
 				c.Map(&database.User{Name: "owner"})
 				c.Map(&database.Repository{Name: "repo"})
 			})
-			m.Post("/", serveBatch(logx.NewNoop(), mockStore))
+			m.Post("/", serveBatch(logx.NewNoopLogger(), mockStore))
 
 			r, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(test.body))
 			require.NoError(t, err)

@@ -1,15 +1,18 @@
 package conf
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"charm.land/lipgloss/v2"
+	charmlog "charm.land/log/v2"
 	"github.com/cockroachdb/errors"
 	"unknwon.dev/ini/v2"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 // ModeConsole, ModeFile, ModeSlack, and ModeDiscord are the logging modes
@@ -128,64 +131,97 @@ func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 		return nil, errors.Wrap(err, "create log directory")
 	}
 
-	modes := make([]logx.Mode, 0, len(logConf.Modes))
+	handlers := make([]slog.Handler, 0, len(logConf.Configs))
 	for _, c := range logConf.Configs {
-		mode, err := modeFromConf(c)
+		h, err := newLogHandler(c)
 		if err != nil {
 			return nil, errors.Wrapf(err, "init %s logger", c.Name)
 		}
-		modes = append(modes, mode)
-		logger.Tracef("Log mode: %s (%s)", strings.Title(c.Name), strings.Title(c.Level))
+		handlers = append(handlers, h)
+		logger.Debug("Log mode enabled", "mode", c.Name, "level", c.Level)
 	}
-
-	logger, err = logx.NewFromOptions(logx.Options{
-		Prod:  IsProdMode(),
-		Level: logx.ParseLevel(File.Section("log").Key("LEVEL").MustString("trace")),
-		Modes: modes,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "init logging")
+	if len(handlers) == 0 {
+		handlers = append(handlers, newCharmHandler(os.Stderr, slog.LevelDebug, IsProdMode()))
 	}
-	return logger, nil
+	return newLogger(handlers...), nil
 }
 
-func modeFromConf(c *loggerConf) (logx.Mode, error) {
-	mode := logx.Mode{
-		Name:     c.Name,
-		Level:    logx.ParseLevel(c.Level),
-		URL:      c.URL,
-		Username: c.Username,
-	}
-	if c.Filename == "" {
-		if c.Name == ModeConsole {
-			mode.Writer = os.Stderr
-			mode.Color = true
+func newLogHandler(c *loggerConf) (slog.Handler, error) {
+	level := parseLevel(c.Level)
+	switch c.Name {
+	case ModeConsole:
+		return newCharmHandler(os.Stderr, level, IsProdMode()), nil
+	case ModeFile:
+		w, err := newRotatingWriter(c.Filename, *c.Rotation)
+		if err != nil {
+			return nil, errors.Wrap(err, "create rotating writer")
 		}
-		return mode, nil
+		return newCharmHandler(w, level, IsProdMode()), nil
+	case ModeSlack:
+		return &webhookHandler{level: level, slack: newSlackHandler(c.URL)}, nil
+	case ModeDiscord:
+		return &webhookHandler{level: level, discord: newDiscordHandler(c.URL, c.Username)}, nil
 	}
+	return nil, errors.Newf("unknown mode %q", c.Name)
+}
 
-	w, err := logx.NewRotatingWriter(c.Filename, logx.RotationConfig{
-		Rotate:   c.Rotation.Rotate,
-		Daily:    c.Rotation.Daily,
-		MaxSize:  c.Rotation.MaxSize,
-		MaxLines: c.Rotation.MaxLines,
-		MaxDays:  c.Rotation.MaxDays,
-	})
-	if err != nil {
-		return mode, err
+// newLogger fans records out to every handler. Each handler applies its own
+// level.
+func newLogger(handlers ...slog.Handler) *logx.Logger {
+	if len(handlers) == 1 {
+		return logx.New(handlers[0])
 	}
-	mode.Writer = w
-	return mode, nil
+	return logx.New(slog.NewMultiHandler(handlers...))
+}
+
+// newCharmHandler follows setupLogging in pgrok and git-lfs-server. Production
+// output is JSON.
+func newCharmHandler(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
+	opts := charmlog.Options{
+		TimeFormat:      time.DateTime,
+		Level:           charmlog.Level(level),
+		ReportTimestamp: true,
+	}
+	if prod {
+		opts.Formatter = charmlog.JSONFormatter
+	}
+	handler := charmlog.NewWithOptions(w, opts)
+
+	// Override warn level color to amber so it is less visually "green"-ish.
+	styles := charmlog.DefaultStyles()
+	styles.Levels[charmlog.WarnLevel] = lipgloss.NewStyle().
+		SetString("WARN").
+		Bold(true).
+		Foreground(lipgloss.Color("226"))
+	handler.SetStyles(styles)
+	return handler
+}
+
+// parseLevel maps [log] LEVEL names to slog levels. "trace", the historical
+// default, is debug.
+func parseLevel(s string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	case "fatal":
+		return slog.LevelError + 4
+	default:
+		return slog.LevelDebug
+	}
 }
 
 // InitHookLogging returns a rotating file logger for an SSH hook command. It
 // has no console sink, so the Git client does not see server logs.
 func InitHookLogging(filename string) (*logx.Logger, error) {
-	level := logx.LevelTrace
+	level := slog.LevelDebug
 	if IsProdMode() {
 		level = slog.LevelError
 	}
-	w, err := logx.NewRotatingWriter(filename, logx.RotationConfig{
+	w, err := newRotatingWriter(filename, FileRotation{
 		Rotate:  true,
 		Daily:   true,
 		MaxDays: 3,
@@ -193,18 +229,11 @@ func InitHookLogging(filename string) (*logx.Logger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "create rotating writer")
 	}
-	return logx.NewFromOptions(logx.Options{
-		Prod: false,
-		Modes: []logx.Mode{{
-			Name:   ModeFile,
-			Level:  level,
-			Writer: w,
-		}},
-	})
+	return newLogger(newCharmHandler(w, level, false)), nil
 }
 
 // NewConsoleLogger returns the logger a command uses before InitLogging builds
 // the configured one.
 func NewConsoleLogger() *logx.Logger {
-	return logx.NewWriter(os.Stderr, slog.LevelDebug, false, os.Getenv("TTY_FORCE") != "")
+	return newLogger(newCharmHandler(os.Stderr, slog.LevelDebug, false))
 }

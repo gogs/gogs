@@ -14,12 +14,12 @@ import (
 	"github.com/go-macaron/i18n"
 	macaronsession "github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
@@ -34,7 +34,7 @@ func parseUserFromCode(ctx stdctx.Context, logger *logx.Logger, code string) (us
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			logger.Errorf("parseUserFromCode: get user by name %q: %v", string(b), err)
+			logger.Error("Failed to get user by username", "username", string(b), "error", err)
 		}
 	}
 	return nil
@@ -122,11 +122,11 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, mc *macaron.Context, c
 			msg := l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
 		default:
-			logger.Errorf("postUserSignUp: create user %q: %v", req.UserName, err)
+			logger.Error("Failed to create user", "username", req.UserName, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "create user")
 		}
 	}
-	logger.Tracef("Account created: %s", u.Name)
+	logger.Debug("Account created", "username", u.Name)
 
 	if database.Handle.Users().Count(r.Context()) == 1 {
 		v := true
@@ -139,17 +139,17 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, mc *macaron.Context, c
 			},
 		)
 		if err != nil {
-			logger.Errorf("postUserSignUp: update first user %q: %v", u.Name, err)
+			logger.Error("Failed to activate first user as admin", "username", u.Name, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 		}
 	}
 
 	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
 		if err := email.SendActivateAccountMail(logger, mc, database.NewMailerUser(u)); err != nil {
-			logger.Errorf("postUserSignUp: send activation mail to user %q: %v", u.Name, err)
+			logger.Error("Failed to send activation mail", "username", u.Name, "error", err)
 		}
 		if err := ca.Set(r.Context(), userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-			logger.Errorf("postUserSignUp: put mail resend cache for user %q: %v", u.Name, err)
+			logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 		}
 		return http.StatusOK, &userSignUpResponse{
 			EmailConfirmationRequired: true,
@@ -164,7 +164,7 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, mc *macaron.Context, c
 func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
 	sources, err := database.Handle.LoginSources().List(r.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
-		logger.Errorf("getUserSignIn: list activated login sources: %v", err)
+		logger.Error("Failed to list activated login sources", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list activated login sources")
 	}
 	loginSources := make([]loginSource, 0, len(sources))
@@ -218,7 +218,7 @@ func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache,
 		if database.IsErrUserNotExist(err) {
 			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
 		}
-		logger.Errorf("postUserResetPassword: get user by email %q: %v", req.Email, err)
+		logger.Error("Failed to get user by email", "email", req.Email, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
 	}
 
@@ -233,14 +233,14 @@ func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache,
 			ResendLimited: true,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		logger.Errorf("postUserResetPassword: get mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to get mail resend cache", "username", u.Name, "error", err)
 	}
 
 	if err = email.SendResetPasswordMail(logger, l, database.NewMailerUser(u)); err != nil {
-		logger.Errorf("postUserResetPassword: send reset password mail to user %q: %v", u.Name, err)
+		logger.Error("Failed to send reset password mail", "username", u.Name, "error", err)
 	}
 	if err = ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-		logger.Errorf("postUserResetPassword: put mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 	}
 
 	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
@@ -253,11 +253,11 @@ func postUserResetPasswordComplete(logger *logx.Logger, r *http.Request, l i18n.
 	}
 
 	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {
-		logger.Errorf("postUserResetPasswordComplete: update password for user %q: %v", u.Name, err)
+		logger.Error("Failed to update user password", "username", u.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 
-	logger.Tracef("User password reset: %s", u.Name)
+	logger.Debug("User password reset", "username", u.Name)
 	return http.StatusNoContent, nil, nil
 }
 
@@ -280,7 +280,7 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, sess session.Session, 
 		case database.IsErrLoginSourceMismatch(err):
 			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
 		default:
-			logger.Errorf("postUserSignIn: authenticate user %q: %v", req.Username, err)
+			logger.Error("Failed to authenticate user", "username", req.Username, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 		}
 	}
@@ -329,13 +329,13 @@ func postUserMFA(logger *logx.Logger, r *http.Request, sess session.Session, mc 
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
 	if err != nil {
-		logger.Errorf("postUserMFA: get two factor by user ID %d: %v", userID, err)
+		logger.Error("Failed to get two factor by user ID", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get two factor by user ID")
 	}
 
 	valid, err := t.ValidateTOTP(req.Passcode)
 	if err != nil {
-		logger.Errorf("postUserMFA: validate TOTP for user %d: %v", userID, err)
+		logger.Error("Failed to validate TOTP", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
 	}
 	if !valid {
@@ -352,15 +352,15 @@ func postUserMFA(logger *logx.Logger, r *http.Request, sess session.Session, mc 
 			Fields: fieldErrors{"passcode": &msg},
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		logger.Errorf("postUserMFA: get two factor passcode cache for user %d: %v", userID, err)
+		logger.Error("Failed to get two factor passcode cache", "userID", userID, "error", err)
 	}
 	if err = ca.Set(r.Context(), cacheKey, 1, 60*time.Second); err != nil {
-		logger.Errorf("postUserMFA: cache two factor passcode for user %d: %v", userID, err)
+		logger.Error("Failed to cache two factor passcode", "userID", userID, "error", err)
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		logger.Errorf("postUserMFA: get user by ID %d: %v", userID, err)
+		logger.Error("Failed to get user by ID", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
@@ -385,13 +385,13 @@ func postUserMFARecovery(logger *logx.Logger, r *http.Request, sess session.Sess
 				Fields: fieldErrors{"recoveryCode": &msg},
 			}, nil
 		}
-		logger.Errorf("postUserMFARecovery: use recovery code for user %d: %v", userID, err)
+		logger.Error("Failed to use recovery code", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "use recovery code")
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		logger.Errorf("postUserMFARecovery: get user by ID %d: %v", userID, err)
+		logger.Error("Failed to get user by ID", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
@@ -462,14 +462,14 @@ func postUserActivate(logger *logx.Logger, r *http.Request, u *database.User, mc
 			CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		logger.Errorf("postUserActivate: get mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to get mail resend cache", "username", u.Name, "error", err)
 	}
 
 	if err := email.SendActivateAccountMail(logger, mc, database.NewMailerUser(u)); err != nil {
-		logger.Errorf("postUserActivate: send activation mail to user %q: %v", u.Name, err)
+		logger.Error("Failed to send activation mail", "username", u.Name, "error", err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-		logger.Errorf("postUserActivate: put mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 	}
 	return http.StatusOK, &postUserActivateResponse{CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60}, nil
 }
@@ -493,11 +493,11 @@ func postUserActivateComplete(logger *logx.Logger, r *http.Request, sess session
 			IsActivated:      &v,
 		},
 	); err != nil {
-		logger.Errorf("postUserActivateComplete: update user %q: %v", target.Name, err)
+		logger.Error("Failed to activate user", "username", target.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 
-	logger.Tracef("User activated: %s", target.Name)
+	logger.Debug("User activated", "username", target.Name)
 
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.

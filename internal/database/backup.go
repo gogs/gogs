@@ -16,11 +16,11 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+	"unknwon.dev/x/logx"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -51,7 +51,7 @@ func DumpDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath
 
 		tableName := getTableType(table)
 		if verbose {
-			logger.Tracef("Dumping table %q...", tableName)
+			logger.Debug("Dumping table", "tableName", tableName)
 		}
 
 		err := func() error {
@@ -119,7 +119,7 @@ func dumpLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string, 
 
 		tableName := getTableType(table)
 		if verbose {
-			logger.Tracef("Dumping table %q...", tableName)
+			logger.Debug("Dumping table", "tableName", tableName)
 		}
 
 		tableFile := filepath.Join(dirPath, tableName+".json")
@@ -157,12 +157,12 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
 			if !osx.IsFile(tableFile) {
-				logger.Infof("Skipped table %q", tableName)
+				logger.Info("Skipped table", "tableName", tableName)
 				return nil
 			}
 
 			if verbose {
-				logger.Tracef("Importing table %q...", tableName)
+				logger.Debug("Importing table", "tableName", tableName)
 			}
 
 			f, err := os.Open(tableFile)
@@ -252,7 +252,7 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 		}
 
 		if verbose {
-			logger.Tracef("Importing table %q...", tableName)
+			logger.Debug("Importing table", "tableName", tableName)
 		}
 
 		if err := x.DropTables(table); err != nil {
@@ -284,20 +284,20 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 				ClosedDateUnix int64
 			}
 			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
-				logger.Errorf("Failed to unmarshal to map: %v", err)
+				logger.Error("Failed to unmarshal to map", "error", err)
 			}
 
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
 				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
-					logger.Errorf("Failed to reset '%s.created_unix': %v", rawTableName, err)
+					logger.Error("Failed to reset 'created_unix'", "tableName", rawTableName, "error", err)
 				}
 			}
 
 			switch rawTableName {
 			case "milestone":
 				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
-					logger.Errorf("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
+					logger.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix'", "error", err)
 				}
 			}
 		}

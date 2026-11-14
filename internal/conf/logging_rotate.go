@@ -1,4 +1,4 @@
-package logx
+package conf
 
 import (
 	"bytes"
@@ -15,21 +15,10 @@ import (
 
 const dateFormat = "2006-01-02"
 
-// RotationConfig controls when a log file is renamed and when old files are
-// deleted. A zero value for a limit disables that limit. Rotate must be true
-// for any limit to take effect.
-type RotationConfig struct {
-	Rotate   bool
-	Daily    bool
-	MaxSize  int64
-	MaxLines int64
-	MaxDays  int64
-}
-
 // rotatingWriter appends to a file and rotates it by day, size, and line count.
 type rotatingWriter struct {
 	filename string
-	config   RotationConfig
+	config   FileRotation
 
 	mu           sync.Mutex
 	file         *os.File
@@ -38,8 +27,8 @@ type rotatingWriter struct {
 	currentLines int64
 }
 
-// NewRotatingWriter opens filename for append and applies cfg.
-func NewRotatingWriter(filename string, cfg RotationConfig) (io.Writer, error) {
+// newRotatingWriter opens filename for append and applies cfg.
+func newRotatingWriter(filename string, cfg FileRotation) (io.Writer, error) {
 	w := &rotatingWriter{
 		filename: filename,
 		config:   cfg,

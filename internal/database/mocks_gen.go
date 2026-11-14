@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	auth "gogs.io/gogs/internal/auth"
-	logx "gogs.io/gogs/internal/logx"
+	logx "unknwon.dev/x/logx"
 )
 
 // MockProvider is a mock implementation of the Provider interface (from the

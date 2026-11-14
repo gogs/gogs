@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
-	"gogs.io/gogs/internal/logx"
 )
 
 var _ lfsx.Storager = (*mockStorage)(nil)
@@ -41,6 +41,7 @@ func (s *mockStorage) Download(_ lfsx.OID, w io.Writer) error {
 func TestBasicHandler_serveDownload(t *testing.T) {
 	s := &mockStorage{}
 	basic := &basicHandler{
+		logger:         logx.NewNoopLogger(),
 		defaultStorage: s.Storage(),
 		storagers: map[lfsx.Storage]lfsx.Storager{
 			s.Storage(): s,
@@ -48,7 +49,6 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 	}
 
 	m := macaron.New()
-	m.Map(logx.NewNoop())
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})
@@ -139,6 +139,7 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 func TestBasicHandler_serveUpload(t *testing.T) {
 	s := &mockStorage{buf: &bytes.Buffer{}}
 	basic := &basicHandler{
+		logger:         logx.NewNoopLogger(),
 		defaultStorage: s.Storage(),
 		storagers: map[lfsx.Storage]lfsx.Storager{
 			s.Storage(): s,
@@ -146,7 +147,6 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 	}
 
 	m := macaron.New()
-	m.Map(logx.NewNoop())
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})
@@ -200,10 +200,9 @@ func TestBasicHandler_serveUpload(t *testing.T) {
 }
 
 func TestBasicHandler_serveVerify(t *testing.T) {
-	basic := &basicHandler{}
+	basic := &basicHandler{logger: logx.NewNoopLogger()}
 
 	m := macaron.New()
-	m.Map(logx.NewNoop())
 	m.Use(macaron.Renderer())
 	m.Use(func(c *macaron.Context) {
 		c.Map(&database.Repository{Name: "repo"})

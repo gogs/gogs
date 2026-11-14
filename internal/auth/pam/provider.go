@@ -3,8 +3,9 @@ package pam
 import (
 	"strings"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Provider contains configuration of a PAM authentication provider.

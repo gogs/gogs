@@ -15,10 +15,10 @@ import (
 
 	"github.com/gogs/chardet"
 	"github.com/unknwon/i18n"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
-	"gogs.io/gogs/internal/logx"
 )
 
 // ShortSHA1 truncates the commit ID to at most 10 characters.
@@ -32,17 +32,17 @@ func ShortSHA1(sha1 string) string {
 // DetectEncoding returns best guess of encoding of given content.
 func DetectEncoding(logger *logx.Logger, content []byte) (string, error) {
 	if utf8.Valid(content) {
-		logger.Tracef("Detected encoding: UTF-8 (fast)")
+		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
 		return "UTF-8", nil
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
 	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
-		logger.Tracef("Using default ANSICharset: %s", conf.Repository.ANSICharset)
+		logger.Debug("Using default ANSI charset", "charset", conf.Repository.ANSICharset)
 		return conf.Repository.ANSICharset, err
 	}
 
-	logger.Tracef("Detected encoding: %s", result.Charset)
+	logger.Debug("Detected encoding", "charset", result.Charset)
 	return result.Charset, err
 }
 
@@ -135,7 +135,7 @@ func AvatarLink(logger *logx.Logger, email string) (url string) {
 		var err error
 		url, err = conf.Picture.LibravatarService.FromEmail(email)
 		if err != nil {
-			logger.Warnf("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
+			logger.Warn("Failed to get Libravatar link", "email", email, "error", err)
 		}
 	}
 	if url == "" && !conf.Picture.DisableGravatar {

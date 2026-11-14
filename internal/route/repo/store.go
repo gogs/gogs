@@ -3,8 +3,9 @@ package repo
 import (
 	"context"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Store is the data layer carrier for context middleware. This interface is

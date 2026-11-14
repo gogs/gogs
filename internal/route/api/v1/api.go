@@ -6,11 +6,11 @@ import (
 
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/logx"
 )
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,

@@ -19,13 +19,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -243,7 +243,7 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 			RepoName:     os.Getenv(database.EnvRepoName),
 		}
 		if err := database.PushUpdate(ctx, logger, options); err != nil {
-			logger.Errorf("PushUpdate: %v", err)
+			logger.Error("Failed to push update", "error", err)
 		}
 
 		// Ask for running deliver hook and test pull request tasks
@@ -252,11 +252,11 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		q.Add("secret", os.Getenv(database.EnvRepoOwnerSaltMd5))
 		q.Add("pusher", os.Getenv(database.EnvAuthUserID))
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
-		logger.Tracef("Trigger task: %s", reqURL)
+		logger.Debug("Triggering tasks", "requestURL", reqURL)
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 		if err != nil {
-			logger.Errorf("Failed to trigger task: %v", err)
+			logger.Error("Failed to create task trigger request", "error", err)
 			continue
 		}
 		req.Header.Set("User-Agent", "GogsServer")
@@ -278,10 +278,10 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
-				logger.Errorf("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
+				logger.Error("Unsuccessful response when triggering tasks", "statusCode", resp.StatusCode)
 			}
 		} else {
-			logger.Errorf("Failed to trigger task: %v", err)
+			logger.Error("Failed to trigger tasks", "error", err)
 		}
 	}
 
@@ -322,7 +322,7 @@ var (
 func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exportTimeout time.Duration) context.Context {
 	shutdown, err := tracing.Init(ctx, logger)
 	if err != nil {
-		logger.Errorf("Failed to initialize tracing: %v", err)
+		logger.Error("Failed to initialize tracing", "error", err)
 		return ctx
 	} else if shutdown == nil {
 		return ctx

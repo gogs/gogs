@@ -12,13 +12,13 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbx"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Engine represents a XORM engine or session.
@@ -156,11 +156,11 @@ func (w *xormLogWriter) Write(p []byte) (int, error) {
 	msg := strings.TrimRight(string(p), "\n")
 	switch {
 	case strings.Contains(msg, "[error]"):
-		w.logger.Errorf("%s", msg)
+		w.logger.Error(msg)
 	case strings.Contains(msg, "[warn]"):
-		w.logger.Warnf("%s", msg)
+		w.logger.Warn(msg)
 	default:
-		w.logger.Debugf("%s", msg)
+		w.logger.Debug(msg)
 	}
 	return len(p), nil
 }

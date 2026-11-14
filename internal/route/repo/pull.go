@@ -304,7 +304,7 @@ func MergePullRequest(c *context.Context) {
 		return
 	}
 
-	c.Logger.Tracef("Pull request merged: %d", pr.ID)
+	c.Logger.Debug("Pull request merged", "pullRequestID", pr.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pr.Index, 10))
 }
 
@@ -317,7 +317,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	// same repo: master...feature
 	infos := strings.Split(c.Params("*"), "...")
 	if len(infos) != 2 {
-		c.Logger.Tracef("ParseCompareInfo[%d]: not enough compared refs information %s", baseRepo.ID, infos)
+		c.Logger.Debug("Not enough compared refs information", "baseRepoID", baseRepo.ID, "refs", infos)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -376,7 +376,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			c.Error(err, "get forked repository")
 			return nil, nil, nil, nil, "", ""
 		} else if !has {
-			c.Logger.Tracef("ParseCompareInfo [base_repo_id: %d]: does not have fork or in same repository", baseRepo.ID)
+			c.Logger.Debug("Head user has no fork of the base repository", "baseRepoID", baseRepo.ID)
 			c.NotFound()
 			return nil, nil, nil, nil, "", ""
 		}
@@ -401,7 +401,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			Private: headRepo.IsPrivate,
 		},
 	) && !c.User.IsAdmin {
-		c.Logger.Tracef("ParseCompareInfo [base_repo_id: %d]: does not have write access or site admin", baseRepo.ID)
+		c.Logger.Debug("User has no write access to the head repository", "baseRepoID", baseRepo.ID)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -662,7 +662,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	c.Logger.Tracef("Pull request created: %d/%d", repo.ID, pullIssue.ID)
+	c.Logger.Debug("Pull request created", "repoID", repo.ID, "issueID", pullIssue.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pullIssue.Index, 10))
 }
 

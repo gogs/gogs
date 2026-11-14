@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/userx"
@@ -141,31 +141,31 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	t.Run("user not found", func(t *testing.T) {
-		_, err := s.Authenticate(ctx, logx.NewNoop(), "bob", password, -1)
+		_, err := s.Authenticate(ctx, logx.NewNoopLogger(), "bob", password, -1)
 		wantErr := auth.ErrBadCredentials{Args: map[string]any{"login": "bob"}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
-		_, err := s.Authenticate(ctx, logx.NewNoop(), alice.Name, "bad_password", -1)
+		_, err := s.Authenticate(ctx, logx.NewNoopLogger(), alice.Name, "bad_password", -1)
 		wantErr := auth.ErrBadCredentials{Args: map[string]any{"login": alice.Name, "userID": alice.ID}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("via email and password", func(t *testing.T) {
-		user, err := s.Authenticate(ctx, logx.NewNoop(), alice.Email, password, -1)
+		user, err := s.Authenticate(ctx, logx.NewNoopLogger(), alice.Email, password, -1)
 		require.NoError(t, err)
 		assert.Equal(t, alice.Name, user.Name)
 	})
 
 	t.Run("via username and password", func(t *testing.T) {
-		user, err := s.Authenticate(ctx, logx.NewNoop(), alice.Name, password, -1)
+		user, err := s.Authenticate(ctx, logx.NewNoopLogger(), alice.Name, password, -1)
 		require.NoError(t, err)
 		assert.Equal(t, alice.Name, user.Name)
 	})
 
 	t.Run("login source mismatch", func(t *testing.T) {
-		_, err := s.Authenticate(ctx, logx.NewNoop(), alice.Email, password, 1)
+		_, err := s.Authenticate(ctx, logx.NewNoopLogger(), alice.Email, password, 1)
 		gotErr := fmt.Sprintf("%v", err)
 		wantErr := ErrLoginSourceMismatch{args: map[string]any{"actual": 0, "expect": 1}}.Error()
 		assert.Equal(t, wantErr, gotErr)
@@ -194,7 +194,7 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		)
 		require.NoError(t, err)
 
-		user, err := s.Authenticate(ctx, logx.NewNoop(), bob.Email, password, loginSource.ID)
+		user, err := s.Authenticate(ctx, logx.NewNoopLogger(), bob.Email, password, loginSource.ID)
 		require.NoError(t, err)
 		assert.Equal(t, bob.Name, user.Name)
 	})
@@ -217,7 +217,7 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		)
 		require.NoError(t, err)
 
-		user, err := s.Authenticate(ctx, logx.NewNoop(), "cindy", password, loginSource.ID)
+		user, err := s.Authenticate(ctx, logx.NewNoopLogger(), "cindy", password, loginSource.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "cindy", user.Name)
 

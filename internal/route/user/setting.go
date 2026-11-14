@@ -22,7 +22,7 @@ func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User)
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			logger.Errorf("parseUserFromCode: get user by name %q: %v", string(b), err)
+			logger.Error("Failed to get user by name", "userName", string(b), "error", err)
 		}
 	}
 	return nil

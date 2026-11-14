@@ -15,12 +15,12 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
@@ -252,7 +252,7 @@ func ActionIcon(opType int) string {
 func ActionContent2Commits(logger *logx.Logger, act Actioner) *database.PushCommits {
 	push := database.NewPushCommits()
 	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
-		logger.Errorf("Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
+		logger.Error("Failed to unmarshal action content", "content", act.GetContent(), "error", err)
 	}
 	return push
 }

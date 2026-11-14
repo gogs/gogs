@@ -1,21 +1,25 @@
-package logx
+package conf
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 )
 
-// slackColors follows the order Trace, Info, Warn, Error, Fatal.
+// slackColors follows the order Debug, Info, Warn, Error, Fatal.
 var slackColors = []string{"", "#3aa3e3", "warning", "danger", "#ff0200"}
 
 // discordTitles and discordColors follow the same order.
 var (
-	discordTitles = []string{"Trace", "Information", "Warning", "Error", "Fatal"}
+	discordTitles = []string{"Debug", "Information", "Warning", "Error", "Fatal"}
 	discordColors = []int{0, 3843043, 16761600, 13041721, 9440319}
 )
 
@@ -160,4 +164,53 @@ func postDiscord(client *http.Client, url string, payload any) (int64, error) {
 		return -1, errors.Newf("non-success response status code %d with body: %s", resp.StatusCode, data)
 	}
 	return -1, nil
+}
+
+// webhookHandler posts one formatted line to Slack or Discord.
+type webhookHandler struct {
+	level   slog.Level
+	slack   *slackHandler
+	discord *discordHandler
+	attrs   []slog.Attr
+}
+
+func (h *webhookHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.level
+}
+
+func (h *webhookHandler) Handle(_ context.Context, r slog.Record) error {
+	msg := r.Message
+	if h.attrs != nil || r.NumAttrs() > 0 {
+		var b strings.Builder
+		b.WriteString(msg)
+		for _, a := range h.attrs {
+			fmt.Fprintf(&b, " %s=%v", a.Key, a.Value.Any())
+		}
+		r.Attrs(func(a slog.Attr) bool {
+			fmt.Fprintf(&b, " %s=%v", a.Key, a.Value.Any())
+			return true
+		})
+		msg = b.String()
+	}
+	level := r.Level.String()
+	var err error
+	if h.slack != nil {
+		err = h.slack.post(level, msg)
+	} else {
+		err = h.discord.post(level, msg)
+	}
+	if err != nil {
+		return errors.Wrap(err, "post webhook")
+	}
+	return nil
+}
+
+func (h *webhookHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	clone := *h
+	clone.attrs = append(append([]slog.Attr{}, h.attrs...), attrs...)
+	return &clone
+}
+
+func (h *webhookHandler) WithGroup(string) slog.Handler {
+	return h
 }

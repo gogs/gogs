@@ -8,10 +8,10 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 )
 
 var (

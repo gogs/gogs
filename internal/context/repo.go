@@ -10,11 +10,11 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/repox"
 )
 

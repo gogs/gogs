@@ -3,8 +3,9 @@ package ldap
 import (
 	"fmt"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Provider contains configuration of an LDAP authentication provider.

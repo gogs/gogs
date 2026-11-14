@@ -16,9 +16,9 @@ import (
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/conf"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/semverx"
 )
@@ -152,9 +152,7 @@ func Init(logger *logx.Logger, customConf string) error {
 
 			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
 				if !HookMode {
-					logger.Warnf(`SSH minimum key size check is forced to be disabled because server is not eligible:
-	1. Windows server
-	2. OpenSSH version is lower than 5.1`)
+					logger.Warn("SSH minimum key size check is disabled because it requires a non-Windows server with OpenSSH 5.1 or later", "windowsRuntime", IsWindowsRuntime(), "openSSHVersion", sshVersion)
 				}
 			} else {
 				SSH.MinimumKeySizes = map[string]int{}
@@ -390,7 +388,7 @@ func Init(logger *logx.Logger, customConf string) error {
 	handleDeprecated()
 	if !HookMode {
 		for _, warning := range checkInvalidOptions(File) {
-			logger.Warnf("%s", warning)
+			logger.Warn("Found invalid configuration", "warning", warning)
 		}
 	}
 

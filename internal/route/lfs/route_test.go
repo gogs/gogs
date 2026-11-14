@@ -10,11 +10,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
-	"gogs.io/gogs/internal/logx"
 )
 
 func TestAuthenticate(t *testing.T) {
@@ -164,9 +164,8 @@ func TestAuthenticate(t *testing.T) {
 			}
 
 			m := macaron.New()
-			m.Map(logx.NewNoop())
 			m.Use(macaron.Renderer())
-			m.Get("/", authenticate(logx.NewNoop(), test.mockStore()), func(w http.ResponseWriter, user *database.User) {
+			m.Get("/", authenticate(logx.NewNoopLogger(), test.mockStore()), func(w http.ResponseWriter, user *database.User) {
 				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 			})
 
@@ -270,14 +269,13 @@ func TestAuthorize(t *testing.T) {
 			}
 
 			m := macaron.New()
-			m.Map(logx.NewNoop())
 			m.Use(macaron.Renderer())
 			m.Use(func(c *macaron.Context) {
 				c.Map(&database.User{})
 			})
 			m.Get(
 				"/:username/:reponame",
-				authorize(logx.NewNoop(), mockStore, test.accessMode),
+				authorize(logx.NewNoopLogger(), mockStore, test.accessMode),
 				func(w http.ResponseWriter, owner *database.User, repo *database.Repository) {
 					_, _ = fmt.Fprintf(w, "owner.Name: %s, repo.Name: %s", owner.Name, repo.Name)
 				},
@@ -312,13 +310,13 @@ func Test_verifyHeader(t *testing.T) {
 	}{
 		{
 			name:          "header not found",
-			verifyHeader:  verifyHeader(logx.NewNoop(), "Accept", contentType, http.StatusNotAcceptable),
+			verifyHeader:  verifyHeader(logx.NewNoopLogger(), "Accept", contentType, http.StatusNotAcceptable),
 			expStatusCode: http.StatusNotAcceptable,
 		},
 
 		{
 			name:         "header found",
-			verifyHeader: verifyHeader(logx.NewNoop(), "Accept", "application/vnd.git-lfs+json", http.StatusNotAcceptable),
+			verifyHeader: verifyHeader(logx.NewNoopLogger(), "Accept", "application/vnd.git-lfs+json", http.StatusNotAcceptable),
 			header: http.Header{
 				"Accept": []string{"application/vnd.git-lfs+json; charset=utf-8"},
 			},
@@ -328,7 +326,6 @@ func Test_verifyHeader(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			m := macaron.New()
-			m.Map(logx.NewNoop())
 			m.Use(macaron.Renderer())
 			m.Get("/", test.verifyHeader)
 
@@ -349,8 +346,7 @@ func Test_verifyHeader(t *testing.T) {
 
 func Test_verifyOID(t *testing.T) {
 	m := macaron.New()
-	m.Map(logx.NewNoop())
-	m.Get("/:oid", verifyOID(logx.NewNoop()), func(w http.ResponseWriter, oid lfsx.OID) {
+	m.Get("/:oid", verifyOID(logx.NewNoopLogger()), func(w http.ResponseWriter, oid lfsx.OID) {
 		fmt.Fprintf(w, "oid: %s", oid)
 	})
 
@@ -398,7 +394,7 @@ func Test_verifyOID(t *testing.T) {
 
 func Test_internalServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
-	internalServerError(logx.NewNoop(), rr)
+	internalServerError(logx.NewNoopLogger(), rr)
 
 	resp := rr.Result()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)

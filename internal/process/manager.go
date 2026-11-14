@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 var ErrExecTimeout = errors.New("process execution timeout")
@@ -108,7 +107,7 @@ func ExecDirEnv(logger *logx.Logger, timeout time.Duration, dir string, env []st
 	select {
 	case <-time.After(timeout):
 		if errKill := Kill(pid); errKill != nil {
-			logger.Errorf("Failed to kill timeout process [pid: %d, desc: %s]: %v", pid, desc, errKill)
+			logger.Error("Failed to kill timed out process", "pid", pid, "description", desc, "error", errKill)
 		}
 		<-done //nolint:errcheck
 		return "", ErrExecTimeout.Error(), ErrExecTimeout
