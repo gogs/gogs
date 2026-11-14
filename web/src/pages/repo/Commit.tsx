@@ -34,7 +34,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/she
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { repoHeaderQuery } from "@/lib/queries/repo";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
-import { useTheme } from "@/lib/theme-context";
+import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 
 import type { RepoCommitSearch } from "./Commit.search";
@@ -118,15 +118,6 @@ const DIFF_UNSAFE_CSS = `
     --diffs-bg-selection-number-override: light-dark(#f5c518, #fff066);
   }
 `;
-
-function resolveTheme(theme: "light" | "dark" | "system"): "light" | "dark" {
-  if (theme === "system") {
-    return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  return theme;
-}
 
 // Bridge app tokens into the @pierre/trees shadow root.
 const TREE_THEME_STYLE: CSSProperties = {

@@ -22,46 +22,55 @@ import {
 } from "@/lib/queries/org";
 import { FormError } from "@/lib/queries/request";
 import { userProfileQuery } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 
 const FIELD_ORDER = ["name", "fullName", "description", "website", "location", "maxRepoCreation"] as const;
 
 // OrgSettingsLayout heads the settings pages of an organization, with links
 // between them. Only owners get here.
-function OrgSettingsLayout({
+export function OrgSettingsLayout({
   org: orgName,
   active,
+  wide,
   children,
 }: {
   org: string;
-  active: "options" | "delete";
+  active: "options" | "hooks" | "delete";
+  // wide lets the page use the full width, e.g., for a list.
+  wide?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
   const { data: org } = useSuspenseQuery(userProfileQuery(orgName));
   usePageTitle(`${t("org.settings")} - ${org.fullName || org.name}`);
   if (org.kind !== "organization") return null;
+  const titles = {
+    options: t("org.settings.options"),
+    hooks: t("repo.settings.hooks"),
+    delete: t("org.settings.delete"),
+  };
 
   return (
     <main className="flex-1">
       <OrgHeader org={org} activeTab="settings" />
       <SettingsLayout
         label={t("org.settings")}
-        current={active === "options" ? t("org.settings.options") : t("org.settings.delete")}
+        current={titles[active]}
+        wide={wide}
         nav={
           <>
             <SettingsNavItem active={active === "options"}>
               <Link to="/org/$org/settings" params={{ org: org.name }} activeOptions={{ exact: true }}>
-                {t("org.settings.options")}
+                {titles.options}
               </Link>
             </SettingsNavItem>
-            {/* Webhooks are still served by the server-rendered pages. */}
-            <SettingsNavItem active={false}>
-              <a href={subUrl(`/org/${org.name}/settings/hooks`)}>{t("repo.settings.hooks")}</a>
+            <SettingsNavItem active={active === "hooks"}>
+              <Link to="/org/$org/settings/hooks" params={{ org: org.name }}>
+                {titles.hooks}
+              </Link>
             </SettingsNavItem>
             <SettingsNavItem active={active === "delete"} destructive>
               <Link to="/org/$org/settings/delete" params={{ org: org.name }}>
-                {t("org.settings.delete")}
+                {titles.delete}
               </Link>
             </SettingsNavItem>
           </>

@@ -70,3 +70,32 @@ export function CheckboxField({
     </label>
   );
 }
+
+// RadioField is a radio button with its label beside it.
+export function RadioField({
+  id,
+  name,
+  checked,
+  onChange,
+  label,
+}: {
+  id: string;
+  name: string;
+  checked: boolean;
+  onChange: () => void;
+  label: ReactNode;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
+      <input
+        id={id}
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onChange}
+        className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary)"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}

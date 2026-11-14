@@ -11,7 +11,9 @@ import {
   fetchOrgTeams,
 } from "@/lib/queries/org";
 import { userProfileQuery } from "@/lib/queries/user";
+import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/webhooks";
 import type { UserInfo } from "@/lib/user-info";
+import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { OrgCreate } from "@/pages/org/Create";
 import { OrgInvite } from "@/pages/org/Invite";
 import { OrgMembers } from "@/pages/org/Members";
@@ -207,6 +209,60 @@ export function createOrgRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // loadOwnerPage loads a page of the organization only its owners see.
+  function loadOwnerPage<T>(context: unknown, org: string, load: () => Promise<T>) {
+    const { queryClient } = context as RouterContext;
+    return loadOrgPage(queryClient, org, async () => {
+      const [, data] = await Promise.all([requireOwner(queryClient, org), load()]);
+      return data;
+    });
+  }
+
+  const webhooksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/settings/hooks",
+    loader: ({ params, context }) => loadOwnerPage(context, params.org, () => fetchWebhooks({ org: params.org })),
+    component: function OrgWebhooks() {
+      const { org } = webhooksRoute.useParams();
+      return <Webhooks scope={{ org }} list={webhooksRoute.useLoaderData()} />;
+    },
+  });
+
+  const webhookNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/settings/hooks/$type/new",
+    loader: ({ params, context }) =>
+      loadOwnerPage(context, params.org, async () => {
+        const { types } = await fetchWebhooks({ org: params.org });
+        if (!types.includes(params.type as WebhookType)) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+          throw notFound();
+        }
+      }),
+    component: function OrgWebhookNew() {
+      const { org, type } = webhookNewRoute.useParams();
+      return <WebhookNew key={type} scope={{ org }} type={type as WebhookType} />;
+    },
+  });
+
+  const webhookRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/org/$org/settings/hooks/$id",
+    loader: ({ params, context }) => {
+      const id = Number(params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return loadOwnerPage(context, params.org, () => fetchWebhook({ org: params.org }, id));
+    },
+    component: function OrgWebhook() {
+      const { org } = webhookRoute.useParams();
+      const hook = webhookRoute.useLoaderData();
+      return <WebhookEdit key={hook.id} scope={{ org }} hook={hook} />;
+    },
+  });
+
   return [
     orgCreateRoute,
     membersRoute,
@@ -217,6 +273,9 @@ export function createOrgRoutes(rootRoute: AnyRoute) {
     newTeamRoute,
     editTeamRoute,
     settingsRoute,
+    webhooksRoute,
+    webhookNewRoute,
+    webhookRoute,
     deleteRoute,
   ];
 }
