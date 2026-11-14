@@ -57,9 +57,21 @@ import (
 )
 
 // Run starts the web server with the given configuration path and port
-// override, and stops it when the context is done.
-func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOverride int) error {
-	logger, err := initServices(logger, configPath)
+// override, and stops it when the context is done. Once logging is configured,
+// it reports a failure through the configured logger and exits.
+func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOverride int) (err error) {
+	configured, err := initServices(logger, configPath)
+	if configured == nil {
+		return errors.Wrap(err, "initialize application")
+	}
+	logger = configured
+	// The caller only has the console logger, which skips the file and webhook
+	// sinks.
+	defer func() {
+		if err != nil {
+			logger.FatalContext(ctx, "Failed to start application", "error", err)
+		}
+	}()
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
@@ -947,7 +959,8 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 // initServices returns the logger built from the loaded configuration, which
-// replaces the given console logger.
+// replaces the given console logger. It also returns that logger with errors
+// that happen after logging is configured.
 func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) {
 	err := conf.Init(logger, customConf)
 	if err != nil {
@@ -985,7 +998,7 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	highlight.NewContext()
 	markup.NewSanitizer()
 	if err := database.NewEngine(logger); err != nil {
-		return nil, errors.Wrap(err, "initialize ORM engine")
+		return logger, errors.Wrap(err, "initialize ORM engine")
 	}
 
 	database.LoadRepoConfig(logger)

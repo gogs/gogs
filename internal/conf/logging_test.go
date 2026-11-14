@@ -2,12 +2,18 @@ package conf
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -278,26 +284,63 @@ func (p *blockingPoster) post(level, message string) error {
 }
 
 func Test_webhookHandler(t *testing.T) {
-	poster := &blockingPoster{
-		release:  make(chan struct{}),
-		received: make(chan string, 1),
-	}
-	logger := newLogger(newWebhookHandler(slog.LevelError, poster, 10))
+	t.Run("does not wait for the post", func(t *testing.T) {
+		poster := &blockingPoster{
+			release:  make(chan struct{}),
+			received: make(chan string, 1),
+		}
+		logger := newLogger(newWebhookHandler(slog.LevelError, poster, 10))
 
-	logged := make(chan struct{})
-	go func() {
-		logger.Info("below level")
-		logger.Error("Failed to deliver", "userID", 1)
-		close(logged)
-	}()
-	select {
-	case <-logged:
-	case <-time.After(5 * time.Second):
-		t.Fatal("logging waited for the webhook post")
-	}
+		logged := make(chan struct{})
+		go func() {
+			logger.Info("below level")
+			logger.Error("Failed to deliver", "userID", 1)
+			close(logged)
+		}()
+		select {
+		case <-logged:
+		case <-time.After(5 * time.Second):
+			t.Fatal("logging waited for the webhook post")
+		}
 
-	close(poster.release)
-	assert.Equal(t, "ERROR Failed to deliver userID=1", <-poster.received)
+		close(poster.release)
+		assert.Equal(t, "ERROR Failed to deliver userID=1", <-poster.received)
+	})
+
+	t.Run("posts the queue before a fatal exit", func(t *testing.T) {
+		// FatalContext exits the process, so it runs in a child test process.
+		if url := os.Getenv("GOGS_TEST_WEBHOOK_URL"); url != "" {
+			logger := newLogger(newWebhookHandler(slog.LevelError, newSlackHandler(url), 10))
+			logger.Error("Queued before fatal")
+			logger.FatalContext(context.Background(), "Fatal")
+			return
+		}
+
+		var mu sync.Mutex
+		var posted []string
+		server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			// A slow webhook keeps messages queued when FatalContext is called.
+			time.Sleep(200 * time.Millisecond)
+			body, _ := io.ReadAll(r.Body)
+			mu.Lock()
+			posted = append(posted, string(body))
+			mu.Unlock()
+		}))
+		defer server.Close()
+
+		cmd := exec.Command(os.Args[0], "-test.run=^Test_webhookHandler$/^posts_the_queue_before_a_fatal_exit$")
+		cmd.Env = append(os.Environ(), "GOGS_TEST_WEBHOOK_URL="+server.URL)
+		err := cmd.Run()
+		var exitErr *exec.ExitError
+		require.ErrorAs(t, err, &exitErr)
+		assert.Equal(t, 1, exitErr.ExitCode())
+
+		mu.Lock()
+		defer mu.Unlock()
+		require.Len(t, posted, 2)
+		assert.Contains(t, posted[0], "Queued before fatal")
+		assert.Contains(t, posted[1], "Fatal")
+	})
 }
 
 func Test_newLogger(t *testing.T) {
