@@ -26,11 +26,6 @@ type dashboardOwner struct {
 // organization.
 func withDashboardOwner(c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
-	if viewer == nil {
-		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
-		return
-	}
-
 	name := c.Param("org")
 	if name == "" {
 		c.Map(&dashboardOwner{viewer})
