@@ -1,10 +1,11 @@
 import {
   type CodeViewOptions,
+  type DiffLineAnnotation,
   type FileDiffContentsLoader,
   type FileDiffMetadata,
   parsePatchFiles,
 } from "@pierre/diffs";
-import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
+import { CodeView, type CodeViewAnnotationArgs, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
@@ -23,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { DiffFileTree, type DiffFileTreeHandle } from "@/components/DiffFileTree";
+import { DiffImage } from "@/components/DiffImage";
 import { DiffSearch } from "@/components/DiffSearch";
 import { DiffToolbar, type DiffToolbarSettings, type WhitespaceMode } from "@/components/DiffToolbar";
 import { FileHeaderMenu } from "@/components/FileHeaderMenu";
@@ -75,6 +77,11 @@ const DIFF_UNSAFE_CSS = `
   [data-deletions-count] {
     font-family: inherit;
   }
+  /* Image diffs have no lines to count, and only they render a line 0
+     annotation. */
+  [data-diffs-header]:has(~ pre [data-line-annotation="-1,-1"]) :is([data-additions-count], [data-deletions-count]) {
+    display: none;
+  }
   /* Skip the first header so it does not double the toolbar's bottom border. */
   * + [data-diffs-header] {
     border-top: 1px solid var(--color-border);
@@ -114,6 +121,26 @@ const TREE_THEME_STYLE: CSSProperties = {
   "--trees-search-bg-override": "var(--color-surface)",
   "--trees-search-fg-override": "var(--color-foreground)",
 };
+
+// Extensions whose content type the raw file endpoint detects, so browsers
+// render them despite `X-Content-Type-Options: nosniff`.
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico"]);
+
+function isImagePath(path: string): boolean {
+  const dot = path.lastIndexOf(".");
+  return dot >= 0 && IMAGE_EXTENSIONS.has(path.slice(dot + 1).toLowerCase());
+}
+
+// A binary image diff has no hunks. Pierre renders an annotation on line 0
+// above a file's lines, in the column of its side, and measures its height, so
+// one annotation per existing side shows the old and new images.
+function imageAnnotations(fileDiff: FileDiffMetadata): DiffLineAnnotation<undefined>[] | undefined {
+  if (fileDiff.hunks.length > 0 || !isImagePath(fileDiff.name)) return undefined;
+  const annotations: DiffLineAnnotation<undefined>[] = [];
+  if (fileDiff.type !== "new") annotations.push({ side: "deletions", lineNumber: 0 });
+  if (fileDiff.type !== "deleted") annotations.push({ side: "additions", lineNumber: 0 });
+  return annotations;
+}
 
 // DiffWorkspace shows the files a patch changes, between the old and the new
 // revision, with a tree of the files beside them. It locks to the viewport
@@ -289,6 +316,7 @@ export function DiffWorkspace({
           id: `${patchIndex}:${fileIndex}:${fileDiff.name}`,
           type: "diff",
           fileDiff,
+          annotations: imageAnnotations(fileDiff),
         })),
       ),
     [patch],
@@ -593,6 +621,19 @@ export function DiffWorkspace({
     [repoLink, newRef],
   );
 
+  const renderAnnotation = useCallback(
+    (...[annotation, fileDiff]: CodeViewAnnotationArgs<undefined>) => {
+      if (!("side" in annotation) || !("hunks" in fileDiff)) return null;
+      const isOld = annotation.side === "deletions";
+      const ref = isOld ? oldRef : newRef;
+      const path = isOld ? (fileDiff.prevName ?? fileDiff.name) : fileDiff.name;
+      if (!ref) return null;
+      const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+      return <DiffImage src={subUrl(`/${owner}/${repo}/raw/${ref}/${encodedPath}`)} side={annotation.side} />;
+    },
+    [owner, repo, oldRef, newRef],
+  );
+
   return (
     <>
       <style>{FULLWIDTH_CSS}</style>
@@ -788,6 +829,7 @@ export function DiffWorkspace({
               renderHeaderPrefix={renderHeaderPrefix}
               renderHeaderFilenameSuffix={renderHeaderFilenameSuffix}
               renderHeaderMetadata={renderHeaderMetadata}
+              renderAnnotation={renderAnnotation}
               options={{
                 theme: { light: "pierre-light", dark: "pierre-dark" },
                 themeType: resolvedTheme,
