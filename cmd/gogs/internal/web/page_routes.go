@@ -318,7 +318,9 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 // serveUserProfile serves the profile page of a user or an organization, and the
 // public SSH keys of a user at "/{username}.keys".
 func serveUserProfile(c *pageContext) {
-	name := c.Param("owner")
+	// Usernames cannot end with ".keys", so "/alice.keys" is always the public
+	// SSH keys of "alice".
+	name, isKeys := strings.CutSuffix(c.Param("owner"), ".keys")
 	user, err := database.Handle.Users().GetByUsername(c.Request().Context(), name)
 	if err != nil {
 		if errx.IsNotFound(err) {
@@ -330,7 +332,7 @@ func serveUserProfile(c *pageContext) {
 		return
 	}
 
-	if !strings.HasSuffix(name, ".keys") {
+	if !isKeys {
 		c.ServeWeb()
 		return
 	}
