@@ -27,6 +27,7 @@ All notable changes to Gogs are documented in this file.
 - Code search, with syntax-highlighted results. Search one repository at any branch, tag or commit from its file browser, or the default branches of all repositories you can read from the navbar. Narrow down the search with `org:`, `user:`, `repo:` and `path:`. Turn on Match case to match letter case. Run an exhaustive search of one repository to list every matching line. [#8549](https://github.com/gogs/gogs/pull/8549)
 - The name `search` is reserved and cannot be used for users or organizations. [#8549](https://github.com/gogs/gogs/pull/8549)
 - The admin panel shows recent traces of requests, with the user, repository and error behind each one, the Git commands and database queries they ran and search by trace ID, and charts of server health over the last hour and day on its own page, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. [#8554](https://github.com/gogs/gogs/pull/8554)
+- A command palette, opened with Ctrl K or ⌘K or the search button in the navbar, to jump to issues, pull requests, files, repositories, people and pages, search code, and run actions such as switching the theme or copying a clone URL. Type `>`, `#`, `@` or `/` to see only commands, issues, people or code. [#8551](https://github.com/gogs/gogs/pull/8551)
 
 ### Changed
 
