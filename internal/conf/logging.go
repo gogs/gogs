@@ -184,6 +184,8 @@ func newCharmHandler(w io.Writer, level slog.Level, prod bool) *charmlog.Logger 
 	}
 	if prod {
 		opts.Formatter = charmlog.JSONFormatter
+		// Production logs are read by other tools, which need the time zone.
+		opts.TimeFormat = time.RFC3339
 	}
 	handler := charmlog.NewWithOptions(w, opts)
 

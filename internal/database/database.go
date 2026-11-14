@@ -30,17 +30,14 @@ var Tables = []any{
 }
 
 // NewConnection returns a new database connection with the given logger.
-func NewConnection(logger *logx.Logger, w gormlogger.Writer) (*gorm.DB, error) {
+func NewConnection(logger *logx.Logger) (*gorm.DB, error) {
 	level := gormlogger.Info
 	if conf.IsProdMode() {
 		level = gormlogger.Warn
 	}
 
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
-	gormlogger.Default = gormlogger.New(w, gormlogger.Config{
-		SlowThreshold: 100 * time.Millisecond,
-		LogLevel:      level,
-	})
+	gormlogger.Default = dbx.NewLogger(logger.Scoped("gorm"), level, 100*time.Millisecond)
 
 	db, err := dbx.OpenDB(
 		conf.Database,

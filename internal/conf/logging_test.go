@@ -2,10 +2,12 @@ package conf
 
 import (
 	"bytes"
+	"encoding/json"
 	"log/slog"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -175,5 +177,10 @@ func Test_newLogger(t *testing.T) {
 		line := strings.TrimSpace(buf.String())
 		assert.True(t, strings.HasPrefix(line, "{"), line)
 		assert.Contains(t, line, `"msg":"started"`)
+
+		var record struct{ Time string }
+		require.NoError(t, json.Unmarshal([]byte(line), &record))
+		_, err := time.Parse(time.RFC3339, record.Time)
+		assert.NoError(t, err, "time %q has no time zone", record.Time)
 	})
 }
