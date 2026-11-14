@@ -43,6 +43,7 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 		})
 		f.Get("/{type: /(repos|users|organizations)/}", serveWeb)
 	}, page, ignSignIn)
+	f.Get("/search", page, ignSignIn, serveWeb)
 	f.Get("/{type: /(issues|pulls)/}", page, reqSignIn, serveWeb)
 
 	f.Group("/user", func() {

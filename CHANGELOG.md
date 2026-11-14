@@ -12,7 +12,8 @@ All notable changes to Gogs are documented in this file.
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
-- Searching the code of a repository at any branch, tag or commit, from the "Search code" button of the file browser.
+- Code search, with syntax-highlighted results. Search one repository at any branch, tag or commit from its file browser, or the default branches of all repositories you can read from the navbar. Narrow down the search with `org:`, `user:`, `repo:` and `path:`.
+- The name `search` is reserved and cannot be used for users or organizations.
 
 ### Changed
 

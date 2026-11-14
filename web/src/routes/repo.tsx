@@ -851,7 +851,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     component: function Search() {
       const { owner, repo } = repoSearchRoute.useParams();
       const data = repoSearchRoute.useLoaderData();
-      return <RepoSearch key={`${owner}/${repo}@${data.ref}?${data.keyword}`} owner={owner} name={repo} data={data} />;
+      return <RepoSearch key={`${owner}/${repo}@${data.ref}?${data.query}`} owner={owner} name={repo} data={data} />;
     },
   });
 
