@@ -193,7 +193,12 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		}
 	}
 
+	// Git finds the repository without the suffix, but recording a push runs other
+	// Git commands in the directory of the repository.
 	repoPath := filepath.Join(conf.Repository.Root, repoFullName)
+	if !strings.HasSuffix(repoPath, ".git") {
+		repoPath += ".git"
+	}
 	serviceOpts := git.ServiceOptions{
 		Stdin:    opts.Stdin,
 		Stdout:   opts.Stdout,
