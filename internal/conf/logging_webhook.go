@@ -9,13 +9,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"reflect"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"unknwon.dev/x/logx"
 )
 
 // slackColors follows the order Debug, Info, Warn, Error, Fatal.
@@ -181,10 +178,6 @@ type webhookMessage struct {
 	posted chan struct{}
 }
 
-// fatalFuncName is the function slog records as the caller of a record logged
-// by logx.FatalContext, which exits the process right after logging it.
-var fatalFuncName = runtime.FuncForPC(reflect.ValueOf((*logx.Logger).FatalContext).Pointer()).Name()
-
 // fatalFlushTimeout bounds how long a fatal record delays the exit while the
 // queue is posted.
 const fatalFlushTimeout = 10 * time.Second
@@ -233,15 +226,24 @@ func (h *webhookHandler) Handle(_ context.Context, r slog.Record) error {
 		msg = b.String()
 	}
 	m := webhookMessage{level: r.Level.String(), text: msg}
-	if runtime.FuncForPC(r.PC).Name() == fatalFuncName {
-		m.posted = make(chan struct{})
+	if r.Level < levelFatal {
+		h.queue <- m
+		return nil
 	}
-	h.queue <- m
-	if m.posted != nil {
-		select {
-		case <-m.posted:
-		case <-time.After(fatalFlushTimeout):
-		}
+
+	// logx.FatalContext exits the process right after logging, so wait for this
+	// record and everything queued before it to be posted, but not forever.
+	m.level = "FATAL"
+	m.posted = make(chan struct{})
+	timeout := time.After(fatalFlushTimeout)
+	select {
+	case h.queue <- m:
+	case <-timeout:
+		return nil
+	}
+	select {
+	case <-m.posted:
+	case <-timeout:
 	}
 	return nil
 }

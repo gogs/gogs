@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"runtime"
+	"os"
 
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
@@ -131,7 +130,7 @@ to make automatic initialization process more smoothly`,
 )
 
 func runCreateUser(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stdout)
 	if !cmd.IsSet("name") {
 		return errors.New("Username is not specified")
 	} else if !cmd.IsSet("password") {
@@ -172,7 +171,7 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 
 func adminDashboardOperation(operation func(*logx.Logger) error, successMessage string) func(context.Context, *cli.Command) error {
 	return func(_ context.Context, cmd *cli.Command) error {
-		logger := conf.NewConsoleLogger()
+		logger := conf.NewConsoleLogger(os.Stdout)
 		err := conf.Init(logger, configFromLineage(cmd))
 		if err != nil {
 			return errors.Wrap(err, "init configuration")
@@ -186,8 +185,7 @@ func adminDashboardOperation(operation func(*logx.Logger) error, successMessage 
 		}
 
 		if err := operation(logger); err != nil {
-			functionName := runtime.FuncForPC(reflect.ValueOf(operation).Pointer()).Name()
-			return errors.Newf("%s: %v", functionName, err)
+			return errors.Wrap(err, cmd.Name)
 		}
 
 		fmt.Printf("%s\n", successMessage)

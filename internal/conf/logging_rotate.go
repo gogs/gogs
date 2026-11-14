@@ -136,9 +136,6 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 	if err := w.rotate(rotateDate); err != nil {
 		return len(p), nil
 	}
-	w.openDay = now.Day()
-	w.currentSize = 0
-	w.currentLines = 0
 	if w.config.MaxDays > 0 {
 		_ = w.deleteOutdated()
 	}
@@ -155,6 +152,10 @@ func (w *rotatingWriter) rotate(date time.Time) error {
 	if err := os.Rename(w.filename, dest); err != nil {
 		return errors.Wrapf(err, "rename %q", w.filename)
 	}
+	// The next file starts empty even if opening it fails now and is retried.
+	w.openDay = time.Now().Day()
+	w.currentSize = 0
+	w.currentLines = 0
 	return w.open()
 }
 

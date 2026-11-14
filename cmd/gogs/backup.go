@@ -48,7 +48,7 @@ const (
 var backupDataDirs = []string{"ssh", "attachments", "avatars", "repo-avatars"}
 
 func runBackup(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stdout)
 	zip.Verbose = cmd.Bool("verbose")
 
 	err := conf.Init(logger, configFromLineage(cmd))

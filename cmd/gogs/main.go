@@ -27,7 +27,7 @@ var webCommand = cli.Command{
 		if cmd.IsSet("port") {
 			portOverride = cmd.Int("port")
 		}
-		return web.Run(ctx, conf.NewConsoleLogger(), configFromLineage(cmd), portOverride)
+		return web.Run(ctx, conf.NewConsoleLogger(os.Stdout), configFromLineage(cmd), portOverride)
 	},
 	Flags: []cli.Flag{
 		intFlag("port, p", 3000, "Alternative listening port to use"),
@@ -57,6 +57,7 @@ func main() {
 		stop()
 	}()
 	if err := cmd.Run(ctx, os.Args); err != nil {
-		conf.NewConsoleLogger().FatalContext(context.Background(), "Failed to start application", "error", err)
+		// Stdout carries the Git protocol in serv and hooks.
+		conf.NewConsoleLogger(os.Stderr).FatalContext(context.Background(), "Failed to start application", "error", err)
 	}
 }

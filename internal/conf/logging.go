@@ -1,16 +1,20 @@
 package conf
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
 	charmlog "charm.land/log/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/cockroachdb/errors"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
@@ -145,10 +149,10 @@ func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 			return nil, errors.Wrapf(err, "init %s logger", c.Name)
 		}
 		handlers = append(handlers, h)
-		logger.Debug("Log mode enabled", "mode", c.Name, "level", c.Level)
+		logger.Debug("Log mode enabled", "mode", c.Name, "logLevel", c.Level)
 	}
 	if len(handlers) == 0 {
-		handlers = append(handlers, newCharmHandler(os.Stderr, slog.LevelDebug, IsProdMode()))
+		handlers = append(handlers, newConsoleHandler(os.Stdout, slog.LevelDebug, IsProdMode()))
 	}
 	return newLogger(handlers...), nil
 }
@@ -157,7 +161,7 @@ func newLogHandler(c *loggerConf) (slog.Handler, error) {
 	level := parseLevel(c.Level)
 	switch c.Name {
 	case ModeConsole:
-		return newCharmHandler(os.Stderr, level, IsProdMode()), nil
+		return newConsoleHandler(os.Stdout, level, IsProdMode()), nil
 	case ModeFile:
 		w, err := newRotatingWriter(c.Filename, *c.Rotation)
 		if err != nil {
@@ -176,9 +180,57 @@ func newLogHandler(c *loggerConf) (slog.Handler, error) {
 // level.
 func newLogger(handlers ...slog.Handler) *logx.Logger {
 	if len(handlers) == 1 {
-		return logx.New(handlers[0])
+		return logx.New(fatalLevelHandler{handlers[0]})
 	}
-	return logx.New(slog.NewMultiHandler(handlers...))
+	return logx.New(fatalLevelHandler{slog.NewMultiHandler(handlers...)})
+}
+
+// levelFatal is the level of records logged by logx.FatalContext, which charmlog
+// shows as fatal.
+const levelFatal = slog.LevelError + 4
+
+// fatalFuncName is the function slog records as the caller of a record logged
+// by logx.FatalContext.
+var fatalFuncName = runtime.FuncForPC(reflect.ValueOf((*logx.Logger).FatalContext).Pointer()).Name()
+
+// fatalLevelHandler raises records logged by logx.FatalContext, which logs at
+// the error level because slog has no fatal level, to levelFatal. Sinks then
+// label them as fatal, and sinks with LEVEL = Fatal receive only them.
+type fatalLevelHandler struct {
+	slog.Handler
+}
+
+func (h fatalLevelHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.Handler.Enabled(ctx, level) ||
+		(level == slog.LevelError && h.Handler.Enabled(ctx, levelFatal))
+}
+
+func (h fatalLevelHandler) Handle(ctx context.Context, r slog.Record) error {
+	if r.Level == slog.LevelError && runtime.FuncForPC(r.PC).Name() == fatalFuncName {
+		r.Level = levelFatal
+	}
+	if !h.Handler.Enabled(ctx, r.Level) {
+		return nil
+	}
+	return h.Handler.Handle(ctx, r)
+}
+
+func (h fatalLevelHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return fatalLevelHandler{h.Handler.WithAttrs(attrs)}
+}
+
+func (h fatalLevelHandler) WithGroup(name string) slog.Handler {
+	return fatalLevelHandler{h.Handler.WithGroup(name)}
+}
+
+// newConsoleHandler returns a handler for a terminal. Process managers like moon
+// are not a TTY, so TTY_FORCE opts back in to colors.
+func newConsoleHandler(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
+	handler := newCharmHandler(w, level, prod)
+	if os.Getenv("TTY_FORCE") != "" {
+		handler.SetColorProfile(colorprofile.Detect(w, append(os.Environ(), "CLICOLOR_FORCE=1")))
+	}
+	return handler
 }
 
 // newCharmHandler follows setupLogging in pgrok and git-lfs-server. Production
@@ -217,8 +269,7 @@ func parseLevel(s string) slog.Level {
 	case "error":
 		return slog.LevelError
 	case "fatal":
-		// logx.FatalContext logs at the error level before exiting.
-		return slog.LevelError
+		return levelFatal
 	default:
 		return slog.LevelDebug
 	}
@@ -243,7 +294,8 @@ func InitHookLogging(filename string) (*logx.Logger, error) {
 }
 
 // NewConsoleLogger returns the logger a command uses before InitLogging builds
-// the configured one.
-func NewConsoleLogger() *logx.Logger {
-	return newLogger(newCharmHandler(os.Stderr, slog.LevelDebug, false))
+// the configured one. Commands whose stdout carries the Git protocol pass
+// os.Stderr.
+func NewConsoleLogger(w io.Writer) *logx.Logger {
+	return newLogger(newConsoleHandler(w, slog.LevelDebug, false))
 }

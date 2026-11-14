@@ -53,6 +53,16 @@ func (l *Logger) Error(_ context.Context, msg string, args ...any) {
 	}
 }
 
+// ParamsFilter implements gorm.ParamsFilter. Query values are only logged when
+// every query is logged. Otherwise only failed and slow queries are, which may
+// go to Slack or Discord and include password hashes or tokens.
+func (l *Logger) ParamsFilter(_ context.Context, sql string, params ...any) (string, []any) {
+	if l.level >= gormlogger.Info {
+		return sql, params
+	}
+	return sql, nil
+}
+
 func (l *Logger) Trace(_ context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
 	if l.level <= gormlogger.Silent {
 		return

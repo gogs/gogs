@@ -65,7 +65,7 @@ var (
 )
 
 func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stderr)
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
@@ -161,7 +161,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 }
 
 func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stderr)
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
@@ -202,7 +202,7 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 }
 
 func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stderr)
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}

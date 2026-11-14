@@ -42,7 +42,7 @@ be skipped and remain unchanged.`,
 var lastSupportedVersionOfFormat = map[int]string{}
 
 func runRestore(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stdout)
 	zip.Verbose = cmd.Bool("verbose")
 
 	tmpDir := cmd.String("tempdir")

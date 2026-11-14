@@ -116,7 +116,7 @@ var allowedCommands = map[string]database.AccessMode{
 }
 
 func runServ(ctx context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stderr)
 	logger = setup(logger, cmd, "serv.log", true)
 
 	if conf.SSH.Disabled {

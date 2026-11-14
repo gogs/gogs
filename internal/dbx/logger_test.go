@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"unknwon.dev/x/logx"
 )
@@ -48,6 +51,40 @@ func TestLogger_Trace(t *testing.T) {
 			assert.Contains(t, out, `"msg":"`+test.wantMsg+`"`)
 			assert.Contains(t, out, "\"sql\":\"SELECT * FROM `user`\"")
 			assert.Contains(t, out, `"rows":1`)
+		})
+	}
+}
+
+func TestLogger_ParamsFilter(t *testing.T) {
+	tests := []struct {
+		name       string
+		level      gormlogger.LogLevel
+		wantValues bool
+	}{
+		{name: "values are hidden when only failures are logged", level: gormlogger.Warn},
+		{name: "values are shown when every query is logged", level: gormlogger.Info, wantValues: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := logx.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{Logger: NewLogger(logger, test.level, 0)})
+			require.NoError(t, err)
+			require.NoError(t, db.Exec("CREATE TABLE secret (name TEXT UNIQUE, passwd TEXT)").Error)
+			require.NoError(t, db.Exec("INSERT INTO secret VALUES (?, ?)", "alice", "hashed-password").Error)
+			buf.Reset()
+
+			err = db.Exec("INSERT INTO secret VALUES (?, ?)", "alice", "hashed-password").Error
+			require.Error(t, err)
+
+			out := buf.String()
+			assert.Contains(t, out, `"msg":"Query failed"`)
+			if test.wantValues {
+				assert.Contains(t, out, "hashed-password")
+			} else {
+				assert.NotContains(t, out, "hashed-password")
+				assert.Contains(t, out, "VALUES (?, ?)")
+			}
 		})
 	}
 }

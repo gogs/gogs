@@ -40,7 +40,7 @@ without manually hacking the data files`,
 )
 
 func runImportLocale(_ context.Context, cmd *cli.Command) error {
-	logger := conf.NewConsoleLogger()
+	logger := conf.NewConsoleLogger(os.Stdout)
 	if !cmd.IsSet("source") {
 		return errors.New("source directory is not specified")
 	} else if !cmd.IsSet("target") {

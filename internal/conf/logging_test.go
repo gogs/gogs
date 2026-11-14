@@ -199,7 +199,7 @@ func Test_parseLevel(t *testing.T) {
 		{"Info", slog.LevelInfo},
 		{"warning", slog.LevelWarn},
 		{"error", slog.LevelError},
-		{"fatal", slog.LevelError},
+		{"fatal", levelFatal},
 	}
 	for _, test := range tests {
 		assert.Equal(t, test.want, parseLevel(test.in), test.in)
@@ -310,9 +310,12 @@ func Test_webhookHandler(t *testing.T) {
 	t.Run("posts the queue before a fatal exit", func(t *testing.T) {
 		// FatalContext exits the process, so it runs in a child test process.
 		if url := os.Getenv("GOGS_TEST_WEBHOOK_URL"); url != "" {
-			logger := newLogger(newWebhookHandler(slog.LevelError, newSlackHandler(url), 10))
+			logger := newLogger(
+				newWebhookHandler(slog.LevelError, newSlackHandler(url), 10),
+				newCharmHandler(os.Stdout, parseLevel("fatal"), false),
+			)
 			logger.Error("Queued before fatal")
-			logger.FatalContext(context.Background(), "Fatal")
+			logger.Scoped("web").FatalContext(context.Background(), "Fatal")
 			return
 		}
 
@@ -330,16 +333,22 @@ func Test_webhookHandler(t *testing.T) {
 
 		cmd := exec.Command(os.Args[0], "-test.run=^Test_webhookHandler$/^posts_the_queue_before_a_fatal_exit$")
 		cmd.Env = append(os.Environ(), "GOGS_TEST_WEBHOOK_URL="+server.URL)
-		err := cmd.Run()
+		stdout, err := cmd.Output()
 		var exitErr *exec.ExitError
 		require.ErrorAs(t, err, &exitErr)
 		assert.Equal(t, 1, exitErr.ExitCode())
+
+		// The sink with LEVEL = Fatal gets only the fatal record, labelled fatal.
+		assert.NotContains(t, string(stdout), "Queued before fatal")
+		assert.Contains(t, string(stdout), "FATA [web] Fatal")
 
 		mu.Lock()
 		defer mu.Unlock()
 		require.Len(t, posted, 2)
 		assert.Contains(t, posted[0], "Queued before fatal")
-		assert.Contains(t, posted[1], "Fatal")
+		assert.Contains(t, posted[0], `"color":"danger"`)
+		assert.Contains(t, posted[1], "[web] Fatal")
+		assert.Contains(t, posted[1], `"color":"#ff0200"`, "labelled fatal")
 	})
 }
 
