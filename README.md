@@ -31,19 +31,37 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💌 Features
 
-- User dashboard, user profile and activity timeline.
-- Access repositories via SSH, HTTP and HTTPS protocols.
-- User, organization and repository management.
-- Repository and organization webhooks, including Slack, Discord and Dingtalk.
-- Repository Git hooks, deploy keys and Git LFS.
-- Repository issues, pull requests, wiki, protected branches and collaboration.
-- Migrate and mirror repositories with wiki from other code hosts.
-- Web editor for quick editing repository files and wiki.
-- Jupyter Notebook and PDF rendering.
-- Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
-- Customize HTML templates, static files and many others.
-- Rich database backend support, including PostgreSQL, MySQL, MariaDB, SQLite3 or any database backend that speaks one of those protocols.
-- Have localization over [31 languages](https://crowdin.com/project/gogs).
+**🗂️ Code hosting**
+
+- Clone and push over SSH, HTTP and HTTPS, with an optional built-in SSH server.
+- Git LFS, deploy keys and server-side Git hooks.
+- Migrate and mirror repositories, including their wikis, from other code hosts.
+- Edit files and wiki pages right in the browser.
+- Render Markdown, Jupyter Notebooks and PDFs.
+
+**🤝 Collaboration**
+
+- Issues, pull requests, wikis and protected branches.
+- Organizations, teams and per-repository collaborators.
+- Dashboards, user profiles and activity timelines.
+
+**🔌 Integrations**
+
+- Repository and organization webhooks, with native Slack, Discord and DingTalk support.
+- A REST [API](https://gogs.io/api-reference) for automation.
+- Prometheus metrics for monitoring.
+
+**🔐 Authentication**
+
+- Sign in with LDAP, SMTP, PAM, reverse proxy, GitHub.com or GitHub Enterprise.
+- Optional two-factor authentication with TOTP and recovery codes.
+
+**⚙️ Operations**
+
+- A single binary on Linux, macOS, Windows and ARM, or the official Docker image.
+- PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
+- Customize templates, static files and much more.
+- Available in over [31 languages](https://crowdin.com/project/gogs).
 
 ## 💾 Hardware requirements
 
