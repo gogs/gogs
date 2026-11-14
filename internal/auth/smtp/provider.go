@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Provider contains configuration of an SMTP authentication provider.
@@ -53,7 +53,7 @@ func (p *Provider) Authenticate(logger *logx.Logger, login, password string) (*a
 	}
 
 	if err := p.config.doAuth(smtpAuth); err != nil {
-		logger.Tracef("SMTP: Authentication failed: %v", err)
+		logger.Debug("Authentication failed", "error", err)
 
 		// Check standard error format first, then fallback to the worse case.
 		tperr, ok := err.(*textproto.Error)

@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.

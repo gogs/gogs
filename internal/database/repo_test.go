@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 )
@@ -82,7 +82,7 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	canary := filepath.Join(repoPath, "canary.txt")
 	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
-	_, err = CreateRepository(context.Background(), logx.NewNoop(), owner, owner, opts)
+	_, err = CreateRepository(context.Background(), logx.NewNoopLogger(), owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))

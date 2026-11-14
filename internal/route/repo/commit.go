@@ -160,13 +160,13 @@ func CompareDiff(c *context.Context) {
 	if git.IsEmptyID(beforeCommitID) {
 		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
 		if err != nil && !git.IsErrNoMergeBase(err) {
-			c.Logger.Errorf("Failed to get merge base: %v", err)
+			c.Logger.Error("Failed to get merge base", "error", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		} else if err != nil || beforeCommitID == afterCommitID {
 			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 			if err != nil {
-				c.Logger.Errorf("Failed to get object format: %v", err)
+				c.Logger.Error("Failed to get object format", "error", err)
 				c.Status(http.StatusInternalServerError)
 				return
 			}
@@ -175,7 +175,7 @@ func CompareDiff(c *context.Context) {
 
 			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
 			if err != nil {
-				c.Logger.Errorf("Failed to list commits: %v", err)
+				c.Logger.Error("Failed to list commits", "error", err)
 				c.Status(http.StatusInternalServerError)
 				return
 			}
@@ -186,7 +186,7 @@ func CompareDiff(c *context.Context) {
 			c.NotFound()
 			return
 		} else if err != nil {
-			c.Logger.Errorf("Failed to get base commit: %v", err)
+			c.Logger.Error("Failed to get base commit", "error", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		}

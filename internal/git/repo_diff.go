@@ -6,8 +6,7 @@ import (
 	"slices"
 
 	"github.com/cockroachdb/errors"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 // DiffOptions contains optional arguments for parsing diff.

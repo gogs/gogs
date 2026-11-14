@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/userx"
@@ -195,7 +195,7 @@ func (issue *Issue) MailParticipants(logger *logx.Logger) (err error) {
 	}
 
 	if err = mailIssueCommentToParticipants(logger, issue, issue.Poster, mentions); err != nil {
-		logger.Errorf("mailIssueCommentToParticipants: %v", err)
+		logger.Error("Failed to mail participants", "error", err)
 	}
 
 	return nil

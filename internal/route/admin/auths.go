@@ -180,7 +180,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		}
 	}
 
-	c.Logger.Tracef("Authentication created by admin(%s): %s", c.User.Name, f.Name)
+	c.Logger.Debug("Authentication source created by admin", "sourceName", f.Name, "adminName", c.User.Name)
 
 	c.Flash.Success(c.Tr("admin.auths.new_success", f.Name))
 	c.Redirect(conf.Server.Subpath + "/admin/auths")
@@ -264,7 +264,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 		}
 	}
 
-	c.Logger.Tracef("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
+	c.Logger.Debug("Authentication source updated by admin", "sourceID", source.ID, "adminName", c.User.Name)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/auths/" + strconv.FormatInt(f.ID, 10))
@@ -283,7 +283,7 @@ func DeleteAuthSource(c *context.Context) {
 		})
 		return
 	}
-	c.Logger.Tracef("Authentication deleted by admin(%s): %d", c.User.Name, id)
+	c.Logger.Debug("Authentication source deleted by admin", "sourceID", id, "adminName", c.User.Name)
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
 	c.JSONSuccess(map[string]any{

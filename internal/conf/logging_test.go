@@ -1,7 +1,10 @@
 package conf
 
 import (
+	"bytes"
+	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -127,4 +130,50 @@ USERNAME = yoyo
 	}
 	assert.True(t, hasConsole)
 	assert.Equal(t, want, got)
+}
+
+func Test_parseLevel(t *testing.T) {
+	tests := []struct {
+		in   string
+		want slog.Level
+	}{
+		{"trace", slog.LevelDebug},
+		{"", slog.LevelDebug},
+		{"Info", slog.LevelInfo},
+		{"warning", slog.LevelWarn},
+		{"error", slog.LevelError},
+		{"fatal", slog.LevelError + 4},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.want, parseLevel(test.in), test.in)
+	}
+}
+
+func Test_newLogger(t *testing.T) {
+	t.Run("each handler applies its own level", func(t *testing.T) {
+		var console, file bytes.Buffer
+		logger := newLogger(
+			newCharmHandler(&console, slog.LevelInfo, false),
+			newCharmHandler(&file, slog.LevelDebug, false),
+		)
+
+		logger.Debug("hidden from console")
+		logger.Info("visible everywhere", "userID", 1)
+
+		assert.NotContains(t, console.String(), "hidden from console")
+		assert.Contains(t, console.String(), "visible everywhere userID=1")
+		assert.Contains(t, file.String(), "hidden from console")
+		assert.Contains(t, file.String(), "visible everywhere userID=1")
+	})
+
+	t.Run("production writes JSON", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := newLogger(newCharmHandler(&buf, slog.LevelInfo, true))
+
+		logger.Info("started")
+
+		line := strings.TrimSpace(buf.String())
+		assert.True(t, strings.HasPrefix(line, "{"), line)
+		assert.Contains(t, line, `"msg":"started"`)
+	})
 }

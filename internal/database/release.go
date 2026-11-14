@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -156,7 +156,7 @@ func (r *Release) preparePublishWebhooks(logger *logx.Logger) {
 		Repository: r.Repo.APIFormatLegacy(logger, nil),
 		Sender:     r.Publisher.APIFormat(),
 	}); err != nil {
-		logger.Errorf("PrepareWebhooks: %v", err)
+		logger.Error("Failed to prepare webhooks", "error", err)
 	}
 }
 

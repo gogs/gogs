@@ -51,7 +51,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 		// reset c.org.OrgLink with new name
 		c.Org.OrgLink = conf.Server.Subpath + "/org/" + f.Name
-		c.Logger.Tracef("Organization name changed: %s -> %s", org.Name, f.Name)
+		c.Logger.Debug("Organization renamed", "oldName", org.Name, "newName", f.Name)
 	}
 
 	opts := database.UpdateUserOptions{
@@ -115,7 +115,7 @@ func SettingsDelete(c *context.Context) {
 				c.Error(err, "delete organization")
 			}
 		} else {
-			c.Logger.Tracef("Organization deleted: %s", org.Name)
+			c.Logger.Debug("Organization deleted", "orgName", org.Name)
 			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return

@@ -8,9 +8,9 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
 )

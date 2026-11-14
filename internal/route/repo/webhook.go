@@ -469,7 +469,7 @@ func TestWebhook(c *context.Context) {
 	if c.Repo.Commit == nil {
 		objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 		if err != nil {
-			c.Logger.Errorf("Failed to get object format: %v", err)
+			c.Logger.Error("Failed to get object format", "error", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		}

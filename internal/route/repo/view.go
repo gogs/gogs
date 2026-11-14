@@ -162,7 +162,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			// Building code view blocks with line number on server side.
 			var fileContent string
 			if content, err := template.ToUTF8WithErr(c.Logger, p); err != nil {
-				c.Logger.Errorf("ToUTF8WithErr: %s", err)
+				c.Logger.Error("Failed to convert file content to UTF-8", "error", err)
 				fileContent = string(p)
 			} else {
 				fileContent = content
@@ -216,7 +216,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig(c.Req.Context())
 	if err != nil && !git.IsErrRevisionNotExist(err) {
-		c.Logger.Warnf("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
+		c.Logger.Warn("Failed to get editorconfig", "repoID", c.Repo.Repository.ID, "error", err)
 		return
 	}
 	c.Data["Editorconfig"] = ec

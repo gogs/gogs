@@ -11,11 +11,11 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/google/uuid"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -171,12 +171,12 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Contex
 			t, err := store.GetAccessTokenBySHA1(c.Req.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {
-					logger.Errorf("GetAccessTokenBySHA: %v", err)
+					logger.Error("Failed to get access token by SHA1", "error", err)
 				}
 				return 0, false
 			}
 			if err = store.TouchAccessTokenByID(c.Req.Context(), t.ID); err != nil {
-				logger.Errorf("Failed to touch access token: %v", err)
+				logger.Error("Failed to touch access token", "tokenID", t.ID, "error", err)
 			}
 			return t.UserID, true
 		}
@@ -190,7 +190,7 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Contex
 		_, err := store.GetUserByID(c.Req.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
-				logger.Errorf("Failed to get user by ID: %v", err)
+				logger.Error("Failed to get user by ID", "userID", id, "error", err)
 			}
 			return 0, false
 		}
@@ -211,7 +211,7 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
 				if err != nil {
 					if !database.IsErrUserNotExist(err) {
-						logger.Errorf("Failed to get user by name: %v", err)
+						logger.Error("Failed to get user by name", "username", webAuthUser, "error", err)
 						return nil, false, false
 					}
 
@@ -226,7 +226,7 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 							},
 						)
 						if err != nil {
-							logger.Errorf("Failed to create user %q: %v", webAuthUser, err)
+							logger.Error("Failed to create user", "username", webAuthUser, "error", err)
 							return nil, false, false
 						}
 					}
@@ -245,7 +245,7 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 				u, err := store.AuthenticateUser(ctx.Req.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
-						logger.Errorf("Failed to authenticate user: %v", err)
+						logger.Error("Failed to authenticate user", "error", err)
 					}
 					return nil, false, false
 				}
@@ -261,7 +261,7 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 
 	u, err := store.GetUserByID(ctx.Req.Context(), uid)
 	if err != nil {
-		logger.Errorf("GetUserByID: %v", err)
+		logger.Error("Failed to get user by ID", "userID", uid, "error", err)
 		return nil, false, false
 	}
 	if isTokenAuth && u.IsDisabled() {
@@ -306,7 +306,7 @@ func AuthenticateByToken(ctx context.Context, logger *logx.Logger, store AuthSto
 	}
 	if err = store.TouchAccessTokenByID(ctx, t.ID); err != nil {
 		// NOTE: There is no need to fail the auth flow if we can't touch the token.
-		logger.Errorf("Failed to touch access token [id: %d]: %v", t.ID, err)
+		logger.Error("Failed to touch access token", "tokenID", t.ID, "error", err)
 	}
 
 	user, err := store.GetUserByID(ctx, t.UserID)

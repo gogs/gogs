@@ -8,11 +8,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 )
@@ -80,7 +80,7 @@ func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, r
 	if repo.IsMirror {
 		mirror, err := database.GetMirrorByRepoID(repo.ID)
 		if err != nil {
-			logger.Errorf("getRepoHeader: get mirror by repo ID %d: %v", repo.ID, err)
+			logger.Error("Failed to get mirror by repository ID", "repoID", repo.ID, "error", err)
 		} else if mirror != nil {
 			resp.MirrorOf = mirror.Address()
 		}
@@ -120,7 +120,7 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
-		logger.Errorf("getRepoCommit: cat-file commit %q in %q/%q: %v", commitID, owner.Name, repo.Name, err)
+		logger.Error("Failed to get commit", "commitID", commitID, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "cat-file commit")
 	}
 
@@ -128,7 +128,7 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, err := commit.ParentID(i)
 		if err != nil {
-			logger.Errorf("getRepoCommit: parent ID %d for %q in %q/%q: %v", i, commitID, owner.Name, repo.Name, err)
+			logger.Error("Failed to get commit parent ID", "parentIndex", i, "commitID", commitID, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "parent ID")
 		}
 		parents[i] = sha.String()
@@ -182,13 +182,13 @@ func repoWatchAction(ctx context.Context, logger *logx.Logger, repoCtx *repoCont
 		err = database.WatchRepo(repoCtx.Viewer.ID(), repo.ID, false)
 	}
 	if err != nil {
-		logger.Errorf("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, repoCtx.Viewer.ID(), repo.ID, err)
+		logger.Error("Failed to update repository watch status", "watching", watching, "userID", repoCtx.Viewer.ID(), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "watch repo")
 	}
 
 	updated, err := database.Handle.Repositories().GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
-		logger.Errorf("repoWatchAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
+		logger.Error("Failed to reload repository", "repoID", repo.ID, "repoName", repo.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoWatchResponse{
@@ -224,13 +224,13 @@ func repoStarAction(ctx context.Context, logger *logx.Logger, repoCtx *repoConte
 		err = database.StarRepo(repoCtx.Viewer.ID(), repo.ID, false)
 	}
 	if err != nil {
-		logger.Errorf("repoStarAction: set starred=%t for user %d on repo %d: %v", starring, repoCtx.Viewer.ID(), repo.ID, err)
+		logger.Error("Failed to update repository star status", "starred", starring, "userID", repoCtx.Viewer.ID(), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "star repo")
 	}
 
 	updated, err := database.Handle.Repositories().GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
-		logger.Errorf("repoStarAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
+		logger.Error("Failed to reload repository", "repoID", repo.ID, "repoName", repo.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoStarResponse{

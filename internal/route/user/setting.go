@@ -15,6 +15,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -23,7 +24,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
@@ -96,7 +96,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				return
 			}
 
-			c.Logger.Tracef("Username changed: %s -> %s", c.User.Name, f.Name)
+			c.Logger.Debug("Username changed", "oldName", c.User.Name, "newName", f.Name)
 		}
 	}
 
@@ -251,7 +251,7 @@ func parseUserFromCode(ctx gocontext.Context, logger *logx.Logger, code string) 
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			logger.Errorf("parseUserFromCode: get user by name %q: %v", string(b), err)
+			logger.Error("Failed to get user by name", "userName", string(b), "error", err)
 		}
 	}
 	return nil
@@ -280,7 +280,7 @@ func ActivateEmail(c *context.Context) {
 			return
 		}
 
-		c.Logger.Tracef("Email activated: %s", email.Email)
+		c.Logger.Debug("Email activated", "email", email.Email)
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
 
@@ -328,11 +328,11 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	// Send confirmation email
 	if conf.Auth.RequireEmailConfirmation {
 		if err := email.SendActivateEmailMail(c.Logger, c.Context, database.NewMailerUser(c.User), f.Email); err != nil {
-			c.Logger.Errorf("Failed to send activate email mail: %v", err)
+			c.Logger.Error("Failed to send activate email mail", "error", err)
 		}
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
-			c.Logger.Errorf("Set cache 'MailResendLimit' failed: %v", err)
+			c.Logger.Error("Failed to set mail resend limit cache", "error", err)
 		}
 		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", f.Email, conf.Auth.ActivateCodeLives/60))
 	} else {
@@ -726,7 +726,7 @@ func SettingsDelete(c *context.Context) {
 				c.Errorf(err, "delete user")
 			}
 		} else {
-			c.Logger.Tracef("Account deleted: %s", c.User.Name)
+			c.Logger.Debug("Account deleted", "userName", c.User.Name)
 			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return

@@ -15,11 +15,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
+	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
@@ -126,7 +126,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	case "events":
 		w.HookEvent = &HookEvent{}
 		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-			handleLogger().Errorf("Unmarshal [%d]: %v", w.ID, err)
+			handleLogger().Error("Failed to unmarshal webhook events", "webhookID", w.ID, "error", err)
 		}
 	case "created_unix":
 		w.Created = time.Unix(w.CreatedUnix, 0).Local()
@@ -138,7 +138,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 func (w *Webhook) SlackMeta() *SlackMeta {
 	s := &SlackMeta{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
-		handleLogger().Errorf("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
+		handleLogger().Error("Failed to get Slack meta", "webhookID", w.ID, "error", err)
 	}
 	return s
 }
@@ -475,7 +475,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.RequestInfo = &HookRequest{}
 		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
-			handleLogger().Errorf("Unmarshal[%d]: %v", t.ID, err)
+			handleLogger().Error("Failed to unmarshal hook task request", "hookTaskID", t.ID, "error", err)
 		}
 
 	case "response_content":
@@ -485,7 +485,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.ResponseInfo = &HookResponse{}
 		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
-			handleLogger().Errorf("Unmarshal [%d]: %v", t.ID, err)
+			handleLogger().Error("Failed to unmarshal hook task response", "hookTaskID", t.ID, "error", err)
 		}
 	}
 }
@@ -493,7 +493,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 func (t *HookTask) ToJSON(v any) string {
 	p, err := json.Marshal(v)
 	if err != nil {
-		handleLogger().Errorf("Marshal [%d]: %v", t.ID, err)
+		handleLogger().Error("Failed to marshal JSON", "hookTaskID", t.ID, "error", err)
 	}
 	return string(p)
 }
@@ -625,7 +625,7 @@ func prepareHookTasks(logger *logx.Logger, e Engine, repo *Repository, event Hoo
 		if len(w.Secret) > 0 {
 			data, err := payloader.JSONPayload()
 			if err != nil {
-				logger.Errorf("prepareWebhooks.JSONPayload: %v", err)
+				logger.Error("Failed to create JSON payload", "error", err)
 			}
 			sig := hmac.New(sha256.New, []byte(w.Secret))
 			_, _ = sig.Write(data)
@@ -741,15 +741,15 @@ func (t *HookTask) deliver(logger *logx.Logger) {
 	defer func() {
 		t.Delivered = time.Now().UnixNano()
 		if t.IsSucceed {
-			logger.Tracef("Hook delivered: %s", t.UUID)
+			logger.Debug("Hook delivered", "uuid", t.UUID)
 		} else {
-			logger.Tracef("Hook delivery failed: %s", t.UUID)
+			logger.Debug("Hook delivery failed", "uuid", t.UUID)
 		}
 
 		// Update webhook last delivery status.
 		w, err := GetWebhookByID(t.HookID)
 		if err != nil {
-			logger.Errorf("GetWebhookByID: %v", err)
+			logger.Error("Failed to get webhook", "error", err)
 			return
 		}
 		if t.IsSucceed {
@@ -758,7 +758,7 @@ func (t *HookTask) deliver(logger *logx.Logger) {
 			w.LastStatus = HookStatusFailed
 		}
 		if err = UpdateWebhook(w); err != nil {
-			logger.Errorf("UpdateWebhook: %v", err)
+			logger.Error("Failed to update webhook", "error", err)
 			return
 		}
 	}()
@@ -813,24 +813,24 @@ func DeliverHooks(logger *logx.Logger) {
 	// Update hook task status.
 	for _, t := range tasks {
 		if err := UpdateHookTask(t); err != nil {
-			logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
+			logger.Error("Failed to update hook task", "hookTaskID", t.ID, "error", err)
 		}
 	}
 
 	// Start listening on new hook requests.
 	for repoID := range HookQueue.Queue() {
-		logger.Tracef("DeliverHooks [repo_id: %v]", repoID)
+		logger.Debug("Delivering hooks", "repoID", repoID)
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
 		if err := x.Where("repo_id = ?", repoID).And("is_delivered = ?", false).Find(&tasks); err != nil {
-			logger.Errorf("Get repository [%s] hook tasks: %v", repoID, err)
+			logger.Error("Failed to get hook tasks of repository", "repoID", repoID, "error", err)
 			continue
 		}
 		for _, t := range tasks {
 			t.deliver(logger)
 			if err := UpdateHookTask(t); err != nil {
-				logger.Errorf("UpdateHookTask [%d]: %v", t.ID, err)
+				logger.Error("Failed to update hook task", "hookTaskID", t.ID, "error", err)
 				continue
 			}
 		}

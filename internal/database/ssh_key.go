@@ -16,11 +16,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"golang.org/x/crypto/ssh"
+	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/process"
 )
@@ -298,7 +298,7 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 	if err != nil {
 		return "", errors.Newf("%s: %v", fnName, err)
 	}
-	logger.Tracef("Key info [native: %v]: %s-%d", conf.SSH.StartBuiltinServer, keyType, length)
+	logger.Debug("Parsed public key", "builtinServer", conf.SSH.StartBuiltinServer, "keyType", keyType, "length", length)
 
 	if minLen, found := conf.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
 		return content, nil
@@ -329,7 +329,7 @@ func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
 
 		// .ssh directory should have mode 700, and authorized_keys file should have mode 600.
 		if fi.Mode().Perm() > 0o600 {
-			logger.Errorf("authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
+			logger.Error("Resetting unusual permission flags of authorized_keys file", "mode", fi.Mode().Perm().String(), "newMode", "-rw-------")
 			if err = f.Chmod(0o600); err != nil {
 				return err
 			}
@@ -389,7 +389,7 @@ func addKey(logger *logx.Logger, e Engine, key *PublicKey) (err error) {
 
 // AddPublicKey adds new public key to database and authorized_keys file.
 func AddPublicKey(logger *logx.Logger, ownerID int64, name, content string) (*PublicKey, error) {
-	logger.Tracef("Add public key: %s", content)
+	logger.Debug("Adding public key", "content", content)
 	if err := checkKeyContent(content); err != nil {
 		return nil, err
 	}
@@ -511,7 +511,7 @@ func RewriteAuthorizedKeys(logger *logx.Logger) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	logger.Tracef("Doing: RewriteAuthorizedKeys")
+	logger.Debug("Rewriting authorized_keys file")
 
 	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
 	fpath := authorizedKeysPath()

@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
@@ -242,7 +242,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			logger.Errorf("LoadIssue: %v", err)
+			logger.Error("Failed to load issue", "error", err)
 			return
 		}
 		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -262,7 +262,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 		})
 	}
 	if err != nil {
-		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "error", err)
 	}
 }
 
@@ -355,7 +355,7 @@ func (issue *Issue) ClearLabels(logger *logx.Logger, doer *User) (err error) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			logger.Errorf("LoadIssue: %v", err)
+			logger.Error("Failed to load issue", "error", err)
 			return err
 		}
 		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
@@ -375,7 +375,7 @@ func (issue *Issue) ClearLabels(logger *logx.Logger, doer *User) (err error) {
 		})
 	}
 	if err != nil {
-		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "error", err)
 	}
 
 	return nil
@@ -513,7 +513,7 @@ func (issue *Issue) ChangeStatus(logger *logx.Logger, doer *User, repo *Reposito
 		err = PrepareWebhooks(logger, repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
-		logger.Errorf("PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "isClosed", isClosed, "error", err)
 	}
 
 	return nil
@@ -555,7 +555,7 @@ func (issue *Issue) ChangeTitle(logger *logx.Logger, doer *User, title string) (
 		})
 	}
 	if err != nil {
-		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "error", err)
 	}
 
 	return nil
@@ -597,7 +597,7 @@ func (issue *Issue) ChangeContent(logger *logx.Logger, doer *User, content strin
 		})
 	}
 	if err != nil {
-		logger.Errorf("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "error", err)
 	}
 
 	return nil
@@ -611,7 +611,7 @@ func (issue *Issue) ChangeAssignee(logger *logx.Logger, doer *User, assigneeID i
 
 	issue.Assignee, err = Handle.Users().GetByID(context.TODO(), issue.AssigneeID)
 	if err != nil && !IsErrUserNotExist(err) {
-		logger.Errorf("Failed to get user by ID: %v", err)
+		logger.Error("Failed to get user by ID", "error", err)
 		return nil
 	}
 
@@ -646,7 +646,7 @@ func (issue *Issue) ChangeAssignee(logger *logx.Logger, doer *User, assigneeID i
 		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
-		logger.Errorf("PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "removeAssignee", isRemoveAssignee, "error", err)
 	}
 
 	return nil
@@ -782,10 +782,10 @@ func NewIssue(logger *logx.Logger, repo *Repository, issue *Issue, labelIDs []in
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		logger.Errorf("NotifyWatchers: %v", err)
+		logger.Error("Failed to notify watchers", "error", err)
 	}
 	if err = issue.MailParticipants(logger); err != nil {
-		logger.Errorf("MailParticipants: %v", err)
+		logger.Error("Failed to mail participants", "error", err)
 	}
 
 	if err = PrepareWebhooks(logger, repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
@@ -795,7 +795,7 @@ func NewIssue(logger *logx.Logger, repo *Repository, issue *Issue, labelIDs []in
 		Repository: repo.APIFormatLegacy(logger, nil),
 		Sender:     issue.Poster.APIFormat(),
 	}); err != nil {
-		logger.Errorf("PrepareWebhooks: %v", err)
+		logger.Error("Failed to prepare webhooks", "error", err)
 	}
 
 	return nil

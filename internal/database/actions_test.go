@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 )
 
 func TestIssueReferencePattern(t *testing.T) {
@@ -155,7 +155,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.CommitRepo(ctx, logx.NewNoop(),
+		err = s.CommitRepo(ctx, logx.NewNoopLogger(),
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -215,7 +215,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.CommitRepo(ctx, logx.NewNoop(),
+		err = s.CommitRepo(ctx, logx.NewNoopLogger(),
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -290,7 +290,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.CommitRepo(ctx, logx.NewNoop(),
+		err = s.CommitRepo(ctx, logx.NewNoopLogger(),
 			CommitRepoOptions{
 				PusherName:  alice.Name,
 				Owner:       alice,
@@ -600,7 +600,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 	require.NoError(t, err)
 
 	now := time.Unix(1588568886, 0).UTC()
-	err = s.MirrorSyncPush(ctx, logx.NewNoop(),
+	err = s.MirrorSyncPush(ctx, logx.NewNoopLogger(),
 		MirrorSyncPushOptions{
 			Owner:       alice,
 			Repo:        repo,
@@ -761,7 +761,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.PushTag(ctx, logx.NewNoop(),
+		err = s.PushTag(ctx, logx.NewNoopLogger(),
 			PushTagOptions{
 				Owner:       alice,
 				Repo:        repo,
@@ -801,7 +801,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 			require.NoError(t, err)
 		})
 
-		err = s.PushTag(ctx, logx.NewNoop(),
+		err = s.PushTag(ctx, logx.NewNoopLogger(),
 			PushTagOptions{
 				Owner:       alice,
 				Repo:        repo,

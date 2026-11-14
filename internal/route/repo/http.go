@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -20,7 +21,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/tool"
 )
@@ -92,7 +92,7 @@ func HTTPContexter(logger *logx.Logger, store Store) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
-				logger.Errorf("Failed to get user [name: %s]: %v", ownerName, err)
+				logger.Error("Failed to get user", "userName", ownerName, "error", err)
 			}
 			return
 		}
@@ -103,7 +103,7 @@ func HTTPContexter(logger *logx.Logger, store Store) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
-				logger.Errorf("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, repoName, err)
+				logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", repoName, "error", err)
 			}
 			return
 		}
@@ -146,7 +146,7 @@ func HTTPContexter(logger *logx.Logger, store Store) macaron.Handler {
 		authUser, err := store.AuthenticateUser(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
-			logger.Errorf("Failed to authenticate user [name: %s]: %v", authUsername, err)
+			logger.Error("Failed to authenticate user", "userName", authUsername, "error", err)
 			return
 		}
 
@@ -156,7 +156,7 @@ func HTTPContexter(logger *logx.Logger, store Store) macaron.Handler {
 			authUser, err = context.AuthenticateByToken(c.Req.Context(), logger, store, authUsername)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
-				logger.Errorf("Failed to authenticate by access token via username: %v", err)
+				logger.Error("Failed to authenticate by access token via username", "error", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
@@ -166,7 +166,7 @@ func HTTPContexter(logger *logx.Logger, store Store) macaron.Handler {
 						askCredentials(c, http.StatusUnauthorized, "")
 					} else {
 						c.Status(http.StatusInternalServerError)
-						logger.Errorf("Failed to authenticate by access token via password: %v", err)
+						logger.Error("Failed to authenticate by access token via password", "error", err)
 					}
 					return
 				}
@@ -182,7 +182,7 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
-		logger.Tracef("[Git] Authenticated user: %s", authUser.Name)
+		logger.Debug("Authenticated user", "userName", authUser.Name)
 
 		mode := database.AccessModeWrite
 		if isPull {
@@ -250,7 +250,7 @@ func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 	if h.r.Header.Get("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
-			logger.Errorf("HTTP.Get: fail to create gzip reader: %v", err)
+			logger.Error("Failed to create gzip reader", "error", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -283,7 +283,7 @@ func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 		Envs:         envs,
 	})
 	if err != nil {
-		logger.Errorf("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
+		logger.Error("Failed to serve RPC", "service", service, "error", err, "stderr", stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -330,7 +330,7 @@ func getInfoRefs(logger *logx.Logger, h serviceHandler) {
 		Protocol:      h.r.Header.Get("Git-Protocol"),
 	})
 	if err != nil {
-		logger.Errorf("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
+		logger.Error("Failed to advertise refs", "service", service, "error", err, "stderr", stderr.String())
 	}
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service))
 	h.w.WriteHeader(http.StatusOK)
@@ -389,7 +389,7 @@ func HTTP(logger *logx.Logger, c *HTTPContext) {
 
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
-			logger.Warnf("HTTP.getGitRepoPath: %v", err)
+			logger.Warn("Failed to get Git repository path", "error", err)
 			c.Error(http.StatusNotFound)
 			return
 		}

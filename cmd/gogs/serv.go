@@ -11,11 +11,11 @@ import (
 
 	"github.com/urfave/cli/v3"
 	"go.opentelemetry.io/otel/codes"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 )
 
 const (
@@ -42,7 +42,7 @@ func fail(logger *logx.Logger, userMessage, errMessage string, args ...any) {
 		if !conf.IsProdMode() {
 			fmt.Fprintf(os.Stderr, errMessage+"\n", args...)
 		}
-		logger.Errorf(errMessage, args...)
+		logger.Error(fmt.Sprintf(errMessage, args...))
 	}
 
 	processSpan.SetStatus(codes.Error, userMessage)

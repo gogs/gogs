@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/logx"
 )
 
 type Type int

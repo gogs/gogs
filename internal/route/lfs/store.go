@@ -3,9 +3,10 @@ package lfs
 import (
 	"context"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Store is the data layer carrier for LFS endpoints. This interface is meant to

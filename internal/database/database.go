@@ -10,10 +10,10 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Tables is the list of struct-to-table mappings.
@@ -91,7 +91,7 @@ func NewConnection(logger *logx.Logger, w gormlogger.Writer) (*gorm.DB, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "auto migrate %q", name)
 		}
-		logger.Tracef("Auto migrated %q", name)
+		logger.Debug("Auto migrated table", "tableName", name)
 	}
 
 	loadedLoginSourceFilesStore, err = loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)
@@ -118,7 +118,7 @@ type DB struct {
 // in tests, which get a no-op logger.
 func handleLogger() *logx.Logger {
 	if Handle == nil || Handle.logger == nil {
-		return logx.NewNoop()
+		return logx.NewNoopLogger()
 	}
 	return Handle.logger
 }

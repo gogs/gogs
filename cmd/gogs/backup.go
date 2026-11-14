@@ -13,10 +13,10 @@ import (
 	"github.com/unknwon/cae/zip"
 	"github.com/urfave/cli/v3"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -66,13 +66,13 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 
 	tmpDir := cmd.String("tempdir")
 	if !osx.Exist(tmpDir) {
-		logger.Fatalf("'--tempdir' does not exist: %s", tmpDir)
+		logger.FatalContext(ctx, "Temporary directory does not exist", "tempDir", tmpDir)
 	}
 	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
 	if err != nil {
-		logger.Fatalf("Failed to create backup root directory '%s': %v", rootDir, err)
+		logger.FatalContext(ctx, "Failed to create backup root directory", "rootDir", rootDir, "error", err)
 	}
-	logger.Infof("Backup root directory: %s", rootDir)
+	logger.Info("Created backup root directory", "rootDir", rootDir)
 
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
@@ -81,34 +81,34 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
 	if err = metadata.SaveTo(metaFile); err != nil {
-		logger.Fatalf("Failed to save metadata '%s': %v", metaFile, err)
+		logger.FatalContext(ctx, "Failed to save metadata", "metadataPath", metaFile, "error", err)
 	}
 
 	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
-	logger.Infof("Packing backup files to: %s", archiveName)
+	logger.Info("Packing backup files", "archivePath", archiveName)
 
 	z, err := zip.Create(archiveName)
 	if err != nil {
-		logger.Fatalf("Failed to create backup archive '%s': %v", archiveName, err)
+		logger.FatalContext(ctx, "Failed to create backup archive", "archivePath", archiveName, "error", err)
 	}
 	if err = z.AddFile(archiveRootDir+"/metadata.ini", metaFile); err != nil {
-		logger.Fatalf("Failed to include 'metadata.ini': %v", err)
+		logger.FatalContext(ctx, "Failed to include 'metadata.ini'", "error", err)
 	}
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
 	if err = database.DumpDatabase(ctx, logger, conn, dbDir, cmd.Bool("verbose")); err != nil {
-		logger.Fatalf("Failed to dump database: %v", err)
+		logger.FatalContext(ctx, "Failed to dump database", "error", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
-		logger.Fatalf("Failed to include 'db': %v", err)
+		logger.FatalContext(ctx, "Failed to include 'db'", "error", err)
 	}
 
 	if !cmd.Bool("database-only") {
 		// Custom files
 		err = addCustomDirToBackup(logger, z)
 		if err != nil {
-			logger.Fatalf("Failed to add custom directory to backup: %v", err)
+			logger.FatalContext(ctx, "Failed to add custom directory to backup", "error", err)
 		}
 
 		// Data files
@@ -119,7 +119,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 			}
 
 			if err = z.AddDir(path.Join(archiveRootDir+"/data", dir), dirPath); err != nil {
-				logger.Fatalf("Failed to include 'data': %v", err)
+				logger.FatalContext(ctx, "Failed to include 'data'", "error", err)
 			}
 		}
 	}
@@ -127,44 +127,44 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	// Repositories
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
-		logger.Infof("Dumping repositories in %q", conf.Repository.Root)
+		logger.Info("Dumping repositories", "repoRoot", conf.Repository.Root)
 		if cmd.Bool("exclude-mirror-repos") {
 			repos, err := database.GetNonMirrorRepositories()
 			if err != nil {
-				logger.Fatalf("Failed to get non-mirror repositories: %v", err)
+				logger.FatalContext(ctx, "Failed to get non-mirror repositories", "error", err)
 			}
 			reposZip, err := zip.Create(reposDump)
 			if err != nil {
-				logger.Fatalf("Failed to create %q: %v", reposDump, err)
+				logger.FatalContext(ctx, "Failed to create repositories archive", "reposArchivePath", reposDump, "error", err)
 			}
 			baseDir := filepath.Base(conf.Repository.Root)
 			for _, r := range repos {
 				name := r.FullName() + ".git"
 				if err := reposZip.AddDir(filepath.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
-					logger.Fatalf("Failed to add %q: %v", name, err)
+					logger.FatalContext(ctx, "Failed to add repository to archive", "repoPath", name, "error", err)
 				}
 			}
 			if err = reposZip.Close(); err != nil {
-				logger.Fatalf("Failed to save %q: %v", reposDump, err)
+				logger.FatalContext(ctx, "Failed to save repositories archive", "reposArchivePath", reposDump, "error", err)
 			}
 		} else {
 			if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
-				logger.Fatalf("Failed to dump repositories: %v", err)
+				logger.FatalContext(ctx, "Failed to dump repositories", "error", err)
 			}
 		}
-		logger.Infof("Repositories dumped to: %s", reposDump)
+		logger.Info("Repositories dumped", "reposArchivePath", reposDump)
 
 		if err = z.AddFile(archiveRootDir+"/repositories.zip", reposDump); err != nil {
-			logger.Fatalf("Failed to include %q: %v", reposDump, err)
+			logger.FatalContext(ctx, "Failed to include repositories archive", "reposArchivePath", reposDump, "error", err)
 		}
 	}
 
 	if err = z.Close(); err != nil {
-		logger.Fatalf("Failed to save backup archive '%s': %v", archiveName, err)
+		logger.FatalContext(ctx, "Failed to save backup archive", "archivePath", archiveName, "error", err)
 	}
 
 	_ = os.RemoveAll(rootDir)
-	logger.Infof("Backup succeed! Archive is located at: %s", archiveName)
+	logger.Info("Backup succeeded", "archivePath", archiveName)
 
 	return nil
 }
@@ -180,7 +180,7 @@ func addCustomDirToBackup(logger *logx.Logger, z *zip.ZipArchive) error {
 		if e.Name() == "data" {
 			// Skip the "data" directory because it lives under the "custom" directory in
 			// the Docker setup and will be backed up separately.
-			logger.Tracef(`Skipping "data" directory in custom directory`)
+			logger.Debug(`Skipping "data" directory in custom directory`)
 			continue
 		}
 

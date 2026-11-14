@@ -122,7 +122,7 @@ func DeleteBranchPost(c *context.Context) {
 
 	protectBranch, err := database.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branchName)
 	if err != nil && !database.IsErrBranchNotExist(err) {
-		c.Logger.Errorf("Failed to get protected branch %q: %v", branchName, err)
+		c.Logger.Error("Failed to get protected branch", "branch", branchName, "error", err)
 		return
 	}
 	if protectBranch != nil && protectBranch.Protected {
@@ -133,7 +133,7 @@ func DeleteBranchPost(c *context.Context) {
 	if len(commitID) > 0 {
 		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(c.Req.Context(), branchName)
 		if err != nil {
-			c.Logger.Errorf("Failed to get commit ID of branch %q: %v", branchName, err)
+			c.Logger.Error("Failed to get commit ID of branch", "branch", branchName, "error", err)
 			return
 		}
 
@@ -146,7 +146,7 @@ func DeleteBranchPost(c *context.Context) {
 	if err := c.Repo.GitRepo.DeleteBranch(c.Req.Context(), branchName, git.DeleteBranchOptions{
 		Force: true,
 	}); err != nil {
-		c.Logger.Errorf("Failed to delete branch %q: %v", branchName, err)
+		c.Logger.Error("Failed to delete branch", "branch", branchName, "error", err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func DeleteBranchPost(c *context.Context) {
 		Repo:       c.Repo.Repository.APIFormatLegacy(c.Logger, nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {
-		c.Logger.Errorf("Failed to prepare webhooks for %q: %v", database.HookEventTypeDelete, err)
+		c.Logger.Error("Failed to prepare webhooks", "eventType", database.HookEventTypeDelete, "error", err)
 		return
 	}
 }

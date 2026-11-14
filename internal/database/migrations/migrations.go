@@ -1,10 +1,11 @@
 package migrations
 
 import (
+	"context"
+
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 const minDBVersion = 19
@@ -96,30 +97,15 @@ func Migrate(logger *logx.Logger, db *gorm.DB) error {
 	}
 
 	if minDBVersion > current.Version {
-		logger.Fatalf(`
-Hi there, thank you for using Gogs for so long!
-However, Gogs has stopped supporting auto-migration from your previously installed version.
-But the good news is, it's very easy to fix this problem!
-You can migrate your older database using a previous release, then you can upgrade to the newest version.
-
-Please save following instructions to somewhere and start working:
-
-- If you were using below 0.6.0 (e.g. 0.5.x), download last supported archive from following link:
-	https://github.com/gogs/gogs/releases/tag/v0.7.33
-- If you were using below 0.7.0 (e.g. 0.6.x), download last supported archive from following link:
-	https://github.com/gogs/gogs/releases/tag/v0.9.141
-- If you were using below 0.11.55 (e.g. 0.9.141), download last supported archive from following link:
-	https://github.com/gogs/gogs/releases/tag/v0.12.0
-
-Once finished downloading:
-
-1. Extract the archive and to upgrade steps as usual.
-2. Run it once. To verify, you should see some migration traces.
-3. Once it starts web server successfully, stop it.
-4. Now it's time to put back the release archive you originally intent to upgrade.
-5. Enjoy!
-
-In case you're stilling getting this notice, go through instructions again until it disappears.`)
+		logger.FatalContext(context.Background(), "Auto-migration from the installed version is no longer supported",
+			"dbVersion", current.Version,
+			"minDBVersion", minDBVersion,
+			"instructions", "Upgrade through the last release that supports your installed version first: "+
+				"https://github.com/gogs/gogs/releases/tag/v0.7.33 for versions below 0.6.0, "+
+				"https://github.com/gogs/gogs/releases/tag/v0.9.141 for versions below 0.7.0, "+
+				"https://github.com/gogs/gogs/releases/tag/v0.12.0 for versions below 0.11.55. "+
+				"Run it once until the web server starts successfully, stop it, then upgrade to the newest version as usual.",
+		)
 		return nil
 	}
 
@@ -130,12 +116,12 @@ In case you're stilling getting this notice, go through instructions again until
 	}
 
 	for _, m := range migrations[current.Version-minDBVersion:] {
-		logger.Infof("Migration: %s", m.Description())
+		logger.Info("Running migration", "description", m.Description())
 		if err = m.Migrate(db); err != nil {
 			if err != errMigrationSkipped {
 				return errors.Wrap(err, "do migrate")
 			}
-			logger.Tracef("The migration %q has been skipped", m.Description())
+			logger.Debug("Migration skipped", "description", m.Description())
 		}
 
 		current.Version++

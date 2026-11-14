@@ -5,8 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 func TestSSHParsePublicKey(t *testing.T) {
@@ -55,7 +54,7 @@ func TestSSHParsePublicKey(t *testing.T) {
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
 
-			typ, length, err = SSHKeygenParsePublicKey(logx.NewNoop(), test.content, tempPath, "ssh-keygen")
+			typ, length, err = SSHKeygenParsePublicKey(logx.NewNoopLogger(), test.content, tempPath, "ssh-keygen")
 			require.NoError(t, err)
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)

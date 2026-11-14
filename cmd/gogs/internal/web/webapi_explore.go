@@ -9,10 +9,10 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -62,11 +62,11 @@ func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.Us
 		PageSize: conf.UI.ExplorePagingNum,
 	})
 	if err != nil {
-		logger.Errorf("getExploreRepos: search repositories: %v", err)
+		logger.Error("Failed to search repositories", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search repositories")
 	}
 	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
-		logger.Errorf("getExploreRepos: load repository attributes: %v", err)
+		logger.Error("Failed to load repository attributes", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
 
@@ -142,7 +142,7 @@ func getExploreUsers(logger *logx.Logger, c flamego.Context, viewer *database.Us
 	page := explorePageParam(c)
 	users, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page)
 	if err != nil {
-		logger.Errorf("getExploreUsers: search users: %v", err)
+		logger.Error("Failed to search users", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search users")
 	}
 
@@ -162,7 +162,7 @@ func getExploreOrganizations(logger *logx.Logger, c flamego.Context) (statusCode
 	page := explorePageParam(c)
 	orgs, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeOrganization, c.Query("q"), page)
 	if err != nil {
-		logger.Errorf("getExploreOrganizations: search organizations: %v", err)
+		logger.Error("Failed to search organizations", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search organizations")
 	}
 

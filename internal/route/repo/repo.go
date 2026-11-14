@@ -125,14 +125,14 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		ObjectFormat: git.ObjectFormat(f.ObjectFormat),
 	})
 	if err == nil {
-		c.Logger.Tracef("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
+		c.Logger.Debug("Repository created", "repoID", repo.ID, "ownerName", ctxUser.Name, "repoName", repo.Name)
 		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
 	if repo != nil {
 		if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
-			c.Logger.Errorf("DeleteRepository: %v", errDelete)
+			c.Logger.Error("Failed to delete repository", "error", errDelete)
 		}
 	}
 
@@ -205,14 +205,14 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		RemoteAddr:  remoteAddr,
 	})
 	if err == nil {
-		c.Logger.Tracef("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
+		c.Logger.Debug("Repository migrated", "repoID", repo.ID, "ownerName", ctxUser.Name, "repoName", f.RepoName)
 		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 		return
 	}
 
 	if repo != nil {
 		if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
-			c.Logger.Errorf("DeleteRepository: %v", errDelete)
+			c.Logger.Error("Failed to delete repository", "error", errDelete)
 		}
 	}
 
@@ -289,7 +289,7 @@ func Download(c *context.Context) {
 		archivePath = filepath.Join(c.Repo.GitRepo.Path(), "archives", "targz")
 		archiveFormat = git.ArchiveTarGz
 	default:
-		c.Logger.Tracef("Unknown format: %s", uri)
+		c.Logger.Debug("Unknown archive format", "uri", uri)
 		c.NotFound()
 		return
 	}

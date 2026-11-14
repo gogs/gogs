@@ -8,8 +8,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 // DiffLineType is the line type in diff.

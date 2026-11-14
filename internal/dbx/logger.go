@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gogs.io/gogs/internal/logx"
+	"unknwon.dev/x/logx"
 )
 
 // Logger adapts a logx.Logger to GORM's logger.Writer. Lines that GORM marks
@@ -21,9 +21,9 @@ func NewLogger(logger *logx.Logger) Logger {
 
 func (l Logger) Printf(format string, args ...any) {
 	msg := strings.TrimRight(fmt.Sprintf(format, args...), "\n")
-	print := l.logger.Debugf
 	if strings.Contains(msg, "[error]") {
-		print = l.logger.Errorf
+		l.logger.Error(msg)
+		return
 	}
-	print("%s", msg)
+	l.logger.Debug(msg)
 }

@@ -70,7 +70,7 @@ func MembersAction(c *context.Context) {
 	}
 
 	if err != nil {
-		c.Logger.Errorf("Action(%s): %v", c.Params(":action"), err)
+		c.Logger.Error("Failed to perform member action", "action", c.Params(":action"), "error", err)
 		c.JSONSuccess(map[string]any{
 			"ok":  false,
 			"err": err.Error(),
@@ -108,7 +108,7 @@ func Invitation(c *context.Context) {
 			return
 		}
 
-		c.Logger.Tracef("New member added(%s): %s", org.Name, u.Name)
+		c.Logger.Debug("New member added", "orgName", org.Name, "userName", u.Name)
 		c.Redirect(c.Org.OrgLink + "/members")
 		return
 	}

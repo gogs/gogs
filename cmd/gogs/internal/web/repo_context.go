@@ -6,9 +6,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/logx"
 )
 
 // Viewer is the request-scoped user looking at a repository. User is nil for an
@@ -88,7 +88,7 @@ func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User
 			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 			return
 		}
-		logger.Errorf("repoContext: get user by username %q: %v", ownerName, err)
+		logger.Error("Failed to get repository owner by username", "ownerName", ownerName, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get owner"))
 		return
 	}
@@ -99,7 +99,7 @@ func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User
 			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 			return
 		}
-		logger.Errorf("repoContext: get repo by name %q/%q: %v", ownerName, repoName, err)
+		logger.Error("Failed to get repository by name", "ownerName", ownerName, "repoName", repoName, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get repo"))
 		return
 	}

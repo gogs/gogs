@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
@@ -39,7 +40,6 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/route"
@@ -586,10 +586,10 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		m.Get("/tasks/trigger", repo.TriggerTask)
 
 		m.Group("/info/lfs", func() {
-			lfs.RegisterRoutes(logger, m.Router)
+			lfs.RegisterRoutes(logger.Scoped("lfs"), m.Router)
 		})
 
-		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(logger, repo.NewStore(logger)), repo.HTTP}
+		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(logger.Scoped("git"), repo.NewStore(logger)), repo.HTTP}
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
 		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
@@ -621,7 +621,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	} else {
 		listenAddr = fmt.Sprintf("%s:%d", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 	}
-	logger.Infof("Available on %s", conf.Server.ExternalURL)
+	logger.Info("Server is available", "externalURL", conf.Server.ExternalURL)
 
 	var handler http.Handler = m
 	if shutdownTracing != nil {
@@ -982,13 +982,13 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "init logging")
 	}
-	logger.Infof("%s %s", conf.App.BrandName, conf.App.Version)
-	logger.Tracef("Work directory: %s", conf.WorkDir())
-	logger.Tracef("Custom path: %s", conf.CustomDir())
-	logger.Tracef("Custom config: %s", conf.CustomConf)
-	logger.Tracef("Log path: %s", conf.Log.RootPath)
-	logger.Tracef("Build time: %s", conf.BuildTime)
-	logger.Tracef("Build commit: %s", conf.BuildCommit)
+	logger.Info("Starting application", "brandName", conf.App.BrandName, "version", conf.App.Version)
+	logger.Debug("Work directory", "workDir", conf.WorkDir())
+	logger.Debug("Custom path", "customDir", conf.CustomDir())
+	logger.Debug("Custom config", "customConf", conf.CustomConf)
+	logger.Debug("Log path", "logPath", conf.Log.RootPath)
+	logger.Debug("Build time", "buildTime", conf.BuildTime)
+	logger.Debug("Build commit", "buildCommit", conf.BuildCommit)
 
 	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
@@ -998,10 +998,10 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	} else {
 		git.SetOutput(os.Stdout)
 	}
-	logger.Infof("Run mode: %s", strings.Title(macaron.Env))
+	logger.Info("Run mode", "runMode", strings.Title(macaron.Env))
 
 	if conf.Email.Enabled {
-		logger.Tracef("Email service is enabled")
+		logger.Debug("Email service is enabled")
 	}
 
 	email.NewContext(logger)
@@ -1021,23 +1021,23 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	database.InitTestPullRequests(logger)
 
 	if conf.HasMinWinSvc {
-		logger.Infof("Builtin Windows Service is supported")
+		logger.Info("Builtin Windows Service is supported")
 	}
 	if conf.Server.LoadAssetsFromDisk {
-		logger.Tracef("Assets are loaded from disk")
+		logger.Debug("Assets are loaded from disk")
 	}
 
 	if conf.SSH.StartBuiltinServer {
 		ssh.Listen(logger, conf.SSH, conf.Server.AppDataPath)
-		logger.Infof("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
-		logger.Tracef("SSH server cipher list: %v", conf.SSH.ServerCiphers)
-		logger.Tracef("SSH server MAC list: %v", conf.SSH.ServerMACs)
-		logger.Tracef("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
+		logger.Info("Builtin SSH server started", "listenHost", conf.SSH.ListenHost, "listenPort", conf.SSH.ListenPort)
+		logger.Debug("SSH server cipher list", "serverCiphers", conf.SSH.ServerCiphers)
+		logger.Debug("SSH server MAC list", "serverMACs", conf.SSH.ServerMACs)
+		logger.Debug("SSH server algorithms", "serverAlgorithms", conf.SSH.ServerAlgorithms)
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
 		if err := database.RewriteAuthorizedKeys(logger); err != nil {
-			logger.Warnf("Failed to rewrite authorized_keys file: %v", err)
+			logger.Warn("Failed to rewrite authorized_keys file", "error", err)
 		}
 	}
 

@@ -100,12 +100,12 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		}
 		return
 	}
-	c.Logger.Tracef("Account %q created by admin %q", user.Name, c.User.Name)
+	c.Logger.Debug("Account created by admin", "userName", user.Name, "adminName", c.User.Name)
 
 	// Send email notification.
 	if f.SendNotify && conf.Email.Enabled {
 		if err := email.SendRegisterNotifyMail(c.Logger, c.Context, database.NewMailerUser(user)); err != nil {
-			c.Logger.Errorf("Failed to send register notify mail: %v", err)
+			c.Logger.Error("Failed to send register notify mail", "error", err)
 		}
 	}
 
@@ -210,7 +210,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		}
 		return
 	}
-	c.Logger.Tracef("Account updated by admin %q: %s", c.User.Name, u.Name)
+	c.Logger.Debug("Account updated by admin", "userName", u.Name, "adminName", c.User.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
@@ -240,7 +240,7 @@ func DeleteUser(c *context.Context) {
 		}
 		return
 	}
-	c.Logger.Tracef("Account deleted by admin (%s): %s", c.User.Name, u.Name)
+	c.Logger.Debug("Account deleted by admin", "userName", u.Name, "adminName", c.User.Name)
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
 	c.JSONSuccess(map[string]any{

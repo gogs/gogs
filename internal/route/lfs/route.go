@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/authx"
@@ -12,7 +13,6 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
-	"gogs.io/gogs/internal/logx"
 )
 
 // RegisterRoutes registers LFS routes using given router, and inherits all
@@ -27,6 +27,7 @@ func RegisterRoutes(logger *logx.Logger, r *macaron.Router) {
 		r.Post("/objects/batch", authorize(logger, store, database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch(logger, store))
 		r.Group("/objects/basic", func() {
 			basic := &basicHandler{
+				logger:         logger,
 				store:          store,
 				defaultStorage: lfsx.Storage(conf.LFS.Storage),
 				storagers: map[lfsx.Storage]lfsx.Storager{
@@ -61,7 +62,7 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 		user, err := store.AuthenticateUser(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(logger, c.Resp)
-			logger.Errorf("Failed to authenticate user [name: %s]: %v", username, err)
+			logger.Error("Failed to authenticate user", "userName", username, "error", err)
 			return
 		}
 
@@ -76,7 +77,7 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 			user, err = context.AuthenticateByToken(c.Req.Context(), logger, store, username)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				internalServerError(logger, c.Resp)
-				logger.Errorf("Failed to authenticate by access token via username: %v", err)
+				logger.Error("Failed to authenticate by access token via username", "error", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
@@ -86,7 +87,7 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 						askCredentials(c.Resp)
 					} else {
 						c.Status(http.StatusInternalServerError)
-						logger.Errorf("Failed to authenticate by access token via password: %v", err)
+						logger.Error("Failed to authenticate by access token via password", "error", err)
 					}
 					return
 				}
@@ -100,7 +101,7 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 			return
 		}
 
-		logger.Tracef("[LFS] Authenticated user: %s", user.Name)
+		logger.Debug("Authenticated user", "userName", user.Name)
 
 		c.Map(user)
 	}
@@ -118,7 +119,7 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) macar
 				c.Status(http.StatusNotFound)
 			} else {
 				internalServerError(logger, c.Resp)
-				logger.Errorf("Failed to get user [name: %s]: %v", username, err)
+				logger.Error("Failed to get user", "userName", username, "error", err)
 			}
 			return
 		}
@@ -129,7 +130,7 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) macar
 				c.Status(http.StatusNotFound)
 			} else {
 				internalServerError(logger, c.Resp)
-				logger.Errorf("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
+				logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", reponame, "error", err)
 			}
 			return
 		}
@@ -144,7 +145,7 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) macar
 			return
 		}
 
-		logger.Tracef("[LFS] Authorized user %q to %q", actor.Name, username+"/"+reponame)
+		logger.Debug("Authorized user", "userName", actor.Name, "ownerName", username, "repoName", reponame)
 
 		c.Map(owner) // NOTE: Override actor
 		c.Map(repo)
@@ -162,7 +163,7 @@ func verifyHeader(logger *logx.Logger, key, value string, failCode int) macaron.
 			}
 		}
 
-		logger.Tracef("[LFS] HTTP header %q does not contain value %q", key, value)
+		logger.Debug("HTTP header does not contain expected value", "header", key, "expectedValue", value)
 		c.Status(failCode)
 	}
 }

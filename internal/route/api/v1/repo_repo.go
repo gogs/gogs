@@ -186,7 +186,7 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 		} else {
 			if repo != nil {
 				if err = database.DeleteRepository(c.Logger, c.User.ID, repo.ID); err != nil {
-					c.Logger.Errorf("Failed to delete repository: %v", err)
+					c.Logger.Error("Failed to delete repository", "error", err)
 				}
 			}
 			c.Error(err, "create repository")
@@ -290,7 +290,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 	if err != nil {
 		if repo != nil {
 			if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
-				c.Logger.Errorf("DeleteRepository: %v", errDelete)
+				c.Logger.Error("Failed to delete repository", "error", errDelete)
 			}
 		}
 
@@ -302,7 +302,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	c.Logger.Tracef("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
+	c.Logger.Debug("Repository migrated", "ownerName", ctxUser.Name, "repoName", f.RepoName)
 	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
@@ -356,7 +356,7 @@ func deleteRepo(c *context.APIContext) {
 		return
 	}
 
-	c.Logger.Tracef("Repository deleted: %s/%s", owner.Name, repo.Name)
+	c.Logger.Debug("Repository deleted", "ownerName", owner.Name, "repoName", repo.Name)
 	c.NoContent()
 }
 
