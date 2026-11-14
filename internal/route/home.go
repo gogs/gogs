@@ -7,15 +7,9 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/route/user"
 )
 
 func Home(c *context.Context) {
-	if c.IsLogged {
-		user.Dashboard(c)
-		return
-	}
-
 	c.ServeWeb()
 }
 

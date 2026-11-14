@@ -36,6 +36,10 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/users/alice",
 		"/api/web/users/alice/repos",
 		"/api/web/users/alice/activity",
+		"/api/web/dashboard",
+		"/api/web/dashboard/activity",
+		"/api/web/orgs/acme/dashboard",
+		"/api/web/orgs/acme/dashboard/activity",
 	}
 	tests := []struct {
 		name                     string
@@ -80,5 +84,30 @@ func TestRequireViewAccess(t *testing.T) {
 				assert.JSONEq(t, test.wantBody, resp.Body.String(), path)
 			}
 		})
+	}
+}
+
+func TestDashboardAuthentication(t *testing.T) {
+	beforeSigninView := conf.Auth.RequireSigninView
+	t.Cleanup(func() {
+		conf.Auth.RequireSigninView = beforeSigninView
+	})
+	// Dashboards need an authenticated viewer even on sites that do not require
+	// signing in to view content.
+	conf.Auth.RequireSigninView = false
+
+	handler, err := newRoutingHandler()
+	require.NoError(t, err)
+
+	for _, path := range []string{
+		"/api/web/dashboard",
+		"/api/web/dashboard/activity",
+		"/api/web/orgs/acme/dashboard",
+		"/api/web/orgs/acme/dashboard/activity",
+	} {
+		resp := httptest.NewRecorder()
+		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))
+		assert.Equal(t, http.StatusUnauthorized, resp.Code, path)
+		assert.JSONEq(t, `{"error":"authentication required"}`, resp.Body.String(), path)
 	}
 }
