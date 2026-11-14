@@ -91,7 +91,7 @@ type repoGitHookRequest struct {
 
 // putRepoGitHook saves the content of the hook. Empty content is refused,
 // because an empty executable fails to run and would reject every push.
-func putRepoGitHook(logger *logx.Logger, l i18n.Locale, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
+func putRepoGitHook(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("repo.settings.githook_content_required")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
@@ -100,14 +100,22 @@ func putRepoGitHook(logger *logx.Logger, l i18n.Locale, hook *git.Hook, req repo
 		logger.Error("Failed to update hook", "hookPath", hook.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update hook")
 	}
+	if err = repoCtx.Repo.SyncDelegateHooks(); err != nil {
+		logger.Error("Failed to sync delegate hooks", "repoID", repoCtx.Repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "sync delegate hooks")
+	}
 	return http.StatusNoContent, nil, nil
 }
 
 // deleteRepoGitHook removes the hook, which makes it inactive again.
-func deleteRepoGitHook(logger *logx.Logger, hook *git.Hook) (statusCode int, resp any, err error) {
+func deleteRepoGitHook(logger *logx.Logger, repoCtx *repoContext, hook *git.Hook) (statusCode int, resp any, err error) {
 	if err = hook.Delete(); err != nil {
 		logger.Error("Failed to delete hook", "hookPath", hook.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete hook")
+	}
+	if err = repoCtx.Repo.SyncDelegateHooks(); err != nil {
+		logger.Error("Failed to sync delegate hooks", "repoID", repoCtx.Repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "sync delegate hooks")
 	}
 	return http.StatusNoContent, nil, nil
 }

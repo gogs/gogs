@@ -64,7 +64,6 @@ func TriggerTask(logger *logx.Logger, c flamego.Context) {
 
 	logger.Debug("Task triggered", "ownerName", owner.Name, "repoName", repo.Name, "branch", branch, "pusherName", pusher.Name)
 
-	go database.HookQueue.Add(repo.ID)
-	go database.AddTestPullRequestTask(logger, pusher, repo.ID, branch, true)
+	database.TriggerPushTasks(logger, pusher, repo.ID, branch)
 	c.ResponseWriter().WriteHeader(http.StatusAccepted)
 }

@@ -2,8 +2,12 @@ package git
 
 import (
 	"context"
+	"encoding/hex"
 	"io"
 	"os"
+	"strconv"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -132,6 +136,139 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 		return ErrExecTimeout
 	}
 	return err
+}
+
+// RefUpdate is an update of a reference by a push.
+type RefUpdate struct {
+	OldID string
+	NewID string
+	// The full name of the reference, e.g., "refs/heads/main".
+	RefName string
+}
+
+// RunReceivePack runs "git receive-pack" for the repository in given path like
+// RunService, and returns the reference updates of the push that were applied,
+// which is what Git passes to the post-receive hook. The updates are returned
+// even with an error, because Git may have applied some of them before it
+// failed.
+func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]RefUpdate, error) {
+	commands := &receivePackCommandsReader{r: opts.Stdin}
+	if opts.Stdin != nil {
+		opts.Stdin = commands
+	}
+	err := RunService(ctx, ServiceReceivePack, path, opts)
+
+	applied, checkErr := appliedRefUpdates(ctx, path, commands.updates())
+	if err != nil {
+		return applied, err
+	}
+	return applied, checkErr
+}
+
+// appliedRefUpdates returns the updates that the references in the repository
+// in given path reflect. Git checks the old ID of every update it applies, so
+// an update whose reference now has the new ID is one that Git applied.
+func appliedRefUpdates(ctx context.Context, path string, updates []RefUpdate) ([]RefUpdate, error) {
+	if len(updates) == 0 {
+		return nil, nil
+	}
+
+	args := []string{"for-each-ref", "--format=%(objectname) %(refname)"}
+	for _, update := range updates {
+		args = append(args, update.RefName)
+	}
+	stdout, err := exec(ctx, path, args, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "list references")
+	}
+	current := make(map[string]string, len(updates))
+	for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
+		id, name, ok := strings.Cut(line, " ")
+		if ok {
+			current[name] = id
+		}
+	}
+
+	applied := make([]RefUpdate, 0, len(updates))
+	for _, update := range updates {
+		id, exists := current[update.RefName]
+		if (IsEmptyID(update.NewID) && !exists) || id == update.NewID {
+			applied = append(applied, update)
+		}
+	}
+	return applied, nil
+}
+
+// receivePackCommandsReader passes on what a client sends to "git
+// receive-pack" and records the reference updates it asks for, which come as
+// pkt-lines of "<old-id> <new-id> <ref-name>" before the first flush-pkt.
+//
+// Docs: https://git-scm.com/docs/pack-protocol#_reference_update_request_and_packfile_transfer
+type receivePackCommandsReader struct {
+	r io.Reader
+
+	// The bytes of a pkt-line that has not been read in full yet.
+	pending []byte
+
+	mu       sync.Mutex
+	done     bool
+	commands []RefUpdate
+}
+
+func (r *receivePackCommandsReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.done && n > 0 {
+		r.pending = append(r.pending, p[:n]...)
+		r.parse()
+	}
+	return n, err
+}
+
+// parse records the commands in complete pkt-lines of pending, and stops at the
+// flush-pkt that ends them or at anything that is not a pkt-line.
+func (r *receivePackCommandsReader) parse() {
+	for len(r.pending) >= 4 {
+		size, err := strconv.ParseUint(string(r.pending[:4]), 16, 16)
+		// A size below 4 is the flush-pkt or another special packet.
+		if err != nil || size < 4 {
+			r.done = true
+			r.pending = nil
+			return
+		}
+		if len(r.pending) < int(size) {
+			break
+		}
+
+		line := string(r.pending[4:size])
+		r.pending = r.pending[size:]
+		// The first command carries the capabilities of the client after a NUL.
+		line, _, _ = strings.Cut(line, "\x00")
+		fields := strings.Fields(line)
+		// Other lines, e.g., "shallow <id>", are not commands. Git rejects reference
+		// names with wildcards, which would also make the lookup of the applied
+		// updates match other references.
+		if len(fields) == 3 && isID(fields[0]) && isID(fields[1]) &&
+			strings.HasPrefix(fields[2], "refs/") && !strings.ContainsAny(fields[2], `*?[\`) {
+			r.commands = append(r.commands, RefUpdate{OldID: fields[0], NewID: fields[1], RefName: fields[2]})
+		}
+	}
+}
+
+func (r *receivePackCommandsReader) updates() []RefUpdate {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.commands
+}
+
+// isID returns true if s is a hex object ID of any object format.
+func isID(s string) bool {
+	if len(s) != 40 && len(s) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(s)
+	return err == nil
 }
 
 type activityReader struct {

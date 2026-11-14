@@ -410,7 +410,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 	if isNewFile {
 		fallback = l.Tr("repo.editor.add", req.Path)
 	}
-	err = repo.UpdateRepoFile(ctx, viewer, database.UpdateRepoFileOptions{
+	err = repo.UpdateRepoFile(ctx, logger, viewer, database.UpdateRepoFileOptions{
 		OldBranch:   req.Branch,
 		NewBranch:   cmp.Or(req.NewBranch, req.Branch),
 		OldTreeName: req.OldPath,
@@ -491,7 +491,7 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		dir = ""
 	}
 
-	err = repo.DeleteRepoFile(ctx, viewer, database.DeleteRepoFileOptions{
+	err = repo.DeleteRepoFile(ctx, logger, viewer, database.DeleteRepoFileOptions{
 		LastCommitID: commit.ID.String(),
 		OldBranch:    req.Branch,
 		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
@@ -568,7 +568,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusBadRequest, nil, errors.New("some files were not uploaded")
 	}
 
-	err = repo.UploadRepoFiles(ctx, viewer, database.UploadRepoFileOptions{
+	err = repo.UploadRepoFiles(ctx, logger, viewer, database.UploadRepoFileOptions{
 		LastCommitID: commit.ID.String(),
 		OldBranch:    req.Branch,
 		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
