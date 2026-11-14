@@ -13,21 +13,6 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-// requireSignIn turns away the same viewers as the sign-in requirement of the
-// server-rendered pages: anonymous visitors, users prohibited from signing in,
-// and users who have not confirmed their email when that is required.
-func requireSignIn(c flamego.Context, viewer *database.User) {
-	w := c.ResponseWriter()
-	switch {
-	case viewer == nil:
-		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
-	case viewer.ProhibitLogin:
-		writeErrorResponse(w, http.StatusForbidden, errors.New("login prohibited"))
-	case !viewer.IsActive && conf.Auth.RequireEmailConfirmation:
-		writeErrorResponse(w, http.StatusForbidden, errors.New("account not activated"))
-	}
-}
-
 // dashboardOwner is the user or organization whose dashboard is requested.
 type dashboardOwner struct {
 	*database.User
@@ -38,13 +23,18 @@ type dashboardOwner struct {
 // server-rendered dashboard, only members see the dashboard of an
 // organization.
 func withDashboardOwner(c flamego.Context, viewer *database.User) {
+	w := c.ResponseWriter()
+	if viewer == nil {
+		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
+		return
+	}
+
 	name := c.Param("org")
 	if name == "" {
 		c.Map(&dashboardOwner{viewer})
 		return
 	}
 
-	w := c.ResponseWriter()
 	org, err := database.Handle.Users().GetByUsername(c.Request().Context(), name)
 	if err != nil && !database.IsErrUserNotExist(err) {
 		log.Error("withDashboardOwner: get user by username %q: %v", name, err)

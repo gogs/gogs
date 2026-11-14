@@ -36,6 +36,10 @@ func TestRequireViewAccess(t *testing.T) {
 		"/api/web/users/alice",
 		"/api/web/users/alice/repos",
 		"/api/web/users/alice/activity",
+		"/api/web/dashboard",
+		"/api/web/dashboard/activity",
+		"/api/web/orgs/acme/dashboard",
+		"/api/web/orgs/acme/dashboard/activity",
 	}
 	tests := []struct {
 		name                     string
@@ -83,63 +87,27 @@ func TestRequireViewAccess(t *testing.T) {
 	}
 }
 
-func TestRequireSignIn(t *testing.T) {
-	beforeSigninView, beforeConfirmation := conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation
+func TestDashboardAuthentication(t *testing.T) {
+	beforeSigninView := conf.Auth.RequireSigninView
 	t.Cleanup(func() {
-		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
+		conf.Auth.RequireSigninView = beforeSigninView
 	})
-	// Dashboards need an authenticated user even on sites that do not require
+	// Dashboards need an authenticated viewer even on sites that do not require
 	// signing in to view content.
 	conf.Auth.RequireSigninView = false
 
 	handler, err := newRoutingHandler()
 	require.NoError(t, err)
 
-	paths := []string{
+	for _, path := range []string{
 		"/api/web/dashboard",
 		"/api/web/dashboard/activity",
 		"/api/web/orgs/acme/dashboard",
 		"/api/web/orgs/acme/dashboard/activity",
-	}
-	tests := []struct {
-		name                     string
-		requireEmailConfirmation bool
-		user                     *database.User
-		wantCode                 int
-		wantBody                 string
-	}{
-		{
-			name:     "anonymous",
-			wantCode: http.StatusUnauthorized,
-			wantBody: `{"error":"authentication required"}`,
-		},
-		{
-			name:                     "unconfirmed user when confirmation is required",
-			requireEmailConfirmation: true,
-			user:                     &database.User{ID: 2, IsActive: false},
-			wantCode:                 http.StatusForbidden,
-			wantBody:                 `{"error":"account not activated"}`,
-		},
-		{
-			name:     "login prohibited user",
-			user:     &database.User{ID: 2, IsActive: true, ProhibitLogin: true},
-			wantCode: http.StatusForbidden,
-			wantBody: `{"error":"login prohibited"}`,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			conf.Auth.RequireEmailConfirmation = test.requireEmailConfirmation
-			for _, path := range paths {
-				req := httptest.NewRequest(http.MethodGet, path, nil)
-				if test.user != nil {
-					req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, test.user))
-				}
-				resp := httptest.NewRecorder()
-				handler.ServeHTTP(resp, req)
-				assert.Equal(t, test.wantCode, resp.Code, path)
-				assert.JSONEq(t, test.wantBody, resp.Body.String(), path)
-			}
-		})
+	} {
+		resp := httptest.NewRecorder()
+		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))
+		assert.Equal(t, http.StatusUnauthorized, resp.Code, path)
+		assert.JSONEq(t, `{"error":"authentication required"}`, resp.Body.String(), path)
 	}
 }
