@@ -6,57 +6,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { webContext } from "@/lib/context";
 import { readGlass, setGlass } from "@/lib/glass";
+import { LANGUAGES, switchLanguage } from "@/lib/languages";
 import { type Theme, useTheme } from "@/lib/theme-context";
+import { reloadWithParams } from "@/lib/url";
 import { cn } from "@/lib/utils";
-
-const LANGUAGES: { code: string; name: string }[] = [
-  { code: "en-US", name: "English" },
-  { code: "zh-CN", name: "简体中文" },
-  { code: "zh-HK", name: "繁體中文（香港）" },
-  { code: "zh-TW", name: "繁體中文（臺灣）" },
-  { code: "de-DE", name: "Deutsch" },
-  { code: "fr-FR", name: "français" },
-  { code: "nl-NL", name: "Nederlands" },
-  { code: "lv-LV", name: "latviešu" },
-  { code: "ru-RU", name: "русский" },
-  { code: "ja-JP", name: "日本語" },
-  { code: "es-ES", name: "español" },
-  { code: "pt-BR", name: "português do Brasil" },
-  { code: "pl-PL", name: "polski" },
-  { code: "bg-BG", name: "български" },
-  { code: "it-IT", name: "italiano" },
-  { code: "fi-FI", name: "suomi" },
-  { code: "tr-TR", name: "Türkçe" },
-  { code: "cs-CZ", name: "čeština" },
-  { code: "sr-SP", name: "српски" },
-  { code: "sv-SE", name: "svenska" },
-  { code: "ko-KR", name: "한국어" },
-  { code: "gl-ES", name: "galego" },
-  { code: "uk-UA", name: "українська" },
-  { code: "en-GB", name: "English (United Kingdom)" },
-  { code: "hu-HU", name: "Magyar" },
-  { code: "sk-SK", name: "Slovenčina" },
-  { code: "id-ID", name: "Indonesian" },
-  { code: "fa-IR", name: "Persian" },
-  { code: "vi-VN", name: "Vietnamese" },
-  { code: "pt-PT", name: "Português" },
-  { code: "mn-MN", name: "Монгол" },
-  { code: "ro-RO", name: "Română" },
-];
 
 // Dev-only feature flag: toggles a `?i18n_debug=1` query param that makes
 // every translated string render with its key wrapped around it. `i18n.ts`
 // reads the param at module load, so toggling forces a full reload.
 const i18nDebugEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("i18n_debug");
-
-// Navigate to the current page with new query params, preserving the hash so
-// deep-linked anchors (PR comment IDs, headings, file rows) stay intact.
-// Assigning to `window.location.search` directly would drop the hash.
-function reloadWithParams(params: URLSearchParams) {
-  const qs = params.toString();
-  const search = qs ? `?${qs}` : "";
-  window.location.href = `${window.location.pathname}${search}${window.location.hash}`;
-}
 
 function toggleI18nDebug() {
   const params = new URLSearchParams(window.location.search);
@@ -166,11 +124,7 @@ export function SettingsMenu() {
             <li key={lang.code}>
               <button
                 type="button"
-                onClick={() => {
-                  const params = new URLSearchParams(window.location.search);
-                  params.set("lang", lang.code);
-                  reloadWithParams(params);
-                }}
+                onClick={() => switchLanguage(lang.code)}
                 className="flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-surface) hover:text-(--color-foreground)"
               >
                 {lang.name}
