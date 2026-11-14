@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Copy, KeyRound, Lock, X } from "lucide-react";
+import { Copy, KeyRound, Lock, LockOpen } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -362,7 +362,7 @@ export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 font-semibold text-(--color-destructive)">
-              <X className="size-4" aria-hidden />
+              <LockOpen className="size-4" aria-hidden />
               {t("settings.two_factor_off")}
             </span>
           )}
