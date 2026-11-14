@@ -14,6 +14,7 @@ All notable changes to Gogs are documented in this file.
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
 - Code search, with syntax-highlighted results. Search one repository at any branch, tag or commit from its file browser, or the default branches of all repositories you can read from the navbar. Narrow down the search with `org:`, `user:`, `repo:` and `path:`. [#8549](https://github.com/gogs/gogs/pull/8549)
 - The name `search` is reserved and cannot be used for users or organizations. [#8549](https://github.com/gogs/gogs/pull/8549)
+- A command palette, opened with Ctrl K or ⌘K or the search button in the navbar, to jump to issues, pull requests, files, repositories, people and pages, search code, and run actions such as switching the theme or copying a clone URL. Type `>`, `#`, `@` or `/` to see only commands, issues, people or code. [#8551](https://github.com/gogs/gogs/pull/8551)
 
 ### Changed
 
