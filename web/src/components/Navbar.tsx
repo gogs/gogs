@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Building2,
   ChevronDown,
@@ -11,9 +11,10 @@ import {
   UserCog,
   User as UserIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CodeSearchInput } from "@/components/CodeSearchInput";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { subUrl } from "@/lib/url";
@@ -62,6 +63,8 @@ export function Navbar() {
             </>
           )}
         </div>
+
+        <NavSearch />
 
         <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <SettingsMenu />
@@ -122,6 +125,9 @@ export function Navbar() {
                     <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
                       {t("explore")}
                     </MobileLink>
+                    <MobileLink href="/search" spa onClick={() => setOpen(false)}>
+                      {t("repo.code_search")}
+                    </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
                     <MobileLink href="/repo/create" onClick={() => setOpen(false)}>
                       {t("new_repo")}
@@ -158,6 +164,9 @@ export function Navbar() {
                     <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
                       {t("explore")}
                     </MobileLink>
+                    <MobileLink href="/search" spa onClick={() => setOpen(false)}>
+                      {t("repo.code_search")}
+                    </MobileLink>
                     <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>
                       {t("help")}
                     </MobileLink>
@@ -176,6 +185,23 @@ export function Navbar() {
         </div>
       </nav>
     </header>
+  );
+}
+
+// NavSearch searches the code of all repositories the viewer can read.
+function NavSearch() {
+  const navigate = useNavigate();
+  // Start empty again after each search.
+  const location = useRouterState({ select: (state) => state.location.href });
+  const onSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const q = (new FormData(event.currentTarget).get("q") as string | null)?.trim() ?? "";
+    void navigate({ to: "/search", search: { q: q || undefined } });
+  };
+  return (
+    <form role="search" onSubmit={onSearch} className="hidden w-48 shrink md:flex lg:w-64">
+      <CodeSearchInput key={location} query="" global compact />
+    </form>
   );
 }
 

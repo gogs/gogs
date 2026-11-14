@@ -43,6 +43,7 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 		})
 		f.Get("/{type: /(repos|users|organizations)/}", serveWeb)
 	}, page, ignSignIn)
+	f.Get("/search", page, ignSignIn, serveWeb)
 	f.Get("/{type: /(issues|pulls)/}", page, reqSignIn, serveWeb)
 
 	f.Group("/user", func() {
@@ -301,6 +302,8 @@ func mountPageRoutes(f *flamego.Flame, webApp http.Handler) {
 		f.Get("/forks", requireNonEmptyRepo, serveWeb)
 		f.Get("/src/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commits/{**}", requireNonEmptyRepo, serveWeb)
+		f.Get("/search", requireNonEmptyRepo, serveWeb)
+		f.Get("/search/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commit/{sha: /[a-f0-9]{7,64}/}", requireNonEmptyRepo, serveWeb)
 		f.Get("/compare/"+compareRangeRoute, requireNonEmptyRepo, serveWeb)
 	}, page, ignSignIn, withPageRepo(false, false))

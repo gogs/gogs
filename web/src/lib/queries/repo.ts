@@ -1189,6 +1189,58 @@ export function fetchRepoSrc(owner: string, name: string, splat: string) {
   return fetchJSON<RepoSrcData>(repoURL(owner, name, `/src/${refPath(splat)}`));
 }
 
+export interface RepoSearchLine {
+  line: number;
+  text: string;
+  // isMatch is set for lines that contain the keyword, and not for the lines
+  // around them.
+  isMatch: boolean;
+}
+
+export interface RepoSearchFile {
+  // repo is the "owner/name" of the repository, and ref the ref searched, in
+  // a search of all repositories.
+  repo?: string;
+  ref?: string;
+  path: string;
+  lines: RepoSearchLine[];
+}
+
+export interface RepoSearchData {
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  // query is what was searched for, and keyword its part without qualifiers.
+  query: string;
+  keyword: string;
+  // files are ordered by path.
+  files: RepoSearchFile[];
+  // truncated is set when more lines matched than files lists.
+  truncated: boolean;
+  // timedOut is set when the search took too long and listed nothing.
+  timedOut: boolean;
+  branches: string[];
+  tags: string[];
+}
+
+export interface CodeSearchData {
+  query: string;
+  keyword: string;
+  // files are grouped by repository, the most recently updated first.
+  files: RepoSearchFile[];
+  reposSearched: number;
+  truncated: boolean;
+  // timedOut is set when the search took too long, and some repositories
+  // were not searched.
+  timedOut: boolean;
+}
+
+// fetchRepoSearch searches the files of the ref in the splat, or of the
+// default branch for an empty splat, for lines that contain the keyword.
+export function fetchRepoSearch(owner: string, name: string, splat: string, q?: string) {
+  const qs = q ? `?${new URLSearchParams({ q }).toString()}` : "";
+  return fetchJSON<RepoSearchData>(repoURL(owner, name, `/search/${refPath(splat)}${qs}`));
+}
+
 export interface RepoCompareData {
   before: string;
   after: string;

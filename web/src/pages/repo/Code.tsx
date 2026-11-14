@@ -17,6 +17,7 @@ import {
   History,
   Pencil,
   Plus,
+  Search,
   Tag,
   Trash2,
   Upload,
@@ -209,6 +210,12 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
                 ) : null}
               </>
             ) : null}
+            <Button asChild variant="outline" size="sm">
+              <Link to="/$owner/$repo/search/$" params={{ ...params, _splat: data.ref }}>
+                <Search className="size-4" aria-hidden />
+                {t("repo.code_search")}
+              </Link>
+            </Button>
             {summary ? (
               <CloneMenu links={summary.cloneLinks} archiveLink={`${repoLink}/archive/${refPath(data.ref)}`} />
             ) : null}

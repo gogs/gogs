@@ -1,6 +1,8 @@
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { loaderResponseError } from "@/lib/loader-error";
+import { validateListSearch } from "@/lib/page-search";
+import type { CodeSearchData } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import { Explore, type ExplorePage } from "@/pages/explore/Explore";
 import {
@@ -9,6 +11,7 @@ import {
   isExploreKind,
   validateExploreSearch,
 } from "@/pages/explore/Explore.search";
+import { CodeSearch } from "@/pages/search/CodeSearch";
 
 export function createExploreRoutes(rootRoute: AnyRoute) {
   const exploreRoute = createRoute({
@@ -55,5 +58,27 @@ export function createExploreRoutes(rootRoute: AnyRoute) {
     component: Explore,
   });
 
-  return [exploreRoute];
+  const codeSearchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/search",
+    validateSearch: (search: Record<string, unknown>): { q?: string } => ({ q: validateListSearch(search).q }),
+    loaderDeps: ({ search }: { search: { q?: string } }) => ({ q: search.q }),
+    loader: async ({ deps }): Promise<CodeSearchData> => {
+      const qs = deps.q ? `?${new URLSearchParams({ q: deps.q }).toString()}` : "";
+      const res = await fetch(subUrl(`/api/web/search/code${qs}`), { credentials: "same-origin" });
+      if (res.status === 401 || res.status === 403) {
+        // Like the explore pages, reload so the server sends the viewer to
+        // sign in, account activation, or the login prohibited page.
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ to: "/search", search: { q: deps.q }, reloadDocument: true });
+      }
+      if (!res.ok) {
+        throw await loaderResponseError(res);
+      }
+      return (await res.json()) as CodeSearchData;
+    },
+    component: CodeSearch,
+  });
+
+  return [exploreRoute, codeSearchRoute];
 }

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Link as LinkIcon, MapPin, Plus, Settings } from "lucide-react";
+import { ChevronRight, Link as LinkIcon, MapPin, Plus, Search, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -78,16 +78,22 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
 
       <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-[minmax(0,1fr)_256px] lg:grid-cols-[minmax(0,1fr)_296px]">
         <section className="min-w-0" aria-label={t("user.repositories")}>
-          {org.viewerIsOwner ? (
-            <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex flex-wrap justify-end gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/search" search={{ q: `org:${org.name} ` }}>
+                <Search className="size-4" aria-hidden />
+                {t("repo.code_search")}
+              </Link>
+            </Button>
+            {org.viewerIsOwner ? (
               <Button asChild variant="outline" size="sm">
                 <a href={subUrl(`/repo/create?org=${org.id}`)}>
                   <Plus className="size-4" aria-hidden />
                   {t("new_repo")}
                 </a>
               </Button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           <ul className="border-t border-(--color-border)">
             {repos.items.map((repo) => (
               <RepoListItem key={repo.name} repo={repo} />
