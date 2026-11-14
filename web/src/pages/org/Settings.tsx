@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { FormField } from "@/components/FormField";
 import { OrgHeader } from "@/components/OrgHeader";
+import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/lib/page-title";
@@ -20,7 +21,6 @@ import {
 } from "@/lib/queries/org";
 import { userProfileQuery } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
-import { cn } from "@/lib/utils";
 
 const FIELD_ORDER = ["name", "fullName", "description", "website", "location", "maxRepoCreation"] as const;
 
@@ -40,39 +40,32 @@ function OrgSettingsLayout({
   usePageTitle(`${t("org.settings")} - ${org.fullName || org.name}`);
   if (org.kind !== "organization") return null;
 
-  const itemClass = (isActive: boolean) =>
-    cn(
-      "rounded-md px-3 py-1.5 text-sm whitespace-nowrap hover:bg-(--color-surface)",
-      isActive ? "bg-(--color-surface) font-semibold text-(--color-foreground)" : "text-(--color-muted-foreground)",
-    );
   return (
     <main className="flex-1">
       <OrgHeader org={org} activeTab="settings" />
-      <div className="mx-auto grid w-full max-w-6xl content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[200px_minmax(0,1fr)]">
-        <nav aria-label={t("org.settings")} className="flex flex-wrap gap-1 md:flex-col">
-          <Link
-            to="/org/$org/settings"
-            params={{ org: org.name }}
-            aria-current={active === "options" ? "page" : undefined}
-            className={itemClass(active === "options")}
-          >
-            {t("org.settings.options")}
-          </Link>
-          {/* Webhooks are still served by the server-rendered pages. */}
-          <a href={subUrl(`/org/${org.name}/settings/hooks`)} className={itemClass(false)}>
-            {t("repo.settings.hooks")}
-          </a>
-          <Link
-            to="/org/$org/settings/delete"
-            params={{ org: org.name }}
-            aria-current={active === "delete" ? "page" : undefined}
-            className={cn(itemClass(active === "delete"), active !== "delete" && "text-(--color-destructive)")}
-          >
-            {t("org.settings.delete")}
-          </Link>
-        </nav>
-        <section className="min-w-0">{children}</section>
-      </div>
+      <SettingsLayout
+        label={t("org.settings")}
+        nav={
+          <>
+            <SettingsNavItem active={active === "options"}>
+              <Link to="/org/$org/settings" params={{ org: org.name }} activeOptions={{ exact: true }}>
+                {t("org.settings.options")}
+              </Link>
+            </SettingsNavItem>
+            {/* Webhooks are still served by the server-rendered pages. */}
+            <SettingsNavItem active={false}>
+              <a href={subUrl(`/org/${org.name}/settings/hooks`)}>{t("repo.settings.hooks")}</a>
+            </SettingsNavItem>
+            <SettingsNavItem active={active === "delete"} destructive>
+              <Link to="/org/$org/settings/delete" params={{ org: org.name }}>
+                {t("org.settings.delete")}
+              </Link>
+            </SettingsNavItem>
+          </>
+        }
+      >
+        {children}
+      </SettingsLayout>
     </main>
   );
 }
