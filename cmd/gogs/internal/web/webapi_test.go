@@ -121,7 +121,7 @@ func TestRequireAuthenticated(t *testing.T) {
 	// sites that do not require signing in to view content.
 	conf.Auth.RequireSigninView = false
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
 	require.NoError(t, err)
 
 	for _, path := range []string{

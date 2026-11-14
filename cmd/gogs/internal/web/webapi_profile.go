@@ -11,7 +11,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -27,7 +27,7 @@ type profileUser struct {
 
 // withProfileUser maps the user or organization named by the `username` path
 // parameter as *profileUser.
-func withProfileUser(c flamego.Context) {
+func withProfileUser(logger *logx.Logger, c flamego.Context) {
 	w := c.ResponseWriter()
 	name := c.Param("username")
 	u, err := database.Handle.Users().GetByUsername(c.Request().Context(), name)
@@ -36,7 +36,7 @@ func withProfileUser(c flamego.Context) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("user does not exist"))
 			return
 		}
-		log.Error("withProfileUser: get user by username %q: %v", name, err)
+		logger.Error("Failed to get user by username", "username", name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get user"))
 		return
 	}
@@ -67,15 +67,15 @@ type userProfile struct {
 
 // getUserProfile returns the profile of a user, or the home page of an
 // organization.
-func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp any, err error) {
+func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp any, err error) {
 	if puser.IsOrganization() {
-		return getOrgProfile(viewer, puser)
+		return getOrgProfile(logger, viewer, puser)
 	}
 
 	ctx := c.Request().Context()
 	orgs, err := database.GetOrgsByUserID(puser.ID, puser.canSeePrivate(viewer))
 	if err != nil {
-		log.Error("getUserProfile: get organizations of user %d: %v", puser.ID, err)
+		logger.Error("Failed to get organizations of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get organizations")
 	}
 
@@ -104,7 +104,7 @@ func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser
 	return http.StatusOK, profile, nil
 }
 
-func getUserProfileRepos(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
+func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
 	page := pageParam(c)
 	var (
 		repos []*database.Repository
@@ -122,10 +122,10 @@ func getUserProfileRepos(c flamego.Context, viewer *database.User, puser *profil
 			Page:     page,
 			PageSize: conf.UI.User.RepoPagingNum,
 		})
-		total = database.CountUserRepositories(puser.ID, showPrivate)
+		total = database.CountUserRepositories(logger, puser.ID, showPrivate)
 	}
 	if err != nil {
-		log.Error("getUserProfileRepos: get repositories of user %d: %v", puser.ID, err)
+		logger.Error("Failed to get repositories of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repositories")
 	}
 	for _, repo := range repos {
@@ -228,7 +228,7 @@ func activityHeadline(l i18n.Locale, act *database.Action) string {
 // toActivityFeed converts a page of actions as listed from the database. Like
 // the server-rendered feeds, it leaves out actions of users that no longer
 // exist.
-func toActivityFeed(ctx context.Context, l i18n.Locale, actions []*database.Action) (*activityFeed, error) {
+func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, actions []*database.Action) (*activityFeed, error) {
 	feed := &activityFeed{Items: make([]activityItem, 0, len(actions))}
 	// A shorter page than requested is the last one.
 	if len(actions) > 0 && len(actions) >= conf.UI.User.NewsFeedPagingNum {
@@ -265,7 +265,7 @@ func toActivityFeed(ctx context.Context, l i18n.Locale, actions []*database.Acti
 		}
 		switch act.OpType {
 		case database.ActionCommitRepo, database.ActionMirrorSyncPush:
-			push := template.ActionContent2Commits(act)
+			push := template.ActionContent2Commits(logger, act)
 			for _, commit := range push.Commits {
 				item.Commits = append(item.Commits, activityCommit{
 					SHA:       commit.Sha1,
@@ -302,7 +302,7 @@ func issueInfo(act *database.Action) string {
 	return infos[1]
 }
 
-func getUserProfileActivity(c flamego.Context, l i18n.Locale, viewer *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
+func getUserProfileActivity(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
 	// Organizations have no activity tab.
 	if puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
@@ -312,12 +312,12 @@ func getUserProfileActivity(c flamego.Context, l i18n.Locale, viewer *database.U
 	afterID, _ := strconv.ParseInt(c.Query("afterID"), 10, 64)
 	actions, err := database.Handle.Actions().ListByUser(ctx, puser.ID, cmp.Or(viewer, &database.User{}).ID, afterID, true)
 	if err != nil {
-		log.Error("getUserProfileActivity: list actions of user %d: %v", puser.ID, err)
+		logger.Error("Failed to list actions of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list actions")
 	}
-	feed, err := toActivityFeed(ctx, l, actions)
+	feed, err := toActivityFeed(ctx, logger, l, actions)
 	if err != nil {
-		log.Error("getUserProfileActivity: convert actions of user %d: %v", puser.ID, err)
+		logger.Error("Failed to convert actions of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "convert actions")
 	}
 	return http.StatusOK, feed, nil
@@ -327,7 +327,7 @@ type userFollowResponse struct {
 	FollowerCount int `json:"followerCount"`
 }
 
-func userFollowAction(ctx context.Context, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
+func userFollowAction(ctx context.Context, logger *logx.Logger, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
 	// Organizations cannot be followed.
 	if puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
@@ -346,24 +346,24 @@ func userFollowAction(ctx context.Context, viewer *database.User, puser *profile
 		err = database.Handle.Users().Unfollow(ctx, viewer.ID, puser.ID)
 	}
 	if err != nil {
-		log.Error("userFollowAction: set following=%t for user %d on user %d: %v", following, viewer.ID, puser.ID, err)
+		logger.Error("Failed to update follow status", "following", following, "followerID", viewer.ID, "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "follow user")
 	}
 
 	updated, err := database.Handle.Users().GetByID(ctx, puser.ID)
 	if err != nil {
-		log.Error("userFollowAction: reload user %d: %v", puser.ID, err)
+		logger.Error("Failed to reload user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload user")
 	}
 	return http.StatusOK, &userFollowResponse{FollowerCount: updated.NumFollowers}, nil
 }
 
-func postUserFollow(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
-	return userFollowAction(c.Request().Context(), viewer, puser, true)
+func postUserFollow(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
+	return userFollowAction(c.Request().Context(), logger, viewer, puser, true)
 }
 
-func deleteUserFollow(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
-	return userFollowAction(c.Request().Context(), viewer, puser, false)
+func deleteUserFollow(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
+	return userFollowAction(c.Request().Context(), logger, viewer, puser, false)
 }
 
 type orgProfileMember struct {
@@ -397,7 +397,7 @@ type orgProfile struct {
 // organization, matching the server-rendered page.
 const orgMembersShown = 12
 
-func getOrgProfile(viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
+func getOrgProfile(logger *logx.Logger, viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
 	profile := &orgProfile{
 		Kind:        "organization",
 		exploreUser: toExploreUser(org.User),
@@ -415,7 +415,7 @@ func getOrgProfile(viewer *database.User, org *profileUser) (statusCode int, res
 	}
 
 	if err = org.GetMembers(orgMembersShown); err != nil {
-		log.Error("getOrgProfile: get members of organization %d: %v", org.ID, err)
+		logger.Error("Failed to get members of organization", "orgID", org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get members")
 	}
 	for _, m := range org.Members {
@@ -445,7 +445,7 @@ func getOrgProfile(viewer *database.User, org *profileUser) (statusCode int, res
 		teams, err = org.GetUserTeams(viewer.ID)
 	}
 	if err != nil {
-		log.Error("getOrgProfile: get teams of organization %d: %v", org.ID, err)
+		logger.Error("Failed to get teams of organization", "orgID", org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get teams")
 	}
 	profile.Teams = make([]orgProfileTeam, 0, len(teams))
