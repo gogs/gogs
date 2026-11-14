@@ -20,7 +20,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
@@ -703,35 +702,35 @@ func (t *HookTask) deliver() {
 		return
 	}
 
-	t.IsDelivered = true
-
-	timeout := time.Duration(conf.Webhook.DeliverTimeout) * time.Second
-	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
-		Header("X-Github-Delivery", t.UUID).
-		Header("X-Github-Event", string(t.EventType)).
-		Header("X-Gogs-Delivery", t.UUID).
-		Header("X-Gogs-Signature", t.Signature).
-		Header("X-Gogs-Event", string(t.EventType)).
-		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify}).
-		SetCheckRedirect(func(req *http.Request, _ []*http.Request) error {
-			// The webhook target is explicitly configured by the user, so any
-			// redirect would silently retarget the signed payload. Refuse all
-			// redirects rather than chase them.
-			return errors.Newf("refusing to follow webhook redirect to %q", req.URL.Redacted())
-		})
-
+	var body, contentType string
 	switch t.ContentType {
 	case JSON:
-		req = req.Header("Content-Type", "application/json").Body(t.PayloadContent)
+		body, contentType = t.PayloadContent, "application/json"
 	case FORM:
-		req.Param("payload", t.PayloadContent)
+		body, contentType = url.Values{"payload": {t.PayloadContent}}.Encode(), "application/x-www-form-urlencoded"
 	}
+	req, err := http.NewRequest(http.MethodPost, t.URL, strings.NewReader(body))
+	if err != nil {
+		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot create request: %v"}`, err)
+		return
+	}
+	req.Header.Set("User-Agent", "GogsServer")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	req.Header.Set("X-Github-Delivery", t.UUID)
+	req.Header.Set("X-Github-Event", string(t.EventType))
+	req.Header.Set("X-Gogs-Delivery", t.UUID)
+	req.Header.Set("X-Gogs-Signature", t.Signature)
+	req.Header.Set("X-Gogs-Event", string(t.EventType))
+
+	t.IsDelivered = true
 
 	// Record delivery information.
 	t.RequestInfo = &HookRequest{
 		Headers: map[string]string{},
 	}
-	for k, vals := range req.Headers() {
+	for k, vals := range req.Header {
 		t.RequestInfo.Headers[k] = strings.Join(vals, ",")
 	}
 
@@ -764,7 +763,20 @@ func (t *HookTask) deliver() {
 		}
 	}()
 
-	resp, err := req.Response()
+	client := &http.Client{
+		Timeout: time.Duration(conf.Webhook.DeliverTimeout) * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify},
+			DisableKeepAlives: true,
+		},
+		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+			// The webhook target is explicitly configured by the user, so any
+			// redirect would silently retarget the signed payload. Refuse all
+			// redirects rather than chase them.
+			return errors.Newf("refusing to follow webhook redirect to %q", req.URL.Redacted())
+		},
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		t.ResponseInfo.Body = fmt.Sprintf("Delivery: %v", err)
 		return

@@ -68,8 +68,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
+      - name: Show test report
+        if: ${{ !cancelled() }}
         run: |
-          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
           go install github.com/mfridman/tparse@latest
           tparse -all -file=test-report.json
       - name: Send email on failure
@@ -131,10 +133,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: |
-          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
-          go install github.com/mfridman/tparse@latest
-          tparse -all -file=test-report.json
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
         env:
           GOGS_DATABASE_TYPE: postgres
           PGPORT: 5432
@@ -142,6 +141,11 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGSSLMODE: disable
+      - name: Show test report
+        if: ${{ !cancelled() }}
+        run: |
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json
 
   mysql:
     name: MySQL
@@ -160,13 +164,15 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        run: |
-          go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
-          go install github.com/mfridman/tparse@latest
-          tparse -all -file=test-report.json
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
         env:
           GOGS_DATABASE_TYPE: mysql
           MYSQL_USER: root
           MYSQL_PASSWORD: root
           MYSQL_HOST: localhost
           MYSQL_PORT: 3306
+      - name: Show test report
+        if: ${{ !cancelled() }}
+        run: |
+          go install github.com/mfridman/tparse@latest
+          tparse -all -file=test-report.json
