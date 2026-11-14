@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { ShieldCheck, Users } from "lucide-react";
+import { Pencil, ShieldCheck, Users } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AvatarForm } from "@/components/AvatarForm";
+import { CodeEditor } from "@/components/CodeEditor";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CredentialRow, ROW_CLASS } from "@/components/CredentialRow";
 import { CheckboxField, FormAlert, FormField, RadioField } from "@/components/FormField";
@@ -23,6 +24,8 @@ import {
   type RepoBranchSettingsData,
   type RepoCollaborator,
   type RepoCollaboratorMode,
+  type RepoGitHook,
+  type RepoGitHookContent,
   type RepoMirrorSettings,
   type RepoProtectedBranch,
   type RepoProtectedBranchForm,
@@ -43,6 +46,7 @@ import {
   transferRepo,
   updateRepoAdvanced,
   updateRepoDefaultBranch,
+  updateRepoGitHook,
   updateRepoMirror,
   updateRepoProtectedBranch,
   updateRepoSettings,
@@ -51,6 +55,7 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import type { SSHKey } from "@/lib/queries/settings";
 import { subUrl } from "@/lib/url";
+import { cn } from "@/lib/utils";
 import { DescriptionField } from "@/pages/repo/New";
 
 const TEXTAREA_CLASS =
@@ -58,7 +63,7 @@ const TEXTAREA_CLASS =
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "short" });
 const MODES: RepoCollaboratorMode[] = ["admin", "write", "read"];
 
-type SettingsPage = "options" | "collaboration" | "branches" | "hooks" | "keys";
+type SettingsPage = "options" | "collaboration" | "branches" | "hooks" | "githooks" | "keys";
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.
@@ -109,12 +114,12 @@ export function RepoSettingsLayout({
   const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
   usePageTitle(`${t("repo.settings")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
-  const legacyLink = (path: string) => subUrl(`/${repo.owner}/${repo.name}/settings${path}`);
   const titles: Record<SettingsPage, string> = {
     options: t("repo.settings.options"),
     collaboration: t("repo.settings.collaboration"),
     branches: t("repo.settings.branches"),
     hooks: t("repo.settings.hooks"),
+    githooks: t("repo.settings.githooks"),
     keys: t("repo.settings.deploy_keys"),
   };
 
@@ -152,10 +157,11 @@ export function RepoSettingsLayout({
                   {titles.hooks}
                 </Link>
               </SettingsNavItem>
-              {/* Git hooks are still served by the server-rendered pages. */}
               {settings.viewerCanEditGitHooks ? (
-                <SettingsNavItem active={false}>
-                  <a href={legacyLink("/hooks/git")}>{t("repo.settings.githooks")}</a>
+                <SettingsNavItem active={active === "githooks"}>
+                  <Link to="/$owner/$repo/settings/hooks/git" params={params}>
+                    {titles.githooks}
+                  </Link>
                 </SettingsNavItem>
               ) : null}
               <SettingsNavItem active={active === "keys"}>
@@ -1404,5 +1410,106 @@ function OptionLabel({ title, desc }: { title: string; desc: string }) {
       <span className="font-medium">{title}</span>
       <span className="block text-(--color-muted-foreground)">{desc}</span>
     </>
+  );
+}
+
+function HookState({ isActive }: { isActive: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-(--color-border) px-2 text-xs leading-5 font-medium text-(--color-muted-foreground)">
+      <span
+        aria-hidden
+        className={cn("size-2 rounded-full", isActive ? "bg-(--color-success)" : "bg-(--color-muted-foreground)")}
+      />
+      {isActive ? t("repo.settings.active") : t("repo.settings.githook_inactive")}
+    </span>
+  );
+}
+
+// RepoGitHooks lists the server-side Git hooks of a repository. Only site
+// admins and the users they allow can edit them, since hooks run on the
+// server.
+export function RepoGitHooks({ owner, name, hooks }: { owner: string; name: string; hooks: RepoGitHook[] }) {
+  const { t } = useTranslation();
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="githooks">
+      <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.githooks")}</h1>
+      <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.githooks_desc")}</p>
+      <ul className="rounded-md border border-(--color-border)">
+        {hooks.map((hook) => (
+          <li key={hook.name} className="border-b border-(--color-border) last:border-b-0">
+            <Link
+              to="/$owner/$repo/settings/hooks/git/$name"
+              params={{ owner, repo: name, name: hook.name }}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-(--color-surface)"
+            >
+              <span className="font-mono text-sm text-(--color-primary) hover:underline">{hook.name}</span>
+              <HookState isActive={hook.isActive} />
+              <Pencil className="ml-auto size-4 text-(--color-muted-foreground)" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoGitHookEdit changes the content of a Git hook. An inactive hook shows
+// its sample, and saving empty content makes the hook do nothing.
+export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: string; hook: RepoGitHookContent }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [content, setContent] = useState(hook.content);
+  const update = useMutation({
+    mutationFn: () => updateRepoGitHook(owner, name, hook.name, content),
+    onSuccess: async () => {
+      toast.success(t("repo.settings.update_githook_success"));
+      await router.invalidate();
+    },
+  });
+  const { formError } = formErrors(update.error);
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="githooks" wide>
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <h1 className="font-mono text-xl font-semibold">{hook.name}</h1>
+        <HookState isActive={hook.isActive} />
+      </div>
+      <p className="mb-6 text-sm text-(--color-muted-foreground)">{t("repo.settings.githook_edit_desc")}</p>
+      <form onSubmit={onSubmit} noValidate>
+        <fieldset disabled={update.isPending} className="contents">
+          <FormAlert message={formError} />
+          <div className="flex flex-col gap-5">
+            <FormField id="content" label={t("repo.settings.githook_content")} invalid={false}>
+              <CodeEditor
+                id="content"
+                label={t("repo.settings.githook_content")}
+                lang="shell"
+                code
+                minLines={20}
+                disabled={update.isPending}
+                value={content}
+                onChange={setContent}
+              />
+            </FormField>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit" variant="outline">
+                {t("repo.settings.update_githook")}
+              </Button>
+              <Button asChild variant="ghost">
+                <Link to="/$owner/$repo/settings/hooks/git" params={{ owner, repo: name }}>
+                  {t("cancel")}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </RepoSettingsLayout>
   );
 }

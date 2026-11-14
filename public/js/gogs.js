@@ -315,18 +315,6 @@ function initRepository() {
     initFilterSearchDropdown(".choose.page .dropdown");
   }
 
-  // Branches
-  if ($(".repository.settings.branches").length > 0) {
-    initFilterSearchDropdown(".protected-branches .dropdown");
-    $(".enable-protection, .enable-whitelist").change(function() {
-      if (this.checked) {
-        $($(this).data("target")).removeClass("disabled");
-      } else {
-        $($(this).data("target")).addClass("disabled");
-      }
-    });
-  }
-
   // Issues
   if ($(".repository.view.issue").length > 0) {
     // Edit issue title
