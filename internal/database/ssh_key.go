@@ -668,6 +668,10 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 
 	key, err := addDeployKey(sess, pkey.ID, repoID, name, pkey.Fingerprint)
 	if err != nil {
+		// Callers tell the user when the key or its name is already used.
+		if IsErrDeployKeyAlreadyExist(err) || IsErrDeployKeyNameAlreadyUsed(err) {
+			return nil, err
+		}
 		return nil, errors.Newf("addDeployKey: %v", err)
 	}
 

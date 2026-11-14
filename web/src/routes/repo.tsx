@@ -1,14 +1,23 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
-import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
+import { LoaderResponseError, loadSignedInPage, loaderResponseError } from "@/lib/loader-error";
 import { type PageSearch, validatePageSearch } from "@/lib/page-search";
-import { fetchRepoForkOptions, fetchRepoNewOptions, fetchRepoPeople, repoHeaderQuery } from "@/lib/queries/repo";
+import {
+  fetchRepoCollaborators,
+  fetchRepoDeployKeys,
+  fetchRepoForkOptions,
+  fetchRepoNewOptions,
+  fetchRepoPeople,
+  repoHeaderQuery,
+  repoSettingsQuery,
+} from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
 import { RepoPeople } from "@/pages/repo/People";
+import { RepoCollaboration, RepoDeployKeys, RepoOptions } from "@/pages/repo/Settings";
 
 // Match the legacy server-side route constraint (see `web.go` near the
 // `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
@@ -220,5 +229,67 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  return [repoCommitRoute, repoStargazersRoute, repoWatchersRoute, repoCreateRoute, repoMigrateRoute, repoForkRoute];
+  // loadSettingsPage loads the header and the settings of a repository, which
+  // every settings page shows, along with the data of the page. Only admins of
+  // the repository get past it.
+  function loadSettingsPage<T>(queryClient: QueryClient, owner: string, repo: string, load: () => Promise<T>) {
+    return loadSignedInPage(async () => {
+      const [, , data] = await Promise.all([
+        queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
+        queryClient.ensureQueryData(repoSettingsQuery(owner, repo)),
+        load(),
+      ]);
+      return data;
+    });
+  }
+
+  const repoSettingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () => Promise.resolve()),
+    component: function Settings() {
+      const { owner, repo } = repoSettingsRoute.useParams();
+      // Start over when the repository changes, e.g., after renaming it.
+      return <RepoOptions key={`${owner}/${repo}`} owner={owner} name={repo} />;
+    },
+  });
+
+  const repoCollaborationRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/collaboration",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoCollaborators(params.owner, params.repo),
+      ),
+    component: function Collaboration() {
+      const { owner, repo } = repoCollaborationRoute.useParams();
+      return <RepoCollaboration owner={owner} name={repo} collaborators={repoCollaborationRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoDeployKeysRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/keys",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoDeployKeys(params.owner, params.repo),
+      ),
+    component: function DeployKeys() {
+      const { owner, repo } = repoDeployKeysRoute.useParams();
+      return <RepoDeployKeys owner={owner} name={repo} keys={repoDeployKeysRoute.useLoaderData()} />;
+    },
+  });
+
+  return [
+    repoCommitRoute,
+    repoStargazersRoute,
+    repoWatchersRoute,
+    repoCreateRoute,
+    repoMigrateRoute,
+    repoForkRoute,
+    repoSettingsRoute,
+    repoCollaborationRoute,
+    repoDeployKeysRoute,
+  ];
 }

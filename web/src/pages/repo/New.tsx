@@ -88,7 +88,9 @@ function OwnerField({
   );
 }
 
-function DescriptionField({
+// DescriptionField is the description of a repository, which counts down the
+// characters left.
+export function DescriptionField({
   value,
   onChange,
   error,
