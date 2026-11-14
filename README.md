@@ -67,6 +67,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 - Any modern browser works, with Chrome 111, Edge 111, Firefox 128 and Safari 16.4 (including iOS) as the minimum versions.
 - The UI is mobile-friendly and works on screens as narrow as 375px.
+- WebAssembly SIMD makes syntax highlighting in diffs faster, but is not required.
 
 ## 📜 Installation
 
