@@ -69,6 +69,9 @@ var allowedCommands = map[string]database.AccessMode{
 // After a push, it records the updated references and calls TriggerPushTasks.
 // Errors are of type *ServeError.
 func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
+	if conf.SSH.Disabled {
+		return serveError("SSH has been disabled", "")
+	}
 	if opts.Command == "" {
 		_, _ = fmt.Fprintln(opts.Stderr, "Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
 		_, _ = fmt.Fprintln(opts.Stderr, "If this is unexpected, please log in with password and setup Gogs under another user.")

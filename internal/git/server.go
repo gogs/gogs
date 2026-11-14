@@ -165,10 +165,47 @@ func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]Re
 	if !reported {
 		applied, checkErr = appliedRefUpdates(ctx, path, updates)
 	}
+	if checkErr == nil {
+		applied, checkErr = withoutPhantomDeletes(ctx, path, applied)
+	}
 	if err != nil {
 		return applied, err
 	}
 	return applied, checkErr
+}
+
+// withoutPhantomDeletes returns the updates without the deletions of references
+// that did not exist, i.e., whose old object is not in the repository. Git
+// reports them as applied, but leaves them out of the post-receive hook.
+func withoutPhantomDeletes(ctx context.Context, path string, updates []RefUpdate) ([]RefUpdate, error) {
+	var input strings.Builder
+	for _, update := range updates {
+		if IsEmptyID(update.NewID) {
+			input.WriteString(update.OldID + "\n")
+		}
+	}
+	if input.Len() == 0 {
+		return updates, nil
+	}
+
+	stdout, err := execInput(ctx, path, []string{"cat-file", "--batch-check=%(objectname)"}, nil, strings.NewReader(input.String()))
+	if err != nil {
+		return nil, errors.Wrap(err, "check objects of deleted references")
+	}
+	missing := make(map[string]bool)
+	for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
+		if id, ok := strings.CutSuffix(line, " missing"); ok {
+			missing[id] = true
+		}
+	}
+
+	existing := updates[:0:0]
+	for _, update := range updates {
+		if !IsEmptyID(update.NewID) || !missing[update.OldID] {
+			existing = append(existing, update)
+		}
+	}
+	return existing, nil
 }
 
 // refUpdatesBatchSize is how many reference names are looked up per Git
@@ -337,7 +374,8 @@ func (p *receivePackPush) parseResponse(b []byte) {
 	}
 	p.response = append(p.response, b...)
 
-	useSideband := slices.Contains(p.capabilities, "side-band-64k") || slices.Contains(p.capabilities, "side-band")
+	// "git receive-pack" only supports the 64k sideband.
+	useSideband := slices.Contains(p.capabilities, "side-band-64k")
 	for {
 		payload, n, err := readPktLine(p.response)
 		if err != nil {

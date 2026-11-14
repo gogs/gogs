@@ -1027,7 +1027,7 @@ func CleanUpMigrateInfo(logger *logx.Logger, repo *Repository) (*Repository, err
 // initRepoCommit commits the files to the default branch of the empty
 // repository at repoPath.
 func initRepoCommit(ctx context.Context, repoPath string, files map[string][]byte, author *git.Signature) error {
-	_, err := commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, nil, func(tmpRepo *git.Repository) error {
+	_, err := commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		indexFiles := make([]git.IndexFile, 0, len(files))
 		for name, data := range files {
 			indexFiles = append(indexFiles, git.IndexFile{Path: name, Content: bytes.NewReader(data)})

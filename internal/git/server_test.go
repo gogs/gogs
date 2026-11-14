@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -297,4 +298,40 @@ func TestRunService_IdleTimeout(t *testing.T) {
 	})
 	assert.Equal(t, ErrExecTimeout, err)
 	assert.Less(t, time.Since(start), 5*time.Second)
+}
+
+func TestWithoutPhantomDeletes(t *testing.T) {
+	ctx := context.Background()
+	path := t.TempDir()
+	stdout, err := exec(ctx, path, []string{"init", "--initial-branch=main"}, nil)
+	require.NoError(t, err, string(stdout))
+	stdout, err = exec(ctx, path, []string{"-c", "user.name=a", "-c", "user.email=a@example.com", "commit", "--allow-empty", "-m", "first"}, nil)
+	require.NoError(t, err, string(stdout))
+	stdout, err = exec(ctx, path, []string{"rev-parse", "HEAD"}, nil)
+	require.NoError(t, err)
+	first := strings.TrimSpace(string(stdout))
+	empty := ObjectFormatSHA1.EmptyID()
+
+	existing := RefUpdate{OldID: first, NewID: empty, RefName: "refs/heads/gone"}
+	created := RefUpdate{OldID: empty, NewID: first, RefName: "refs/heads/new"}
+	phantom := RefUpdate{OldID: strings.Repeat("ab", 20), NewID: empty, RefName: "refs/heads/never-existed"}
+	got, err := withoutPhantomDeletes(ctx, path, []RefUpdate{existing, phantom, created})
+	require.NoError(t, err)
+	assert.Equal(t, []RefUpdate{existing, created}, got)
+}
+
+func TestReceivePackPush_SidebandCapability(t *testing.T) {
+	id := strings.Repeat("ab", 20)
+	empty := ObjectFormatSHA1.EmptyID()
+	command := id + " " + empty + " refs/heads/gone\x00report-status side-band"
+	request := fmt.Sprintf("%04x%s0000", len(command)+4, command)
+	// "git receive-pack" ignores "side-band" and sends the report as is.
+	response := "000eunpack ok\n0017ok refs/heads/gone\n0000"
+
+	push := &receivePackPush{}
+	push.parseRequest([]byte(request))
+	push.parseResponse([]byte(response))
+	_, applied, reported := push.result()
+	assert.True(t, reported)
+	assert.Equal(t, []RefUpdate{{OldID: id, NewID: empty, RefName: "refs/heads/gone"}}, applied)
 }

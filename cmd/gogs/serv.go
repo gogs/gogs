@@ -101,11 +101,6 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	// Recording a push may send emails, e.g., when a commit closes an issue.
 	email.NewContext(logger)
 
-	if conf.SSH.Disabled {
-		println("Gogs: SSH has been disabled")
-		return nil
-	}
-
 	if cmd.Args().Len() < 1 {
 		fail(logger, "Not enough arguments", "Not enough arguments")
 	}

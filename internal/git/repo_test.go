@@ -250,3 +250,31 @@ func TestRepository_GC(t *testing.T) {
 	require.NoError(t, r.GC(ctx, GCOptions{Args: []string{"--quiet"}}))
 	assert.Error(t, r.GC(ctx, GCOptions{Args: []string{"--no-such-option"}}))
 }
+
+func TestRepository_Push_ExpectedOldID(t *testing.T) {
+	ctx := context.Background()
+	remotePath := filepath.Join(t.TempDir(), "remote.git")
+	require.NoError(t, Init(ctx, remotePath, InitOptions{Bare: true}))
+	localPath := t.TempDir()
+	git := func(args ...string) string {
+		args = append([]string{"-c", "user.name=a", "-c", "user.email=a@example.com"}, args...)
+		stdout, err := exec(ctx, localPath, args, nil)
+		require.NoError(t, err)
+		return strings.TrimSpace(string(stdout))
+	}
+	git("init", "--initial-branch=main")
+	git("commit", "--allow-empty", "-m", "first")
+	first := git("rev-parse", "HEAD")
+	git("commit", "--allow-empty", "-m", "second")
+	second := git("rev-parse", "HEAD")
+	local, err := Open(localPath)
+	require.NoError(t, err)
+	empty := ObjectFormatSHA1.EmptyID()
+
+	// The branch must not exist yet.
+	require.NoError(t, local.Push(ctx, remotePath, first+":refs/heads/b", PushOptions{ExpectedOldID: empty}))
+	assert.Error(t, local.Push(ctx, remotePath, second+":refs/heads/b", PushOptions{ExpectedOldID: empty}))
+	// The branch must be at the expected commit.
+	assert.Error(t, local.Push(ctx, remotePath, second+":refs/heads/b", PushOptions{ExpectedOldID: second}))
+	require.NoError(t, local.Push(ctx, remotePath, second+":refs/heads/b", PushOptions{ExpectedOldID: first}))
+}

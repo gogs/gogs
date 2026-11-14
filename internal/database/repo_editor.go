@@ -133,10 +133,10 @@ func newTemporaryRepository(ctx context.Context, repoPaths ...string) (_ *git.Re
 // commitAndPush creates a commit on top of the parent, or a root commit when
 // the parent is nil, with the changes that change makes to the index of a
 // temporary repository, and pushes it to the branch of the repository at
-// repoPath with the environment variables, and returns the ID of the pushed
+// repoPath with the options, and returns the ID of the pushed
 // commit. When the changes leave the tree of the parent as it was, it pushes the
 // parent as is. The committer may be nil to use the one from Git configuration.
-func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, envs []string, change func(tmpRepo *git.Repository) error) (string, error) {
+func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, branch, message string, author, committer *git.Signature, pushOpts git.PushOptions, change func(tmpRepo *git.Repository) error) (string, error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -189,7 +189,7 @@ func commitAndPush(ctx context.Context, repoPath string, parent *git.Commit, bra
 		}
 	}
 
-	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, git.PushOptions{Envs: envs})
+	err = tmpRepo.Push(ctx, repoPath, commitID+":"+git.RefsHeads+branch, pushOpts)
 	if err != nil {
 		return "", errors.Newf("git push origin %s: %v", branch, err)
 	}
@@ -209,17 +209,18 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 		return errors.Wrapf(err, "get commit of branch %q", oldBranch)
 	}
 
-	// Git rejects the push when another one updates the branch in the meantime,
-	// because the new commit no longer fast-forwards it.
+	// The push is rejected when another one updates the branch, or creates the new
+	// branch, in the meantime, so that what is recorded for it is what it changed.
 	update := git.RefUpdate{OldID: parent.ID.String(), RefName: git.RefsHeads + newBranch}
 	if newBranch != oldBranch {
 		if !gitRepo.IsValidBranchName(ctx, newBranch) {
 			return errors.Newf("invalid branch name %q", newBranch)
 		}
-		update.OldID, err = branchID(ctx, gitRepo, newBranch)
+		format, err := gitRepo.ObjectFormat(ctx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "get object format")
 		}
+		update.OldID = format.EmptyID()
 	}
 
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
@@ -231,7 +232,7 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 		RepoName:  r.Name,
 		RepoPath:  r.RepoPath(),
 	})
-	update.NewID, err = commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, envs, func(tmpRepo *git.Repository) error {
+	update.NewID, err = commitAndPush(ctx, r.RepoPath(), parent, newBranch, message, sig, sig, git.PushOptions{Envs: envs, ExpectedOldID: update.OldID}, func(tmpRepo *git.Repository) error {
 		return change(tmpRepo, parent)
 	})
 	if err != nil {
@@ -245,24 +246,6 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 		})
 	}
 	return nil
-}
-
-// branchID returns the ID of the commit of the branch, or the empty ID when the
-// branch does not exist.
-func branchID(ctx context.Context, repo *git.Repository, branch string) (string, error) {
-	if !git.RepoHasBranch(ctx, repo.Path(), branch) {
-		format, err := repo.ObjectFormat(ctx)
-		if err != nil {
-			return "", errors.Wrap(err, "get object format")
-		}
-		return format.EmptyID(), nil
-	}
-
-	commit, err := repo.BranchCommit(ctx, branch)
-	if err != nil {
-		return "", errors.Wrapf(err, "get commit of branch %q", branch)
-	}
-	return commit.ID.String(), nil
 }
 
 // treeEntry returns the entry at the path in the tree of the commit, or nil if
