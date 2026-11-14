@@ -176,7 +176,7 @@ func postUserSSHKey(l i18n.Locale, viewer *database.User, req userSSHKeyRequest)
 		log.Error("postUserSSHKey: add key for user %d: %v", viewer.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add public key")
 	}
-	return http.StatusCreated, nil, nil
+	return http.StatusNoContent, nil, nil
 }
 
 // deleteUserSSHKey deletes an SSH key of the authenticated user. Keys of other
