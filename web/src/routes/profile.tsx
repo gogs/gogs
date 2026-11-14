@@ -19,17 +19,17 @@ export function createProfileRoutes(rootRoute: AnyRoute) {
     validateSearch: validateProfileSearch,
     loaderDeps: ({ search }: { search: ProfileSearch }) => ({ tab: search.tab, page: search.page }),
     loader: async ({ params, deps, context }): Promise<ProfilePage> => {
-      const { queryClient } = context as RouterContext;
+      const routerContext = context as RouterContext;
       try {
         if (deps.tab === "activity") {
           await Promise.all([
-            queryClient.ensureQueryData(userProfileQuery(params.username)),
-            queryClient.ensureInfiniteQueryData(userActivityQuery(params.username)),
+            routerContext.queryClient.ensureQueryData(userProfileQuery(params.username)),
+            routerContext.queryClient.ensureInfiniteQueryData(userActivityQuery(params.username)),
           ]);
           return { tab: "activity" };
         }
         const [, repos] = await Promise.all([
-          queryClient.ensureQueryData(userProfileQuery(params.username)),
+          routerContext.queryClient.ensureQueryData(userProfileQuery(params.username)),
           fetchUserRepos(params.username, deps.page),
         ]);
         return { tab: "repos", repos };

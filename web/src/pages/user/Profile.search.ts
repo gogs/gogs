@@ -9,6 +9,8 @@ export interface ProfileSearch {
   page?: number;
 }
 
+// Both keys are always present, even when undefined, so that malformed values
+// from the URL do not leak through from the unvalidated root search.
 export function validateProfileSearch(search: Record<string, unknown>): ProfileSearch {
   // A repeated parameter arrives as an array. Use the first value, like the server.
   const first = (value: unknown) => (Array.isArray(value) ? (value as unknown[])[0] : value);

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	"context"
 	"html"
 	"net/http"
@@ -67,9 +68,9 @@ type userProfile struct {
 	ViewerIsFollowing bool             `json:"viewerIsFollowing"`
 }
 
-func getUserProfile(c flamego.Context, user *database.User, puser *profileUser) (statusCode int, resp *userProfile, err error) {
+func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userProfile, err error) {
 	ctx := c.Request().Context()
-	orgs, err := database.GetOrgsByUserID(puser.ID, puser.canSeePrivate(user))
+	orgs, err := database.GetOrgsByUserID(puser.ID, puser.canSeePrivate(viewer))
 	if err != nil {
 		log.Error("getUserProfile: get organizations of user %d: %v", puser.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get organizations")
@@ -90,18 +91,18 @@ func getUserProfile(c flamego.Context, user *database.User, puser *profileUser) 
 			AvatarURL: org.AvatarURLPath(),
 		})
 	}
-	if user != nil {
-		// Email addresses are only shown to signed-in users.
+	if viewer != nil {
+		// Email addresses are only shown to signed-in viewers.
 		profile.Email = puser.Email
-		profile.ViewerIsSelf = user.ID == puser.ID
-		profile.ViewerIsFollowing = !profile.ViewerIsSelf && database.Handle.Users().IsFollowing(ctx, user.ID, puser.ID)
+		profile.ViewerIsSelf = viewer.ID == puser.ID
+		profile.ViewerIsFollowing = !profile.ViewerIsSelf && database.Handle.Users().IsFollowing(ctx, viewer.ID, puser.ID)
 	}
 	return http.StatusOK, profile, nil
 }
 
-func getUserProfileRepos(c flamego.Context, user *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
+func getUserProfileRepos(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
 	page := pageParam(c)
-	showPrivate := puser.canSeePrivate(user)
+	showPrivate := puser.canSeePrivate(viewer)
 	repos, err := database.GetUserRepositories(&database.UserRepoOptions{
 		UserID:   puser.ID,
 		Private:  showPrivate,
@@ -287,14 +288,10 @@ func issueInfo(act *database.Action) string {
 	return infos[1]
 }
 
-func getUserProfileActivity(c flamego.Context, l i18n.Locale, user *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
+func getUserProfileActivity(c flamego.Context, l i18n.Locale, viewer *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
 	ctx := c.Request().Context()
-	var viewerID int64
-	if user != nil {
-		viewerID = user.ID
-	}
 	afterID, _ := strconv.ParseInt(c.Query("afterID"), 10, 64)
-	actions, err := database.Handle.Actions().ListByUser(ctx, puser.ID, viewerID, afterID, true)
+	actions, err := database.Handle.Actions().ListByUser(ctx, puser.ID, cmp.Or(viewer, &database.User{}).ID, afterID, true)
 	if err != nil {
 		log.Error("getUserProfileActivity: list actions of user %d: %v", puser.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list actions")
@@ -311,22 +308,22 @@ type userFollowResponse struct {
 	FollowerCount int `json:"followerCount"`
 }
 
-func userFollowAction(ctx context.Context, user *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
+func userFollowAction(ctx context.Context, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
 	// Match the sign-in requirement of the server-rendered follow form.
-	if user == nil {
+	if viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
-	if !user.IsActive && conf.Auth.RequireEmailConfirmation {
+	if !viewer.IsActive && conf.Auth.RequireEmailConfirmation {
 		return http.StatusForbidden, nil, errors.New("account not activated")
 	}
 
 	if following {
-		err = database.Handle.Users().Follow(ctx, user.ID, puser.ID)
+		err = database.Handle.Users().Follow(ctx, viewer.ID, puser.ID)
 	} else {
-		err = database.Handle.Users().Unfollow(ctx, user.ID, puser.ID)
+		err = database.Handle.Users().Unfollow(ctx, viewer.ID, puser.ID)
 	}
 	if err != nil {
-		log.Error("userFollowAction: set following=%t for user %d on user %d: %v", following, user.ID, puser.ID, err)
+		log.Error("userFollowAction: set following=%t for user %d on user %d: %v", following, viewer.ID, puser.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "follow user")
 	}
 
@@ -338,10 +335,10 @@ func userFollowAction(ctx context.Context, user *database.User, puser *profileUs
 	return http.StatusOK, &userFollowResponse{FollowerCount: updated.NumFollowers}, nil
 }
 
-func postUserFollow(c flamego.Context, user *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
-	return userFollowAction(c.Request().Context(), user, puser, true)
+func postUserFollow(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
+	return userFollowAction(c.Request().Context(), viewer, puser, true)
 }
 
-func deleteUserFollow(c flamego.Context, user *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
-	return userFollowAction(c.Request().Context(), user, puser, false)
+func deleteUserFollow(c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
+	return userFollowAction(c.Request().Context(), viewer, puser, false)
 }
