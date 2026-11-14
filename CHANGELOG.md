@@ -27,6 +27,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- Commenting on, closing, or reopening an issue, including with `fixes #N` in a pushed commit, no longer hangs the server when using SQLite with email notifications enabled. [#8395](https://github.com/gogs/gogs/pull/8395)
 - Markdown files starting with a byte order mark now render their first line correctly, e.g., a leading heading is no longer shown as plain text. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Code blocks in languages whose names contain symbols, e.g., `c++` and `c#`, now keep their language for syntax highlighting. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Relative links in issue notification emails now point to the repository instead of a broken `http:/` address. [#8519](https://github.com/gogs/gogs/pull/8519)
