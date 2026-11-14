@@ -155,7 +155,7 @@ func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, 
 	items := make([]exploreUser, 0, len(users))
 	for _, u := range users {
 		item := toExploreUser(u)
-		// Email addresses are only shown to signed-in viewers.
+		// Email addresses are only shown to authenticated viewers.
 		if viewer != nil {
 			item.Email = u.Email
 		}

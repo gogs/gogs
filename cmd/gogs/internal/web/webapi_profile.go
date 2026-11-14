@@ -92,7 +92,7 @@ func getUserProfile(c flamego.Context, viewer *database.User, puser *profileUser
 		})
 	}
 	if viewer != nil {
-		// Email addresses are only shown to signed-in viewers.
+		// Email addresses are only shown to authenticated viewers.
 		profile.Email = puser.Email
 		profile.ViewerIsSelf = viewer.ID == puser.ID
 		profile.ViewerIsFollowing = !profile.ViewerIsSelf && database.Handle.Users().IsFollowing(ctx, viewer.ID, puser.ID)
@@ -309,7 +309,7 @@ type userFollowResponse struct {
 }
 
 func userFollowAction(ctx context.Context, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
-	// Match the sign-in requirement of the server-rendered follow form.
+	// Match the authentication requirement of the server-rendered follow form.
 	if viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}

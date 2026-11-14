@@ -122,7 +122,7 @@ function ProfileSidebar({ profile }: { profile: UserProfileData }) {
   const { t } = useTranslation();
   const isWebsiteLink = profile.website ? /^https?:\/\//i.test(profile.website) : false;
   const homeLink = subUrl(`/${profile.name}`);
-  const signedIn = useUserInfo() !== null;
+  const authenticated = useUserInfo() !== null;
 
   return (
     <aside className="min-w-0">
@@ -154,7 +154,7 @@ function ProfileSidebar({ profile }: { profile: UserProfileData }) {
         </h1>
       </div>
 
-      {signedIn && !profile.viewerIsSelf ? <FollowButton profile={profile} /> : null}
+      {authenticated && !profile.viewerIsSelf ? <FollowButton profile={profile} /> : null}
 
       <ul className="mt-4 grid gap-1.5 text-sm">
         {profile.location ? (
