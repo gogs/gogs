@@ -162,7 +162,7 @@ function RepoItem({ repo }: { repo: ExploreRepo }) {
         />
       ) : (
         <span className="grid size-10 shrink-0 place-items-center text-(--color-muted-foreground)">
-          <BookMarked className="size-5" aria-hidden />
+          <BookMarked className="size-9" strokeWidth={1.5} aria-hidden />
         </span>
       )}
       <div className="min-w-0 flex-1">
