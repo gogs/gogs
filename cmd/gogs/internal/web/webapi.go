@@ -193,6 +193,19 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		}
 		f.Group("/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
 		f.Group("/orgs/{org}/dashboard", dashboardRoutes, requireSignIn, withDashboardOwner)
+		f.Group("/orgs/{org}", func() {
+			f.Get("/members", getOrgMembers)
+			f.Delete("/members/{username}", deleteOrgMember)
+			f.Combo("/members/{username}/public").Put(putOrgMemberPublic).Delete(deleteOrgMemberPublic)
+			f.Get("/teams", getOrgTeams)
+			f.Group("/teams/{team}", func() {
+				f.Get("", getOrgTeam)
+				f.Get("/members", getOrgTeamMembers)
+				f.Combo("/members/{username}").Put(putOrgTeamMember).Delete(deleteOrgTeamMember)
+				f.Get("/repos", getOrgTeamRepos)
+				f.Combo("/repos/{repo}").Put(putOrgTeamRepo).Delete(deleteOrgTeamRepo)
+			}, withOrgTeam)
+		}, requireSignIn, withOrgMembership)
 	}, enforceWebAPIMaxBodySize)
 }
 
