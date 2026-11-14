@@ -151,7 +151,7 @@ function TracesLayout({
 }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="traces" wide>
+    <AdminLayout active="traces">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
@@ -1073,7 +1073,7 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
 export function AdminTraceView({ trace }: { trace: AdminTrace }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="traces" wide>
+    <AdminLayout active="traces">
       <Link
         to="/admin/traces"
         className="mb-3 inline-flex items-center gap-1 text-sm text-(--color-primary) hover:underline"
