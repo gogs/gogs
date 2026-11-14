@@ -32,9 +32,12 @@ export interface OrgTeamDetail {
   permissionHTML: string;
   memberCount: number;
   repoCount: number;
+  permission: TeamPermission | "owner";
   isOwnerTeam: boolean;
   viewerIsMember: boolean;
 }
+
+export type TeamPermission = "read" | "write" | "admin";
 
 export interface OrgTeamRepo {
   name: string;
@@ -91,6 +94,58 @@ export function setOrgMemberPublic(org: string, username: string, isPublic: bool
 // leave it.
 export function removeOrgMember(org: string, username: string) {
   return send("DELETE", orgURL(org, `/members/${encodeURIComponent(username)}`));
+}
+
+// inviteOrgMember adds a user to the organization.
+export function inviteOrgMember(org: string, username: string) {
+  return send("PUT", orgURL(org, `/members/${encodeURIComponent(username)}`));
+}
+
+export interface OrgTeamForm {
+  teamName: string;
+  description: string;
+  permission: TeamPermission;
+}
+
+// FormError is a failed form submission, with the message for the whole form
+// or the messages for its fields.
+export class FormError extends Error {
+  fields: Record<string, string | null>;
+
+  constructor(message: string, fields: Record<string, string | null>) {
+    super(message);
+    this.name = "FormError";
+    this.fields = fields;
+  }
+}
+
+async function submit<T>(method: "POST" | "PATCH", url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
+    throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {});
+  }
+  return (await res.json()) as T;
+}
+
+// createOrgTeam creates a team and returns the name of its page.
+export async function createOrgTeam(org: string, form: OrgTeamForm) {
+  return (await submit<{ lowerName: string }>("POST", orgURL(org, "/teams"), form)).lowerName;
+}
+
+// updateOrgTeam changes a team and returns the name of its page, which
+// changes with the team name.
+export async function updateOrgTeam(org: string, team: string, form: OrgTeamForm) {
+  return (await submit<{ lowerName: string }>("PATCH", teamURL(org, team), form)).lowerName;
+}
+
+export function deleteOrgTeam(org: string, team: string) {
+  return send("DELETE", teamURL(org, team));
 }
 
 export function addOrgTeamMember(org: string, team: string, username: string) {

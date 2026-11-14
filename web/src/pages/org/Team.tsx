@@ -86,10 +86,10 @@ function TeamSidebar({ org, team, viewerIsOwner }: { org: string; team: OrgTeamD
       {viewerIsOwner ? (
         <div className="border-t border-(--color-border) px-4 py-3">
           <Button asChild variant="outline" size="sm">
-            <a href={subUrl(`/org/${org}/teams/${team.lowerName}/edit`)}>
+            <Link to="/org/$org/teams/$team/edit" params={{ org, team: team.lowerName }}>
               <Settings className="size-4" aria-hidden />
               {t("org.teams.settings")}
-            </a>
+            </Link>
           </Button>
         </div>
       ) : null}

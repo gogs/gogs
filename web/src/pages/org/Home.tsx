@@ -131,7 +131,9 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               </ul>
               {org.viewerIsOwner ? (
                 <Button asChild variant="outline" size="sm" className="mt-3">
-                  <a href={`${orgLink}/invitations/new`}>{t("org.invite_someone")}</a>
+                  <Link to="/org/$org/invitations/new" params={{ org: org.name }}>
+                    {t("org.invite_someone")}
+                  </Link>
                 </Button>
               ) : null}
             </section>
@@ -163,7 +165,9 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               </ul>
               {org.viewerIsOwner ? (
                 <Button asChild variant="outline" size="sm" className="mt-3">
-                  <a href={`${orgLink}/teams/new`}>{t("org.create_new_team")}</a>
+                  <Link to="/org/$org/teams/new" params={{ org: org.name }}>
+                    {t("org.create_new_team")}
+                  </Link>
                 </Button>
               ) : null}
             </section>
