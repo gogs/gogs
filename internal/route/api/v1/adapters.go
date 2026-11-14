@@ -9,7 +9,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/logx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -269,7 +268,7 @@ func toRepositoryCollaborator(c *database.Collaborator) *types.RepositoryCollabo
 
 // toRepository converts a database repository to an API repository.
 // It assumes the Owner field has been loaded on the repo.
-func toRepository(logger *logx.Logger, repo *database.Repository, perm *types.RepositoryPermission) *types.Repository {
+func toRepository(repo *database.Repository, perm *types.RepositoryPermission) *types.Repository {
 	cloneLink := repo.CloneLink()
 	apiRepo := &types.Repository{
 		ID:            repo.ID,
@@ -297,7 +296,7 @@ func toRepository(logger *logx.Logger, repo *database.Repository, perm *types.Re
 	}
 	if repo.IsFork {
 		p := &types.RepositoryPermission{Pull: true}
-		apiRepo.Parent = toRepository(logger, repo.BaseRepo, p)
+		apiRepo.Parent = toRepository(repo.BaseRepo, p)
 	}
 	return apiRepo
 }
