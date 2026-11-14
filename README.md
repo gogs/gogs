@@ -31,19 +31,31 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💌 Features
 
-- User dashboard, user profile and activity timeline.
-- Access repositories via SSH, HTTP and HTTPS protocols.
-- User, organization and repository management.
-- Repository and organization webhooks, including Slack, Discord and Dingtalk.
-- Repository Git hooks, deploy keys and Git LFS.
-- Repository issues, pull requests, wiki, protected branches and collaboration.
-- Migrate and mirror repositories with wiki from other code hosts.
-- Web editor for quick editing repository files and wiki.
-- Jupyter Notebook and PDF rendering.
-- Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
-- Customize HTML templates, static files and many others.
-- Rich database backend support, including PostgreSQL, MySQL, MariaDB, SQLite3 or any database backend that speaks one of those protocols.
-- Have localization over [31 languages](https://crowdin.com/project/gogs).
+- Code hosting
+  - Git over SSH and HTTP(S), with deploy keys and LFS (local or S3\*).
+  - Migrate and mirror from other code hosts.
+  - Browse, edit, search\* and blame\* code right in the browser.
+  - Rendered Markdown, Jupyter Notebooks and PDFs, with rich diffs\*.
+- Collaboration
+  - Issues, wikis and pull requests, with inline reviews\* and stacks\*.
+  - Protected branches, with code owners\* and signed commits\*.
+  - Organizations, teams and collaborators.
+- Interface
+  - Dashboards, profiles and activity timelines.
+  - Light and dark themes, a command palette\* and over [31 languages](https://crowdin.com/project/gogs).
+- Integrations
+  - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
+  - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
+- Security
+  - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
+  - Two-factor authentication and passkeys\*.
+  - Session management\*, security alerts\* and breached password detection\*.
+- Operations
+  - Single binary, Docker or Kubernetes\*, on Linux, macOS, Windows and ARM.
+  - PostgreSQL, MySQL or SQLite3.
+  - OpenTelemetry with a built-in trace viewer\*.
+
+<sub>* In development.</sub>
 
 ## 💾 Hardware requirements
 
@@ -53,8 +65,9 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💻 Browser support
 
-- Please see [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) for specific versions of supported browsers.
-- The smallest resolution officially supported is **1024*768**, however the UI may still look right in smaller resolutions, but no promises or fixes.
+- Any modern browser works, with Chrome 111, Edge 111, Firefox 128 and Safari 16.4 (including iOS) as the minimum versions.
+- The UI is mobile-friendly and works on screens as narrow as 375px.
+- WebAssembly SIMD makes syntax highlighting in diffs faster, but is not required.
 
 ## 📜 Installation
 
