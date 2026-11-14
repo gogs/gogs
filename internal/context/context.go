@@ -64,10 +64,6 @@ func (c *Context) RequireHighlightJS() {
 	c.Require("HighlightJS")
 }
 
-func (c *Context) RequireSimpleMDE() {
-	c.Require("SimpleMDE")
-}
-
 func (c *Context) RequireDropzone() {
 	c.Require("Dropzone")
 }

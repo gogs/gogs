@@ -42,16 +42,6 @@
 		<script src="{{AppSubURL}}/plugins/notebookjs-0.8.3/notebook.min.js"></script>
 	{{end}}
 
-	{{if .RequireSimpleMDE}}
-		<link rel="stylesheet" href="{{AppSubURL}}/plugins/simplemde-1.10.1/simplemde.min.css">
-		<script src="{{AppSubURL}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
-		<script src="{{AppSubURL}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
-		<script src="{{AppSubURL}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
-		<script>
-			CodeMirror.modeURL =  "{{AppSubURL}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
-		</script>
-	{{end}}
-
 	<!-- Stylesheet -->
 	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.4.2.min.css">
 	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.min.css?v={{BuildCommit}}">

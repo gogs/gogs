@@ -1,13 +1,20 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { Language, StreamLanguage, defineLanguageFacet, syntaxHighlighting } from "@codemirror/language";
-import { shell } from "@codemirror/legacy-modes/mode/shell";
-import { Compartment, EditorState } from "@codemirror/state";
+import {
+  Language,
+  StreamLanguage,
+  type StreamParser,
+  defineLanguageFacet,
+  indentUnit as indentUnitFacet,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { classHighlighter, tagHighlighter, tags } from "@lezer/highlight";
 import { GFM, parser as markdownParser } from "@lezer/markdown";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { CodeEditorProps } from "@/components/CodeEditor";
+import type { CodeLanguage } from "@/lib/code-language";
 
 // MARKDOWN_HIGHLIGHTER marks what classHighlighter leaves out of Markdown:
 // inline code, quotes, and the characters of the markup.
@@ -21,9 +28,44 @@ const MARKDOWN_HIGHLIGHTER = tagHighlighter([
 // CSS and JavaScript languages too, which triples the size of the editor.
 const markdownLanguage = new Language(defineLanguageFacet(), markdownParser.configure(GFM), [], "markdown");
 
-const LANGUAGES = {
-  markdown: () => markdownLanguage,
-  shell: () => StreamLanguage.define(shell),
+// Each mode loads on demand, so a page only fetches the languages it shows.
+const MODES: Record<Exclude<CodeLanguage, "markdown" | "plain">, () => Promise<StreamParser<unknown>>> = {
+  shell: async () => (await import("@codemirror/legacy-modes/mode/shell")).shell,
+  go: async () => (await import("@codemirror/legacy-modes/mode/go")).go,
+  javascript: async () => (await import("@codemirror/legacy-modes/mode/javascript")).javascript,
+  typescript: async () => (await import("@codemirror/legacy-modes/mode/javascript")).typescript,
+  json: async () => (await import("@codemirror/legacy-modes/mode/javascript")).json,
+  python: async () => (await import("@codemirror/legacy-modes/mode/python")).python,
+  yaml: async () => (await import("@codemirror/legacy-modes/mode/yaml")).yaml,
+  toml: async () => (await import("@codemirror/legacy-modes/mode/toml")).toml,
+  css: async () => (await import("@codemirror/legacy-modes/mode/css")).css,
+  scss: async () => (await import("@codemirror/legacy-modes/mode/css")).sCSS,
+  less: async () => (await import("@codemirror/legacy-modes/mode/css")).less,
+  xml: async () => (await import("@codemirror/legacy-modes/mode/xml")).xml,
+  html: async () => (await import("@codemirror/legacy-modes/mode/xml")).html,
+  rust: async () => (await import("@codemirror/legacy-modes/mode/rust")).rust,
+  sql: async () => (await import("@codemirror/legacy-modes/mode/sql")).standardSQL,
+  ruby: async () => (await import("@codemirror/legacy-modes/mode/ruby")).ruby,
+  c: async () => (await import("@codemirror/legacy-modes/mode/clike")).c,
+  cpp: async () => (await import("@codemirror/legacy-modes/mode/clike")).cpp,
+  java: async () => (await import("@codemirror/legacy-modes/mode/clike")).java,
+  csharp: async () => (await import("@codemirror/legacy-modes/mode/clike")).csharp,
+  kotlin: async () => (await import("@codemirror/legacy-modes/mode/clike")).kotlin,
+  scala: async () => (await import("@codemirror/legacy-modes/mode/clike")).scala,
+  swift: async () => (await import("@codemirror/legacy-modes/mode/swift")).swift,
+  dockerfile: async () => (await import("@codemirror/legacy-modes/mode/dockerfile")).dockerFile,
+  properties: async () => (await import("@codemirror/legacy-modes/mode/properties")).properties,
+  diff: async () => (await import("@codemirror/legacy-modes/mode/diff")).diff,
+  lua: async () => (await import("@codemirror/legacy-modes/mode/lua")).lua,
+  perl: async () => (await import("@codemirror/legacy-modes/mode/perl")).perl,
+  nginx: async () => (await import("@codemirror/legacy-modes/mode/nginx")).nginx,
+  protobuf: async () => (await import("@codemirror/legacy-modes/mode/protobuf")).protobuf,
+  powershell: async () => (await import("@codemirror/legacy-modes/mode/powershell")).powerShell,
+  cmake: async () => (await import("@codemirror/legacy-modes/mode/cmake")).cmake,
+  haskell: async () => (await import("@codemirror/legacy-modes/mode/haskell")).haskell,
+  erlang: async () => (await import("@codemirror/legacy-modes/mode/erlang")).erlang,
+  r: async () => (await import("@codemirror/legacy-modes/mode/r")).r,
+  groovy: async () => (await import("@codemirror/legacy-modes/mode/groovy")).groovy,
 };
 
 // The token colors live in index.css as the .tok-* classes, so they follow the
@@ -43,8 +85,20 @@ const THEME = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 0.5rem 0 0.75rem" },
 });
 
+// layoutOf lays the text out as source code or as prose.
+function layoutOf(code: boolean, wrap: boolean): Extension {
+  return [
+    code ? keymap.of([indentWithTab]) : [],
+    code ? lineNumbers() : [],
+    wrap ? EditorView.lineWrapping : [],
+    EditorView.contentAttributes.of(
+      code ? { spellcheck: "false", autocorrect: "off", autocapitalize: "off" } : { spellcheck: "true" },
+    ),
+  ];
+}
+
 // CodeEditorView is the CodeMirror half of CodeEditor, loaded on demand. The
-// language and the layout are fixed once it mounts.
+// height of the empty editor is fixed once it mounts.
 export default function CodeEditorView({
   id,
   label,
@@ -52,6 +106,9 @@ export default function CodeEditorView({
   onChange,
   lang,
   code = false,
+  wrap = !code,
+  indentUnit = "  ",
+  tabSize = 4,
   minLines = 6,
   disabled = false,
   autoFocus = false,
@@ -63,7 +120,10 @@ export default function CodeEditorView({
   const view = useRef<EditorView | null>(null);
   const [attrs] = useState(() => new Compartment());
   const [editable] = useState(() => new Compartment());
-  const [initial] = useState(() => ({ value, lang, code, minLines, autoFocus }));
+  const [language] = useState(() => new Compartment());
+  const [layout] = useState(() => new Compartment());
+  const [indentation] = useState(() => new Compartment());
+  const [initial] = useState(() => ({ value, minLines, autoFocus }));
   const emitChange = useEffectEvent((text: string) => onChange(text));
   // takeFiles hands over pasted or dropped files, and tells whether anyone
   // took them.
@@ -79,16 +139,14 @@ export default function CodeEditorView({
         doc: initial.value,
         extensions: [
           history(),
-          keymap.of([...defaultKeymap, ...historyKeymap, ...(initial.code ? [indentWithTab] : [])]),
-          LANGUAGES[initial.lang](),
+          layout.of([]),
+          indentation.of([]),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          language.of([]),
           syntaxHighlighting(classHighlighter),
           syntaxHighlighting(MARKDOWN_HIGHLIGHTER),
           THEME,
           EditorView.theme({ ".cm-content": { minHeight: `${initial.minLines * 1.5}em` } }),
-          initial.code ? lineNumbers() : EditorView.lineWrapping,
-          EditorView.contentAttributes.of(
-            initial.code ? { spellcheck: "false", autocorrect: "off", autocapitalize: "off" } : { spellcheck: "true" },
-          ),
           EditorView.domEventHandlers({
             // Dropping a file would otherwise insert its bytes as text.
             drop: (e) => {
@@ -117,7 +175,34 @@ export default function CodeEditorView({
       v.destroy();
       view.current = null;
     };
-  }, [initial, attrs, editable]);
+  }, [initial, attrs, editable, language, layout, indentation]);
+
+  // The language follows the name of the file being edited.
+  useEffect(() => {
+    const v = view.current;
+    if (!v) return;
+    if (lang === "markdown" || lang === "plain") {
+      v.dispatch({ effects: language.reconfigure(lang === "markdown" ? markdownLanguage : []) });
+      return;
+    }
+    let current = true;
+    void MODES[lang]().then((mode) => {
+      if (current && view.current === v) v.dispatch({ effects: language.reconfigure(StreamLanguage.define(mode)) });
+    });
+    return () => {
+      current = false;
+    };
+  }, [language, lang]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: layout.reconfigure(layoutOf(code, wrap)) });
+  }, [layout, code, wrap]);
+
+  useEffect(() => {
+    view.current?.dispatch({
+      effects: indentation.reconfigure([indentUnitFacet.of(indentUnit), EditorState.tabSize.of(tabSize)]),
+    });
+  }, [indentation, indentUnit, tabSize]);
 
   // Take the value from outside when it changes there, e.g., cleared after
   // submitting.

@@ -3,6 +3,7 @@ package web
 import (
 	"io"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -618,29 +619,38 @@ func limitAttachmentUpload(lim attachmentLimits) flamego.Handler {
 	}
 }
 
-// storeAttachment stores the file uploaded as the "file" form field, and
-// returns its UUID.
-func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (statusCode int, resp any, err error) {
+// uploadedFile is a file uploaded as the "file" form field that passed the
+// size and type limits. Head is its first bytes, already read from File.
+type uploadedFile struct {
+	File   multipart.File
+	Header *multipart.FileHeader
+	Head   []byte
+}
+
+// readUploadedFile reads the file uploaded as the "file" form field, checking
+// it against the limits. The caller closes the file.
+func readUploadedFile(c flamego.Context, l i18n.Locale, lim attachmentLimits) (_ *uploadedFile, statusCode int, err error) {
 	if !lim.Enabled {
-		return http.StatusNotFound, nil, errors.New("attachments are disabled")
+		return nil, http.StatusNotFound, errors.New("uploads are disabled")
 	}
 	file, header, err := c.Request().FormFile("file")
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", lim.MaxSize)
+			return nil, http.StatusRequestEntityTooLarge, errors.Newf("file exceeds the size limit of %d MB", lim.MaxSize)
 		}
-		return http.StatusBadRequest, nil, errors.Wrap(err, "read file")
+		return nil, http.StatusBadRequest, errors.Wrap(err, "read file")
 	}
-	defer func() { _ = file.Close() }()
 	if header.Size > lim.MaxSize<<20 {
-		return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", lim.MaxSize)
+		_ = file.Close()
+		return nil, http.StatusRequestEntityTooLarge, errors.Newf("file exceeds the size limit of %d MB", lim.MaxSize)
 	}
 
 	buf := make([]byte, 1024)
 	n, err := io.ReadFull(file, buf)
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return http.StatusBadRequest, nil, errors.Wrap(err, "read file")
+		_ = file.Close()
+		return nil, http.StatusBadRequest, errors.Wrap(err, "read file")
 	}
 	buf = buf[:n]
 	fileType := http.DetectContentType(buf)
@@ -648,10 +658,22 @@ func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (st
 		t = strings.TrimSpace(t)
 		return t == "*/*" || t == fileType
 	}) {
-		return http.StatusBadRequest, nil, errors.New(l.Tr("dropzone.invalid_input_type"))
+		_ = file.Close()
+		return nil, http.StatusBadRequest, errors.New(l.Tr("dropzone.invalid_input_type"))
 	}
+	return &uploadedFile{File: file, Header: header, Head: buf}, http.StatusOK, nil
+}
 
-	attachment, err := database.NewAttachment(header.Filename, buf, file)
+// storeAttachment stores the file uploaded as the "file" form field, and
+// returns its UUID.
+func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (statusCode int, resp any, err error) {
+	f, statusCode, err := readUploadedFile(c, l, lim)
+	if err != nil {
+		return statusCode, nil, err
+	}
+	defer func() { _ = f.File.Close() }()
+
+	attachment, err := database.NewAttachment(f.Header.Filename, f.Head, f.File)
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}

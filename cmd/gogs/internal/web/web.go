@@ -434,32 +434,21 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				Post(bindIgnErr(form.NewIssue{}), repo.CompareAndPullRequestPost)
 
 			m.Group("", func() {
-				m.Combo("/_edit/*").Get(repo.EditFile).
-					Post(bindIgnErr(form.EditRepoFile{}), repo.EditFilePost)
-				m.Combo("/_new/*").Get(repo.NewFile).
-					Post(bindIgnErr(form.EditRepoFile{}), repo.NewFilePost)
-				m.Post("/_preview/*", bindIgnErr(form.EditPreviewDiff{}), repo.DiffPreviewPost)
-				m.Combo("/_delete/*").Get(repo.DeleteFile).
-					Post(bindIgnErr(form.DeleteRepoFile{}), repo.DeleteFilePost)
-
-				m.Group("", func() {
-					m.Combo("/_upload/*").Get(repo.UploadFile).
-						Post(bindIgnErr(form.UploadRepoFile{}), repo.UploadFilePost)
-					m.Post("/upload-file", repo.UploadFileToServer)
-					m.Post("/upload-remove", bindIgnErr(form.RemoveUploadFile{}), repo.RemoveUploadFileFromServer)
-				}, func(c *context.Context) {
+				m.Get("/_edit/*", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/_new/*", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/_delete/*", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/_upload/*", func(c *context.Context) {
 					if !conf.Repository.Upload.Enabled {
 						c.NotFound()
 						return
 					}
+					c.ServeWeb()
 				})
 			}, repo.MustBeNotEmpty, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
 				if !c.Repo.CanEnableEditor() {
 					c.NotFound()
 					return
 				}
-
-				c.Data["PageIsViewFiles"] = true
 			})
 		}, reqSignIn, context.RepoAssignment())
 
