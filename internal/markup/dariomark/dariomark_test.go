@@ -366,10 +366,17 @@ func TestAngleDestination(t *testing.T) {
 	assert.Equal(t, "<p>[a]</p>\n<p>[a]: &lt;b<c></p>\n", string(HTML([]byte("[a]\n\n[a]: <b<c>"), opts)))
 	assert.Equal(t, "<p><a href=\"b%3Cc\">a</a></p>\n", string(HTML([]byte("[a](<b\\<c>)"), opts)))
 
-	in := []byte(strings.Repeat("[a](<", 1<<16))
-	start := time.Now()
-	HTML(in, opts)
-	assert.Less(t, time.Since(start), 2*time.Second)
+	// Without the stop at "<", each destination would be scanned to the end of
+	// the document. The same links without "<" are the bound, whatever the
+	// speed of the machine.
+	const n = 1 << 16
+	render := func(in string) time.Duration {
+		start := time.Now()
+		HTML([]byte(in), opts)
+		return time.Since(start)
+	}
+	bound := render(strings.Repeat("[a](b", n))
+	assert.Less(t, render(strings.Repeat("[a](<", n)), 10*bound+50*time.Millisecond)
 }
 
 func TestEmphasisDelimiterSearch(t *testing.T) {
