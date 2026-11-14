@@ -196,6 +196,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/issues/{index}", withRepoIssues, withRepoIssue, getRepoIssue)
 			f.Get("/pulls", getRepoPulls)
 			f.Get("/forks", getRepoForks)
+			f.Get("/releases", withRepoCode, getRepoReleases)
 			f.Group("", func() {
 				f.Get("/labels", getRepoLabels)
 				f.Get("/milestones", getRepoMilestones)
@@ -213,6 +214,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Delete(deleteRepoMilestone)
 				f.Combo("/closed").Put(putRepoMilestoneClosed).Delete(deleteRepoMilestoneClosed)
 			}, withRepoMilestone)
+			f.Group("/releases", func() {
+				f.Get("/new", getRepoNewRelease)
+				f.Combo("/edit/{tag: **}", withRepoRelease).Get(getRepoRelease).Delete(deleteRepoRelease)
+			}, withRepoCode)
 		}, requireSignIn, withRepoContext, withRepoWriter)
 		f.Group("/{owner}/{repo}", func() {
 			f.Delete("", bindJSON(repoConfirmRequest{}), deleteRepo)
@@ -333,8 +338,13 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Put("/assignee", bindJSON(repoIssueIDRequest{}), putRepoIssueAssignee)
 			}, withRepoWriter)
 		}, withRepoIssues, withRepoIssue)
+		f.Group("/releases", func() {
+			f.Post("", bindJSON(repoReleaseRequest{}), postRepoRelease)
+			f.Patch("/edit/{tag: **}", withRepoRelease, bindJSON(repoReleaseRequest{}), patchRepoRelease)
+		}, withRepoWriter, withRepoCode)
 	}, limitIssueContent, requireSignIn, withRepoContext)
-	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload, requireSignIn, withRepoContext, withRepoIssues, postRepoIssueAttachment)
+	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireSignIn, withRepoContext, withRepoIssues, postRepoIssueAttachment)
+	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireSignIn, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireSignIn).
 		Put(putUserAvatar).
 		Delete(deleteUserAvatar)

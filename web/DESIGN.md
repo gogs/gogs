@@ -103,7 +103,7 @@ Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a
 
 Show Markdown that the server rendered and sanitized, e.g., the content of an issue and its comments, with `Markdown` from `@/components/Markdown`. It styles the HTML with the `markdown` class in `index.css`, and highlights fenced code blocks that name a language with `CodeBlock`. Previews of Markdown being written go through the same component, so they look like the result.
 
-Forms that open or change issues share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set.
+Forms that open or change issues and releases share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set on issues. `useAttachmentUploads` takes `"releases"` to upload under the release attachment limits.
 
 ## Translated markup
 
