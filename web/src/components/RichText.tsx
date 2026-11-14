@@ -7,10 +7,11 @@ const LINK_CLASS = "text-(--color-primary) underline underline-offset-2";
 // RichText renders a translated sentence that carries the markup the
 // server-rendered pages used: links, inline code, and bold or highlighted text. Translations
 // keep Go placeholders in that markup, so links take their targets from
-// `links`, in order, and code takes its content from `code`. App paths
-// navigate within the app.
-export function RichText({ text, links = [], code }: { text: string; links?: string[]; code?: string }) {
+// `links`, in order, and code takes its content from `code`, or from each of
+// `code` in order. App paths navigate within the app.
+export function RichText({ text, links = [], code }: { text: string; links?: string[]; code?: string | string[] }) {
   let nextLink = 0;
+  let nextCode = 0;
   const parts = text.split(MARKUP).map((part, i): ReactNode => {
     const inner = part.replace(/^<[^>]+>|<\/[a-z]+>$/g, "");
     if (part.startsWith("<a")) {
@@ -28,7 +29,7 @@ export function RichText({ text, links = [], code }: { text: string; links?: str
     if (part.startsWith("<code>")) {
       return (
         <code key={i} className="rounded bg-(--color-surface) px-1 font-mono text-[0.9em] wrap-anywhere">
-          {code ?? inner}
+          {(Array.isArray(code) ? code[nextCode++] : code) ?? inner}
         </code>
       );
     }

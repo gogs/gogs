@@ -99,13 +99,3 @@ type NewIssue struct {
 func (f *NewIssue) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
-
-type CreateComment struct {
-	Content string
-	Status  string `binding:"OmitEmpty;In(reopen,close)"`
-	Files   []string
-}
-
-func (f *CreateComment) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}

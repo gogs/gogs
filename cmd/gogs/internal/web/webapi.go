@@ -194,6 +194,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Delete("/watchers/{username}", deleteRepoWatcher)
 			f.Get("/issues", getRepoIssues)
 			f.Get("/issues/{index}", withRepoIssues, withRepoIssue, getRepoIssue)
+			f.Group("/pulls/{index}", func() {
+				f.Get("", getRepoPull)
+				f.Get("/commits", getRepoPullCommits)
+			}, withRepoPulls, withRepoPull)
 			f.Get("/pulls", getRepoPulls)
 			f.Get("/forks", getRepoForks)
 			f.Get("/releases", withRepoCode, getRepoReleases)
@@ -351,7 +355,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/new", getRepoNewIssue)
 			f.Post("", bindJSON(repoNewIssueRequest{}), postRepoIssue)
 		}, withRepoIssues)
-		f.Group("/issues/{index}", func() {
+		// Issues and pull requests take the same changes.
+		issueChanges := func() {
 			f.Patch("", requireIssueEditor, bindJSON(repoIssueRequest{}), patchRepoIssue)
 			f.Combo("/closed", requireIssueEditor).Put(putRepoIssueClosed).Delete(deleteRepoIssueClosed)
 			f.Post("/comments", bindJSON(repoIssueCommentRequest{}), postRepoIssueComment)
@@ -363,7 +368,15 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Put("/milestone", bindJSON(repoIssueIDRequest{}), putRepoIssueMilestone)
 				f.Put("/assignee", bindJSON(repoIssueIDRequest{}), putRepoIssueAssignee)
 			}, withRepoWriter)
-		}, withRepoIssues, withRepoIssue)
+		}
+		f.Group("/issues/{index}", issueChanges, withRepoIssues, withRepoIssue)
+		f.Group("/pulls/{index}", func() {
+			issueChanges()
+			f.Group("", func() {
+				f.Post("/merge", bindJSON(repoPullMergeRequest{}), postRepoPullMerge)
+				f.Delete("/branch", deleteRepoPullBranch)
+			}, withRepoWriter)
+		}, withRepoPulls, withRepoPull)
 		f.Group("/releases", func() {
 			f.Post("", bindJSON(repoReleaseRequest{}), postRepoRelease)
 			f.Patch("/edit/{tag: **}", withRepoRelease, bindJSON(repoReleaseRequest{}), patchRepoRelease)
@@ -372,7 +385,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			Post(bindJSON(repoWikiPageRequest{}), postRepoWikiPage).
 			Patch(bindJSON(repoWikiPageRequest{}), patchRepoWikiPage)
 	}, limitIssueContent, requireSignIn, withRepoContext)
-	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireSignIn, withRepoContext, withRepoIssues, postRepoIssueAttachment)
+	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireSignIn, withRepoContext, withRepoIssuesOrPulls, postRepoIssueAttachment)
 	f.Group("/api/web/{owner}/{repo}/editor", func() {
 		f.Get("/{path: **}", getRepoEditorTarget)
 		f.Post("/files", limitEditorContent, bindJSON(repoEditorFileRequest{}), postRepoEditorFile)
