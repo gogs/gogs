@@ -1,10 +1,11 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Copy, FileText, Pencil, Plus } from "lucide-react";
+import { BookOpen, FileText, Pencil, Plus } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { CloneBox } from "@/components/CloneBox";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { FormAlert, FormField } from "@/components/FormField";
 import { MarkdownEditor } from "@/components/IssueForm";
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
+  type RepoCloneLinks,
   type RepoWikiData,
   type RepoWikiPagesData,
   deleteRepoWikiPage,
@@ -183,7 +185,7 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
         </article>
         <aside className="flex min-w-0 flex-col gap-6 max-md:border-t max-md:border-(--color-border) max-md:pt-6">
           <PageList owner={owner} name={name} pages={data.pages ?? []} current={page.name} />
-          {data.cloneLinks?.https || data.cloneLinks?.ssh ? <CloneBox links={data.cloneLinks} /> : null}
+          {data.cloneLinks?.https || data.cloneLinks?.ssh ? <WikiCloneBox links={data.cloneLinks} /> : null}
         </aside>
       </div>
     </WikiLayout>
@@ -240,64 +242,14 @@ function PageList({ owner, name, pages, current }: { owner: string; name: string
   );
 }
 
-function CloneBox({ links }: { links: NonNullable<RepoWikiData["cloneLinks"]> }) {
+function WikiCloneBox({ links }: { links: RepoCloneLinks }) {
   const { t } = useTranslation();
-  const protocols = [
-    ...(links.https
-      ? [{ key: "https", label: links.https.startsWith("https:") ? "HTTPS" : "HTTP", url: links.https }]
-      : []),
-    ...(links.ssh ? [{ key: "ssh", label: "SSH", url: links.ssh }] : []),
-  ];
-  const [selected, setSelected] = useState(protocols[0].key);
-  const [copied, setCopied] = useState(false);
-  const url = protocols.find((p) => p.key === selected)?.url ?? protocols[0].url;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error(t("copy_failed"));
-    }
-  };
   return (
     <section aria-labelledby="wiki-clone-heading">
       <h2 id="wiki-clone-heading" className="mb-2 text-sm font-semibold">
         {t("repo.wiki.clone")}
       </h2>
-      {protocols.length > 1 ? (
-        <div role="group" aria-label={t("repo.wiki.clone")} className="mb-2 flex gap-1">
-          {protocols.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              aria-pressed={p.key === selected}
-              onClick={() => setSelected(p.key)}
-              className={cn(
-                "min-h-7 cursor-pointer rounded-md px-2.5 text-xs",
-                p.key === selected
-                  ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
-                  : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <div className="flex gap-1.5">
-        <Input
-          readOnly
-          value={url}
-          aria-label={t("repo.wiki.clone")}
-          onFocus={(e) => e.target.select()}
-          className="h-8 min-w-0 flex-1 font-mono text-xs"
-        />
-        <Button type="button" variant="outline" size="sm" className="h-8 shrink-0" onClick={() => void copy()}>
-          <Copy className="size-3.5" aria-hidden />
-          <span aria-live="polite">{copied ? t("repo.copy_link_success") : t("repo.copy_link")}</span>
-        </Button>
-      </div>
+      <CloneBox links={links} label={t("repo.wiki.clone")} />
     </section>
   );
 }

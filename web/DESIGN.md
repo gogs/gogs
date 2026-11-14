@@ -107,6 +107,10 @@ Show Markdown that the server rendered and sanitized, e.g., the content of an is
 
 Forms that open or change issues and releases share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set on issues. `useAttachmentUploads` takes `"releases"` to upload under the release attachment limits.
 
+## Repository refs and clone URLs
+
+Pages that show a repository at a branch, a tag or a commit, e.g., the code browser and the commit history, switch it with `RefPicker` from `@/components/RefPicker`, which links each ref to the same page through `renderLink`. Show the clone URL of a repository or a wiki with `CloneBox` from `@/components/CloneBox`. It remembers the protocol the viewer picked under the key the server-rendered pages use.
+
 ## Translated markup
 
 Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.

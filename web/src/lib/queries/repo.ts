@@ -997,6 +997,78 @@ export interface RepoCommitsData {
   tags: string[];
 }
 
+export interface RepoCloneLinks {
+  https?: string;
+  ssh?: string;
+}
+
+export interface RepoEntryCommit {
+  sha: string;
+  subjectHTML: string;
+  when: string;
+}
+
+export interface RepoTreeEntry {
+  name: string;
+  type: "dir" | "file" | "symlink" | "submodule";
+  // submoduleURL is where the repository of a submodule is, when it can be
+  // inferred.
+  submoduleURL?: string;
+  submoduleCommit?: string;
+  commit?: RepoEntryCommit;
+}
+
+export interface RepoFile {
+  name: string;
+  size: number;
+  // too_large is a text file too large to show.
+  kind: "text" | "markup" | "notebook" | "image" | "video" | "pdf" | "binary" | "too_large";
+  // content is set for a text file, and html for a file in a markup language.
+  content?: string;
+  html?: string;
+  isReadme: boolean;
+  // isSymlink is set for a symbolic link, whose content is its target.
+  isSymlink: boolean;
+  // tabWidth is the width of a tab that .editorconfig sets for the file.
+  tabWidth?: number;
+}
+
+export interface RepoSrcData {
+  // empty is set for a repository without commits, which only has the fields
+  // of its quick guide.
+  empty: boolean;
+  defaultBranch: string;
+  isMirror: boolean;
+  viewerCanWrite: boolean;
+  cloneLinks?: RepoCloneLinks;
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  commitID: string;
+  path: string;
+  kind: "dir" | "file";
+  latestCommit?: RepoCommitListItem;
+  entries?: RepoTreeEntry[];
+  // readme has html in a markup language, and text otherwise.
+  readme?: { name: string; html?: string; text?: string };
+  file?: RepoFile;
+  // summary is set for the root directory.
+  summary?: { description: string; website: string; commitCount: number; cloneLinks: RepoCloneLinks };
+  // editor tells whether files can be changed in the browser, or why not. It
+  // is left out where files are never changed in the browser.
+  editor?: "ok" | "not_branch" | "no_write";
+  canUploadFile: boolean;
+  // pullRequest is where the changes of the branch can be proposed.
+  pullRequest?: { repoLink: string; baseBranch: string; head: string };
+  branches: string[];
+  tags: string[];
+}
+
+// fetchRepoSrc describes the directory or the file at the path after the ref
+// at the start of the splat, or the default branch for an empty splat.
+export function fetchRepoSrc(owner: string, name: string, splat: string) {
+  return fetchJSON<RepoSrcData>(repoURL(owner, name, `/src/${refPath(splat)}`));
+}
+
 export interface RepoCompareData {
   before: string;
   after: string;

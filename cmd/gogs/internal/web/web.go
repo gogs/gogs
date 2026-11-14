@@ -481,9 +481,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				m.Post("/merge", reqRepoWriter, repo.MergePullRequest)
 			}, repo.MustAllowPulls)
 
-			m.Group("", func() {
-				m.Get("/src/*", repo.Home)
-			}, repo.MustBeNotEmpty, context.RepoRef())
+			m.Get("/src/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 			m.Get("/commits/*", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
@@ -495,9 +493,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
-			m.Get("", repo.Home)
+			m.Get("", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })
-		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(), context.RepoRef())
+		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment())
 		// ***** END: Repository *****
 
 		// **********************

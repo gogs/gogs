@@ -5,6 +5,7 @@ import { LoaderResponseError, loadSignedInPage, loaderResponseError } from "@/li
 import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
   type RepoCompareData,
+  type RepoSrcData,
   fetchRepoBranchSettings,
   fetchRepoBranches,
   fetchRepoCollaborators,
@@ -27,6 +28,7 @@ import {
   fetchRepoProtectedBranch,
   fetchRepoRelease,
   fetchRepoReleases,
+  fetchRepoSrc,
   fetchRepoWiki,
   fetchRepoWikiPageSource,
   fetchRepoWikiPages,
@@ -37,6 +39,7 @@ import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/web
 import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoBranches } from "@/pages/repo/Branches";
+import { RepoCode } from "@/pages/repo/Code";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoCommits } from "@/pages/repo/Commits";
@@ -715,6 +718,36 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  function RepoCodePage({ owner, repo, data }: { owner: string; repo: string; data: RepoSrcData }) {
+    return <RepoCode key={`${owner}/${repo}@${data.ref}/${data.path}`} owner={owner} name={repo} data={data} />;
+  }
+
+  const repoHomeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoSrc(params.owner, params.repo, ""),
+      ),
+    component: function Home() {
+      const { owner, repo } = repoHomeRoute.useParams();
+      return <RepoCodePage owner={owner} repo={repo} data={repoHomeRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoSrcRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/src/$",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoSrc(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function Src() {
+      const { owner, repo } = repoSrcRoute.useParams();
+      return <RepoCodePage owner={owner} repo={repo} data={repoSrcRoute.useLoaderData()} />;
+    },
+  });
+
   const repoReleasesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/releases",
@@ -968,6 +1001,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
   return [
     repoCommitRoute,
     repoCompareRoute,
+    repoHomeRoute,
+    repoSrcRoute,
     repoCommitsRoute,
     repoStargazersRoute,
     repoWatchersRoute,
