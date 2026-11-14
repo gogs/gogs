@@ -690,34 +690,35 @@ export function RepoCommit() {
 
           <span aria-hidden className="hidden h-4 w-px bg-(--color-border) sm:inline-block" />
 
-          {/* Wraps between groups on narrow screens, keeping each label with its value. */}
+          {/* Wraps between groups on narrow screens, keeping each label with its value. Each
+              separator leads its group, so a wrapped line never ends with one. */}
           <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1.5 font-mono text-xs">
             <a href={subUrl(`/${owner}/${repo}/commit/${sha}.patch`)} className="hover:underline">
               {t("repo.patch_label")}
             </a>
-            <span aria-hidden>·</span>
-            <a href={subUrl(`/${owner}/${repo}/commit/${sha}.diff`)} className="hover:underline">
-              {t("repo.diff_label")}
-            </a>
-            {parents.length > 0 ? (
-              <>
-                <span aria-hidden>·</span>
-                <span className="inline-flex items-center gap-1">
-                  <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
-                  {parents.map((p) => (
-                    <a
-                      key={p}
-                      href={`${repoLink}/commit/${p}`}
-                      className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground) hover:underline"
-                    >
-                      {p.slice(0, 7)}
-                    </a>
-                  ))}
-                </span>
-              </>
-            ) : null}
-            <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1">
+              <span aria-hidden>·</span>
+              <a href={subUrl(`/${owner}/${repo}/commit/${sha}.diff`)} className="hover:underline">
+                {t("repo.diff_label")}
+              </a>
+            </span>
+            {parents.length > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden>·</span>
+                <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
+                {parents.map((p) => (
+                  <a
+                    key={p}
+                    href={`${repoLink}/commit/${p}`}
+                    className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground) hover:underline"
+                  >
+                    {p.slice(0, 7)}
+                  </a>
+                ))}
+              </span>
+            ) : null}
+            <span className="inline-flex items-center gap-1">
+              <span aria-hidden>·</span>
               <span>{t("repo.commit_label")}</span>
               <code className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground)">
                 {sha.slice(0, 10)}

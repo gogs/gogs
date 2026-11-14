@@ -37,8 +37,9 @@ import { cn } from "@/lib/utils";
 
 // Mobile collapses the tab strip after this many items into a hamburger
 // overflow menu. The active tab is always pulled into the inline group so the
-// user can see the active indicator without opening the menu. At 320px wide,
-// only the widest tab with its count fits next to the menu.
+// user can see the active indicator without opening the menu. At 375px wide,
+// a second tab does not fit next to the menu when the active one is the
+// widest, e.g., pull requests with its count.
 const MOBILE_INLINE_LIMIT = 1;
 
 export type RepoTab = "code" | "issues" | "pulls" | "commits" | "wiki" | "settings";
@@ -245,17 +246,15 @@ function RepoTabs({
   const tabs = buildTabs(repo, repoLink, t);
 
   // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
-  // fold into a hamburger overflow. If the active tab is past the cutoff,
-  // swap it into the last inline slot so the indicator stays visible without
-  // opening the menu.
+  // fold into a hamburger overflow in their original order. If the active tab
+  // is past the cutoff, it takes the last inline slot so the indicator stays
+  // visible without opening the menu.
   const activeIndex = tabs.findIndex((t) => t.key === activeTab);
   let mobileInline = tabs.slice(0, MOBILE_INLINE_LIMIT);
-  let mobileOverflow = tabs.slice(MOBILE_INLINE_LIMIT);
   if (activeIndex >= MOBILE_INLINE_LIMIT) {
-    const swappedOut = mobileInline[MOBILE_INLINE_LIMIT - 1];
     mobileInline = [...mobileInline.slice(0, MOBILE_INLINE_LIMIT - 1), tabs[activeIndex]];
-    mobileOverflow = mobileOverflow.map((t) => (t.key === tabs[activeIndex].key ? swappedOut : t));
   }
+  const mobileOverflow = tabs.filter((tab) => !mobileInline.includes(tab));
 
   return (
     <>
