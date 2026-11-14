@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -25,7 +26,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -251,12 +251,27 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
-		req := httplib.Get(reqURL).
-			SetTLSClientConfig(&tls.Config{
-				InsecureSkipVerify: true,
-			})
-		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Headers()))
-		resp, err := req.Response()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+		if err != nil {
+			log.Error("Failed to trigger task: %v", err)
+			continue
+		}
+		req.Header.Set("User-Agent", "GogsServer")
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+		client := &http.Client{
+			Timeout: 60 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+				DisableKeepAlives: true,
+			},
+			// The trigger endpoint is local and never redirects legitimately, so a
+			// redirect response is reported as a failure instead of being followed.
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+		resp, err := client.Do(req)
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
