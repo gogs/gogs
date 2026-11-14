@@ -1,4 +1,4 @@
-import { Link, type LinkProps } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Activity, Check, ChevronDown, CircleDot, GitPullRequest, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,13 @@ const ORG_PATHS = {
   issues: "/org/$org/issues",
   pulls: "/org/$org/pulls",
 } as const;
+
+// ContextLinkTarget is a dashboard page of the user or of an organization.
+// It is narrower than LinkProps, which grows too deep for the type checker
+// with the number of routes.
+type ContextLinkTarget =
+  | { to: (typeof USER_PATHS)[DashboardPage] }
+  | { to: (typeof ORG_PATHS)[DashboardPage]; params: { org: string } };
 
 // ContextSwitcher switches the current page between the dashboards of the
 // signed-in user and of their organizations.
@@ -87,7 +94,7 @@ function ContextLink({
   onSelect,
   children,
 }: {
-  linkProps: LinkProps;
+  linkProps: ContextLinkTarget;
   current: boolean;
   avatarURL: string;
   onSelect: () => void;

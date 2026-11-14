@@ -975,65 +975,6 @@ function initEditor() {
     .trigger("keyup");
 }
 
-function initAdmin() {
-  if ($(".admin").length == 0) {
-    return;
-  }
-
-  function onSecurityProtocolChange() {
-    if ($("#security_protocol").val() > 0) {
-      $(".has-tls").show();
-    } else {
-      $(".has-tls").hide();
-    }
-  }
-
-  // New authentication
-  if ($(".admin.new.authentication").length > 0) {
-    $("#auth_type").change(function() {
-      $(".ldap").hide();
-      $(".dldap").hide();
-      $(".smtp").hide();
-      $(".pam").hide();
-      $(".github").hide();
-      $(".has-tls").hide();
-
-      var authType = $(this).val();
-      switch (authType) {
-        case "2": // LDAP
-          $(".ldap").show();
-          break;
-        case "3": // SMTP
-          $(".smtp").show();
-          $(".has-tls").show();
-          break;
-        case "4": // PAM
-          $(".pam").show();
-          break;
-        case "5": // LDAP
-          $(".dldap").show();
-          break;
-        case "6": //GITHUB
-          $(".github").show();
-          $(".has-tls").show();
-          break;
-      }
-
-      if (authType == "2" || authType == "5") {
-        onSecurityProtocolChange();
-      }
-    });
-    $("#security_protocol").change(onSecurityProtocolChange);
-  }
-  // Edit authentication
-  if ($(".admin.edit.authentication").length > 0) {
-    var authType = $("#auth_type").val();
-    if (authType == "2" || authType == "5") {
-      $("#security_protocol").change(onSecurityProtocolChange);
-    }
-  }
-}
-
 function buttonsClickOnEnter() {
   $(".ui.button").keypress(function(e) {
     if (e.keyCode == 13 || e.keyCode == 32)
@@ -1533,7 +1474,6 @@ $(document).ready(function() {
   initWikiForm();
   initEditForm();
   initEditor();
-  initAdmin();
   initCodeView();
 
   // Repo clone url.

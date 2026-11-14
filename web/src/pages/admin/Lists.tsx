@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { webContext } from "@/lib/context";
 import type { ListSearch } from "@/lib/page-search";
 import {
+  type AdminAuthSource,
   type AdminList,
   type AdminNotice,
   type AdminOrg,
@@ -147,6 +148,71 @@ export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; searc
                 to="/admin/users/$id"
                 params={{ id: String(user.id) }}
                 aria-label={`${t("admin.users.edit")} ${user.name}`}
+              >
+                <Pencil className="size-3.5" aria-hidden />
+                {t("admin.users.edit")}
+              </Link>
+            </Button>
+          </li>
+        )}
+      </ListBody>
+    </AdminLayout>
+  );
+}
+
+// AdminAuthSources lists the authentication sources users can sign in
+// through, besides local accounts.
+export function AdminAuthSources({ sources }: { sources: AdminAuthSource[] }) {
+  const { t } = useTranslation();
+  return (
+    <AdminLayout active="auths" wide>
+      <AdminListHeading
+        title={t("admin.auths.auth_sources")}
+        total={sources.length}
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/admin/auths/new">
+              <Plus className="size-4" aria-hidden />
+              {t("admin.auths.new")}
+            </Link>
+          </Button>
+        }
+      />
+      <ListBody list={{ items: sources, page: 1, totalPages: 1, total: sources.length }}>
+        {(source) => (
+          <li key={source.id} className={ROW_CLASS}>
+            <div className="min-w-0 flex-1 basis-56">
+              <p className="flex flex-wrap items-center gap-2">
+                <Link
+                  to="/admin/auths/$id"
+                  params={{ id: String(source.id) }}
+                  className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
+                >
+                  {source.name}
+                </Link>
+                {source.isDefault ? <span className={BADGE_CLASS}>{t("admin.auths.default")}</span> : null}
+                {source.isActive ? null : <span className={BADGE_CLASS}>{t("admin.users.not_activated")}</span>}
+              </p>
+              <Meta>
+                <span>ID {source.id}</span>
+                <span>{source.typeName}</span>
+                {source.updatedAt ? (
+                  <span>
+                    {t("admin.auths.updated")} {DATE_FMT.format(new Date(source.updatedAt))}
+                  </span>
+                ) : null}
+                {source.createdAt ? (
+                  <span>
+                    {t("admin.users.created")} {DATE_FMT.format(new Date(source.createdAt))}
+                  </span>
+                ) : null}
+              </Meta>
+            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <Link
+                to="/admin/auths/$id"
+                params={{ id: String(source.id) }}
+                aria-label={`${t("admin.users.edit")} ${source.name}`}
               >
                 <Pencil className="size-3.5" aria-hidden />
                 {t("admin.users.edit")}

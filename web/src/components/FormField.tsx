@@ -1,5 +1,6 @@
 import { type AriaAttributes, type ReactElement, type ReactNode, cloneElement } from "react";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 // FormField labels an input and shows its error, or its helper text when there
@@ -47,5 +48,25 @@ export function FormAlert({ message }: { message: string | null }) {
     >
       {message}
     </div>
+  );
+}
+
+// CheckboxField is a checkbox with its label beside it.
+export function CheckboxField({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
+      <Checkbox id={id} className="mt-0.5" checked={checked} onCheckedChange={(c) => onChange(c === true)} />
+      {label}
+    </label>
   );
 }

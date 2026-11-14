@@ -6,9 +6,8 @@ import { toast } from "sonner";
 
 import { AdminLayout } from "@/components/AdminLayout";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { FormAlert, FormField } from "@/components/FormField";
+import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -60,25 +59,6 @@ function LoginSourceSelect({
         </SelectContent>
       </Select>
     </FormField>
-  );
-}
-
-function CheckboxField({
-  id,
-  label,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
-      <Checkbox id={id} className="mt-0.5" checked={checked} onCheckedChange={(c) => onChange(c === true)} />
-      {label}
-    </label>
   );
 }
 

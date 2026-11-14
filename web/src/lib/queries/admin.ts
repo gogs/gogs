@@ -241,3 +241,101 @@ export interface AdminMonitor {
 export function fetchAdminMonitor() {
   return fetchJSON<AdminMonitor>(adminURL("/monitor"));
 }
+
+// AUTH_SOURCE_TYPES lists the types of authentication sources, with the
+// names the server gives them.
+export const AUTH_SOURCE_TYPES = [
+  { type: 2, name: "LDAP (via BindDN)" },
+  { type: 5, name: "LDAP (simple auth)" },
+  { type: 3, name: "SMTP" },
+  { type: 4, name: "PAM" },
+  { type: 6, name: "GitHub" },
+] as const;
+
+export const LDAP_SECURITY_PROTOCOLS = [
+  { value: 0, name: "Unencrypted" },
+  { value: 1, name: "LDAPS" },
+  { value: 2, name: "StartTLS" },
+] as const;
+
+export const SMTP_AUTH_TYPES = ["PLAIN", "LOGIN"] as const;
+
+export interface AdminAuthSource {
+  id: number;
+  name: string;
+  type: number;
+  typeName: string;
+  isActive: boolean;
+  isDefault: boolean;
+  // True for sources loaded from a file, which can't be deleted here.
+  fromFile: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export async function fetchAdminAuthSources() {
+  const { items } = await fetchJSON<{ items: AdminAuthSource[] }>(adminURL("/auths"));
+  return items;
+}
+
+// AdminAuthSourceConfig holds the settings of every type of source. Only the
+// ones of the source's type are used.
+export interface AdminAuthSourceConfig {
+  securityProtocol: number;
+  host: string;
+  port: number;
+  bindDN: string;
+  userBase: string;
+  userDN: string;
+  filter: string;
+  adminFilter: string;
+  attributeUsername: string;
+  attributeName: string;
+  attributeSurname: string;
+  attributeMail: string;
+  attributesInBind: boolean;
+  groupEnabled: boolean;
+  groupDN: string;
+  groupFilter: string;
+  groupMemberUID: string;
+  userUID: string;
+  smtpAuth: string;
+  smtpHost: string;
+  smtpPort: number;
+  allowedDomains: string;
+  tls: boolean;
+  pamServiceName: string;
+  githubAPIEndpoint: string;
+  skipVerify: boolean;
+}
+
+export interface AdminAuthSourceDetail extends AdminAuthSource, AdminAuthSourceConfig {
+  // The bind password itself is never sent back.
+  hasBindPassword: boolean;
+}
+
+export function fetchAdminAuthSource(id: number) {
+  return fetchJSON<AdminAuthSourceDetail>(adminURL(`/auths/${id}`));
+}
+
+export interface AdminAuthSourceForm extends AdminAuthSourceConfig {
+  // Only read when creating a source.
+  type: number;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+  // Left unchanged when empty on update.
+  bindPassword: string;
+}
+
+export function createAdminAuthSource(form: AdminAuthSourceForm) {
+  return submit<{ id: number; name: string }>("POST", adminURL("/auths"), form);
+}
+
+export function updateAdminAuthSource(id: number, form: AdminAuthSourceForm) {
+  return submit<void>("PATCH", adminURL(`/auths/${id}`), form);
+}
+
+export function deleteAdminAuthSource(id: number) {
+  return send("DELETE", adminURL(`/auths/${id}`));
+}
