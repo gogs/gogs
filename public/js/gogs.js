@@ -975,33 +975,6 @@ function initEditor() {
     .trigger("keyup");
 }
 
-function initOrganization() {
-  if ($(".organization").length == 0) {
-    return;
-  }
-
-  // Options
-  if ($(".organization.settings.options").length > 0) {
-    $("#org_name").keyup(function() {
-      var $prompt = $("#org-name-change-prompt");
-      if (
-        $(this)
-          .val()
-          .toString()
-          .toLowerCase() !=
-        $(this)
-          .data("org-name")
-          .toString()
-          .toLowerCase()
-      ) {
-        $prompt.show();
-      } else {
-        $prompt.hide();
-      }
-    });
-  }
-}
-
 function initAdmin() {
   if ($(".admin").length == 0) {
     return;
@@ -1655,7 +1628,6 @@ $(document).ready(function() {
   initWikiForm();
   initEditForm();
   initEditor();
-  initOrganization();
   initAdmin();
   initCodeView();
 

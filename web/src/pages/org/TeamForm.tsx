@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type ComponentProps, type FormEvent, type ReactElement, cloneElement, useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { FormField } from "@/components/FormField";
 import { OrgHeader } from "@/components/OrgHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -99,7 +99,7 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
               </div>
             ) : null}
             <div className="flex flex-col gap-5">
-              <Field
+              <FormField
                 id="teamName"
                 label={t("org.team_name")}
                 helper={t("org.team_name_helper")}
@@ -118,8 +118,8 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
                   onChange={(e) => setForm({ ...form, teamName: e.target.value })}
                   className={isOwnerTeam ? "bg-(--color-surface) text-(--color-muted-foreground)" : undefined}
                 />
-              </Field>
-              <Field
+              </FormField>
+              <FormField
                 id="description"
                 label={t("org.team_desc")}
                 helper={t("org.team_desc_helper")}
@@ -135,7 +135,7 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
-              </Field>
+              </FormField>
               {isOwnerTeam ? null : (
                 <fieldset className="flex flex-col gap-3">
                   <legend className="mb-3 text-sm font-medium">{t("org.team_permission_desc")}</legend>
@@ -174,39 +174,6 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
         </form>
       </div>
     </main>
-  );
-}
-
-function Field({
-  id,
-  label,
-  helper,
-  error,
-  invalid,
-  children,
-}: {
-  id: string;
-  label: string;
-  helper: string;
-  error?: string | null;
-  invalid: boolean;
-  children: ReactElement<ComponentProps<"input">>;
-}) {
-  const describedBy = error ? `${id}-error` : `${id}-helper`;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {cloneElement(children, { "aria-invalid": invalid || undefined, "aria-describedby": describedBy })}
-      {error ? (
-        <p id={`${id}-error`} className="text-sm text-(--color-destructive)">
-          {error}
-        </p>
-      ) : (
-        <p id={`${id}-helper`} className="text-sm text-(--color-muted-foreground)">
-          {helper}
-        </p>
-      )}
-    </div>
   );
 }
 

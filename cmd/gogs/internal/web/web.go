@@ -46,7 +46,6 @@ import (
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 	"gogs.io/gogs/internal/route/lfs"
-	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/ssh"
@@ -289,8 +288,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Organization *****
 		m.Group("/org", func() {
 			m.Group("", func() {
-				m.Get("/create", org.Create)
-				m.Post("/create", bindIgnErr(form.CreateOrg{}), org.CreatePost)
+				m.Get("/create", func(c *context.Context) { c.ServeWeb() })
 			}, func(c *context.Context) {
 				if !c.User.CanCreateOrganization() {
 					c.NotFound()
@@ -314,12 +312,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				m.Get("/teams/:team/edit", func(c *context.Context) { c.ServeWeb() })
 
 				m.Group("/settings", func() {
-					m.Combo("").Get(org.Settings).
-						Post(bindIgnErr(form.UpdateOrgSetting{}), org.SettingsPost)
-					m.Post("/avatar", binding.MultipartForm(form.Avatar{}), org.SettingsAvatar)
-					m.Post("/avatar/delete", org.SettingsDeleteAvatar)
+					m.Get("", func(c *context.Context) { c.ServeWeb() })
 					m.Group("/hooks", webhookRoutes)
-					m.Route("/delete", "GET,POST", org.SettingsDelete)
+					m.Get("/delete", func(c *context.Context) { c.ServeWeb() })
 				})
 
 				m.Get("/invitations/new", func(c *context.Context) { c.ServeWeb() })
