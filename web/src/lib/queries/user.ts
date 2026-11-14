@@ -175,6 +175,14 @@ export function dashboardActivityQuery(org?: string) {
   });
 }
 
+export interface IssueLabel {
+  id: number;
+  name: string;
+  color: string;
+  // textColor is black or white, whichever reads better on the color.
+  textColor: string;
+}
+
 export interface DashboardIssue {
   // The full name of the repository, e.g., "owner/name".
   repo: string;
@@ -182,7 +190,7 @@ export interface DashboardIssue {
   title: string;
   isClosed: boolean;
   commentCount: number;
-  labels: { name: string; color: string; textColor: string }[];
+  labels: IssueLabel[];
   poster: { name: string; avatarURL: string };
   assignee?: { name: string; avatarURL: string };
   createdAt: string;

@@ -192,6 +192,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/stargazers", getRepoStargazers)
 			f.Get("/watchers", getRepoWatchers)
 			f.Delete("/watchers/{username}", deleteRepoWatcher)
+			f.Get("/issues", getRepoIssues)
+			f.Get("/pulls", getRepoPulls)
+			f.Get("/forks", getRepoForks)
 			f.Group("", func() {
 				f.Get("/labels", getRepoLabels)
 				f.Get("/milestones", getRepoMilestones)

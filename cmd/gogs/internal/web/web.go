@@ -371,7 +371,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 		m.Group("/:username/:reponame", func() {
-			m.Get("/issues", repo.RetrieveLabels, repo.Issues)
+			m.Get("/issues", repo.MustEnableIssues, repo.ServeIssueList)
 			m.Get("/issues/:index", repo.ViewIssue)
 			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn, context.RepoAssignment(true))
@@ -476,7 +476,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
 				m.Get("/releases", repo.MustBeNotEmpty, repo.Releases)
-				m.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
 				m.Get("/pulls/:index", repo.ViewPull)
 			}, context.RepoRef())
 
@@ -499,7 +498,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			}, repo.MustEnableWiki, context.RepoRef())
 
 			m.Get("/archive/*", repo.MustBeNotEmpty, repo.Download)
+			m.Get("/forks", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
 
+			m.Get("/pulls", repo.MustAllowPulls, repo.ServeIssueList)
 			m.Group("/pulls/:index", func() {
 				m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
 				m.Get("/files", context.RepoRef(), repo.ViewPullFiles)
@@ -509,7 +510,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Group("", func() {
 				m.Get("/src/*", repo.Home)
 				m.Get("/commits/*", repo.RefCommits)
-				m.Get("/forks", repo.Forks)
 			}, repo.MustBeNotEmpty, context.RepoRef())
 			// Bridged to Flamego to skip the legacy `RepoRef` middleware, which double-resolves the ref.
 			m.Get("/raw/*", flamegoBridger(webHandler))
