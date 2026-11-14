@@ -4,151 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"mime"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/editorconfig/editorconfig-core-go/v2"
-	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/tool"
 )
-
-var (
-	funcMap     []template.FuncMap
-	funcMapOnce sync.Once
-)
-
-// FuncMap returns a list of user-defined template functions.
-func FuncMap() []template.FuncMap {
-	funcMapOnce.Do(func() {
-		funcMap = []template.FuncMap{map[string]any{
-			"BuildCommit": func() string {
-				return conf.BuildCommit
-			},
-			"Year": func() int {
-				return time.Now().Year()
-			},
-			"UseHTTPS": func() bool {
-				return conf.Server.URL.Scheme == "https"
-			},
-			"AppName": func() string {
-				return conf.App.BrandName
-			},
-			"AppSubURL": func() string {
-				return conf.Server.Subpath
-			},
-			"AppURL": func() string {
-				return conf.Server.ExternalURL
-			},
-			"AppVer": func() string {
-				return conf.App.Version
-			},
-			"AppDomain": func() string {
-				return conf.Server.Domain
-			},
-			"DisableGravatar": func() bool {
-				return conf.Picture.DisableGravatar
-			},
-			"ShowFooterTemplateLoadTime": func() bool {
-				return conf.Other.ShowFooterTemplateLoadTime
-			},
-			"LoadTimes": func(startTime time.Time) string {
-				return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
-			},
-			"AvatarLink":       tool.AvatarLink,
-			"AppendAvatarSize": tool.AppendAvatarSize,
-			"Safe":             Safe,
-			"Escape":           template.HTMLEscapeString,
-			"Sanitize":         bluemonday.UGCPolicy().Sanitize,
-			"Str2HTML":         Str2HTML,
-			"NewLine2br":       NewLine2br,
-			"TimeSince":        tool.TimeSince,
-			"RawTimeSince":     tool.RawTimeSince,
-			"FileSize":         tool.FileSize,
-			"Subtract":         tool.Subtract,
-			"Add": func(a, b int) int {
-				return a + b
-			},
-			"ActionIcon": ActionIcon,
-			"DateFmtLong": func(t time.Time) string {
-				return t.Format(time.RFC1123Z)
-			},
-			"DateFmtShort": func(t time.Time) string {
-				return t.Format("Jan 02, 2006")
-			},
-			"SubStr": func(str string, start, length int) string {
-				if str == "" {
-					return ""
-				}
-				end := start + length
-				if length == -1 {
-					end = len(str)
-				}
-				if len(str) < end {
-					return str
-				}
-				return str[start:end]
-			},
-			"Join":                  strings.Join,
-			"EllipsisString":        strx.Ellipsis,
-			"DiffFileTypeToStr":     DiffFileTypeToStr,
-			"DiffLineTypeToStr":     DiffLineTypeToStr,
-			"Sha1":                  Sha1,
-			"ShortSHA1":             tool.ShortSHA1,
-			"ActionContent2Commits": ActionContent2Commits,
-			"EscapePound":           EscapePound,
-			"RenderCommitMessage":   RenderCommitMessage,
-			"ThemeColorMetaTag": func() string {
-				return conf.UI.ThemeColorMetaTag
-			},
-			"FilenameIsImage": func(filename string) bool {
-				mimeType := mime.TypeByExtension(filepath.Ext(filename))
-				return strings.HasPrefix(mimeType, "image/")
-			},
-			"TabSizeClass": func(ec *editorconfig.Editorconfig, filename string) string {
-				if ec != nil {
-					def, err := ec.GetDefinitionForFilename(filename)
-					if err == nil && def.TabWidth > 0 {
-						return fmt.Sprintf("tab-size-%d", def.TabWidth)
-					}
-				}
-				return "tab-size-8"
-			},
-			"InferSubmoduleURL": git.InferSubmoduleURL,
-		}}
-	})
-	return funcMap
-}
-
-func Safe(raw string) template.HTML {
-	return template.HTML(raw)
-}
-
-func Str2HTML(raw string) template.HTML {
-	return template.HTML(markup.Sanitize(raw))
-}
-
-// NewLine2br simply replaces "\n" to "<br>".
-func NewLine2br(raw string) string {
-	return strings.ReplaceAll(raw, "\n", "<br>")
-}
-
-func Sha1(str string) string {
-	return cryptox.SHA1(str)
-}
 
 func ToUTF8WithErr(content []byte) (string, error) {
 	charsetLabel, err := tool.DetectEncoding(content)
@@ -211,41 +78,6 @@ type Actioner interface {
 	GetIssueInfos() []string
 }
 
-// ActionIcon accepts a int that represents action operation type
-// and returns a icon class name.
-func ActionIcon(opType int) string {
-	switch opType {
-	case 1, 8: // Create and transfer repository
-		return "repo"
-	case 5: // Commit repository
-		return "git-commit"
-	case 6: // Create issue
-		return "issue-opened"
-	case 7: // New pull request
-		return "git-pull-request"
-	case 9: // Push tag
-		return "tag"
-	case 10: // Comment issue
-		return "comment-discussion"
-	case 11: // Merge pull request
-		return "git-merge"
-	case 12, 14: // Close issue or pull request
-		return "issue-closed"
-	case 13, 15: // Reopen issue or pull request
-		return "issue-reopened"
-	case 16: // Create branch
-		return "git-branch"
-	case 17, 18: // Delete branch or tag
-		return "alert"
-	case 19: // Fork a repository
-		return "repo-forked"
-	case 20, 21, 22: // Mirror sync
-		return "repo-clone"
-	default:
-		return "invalid type"
-	}
-}
-
 func ActionContent2Commits(act Actioner) *database.PushCommits {
 	push := database.NewPushCommits()
 	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
@@ -257,25 +89,4 @@ func ActionContent2Commits(act Actioner) *database.PushCommits {
 // TODO(unknwon): Use url.Escape.
 func EscapePound(str string) string {
 	return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(str)
-}
-
-func DiffFileTypeToStr(typ git.DiffFileType) string {
-	return map[git.DiffFileType]string{
-		git.DiffFileAdd:    "add",
-		git.DiffFileChange: "modify",
-		git.DiffFileDelete: "del",
-		git.DiffFileRename: "rename",
-	}[typ]
-}
-
-func DiffLineTypeToStr(typ git.DiffLineType) string {
-	switch typ {
-	case git.DiffLineAdd:
-		return "add"
-	case git.DiffLineDelete:
-		return "del"
-	case git.DiffLineSection:
-		return "tag"
-	}
-	return "same"
 }

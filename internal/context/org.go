@@ -49,7 +49,6 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 		return
 	}
 	org := c.Org.Organization
-	c.Data["Org"] = org
 
 	// Force redirection when username is actually a user.
 	if !org.IsOrganization() {
@@ -72,20 +71,14 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 		} else if org.IsOrgMember(c.User.ID) {
 			c.Org.IsMember = true
 		}
-	} else {
-		// Fake data.
-		c.Data["SignedUser"] = &database.User{}
 	}
 	if (requireMember && !c.Org.IsMember) ||
 		(requireOwner && !c.Org.IsOwner) {
 		c.NotFound()
 		return
 	}
-	c.Data["IsOrganizationOwner"] = c.Org.IsOwner
-	c.Data["IsOrganizationMember"] = c.Org.IsMember
 
 	c.Org.OrgLink = conf.Server.Subpath + "/org/" + org.Name
-	c.Data["OrgLink"] = c.Org.OrgLink
 
 	// Team.
 	if c.Org.IsMember {
@@ -111,7 +104,6 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 				teamExists = true
 				c.Org.Team = team
 				c.Org.IsTeamMember = true
-				c.Data["Team"] = c.Org.Team
 				break
 			}
 		}
@@ -121,14 +113,12 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 			return
 		}
 
-		c.Data["IsTeamMember"] = c.Org.IsTeamMember
 		if requireTeamMember && !c.Org.IsTeamMember {
 			c.NotFound()
 			return
 		}
 
 		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= database.AccessModeAdmin
-		c.Data["IsTeamAdmin"] = c.Org.IsTeamAdmin
 		if requireTeamAdmin && !c.Org.IsTeamAdmin {
 			c.NotFound()
 			return

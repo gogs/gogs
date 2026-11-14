@@ -22,7 +22,6 @@ Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v2.43.1 or higher)
 - [Go](https://golang.org/doc/install) (v1.27 or higher)
-- [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [Moon](https://moonrepo.dev/docs/install)
 - [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
 - [go-mockgen](https://github.com/derision-test/go-mockgen)
@@ -40,8 +39,6 @@ Gogs has the following dependencies:
     ```bash
     brew install go postgresql git npm moon portless
     portless trust
-    npm install -g less
-    npm install -g less-plugin-clean-css
     go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
@@ -80,7 +77,6 @@ Gogs has the following dependencies:
 
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
-    npm install -g less
     go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
@@ -157,9 +153,9 @@ moon run gogs:dev
 
 ## Other nice things
 
-### Load HTML templates and static files from disk
+### Load email templates and static files from disk
 
-When you are actively working on HTML templates and static files during development, you may want to enable the following configuration to avoid recompiling and restarting Gogs every time you make a change to files under `template/` and `public/` directories:
+When you are actively working on email templates and static files during development, you may want to enable the following configuration to avoid recompiling and restarting Gogs every time you make a change to files under `templates/` and `public/` directories:
 
 ```ini
 RUN_MODE = dev
