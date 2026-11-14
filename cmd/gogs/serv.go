@@ -23,6 +23,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/ssh"
 )
 
@@ -97,6 +98,8 @@ func setup(logger *logx.Logger, cmd *cli.Command, logFile string, connectDB bool
 func runServ(ctx context.Context, cmd *cli.Command) error {
 	logger := conf.NewConsoleLogger(os.Stderr)
 	logger = setup(logger, cmd, "serv.log", true)
+	// Recording a push may send emails, e.g., when a commit closes an issue.
+	email.NewContext(logger)
 
 	if conf.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
