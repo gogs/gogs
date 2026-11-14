@@ -18,9 +18,23 @@ if (showKeys) {
   });
 }
 
+// The server builds the translations from its locale files and preloads them
+// from the page, so this fetch is usually answered from that preload or the
+// cache. Without them, the app still renders and shows the keys.
+async function loadMessages(): Promise<Record<string, string>> {
+  try {
+    const resp = await fetch(webContext.localeURL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return (await resp.json()) as Record<string, string>;
+  } catch (err) {
+    console.error("Failed to load translations:", err);
+    return {};
+  }
+}
+
 // eslint-disable-next-line import/no-named-as-default-member
-void i18n.use(initReactI18next).init({
-  resources: { [webContext.lang]: { translation: webContext.messages } },
+await i18n.use(initReactI18next).init({
+  resources: { [webContext.lang]: { translation: await loadMessages() } },
   lng: webContext.lang,
   // The server already fills keys missing from the active locale with en-US.
   fallbackLng: false,

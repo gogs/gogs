@@ -1,17 +1,17 @@
 package web
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/unknwon/i18n"
-	"unknwon.dev/ini/v2"
-
-	embedconf "gogs.io/gogs/conf"
 
 	"gogs.io/gogs/internal/context"
 )
@@ -65,34 +65,37 @@ func TestRenderIndex_entrypointPaths(t *testing.T) {
 	}
 }
 
-func TestRenderIndex_messages(t *testing.T) {
-	en := "explore = Explore\n[repo]\nfork = Fork\n"
-	require.NoError(t, i18n.SetMessage("en-US", []byte(en)))
-	require.NoError(t, i18n.SetMessage("de-DE", []byte("explore = Erkunden\n")))
-	i18n.SetDefaultLang("en-US")
-
-	got := webLocaleMessages("de-DE")
-	assert.Equal(t, "Erkunden", got["explore"])
-	assert.Equal(t, "Fork", got["repo.fork"], "missing keys fall back to en-US")
-
-	out, err := renderIndex([]byte(`<head>{{.WebContext}}</head>`), context.WebContext{Lang: "de-DE"}, injectContent{})
-	require.NoError(t, err)
-	assert.Contains(t, string(out), `"explore":"Erkunden"`)
-}
-
-// Every key the web app uses must exist in en-US, which other locales fall back
-// to.
-func TestWebLocaleKeys_inEnglish(t *testing.T) {
-	data, err := embedconf.Files.ReadFile("locale/locale_en-US.ini")
-	require.NoError(t, err)
-	f, err := ini.Load(data)
+func TestWebLocales(t *testing.T) {
+	localeDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_en-US.ini"), []byte("custom_only = Custom\n"), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_de-DE.ini"), []byte("[repo]\nfork = Gabel\n"), 0600))
+	var err error
+	webLocales, err = loadWebLocales(localeDir, []string{"en-US", "de-DE"})
 	require.NoError(t, err)
 
-	for _, key := range webLocaleKeys {
-		section, name := ini.DefaultSection, key
-		if i := strings.IndexByte(key, '.'); i > 0 {
-			section, name = key[:i], key[i+1:]
-		}
-		assert.True(t, f.Section(section).HasKey(name), key)
+	f := flamego.New()
+	mountWebLocaleRoutes(f)
+	get := func(t *testing.T, lang string) map[string]string {
+		t.Helper()
+		resp := httptest.NewRecorder()
+		f.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, webLocaleURL(lang), nil))
+		require.Equal(t, http.StatusOK, resp.Code)
+		assert.Contains(t, resp.Header().Get("Cache-Control"), "immutable")
+		var messages map[string]string
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &messages))
+		return messages
 	}
+
+	de := get(t, "de-DE")
+	assert.Equal(t, "Erkunden", de["explore"], "the language's own file")
+	assert.Equal(t, "Gabel", de["repo.fork"], "the custom override of the language")
+	assert.Equal(t, "Custom", de["custom_only"], "keys missing from the language fall back to en-US")
+	assert.Equal(t, "Explore", get(t, "en-US")["explore"])
+	assert.NotEqual(t, webLocaleURL("en-US"), webLocaleURL("de-DE"))
+	assert.Equal(t, webLocaleURL("en-US"), webLocaleURL("xx-XX"), "unknown languages use en-US")
+
+	out, err := renderIndex([]byte(`<head>{{.WebContext}}</head>`), context.WebContext{Lang: "de-DE", SubURL: "/gogs"}, injectContent{})
+	require.NoError(t, err)
+	assert.Contains(t, string(out), `"localeURL":"/gogs`+webLocaleURL("de-DE")+`"`)
+	assert.Contains(t, string(out), `<link rel="preload" as="fetch" crossorigin href="/gogs`+webLocaleURL("de-DE")+`">`)
 }

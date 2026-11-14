@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -764,6 +765,7 @@ func newRoutingHandler() (http.Handler, error) {
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
 	}, requireViewAccess, withRepoContext)
 
+	mountWebLocaleRoutes(f)
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
 	if err != nil {
@@ -862,15 +864,20 @@ func newMacaron() (*macaron.Macaron, error) {
 			return nil, errors.Wrapf(err, "read locale file %q", name)
 		}
 	}
+	customLocaleDir := filepath.Join(conf.CustomDir(), "conf", "locale")
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.Server.Subpath,
 		Files:           localeFiles,
-		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		CustomDirectory: customLocaleDir,
 		Langs:           conf.I18n.Langs,
 		Names:           conf.I18n.Names,
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
+	webLocales, err = loadWebLocales(customLocaleDir, conf.I18n.Langs)
+	if err != nil {
+		return nil, errors.Wrap(err, "load web locales")
+	}
 	m.Use(macaroncache.Cacher(macaroncache.Options{
 		Adapter:       conf.Cache.Adapter,
 		AdapterConfig: conf.Cache.Host,
@@ -907,18 +914,20 @@ func readInjectContent() (injectContent, error) {
 func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
-		Lang     string            `json:"lang"`
-		SubURL   string            `json:"subURL"`
-		Messages map[string]string `json:"messages"`
+		Lang      string `json:"lang"`
+		SubURL    string `json:"subURL"`
+		LocaleURL string `json:"localeURL"`
 	}{
-		Lang:     wc.Lang,
-		SubURL:   wc.SubURL,
-		Messages: webLocaleMessages(wc.Lang),
+		Lang:      wc.Lang,
+		SubURL:    wc.SubURL,
+		LocaleURL: wc.SubURL + webLocaleURL(wc.Lang),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")
 	}
-	script := `<script>window.__webContext=` + string(payload) +
+	// Start loading the translations alongside the bundle that needs them.
+	script := `<link rel="preload" as="fetch" crossorigin href="` + html.EscapeString(wc.SubURL+webLocaleURL(wc.Lang)) + `">` +
+		`<script>window.__webContext=` + string(payload) +
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
 
 	pairs := []string{

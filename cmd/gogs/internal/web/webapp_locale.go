@@ -1,228 +1,115 @@
 package web
 
 import (
-	"github.com/unknwon/i18n"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"net/http"
+	"os"
+	"path/filepath"
+
+	"github.com/cockroachdb/errors"
+	"github.com/flamego/flamego"
+	"unknwon.dev/ini/v2"
+
+	embedconf "gogs.io/gogs/conf"
 )
 
-// webLocaleKeys lists the locale keys the web app translates. Add a key here
-// when the web app starts using it. A key is the INI section and key joined by
-// a dot, or the bare key for those above any section.
-var webLocaleKeys = []string{
-	"app_desc",
-	"home",
-	"dashboard",
-	"issues",
-	"pull_requests",
-	"explore",
-	"help",
-	"register",
-	"sign_in",
-	"sign_out",
-	"create_new",
-	"new_repo",
-	"new_migrate",
-	"new_org",
-	"signed_in_as",
-	"user_profile_and_more",
-	"your_profile",
-	"your_settings",
-	"admin_panel",
-	"settings",
-	"language_current",
-	"repository",
-	"theme",
-	"theme_light",
-	"theme_dark",
-	"theme_system",
-	"username",
-	"username_placeholder",
-	"new_username_placeholder",
-	"email",
-	"email_placeholder",
-	"password",
-	"password_placeholder",
-	"captcha",
-	"captcha_placeholder",
-	"captcha_image_alt",
-	"refresh_captcha",
-	"click_to_refresh_captcha",
-	"close",
-	"show_more",
-	"show_less",
-	"resize_sidebar",
-	"copy_failed",
-	"more",
-	"more_tabs",
-	"more_actions",
-	"page",
-	"website",
-	"mirror",
-	"explore.repos",
-	"explore.users",
-	"explore.organizations",
-	"explore.search",
-	"user.join_on",
-	"settings.location",
-	"org.repo_updated",
-	"repo.issues.previous",
-	"repo.issues.next",
-	"repo.unlisted",
-	"repo.stargazers",
-	"repo.forks",
-	"repo.no_desc",
-	"status.page_not_found",
-	"status.internal_server_error",
-	"auth.auth_source",
-	"auth.local",
-	"auth.forget_password",
-	"auth.send_reset_email",
-	"auth.reset_password_email_submitting",
-	"auth.reset_password_email_failed",
-	"auth.reset_password_email_sent",
-	"auth.disable_register_mail",
-	"auth.disable_register_prompt",
-	"auth.reset_password_resend_limited",
-	"auth.non_local_account",
-	"auth.create_new_account",
-	"auth.register_hepler_msg",
-	"auth.sign_up_now",
-	"auth.sign_up_submitting",
-	"auth.sign_up_failed",
-	"auth.sign_in_submitting",
-	"auth.sign_in_failed",
-	"auth.show_password",
-	"auth.hide_password",
-	"auth.back_to_sign_in",
-	"auth.reset_password",
-	"auth.invalid_code",
-	"auth.reset_password_submit",
-	"auth.reset_password_submitting",
-	"auth.reset_password_failed",
-	"auth.new_password",
-	"auth.new_password_placeholder",
-	"auth.confirm_password",
-	"auth.confirm_password_placeholder",
-	"auth.confirm_new_password",
-	"auth.confirm_new_password_placeholder",
-	"auth.password_mismatch",
-	"auth.mfa_title",
-	"auth.mfa_passcode",
-	"auth.mfa_passcode_placeholder",
-	"auth.mfa_recovery_code",
-	"auth.mfa_recovery_code_placeholder",
-	"auth.mfa_use_recovery_code",
-	"auth.mfa_use_passcode",
-	"auth.mfa_verify",
-	"auth.mfa_verifying",
-	"auth.mfa_session_expired",
-	"auth.mfa_verify_failed",
-	"auth.activate_your_account",
-	"auth.resend_rate_limited",
-	"auth.send_activation_email",
-	"auth.check_activation_email",
-	"auth.activation_email_pending",
-	"auth.activation_email_sent",
-	"auth.sending_activation_email",
-	"auth.send_activation_email_failed",
-	"auth.activating_account",
-	"tool.now",
-	"tool.ago",
-	"tool.from_now",
-	"tool.1s",
-	"tool.1m",
-	"tool.1h",
-	"tool.1d",
-	"tool.1w",
-	"tool.1mon",
-	"tool.1y",
-	"tool.seconds",
-	"tool.minutes",
-	"tool.hours",
-	"tool.days",
-	"tool.weeks",
-	"tool.months",
-	"tool.years",
-	"repo.diff.showing_changed_files",
-	"repo.diff.additions",
-	"repo.diff.deletions",
-	"repo.diff.unified",
-	"repo.diff.split",
-	"repo.diff.diff_settings",
-	"repo.diff.whitespace",
-	"repo.diff.show_whitespace",
-	"repo.diff.ignore_whitespace_changes",
-	"repo.diff.ignore_all_whitespace",
-	"repo.diff.display",
-	"repo.diff.wrap_long_lines",
-	"repo.diff.expand_all_files",
-	"repo.diff.collapse_all_files",
-	"repo.show_file_tree",
-	"repo.hide_file_tree",
-	"repo.expand_all_directories",
-	"repo.collapse_all_directories",
-	"repo.search_files",
-	"repo.search_hide",
-	"repo.search_diff",
-	"repo.search_previous_match",
-	"repo.search_next_match",
-	"repo.diff.expand_file",
-	"repo.diff.collapse_file",
-	"repo.diff.expand_all_lines",
-	"repo.diff.unmodified_line",
-	"repo.diff.unmodified_lines",
-	"repo.diff.no_newline_at_eof",
-	"repo.diff.expand_all",
-	"repo.diff.file_added",
-	"repo.diff.file_deleted",
-	"repo.diff.file_modified",
-	"repo.diff.file_renamed",
-	"repo.diff.contains_changed_files",
-	"repo.commit_parent",
-	"repo.commit_label",
-	"repo.view_file",
-	"repo.editor.edit_file",
-	"repo.editor.delete_this_file",
-	"repo.files",
-	"repo.settings",
-	"repo.wiki",
-	"repo.watch",
-	"repo.unwatch",
-	"repo.star",
-	"repo.starred",
-	"repo.fork",
-	"repo.mirror_of",
-	"repo.sign_in_to_watch",
-	"repo.sign_in_to_star",
-	"repo.sign_in_to_fork",
-	"repo.watch_this_repository",
-	"repo.unwatch_this_repository",
-	"repo.star_this_repository",
-	"repo.unstar_this_repository",
-	"repo.fork_this_repository",
-	"repo.visibility_private",
-	"repo.visibility_public",
-	"repo.view_watchers",
-	"repo.view_stargazers",
-	"repo.view_forks",
-	"repo.browse_files",
-	"repo.view_history",
-	"repo.view_raw",
-	"repo.copy_file_path",
-	"repo.copy_full_sha",
-	"repo.renamed_from",
-	"repo.authored",
-	"repo.parents",
-	"repo.diff_label",
-	"repo.patch_label",
+// webLocale is the translations of one language for the web app.
+type webLocale struct {
+	// url is where the web app loads the translations from. It contains a hash of
+	// them, so they are cached until they change.
+	url  string
+	body []byte
 }
 
-// webLocaleMessages returns the web app translations for lang from the locale
-// files loaded at startup, including overrides under the custom directory.
-// Keys missing from lang fall back to en-US, which has all of them.
-func webLocaleMessages(lang string) map[string]string {
-	messages := make(map[string]string, len(webLocaleKeys))
-	for _, key := range webLocaleKeys {
-		messages[key] = i18n.Tr(lang, key)
+// webLocales maps each language to its translations for the web app. It is
+// built once by loadWebLocales.
+var webLocales map[string]webLocale
+
+// loadWebLocales flattens the locale files of every language into JSON objects
+// keyed by "section.key", or the bare key for those above any section. Like the
+// server-rendered pages, each language reads en-US first, then its own file,
+// then its override under the custom directory, so keys missing from a language
+// fall back to en-US. customDir is the directory of the overrides.
+func loadWebLocales(customDir string, langs []string) (map[string]webLocale, error) {
+	readSources := func(lang string) ([]any, error) {
+		name := "locale_" + lang + ".ini"
+		data, err := embedconf.Files.ReadFile("locale/" + name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "read %q", name)
+		}
+		sources := []any{data}
+		if custom := filepath.Join(customDir, name); isFile(custom) {
+			sources = append(sources, custom)
+		}
+		return sources, nil
 	}
-	return messages
+
+	english, err := readSources("en-US")
+	if err != nil {
+		return nil, err
+	}
+	locales := make(map[string]webLocale, len(langs))
+	for _, lang := range langs {
+		sources := english
+		if lang != "en-US" {
+			own, err := readSources(lang)
+			if err != nil {
+				return nil, err
+			}
+			sources = append(append([]any{}, english...), own...)
+		}
+		f, err := ini.LoadSources(sources, ini.IgnoreInlineComment(true), ini.UnescapeValueCommentSymbols(true))
+		if err != nil {
+			return nil, errors.Wrapf(err, "parse locale %q", lang)
+		}
+
+		messages := make(map[string]string)
+		for _, section := range f.Sections() {
+			prefix := ""
+			if section.Name() != ini.DefaultSection {
+				prefix = section.Name() + "."
+			}
+			for _, key := range section.Keys() {
+				messages[prefix+key.Name()] = key.Value()
+			}
+		}
+		body, err := json.Marshal(messages)
+		if err != nil {
+			return nil, errors.Wrapf(err, "encode locale %q", lang)
+		}
+		sum := sha256.Sum256(body)
+		locales[lang] = webLocale{
+			url:  "/assets/locale/" + lang + "." + hex.EncodeToString(sum[:6]) + ".json",
+			body: body,
+		}
+	}
+	return locales, nil
+}
+
+// webLocaleURL returns the path, without the subpath, of the translations for
+// lang, falling back to en-US.
+func webLocaleURL(lang string) string {
+	if l, ok := webLocales[lang]; ok {
+		return l.url
+	}
+	return webLocales["en-US"].url
+}
+
+// mountWebLocaleRoutes serves the translations at the URLs webLocaleURL returns.
+func mountWebLocaleRoutes(f *flamego.Flame) {
+	for _, l := range webLocales {
+		f.Get(l.url, func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(l.body)
+		})
+	}
+}
+
+func isFile(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && !fi.IsDir()
 }
