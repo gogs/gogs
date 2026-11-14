@@ -113,13 +113,44 @@ func cutoutVerbosePrefix(prefix string) string {
 	return prefix
 }
 
-// expand substitutes "{key}" placeholders in template with values from match.
+// expand substitutes "{key}" placeholders in template with values from match,
+// in one pass from left to right like a strings.Replacer, given that no key
+// contains "}". It runs for every issue reference, so it does not build a
+// strings.Replacer, and it takes linear time for any template.
 func expand(template string, match map[string]string) string {
-	pairs := make([]string, 0, len(match)*2)
-	for k, v := range match {
-		pairs = append(pairs, "{"+k+"}", v)
+	maxKey := 0
+	for k := range match {
+		maxKey = max(maxKey, len(k))
 	}
-	return strings.NewReplacer(pairs...).Replace(template)
+	var b strings.Builder
+	written := 0
+	// end is the first "}" at or after the current "{", or -1.
+	end := -1
+	for i := 0; i < len(template); i++ {
+		if template[i] != '{' {
+			continue
+		}
+		if end < i {
+			end = strings.IndexByte(template[i:], '}')
+			if end < 0 {
+				break
+			}
+			end += i
+		}
+		if end-i-1 > maxKey {
+			continue
+		}
+		v, ok := match[template[i+1:end]]
+		if !ok {
+			continue
+		}
+		b.WriteString(template[written:i])
+		b.WriteString(v)
+		written = end + 1
+		i = end
+	}
+	b.WriteString(template[written:])
+	return b.String()
 }
 
 // linkSpan is a reference found in text and the link that replaces it.

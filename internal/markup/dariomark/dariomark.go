@@ -7,6 +7,7 @@ package dariomark
 
 import (
 	"bytes"
+	"math"
 	"sync"
 )
 
@@ -162,6 +163,13 @@ var parserPool = sync.Pool{New: func() any { return new(parser) }}
 // HTML are sanitized while rendering when Options.Sanitizer is set, and
 // Result.Sanitized is true. Other documents must be sanitized by the caller.
 func Render(src []byte, opts *Options) Result {
+	if len(src) > maxSourceSize {
+		// The parser keeps offsets into the source as int32, so the source
+		// is shown as text, which needs no sanitizing.
+		out := appendEscapedText(append(make([]byte, 0, len(src)+len(src)/8+12), "<pre>"...), src)
+		out = append(out, "</pre>\n"...)
+		return Result{HTML: out, Sanitized: opts.PostProcess && opts.Sanitizer != nil}
+	}
 	p := parserPool.Get().(*parser)
 	defer func() {
 		p.reset()
@@ -182,11 +190,11 @@ func Render(src []byte, opts *Options) Result {
 	if !p.hasRawHTML {
 		// Inline raw HTML is only found while rendering, which then starts
 		// over without sanitizing.
-		refBudget, padBudget := p.refBudget, p.padBudget
+		refBudget, padBudget, footnoteBudget := p.refBudget, p.padBudget, p.footnoteBudget
 		if out, ok := r.renderSanitized(func() { r.renderDocument(doc) }); ok {
 			return Result{HTML: out, Sanitized: true, Headings: r.headingList()}
 		}
-		p.refBudget, p.padBudget = refBudget, padBudget
+		p.refBudget, p.padBudget, p.footnoteBudget = refBudget, padBudget, footnoteBudget
 		p.footnotes.resetInline()
 		r.init(p, opts)
 	}
@@ -197,6 +205,9 @@ func Render(src []byte, opts *Options) Result {
 // streamMinSize is the size from which documents are rendered while they are
 // parsed, when they allow it, see parser.renderStream.
 var streamMinSize = 256 << 10
+
+// maxSourceSize is the size of the largest source that Render parses.
+const maxSourceSize = math.MaxInt32
 
 // renderStream renders src while parsing it: each top-level block is
 // rendered and freed when it is closed, which keeps memory small for large

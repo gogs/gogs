@@ -345,19 +345,41 @@ func (a *arena) reset() {
 	a.free, a.freeExt = nil, nil
 }
 
-// freeTree frees n and its descendants for reuse by new.
-func (a *arena) freeTree(n *node) {
-	for c := n.first; c != nil; {
-		next := c.next
-		a.freeTree(c)
-		c = next
+// skipIn returns the node after n and its descendants in document order,
+// among the descendants of root, or nil. Walking the tree with it instead of
+// recursion keeps the stack small however deeply inline contents nest, e.g.,
+// in a run of thousands of "*".
+func (n *node) skipIn(root *node) *node {
+	for ; n != root; n = n.parent {
+		if n.next != nil {
+			return n.next
+		}
 	}
-	if e := n.ext; e != nil {
-		*e = nodeExt{next: a.freeExt}
-		a.freeExt = e
+	return nil
+}
+
+// freeTree frees root and its descendants for reuse by new.
+func (a *arena) freeTree(root *node) {
+	n := root
+	for {
+		if c := n.first; c != nil {
+			// The children are freed first, from the first one on.
+			n.first = c.next
+			n = c
+			continue
+		}
+		parent, done := n.parent, n == root
+		if e := n.ext; e != nil {
+			*e = nodeExt{next: a.freeExt}
+			a.freeExt = e
+		}
+		*n = node{next: a.free}
+		a.free = n
+		if done {
+			return
+		}
+		n = parent
 	}
-	*n = node{next: a.free}
-	a.free = n
 }
 
 // stackChunk is the number of entries in a chunk of a stack.

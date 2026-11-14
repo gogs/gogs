@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -287,6 +288,16 @@ func TestFootnoteLabels(t *testing.T) {
 	}
 }
 
+func TestFootnoteTableAfterRawHTML(t *testing.T) {
+	// The raw HTML after the definition makes the sanitizing render start
+	// over without sanitizing, which parses the definition again.
+	in := "a[^1]\n\n[^1]: | b | c |\n    |---|---|\n    | d | e |\n\nf <b>g</b>\n"
+	got := Render([]byte(in), postProcessTestOptions())
+	assert.False(t, got.Sanitized)
+	assert.Equal(t, 2, strings.Count(string(got.HTML), "<th>"), string(got.HTML))
+	assert.Equal(t, 2, strings.Count(string(got.HTML), "<td>"), string(got.HTML))
+}
+
 func TestTablePadding(t *testing.T) {
 	opts := &Options{Tables: true}
 	t.Run("short rows are filled", func(t *testing.T) {
@@ -332,6 +343,20 @@ func TestReferenceBudget(t *testing.T) {
 			assert.True(t, strings.HasSuffix(got, use+"</p>\n<p><em>after</em></p>\n"))
 		})
 	}
+
+	t.Run("footnote references", func(t *testing.T) {
+		// Each reference renders a link and a backlink.
+		const n = 1 << 16
+		in := "[^a]: b\n\n" + strings.Repeat("[^a]", n)
+		got := string(HTML([]byte(in), &Options{Footnotes: true}))
+		assert.Less(t, len(got), 40*len(in))
+		// The references within the budget are links, the rest stay text.
+		refs := strings.Count(got, `class="footnote-ref"`)
+		assert.Less(t, refs, n)
+		assert.Equal(t, refs, strings.Count(got, `class="footnote-backref"`))
+		assert.Equal(t, n-refs, strings.Count(got, "[^a]"))
+		assert.True(t, strings.HasPrefix(got, "<p><sup"))
+	})
 }
 
 func TestAngleDestination(t *testing.T) {
@@ -345,6 +370,24 @@ func TestAngleDestination(t *testing.T) {
 	start := time.Now()
 	HTML(in, opts)
 	assert.Less(t, time.Since(start), 2*time.Second)
+}
+
+func TestEmphasisDelimiterSearch(t *testing.T) {
+	// Every second tilde closer searches for an opener down to the first
+	// tilde, past the "*" runs that never close. Without the first tilde,
+	// the search stops at the previous closer, so the time of that document
+	// is the bound, whatever the speed of the machine.
+	const n = 1 << 15
+	body := strings.Repeat("*x ", n) + strings.Repeat("x~~x ", n)
+	render := func(in string) (string, time.Duration) {
+		start := time.Now()
+		out := HTML([]byte(in), &Options{Strikethrough: true})
+		return string(out), time.Since(start)
+	}
+	_, bound := render("x " + body)
+	got, elapsed := render("~x " + body)
+	assert.Less(t, elapsed, 10*bound+50*time.Millisecond)
+	assert.Equal(t, n/2, strings.Count(got, "<del>"))
 }
 
 func TestImageLinkEscaping(t *testing.T) {
@@ -403,6 +446,35 @@ func TestNestingLimit(t *testing.T) {
 			// The markers past the limit are text of the innermost block.
 			assert.Equal(t, maxNesting, strings.Count(got, test.tag))
 			assert.Contains(t, got, test.inner)
+		})
+	}
+}
+
+func TestDeepInlineNesting(t *testing.T) {
+	// Inline contents nest without limit, so walking them must not take
+	// stack for each level: a stack overflow crashes the program.
+	defer debug.SetMaxStack(debug.SetMaxStack(2 << 20))
+	run := strings.Repeat("*", 1<<18)
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "emphasis", input: run + "x a@b.co x" + run, want: "<p><strong>x <a href=\"mailto:a@b.co\">a@b.co</a> x</strong></p>\n"},
+		{name: "heading ID", input: "# " + run + "a" + run, want: "<h1 id=\"a\"><strong>a</strong></h1>\n"},
+		{name: "image description", input: "![" + run + "a" + run + "](b)", want: "<p><img src=\"b\" alt=\"a\"></p>\n"},
+		{
+			name: "streamed link",
+			// The finished link is rendered and freed before the end of the
+			// paragraph, see streamFlush.
+			input: "[" + run + "a" + run + "](b) c",
+			want:  "<p><a href=\"b\"><strong>a</strong></a> c</p>\n",
+		},
+	}
+	opts := &Options{Linkify: true, HeadingIDs: true, TextAutoLinksInRawAnchors: true}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, string(HTML([]byte(test.input), opts)))
 		})
 	}
 }

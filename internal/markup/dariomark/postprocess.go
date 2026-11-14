@@ -64,6 +64,11 @@ func (r *renderer) postProcess(b []byte) []byte {
 			if !isNoEndTag(t.Data) {
 				startTags = append(startTags, t.Data)
 			}
+		case html.SelfClosingTagToken:
+			// The tokenizer reads the content after "<textarea/>" as raw
+			// text too.
+			rawText = isRawTextElement(t.Data)
+			out.WriteString(t.String())
 		case html.EndTagToken:
 			if len(startTags) == 0 {
 				out.WriteString(t.String())

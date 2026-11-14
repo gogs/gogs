@@ -166,6 +166,13 @@ func (ip *inlineParser) footnoteRef() bool {
 	if fn == nil {
 		return false
 	}
+	// Each reference renders a link and a backlink, which take about 70
+	// times the input for a document of only "[^a]". Past the budget,
+	// references render as text, like undefined ones.
+	if ip.p.footnoteBudget == 0 {
+		return false
+	}
+	ip.p.footnoteBudget--
 	if fn.number == 0 {
 		ip.p.footnotes.ordered = append(ip.p.footnotes.ordered, fn)
 		fn.number = len(ip.p.footnotes.ordered)

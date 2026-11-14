@@ -256,17 +256,23 @@ func (ip *inlineParser) linkifyEmails(n *node) {
 			for last.next != nil && last.next.kind == kindText {
 				last = last.next
 			}
-			next := last.next
+			// The run is replaced, so the walk goes on from its parent when
+			// nothing follows it.
+			parent, next := c.parent, last.next
 			ip.linkifyEmailRun(c, last)
+			if next == nil {
+				next = parent.skipIn(n)
+			}
 			c = next
 			continue
 		case kindLink, kindImage, kindAutoLink:
 		default:
 			if c.first != nil {
-				ip.linkifyEmails(c)
+				c = c.first
+				continue
 			}
 		}
-		c = c.next
+		c = c.skipIn(n)
 	}
 }
 
@@ -427,7 +433,7 @@ func (ip *inlineParser) taskCheckbox() {
 // inline contents of n: relative link destinations are joined with the link
 // base, and autolinks inside raw HTML anchors become text.
 func (p *parser) walkLinks(n *node, inRawAnchor *bool) {
-	for c := n.first; c != nil; c = c.next {
+	for c := n.first; c != nil; {
 		switch c.kind {
 		case kindLink:
 			if p.opts.RelativeLinks {
@@ -462,7 +468,9 @@ func (p *parser) walkLinks(n *node, inRawAnchor *bool) {
 			}
 		}
 		if c.first != nil {
-			p.walkLinks(c, inRawAnchor)
+			c = c.first
+		} else {
+			c = c.skipIn(n)
 		}
 	}
 }

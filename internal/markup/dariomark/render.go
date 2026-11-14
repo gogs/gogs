@@ -401,7 +401,7 @@ func (r *renderer) headingList() []Heading {
 // appendTextContent appends the text of the inline content of n, as a
 // browser shows it, without images and footnote references.
 func (r *renderer) appendTextContent(b []byte, n *node) []byte {
-	for c := n.first; c != nil; c = c.next {
+	for c := n.first; c != nil; {
 		switch c.kind {
 		case kindText, kindCodeSpan, kindAutoLink:
 			b = append(b, c.text...)
@@ -419,8 +419,12 @@ func (r *renderer) appendTextContent(b []byte, n *node) []byte {
 			}
 		case kindRawHTML, kindImage, kindFootnoteRef, kindTaskCheckbox:
 		default:
-			b = r.appendTextContent(b, c)
+			if c.first != nil {
+				c = c.first
+				continue
+			}
 		}
+		c = c.skipIn(n)
 	}
 	return b
 }
@@ -603,13 +607,57 @@ var (
 	alignRightValue  = []byte("right")
 )
 
+// inlines renders the inline contents of parent. It walks them without
+// recursion, so that deeply nested contents, e.g., a run of thousands of "*",
+// do not grow the stack.
 func (r *renderer) inlines(parent *node) {
-	for n := parent.first; n != nil; n = n.next {
-		r.inline(n)
+	n := parent.first
+	for n != nil {
+		if r.inlineStart(n) {
+			if n.first != nil {
+				n = n.first
+				continue
+			}
+			r.inlineEnd(n)
+		}
+		for n.next == nil {
+			n = n.parent
+			if n == parent {
+				return
+			}
+			r.inlineEnd(n)
+		}
+		n = n.next
 	}
 }
 
-func (r *renderer) inline(n *node) {
+// nestedStrong reports whether n is strong emphasis directly inside strong
+// emphasis, which adds nothing, as on GitHub, e.g., "****a****" renders one
+// <strong>.
+func nestedStrong(n *node) bool {
+	return n.kind == kindStrong && n.parent != nil && n.parent.kind == kindStrong
+}
+
+// inlineEnd writes the end of the inline node n, whose children are
+// rendered, see inlineStart.
+func (r *renderer) inlineEnd(n *node) {
+	switch n.kind {
+	case kindEmphasis:
+		r.s.end("em")
+	case kindStrong:
+		if !nestedStrong(n) {
+			r.s.end("strong")
+		}
+	case kindStrikethrough:
+		r.s.end("del")
+	case kindLink:
+		r.s.end("a")
+	}
+}
+
+// inlineStart writes the inline node n, or only its start if its children
+// are rendered next, which it reports.
+func (r *renderer) inlineStart(n *node) bool {
 	s := r.s
 	switch n.kind {
 	case kindText:
@@ -628,22 +676,15 @@ func (r *renderer) inline(n *node) {
 		s.end("code")
 	case kindEmphasis:
 		s.start("em")
-		r.inlines(n)
-		s.end("em")
+		return true
 	case kindStrong:
-		if n.parent != nil && n.parent.kind == kindStrong {
-			// Like GitHub, strong emphasis directly inside strong emphasis
-			// adds nothing, e.g., "****a****" renders one <strong>.
-			r.inlines(n)
-			break
+		if !nestedStrong(n) {
+			s.start("strong")
 		}
-		s.start("strong")
-		r.inlines(n)
-		s.end("strong")
+		return true
 	case kindStrikethrough:
 		s.start("del")
-		r.inlines(n)
-		s.end("del")
+		return true
 	case kindLink:
 		href := r.urlEscape(n.ext.dest)
 		if n.ext.hasTitle {
@@ -651,8 +692,7 @@ func (r *renderer) inline(n *node) {
 		} else {
 			s.start("a", attr{"href", href, false})
 		}
-		r.inlines(n)
-		s.end("a")
+		return true
 	case kindImage:
 		href := r.urlEscape(n.ext.dest)
 		alt := r.plainText(n)
@@ -689,6 +729,7 @@ func (r *renderer) inline(n *node) {
 		}
 		s.text(spaces[:1])
 	}
+	return false
 }
 
 var checkboxValue = []byte("checkbox")
@@ -728,7 +769,7 @@ func (r *renderer) plainText(n *node) []byte {
 }
 
 func (r *renderer) appendPlain(n *node) {
-	for c := n.first; c != nil; c = c.next {
+	for c := n.first; c != nil; {
 		switch c.kind {
 		case kindAutoLink, kindText, kindCodeSpan, kindRawHTML:
 			// Raw HTML is text in a description, which is an attribute.
@@ -750,8 +791,12 @@ func (r *renderer) appendPlain(n *node) {
 			// Descriptions keep fractions as written.
 			r.p.buf = appendEscapedText(r.p.buf, c.text)
 		default:
-			r.appendPlain(c)
+			if c.first != nil {
+				c = c.first
+				continue
+			}
 		}
+		c = c.skipIn(n)
 	}
 }
 

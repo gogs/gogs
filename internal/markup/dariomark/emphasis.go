@@ -164,8 +164,9 @@ func (ip *inlineParser) srcStart(t *node) int {
 }
 
 func (ip *inlineParser) pushDelim(d delimiter) {
+	ci := delimIndex(d.char)
 	if d.canOpen {
-		ip.openers[delimIndex(d.char)]++
+		ip.openers[ci]++
 	}
 	if ip.delimTop < 0 {
 		if ip.brackets.len() == 0 {
@@ -177,18 +178,25 @@ func (ip *inlineParser) pushDelim(d delimiter) {
 	}
 	d.prev = ip.delimTop
 	d.next = -1
+	d.prevSame = ip.sameTop[ci]
+	d.nextSame = -1
 	ip.delims.push(d)
 	i := int32(ip.delims.len() - 1)
 	if ip.delimTop >= 0 {
 		ip.delims.at(int(ip.delimTop)).next = i
 	}
 	ip.delimTop = i
+	if d.prevSame >= 0 {
+		ip.delims.at(int(d.prevSame)).nextSame = i
+	}
+	ip.sameTop[ci] = i
 }
 
 func (ip *inlineParser) removeDelim(i int32) {
 	d := ip.delims.at(int(i))
+	ci := delimIndex(d.char)
 	if d.canOpen {
-		ip.openers[delimIndex(d.char)]--
+		ip.openers[ci]--
 	}
 	if d.prev >= 0 {
 		ip.delims.at(int(d.prev)).next = d.next
@@ -200,7 +208,15 @@ func (ip *inlineParser) removeDelim(i int32) {
 	} else {
 		ip.delimTop = d.prev
 	}
-	d.prev, d.next = -2, -2
+	if d.prevSame >= 0 {
+		ip.delims.at(int(d.prevSame)).nextSame = d.nextSame
+	}
+	if d.nextSame >= 0 {
+		ip.delims.at(int(d.nextSame)).prevSame = d.prevSame
+	} else {
+		ip.sameTop[ci] = d.prevSame
+	}
+	d.prev, d.next, d.prevSame, d.nextSame = -2, -2, -2, -2
 }
 
 // processEmphasis matches the delimiters above bottom, an index in the
@@ -242,11 +258,15 @@ func (ip *inlineParser) processEmphasis(bottom int32) {
 		}
 		mod := cd.origCount % 3
 		found, stopped := false, false
-		opener := cd.prev
+		// Only delimiters of the same character can match or stop the
+		// search, so the search skips the others, which keeps it from
+		// passing the same unmatched delimiters for every closer, e.g., "*"
+		// runs between quotes or tildes.
+		opener := cd.prevSame
 		quote := cd.char == '\'' || cd.char == '"'
 		for opener > bottom && opener > openersBottom[ci][oi][mod] {
 			od := ip.delims.at(int(opener))
-			if cd.char == '~' && od.char == '~' && od.canOpen && od.origCount != cd.origCount && !od.canClose {
+			if cd.char == '~' && od.canOpen && od.origCount != cd.origCount && !od.canClose {
 				// Like GitHub, a tilde run of another length that can only
 				// open stops the search, and a closer that cannot open
 				// removes it, e.g., "~~a ~b c~~" has no strikethrough.
@@ -258,7 +278,7 @@ func (ip *inlineParser) processEmphasis(bottom int32) {
 			}
 			// Strikethrough pairs tildes of the same length (GFM 0.29,
 			// section 6.5).
-			if od.char == cd.char && od.canOpen && (cd.char != '~' || od.origCount == cd.origCount) {
+			if od.canOpen && (cd.char != '~' || od.origCount == cd.origCount) {
 				oddMatch := !quote && (cd.canOpen || od.canClose) && cd.origCount%3 != 0 &&
 					(od.origCount+cd.origCount)%3 == 0
 				found = !oddMatch && cd.node != nil && (od.node != nil || ip.materialize(od, cd.node))
@@ -266,7 +286,7 @@ func (ip *inlineParser) processEmphasis(bottom int32) {
 					break
 				}
 			}
-			opener = od.prev
+			opener = od.prevSame
 		}
 		if !found {
 			if !stopped {
