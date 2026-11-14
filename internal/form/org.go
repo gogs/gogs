@@ -25,13 +25,3 @@ type UpdateOrgSetting struct {
 func (f *UpdateOrgSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
-
-type CreateTeam struct {
-	TeamName    string `binding:"Required;AlphaDashDot;MaxSize(30)"`
-	Description string `binding:"MaxSize(255)"`
-	Permission  string
-}
-
-func (f *CreateTeam) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}

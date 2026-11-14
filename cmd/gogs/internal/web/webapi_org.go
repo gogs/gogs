@@ -153,6 +153,28 @@ func deleteOrgMember(c flamego.Context, l i18n.Locale, user *database.User, m *o
 	return http.StatusNoContent, nil, nil
 }
 
+// putOrgMember adds a user to the organization. Only owners can invite.
+func putOrgMember(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
+	if !m.IsOwner {
+		return http.StatusForbidden, nil, errors.New("organization owner required")
+	}
+	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
+	if err != nil {
+		if code == http.StatusInternalServerError {
+			log.Error("putOrgMember: %v", err)
+		}
+		return code, nil, err
+	}
+	if member.IsOrganization() {
+		return http.StatusNotFound, nil, errors.New(l.Tr("form.user_not_exist"))
+	}
+	if err = m.Org.AddMember(member.ID); err != nil {
+		log.Error("putOrgMember: add user %d to organization %d: %v", member.ID, m.Org.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "add member")
+	}
+	return http.StatusNoContent, nil, nil
+}
+
 type orgTeamMember struct {
 	Name      string `json:"name"`
 	FullName  string `json:"fullName,omitempty"`
@@ -241,6 +263,9 @@ type orgTeamDetail struct {
 	PermissionHTML string `json:"permissionHTML"`
 	MemberCount    int    `json:"memberCount"`
 	RepoCount      int    `json:"repoCount"`
+	// Permission is "read", "write" or "admin", or "owner" for the owners
+	// team.
+	Permission string `json:"permission"`
 	// IsOwnerTeam is true for the owners team, which has every repository.
 	IsOwnerTeam    bool `json:"isOwnerTeam"`
 	ViewerIsMember bool `json:"viewerIsMember"`
@@ -267,6 +292,7 @@ func getOrgTeam(l i18n.Locale, user *database.User, team *orgTeam) (statusCode i
 		PermissionHTML: markup.Sanitize(permission),
 		MemberCount:    team.NumMembers,
 		RepoCount:      team.NumRepos,
+		Permission:     team.Authorize.String(),
 		IsOwnerTeam:    team.IsOwnerTeam(),
 		ViewerIsMember: team.IsMember(user.ID),
 	}, nil
@@ -405,6 +431,113 @@ func deleteOrgTeamRepo(c flamego.Context, l i18n.Locale, m *orgMembership, team 
 	if err = team.RemoveRepository(repo.ID); err != nil {
 		log.Error("deleteOrgTeamRepo: remove repository %d from team %d: %v", repo.ID, team.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "remove team repository")
+	}
+	return http.StatusNoContent, nil, nil
+}
+
+type orgTeamRequest struct {
+	TeamName    string `json:"teamName" validate:"required,alphadashdot,max=30"`
+	Description string `json:"description" validate:"max=255"`
+	// Permission is "read", "write" or "admin". The owners team ignores it.
+	Permission string `json:"permission"`
+}
+
+type orgTeamResponse struct {
+	LowerName string `json:"lowerName"`
+}
+
+// teamPermissions are the access levels a team other than the owners team
+// can grant.
+var teamPermissions = map[string]database.AccessMode{
+	"read":  database.AccessModeRead,
+	"write": database.AccessModeWrite,
+	"admin": database.AccessModeAdmin,
+}
+
+// teamNameError returns the response for a team name the organization cannot
+// use, or nil when err is about something else.
+func teamNameError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
+	var msg string
+	var code int
+	switch {
+	case database.IsErrTeamAlreadyExist(err):
+		code, msg = http.StatusUnprocessableEntity, l.Tr("form.team_name_been_taken")
+	case database.IsErrNameNotAllowed(err):
+		code, msg = http.StatusBadRequest, l.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+	default:
+		return 0, nil
+	}
+	return code, &bindingErrorResponse{Fields: fieldErrors{"teamName": &msg}}
+}
+
+func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCode int, resp any, err error) {
+	if !m.IsOwner {
+		return http.StatusForbidden, nil, errors.New("organization owner required")
+	}
+	permission, ok := teamPermissions[req.Permission]
+	if !ok {
+		return http.StatusBadRequest, nil, errors.New("invalid permission")
+	}
+	t := &database.Team{
+		OrgID:       m.Org.ID,
+		Name:        req.TeamName,
+		Description: req.Description,
+		Authorize:   permission,
+	}
+	if err = database.NewTeam(t); err != nil {
+		if code, resp := teamNameError(l, err); resp != nil {
+			return code, resp, nil
+		}
+		log.Error("postOrgTeam: create team %q in organization %d: %v", req.TeamName, m.Org.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "create team")
+	}
+	return http.StatusCreated, &orgTeamResponse{LowerName: t.LowerName}, nil
+}
+
+// patchOrgTeam changes the name, the description and the permission of a
+// team. The owners team keeps its name and permission.
+func patchOrgTeam(l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamRequest) (statusCode int, resp any, err error) {
+	if !m.IsOwner {
+		return http.StatusForbidden, nil, errors.New("organization owner required")
+	}
+	t := team.Team
+	authChanged := false
+	if !t.IsOwnerTeam() {
+		permission, ok := teamPermissions[req.Permission]
+		if !ok {
+			return http.StatusBadRequest, nil, errors.New("invalid permission")
+		}
+		// Renaming a team to a reserved name would make its page unreachable.
+		if err = database.IsUsableTeamName(req.TeamName); err != nil {
+			code, resp := teamNameError(l, err)
+			return code, resp, nil
+		}
+		t.Name = req.TeamName
+		authChanged = t.Authorize != permission
+		t.Authorize = permission
+	}
+	t.Description = req.Description
+	if err = database.UpdateTeam(t, authChanged); err != nil {
+		if code, resp := teamNameError(l, err); resp != nil {
+			return code, resp, nil
+		}
+		log.Error("patchOrgTeam: update team %d: %v", t.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "update team")
+	}
+	return http.StatusOK, &orgTeamResponse{LowerName: t.LowerName}, nil
+}
+
+func deleteOrgTeam(m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+	if !m.IsOwner {
+		return http.StatusForbidden, nil, errors.New("organization owner required")
+	}
+	// An organization always needs its owners team.
+	if team.IsOwnerTeam() {
+		return http.StatusForbidden, nil, errors.New("the owners team cannot be deleted")
+	}
+	if err = database.DeleteTeam(team.Team); err != nil {
+		log.Error("deleteOrgTeam: delete team %d: %v", team.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete team")
 	}
 	return http.StatusNoContent, nil, nil
 }
