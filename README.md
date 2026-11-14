@@ -37,10 +37,14 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - Migrate and mirror repositories, including their wikis, from other code hosts.
   - Edit files and wiki pages right in the browser.
   - Render Markdown, Jupyter Notebooks and PDFs.
+  - Search code in one repository or across all of them.\*
+  - See who last changed each line with blame.\*
+  - Compare images before and after in diffs.\*
 - Collaboration
   - Issues, pull requests, wikis and protected branches.
   - Organizations, teams and per-repository collaborators.
   - Dashboards, user profiles and activity timelines.
+  - Jump to repositories, files, issues and code from a command palette.\*
 - Integrations
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
   - A REST [API](https://gogs.io/api-reference) for automation.
@@ -48,11 +52,19 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Authentication
   - Sign in with LDAP, SMTP, PAM, reverse proxy, GitHub.com or GitHub Enterprise.
   - Optional two-factor authentication with TOTP and recovery codes.
+  - Sign in with passkeys.\*
+  - Confirm who you are before sensitive actions.\*
+  - See and sign out the browsers signed in to your account.\*
+  - Get emails about changes to the security of your account.\*
+  - Require a minimum password length and optionally reject leaked passwords.\*
 - Operations
   - A single binary on Linux, macOS, Windows and ARM, or the official Docker image.
   - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
   - Customize templates, static files and much more.
+  - Translated emails, previewed in the admin panel.\*
   - Available in over [31 languages](https://crowdin.com/project/gogs).
+
+<sub>* In development.</sub>
 
 ## 💾 Hardware requirements
 
