@@ -49,12 +49,11 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
   - Two-factor authentication and passkeys\*.
-  - Sudo mode\*, session management\*, security alerts\* and breached password detection\*.
+  - Session management\*, security alerts\* and breached password detection\*.
 - Operations
   - Single binary, Docker or Kubernetes\*, on Linux, macOS, Windows and ARM.
-  - PostgreSQL, MySQL, MariaDB or SQLite3.
-  - Custom templates, emails and static files.
-  - OpenTelemetry and Prometheus, plus a built-in trace viewer\*.
+  - PostgreSQL, MySQL or SQLite3.
+  - OpenTelemetry with a built-in trace viewer\*.
 
 <sub>* In development.</sub>
 
