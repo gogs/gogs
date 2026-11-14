@@ -83,6 +83,10 @@ Tailwind 4's preflight removes the browser default `cursor: pointer` on `<button
 
 When in doubt, hover-test the new control: if the cursor is still an I-beam or arrow, add `cursor-pointer`.
 
+## Tabs
+
+Page-level tabs (the repository header tabs, the explore tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 375px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row.
+
 ## Tooltips
 
 Use the `Tooltip` component from `@/components/ui/tooltip` (built on `@radix-ui/react-tooltip`) for any hover hint. Never use the native HTML `title` attribute: it renders unstyled, has inconsistent timing across browsers, and is invisible on touch. The tooltip provider lives at the router root, so `Tooltip`/`TooltipTrigger`/`TooltipContent` work anywhere downstream.

@@ -1,11 +1,15 @@
 package web
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -59,4 +63,39 @@ func TestRenderIndex_entrypointPaths(t *testing.T) {
 			assert.Contains(t, string(got), test.want)
 		})
 	}
+}
+
+func TestWebLocales(t *testing.T) {
+	localeDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_en-US.ini"), []byte("custom_only = Custom\n"), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_de-DE.ini"), []byte("[repo]\nfork = Gabel\n"), 0600))
+	var err error
+	webLocales, err = loadWebLocales(localeDir, []string{"en-US", "de-DE"})
+	require.NoError(t, err)
+
+	f := flamego.New()
+	mountWebLocaleRoutes(f)
+	get := func(t *testing.T, lang string) map[string]string {
+		t.Helper()
+		resp := httptest.NewRecorder()
+		f.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, webLocaleURL(lang), nil))
+		require.Equal(t, http.StatusOK, resp.Code)
+		assert.Contains(t, resp.Header().Get("Cache-Control"), "immutable")
+		var messages map[string]string
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &messages))
+		return messages
+	}
+
+	de := get(t, "de-DE")
+	assert.Equal(t, "Erkunden", de["explore"], "the language's own file")
+	assert.Equal(t, "Gabel", de["repo.fork"], "the custom override of the language")
+	assert.Equal(t, "Custom", de["custom_only"], "keys missing from the language fall back to en-US")
+	assert.Equal(t, "Explore", get(t, "en-US")["explore"])
+	assert.NotEqual(t, webLocaleURL("en-US"), webLocaleURL("de-DE"))
+	assert.Equal(t, webLocaleURL("en-US"), webLocaleURL("xx-XX"), "unknown languages use en-US")
+
+	out, err := renderIndex([]byte(`<head>{{.WebContext}}</head>`), context.WebContext{Lang: "de-DE", SubURL: "/gogs"}, injectContent{})
+	require.NoError(t, err)
+	assert.Contains(t, string(out), `"localeURL":"/gogs`+webLocaleURL("de-DE")+`"`)
+	assert.Contains(t, string(out), `<link rel="preload" as="fetch" crossorigin href="/gogs`+webLocaleURL("de-DE")+`">`)
 }

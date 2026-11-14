@@ -17,12 +17,12 @@ import (
 	macaronsession "github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 )
 
 type (
-	webAPIUserKey    struct{}
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
@@ -31,7 +31,7 @@ type (
 func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
 	return func(c *context.Context, l i18n.Locale) {
 		ctx := c.Req.Context()
-		ctx = stdctx.WithValue(ctx, webAPIUserKey{}, c.User)
+		ctx = stdctx.WithValue(ctx, context.UserKey{}, c.User)
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
@@ -49,11 +49,11 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 
 func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
-	user, _ := ctx.Value(webAPIUserKey{}).(*database.User)
+	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(user, sess, mc, l)
+	c.Map(viewer, sess, mc, l)
 	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 
@@ -72,6 +72,23 @@ func (s flamegoSessionAdapter) SetFlash(val any)        { _ = s.sess.Set("_flash
 func (s flamegoSessionAdapter) Delete(key any)          { _ = s.sess.Delete(key) }
 func (s flamegoSessionAdapter) Flush()                  { _ = s.sess.Flush() }
 func (s flamegoSessionAdapter) Encode() ([]byte, error) { return nil, nil }
+
+// requireViewAccess turns away the same viewers as the sign-in toggle of the
+// server-rendered pages: disabled users and, when the site requires signing in
+// to view any content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous visitors. Mount
+// it on every route that serves site content, but not on the routes visitors
+// need to sign in.
+func requireViewAccess(c flamego.Context, viewer *database.User) {
+	w := c.ResponseWriter()
+	switch {
+	case viewer != nil && viewer.ProhibitLogin:
+		writeErrorResponse(w, http.StatusForbidden, errors.New("login prohibited"))
+	case viewer != nil && viewer.IsDisabled():
+		writeErrorResponse(w, http.StatusForbidden, errors.New("account not activated"))
+	case viewer == nil && conf.Auth.RequireSigninView:
+		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
+	}
+}
 
 func enforceWebAPIMaxBodySize(c flamego.Context) {
 	r := c.Request().Request
@@ -151,7 +168,12 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}", getRepoCommit)
 			f.Combo("/watch").Post(postRepoWatch).Delete(deleteRepoWatch)
 			f.Combo("/star").Post(postRepoStar).Delete(deleteRepoStar)
-		}, withRepoContext)
+		}, requireViewAccess, withRepoContext)
+		f.Group("/explore", func() {
+			f.Get("/repos", getExploreRepos)
+			f.Get("/users", getExploreUsers)
+			f.Get("/organizations", getExploreOrganizations)
+		}, requireViewAccess)
 	}, enforceWebAPIMaxBodySize)
 }
 

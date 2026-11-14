@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -95,9 +96,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Get("", func(c *context.Context) {
 				c.Redirect(conf.Server.Subpath + "/explore/repos")
 			})
-			m.Get("/repos", route.ExploreRepos)
-			m.Get("/users", route.ExploreUsers)
-			m.Get("/organizations", route.ExploreOrganizations)
+			m.Get("/^:type(repos|users|organizations)$", func(c *context.Context) { c.ServeWeb() })
 		}, ignSignIn)
 		m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
@@ -145,6 +144,10 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Group("/user", func() {
 			m.Any("/activate_email", user.ActivateEmail)
 			m.Get("/email2user", user.Email2User)
+			// The pages for signing in stay reachable when the site requires signing in to
+			// view content. Without this route they would match "/:username/:reponame" and
+			// its sign-in toggle.
+			m.Get("/^:page(sign-in|sign-up|mfa|reset-password|activate)$", func(c *context.Context) { c.ServeWeb() })
 		})
 		// ***** END: User *****
 
@@ -760,8 +763,9 @@ func newRoutingHandler() (http.Handler, error) {
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
 		f.Get("/raw/{ref}/{filepath: **}", getRepoRawFile)
-	}, withRepoContext)
+	}, requireViewAccess, withRepoContext)
 
+	mountWebLocaleRoutes(f)
 	mountWebAPIRoutes(f)
 	err = mountWebAppRoutes(f)
 	if err != nil {
@@ -860,15 +864,20 @@ func newMacaron() (*macaron.Macaron, error) {
 			return nil, errors.Wrapf(err, "read locale file %q", name)
 		}
 	}
+	customLocaleDir := filepath.Join(conf.CustomDir(), "conf", "locale")
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.Server.Subpath,
 		Files:           localeFiles,
-		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		CustomDirectory: customLocaleDir,
 		Langs:           conf.I18n.Langs,
 		Names:           conf.I18n.Names,
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
+	webLocales, err = loadWebLocales(customLocaleDir, conf.I18n.Langs)
+	if err != nil {
+		return nil, errors.Wrap(err, "load web locales")
+	}
 	m.Use(macaroncache.Cacher(macaroncache.Options{
 		Adapter:       conf.Cache.Adapter,
 		AdapterConfig: conf.Cache.Host,
@@ -905,16 +914,20 @@ func readInjectContent() (injectContent, error) {
 func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
-		Lang   string `json:"lang"`
-		SubURL string `json:"subURL"`
+		Lang      string `json:"lang"`
+		SubURL    string `json:"subURL"`
+		LocaleURL string `json:"localeURL"`
 	}{
-		Lang:   wc.Lang,
-		SubURL: wc.SubURL,
+		Lang:      wc.Lang,
+		SubURL:    wc.SubURL,
+		LocaleURL: wc.SubURL + webLocaleURL(wc.Lang),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")
 	}
-	script := `<script>window.__webContext=` + string(payload) +
+	// Start loading the translations alongside the bundle that needs them.
+	script := `<link rel="preload" as="fetch" crossorigin href="` + html.EscapeString(wc.SubURL+webLocaleURL(wc.Lang)) + `">` +
+		`<script>window.__webContext=` + string(payload) +
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
 
 	pairs := []string{

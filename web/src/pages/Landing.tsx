@@ -39,7 +39,7 @@ export function Landing() {
             {"\n"}
             <CmdLink href="/user/sign-up" cmd="sign-up" desc={t("register")} spa />
             {"\n"}
-            <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} />
+            <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} spa />
             {"\n"}
             <CmdLink href="https://gogs.io" cmd="help" desc={t("help")} external />
             {"\n"}

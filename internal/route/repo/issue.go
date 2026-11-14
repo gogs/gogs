@@ -109,8 +109,7 @@ func issues(c *context.Context, isPullList bool) {
 
 	// Must sign in to see issues about you.
 	if viewType != "all" && !c.IsLogged {
-		c.SetCookie("redirect_to", "/"+url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-		c.Redirect(conf.Server.Subpath + "/user/sign-in")
+		c.RawRedirect(conf.Server.Subpath + "/user/sign-in?redirect_to=" + url.QueryEscape(conf.Server.Subpath+c.Req.URL.RequestURI()))
 		return
 	}
 
