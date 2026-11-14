@@ -264,28 +264,33 @@ function IssueRow({ issue, kind, showRepo }: { issue: DashboardIssue; kind: "iss
           #{issue.index} <OpenedBy issue={issue} />
         </p>
       </div>
-      <div className="flex shrink-0 items-start gap-3">
-        {issue.assignee ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/$username" params={{ username: issue.assignee.name }} aria-label={issue.assignee.name}>
-                <img
-                  src={issue.assignee.avatarURL}
-                  alt=""
-                  className="size-5 rounded-full border border-(--color-border) object-cover"
-                />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent>{issue.assignee.name}</TooltipContent>
-          </Tooltip>
-        ) : null}
-        {issue.commentCount > 0 ? (
-          <span className="inline-flex items-center gap-1 text-xs tabular-nums text-(--color-muted-foreground)">
-            <MessageSquare className="size-3.5" aria-hidden />
-            <span aria-hidden>{issue.commentCount}</span>
-            <span className="sr-only">{commentLabel}</span>
-          </span>
-        ) : null}
+      {/* Fixed slots keep avatars and comment counts aligned across rows that lack either. */}
+      <div className="flex shrink-0 items-start gap-2">
+        <span className="flex w-5 justify-center">
+          {issue.assignee ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/$username" params={{ username: issue.assignee.name }} aria-label={issue.assignee.name}>
+                  <img
+                    src={issue.assignee.avatarURL}
+                    alt=""
+                    className="size-5 rounded-full border border-(--color-border) object-cover"
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>{issue.assignee.name}</TooltipContent>
+            </Tooltip>
+          ) : null}
+        </span>
+        <span className="flex min-w-8">
+          {issue.commentCount > 0 ? (
+            <span className="inline-flex items-center gap-1 text-xs tabular-nums text-(--color-muted-foreground)">
+              <MessageSquare className="size-3.5" aria-hidden />
+              <span aria-hidden>{issue.commentCount}</span>
+              <span className="sr-only">{commentLabel}</span>
+            </span>
+          ) : null}
+        </span>
       </div>
     </li>
   );
