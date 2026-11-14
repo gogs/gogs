@@ -52,7 +52,6 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Integrations
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
   - A REST [API](https://gogs.io/api-reference) for automation, with GitHub compatibility\*.
-  - Prometheus metrics for monitoring.
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\*, SAML 2.0\* or passkeys\*.
   - Optional two-factor authentication with TOTP and recovery codes.
@@ -67,7 +66,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
   - Customize templates, static files and much more.
   - Translated emails, previewed in the admin panel.\*
-  - Trace requests from the admin panel.\*
+  - Monitor with OpenTelemetry and Prometheus, plus a built-in trace view in the admin panel\*.
   - Available in over [31 languages](https://crowdin.com/project/gogs).
 
 <sub>* In development.</sub>
