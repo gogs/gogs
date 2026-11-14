@@ -62,8 +62,8 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💻 Browser support
 
-- Please see [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) for specific versions of supported browsers.
-- The smallest resolution officially supported is **1024*768**, however the UI may still look right in smaller resolutions, but no promises or fixes.
+- Any modern browser works, with Chrome 111, Edge 111, Firefox 128 and Safari 16.4 (including iOS) as the minimum versions.
+- The UI is mobile-friendly and works on screens as narrow as 375px.
 
 ## 📜 Installation
 
