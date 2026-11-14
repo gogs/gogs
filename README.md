@@ -32,37 +32,35 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 ## 💌 Features
 
 - Code hosting
-  - Clone and push over SSH, HTTP and HTTPS, with deploy keys and an optional built-in SSH server.
-  - Git LFS, with local or S3-compatible\* storage.
+  - Clone and push over SSH, HTTP and HTTPS, with deploy keys and a built-in SSH server.
+  - Git LFS, stored locally or in any S3-compatible bucket\*.
   - Migrate and mirror repositories from other code hosts.
   - Edit files right in the browser.
   - Render Markdown, Jupyter Notebooks and PDFs, plus rich diffs for images and Markdown\*.
-  - Search code in one repository or across all of them.\*
-  - See who last changed each line with blame.\*
+  - Search code in a repository or across your whole instance.\*
+  - Blame view to see who changed every line.\*
 - Collaboration
   - Issues, wikis and pull requests, with inline reviews\* and stacks\*.
   - Protected branches, with required code owner reviews\* and signed commits\*.
   - Organizations, teams and per-repository collaborators.
   - Dashboards, user profiles and activity timelines.
-  - Work with repositories across federated Gogs instances.\*
 - Interface
   - Light and dark themes.
   - Available in over [31 languages](https://crowdin.com/project/gogs), including emails\*.
-  - Jump to repositories, files, issues and code from a command palette.\*
+  - A command palette to jump to repositories, files, issues and code.\*
 - Integrations
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
   - Server-side Git hooks.
-  - A REST [API](https://gogs.io/api-reference) for automation, with GitHub compatibility\*.
+  - A REST [API](https://gogs.io/api-reference) for automation, GitHub-compatible\* so your existing tools just work.
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
   - Multi-factor authentication with TOTP, recovery codes and passkeys\*.
-  - Protect accounts with re-authentication for sensitive actions\*, session management\*, security alert emails\* and a password policy that can reject leaked passwords\*.
-  - Block pushes with secrets, get alerts for vulnerable dependencies, and see static analysis results.\*
+  - Keep accounts safe with sudo mode\*, session management\*, security alerts\* and breached password detection\*.
 - Operations
-  - Run a single binary on Linux, macOS, Windows and ARM, the official Docker image, or scale out on Kubernetes\*.
-  - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
-  - Customize templates, emails and static files, with email previews in the admin panel\*.
-  - Monitor with OpenTelemetry and Prometheus, plus a built-in trace view in the admin panel\*.
+  - Runs anywhere: a single binary on Linux, macOS, Windows and ARM, a Docker image, or Kubernetes at scale\*.
+  - Works with PostgreSQL, MySQL, MariaDB, SQLite3 and compatible databases.
+  - Make it yours with custom templates, emails and static files, and preview every email in the admin panel\*.
+  - Observability with OpenTelemetry and Prometheus, plus a built-in trace viewer\*.
 
 <sub>* In development.</sub>
 
