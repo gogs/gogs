@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -123,7 +124,7 @@ func TestServeBatch(t *testing.T) {
 				c.Map(&database.User{Name: "owner"})
 				c.Map(&database.Repository{Name: "repo"})
 			})
-			m.Post("/", serveBatch(mockStore))
+			m.Post("/", serveBatch(logx.NewNoopLogger(), mockStore))
 
 			r, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(test.body))
 			require.NoError(t, err)

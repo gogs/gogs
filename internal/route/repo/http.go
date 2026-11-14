@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -68,7 +68,7 @@ func gitHTTPIsPull(c *macaron.Context, action string) bool {
 	return action != "git-receive-pack"
 }
 
-func HTTPContexter(store Store) macaron.Handler {
+func HTTPContexter(logger *logx.Logger, store Store) macaron.Handler {
 	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
@@ -92,7 +92,7 @@ func HTTPContexter(store Store) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [name: %s]: %v", ownerName, err)
+				logger.Error("Failed to get user", "userName", ownerName, "error", err)
 			}
 			return
 		}
@@ -103,7 +103,7 @@ func HTTPContexter(store Store) macaron.Handler {
 				c.Status(http.StatusNotFound)
 			} else {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, repoName, err)
+				logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", repoName, "error", err)
 			}
 			return
 		}
@@ -146,27 +146,27 @@ func HTTPContexter(store Store) macaron.Handler {
 		authUser, err := store.AuthenticateUser(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
-			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
+			logger.Error("Failed to authenticate user", "userName", authUsername, "error", err)
 			return
 		}
 
 		// If username and password combination failed, try again using either username
 		// or password as the token.
 		if authUser == nil {
-			authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authUsername)
+			authUser, err = context.AuthenticateByToken(c.Req.Context(), logger, store, authUsername)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to authenticate by access token via username: %v", err)
+				logger.Error("Failed to authenticate by access token via username", "error", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
-				authUser, err = context.AuthenticateByToken(store, c.Req.Context(), authPassword)
+				authUser, err = context.AuthenticateByToken(c.Req.Context(), logger, store, authPassword)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
 						askCredentials(c, http.StatusUnauthorized, "")
 					} else {
 						c.Status(http.StatusInternalServerError)
-						log.Error("Failed to authenticate by access token via password: %v", err)
+						logger.Error("Failed to authenticate by access token via password", "error", err)
 					}
 					return
 				}
@@ -182,13 +182,13 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
-		log.Trace("[Git] Authenticated user: %s", authUser.Name)
+		logger.Debug("Authenticated user", "userName", authUser.Name)
 
 		mode := database.AccessModeWrite
 		if isPull {
 			mode = database.AccessModeRead
 		}
-		if !database.Handle.Permissions().Authorize(c.Req.Context(), authUser.ID, repo.ID, mode,
+		if !database.Handle.Permissions().Authorize(c.Req.Context(), logger, authUser.ID, repo.ID, mode,
 			database.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
@@ -232,7 +232,7 @@ func (h *serviceHandler) setHeaderNoCache() {
 	h.w.Header().Set("Cache-Control", "no-cache, max-age=0, must-revalidate")
 }
 
-func serviceRPC(h serviceHandler, service string) {
+func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 	defer h.r.Body.Close()
 
 	if h.r.Header.Get("Content-Type") != fmt.Sprintf("application/x-git-%s-request", service) {
@@ -250,7 +250,7 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.r.Header.Get("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
-			log.Error("HTTP.Get: fail to create gzip reader: %v", err)
+			logger.Error("Failed to create gzip reader", "error", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -283,18 +283,18 @@ func serviceRPC(h serviceHandler, service string) {
 		Envs:         envs,
 	})
 	if err != nil {
-		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
+		logger.Error("Failed to serve RPC", "service", service, "error", err, "stderr", stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
 
-func serviceUploadPack(h serviceHandler) {
-	serviceRPC(h, "upload-pack")
+func serviceUploadPack(logger *logx.Logger, h serviceHandler) {
+	serviceRPC(logger, h, "upload-pack")
 }
 
-func serviceReceivePack(h serviceHandler) {
-	serviceRPC(h, "receive-pack")
+func serviceReceivePack(logger *logx.Logger, h serviceHandler) {
+	serviceRPC(logger, h, "receive-pack")
 }
 
 func getServiceType(r *http.Request) string {
@@ -313,7 +313,7 @@ func packetWrite(str string) []byte {
 	return []byte(s + str)
 }
 
-func getInfoRefs(h serviceHandler) {
+func getInfoRefs(logger *logx.Logger, h serviceHandler) {
 	h.setHeaderNoCache()
 	service := getServiceType(h.r)
 	if service != "upload-pack" && service != "receive-pack" {
@@ -330,7 +330,7 @@ func getInfoRefs(h serviceHandler) {
 		Protocol:      h.r.Header.Get("Git-Protocol"),
 	})
 	if err != nil {
-		log.Error("HTTP.getInfoRefs: fail to advertise refs for '%s': %v - %s", service, err, stderr.String())
+		logger.Error("Failed to advertise refs", "service", service, "error", err, "stderr", stderr.String())
 	}
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service))
 	h.w.WriteHeader(http.StatusOK)
@@ -342,7 +342,7 @@ func getInfoRefs(h serviceHandler) {
 var routes = []struct {
 	re      *lazyregexp.Regexp
 	method  string
-	handler func(serviceHandler)
+	handler func(*logx.Logger, serviceHandler)
 }{
 	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
 	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
@@ -362,7 +362,7 @@ func getGitRepoPath(dir string) (string, error) {
 	return filename, nil
 }
 
-func HTTP(c *HTTPContext) {
+func HTTP(logger *logx.Logger, c *HTTPContext) {
 	for _, route := range routes {
 		reqPath := strings.ToLower(c.Req.URL.Path)
 		m := route.re.FindStringSubmatch(reqPath)
@@ -389,12 +389,12 @@ func HTTP(c *HTTPContext) {
 
 		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
-			log.Warn("HTTP.getGitRepoPath: %v", err)
+			logger.Warn("Failed to get Git repository path", "error", err)
 			c.Error(http.StatusNotFound)
 			return
 		}
 
-		route.handler(serviceHandler{
+		route.handler(logger, serviceHandler{
 			w:   c.Resp,
 			r:   c.Req.Request,
 			dir: dir,

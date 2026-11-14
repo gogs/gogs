@@ -3,6 +3,8 @@ package github
 import (
 	"strings"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/auth"
 )
 
@@ -18,7 +20,7 @@ func NewProvider(cfg *Config) auth.Provider {
 	}
 }
 
-func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
+func (p *Provider) Authenticate(_ *logx.Logger, login, password string) (*auth.ExternalAccount, error) {
 	fullname, email, website, location, err := p.config.doAuth(login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") {

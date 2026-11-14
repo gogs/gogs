@@ -8,7 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -38,7 +38,7 @@ type repoHeader struct {
 	ViewerIsStarring    bool `json:"viewerIsStarring"`
 }
 
-func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
+func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
 	owner := repoCtx.Owner
 	repo := repoCtx.Repo
 
@@ -80,7 +80,7 @@ func getRepoHeader(repoCtx *repoContext) (statusCode int, resp *repoHeader, err 
 	if repo.IsMirror {
 		mirror, err := database.GetMirrorByRepoID(repo.ID)
 		if err != nil {
-			log.Error("getRepoHeader: get mirror by repo ID %d: %v", repo.ID, err)
+			logger.Error("Failed to get mirror by repository ID", "repoID", repo.ID, "error", err)
 		} else if mirror != nil {
 			resp.MirrorOf = mirror.Address()
 		}
@@ -105,7 +105,7 @@ type repoCommit struct {
 	Parents []string            `json:"parents"`
 }
 
-func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCommit, err error) {
+func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCommit, err error) {
 	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -120,7 +120,7 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil
 		}
-		log.Error("getRepoCommit: cat-file commit %q in %q/%q: %v", commitID, owner.Name, repo.Name, err)
+		logger.Error("Failed to get commit", "commitID", commitID, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "cat-file commit")
 	}
 
@@ -128,7 +128,7 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, err := commit.ParentID(i)
 		if err != nil {
-			log.Error("getRepoCommit: parent ID %d for %q in %q/%q: %v", i, commitID, owner.Name, repo.Name, err)
+			logger.Error("Failed to get commit parent ID", "parentIndex", i, "commitID", commitID, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "parent ID")
 		}
 		parents[i] = sha.String()
@@ -139,7 +139,7 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 			Name:      s.Name,
 			Email:     s.Email,
 			When:      s.When.UTC(),
-			AvatarURL: tool.AvatarLink(s.Email),
+			AvatarURL: tool.AvatarLink(logger, s.Email),
 		}
 		if u, err := database.Handle.Users().GetByEmail(ctx, s.Email); err == nil && u != nil {
 			sig.ProfileURL = conf.Server.Subpath + "/" + u.Name
@@ -166,7 +166,7 @@ type repoWatchResponse struct {
 	WatchCount int `json:"watchCount"`
 }
 
-func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (statusCode int, resp *repoWatchResponse, err error) {
+func repoWatchAction(ctx context.Context, logger *logx.Logger, repoCtx *repoContext, watching bool) (statusCode int, resp *repoWatchResponse, err error) {
 	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -182,13 +182,13 @@ func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (
 		err = database.WatchRepo(repoCtx.Viewer.ID(), repo.ID, false)
 	}
 	if err != nil {
-		log.Error("repoWatchAction: set watching=%t for user %d on repo %d: %v", watching, repoCtx.Viewer.ID(), repo.ID, err)
+		logger.Error("Failed to update repository watch status", "watching", watching, "userID", repoCtx.Viewer.ID(), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "watch repo")
 	}
 
 	updated, err := database.Handle.Repositories().GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
-		log.Error("repoWatchAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
+		logger.Error("Failed to reload repository", "repoID", repo.ID, "repoName", repo.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoWatchResponse{
@@ -196,19 +196,19 @@ func repoWatchAction(ctx context.Context, repoCtx *repoContext, watching bool) (
 	}, nil
 }
 
-func postRepoWatch(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoWatchResponse, err error) {
-	return repoWatchAction(c.Request().Context(), repoCtx, true)
+func postRepoWatch(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoWatchResponse, err error) {
+	return repoWatchAction(c.Request().Context(), logger, repoCtx, true)
 }
 
-func deleteRepoWatch(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoWatchResponse, err error) {
-	return repoWatchAction(c.Request().Context(), repoCtx, false)
+func deleteRepoWatch(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoWatchResponse, err error) {
+	return repoWatchAction(c.Request().Context(), logger, repoCtx, false)
 }
 
 type repoStarResponse struct {
 	StarCount int `json:"starCount"`
 }
 
-func repoStarAction(ctx context.Context, repoCtx *repoContext, starring bool) (statusCode int, resp *repoStarResponse, err error) {
+func repoStarAction(ctx context.Context, logger *logx.Logger, repoCtx *repoContext, starring bool) (statusCode int, resp *repoStarResponse, err error) {
 	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -224,13 +224,13 @@ func repoStarAction(ctx context.Context, repoCtx *repoContext, starring bool) (s
 		err = database.StarRepo(repoCtx.Viewer.ID(), repo.ID, false)
 	}
 	if err != nil {
-		log.Error("repoStarAction: set starred=%t for user %d on repo %d: %v", starring, repoCtx.Viewer.ID(), repo.ID, err)
+		logger.Error("Failed to update repository star status", "starred", starring, "userID", repoCtx.Viewer.ID(), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "star repo")
 	}
 
 	updated, err := database.Handle.Repositories().GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
-		log.Error("repoStarAction: reload repo %d (%q): %v", repo.ID, repo.Name, err)
+		logger.Error("Failed to reload repository", "repoID", repo.ID, "repoName", repo.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reload repo")
 	}
 	return http.StatusOK, &repoStarResponse{
@@ -238,10 +238,10 @@ func repoStarAction(ctx context.Context, repoCtx *repoContext, starring bool) (s
 	}, nil
 }
 
-func postRepoStar(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoStarResponse, err error) {
-	return repoStarAction(c.Request().Context(), repoCtx, true)
+func postRepoStar(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoStarResponse, err error) {
+	return repoStarAction(c.Request().Context(), logger, repoCtx, true)
 }
 
-func deleteRepoStar(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoStarResponse, err error) {
-	return repoStarAction(c.Request().Context(), repoCtx, false)
+func deleteRepoStar(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoStarResponse, err error) {
+	return repoStarAction(c.Request().Context(), logger, repoCtx, false)
 }

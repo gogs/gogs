@@ -14,6 +14,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
@@ -342,7 +343,7 @@ func (r *Repository) UpdateRepoFile(ctx context.Context, doer *User, opts Update
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (r *Repository) GetDiffPreview(ctx context.Context, branch, treePath, content string) (*git.Diff, error) {
+func (r *Repository) GetDiffPreview(ctx context.Context, logger *logx.Logger, branch, treePath, content string) (*git.Diff, error) {
 	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
 	if isRepositoryGitPath(treePath) {
 		return nil, errors.Errorf("bad tree path %q", treePath)
@@ -382,7 +383,7 @@ func (r *Repository) GetDiffPreview(ctx context.Context, branch, treePath, conte
 		return nil, errors.Wrapf(err, "add %q", treePath)
 	}
 
-	diff, err := tmpRepo.DiffCached(ctx, commit.ID.String(), treePath, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	diff, err := tmpRepo.DiffCached(ctx, logger, commit.ID.String(), treePath, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
 	if err != nil {
 		return nil, errors.Newf("get diff: %v", err)
 	}

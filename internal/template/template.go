@@ -15,7 +15,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
@@ -31,8 +31,9 @@ var (
 	funcMapOnce sync.Once
 )
 
-// FuncMap returns a list of user-defined template functions.
-func FuncMap() []template.FuncMap {
+// FuncMap returns a list of user-defined template functions. The logger is
+// used by functions that log, since templates cannot pass one.
+func FuncMap(logger *logx.Logger) []template.FuncMap {
 	funcMapOnce.Do(func() {
 		funcMap = []template.FuncMap{map[string]any{
 			"BuildCommit": func() string {
@@ -68,7 +69,9 @@ func FuncMap() []template.FuncMap {
 			"LoadTimes": func(startTime time.Time) string {
 				return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 			},
-			"AvatarLink":       tool.AvatarLink,
+			"AvatarLink": func(email string) string {
+				return tool.AvatarLink(logger, email)
+			},
 			"AppendAvatarSize": tool.AppendAvatarSize,
 			"Safe":             Safe,
 			"Escape":           template.HTMLEscapeString,
@@ -102,15 +105,17 @@ func FuncMap() []template.FuncMap {
 				}
 				return str[start:end]
 			},
-			"Join":                  strings.Join,
-			"EllipsisString":        strx.Ellipsis,
-			"DiffFileTypeToStr":     DiffFileTypeToStr,
-			"DiffLineTypeToStr":     DiffLineTypeToStr,
-			"Sha1":                  Sha1,
-			"ShortSHA1":             tool.ShortSHA1,
-			"ActionContent2Commits": ActionContent2Commits,
-			"EscapePound":           EscapePound,
-			"RenderCommitMessage":   RenderCommitMessage,
+			"Join":              strings.Join,
+			"EllipsisString":    strx.Ellipsis,
+			"DiffFileTypeToStr": DiffFileTypeToStr,
+			"DiffLineTypeToStr": DiffLineTypeToStr,
+			"Sha1":              Sha1,
+			"ShortSHA1":         tool.ShortSHA1,
+			"ActionContent2Commits": func(act Actioner) *database.PushCommits {
+				return ActionContent2Commits(logger, act)
+			},
+			"EscapePound":         EscapePound,
+			"RenderCommitMessage": RenderCommitMessage,
 			"ThemeColorMetaTag": func() string {
 				return conf.UI.ThemeColorMetaTag
 			},
@@ -150,8 +155,8 @@ func Sha1(str string) string {
 	return cryptox.SHA1(str)
 }
 
-func ToUTF8WithErr(content []byte) (string, error) {
-	charsetLabel, err := tool.DetectEncoding(content)
+func ToUTF8WithErr(logger *logx.Logger, content []byte) (string, error) {
+	charsetLabel, err := tool.DetectEncoding(logger, content)
 	if err != nil {
 		return "", err
 	} else if charsetLabel == "UTF-8" {
@@ -246,10 +251,10 @@ func ActionIcon(opType int) string {
 	}
 }
 
-func ActionContent2Commits(act Actioner) *database.PushCommits {
+func ActionContent2Commits(logger *logx.Logger, act Actioner) *database.PushCommits {
 	push := database.NewPushCommits()
 	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
-		log.Error("Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
+		logger.Error("Failed to unmarshal action content", "content", act.GetContent(), "error", err)
 	}
 	return push
 }

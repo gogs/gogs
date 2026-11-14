@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 )
 
-func TriggerTask(c *macaron.Context) {
+func TriggerTask(logger *logx.Logger, c *macaron.Context) {
 	branch := c.Query("branch")
 	pusherID := c.QueryInt64("pusher")
 	secret := c.Query("secret")
@@ -28,7 +28,7 @@ func TriggerTask(c *macaron.Context) {
 			c.Error(http.StatusBadRequest, "Owner does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
-			log.Error("Failed to get user [name: %s]: %v", username, err)
+			logger.Error("Failed to get user", "userName", username, "error", err)
 		}
 		return
 	}
@@ -46,7 +46,7 @@ func TriggerTask(c *macaron.Context) {
 			c.Error(http.StatusBadRequest, "Repository does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
-			log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
+			logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", reponame, "error", err)
 		}
 		return
 	}
@@ -57,14 +57,14 @@ func TriggerTask(c *macaron.Context) {
 			c.Error(http.StatusBadRequest, "Pusher does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
-			log.Error("Failed to get user [id: %d]: %v", pusherID, err)
+			logger.Error("Failed to get user", "userID", pusherID, "error", err)
 		}
 		return
 	}
 
-	log.Trace("TriggerTask: %s/%s@%s by %q", owner.Name, repo.Name, branch, pusher.Name)
+	logger.Debug("Task triggered", "ownerName", owner.Name, "repoName", repo.Name, "branch", branch, "pusherName", pusher.Name)
 
 	go database.HookQueue.Add(repo.ID)
-	go database.AddTestPullRequestTask(pusher, repo.ID, branch, true)
+	go database.AddTestPullRequestTask(logger, pusher, repo.ID, branch, true)
 	c.Status(http.StatusAccepted)
 }

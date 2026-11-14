@@ -6,8 +6,6 @@ import (
 	"path"
 	"time"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -162,13 +160,13 @@ func CompareDiff(c *context.Context) {
 	if git.IsEmptyID(beforeCommitID) {
 		beforeCommitID, err = c.Repo.GitRepo.MergeBase(c.Req.Context(), git.RefsHeads+c.Repo.Repository.DefaultBranch, afterCommitID)
 		if err != nil && !git.IsErrNoMergeBase(err) {
-			log.Error("Failed to get merge base: %v", err)
+			c.Logger.Error("Failed to get merge base", "error", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		} else if err != nil || beforeCommitID == afterCommitID {
 			objectFormat, err := c.Repo.GitRepo.ObjectFormat(c.Req.Context())
 			if err != nil {
-				log.Error("Failed to get object format: %v", err)
+				c.Logger.Error("Failed to get object format", "error", err)
 				c.Status(http.StatusInternalServerError)
 				return
 			}
@@ -177,7 +175,7 @@ func CompareDiff(c *context.Context) {
 
 			commits, err = c.Repo.GitRepo.RevList(c.Req.Context(), []string{afterCommitID})
 			if err != nil {
-				log.Error("Failed to list commits: %v", err)
+				c.Logger.Error("Failed to list commits", "error", err)
 				c.Status(http.StatusInternalServerError)
 				return
 			}
@@ -188,7 +186,7 @@ func CompareDiff(c *context.Context) {
 			c.NotFound()
 			return
 		} else if err != nil {
-			log.Error("Failed to get base commit: %v", err)
+			c.Logger.Error("Failed to get base commit", "error", err)
 			c.Status(http.StatusInternalServerError)
 			return
 		}
@@ -205,7 +203,7 @@ func CompareDiff(c *context.Context) {
 	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
 	defer cancel()
 	diff, err := c.Repo.GitRepo.Diff(ctx,
-		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		c.Logger, afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
@@ -105,7 +105,7 @@ func NewMailerIssue(issue *Issue) email.Issue {
 // This functions sends two list of emails:
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
-func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string) error {
+func mailIssueCommentToParticipants(logger *logx.Logger, issue *Issue, doer *User, mentions []string) error {
 	ctx := context.TODO()
 
 	if !conf.User.EnableEmailNotification {
@@ -161,7 +161,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 			names = append(names, issue.Assignee.Name)
 		}
 	}
-	if err = email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+	if err = email.SendIssueCommentMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue comment mail")
 	}
 
@@ -180,7 +180,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	if err != nil {
 		return errors.Wrap(err, "get mailable emails by usernames")
 	}
-	if err = email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+	if err = email.SendIssueMentionMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue mention mail")
 	}
 	return nil
@@ -188,14 +188,14 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 // MailParticipants sends new issue thread created emails to repository watchers
 // and mentioned people.
-func (issue *Issue) MailParticipants() (err error) {
+func (issue *Issue) MailParticipants(logger *logx.Logger) (err error) {
 	mentions := markup.FindAllMentions(issue.Content)
 	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
 		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
-	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {
-		log.Error("mailIssueCommentToParticipants: %v", err)
+	if err = mailIssueCommentToParticipants(logger, issue, issue.Poster, mentions); err != nil {
+		logger.Error("Failed to mail participants", "error", err)
 	}
 
 	return nil

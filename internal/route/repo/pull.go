@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -47,7 +45,7 @@ func parseBaseRepository(c *context.Context) *database.Repository {
 		return nil
 	}
 
-	if !baseRepo.CanBeForked() || !baseRepo.HasAccess(c.User.ID) {
+	if !baseRepo.CanBeForked() || !baseRepo.HasAccess(c.Logger, c.User.ID) {
 		c.NotFound()
 		return nil
 	}
@@ -131,7 +129,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err = database.ForkRepository(c.Req.Context(), c.User, ctxUser, baseRepo, f.RepoName, f.Description)
+	repo, err = database.ForkRepository(c.Req.Context(), c.Logger, c.User, ctxUser, baseRepo, f.RepoName, f.Description)
 	if err != nil {
 		c.Data["Err_RepoName"] = true
 		switch {
@@ -147,7 +145,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	log.Trace("Repository forked from '%s' -> '%s'", baseRepo.FullName(), repo.FullName())
+	c.Logger.Debug("Repository forked", "baseRepo", baseRepo.FullName(), "forkRepo", repo.FullName())
 	c.Redirect(repo.Link())
 }
 
@@ -357,7 +355,7 @@ func ViewPullFiles(c *context.Context) {
 	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
 	defer cancel()
 	diff, err := diffGitRepo.Diff(ctx,
-		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		c.Logger, endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: startCommitID},
 	)
 	if err != nil {
@@ -425,12 +423,12 @@ func MergePullRequest(c *context.Context) {
 
 	pr.Issue = issue
 	pr.Issue.Repo = c.Repo.Repository
-	if err = pr.Merge(c.Req.Context(), c.User, c.Repo.GitRepo, database.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
+	if err = pr.Merge(c.Req.Context(), c.Logger, c.User, c.Repo.GitRepo, database.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
 		c.Error(err, "merge")
 		return
 	}
 
-	log.Trace("Pull request merged: %d", pr.ID)
+	c.Logger.Debug("Pull request merged", "pullRequestID", pr.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pr.Index, 10))
 }
 
@@ -443,7 +441,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	// same repo: master...feature
 	infos := strings.Split(c.Params("*"), "...")
 	if len(infos) != 2 {
-		log.Trace("ParseCompareInfo[%d]: not enough compared refs information %s", baseRepo.ID, infos)
+		c.Logger.Debug("Not enough compared refs information", "baseRepoID", baseRepo.ID, "refs", infos)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -502,7 +500,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			c.Error(err, "get forked repository")
 			return nil, nil, nil, nil, "", ""
 		} else if !has {
-			log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have fork or in same repository", baseRepo.ID)
+			c.Logger.Debug("Head user has no fork of the base repository", "baseRepoID", baseRepo.ID)
 			c.NotFound()
 			return nil, nil, nil, nil, "", ""
 		}
@@ -518,7 +516,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 	}
 
 	if !database.Handle.Permissions().Authorize(
-		c.Req.Context(),
+		c.Req.Context(), c.Logger,
 		c.User.ID,
 		headRepo.ID,
 		database.AccessModeWrite,
@@ -527,7 +525,7 @@ func ParseCompareInfo(c *context.Context) (*database.User, *database.Repository,
 			Private: headRepo.IsPrivate,
 		},
 	) && !c.User.IsAdmin {
-		log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have write access or site admin", baseRepo.ID)
+		c.Logger.Debug("User has no write access to the head repository", "baseRepoID", baseRepo.ID)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -592,7 +590,7 @@ func PrepareCompareDiff(
 	ctx, cancel := git.WithTimeout(c.Req.Context(), time.Duration(conf.Git.Timeout.Diff)*time.Second)
 	defer cancel()
 	diff, err := headGitRepo.Diff(ctx,
-		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		c.Logger, headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: meta.MergeBase},
 	)
 	if err != nil {
@@ -753,14 +751,14 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 	}
 	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
 	// instead of 500.
-	if err := database.NewPullRequest(c.Req.Context(), repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
+	if err := database.NewPullRequest(c.Req.Context(), c.Logger, repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
 		c.Error(err, "new pull request")
 		return
-	} else if err := pullRequest.PushToBaseRepo(c.Req.Context()); err != nil {
+	} else if err := pullRequest.PushToBaseRepo(c.Req.Context(), c.Logger); err != nil {
 		c.Error(err, "push to base repository")
 		return
 	}
 
-	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)
+	c.Logger.Debug("Pull request created", "repoID", repo.ID, "issueID", pullIssue.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + strconv.FormatInt(pullIssue.Index, 10))
 }

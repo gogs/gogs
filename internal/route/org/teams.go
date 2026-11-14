@@ -5,8 +5,6 @@ import (
 	"path"
 	"strconv"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
@@ -86,7 +84,7 @@ func TeamsAction(c *context.Context) {
 		if database.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
-			log.Error("Action(%s): %v", c.Params(":action"), err)
+			c.Logger.Error("Failed to perform team action", "action", c.Params(":action"), "error", err)
 			c.JSONSuccess(map[string]any{
 				"ok":  false,
 				"err": err.Error(),
@@ -176,7 +174,7 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		}
 		return
 	}
-	log.Trace("Team created: %s/%s", c.Org.Organization.Name, t.Name)
+	c.Logger.Debug("Team created", "orgName", c.Org.Organization.Name, "teamName", t.Name)
 	c.Redirect(c.Org.OrgLink + "/teams/" + t.LowerName)
 }
 

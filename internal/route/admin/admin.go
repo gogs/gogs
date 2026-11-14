@@ -114,7 +114,7 @@ func Dashboard(c *context.Context) {
 	c.Data["BuildTime"] = conf.BuildTime
 	c.Data["BuildCommit"] = conf.BuildCommit
 
-	c.Data["Stats"] = database.GetStatistic(c.Req.Context())
+	c.Data["Stats"] = database.GetStatistic(c.Req.Context(), c.Logger)
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
@@ -146,19 +146,19 @@ func Operation(c *context.Context) {
 		err = database.DeleteRepositoryArchives()
 	case CleanMissingRepos:
 		success = c.Tr("admin.dashboard.delete_missing_repos_success")
-		err = database.DeleteMissingRepositories()
+		err = database.DeleteMissingRepositories(c.Logger)
 	case GitGCRepos:
 		success = c.Tr("admin.dashboard.git_gc_repos_success")
 		err = database.GitGcRepos()
 	case SyncSSHAuthorizedKey:
 		success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
-		err = database.RewriteAuthorizedKeys()
+		err = database.RewriteAuthorizedKeys(c.Logger)
 	case SyncRepositoryHooks:
 		success = c.Tr("admin.dashboard.resync_all_hooks_success")
 		err = database.SyncRepositoryHooks()
 	case ReinitMissingRepository:
 		success = c.Tr("admin.dashboard.reinit_missing_repos_success")
-		err = database.ReinitMissingRepositories()
+		err = database.ReinitMissingRepositories(c.Logger)
 	}
 
 	if err != nil {
@@ -172,7 +172,7 @@ func Operation(c *context.Context) {
 func SendTestMail(c *context.Context) {
 	emailAddr := c.Query("email")
 	// Send a test email to the user's email address and redirect back to Config
-	if err := email.SendTestMail(emailAddr); err != nil {
+	if err := email.SendTestMail(c.Logger, emailAddr); err != nil {
 		c.Flash.Error(c.Tr("admin.config.email.test_mail_failed", emailAddr, err))
 	} else {
 		c.Flash.Info(c.Tr("admin.config.email.test_mail_sent", emailAddr))

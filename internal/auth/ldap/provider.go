@@ -3,6 +3,8 @@ package ldap
 import (
 	"fmt"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/auth"
 )
 
@@ -22,8 +24,8 @@ func NewProvider(directBind bool, cfg *Config) auth.Provider {
 
 // Authenticate queries if login/password is valid against the LDAP directory pool,
 // and returns queried information when succeeded.
-func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
-	username, fn, sn, email, isAdmin, succeed := p.config.searchEntry(login, password, p.directBind)
+func (p *Provider) Authenticate(logger *logx.Logger, login, password string) (*auth.ExternalAccount, error) {
+	username, fn, sn, email, isAdmin, succeed := p.config.searchEntry(logger, login, password, p.directBind)
 	if !succeed {
 		return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 	}

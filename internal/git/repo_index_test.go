@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"unknwon.dev/x/logx"
 )
 
 // setupBareRepoWithAlternates returns an empty bare repository that reads
@@ -205,7 +206,7 @@ func TestRepository_DiffCached(t *testing.T) {
 		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: path, Content: strings.NewReader("changed\n")}))
 	}
 
-	diff, err := r.DiffCached(ctx, parent.ID.String(), "README.txt", 0, 0, 0)
+	diff, err := r.DiffCached(ctx, logx.NewNoopLogger(), parent.ID.String(), "README.txt", 0, 0, 0)
 	require.NoError(t, err)
 	require.Len(t, diff.Files, 1)
 	assert.Equal(t, "README.txt", diff.Files[0].Name)
@@ -220,7 +221,7 @@ func TestRepository_DiffCached(t *testing.T) {
 		require.NoError(t, r.ReadTree(ctx, rev))
 		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "a.dat", Content: strings.NewReader("b\n")}))
 
-		diff, err := r.DiffCached(ctx, rev, "a.dat", 0, 0, 0)
+		diff, err := r.DiffCached(ctx, logx.NewNoopLogger(), rev, "a.dat", 0, 0, 0)
 		require.NoError(t, err)
 		require.Len(t, diff.Files, 1)
 		assert.True(t, diff.Files[0].IsBinary())

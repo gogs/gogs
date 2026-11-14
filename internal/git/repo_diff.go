@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
 )
 
 // DiffOptions contains optional arguments for parsing diff.
@@ -18,7 +19,7 @@ type DiffOptions struct {
 }
 
 // Diff returns a parsed diff object between given commits of the repository.
-func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (*Diff, error) {
+func (r *Repository) Diff(ctx context.Context, logger *logx.Logger, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (*Diff, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.Diff")
 	defer span.End()
 
@@ -47,23 +48,23 @@ func (r *Repository) Diff(ctx context.Context, rev string, maxFiles, maxFileLine
 	} else {
 		args = []string{"diff", "--full-index", "-M", opt.Base, "--end-of-options", rev}
 	}
-	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
+	return r.parseDiff(ctx, logger, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 
 // DiffCached returns a parsed diff of given path between the revision and the
 // index of the repository, following the ".gitattributes" of the revision.
-func (r *Repository) DiffCached(ctx context.Context, rev, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+func (r *Repository) DiffCached(ctx context.Context, logger *logx.Logger, rev, path string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.DiffCached")
 	defer span.End()
 
 	args := []string{"--attr-source=" + rev, "diff", "--cached", "--end-of-options", rev, "--", path}
-	return r.parseDiff(ctx, args, nil, maxFiles, maxFileLines, maxLineChars)
+	return r.parseDiff(ctx, logger, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 
-func (r *Repository) parseDiff(ctx context.Context, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+func (r *Repository) parseDiff(ctx context.Context, logger *logx.Logger, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
 	stdout, w := io.Pipe()
 	done := make(chan streamParseDiffResult)
-	go streamParseDiff(stdout, done, maxFiles, maxFileLines, maxLineChars)
+	go streamParseDiff(logger, stdout, done, maxFiles, maxFileLines, maxLineChars)
 
 	err := pipe(ctx, r.path, args, envs, w)
 	_ = w.Close() // Close writer to exit parsing goroutine

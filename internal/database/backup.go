@@ -16,7 +16,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
@@ -31,13 +31,13 @@ func getTableType(t any) string {
 }
 
 // DumpDatabase dumps all data from database to file system in JSON Lines format.
-func DumpDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool) error {
+func DumpDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath string, verbose bool) error {
 	err := os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = dumpLegacyTables(ctx, dirPath, verbose)
+	err = dumpLegacyTables(ctx, logger, dirPath, verbose)
 	if err != nil {
 		return errors.Wrap(err, "dump legacy tables")
 	}
@@ -51,7 +51,7 @@ func DumpDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool
 
 		tableName := getTableType(table)
 		if verbose {
-			log.Trace("Dumping table %q...", tableName)
+			logger.Debug("Dumping table", "tableName", tableName)
 		}
 
 		err := func() error {
@@ -107,7 +107,7 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 	return rows.Err()
 }
 
-func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
+func dumpLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string, verbose bool) error {
 	// Purposely create a local variable to not modify global variable
 	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
@@ -119,7 +119,7 @@ func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 
 		tableName := getTableType(table)
 		if verbose {
-			log.Trace("Dumping table %q...", tableName)
+			logger.Debug("Dumping table", "tableName", tableName)
 		}
 
 		tableFile := filepath.Join(dirPath, tableName+".json")
@@ -140,8 +140,8 @@ func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 }
 
 // ImportDatabase imports data from backup archive in JSON Lines format.
-func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool) error {
-	err := importLegacyTables(ctx, dirPath, verbose)
+func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath string, verbose bool) error {
+	err := importLegacyTables(ctx, logger, dirPath, verbose)
 	if err != nil {
 		return errors.Wrap(err, "import legacy tables")
 	}
@@ -157,12 +157,12 @@ func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bo
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
 			if !osx.IsFile(tableFile) {
-				log.Info("Skipped table %q", tableName)
+				logger.Info("Skipped table", "tableName", tableName)
 				return nil
 			}
 
 			if verbose {
-				log.Trace("Importing table %q...", tableName)
+				logger.Debug("Importing table", "tableName", tableName)
 			}
 
 			f, err := os.Open(tableFile)
@@ -228,7 +228,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 	return nil
 }
 
-func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
+func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string, verbose bool) error {
 	snakeMapper := core.SnakeMapper{}
 
 	skipInsertProcessors := map[string]bool{
@@ -252,7 +252,7 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 		}
 
 		if verbose {
-			log.Trace("Importing table %q...", tableName)
+			logger.Debug("Importing table", "tableName", tableName)
 		}
 
 		if err := x.DropTables(table); err != nil {
@@ -284,20 +284,20 @@ func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error
 				ClosedDateUnix int64
 			}
 			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
-				log.Error("Failed to unmarshal to map: %v", err)
+				logger.Error("Failed to unmarshal to map", "error", err)
 			}
 
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
 				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
-					log.Error("Failed to reset '%s.created_unix': %v", rawTableName, err)
+					logger.Error("Failed to reset 'created_unix'", "tableName", rawTableName, "error", err)
 				}
 			}
 
 			switch rawTableName {
 			case "milestone":
 				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
-					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
+					logger.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix'", "error", err)
 				}
 			}
 		}

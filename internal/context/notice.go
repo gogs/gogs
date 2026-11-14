@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
@@ -22,14 +20,14 @@ func (c *Context) renderNoticeBanner() {
 
 	f, err := os.Open(fpath)
 	if err != nil {
-		log.Error("Failed to open file %q: %v", fpath, err)
+		c.Logger.Error("Failed to open notice banner file", "path", fpath, "error", err)
 		return
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		log.Error("Failed to stat file %q: %v", fpath, err)
+		c.Logger.Error("Failed to stat notice banner file", "path", fpath, "error", err)
 		return
 	}
 
@@ -37,20 +35,20 @@ func (c *Context) renderNoticeBanner() {
 	var maxSize int64 = 1024
 
 	if fi.Size() > maxSize { // Refuse to print very long messages
-		log.Warn("Notice banner file %q size too large [%d > %d]: refusing to render", fpath, fi.Size(), maxSize)
+		c.Logger.Warn("Refusing to render notice banner file that is too large", "path", fpath, "size", fi.Size(), "maxSize", maxSize)
 		return
 	}
 
 	buf := make([]byte, maxSize)
 	n, err := f.Read(buf)
 	if err != nil {
-		log.Error("Failed to read file %q: %v", fpath, err)
+		c.Logger.Error("Failed to read notice banner file", "path", fpath, "error", err)
 		return
 	}
 	buf = buf[:n]
 
 	if !tool.IsTextFile(buf) {
-		log.Warn("Notice banner file %q does not appear to be a text file: aborting", fpath)
+		c.Logger.Warn("Refusing to render notice banner file that does not appear to be text", "path", fpath)
 		return
 	}
 

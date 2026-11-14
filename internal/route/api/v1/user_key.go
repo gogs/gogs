@@ -73,13 +73,13 @@ type createPublicKeyRequest struct {
 }
 
 func createUserPublicKey(c *context.APIContext, form createPublicKeyRequest, uid int64) {
-	content, err := database.CheckPublicKeyString(form.Key)
+	content, err := database.CheckPublicKeyString(c.Logger, form.Key)
 	if err != nil {
 		handleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := database.AddPublicKey(uid, form.Title, content)
+	key, err := database.AddPublicKey(c.Logger, uid, form.Title, content)
 	if err != nil {
 		handleAddKeyError(c, err)
 		return
@@ -93,7 +93,7 @@ func createPublicKey(c *context.APIContext, form createPublicKeyRequest) {
 }
 
 func deletePublicKey(c *context.APIContext) {
-	if err := database.DeletePublicKey(c.User, c.ParamsInt64(":id")); err != nil {
+	if err := database.DeletePublicKey(c.Logger, c.User, c.ParamsInt64(":id")); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key."))
 		} else {

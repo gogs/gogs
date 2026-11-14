@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"unknwon.dev/x/logx"
 )
 
 func TestParseRemoteUpdateOutput(t *testing.T) {
@@ -32,7 +33,7 @@ From https://try.gogs.io/unknwon/upsteam
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expResults, parseRemoteUpdateOutput(test.output))
+			assert.Equal(t, test.expResults, parseRemoteUpdateOutput(logx.NewNoopLogger(), test.output))
 		})
 	}
 }

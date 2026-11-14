@@ -8,30 +8,13 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 )
-
-func newLogWriter() (logger.Writer, error) {
-	sec := conf.File.Section("log.gorm")
-	w, err := log.NewFileWriter(
-		filepath.Join(conf.Log.RootPath, "gorm.log"),
-		log.FileRotationConfig{
-			Rotate:  sec.Key("ROTATE").MustBool(true),
-			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
-			MaxSize: sec.Key("MAX_SIZE").MustInt64(100) * 1024 * 1024,
-			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, `create "gorm.log"`)
-	}
-	return &dbx.Logger{Writer: w}, nil
-}
 
 // Tables is the list of struct-to-table mappings.
 //
@@ -47,17 +30,14 @@ var Tables = []any{
 }
 
 // NewConnection returns a new database connection with the given logger.
-func NewConnection(w logger.Writer) (*gorm.DB, error) {
-	level := logger.Info
+func NewConnection(logger *logx.Logger) (*gorm.DB, error) {
+	level := gormlogger.Info
 	if conf.IsProdMode() {
-		level = logger.Warn
+		level = gormlogger.Warn
 	}
 
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
-	logger.Default = logger.New(w, logger.Config{
-		SlowThreshold: 100 * time.Millisecond,
-		LogLevel:      level,
-	})
+	gormlogger.Default = dbx.NewLogger(logger.Scoped("gorm"), level, 100*time.Millisecond)
 
 	db, err := dbx.OpenDB(
 		conf.Database,
@@ -108,7 +88,7 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "auto migrate %q", name)
 		}
-		log.Trace("Auto migrated %q", name)
+		logger.Debug("Auto migrated table", "tableName", name)
 	}
 
 	loadedLoginSourceFilesStore, err = loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)
@@ -117,13 +97,27 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	}
 
 	// Initialize the database handle.
-	Handle = &DB{db: db}
+	Handle = &DB{db: db, logger: logger}
 	return db, nil
 }
 
 // DB is the database handler for the storage layer.
 type DB struct {
 	db *gorm.DB
+	// logger is for methods whose signatures are fixed by xorm hooks or
+	// templates, so they cannot receive a logger from their caller.
+	logger *logx.Logger
+}
+
+// handleLogger returns the logger of the global database handle. Only methods
+// whose signatures are fixed by xorm hooks or templates use it, because their
+// callers cannot pass a logger. The handle is nil during installation mode and
+// in tests, which get a no-op logger.
+func handleLogger() *logx.Logger {
+	if Handle == nil || Handle.logger == nil {
+		return logx.NewNoopLogger()
+	}
+	return Handle.logger
 }
 
 // Handle is the global database handle. It could be `nil` during the

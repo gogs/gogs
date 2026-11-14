@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
@@ -120,7 +119,7 @@ func NewTestEngine() error {
 	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
-func SetEngine() (*gorm.DB, error) {
+func SetEngine(logger *logx.Logger) (*gorm.DB, error) {
 	var err error
 	x, err = getEngine()
 	if err != nil {
@@ -133,55 +132,109 @@ func SetEngine() (*gorm.DB, error) {
 
 	x.SetMapper(core.GonicMapper{})
 
-	var logPath string
-	if conf.HookMode {
-		logPath = filepath.Join(conf.Log.RootPath, "hooks", "xorm.log")
-	} else {
-		logPath = filepath.Join(conf.Log.RootPath, "xorm.log")
-	}
-	sec := conf.File.Section("log.xorm")
-	fileWriter, err := log.NewFileWriter(logPath,
-		log.FileRotationConfig{
-			Rotate:  sec.Key("ROTATE").MustBool(true),
-			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
-			MaxSize: sec.Key("MAX_SIZE").MustInt64(100) * 1024 * 1024,
-			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
-		},
-	)
-	if err != nil {
-		return nil, errors.Newf("create 'xorm.log': %v", err)
-	}
-
 	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
 	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
+	xormLevel := core.LOG_DEBUG
 	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
-	} else {
-		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
+		xormLevel = core.LOG_ERR
 	}
+	x.SetLogger(&xormLogger{logger: logger.Scoped("xorm"), level: xormLevel})
 	x.ShowSQL(true)
 
-	var gormLogger logger.Writer
-	if conf.HookMode {
-		gormLogger = &dbx.Logger{Writer: fileWriter}
-	} else {
-		gormLogger, err = newLogWriter()
-		if err != nil {
-			return nil, errors.Wrap(err, "new log writer")
-		}
-	}
-	return NewConnection(gormLogger)
+	return NewConnection(logger)
 }
 
-func NewEngine() error {
-	db, err := SetEngine()
+// xormLogger sends xorm's logs through the process logger, one structured
+// line per query.
+type xormLogger struct {
+	logger  *logx.Logger
+	level   core.LogLevel
+	showSQL bool
+}
+
+var _ core.ILogger = (*xormLogger)(nil)
+
+// maxXormArgLength caps each logged query argument, so a large value such as a
+// webhook payload does not fill the log.
+const maxXormArgLength = 200
+
+func (l *xormLogger) log(level core.LogLevel, msg string) {
+	if level < l.level {
+		return
+	}
+	switch level {
+	case core.LOG_ERR:
+		l.logger.Error(msg)
+	case core.LOG_WARNING:
+		l.logger.Warn(msg)
+	default:
+		// xorm logs queries at its info level, which is debug output for Gogs.
+		l.logger.Debug(msg)
+	}
+}
+
+func (l *xormLogger) Debug(v ...any) { l.log(core.LOG_DEBUG, fmt.Sprint(v...)) }
+func (l *xormLogger) Debugf(format string, v ...any) {
+	l.log(core.LOG_DEBUG, fmt.Sprintf(format, v...))
+}
+func (l *xormLogger) Error(v ...any)                 { l.log(core.LOG_ERR, fmt.Sprint(v...)) }
+func (l *xormLogger) Errorf(format string, v ...any) { l.log(core.LOG_ERR, fmt.Sprintf(format, v...)) }
+func (l *xormLogger) Info(v ...any)                  { l.log(core.LOG_INFO, fmt.Sprint(v...)) }
+func (l *xormLogger) Warn(v ...any)                  { l.log(core.LOG_WARNING, fmt.Sprint(v...)) }
+func (l *xormLogger) Warnf(format string, v ...any) {
+	l.log(core.LOG_WARNING, fmt.Sprintf(format, v...))
+}
+
+func (l *xormLogger) Infof(format string, v ...any) {
+	if l.level > core.LOG_INFO {
+		return
+	}
+	// xorm logs every query as "[SQL] %v %#v" with the query and its arguments.
+	if strings.HasPrefix(format, "[SQL] ") && len(v) > 0 {
+		attrs := []any{"sql", v[0]}
+		if args, ok := v[len(v)-1].([]any); ok && len(v) > 1 {
+			attrs = append(attrs, "args", formatXormArgs(args))
+		}
+		l.logger.Debug("Query", attrs...)
+		return
+	}
+	l.log(core.LOG_INFO, fmt.Sprintf(format, v...))
+}
+
+func formatXormArgs(args []any) string {
+	parts := make([]string, len(args))
+	for i, arg := range args {
+		s, ok := arg.(string)
+		if !ok {
+			parts[i] = fmt.Sprintf("%v", arg)
+			continue
+		}
+		if len(s) > maxXormArgLength {
+			s = fmt.Sprintf("%s... (%d bytes)", s[:maxXormArgLength], len(s))
+		}
+		parts[i] = strconv.Quote(s)
+	}
+	return "[" + strings.Join(parts, ", ") + "]"
+}
+
+func (l *xormLogger) Level() core.LogLevel      { return l.level }
+func (l *xormLogger) SetLevel(lv core.LogLevel) { l.level = lv }
+
+func (l *xormLogger) ShowSQL(show ...bool) {
+	l.showSQL = len(show) == 0 || show[0]
+}
+
+func (l *xormLogger) IsShowSQL() bool { return l.showSQL }
+
+func NewEngine(logger *logx.Logger) error {
+	db, err := SetEngine(logger)
 	if err != nil {
 		return err
 	}
 
-	if err = migrations.Migrate(db); err != nil {
+	if err = migrations.Migrate(logger, db); err != nil {
 		return errors.Newf("migrate: %v", err)
 	}
 
@@ -203,11 +256,11 @@ type Statistic struct {
 	}
 }
 
-func GetStatistic(ctx context.Context) (stats Statistic) {
+func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	stats.Counter.User = Handle.Users().Count(ctx)
 	stats.Counter.Org = CountOrganizations()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
-	stats.Counter.Repo = CountRepositories(true)
+	stats.Counter.Repo = CountRepositories(logger, true)
 	stats.Counter.Watch, _ = x.Count(new(Watch))
 	stats.Counter.Star, _ = x.Count(new(Star))
 	stats.Counter.Action, _ = x.Count(new(Action))

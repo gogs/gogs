@@ -15,7 +15,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -96,7 +96,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				return
 			}
 
-			log.Trace("Username changed: %s -> %s", c.User.Name, f.Name)
+			c.Logger.Debug("Username changed", "oldName", c.User.Name, "newName", f.Name)
 		}
 	}
 
@@ -241,7 +241,7 @@ func SettingsEmails(c *context.Context) {
 	c.Success(tmplUserSettingsEmail)
 }
 
-func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User) {
+func parseUserFromCode(ctx gocontext.Context, logger *logx.Logger, code string) (user *database.User) {
 	if len(code) <= tool.TimeLimitCodeLength {
 		return nil
 	}
@@ -251,14 +251,14 @@ func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User)
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			log.Error("parseUserFromCode: get user by name %q: %v", string(b), err)
+			logger.Error("Failed to get user by name", "userName", string(b), "error", err)
 		}
 	}
 	return nil
 }
 
-func verifyActiveEmailCode(ctx gocontext.Context, code, email string) *database.EmailAddress {
-	if user := parseUserFromCode(ctx, code); user != nil {
+func verifyActiveEmailCode(ctx gocontext.Context, logger *logx.Logger, code, email string) *database.EmailAddress {
+	if user := parseUserFromCode(ctx, logger, code); user != nil {
 		if userx.VerifyActivateCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 			emailAddress, err := database.Handle.Users().GetEmail(ctx, user.ID, email, false)
 			if err == nil {
@@ -273,14 +273,14 @@ func ActivateEmail(c *context.Context) {
 	code := c.Query("code")
 	emailAddr := c.Query("email")
 
-	if email := verifyActiveEmailCode(c.Req.Context(), code, emailAddr); email != nil {
+	if email := verifyActiveEmailCode(c.Req.Context(), c.Logger, code, emailAddr); email != nil {
 		err := database.Handle.Users().MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
 		if err != nil {
 			c.Error(err, "activate email")
 			return
 		}
 
-		log.Trace("Email activated: %s", email.Email)
+		c.Logger.Debug("Email activated", "email", email.Email)
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
 
@@ -327,12 +327,12 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Send confirmation email
 	if conf.Auth.RequireEmailConfirmation {
-		if err := email.SendActivateEmailMail(c.Context, database.NewMailerUser(c.User), f.Email); err != nil {
-			log.Error("Failed to send activate email mail: %v", err)
+		if err := email.SendActivateEmailMail(c.Logger, c.Context, database.NewMailerUser(c.User), f.Email); err != nil {
+			c.Logger.Error("Failed to send activate email mail", "error", err)
 		}
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
-			log.Error("Set cache 'MailResendLimit' failed: %v", err)
+			c.Logger.Error("Failed to set mail resend limit cache", "error", err)
 		}
 		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", f.Email, conf.Auth.ActivateCodeLives/60))
 	} else {
@@ -394,7 +394,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		return
 	}
 
-	content, err := database.CheckPublicKeyString(f.Content)
+	content, err := database.CheckPublicKeyString(c.Logger, f.Content)
 	if err != nil {
 		if database.IsErrKeyUnableVerify(err) {
 			c.Flash.Info(c.Tr("form.unable_verify_ssh_key"))
@@ -405,7 +405,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		}
 	}
 
-	if _, err = database.AddPublicKey(c.User.ID, f.Title, content); err != nil {
+	if _, err = database.AddPublicKey(c.Logger, c.User.ID, f.Title, content); err != nil {
 		c.Data["HasError"] = true
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
@@ -425,7 +425,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 }
 
 func DeleteSSHKey(c *context.Context) {
-	if err := database.DeletePublicKey(c.User, c.QueryInt64("id")); err != nil {
+	if err := database.DeletePublicKey(c.Logger, c.User, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeletePublicKey: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("settings.ssh_key_deletion_success"))
@@ -451,7 +451,7 @@ func SettingsSecurity(c *context.Context) {
 }
 
 func SettingsTwoFactorEnable(c *context.Context) {
-	if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+	if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -521,7 +521,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {
-	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -540,7 +540,7 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
-	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -555,7 +555,7 @@ func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
 }
 
 func SettingsTwoFactorDisable(c *context.Context) {
-	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -596,7 +596,7 @@ func SettingsLeaveRepo(c *context.Context) {
 		return
 	}
 
-	if err = repo.DeleteCollaboration(c.User.ID); err != nil {
+	if err = repo.DeleteCollaboration(c.Logger, c.User.ID); err != nil {
 		c.Errorf(err, "delete collaboration")
 		return
 	}
@@ -705,7 +705,7 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := database.Handle.Users().Authenticate(c.Req.Context(), c.Logger, c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), http.StatusUnauthorized, tmplUserSettingsDelete, nil)
 			} else {
@@ -726,7 +726,7 @@ func SettingsDelete(c *context.Context) {
 				c.Errorf(err, "delete user")
 			}
 		} else {
-			log.Trace("Account deleted: %s", c.User.Name)
+			c.Logger.Debug("Account deleted", "userName", c.User.Name)
 			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return

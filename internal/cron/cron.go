@@ -1,11 +1,11 @@
 package cron
 
 import (
+	"context"
 	"time"
 
-	log "unknwon.dev/clog/v2"
-
 	"github.com/gogs/cron"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -13,53 +13,53 @@ import (
 
 var c = cron.New()
 
-func NewContext() {
+func NewContext(logger *logx.Logger) {
 	var (
 		entry *cron.Entry
 		err   error
 	)
 	if conf.Cron.UpdateMirror.Enabled {
-		entry, err = c.AddFunc("Update mirrors", conf.Cron.UpdateMirror.Schedule, database.MirrorUpdate)
+		entry, err = c.AddFunc("Update mirrors", conf.Cron.UpdateMirror.Schedule, func() { database.MirrorUpdate(logger) })
 		if err != nil {
-			log.Fatal("Cron.(update mirrors): %v", err)
+			logger.FatalContext(context.Background(), "Failed to add cron task", "task", "Update mirrors", "schedule", conf.Cron.UpdateMirror.Schedule, "error", err)
 		}
 		if conf.Cron.UpdateMirror.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
-			go database.MirrorUpdate()
+			go database.MirrorUpdate(logger)
 		}
 	}
 	if conf.Cron.RepoHealthCheck.Enabled {
-		entry, err = c.AddFunc("Repository health check", conf.Cron.RepoHealthCheck.Schedule, database.GitFsck)
+		entry, err = c.AddFunc("Repository health check", conf.Cron.RepoHealthCheck.Schedule, func() { database.GitFsck(logger) })
 		if err != nil {
-			log.Fatal("Cron.(repository health check): %v", err)
+			logger.FatalContext(context.Background(), "Failed to add cron task", "task", "Repository health check", "schedule", conf.Cron.RepoHealthCheck.Schedule, "error", err)
 		}
 		if conf.Cron.RepoHealthCheck.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
-			go database.GitFsck()
+			go database.GitFsck(logger)
 		}
 	}
 	if conf.Cron.CheckRepoStats.Enabled {
-		entry, err = c.AddFunc("Check repository statistics", conf.Cron.CheckRepoStats.Schedule, database.CheckRepoStats)
+		entry, err = c.AddFunc("Check repository statistics", conf.Cron.CheckRepoStats.Schedule, func() { database.CheckRepoStats(logger) })
 		if err != nil {
-			log.Fatal("Cron.(check repository statistics): %v", err)
+			logger.FatalContext(context.Background(), "Failed to add cron task", "task", "Check repository statistics", "schedule", conf.Cron.CheckRepoStats.Schedule, "error", err)
 		}
 		if conf.Cron.CheckRepoStats.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
-			go database.CheckRepoStats()
+			go database.CheckRepoStats(logger)
 		}
 	}
 	if conf.Cron.RepoArchiveCleanup.Enabled {
-		entry, err = c.AddFunc("Repository archive cleanup", conf.Cron.RepoArchiveCleanup.Schedule, database.DeleteOldRepositoryArchives)
+		entry, err = c.AddFunc("Repository archive cleanup", conf.Cron.RepoArchiveCleanup.Schedule, func() { database.DeleteOldRepositoryArchives(logger) })
 		if err != nil {
-			log.Fatal("Cron.(repository archive cleanup): %v", err)
+			logger.FatalContext(context.Background(), "Failed to add cron task", "task", "Repository archive cleanup", "schedule", conf.Cron.RepoArchiveCleanup.Schedule, "error", err)
 		}
 		if conf.Cron.RepoArchiveCleanup.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
-			go database.DeleteOldRepositoryArchives()
+			go database.DeleteOldRepositoryArchives(logger)
 		}
 	}
 	c.Start()

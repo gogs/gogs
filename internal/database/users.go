@@ -11,7 +11,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -61,7 +61,7 @@ func (err ErrLoginSourceMismatch) Error() string {
 //
 // When the "loginSourceID" is positive, it tries to authenticate via given
 // login source and creates a new user when not yet exists in the database.
-func (s *UsersStore) Authenticate(ctx context.Context, login, password string, loginSourceID int64) (*User, error) {
+func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, login, password string, loginSourceID int64) (*User, error) {
 	login = strings.ToLower(login)
 
 	query := s.db.WithContext(ctx)
@@ -118,7 +118,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 		return nil, errors.Errorf("login source %d is not activated", source.ID)
 	}
 
-	extAccount, err := source.Provider.Authenticate(login, password)
+	extAccount, err := source.Provider.Authenticate(logger, login, password)
 	if err != nil {
 		return nil, err
 	}
@@ -1362,12 +1362,12 @@ func (u *User) AvatarURLPath() string {
 	case conf.Picture.DisableGravatar:
 		if !hasCustomAvatar {
 			if err := userx.GenerateRandomAvatar(u.ID, u.Name, u.Email); err != nil {
-				log.Error("Failed to generate random avatar [user_id: %d]: %v", u.ID, err)
+				handleLogger().Error("Failed to generate random avatar", "userID", u.ID, "error", err)
 			}
 		}
 		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
 	}
-	return tool.AvatarLink(u.AvatarEmail)
+	return tool.AvatarLink(handleLogger(), u.AvatarEmail)
 }
 
 // AvatarURL returns the full URL to the user or organization avatar. If the

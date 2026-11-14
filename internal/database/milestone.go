@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
-
 	"github.com/cockroachdb/errors"
+	"unknwon.dev/x/logx"
+	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
@@ -328,7 +327,7 @@ func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) 
 }
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
-func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err error) {
+func ChangeMilestoneAssign(logger *logx.Logger, doer *User, issue *Issue, oldMilestoneID int64) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -353,27 +352,27 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error("LoadIssue: %v", err)
+			logger.Error("Failed to load issue", "error", err)
 			return err
 		}
-		err = PrepareWebhooks(issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormatLegacy(nil),
+			PullRequest: issue.PullRequest.APIFormat(logger),
+			Repository:  issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormatLegacy(nil),
+			Repository: issue.Repo.APIFormatLegacy(logger, nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "error", err)
 	}
 
 	return nil

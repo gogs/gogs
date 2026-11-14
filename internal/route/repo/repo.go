@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -115,7 +113,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err := database.CreateRepository(c.Req.Context(), c.User, ctxUser, database.CreateRepoOptionsLegacy{
+	repo, err := database.CreateRepository(c.Req.Context(), c.Logger, c.User, ctxUser, database.CreateRepoOptionsLegacy{
 		Name:         f.RepoName,
 		Description:  f.Description,
 		Gitignores:   f.Gitignores,
@@ -127,14 +125,14 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		ObjectFormat: git.ObjectFormat(f.ObjectFormat),
 	})
 	if err == nil {
-		log.Trace("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
+		c.Logger.Debug("Repository created", "repoID", repo.ID, "ownerName", ctxUser.Name, "repoName", repo.Name)
 		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
 	if repo != nil {
-		if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-			log.Error("DeleteRepository: %v", errDelete)
+		if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
+			c.Logger.Error("Failed to delete repository", "error", errDelete)
 		}
 	}
 
@@ -198,7 +196,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.Req.Context(), c.User, ctxUser, database.MigrateRepoOptions{
+	repo, err := database.MigrateRepository(c.Req.Context(), c.Logger, c.User, ctxUser, database.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
@@ -207,14 +205,14 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		RemoteAddr:  remoteAddr,
 	})
 	if err == nil {
-		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
+		c.Logger.Debug("Repository migrated", "repoID", repo.ID, "ownerName", ctxUser.Name, "repoName", f.RepoName)
 		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 		return
 	}
 
 	if repo != nil {
-		if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-			log.Error("DeleteRepository: %v", errDelete)
+		if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
+			c.Logger.Error("Failed to delete repository", "error", errDelete)
 		}
 	}
 
@@ -257,7 +255,7 @@ func Action(c *context.Context) {
 
 		c.Repo.Repository.Description = c.Query("desc")
 		c.Repo.Repository.Website = c.Query("site")
-		err = database.UpdateRepository(c.Repo.Repository, false)
+		err = database.UpdateRepository(c.Logger, c.Repo.Repository, false)
 	}
 
 	if err != nil {
@@ -291,7 +289,7 @@ func Download(c *context.Context) {
 		archivePath = filepath.Join(c.Repo.GitRepo.Path(), "archives", "targz")
 		archiveFormat = git.ArchiveTarGz
 	default:
-		log.Trace("Unknown format: %s", uri)
+		c.Logger.Debug("Unknown archive format", "uri", uri)
 		c.NotFound()
 		return
 	}

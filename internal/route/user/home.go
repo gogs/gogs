@@ -326,7 +326,7 @@ func Issues(c *context.Context) {
 		}
 
 		// Check if user has access to given repository.
-		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(ctxUser.ID) {
+		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(c.Logger, ctxUser.ID) {
 			c.NotFound()
 			return
 		}
@@ -421,7 +421,7 @@ func showOrgProfile(c *context.Context) {
 			return
 		}
 		c.Data["Repos"] = repos
-		count = database.CountUserRepositories(org.ID, showPrivate)
+		count = database.CountUserRepositories(c.Logger, org.ID, showPrivate)
 	}
 	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 

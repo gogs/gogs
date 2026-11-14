@@ -8,13 +8,13 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/public"
 )
 
-func mountWebAppRoutes(f *flamego.Flame) error {
+func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) error {
 	webFS, err := fs.Sub(public.WebAssets, "dist")
 	if err != nil {
 		return errors.Wrap(err, "load embedded web assets")
@@ -42,7 +42,7 @@ func mountWebAppRoutes(f *flamego.Flame) error {
 		wc := context.WebContextFrom(r)
 		body, err := renderIndex(index, wc, inject)
 		if err != nil {
-			log.Error("Failed to render index: %v", err)
+			logger.Error("Failed to render index", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}

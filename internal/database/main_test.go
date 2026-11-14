@@ -2,32 +2,21 @@ package database
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"testing"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
-	"gogs.io/gogs/internal/testx"
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 
 	level := logger.Silent
-	if !testing.Verbose() {
-		// Remove the primary logger and register a noop logger.
-		log.Remove(log.DefaultConsoleName)
-		err := log.New("noop", testx.InitNoopLogger)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	} else {
+	if testing.Verbose() {
 		level = logger.Info
 	}
 

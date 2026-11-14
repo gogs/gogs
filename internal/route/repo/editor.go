@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -81,9 +80,9 @@ func editFile(c *context.Context, isNewFile bool) {
 			return
 		}
 
-		if content, err := template.ToUTF8WithErr(p); err != nil {
+		if content, err := template.ToUTF8WithErr(c.Logger, p); err != nil {
 			if err != nil {
-				log.Error("Failed to convert encoding to UTF-8: %v", err)
+				c.Logger.Error("Failed to convert encoding to UTF-8", "error", err)
 			}
 			c.Data["FileContent"] = string(p)
 		} else {
@@ -277,7 +276,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		Content:     strings.ReplaceAll(f.Content, "\r", ""),
 		IsNewFile:   isNewFile,
 	}); err != nil {
-		log.Error("Failed to update repo file: %v", err)
+		c.Logger.Error("Failed to update repo file", "error", err)
 		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorEdit, &f)
 		return
@@ -311,7 +310,7 @@ func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 		return
 	}
 
-	diff, err := c.Repo.Repository.GetDiffPreview(c.Req.Context(), c.Repo.BranchName, treePath, f.Content)
+	diff, err := c.Repo.Repository.GetDiffPreview(c.Req.Context(), c.Logger, c.Repo.BranchName, treePath, f.Content)
 	if err != nil {
 		c.Error(err, "get diff preview")
 		return
@@ -386,7 +385,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		TreePath:     c.Repo.TreePath,
 		Message:      message,
 	}); err != nil {
-		log.Error("Failed to delete repo file: %v", err)
+		c.Logger.Error("Failed to delete repo file", "error", err)
 		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorDelete, &f)
 		return
 	}
@@ -507,7 +506,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		Message:      message,
 		Files:        f.Files,
 	}); err != nil {
-		log.Error("Failed to upload files: %v", err)
+		c.Logger.Error("Failed to upload files", "error", err)
 		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errInternalServerError), http.StatusInternalServerError, tmplEditorUpload, &f)
 		return
@@ -557,7 +556,7 @@ func UploadFileToServer(c *context.Context) {
 		return
 	}
 
-	log.Trace("New file uploaded by user[%d]: %s", c.UserID(), upload.UUID)
+	c.Logger.Debug("New file uploaded", "userID", c.UserID(), "uuid", upload.UUID)
 	c.JSONSuccess(map[string]string{
 		"uuid": upload.UUID,
 	})
@@ -574,6 +573,6 @@ func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
 		return
 	}
 
-	log.Trace("Upload file removed: %s", f.File)
+	c.Logger.Debug("Upload file removed", "file", f.File)
 	c.Status(http.StatusNoContent)
 }

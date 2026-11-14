@@ -14,7 +14,7 @@ import (
 	"github.com/go-macaron/i18n"
 	macaronsession "github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -24,7 +24,7 @@ import (
 	"gogs.io/gogs/internal/userx"
 )
 
-func parseUserFromCode(ctx stdctx.Context, code string) (user *database.User) {
+func parseUserFromCode(ctx stdctx.Context, logger *logx.Logger, code string) (user *database.User) {
 	if len(code) <= tool.TimeLimitCodeLength {
 		return nil
 	}
@@ -34,22 +34,22 @@ func parseUserFromCode(ctx stdctx.Context, code string) (user *database.User) {
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user
 		} else if !database.IsErrUserNotExist(err) {
-			log.Error("parseUserFromCode: get user by name %q: %v", string(b), err)
+			logger.Error("Failed to get user by username", "username", string(b), "error", err)
 		}
 	}
 	return nil
 }
 
-func verifyUserActivateCode(ctx stdctx.Context, code string) *database.User {
-	user := parseUserFromCode(ctx, code)
+func verifyUserActivateCode(ctx stdctx.Context, logger *logx.Logger, code string) *database.User {
+	user := parseUserFromCode(ctx, logger, code)
 	if user != nil && userx.VerifyActivateCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
 		return user
 	}
 	return nil
 }
 
-func verifyUserResetPasswordCode(ctx stdctx.Context, code string) *database.User {
-	user := parseUserFromCode(ctx, code)
+func verifyUserResetPasswordCode(ctx stdctx.Context, logger *logx.Logger, code string) *database.User {
+	user := parseUserFromCode(ctx, logger, code)
 	if user != nil && userx.VerifyResetPasswordCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
 		return user
 	}
@@ -91,7 +91,7 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
+func postUserSignUp(logger *logx.Logger, r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_prompt")}, nil
 	}
@@ -122,11 +122,11 @@ func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n
 			msg := l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
 		default:
-			log.Error("postUserSignUp: create user %q: %v", req.UserName, err)
+			logger.Error("Failed to create user", "username", req.UserName, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "create user")
 		}
 	}
-	log.Trace("Account created: %s", u.Name)
+	logger.Debug("Account created", "username", u.Name)
 
 	if database.Handle.Users().Count(r.Context()) == 1 {
 		v := true
@@ -139,17 +139,17 @@ func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n
 			},
 		)
 		if err != nil {
-			log.Error("postUserSignUp: update first user %q: %v", u.Name, err)
+			logger.Error("Failed to activate first user as admin", "username", u.Name, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 		}
 	}
 
 	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
-		if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
-			log.Error("postUserSignUp: send activation mail to user %q: %v", u.Name, err)
+		if err := email.SendActivateAccountMail(logger, mc, database.NewMailerUser(u)); err != nil {
+			logger.Error("Failed to send activation mail", "username", u.Name, "error", err)
 		}
 		if err := ca.Set(r.Context(), userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-			log.Error("postUserSignUp: put mail resend cache for user %q: %v", u.Name, err)
+			logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 		}
 		return http.StatusOK, &userSignUpResponse{
 			EmailConfirmationRequired: true,
@@ -161,10 +161,10 @@ func postUserSignUp(r *http.Request, mc *macaron.Context, ca cache.Cache, l i18n
 	return http.StatusOK, &userSignUpResponse{}, nil
 }
 
-func getUserSignIn(r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
+func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
 	sources, err := database.Handle.LoginSources().List(r.Context(), database.ListLoginSourceOptions{OnlyActivated: true})
 	if err != nil {
-		log.Error("getUserSignIn: list activated login sources: %v", err)
+		logger.Error("Failed to list activated login sources", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list activated login sources")
 	}
 	loginSources := make([]loginSource, 0, len(sources))
@@ -185,11 +185,11 @@ type getUserResetPasswordResponse struct {
 	Valid        bool `json:"valid"`
 }
 
-func getUserResetPassword(r *http.Request) (statusCode int, resp *getUserResetPasswordResponse, err error) {
+func getUserResetPassword(logger *logx.Logger, r *http.Request) (statusCode int, resp *getUserResetPasswordResponse, err error) {
 	code := r.URL.Query().Get("code")
 	return http.StatusOK, &getUserResetPasswordResponse{
 		EmailEnabled: conf.Email.Enabled,
-		Valid:        code != "" && verifyUserResetPasswordCode(r.Context(), code) != nil,
+		Valid:        code != "" && verifyUserResetPasswordCode(r.Context(), logger, code) != nil,
 	}, nil
 }
 
@@ -207,7 +207,7 @@ type userResetPasswordResponse struct {
 	ResendLimited bool `json:"resendLimited,omitempty"`
 }
 
-func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
+func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
 	if !conf.Email.Enabled {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
 	}
@@ -218,7 +218,7 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 		if database.IsErrUserNotExist(err) {
 			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
 		}
-		log.Error("postUserResetPassword: get user by email %q: %v", req.Email, err)
+		logger.Error("Failed to get user by email", "email", req.Email, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
 	}
 
@@ -233,31 +233,31 @@ func postUserResetPassword(r *http.Request, ca cache.Cache, l i18n.Locale, req u
 			ResendLimited: true,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		log.Error("postUserResetPassword: get mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to get mail resend cache", "username", u.Name, "error", err)
 	}
 
-	if err = email.SendResetPasswordMail(l, database.NewMailerUser(u)); err != nil {
-		log.Error("postUserResetPassword: send reset password mail to user %q: %v", u.Name, err)
+	if err = email.SendResetPasswordMail(logger, l, database.NewMailerUser(u)); err != nil {
+		logger.Error("Failed to send reset password mail", "username", u.Name, "error", err)
 	}
 	if err = ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-		log.Error("postUserResetPassword: put mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 	}
 
 	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
 }
 
-func postUserResetPasswordComplete(r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
-	u := verifyUserResetPasswordCode(r.Context(), req.Code)
+func postUserResetPasswordComplete(logger *logx.Logger, r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
+	u := verifyUserResetPasswordCode(r.Context(), logger, req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
 	}
 
 	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {
-		log.Error("postUserResetPasswordComplete: update password for user %q: %v", u.Name, err)
+		logger.Error("Failed to update user password", "username", u.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 
-	log.Trace("User password reset: %s", u.Name)
+	logger.Debug("User password reset", "username", u.Name)
 	return http.StatusNoContent, nil, nil
 }
 
@@ -268,8 +268,8 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
-	u, err := database.Handle.Users().Authenticate(r.Context(), req.Username, req.Password, req.LoginSource)
+func postUserSignIn(logger *logx.Logger, r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
 		case auth.IsErrBadCredentials(err):
@@ -280,12 +280,12 @@ func postUserSignIn(r *http.Request, sess session.Session, mc *macaron.Context, 
 		case database.IsErrLoginSourceMismatch(err):
 			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
 		default:
-			log.Error("postUserSignIn: authenticate user %q: %v", req.Username, err)
+			logger.Error("Failed to authenticate user", "username", req.Username, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 		}
 	}
 
-	if database.Handle.TwoFactors().IsEnabled(r.Context(), u.ID) {
+	if database.Handle.TwoFactors().IsEnabled(r.Context(), logger, u.ID) {
 		sess.Set("mfaUserID", u.ID)
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
@@ -321,7 +321,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
+func postUserMFA(logger *logx.Logger, r *http.Request, sess session.Session, mc *macaron.Context, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -329,13 +329,13 @@ func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca 
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMFA: get two factor by user ID %d: %v", userID, err)
+		logger.Error("Failed to get two factor by user ID", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get two factor by user ID")
 	}
 
 	valid, err := t.ValidateTOTP(req.Passcode)
 	if err != nil {
-		log.Error("postUserMFA: validate TOTP for user %d: %v", userID, err)
+		logger.Error("Failed to validate TOTP", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
 	}
 	if !valid {
@@ -352,15 +352,15 @@ func postUserMFA(r *http.Request, sess session.Session, mc *macaron.Context, ca 
 			Fields: fieldErrors{"passcode": &msg},
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		log.Error("postUserMFA: get two factor passcode cache for user %d: %v", userID, err)
+		logger.Error("Failed to get two factor passcode cache", "userID", userID, "error", err)
 	}
 	if err = ca.Set(r.Context(), cacheKey, 1, 60*time.Second); err != nil {
-		log.Error("postUserMFA: cache two factor passcode for user %d: %v", userID, err)
+		logger.Error("Failed to cache two factor passcode", "userID", userID, "error", err)
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMFA: get user by ID %d: %v", userID, err)
+		logger.Error("Failed to get user by ID", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
@@ -372,7 +372,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
-func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
+func postUserMFARecovery(logger *logx.Logger, r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
@@ -385,13 +385,13 @@ func postUserMFARecovery(r *http.Request, sess session.Session, mc *macaron.Cont
 				Fields: fieldErrors{"recoveryCode": &msg},
 			}, nil
 		}
-		log.Error("postUserMFARecovery: use recovery code for user %d: %v", userID, err)
+		logger.Error("Failed to use recovery code", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "use recovery code")
 	}
 
 	u, err := database.Handle.Users().GetByID(r.Context(), userID)
 	if err != nil {
-		log.Error("postUserMFARecovery: get user by ID %d: %v", userID, err)
+		logger.Error("Failed to get user by ID", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
@@ -444,7 +444,7 @@ type postUserActivateResponse struct {
 	CodeLifetimeHours int  `json:"codeLifetimeHours,omitempty"`
 }
 
-func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
+func postUserActivate(logger *logx.Logger, r *http.Request, u *database.User, mc *macaron.Context, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
 	if u == nil {
 		return http.StatusUnauthorized, nil, nil
 	}
@@ -462,14 +462,14 @@ func postUserActivate(r *http.Request, u *database.User, mc *macaron.Context, ca
 			CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		log.Error("postUserActivate: get mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to get mail resend cache", "username", u.Name, "error", err)
 	}
 
-	if err := email.SendActivateAccountMail(mc, database.NewMailerUser(u)); err != nil {
-		log.Error("postUserActivate: send activation mail to user %q: %v", u.Name, err)
+	if err := email.SendActivateAccountMail(logger, mc, database.NewMailerUser(u)); err != nil {
+		logger.Error("Failed to send activation mail", "username", u.Name, "error", err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
-		log.Error("postUserActivate: put mail resend cache for user %q: %v", u.Name, err)
+		logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 	}
 	return http.StatusOK, &postUserActivateResponse{CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60}, nil
 }
@@ -478,8 +478,8 @@ type userActivateCompleteRequest struct {
 	Code string `json:"code" validate:"required"`
 }
 
-func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
-	target := verifyUserActivateCode(r.Context(), req.Code)
+func postUserActivateComplete(logger *logx.Logger, r *http.Request, sess session.Session, mc *macaron.Context, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
+	target := verifyUserActivateCode(r.Context(), logger, req.Code)
 	if target == nil || target.IsActive {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
 	}
@@ -493,15 +493,15 @@ func postUserActivateComplete(r *http.Request, sess session.Session, mc *macaron
 			IsActivated:      &v,
 		},
 	); err != nil {
-		log.Error("postUserActivateComplete: update user %q: %v", target.Name, err)
+		logger.Error("Failed to activate user", "username", target.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 
-	log.Trace("User activated: %s", target.Name)
+	logger.Debug("User activated", "username", target.Name)
 
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
-	if !database.Handle.TwoFactors().IsEnabled(r.Context(), target.ID) {
+	if !database.Handle.TwoFactors().IsEnabled(r.Context(), logger, target.ID) {
 		completeSignIn(sess, mc, target)
 	}
 	return http.StatusNoContent, nil, nil
