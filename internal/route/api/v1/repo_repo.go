@@ -61,7 +61,7 @@ func searchRepos(c *context.APIContext) {
 
 	results := make([]*types.Repository, len(repos))
 	for i := range repos {
-		results[i] = toRepository(c.Logger, repos[i], nil)
+		results[i] = toRepository(repos[i], nil)
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
@@ -105,7 +105,7 @@ func listReposOfUser(c *context.APIContext, username string) {
 	if c.User.ID != user.ID {
 		repos := make([]*types.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = toRepository(c.Logger, ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
+			repos[i] = toRepository(ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -129,12 +129,12 @@ func listReposOfUser(c *context.APIContext, username string) {
 	numOwnRepos := len(ownRepos)
 	repos := make([]*types.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
-		repos = append(repos, toRepository(c.Logger, r, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+		repos = append(repos, toRepository(r, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 	}
 
 	for repo, access := range accessibleReposWithAccessMode {
 		repos = append(repos,
-			toRepository(c.Logger, repo, &types.RepositoryPermission{
+			toRepository(repo, &types.RepositoryPermission{
 				Admin: access >= database.AccessModeAdmin,
 				Push:  access >= database.AccessModeWrite,
 				Pull:  true,
@@ -194,7 +194,7 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 		return
 	}
 
-	c.JSON(201, toRepository(c.Logger, repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 func createRepo(c *context.APIContext, opt createRepoRequest) {
@@ -303,7 +303,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 	}
 
 	c.Logger.Tracef("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, toRepository(c.Logger, repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
@@ -333,7 +333,7 @@ func getRepo(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(toRepository(c.Logger, repo, &types.RepositoryPermission{
+	c.JSONSuccess(toRepository(repo, &types.RepositoryPermission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
@@ -384,7 +384,7 @@ func listForks(c *context.APIContext) {
 			},
 		)
 
-		apiForks[i] = toRepository(c.Logger, forks[i],
+		apiForks[i] = toRepository(forks[i],
 			&types.RepositoryPermission{
 				Admin: accessMode >= database.AccessModeAdmin,
 				Push:  accessMode >= database.AccessModeWrite,
