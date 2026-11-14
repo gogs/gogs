@@ -649,6 +649,10 @@ func SettingsGitHooksEditPost(c *context.Context) {
 		c.Error(err, "update hook")
 		return
 	}
+	if err = c.Repo.Repository.SyncDelegateHooks(); err != nil {
+		c.Error(err, "sync delegate hooks")
+		return
+	}
 	c.Redirect(c.Data["Link"].(string))
 }
 

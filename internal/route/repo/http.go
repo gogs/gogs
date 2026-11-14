@@ -268,20 +268,32 @@ func serviceRPC(h serviceHandler, service string) {
 		})
 	}
 	// A client disconnecting must not kill Git midway through a push, e.g., while
-	// running hooks after refs were updated.
+	// running hooks after refs were updated, nor stop recording what it pushed.
 	ctx := h.r.Context()
 	if service == "receive-pack" {
 		ctx = gocontext.WithoutCancel(ctx)
 	}
 	var stderr bytes.Buffer
-	err = git.RunService(ctx, git.Service(service), h.dir, git.ServiceOptions{
+	opts := git.ServiceOptions{
 		StatelessRPC: true,
 		Stdin:        reqBody,
 		Stdout:       h.w,
 		Stderr:       &stderr,
 		Protocol:     h.r.Header.Get("Git-Protocol"),
 		Envs:         envs,
-	})
+	}
+	if service == "receive-pack" {
+		var updates []git.RefUpdate
+		updates, err = git.RunReceivePack(ctx, h.dir, opts)
+		// TODO: support news feeds for wiki
+		if !strings.HasSuffix(h.dir, ".wiki.git") {
+			database.PushUpdates(ctx, h.authUser, h.ownerName, h.repoName, updates, func(branch string) {
+				database.TriggerPushTasks(h.authUser, h.repoID, branch)
+			})
+		}
+	} else {
+		err = git.RunService(ctx, git.Service(service), h.dir, opts)
+	}
 	if err != nil {
 		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)

@@ -4,10 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,7 +21,6 @@ import (
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
@@ -203,89 +199,16 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	setup(cmd, "post-receive.log", true)
-	ctx = startProcessSpan(ctx, "hook post-receive", time.Second)
-	defer endProcessSpan()
 
-	// Post-receive hook does more than just gather Git information,
-	// so we need to setup additional services for email notifications.
-	email.NewContext()
-
-	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
-
-	buf := bytes.NewBuffer(nil)
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		buf.Write(scanner.Bytes())
-		buf.WriteByte('\n')
-
-		// TODO: support news feeds for wiki
-		if isWiki {
-			continue
-		}
-
-		fields := bytes.Fields(scanner.Bytes())
-		if len(fields) != 3 {
-			continue
-		}
-
-		pusherID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
-		options := database.PushUpdateOptions{
-			OldCommitID:  string(fields[0]),
-			NewCommitID:  string(fields[1]),
-			FullRefspec:  string(fields[2]),
-			PusherID:     pusherID,
-			PusherName:   os.Getenv(database.EnvAuthUserName),
-			RepoUserName: os.Getenv(database.EnvRepoOwnerName),
-			RepoName:     os.Getenv(database.EnvRepoName),
-		}
-		if err := database.PushUpdate(ctx, options); err != nil {
-			log.Error("PushUpdate: %v", err)
-		}
-
-		// Ask for running deliver hook and test pull request tasks
-		q := make(url.Values)
-		q.Add("branch", git.RefShortName(options.FullRefspec))
-		q.Add("secret", os.Getenv(database.EnvRepoOwnerSaltMd5))
-		q.Add("pusher", os.Getenv(database.EnvAuthUserID))
-		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
-		log.Trace("Trigger task: %s", reqURL)
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
-		if err != nil {
-			log.Error("Failed to trigger task: %v", err)
-			continue
-		}
-		req.Header.Set("User-Agent", "GogsServer")
-		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
-
-		client := &http.Client{
-			Timeout: 60 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-				DisableKeepAlives: true,
-			},
-			// The trigger endpoint is local and never redirects legitimately, so a
-			// redirect response is reported as a failure instead of being followed.
-			CheckRedirect: func(*http.Request, []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
-		resp, err := client.Do(req)
-		if err == nil {
-			_ = resp.Body.Close()
-			if resp.StatusCode/100 != 2 {
-				log.Error("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
-			}
-		} else {
-			log.Error("Failed to trigger task: %v", err)
-		}
-	}
-
+	// The process that runs "git receive-pack" records what the push updated after
+	// Git exits, so only the custom hook is left to run.
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "post-receive")
 	if !osx.IsFile(customHooksPath) {
 		return nil
 	}
+	setup(cmd, "post-receive.log", false)
+	_ = startProcessSpan(ctx, "hook post-receive", time.Second)
+	defer endProcessSpan()
 
 	var hookCmd *exec.Cmd
 	if conf.IsWindowsRuntime() {
@@ -295,7 +218,7 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	}
 	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
-	hookCmd.Stdin = buf
+	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
 		fail("Internal error", "Failed to execute custom post-receive hook: %v", err)

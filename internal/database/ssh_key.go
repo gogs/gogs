@@ -26,7 +26,9 @@ import (
 )
 
 const (
-	tplPublicKey = `command="%s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
+	// GOGC=off speeds up the startup of "gogs serv", which turns the garbage
+	// collector back on after it.
+	tplPublicKey = `command="GOGC=off %s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
 )
 
 var sshOpLocker sync.Mutex

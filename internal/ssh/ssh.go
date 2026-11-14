@@ -2,11 +2,12 @@ package ssh
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 
@@ -22,6 +25,8 @@ import (
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
+
+var tracer = otel.Tracer("gogs.io/gogs/internal/ssh")
 
 func cleanCommand(cmd string) string {
 	i := strings.Index(cmd, "git")
@@ -71,60 +76,63 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					cmdName := strings.TrimLeft(payload, "'()")
 					log.Trace("SSH: Payload: %v", cmdName)
 
-					args := []string{"serv", "key-" + keyID, "--config=" + conf.CustomConf}
-					log.Trace("SSH: Arguments: %v", args)
-					cmd := exec.Command(conf.AppPath(), args...)
-					cmd.Env = append(os.Environ(), "SSH_ORIGINAL_COMMAND="+cmdName)
-					if gitProtocol != "" {
-						cmd.Env = append(cmd.Env, "GIT_PROTOCOL="+gitProtocol)
-					}
-
-					stdout, err := cmd.StdoutPipe()
-					if err != nil {
-						log.Error("SSH: StdoutPipe: %v", err)
-						return
-					}
-					stderr, err := cmd.StderrPipe()
-					if err != nil {
-						log.Error("SSH: StderrPipe: %v", err)
-						return
-					}
-					input, err := cmd.StdinPipe()
-					if err != nil {
-						log.Error("SSH: StdinPipe: %v", err)
-						return
-					}
-
-					// FIXME: check timeout
-					if err = cmd.Start(); err != nil {
-						log.Error("SSH: Start: %v", err)
-						return
-					}
-
 					_ = req.Reply(true, nil)
-					go func() {
-						_, _ = io.Copy(input, ch)
-						input.Close()
-					}()
-					_, _ = io.Copy(ch, stdout)
-					// When the client is gone, the copy stops early. Closing the pipe makes
-					// the next write of the command fail, so that it exits rather than
-					// waiting forever for someone to read its output.
-					_ = stdout.Close()
-					_, _ = io.Copy(ch.Stderr(), stderr)
-
-					if err = cmd.Wait(); err != nil {
-						log.Error("SSH: Wait: %v", err)
-						return
-					}
-
-					_, _ = ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
+					status := serve(keyID, cmdName, gitProtocol, ch)
+					_, _ = ch.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{status}))
 					return
 				default:
 				}
 			}
 		}(reqs)
 	}
+}
+
+// serve runs the command for the client on the channel, and returns the exit
+// status of the command.
+func serve(keyID, command, protocol string, ch ssh.Channel) (status uint32) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("SSH: Panic while serving %q: %v\n%s", command, r, debug.Stack())
+			_, _ = fmt.Fprintln(ch.Stderr(), "Gogs: Internal error")
+			status = 1
+		}
+	}()
+
+	verb, _, _ := strings.Cut(command, " ")
+	ctx, span := tracer.Start(context.Background(), "ssh "+verb)
+	defer span.End()
+
+	id, _ := strconv.ParseInt(keyID, 10, 64)
+	err := Serve(ctx, ServeOptions{
+		KeyID:    id,
+		Command:  command,
+		Protocol: protocol,
+		Stdin:    ch,
+		Stdout:   ch,
+		Stderr:   ch.Stderr(),
+		TriggerPushTasks: func(pusher *database.User, repo *database.Repository, branch string) {
+			database.TriggerPushTasks(pusher, repo.ID, branch)
+		},
+	})
+	if err == nil {
+		return 0
+	}
+
+	span.SetStatus(codes.Error, err.Error())
+	userMessage := "Internal error"
+	var serveErr *ServeError
+	if errors.As(err, &serveErr) {
+		userMessage = serveErr.UserMessage
+		err = serveErr.Err
+	}
+	_, _ = fmt.Fprintln(ch.Stderr(), "Gogs:", userMessage)
+	if err != nil {
+		if !conf.IsProdMode() {
+			_, _ = fmt.Fprintln(ch.Stderr(), err)
+		}
+		log.Error("SSH: Failed to serve %q: %v", command, err)
+	}
+	return 1
 }
 
 func listen(config *ssh.ServerConfig, host string, port int) {
