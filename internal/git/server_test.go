@@ -300,24 +300,40 @@ func TestRunService_IdleTimeout(t *testing.T) {
 	assert.Less(t, time.Since(start), 5*time.Second)
 }
 
-func TestWithoutPhantomDeletes(t *testing.T) {
+func TestRunReceivePack_DeleteWithMissingOldObject(t *testing.T) {
 	ctx := context.Background()
-	path := t.TempDir()
-	stdout, err := exec(ctx, path, []string{"init", "--initial-branch=main"}, nil)
+	path := filepath.Join(t.TempDir(), "remote.git")
+	require.NoError(t, Init(ctx, path, InitOptions{Bare: true}))
+	stdout, err := exec(ctx, path, []string{"-c", "user.name=a", "-c", "user.email=a@example.com", "commit-tree", "-m", "first", ObjectFormatSHA1.EmptyTreeID()}, nil)
 	require.NoError(t, err, string(stdout))
-	stdout, err = exec(ctx, path, []string{"-c", "user.name=a", "-c", "user.email=a@example.com", "commit", "--allow-empty", "-m", "first"}, nil)
-	require.NoError(t, err, string(stdout))
-	stdout, err = exec(ctx, path, []string{"rev-parse", "HEAD"}, nil)
-	require.NoError(t, err)
 	first := strings.TrimSpace(string(stdout))
-	empty := ObjectFormatSHA1.EmptyID()
+	stdout, err = exec(ctx, path, []string{"update-ref", "refs/heads/existing", first}, nil)
+	require.NoError(t, err, string(stdout))
 
-	existing := RefUpdate{OldID: first, NewID: empty, RefName: "refs/heads/gone"}
-	created := RefUpdate{OldID: empty, NewID: first, RefName: "refs/heads/new"}
-	phantom := RefUpdate{OldID: strings.Repeat("ab", 20), NewID: empty, RefName: "refs/heads/never-existed"}
-	got, err := withoutPhantomDeletes(ctx, path, []RefUpdate{existing, phantom, created})
+	// Git deletes an existing reference even when the old ID is not an object in
+	// the repository, and reports the deletion of a missing reference without
+	// passing it to the post-receive hook.
+	missingOldID := strings.Repeat("ab", 20)
+	empty := ObjectFormatSHA1.EmptyID()
+	var request strings.Builder
+	for i, name := range []string{"refs/heads/existing", "refs/heads/never-existed"} {
+		command := missingOldID + " " + empty + " " + name
+		if i == 0 {
+			command += "\x00report-status"
+		}
+		_, _ = fmt.Fprintf(&request, "%04x%s", len(command)+4, command)
+	}
+	request.WriteString("0000")
+
+	var response strings.Builder
+	applied, err := RunReceivePack(ctx, path, ServiceOptions{
+		StatelessRPC: true,
+		Stdin:        strings.NewReader(request.String()),
+		Stdout:       &response,
+	})
 	require.NoError(t, err)
-	assert.Equal(t, []RefUpdate{existing, created}, got)
+	require.Contains(t, response.String(), "ok refs/heads/never-existed")
+	assert.Equal(t, []RefUpdate{{OldID: missingOldID, NewID: empty, RefName: "refs/heads/existing"}}, applied)
 }
 
 func TestReceivePackPush_SidebandCapability(t *testing.T) {

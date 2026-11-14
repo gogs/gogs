@@ -155,7 +155,7 @@ type RefUpdate struct {
 func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]RefUpdate, error) {
 	push := &receivePackPush{inAdvertisement: !opts.StatelessRPC}
 	if opts.Stdin != nil {
-		opts.Stdin = receivePackRequestReader{r: opts.Stdin, push: push}
+		opts.Stdin = receivePackRequestReader{ctx: ctx, path: path, r: opts.Stdin, push: push}
 	}
 	opts.Stdout = receivePackResponseWriter{w: opts.Stdout, push: push}
 	err := RunService(ctx, ServiceReceivePack, path, opts)
@@ -165,47 +165,11 @@ func RunReceivePack(ctx context.Context, path string, opts ServiceOptions) ([]Re
 	if !reported {
 		applied, checkErr = appliedRefUpdates(ctx, path, updates)
 	}
-	if checkErr == nil {
-		applied, checkErr = withoutPhantomDeletes(ctx, path, applied)
-	}
+	applied = push.withoutPhantomDeletes(applied)
 	if err != nil {
 		return applied, err
 	}
 	return applied, checkErr
-}
-
-// withoutPhantomDeletes returns the updates without the deletions of references
-// that did not exist, i.e., whose old object is not in the repository. Git
-// reports them as applied, but leaves them out of the post-receive hook.
-func withoutPhantomDeletes(ctx context.Context, path string, updates []RefUpdate) ([]RefUpdate, error) {
-	var input strings.Builder
-	for _, update := range updates {
-		if IsEmptyID(update.NewID) {
-			input.WriteString(update.OldID + "\n")
-		}
-	}
-	if input.Len() == 0 {
-		return updates, nil
-	}
-
-	stdout, err := execInput(ctx, path, []string{"cat-file", "--batch-check=%(objectname)"}, nil, strings.NewReader(input.String()))
-	if err != nil {
-		return nil, errors.Wrap(err, "check objects of deleted references")
-	}
-	missing := make(map[string]bool)
-	for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
-		if id, ok := strings.CutSuffix(line, " missing"); ok {
-			missing[id] = true
-		}
-	}
-
-	existing := updates[:0:0]
-	for _, update := range updates {
-		if !IsEmptyID(update.NewID) || !missing[update.OldID] {
-			existing = append(existing, update)
-		}
-	}
-	return existing, nil
 }
 
 // refUpdatesBatchSize is how many reference names are looked up per Git
@@ -221,24 +185,13 @@ func appliedRefUpdates(ctx context.Context, path string, updates []RefUpdate) ([
 		return nil, nil
 	}
 
-	// A name also matches the references below it, e.g., "refs/heads/a" matches
-	// "refs/heads/a/b", so the result is matched by the exact name.
-	current := make(map[string]string, len(updates))
-	for batch := range slices.Chunk(updates, refUpdatesBatchSize) {
-		args := []string{"for-each-ref", "--format=%(objectname) %(refname)", "--end-of-options"}
-		for _, update := range batch {
-			args = append(args, update.RefName)
-		}
-		stdout, err := exec(ctx, path, args, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "list references")
-		}
-		for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
-			id, name, ok := strings.Cut(line, " ")
-			if ok {
-				current[name] = id
-			}
-		}
+	names := make([]string, 0, len(updates))
+	for _, update := range updates {
+		names = append(names, update.RefName)
+	}
+	current, err := refIDs(ctx, path, names)
+	if err != nil {
+		return nil, err
 	}
 
 	applied := make([]RefUpdate, 0, len(updates))
@@ -249,6 +202,28 @@ func appliedRefUpdates(ctx context.Context, path string, updates []RefUpdate) ([
 		}
 	}
 	return applied, nil
+}
+
+// refIDs returns the IDs of the references with given names that exist in the
+// repository in given path.
+func refIDs(ctx context.Context, path string, names []string) (map[string]string, error) {
+	// A name also matches the references below it, e.g., "refs/heads/a" matches
+	// "refs/heads/a/b", so the result is matched by the exact name.
+	ids := make(map[string]string, len(names))
+	for batch := range slices.Chunk(names, refUpdatesBatchSize) {
+		args := append([]string{"for-each-ref", "--format=%(objectname) %(refname)", "--end-of-options"}, batch...)
+		stdout, err := exec(ctx, path, args, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "list references")
+		}
+		for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
+			id, name, ok := strings.Cut(line, " ")
+			if ok {
+				ids[name] = id
+			}
+		}
+	}
+	return ids, nil
 }
 
 // receivePackPush records a push from the pkt-lines that pass between the
@@ -265,6 +240,9 @@ type receivePackPush struct {
 	commands    []RefUpdate
 	// The capabilities that the client asks for.
 	capabilities []string
+	// The references to delete that existed before Git read the commands, or nil
+	// when they are unknown.
+	existedBeforeDelete map[string]string
 
 	// The bytes of a pkt-line from Git that was not written in full yet.
 	response []byte
@@ -282,16 +260,40 @@ type receivePackPush struct {
 }
 
 type receivePackRequestReader struct {
+	ctx  context.Context
+	path string
 	r    io.Reader
 	push *receivePackPush
 }
 
 func (r receivePackRequestReader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
-	if n > 0 {
-		r.push.mu.Lock()
-		r.push.parseRequest(p[:n])
-		r.push.mu.Unlock()
+	if n == 0 {
+		return n, err
+	}
+
+	r.push.mu.Lock()
+	wasDone := r.push.requestDone
+	r.push.parseRequest(p[:n])
+	var deleted []string
+	if !wasDone && r.push.requestDone {
+		for _, command := range r.push.commands {
+			if IsEmptyID(command.NewID) {
+				deleted = append(deleted, command.RefName)
+			}
+		}
+	}
+	r.push.mu.Unlock()
+
+	// Git has not read the end of the commands yet, so it has not deleted any of
+	// the references.
+	if len(deleted) > 0 {
+		existed, lookupErr := refIDs(r.ctx, r.path, deleted)
+		if lookupErr == nil {
+			r.push.mu.Lock()
+			r.push.existedBeforeDelete = existed
+			r.push.mu.Unlock()
+		}
 	}
 	return n, err
 }
@@ -455,6 +457,27 @@ func (p *receivePackPush) result() (updates, applied []RefUpdate, reported bool)
 		}
 	}
 	return p.commands, applied, true
+}
+
+// withoutPhantomDeletes returns the updates without the deletions of references
+// that did not exist before the push. Git reports them as applied when the old
+// ID is not an object in the repository, but leaves them out of the
+// post-receive hook. All updates are returned when it is unknown which
+// references existed.
+func (p *receivePackPush) withoutPhantomDeletes(updates []RefUpdate) []RefUpdate {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.existedBeforeDelete == nil {
+		return updates
+	}
+
+	existing := updates[:0:0]
+	for _, update := range updates {
+		if _, existed := p.existedBeforeDelete[update.RefName]; existed || !IsEmptyID(update.NewID) {
+			existing = append(existing, update)
+		}
+	}
+	return existing
 }
 
 // isID returns true if s is a hex object ID of any object format.
