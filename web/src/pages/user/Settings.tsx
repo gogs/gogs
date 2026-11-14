@@ -11,6 +11,7 @@ import { FormAlert, FormField } from "@/components/FormField";
 import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { passwordHint } from "@/lib/password";
 import { removeOrgMember } from "@/lib/queries/org";
 import { FormError, formErrors } from "@/lib/queries/request";
 import {
@@ -259,6 +260,7 @@ export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
               <FormField
                 id="password"
                 label={t("settings.new_password")}
+                helper={passwordHint(t)}
                 error={fields.password}
                 invalid={"password" in fields}
               >

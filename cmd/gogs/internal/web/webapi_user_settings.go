@@ -170,6 +170,9 @@ func putUserPassword(c flamego.Context, sess session.Session, mc *macaron.Contex
 		msg := l.Tr("form.password_not_match")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"retype": &msg}}, nil
 	}
+	if msg := checkNewPassword(c.Request().Context(), l, req.Password); msg != nil {
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"password": msg}}, nil
+	}
 	err = database.Handle.Users().Update(c.Request().Context(), user.ID, database.UpdateUserOptions{Password: &req.Password})
 	if err != nil {
 		log.Error("putUserPassword: update user %d: %v", user.ID, err)
