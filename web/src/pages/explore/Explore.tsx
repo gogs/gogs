@@ -9,16 +9,19 @@ import {
   Lock,
   Mail,
   MapPin,
+  Menu,
   Search,
   Star,
   User,
 } from "lucide-react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
@@ -64,6 +67,12 @@ export type ExplorePage =
   | ({ kind: "repos" } & ExploreList<ExploreRepo>)
   | ({ kind: "users" | "organizations" } & ExploreList<ExploreUser>);
 
+interface ExploreTab {
+  kind: ExploreKind;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+}
+
 const route = getRouteApi("/explore/$kind");
 
 const JOINED_DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", month: "short", day: "2-digit" });
@@ -75,7 +84,7 @@ export function Explore() {
   const navigate = useNavigate({ from: "/explore/$kind" });
   usePageTitle(t("explore"));
 
-  const tabs: { kind: ExploreKind; label: string; icon: ComponentType<{ className?: string }> }[] = [
+  const tabs: ExploreTab[] = [
     { kind: "repos", label: t("explore.repos"), icon: BookMarked },
     { kind: "users", label: t("explore.users"), icon: User },
     { kind: "organizations", label: t("explore.organizations"), icon: Building2 },
@@ -90,7 +99,7 @@ export function Explore() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
       <h1 className="mb-3 text-xl font-semibold">{t("explore")}</h1>
-      <nav aria-label={t("explore")} className="mb-4 flex overflow-x-auto border-b border-(--color-border)">
+      <nav aria-label={t("explore")} className="mb-4 flex border-b border-(--color-border)">
         {tabs.map(({ kind, label, icon: Icon }) => {
           const active = kind === data.kind;
           return (
@@ -100,10 +109,10 @@ export function Explore() {
               params={{ kind }}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
+                "-mb-px items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
                 active
-                  ? "border-(--color-primary) font-semibold text-(--color-foreground)"
-                  : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
+                  ? "flex border-(--color-primary) font-semibold text-(--color-foreground)"
+                  : "hidden border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground) sm:flex",
               )}
             >
               <Icon className="size-4" aria-hidden />
@@ -111,6 +120,8 @@ export function Explore() {
             </Link>
           );
         })}
+        {/* Only the active tab fits inline next to the menu at 375px. */}
+        <TabsOverflowMenu tabs={tabs.filter((tab) => tab.kind !== data.kind)} />
       </nav>
 
       <form role="search" onSubmit={onSearch} className="flex gap-2">
@@ -147,6 +158,39 @@ export function Explore() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+function TabsOverflowMenu({ tabs }: { tabs: ExploreTab[] }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("more_tabs")}
+          className="-mb-px flex cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground) sm:hidden"
+        >
+          <Menu className="size-4" aria-hidden />
+          <span>{t("more")}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-1">
+        {tabs.map(({ kind, label, icon: Icon }) => (
+          <Link
+            key={kind}
+            to="/explore/$kind"
+            params={{ kind }}
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-(--color-foreground) hover:bg-(--color-surface)"
+          >
+            <Icon className="size-4" aria-hidden />
+            {label}
+          </Link>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }
 

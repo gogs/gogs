@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	"context"
 	"html"
 	"net/http"
@@ -22,13 +23,10 @@ type explorePage[T any] struct {
 }
 
 func newExplorePage[T any](items []T, page int, total int64) *explorePage[T] {
-	// A page size below 1 counts as 1, like the server-rendered pagination did.
 	pageSize := int64(max(conf.UI.ExplorePagingNum, 1))
 	totalPages := int((total + pageSize - 1) / pageSize)
 	return &explorePage[T]{
-		Items: items,
-		// A page past the end (e.g., a stale link) marks the last page as current,
-		// like the server-rendered pagination did.
+		Items:      items,
 		Page:       min(page, max(totalPages, 1)),
 		TotalPages: totalPages,
 	}
@@ -42,7 +40,7 @@ type exploreRepo struct {
 	Owner string `json:"owner"`
 	Name  string `json:"name"`
 	// DescriptionHTML is the repository description sanitized for rendering as
-	// HTML, matching what the legacy templates rendered.
+	// HTML.
 	DescriptionHTML string    `json:"descriptionHTML"`
 	AvatarURL       string    `json:"avatarURL,omitempty"`
 	IsPrivate       bool      `json:"isPrivate"`
@@ -54,16 +52,11 @@ type exploreRepo struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-func getExploreRepos(c flamego.Context, user *database.User) (statusCode int, resp *explorePage[exploreRepo], err error) {
+func getExploreRepos(c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreRepo], err error) {
 	page := explorePageParam(c)
-	var viewerID int64
-	if user != nil {
-		viewerID = user.ID
-	}
-
 	repos, total, err := database.SearchRepositoryByName(&database.SearchRepoOptions{
 		Keyword:  c.Query("q"),
-		UserID:   viewerID,
+		UserID:   cmp.Or(viewer, &database.User{}).ID,
 		OrderBy:  "updated_unix DESC",
 		Page:     page,
 		PageSize: conf.UI.ExplorePagingNum,
@@ -97,13 +90,12 @@ func getExploreRepos(c flamego.Context, user *database.User) (statusCode int, re
 }
 
 type exploreUser struct {
-	Name      string `json:"name"`
-	FullName  string `json:"fullName,omitempty"`
-	AvatarURL string `json:"avatarURL"`
-	Location  string `json:"location,omitempty"`
-	Email     string `json:"email,omitempty"`
-	Website   string `json:"website,omitempty"`
-	// Description is only set for organizations.
+	Name        string     `json:"name"`
+	FullName    string     `json:"fullName,omitempty"`
+	AvatarURL   string     `json:"avatarURL"`
+	Location    string     `json:"location,omitempty"`
+	Email       string     `json:"email,omitempty"`
+	Website     string     `json:"website,omitempty"`
 	Description string     `json:"description,omitempty"`
 	CreatedAt   *time.Time `json:"createdAt,omitempty"`
 }
@@ -112,12 +104,12 @@ func toExploreUser(u *database.User) exploreUser {
 	user := exploreUser{
 		Name: u.Name,
 		// Users loaded through GORM carry an HTML-sanitized full name, while those
-		// loaded through xorm carry the raw one. Normalize both to plain text.
+		// loaded through XORM carry the raw one. Normalize both to plain text.
 		FullName:  html.UnescapeString(markup.Sanitize(u.FullName)),
 		AvatarURL: u.AvatarURLPath(),
 		Location:  u.Location,
 	}
-	// Read the column directly because xorm-loaded users leave Created unset.
+	// Read the column directly because XORM-loaded users leave Created unset.
 	// Organizations created before their creation time was recorded have none.
 	if u.CreatedUnix > 0 {
 		created := time.Unix(u.CreatedUnix, 0).UTC()
@@ -146,7 +138,7 @@ func searchExploreUsers(ctx context.Context, typ database.UserType, keyword stri
 	return users, database.Handle.Users().Count(ctx), err
 }
 
-func getExploreUsers(c flamego.Context, user *database.User) (statusCode int, resp *explorePage[exploreUser], err error) {
+func getExploreUsers(c flamego.Context, viewer *database.User) (statusCode int, resp *explorePage[exploreUser], err error) {
 	page := explorePageParam(c)
 	users, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page)
 	if err != nil {
@@ -157,8 +149,8 @@ func getExploreUsers(c flamego.Context, user *database.User) (statusCode int, re
 	items := make([]exploreUser, 0, len(users))
 	for _, u := range users {
 		item := toExploreUser(u)
-		// Email addresses are only shown to signed-in users.
-		if user != nil {
+		// Email addresses are only shown to signed-in viewers.
+		if viewer != nil {
 			item.Email = u.Email
 		}
 		items = append(items, item)

@@ -121,7 +121,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	org.MaxRepoCreation = -1
 	org.NumTeams = 1
 	org.NumMembers = 1
-	// The GORM create hook that stamps the creation time does not run for xorm inserts.
+	// The GORM create hook that stamps the creation time does not run for XORM inserts.
 	org.CreatedUnix = time.Now().Unix()
 	org.UpdatedUnix = org.CreatedUnix
 

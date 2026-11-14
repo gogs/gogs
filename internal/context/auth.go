@@ -108,7 +108,8 @@ func isWebAssetPath(p string) bool {
 		strings.HasPrefix(p, "/node_modules/")
 }
 
-// turnsAway returns true if the toggle denies the viewer the requested page.
+// turnsAway returns true if the toggle sends the viewer to sign-in, account
+// activation, or the prohibit-login page.
 func turnsAway(c *Context, options *ToggleOptions) bool {
 	if c.IsLogged {
 		return c.User.IsDisabled()

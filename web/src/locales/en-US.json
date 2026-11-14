@@ -60,7 +60,7 @@
   "repo.unlisted": "Unlisted",
   "repo.stargazers": "Stargazers",
   "repo.forks": "Forks",
-  "repo.no_desc": "No Description",
+  "repo.no_desc": "No description",
   "status.page_not_found": "Page not found",
   "status.internal_server_error": "Internal server error",
   "auth.auth_source": "Authentication source",

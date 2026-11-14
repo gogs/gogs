@@ -38,7 +38,7 @@ func TestRequireViewAccess(t *testing.T) {
 		name                     string
 		requireSigninView        bool
 		requireEmailConfirmation bool
-		user                     *database.User
+		viewer                   *database.User
 		wantCode                 int
 		wantBody                 string
 	}{
@@ -51,13 +51,13 @@ func TestRequireViewAccess(t *testing.T) {
 		{
 			name:                     "unconfirmed user when confirmation is required",
 			requireEmailConfirmation: true,
-			user:                     &database.User{ID: 2, IsActive: false},
+			viewer:                   &database.User{ID: 2, IsActive: false},
 			wantCode:                 http.StatusForbidden,
 			wantBody:                 `{"error":"account not activated"}`,
 		},
 		{
 			name:     "login prohibited user when sign-in is not required",
-			user:     &database.User{ID: 2, IsActive: true, ProhibitLogin: true},
+			viewer:   &database.User{ID: 2, IsActive: true, ProhibitLogin: true},
 			wantCode: http.StatusForbidden,
 			wantBody: `{"error":"login prohibited"}`,
 		},
@@ -68,8 +68,8 @@ func TestRequireViewAccess(t *testing.T) {
 			conf.Auth.RequireEmailConfirmation = test.requireEmailConfirmation
 			for _, path := range paths {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
-				if test.user != nil {
-					req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, test.user))
+				if test.viewer != nil {
+					req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, test.viewer))
 				}
 				resp := httptest.NewRecorder()
 				handler.ServeHTTP(resp, req)

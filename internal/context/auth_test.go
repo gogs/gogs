@@ -64,7 +64,7 @@ func TestToggle(t *testing.T) {
 	conf.Server.Subpath = "/gogs"
 	conf.Auth.RequireEmailConfirmation = true
 
-	serve := func(t *testing.T, user *database.User, path string) *httptest.ResponseRecorder {
+	serve := func(t *testing.T, viewer *database.User, path string) *httptest.ResponseRecorder {
 		t.Helper()
 		webHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("web app"))
@@ -72,7 +72,7 @@ func TestToggle(t *testing.T) {
 		m := macaron.New()
 		m.Use(func(ctx *macaron.Context) {
 			ctx.Locale = testLocale{}
-			ctx.Map(&Context{Context: ctx, User: user, IsLogged: user != nil, webHandler: webHandler})
+			ctx.Map(&Context{Context: ctx, User: viewer, IsLogged: viewer != nil, webHandler: webHandler})
 		})
 		m.Get("/:username/:reponame", Toggle(&ToggleOptions{SignInRequired: true}), func(ctx *macaron.Context) {
 			_, _ = ctx.Resp.Write([]byte("page"))
@@ -110,19 +110,19 @@ func TestToggle(t *testing.T) {
 	})
 }
 
-func TestContext_NotFound_passesUser(t *testing.T) {
+func TestContextNotFoundPassesUser(t *testing.T) {
 	var got *database.User
 	webHandler := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		got, _ = r.Context().Value(UserKey{}).(*database.User)
 	})
-	user := &database.User{ID: 7}
+	viewer := &database.User{ID: 7}
 	m := macaron.New()
 	m.Use(func(ctx *macaron.Context) {
 		ctx.Locale = testLocale{}
-		ctx.Map(&Context{Context: ctx, User: user, IsLogged: true, webHandler: webHandler})
+		ctx.Map(&Context{Context: ctx, User: viewer, IsLogged: true, webHandler: webHandler})
 	})
 	m.Get("/alice/missing", func(c *Context) { c.NotFound() })
 
 	m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/alice/missing", nil))
-	assert.Same(t, user, got)
+	assert.Same(t, viewer, got)
 }

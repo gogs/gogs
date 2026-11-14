@@ -49,11 +49,11 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 
 func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
-	user, _ := ctx.Value(context.UserKey{}).(*database.User)
+	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(user, sess, mc, l)
+	c.Map(viewer, sess, mc, l)
 	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 
@@ -78,14 +78,14 @@ func (s flamegoSessionAdapter) Encode() ([]byte, error) { return nil, nil }
 // to view any content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous visitors. Mount
 // it on every route that serves site content, but not on the routes visitors
 // need to sign in.
-func requireViewAccess(c flamego.Context, user *database.User) {
+func requireViewAccess(c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
 	switch {
-	case user != nil && user.ProhibitLogin:
+	case viewer != nil && viewer.ProhibitLogin:
 		writeErrorResponse(w, http.StatusForbidden, errors.New("login prohibited"))
-	case user != nil && user.IsDisabled():
+	case viewer != nil && viewer.IsDisabled():
 		writeErrorResponse(w, http.StatusForbidden, errors.New("account not activated"))
-	case user == nil && conf.Auth.RequireSigninView:
+	case viewer == nil && conf.Auth.RequireSigninView:
 		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
 	}
 }
