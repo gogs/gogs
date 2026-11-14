@@ -48,6 +48,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - Work with repositories across federated Gogs instances.\*
 - Interface
   - Light and dark themes.
+  - Available in over [31 languages](https://crowdin.com/project/gogs), including emails\*.
   - Jump to repositories, files, issues and code from a command palette.\*
 - Integrations
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
@@ -65,7 +66,6 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
   - Customize templates, static files and much more, and preview emails in the admin panel\*.
   - Monitor with OpenTelemetry and Prometheus, plus a built-in trace view in the admin panel\*.
-  - Available in over [31 languages](https://crowdin.com/project/gogs), including emails\*.
 
 <sub>* In development.</sub>
 
