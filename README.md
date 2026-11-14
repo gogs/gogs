@@ -41,10 +41,10 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - See who last changed each line with blame.\*
   - Compare images and rendered Markdown in diffs.\*
 - Collaboration
-  - Issues, wikis, and pull requests with inline reviews\* and stacks\*.
+  - Issues, wikis and pull requests, with inline reviews\* and stacks\*.
   - Organizations, teams and per-repository collaborators.
   - Dashboards, user profiles and activity timelines.
-  - Protected branches, with required code owner reviews and signed commits.\*
+  - Protected branches, with required code owner reviews\* and signed commits\*.
   - Work with repositories across federated Gogs instances.\*
 - Interface
   - Light and dark themes.
@@ -53,21 +53,19 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - Repository and organization webhooks, with native Slack, Discord and DingTalk support.
   - A REST [API](https://gogs.io/api-reference) for automation, with GitHub compatibility\*.
 - Security
-  - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\*, SAML 2.0\* or passkeys\*.
-  - Optional two-factor authentication with TOTP and recovery codes.
+  - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
+  - Multi-factor authentication with TOTP, recovery codes and passkeys\*.
   - Confirm who you are before sensitive actions.\*
   - See and sign out the browsers signed in to your account.\*
   - Get emails about changes to the security of your account.\*
   - Require a minimum password length and optionally reject leaked passwords.\*
   - Block pushes with secrets, get alerts for vulnerable dependencies, and see static analysis results.\*
 - Operations
-  - A single binary on Linux, macOS, Windows and ARM, or the official Docker image.
-  - Scale out across nodes on Kubernetes.\*
+  - Run a single binary on Linux, macOS, Windows and ARM, the official Docker image, or scale out on Kubernetes\*.
   - PostgreSQL, MySQL, MariaDB or SQLite3, plus anything that speaks one of their protocols.
-  - Customize templates, static files and much more.
-  - Translated emails, previewed in the admin panel.\*
+  - Customize templates, static files and much more, and preview emails in the admin panel\*.
   - Monitor with OpenTelemetry and Prometheus, plus a built-in trace view in the admin panel\*.
-  - Available in over [31 languages](https://crowdin.com/project/gogs).
+  - Available in over [31 languages](https://crowdin.com/project/gogs), including emails\*.
 
 <sub>* In development.</sub>
 
