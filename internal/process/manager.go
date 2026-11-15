@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -81,6 +82,16 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
 		timeout = defaultTimeout
+	}
+
+	// 🚨 SECURITY: Older Git does not accept "--end-of-options" for every command,
+	// so it is replaced by a check that no argument after it looks like an option.
+	if cmdName == "git" {
+		var err error
+		args, err = git.ArgsForBinVersion(args)
+		if err != nil {
+			return "", err.Error(), err
+		}
 	}
 
 	bufOut := new(bytes.Buffer)
