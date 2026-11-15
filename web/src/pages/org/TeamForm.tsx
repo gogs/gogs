@@ -253,7 +253,6 @@ function DeleteTeamButton({ org, team }: { org: string; team: OrgTeamDetail }) {
       label={t("org.teams.delete_team")}
       title={t("org.teams.delete_team_title")}
       description={t("org.teams.delete_team_desc")}
-      align="start"
       action={() => deleteOrgTeam(org, team.lowerName)}
       onDone={async () => {
         toast.success(t("org.teams.delete_team_success"));

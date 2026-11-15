@@ -334,7 +334,6 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
                 label={t("admin.auths.delete")}
                 title={t("admin.auths.delete_auth_title")}
                 description={t("admin.auths.delete_auth_desc")}
-                align="start"
                 action={() => deleteAdminAuthSource(source.id)}
                 onDone={async () => {
                   toast.success(t("admin.auths.deletion_success"));
