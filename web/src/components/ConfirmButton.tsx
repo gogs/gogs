@@ -65,6 +65,8 @@ export function ConfirmButton({
             type="button"
             variant="destructive"
             size="sm"
+            // A long title wraps in narrow popovers, so the button grows with it.
+            className="h-auto min-h-8 py-1.5"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >

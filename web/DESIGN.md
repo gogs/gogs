@@ -83,6 +83,10 @@ The settings pages of users and organizations use `SettingsLayout` from `@/compo
 
 Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a popover with `ConfirmButton`, not a modal. Deleting an account asks for the password instead, with `DeleteForm`.
 
+## Translated markup
+
+Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>` and `<strong>`. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.
+
 ## Interactive affordances
 
 Tailwind 4's preflight removes the browser default `cursor: pointer` on `<button>`. Without it, controls visually read as static text. Apply `cursor-pointer` on every interactive element that isn't a plain link: buttons, custom clickable rows, menu triggers, anything whose `onClick` activates an action. `<a href>` keeps the link cursor automatically.
