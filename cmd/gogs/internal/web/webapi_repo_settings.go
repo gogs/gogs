@@ -125,6 +125,9 @@ type repoSettings struct {
 	// danger zone.
 	ViewerIsOwner         bool `json:"viewerIsOwner"`
 	ViewerCanEditGitHooks bool `json:"viewerCanEditGitHooks"`
+	// ForcePrivate is true when the site forces private repositories and the
+	// viewer cannot make this one public.
+	ForcePrivate bool `json:"forcePrivate"`
 }
 
 func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
@@ -137,6 +140,7 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 		Private:         repo.IsPrivate,
 		Unlisted:        repo.IsUnlisted,
 		IsFork:          repo.IsFork,
+		ForcePrivate:    isForcedPrivate(viewer, repo),
 		ForkCount:       repo.NumForks,
 		AvatarURL:       avatarURL,
 		HasCustomAvatar: avatarURL != "",
@@ -200,6 +204,13 @@ type repoNameResponse struct {
 	Name  string `json:"name"`
 }
 
+// isForcedPrivate reports whether the viewer must keep the repository private
+// because the site forces private repositories. Only site admins can make such
+// a repository public.
+func isForcedPrivate(viewer *database.User, repo *database.Repository) bool {
+	return conf.Repository.ForcePrivate && repo.IsPrivate && !viewer.IsAdmin
+}
+
 // patchRepoSettings renames the repository and changes its description,
 // website and visibility.
 func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoSettingsRequest) (statusCode int, resp any, err error) {
@@ -229,6 +240,9 @@ func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	private, unlisted := req.Private, req.Unlisted
 	if repo.IsFork {
 		private, unlisted = repo.BaseRepo.IsPrivate, repo.BaseRepo.IsUnlisted
+	}
+	if isForcedPrivate(viewer, repo) {
+		private = true
 	}
 	visibilityChanged := repo.IsPrivate != private || repo.IsUnlisted != unlisted
 	repo.IsPrivate, repo.IsUnlisted = private, unlisted

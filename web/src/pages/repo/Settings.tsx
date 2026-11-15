@@ -25,6 +25,7 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { SettingsLayout, SettingsNavDivider, SettingsNavGroup, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogBody,
@@ -960,12 +961,21 @@ function VisibilityAction({ owner, name, settings }: { owner: string; name: stri
                   aria-describedby={settings.forkCount ? "visibility-helper" : undefined}
                 >
                   <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
-                  <CheckboxField
-                    id="private"
-                    label={<RichText text={t("repo.visiblity_helper")} />}
-                    checked={form.private}
-                    onChange={(checked) => setForm((f) => ({ ...f, private: checked }))}
-                  />
+                  {settings.forcePrivate ? (
+                    <label htmlFor="private" className="flex items-start gap-2.5 text-sm">
+                      <Checkbox id="private" className="mt-0.5" checked disabled />
+                      <span>
+                        <RichText text={t("repo.visiblity_helper_forced")} />
+                      </span>
+                    </label>
+                  ) : (
+                    <CheckboxField
+                      id="private"
+                      label={<RichText text={t("repo.visiblity_helper")} />}
+                      checked={form.private}
+                      onChange={(checked) => setForm((f) => ({ ...f, private: checked }))}
+                    />
+                  )}
                   <CheckboxField
                     id="unlisted"
                     label={<RichText text={t("repo.unlisted_helper")} />}

@@ -222,6 +222,8 @@ export interface RepoSettingsData {
   unlisted: boolean;
   // Forks keep the visibility of their base repository.
   isFork: boolean;
+  // The site forces private repositories and the viewer cannot make this one public.
+  forcePrivate: boolean;
   forkCount: number;
   avatarURL: string;
   hasCustomAvatar: boolean;
