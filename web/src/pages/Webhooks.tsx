@@ -423,7 +423,6 @@ function WebhookForm({ scope, type, hook }: { scope: WebhookScope; type: Webhook
                 label={t("repo.settings.delete_webhook")}
                 title={t("repo.settings.webhook_deletion")}
                 description={t("repo.settings.webhook_deletion_desc")}
-                align="start"
                 action={() => deleteWebhook(scope, hook.id)}
                 onDone={async () => {
                   toast.success(t("repo.settings.webhook_deletion_success"));
