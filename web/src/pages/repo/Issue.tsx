@@ -849,8 +849,8 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
   );
 }
 
-// SidebarSection is a part of the sidebar with a heading, which writers can
-// change through the popover of its button.
+// SidebarSection is a part of the sidebar with a heading, which writers click
+// to change it in a popover.
 function SidebarSection({
   title,
   editor,
@@ -861,34 +861,32 @@ function SidebarSection({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const heading = "text-xs font-semibold text-(--color-muted-foreground)";
   return (
-    <section className="border-b border-(--color-border) pb-4">
-      <div className="mb-2 flex min-h-8 items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-(--color-muted-foreground)">{title}</h2>
-        {editor ? (
-          <Popover open={open} onOpenChange={setOpen}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={title}
-                    className="size-8 text-(--color-muted-foreground)"
-                  >
-                    <Settings className="size-4" aria-hidden />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>{title}</TooltipContent>
-            </Tooltip>
-            <PopoverContent align="end" collisionPadding={16} className="w-64 max-w-[calc(100vw-2rem)] p-1">
-              {editor(() => setOpen(false))}
-            </PopoverContent>
-          </Popover>
-        ) : null}
-      </div>
+    <section className="border-b border-(--color-border) py-4 first:pt-0 last:border-b-0">
+      {editor ? (
+        <Popover open={open} onOpenChange={setOpen}>
+          <h2 className="mb-1">
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  heading,
+                  "-ml-2 flex min-h-8 w-[calc(100%+0.5rem)] cursor-pointer items-center justify-between gap-2 rounded-md px-2 hover:text-(--color-primary) focus-visible:outline-2 focus-visible:outline-(--color-ring)",
+                )}
+              >
+                {title}
+                <Settings className="size-4" aria-hidden />
+              </button>
+            </PopoverTrigger>
+          </h2>
+          <PopoverContent align="end" collisionPadding={16} className="w-64 max-w-[calc(100vw-2rem)] p-1">
+            {editor(() => setOpen(false))}
+          </PopoverContent>
+        </Popover>
+      ) : (
+        <h2 className={cn(heading, "mb-1 flex min-h-8 items-center")}>{title}</h2>
+      )}
       {children}
     </section>
   );
@@ -967,9 +965,64 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
     </span>
   );
   const emptyText = "text-sm text-(--color-muted-foreground)";
+  // self is the viewer when they can be assigned, for the shortcut to assign
+  // themselves.
+  const viewer = useUserInfo();
+  const self = viewer ? data.assigneeOptions?.find((u) => u.name === viewer.username) : undefined;
 
   return (
-    <aside className="flex min-w-0 flex-col gap-4">
+    <aside className="flex min-w-0 flex-col">
+      <SidebarSection
+        title={t("repo.issues.new.assignee")}
+        editor={
+          data.assigneeOptions
+            ? (close) => (
+                <OptionList
+                  clearLabel={t("repo.issues.new.clear_assignee")}
+                  groups={[{ items: data.assigneeOptions ?? [] }]}
+                  current={data.assignee?.id}
+                  disabled={assignee.isPending}
+                  render={(u) => (
+                    <>
+                      <img src={u.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
+                      <span className="min-w-0 truncate">{u.name}</span>
+                    </>
+                  )}
+                  onPick={(id) => assignee.mutate(id, { onSuccess: close })}
+                />
+              )
+            : undefined
+        }
+      >
+        {data.assignee ? (
+          <Link
+            to="/$username"
+            params={{ username: data.assignee.name }}
+            className="inline-flex max-w-full items-center gap-2 text-sm font-semibold hover:text-(--color-primary) hover:underline"
+          >
+            <img src={data.assignee.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
+            <span className="truncate">{data.assignee.name}</span>
+          </Link>
+        ) : (
+          <p className={emptyText}>
+            {t("repo.issues.new.no_assignee")}
+            {self ? (
+              <>
+                {", "}
+                <button
+                  type="button"
+                  className="cursor-pointer text-(--color-foreground) hover:text-(--color-primary) hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={assignee.isPending}
+                  onClick={() => assignee.mutate(self.id)}
+                >
+                  {t("repo.issues.assign_yourself")}
+                </button>
+              </>
+            ) : null}
+          </p>
+        )}
+      </SidebarSection>
+
       <SidebarSection
         title={t("repo.issues.new.labels")}
         editor={
@@ -1052,59 +1105,34 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
         }
       >
         {data.milestone ? (
-          <Link
-            to="/$owner/$repo/issues"
-            params={params}
-            search={{ milestone: data.milestone.id }}
-            className="text-sm font-medium wrap-anywhere hover:text-(--color-primary) hover:underline"
-          >
-            {data.milestone.name}
-          </Link>
+          <div className="flex flex-col gap-2">
+            <div
+              role="progressbar"
+              aria-label={data.milestone.name}
+              aria-valuenow={data.milestone.completeness}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-2 overflow-hidden rounded-full bg-(--color-secondary)"
+            >
+              <div className="h-full bg-(--color-success)" style={{ width: `${data.milestone.completeness}%` }} />
+            </div>
+            <Link
+              to="/$owner/$repo/issues"
+              params={params}
+              search={{ milestone: data.milestone.id }}
+              className="text-sm font-semibold wrap-anywhere hover:text-(--color-primary) hover:underline"
+            >
+              {data.milestone.name}
+            </Link>
+          </div>
         ) : (
           <p className={emptyText}>{t("repo.issues.new.no_milestone")}</p>
         )}
       </SidebarSection>
 
       <SidebarSection
-        title={t("repo.issues.new.assignee")}
-        editor={
-          data.assigneeOptions
-            ? (close) => (
-                <OptionList
-                  clearLabel={t("repo.issues.new.clear_assignee")}
-                  groups={[{ items: data.assigneeOptions ?? [] }]}
-                  current={data.assignee?.id}
-                  disabled={assignee.isPending}
-                  render={(u) => (
-                    <>
-                      <img src={u.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-                      <span className="min-w-0 truncate">{u.name}</span>
-                    </>
-                  )}
-                  onPick={(id) => assignee.mutate(id, { onSuccess: close })}
-                />
-              )
-            : undefined
-        }
+        title={t("repo.issues.num_participants").replace(/%(?:\[1\])?d/, String(data.participants.length))}
       >
-        {data.assignee ? (
-          <Link
-            to="/$username"
-            params={{ username: data.assignee.name }}
-            className="inline-flex max-w-full items-center gap-2 text-sm font-medium hover:text-(--color-primary) hover:underline"
-          >
-            <img src={data.assignee.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-            <span className="truncate">{data.assignee.name}</span>
-          </Link>
-        ) : (
-          <p className={emptyText}>{t("repo.issues.new.no_assignee")}</p>
-        )}
-      </SidebarSection>
-
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">
-          {t("repo.issues.num_participants").replace(/%(?:\[1\])?d/, String(data.participants.length))}
-        </h2>
         <ul className="flex flex-wrap gap-1">
           {data.participants.map((u) => (
             <li key={u.name}>
@@ -1115,7 +1143,7 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
                       <img
                         src={u.avatarURL}
                         alt={u.name}
-                        className="size-7 rounded-full border border-(--color-border)"
+                        className="size-6.5 rounded-full border border-(--color-border)"
                       />
                     </UserLink>
                   </span>
@@ -1125,7 +1153,7 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
             </li>
           ))}
         </ul>
-      </section>
+      </SidebarSection>
     </aside>
   );
 }

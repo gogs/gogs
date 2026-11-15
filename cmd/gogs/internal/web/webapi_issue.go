@@ -119,6 +119,13 @@ type issueAttachmentSettings struct {
 	MaxFiles int   `json:"maxFiles"`
 }
 
+type repoIssueViewMilestone struct {
+	repoIssueMilestone
+	// Completeness is the percentage of the issues of the milestone that are
+	// closed.
+	Completeness int `json:"completeness"`
+}
+
 type repoIssueView struct {
 	Index       int64             `json:"index"`
 	Title       string            `json:"title"`
@@ -130,9 +137,9 @@ type repoIssueView struct {
 	Attachments []issueAttachment `json:"attachments"`
 	Comments    []issueComment    `json:"comments"`
 
-	Labels    []dashboardIssueLabel `json:"labels"`
-	Milestone *repoIssueMilestone   `json:"milestone,omitempty"`
-	Assignee  *repoIssueAssignee    `json:"assignee,omitempty"`
+	Labels    []dashboardIssueLabel   `json:"labels"`
+	Milestone *repoIssueViewMilestone `json:"milestone,omitempty"`
+	Assignee  *repoIssueAssignee      `json:"assignee,omitempty"`
 	// LabelOptions, MilestoneOptions and AssigneeOptions are what writers can
 	// set on the issue, and are only sent to them.
 	LabelOptions     []dashboardIssueLabel      `json:"labelOptions,omitempty"`
@@ -171,7 +178,11 @@ func getRepoIssue(c flamego.Context, viewer *database.User, repoCtx *repoContext
 		resp.Labels = append(resp.Labels, toIssueLabel(label))
 	}
 	if issue.Milestone != nil {
-		resp.Milestone = &repoIssueMilestone{ID: issue.Milestone.ID, Name: issue.Milestone.Name}
+		m := issue.Milestone
+		resp.Milestone = &repoIssueViewMilestone{repoIssueMilestone: repoIssueMilestone{ID: m.ID, Name: m.Name}}
+		if m.NumIssues > 0 {
+			resp.Milestone.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+		}
 	}
 	if issue.Assignee != nil {
 		resp.Assignee = &repoIssueAssignee{ID: issue.Assignee.ID, Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath()}

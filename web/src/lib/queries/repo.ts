@@ -511,7 +511,9 @@ export interface RepoIssueData {
   attachments: IssueAttachment[];
   comments: IssueComment[];
   labels: IssueLabel[];
-  milestone?: { id: number; name: string };
+  // completeness is the percentage of the issues of the milestone that are
+  // closed.
+  milestone?: { id: number; name: string; completeness: number };
   assignee?: { id: number; name: string; avatarURL: string };
   // labelOptions, milestoneOptions and assigneeOptions are what writers can
   // set on the issue, and are only sent to them.
