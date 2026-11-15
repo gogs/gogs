@@ -24,7 +24,7 @@ All notable changes to Gogs are documented in this file.
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
-- The database schema version is now recorded in the `goose_db_version` table. The `version` table is no longer updated and can be dropped. [#8526](https://github.com/gogs/gogs/pull/8526)
+- The database schema version is now recorded in the `goose_db_version` table. The `version` table is no longer updated and can be dropped. [#8559](https://github.com/gogs/gogs/pull/8559)
 
 ### Fixed
 
