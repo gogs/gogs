@@ -1632,8 +1632,29 @@ func GetNonMirrorRepositories() ([]*Repository, error) {
 	return getNonMirrorRepositories(x)
 }
 
+// limitVisibilityTo makes the fork at most as visible as its base repository,
+// i.e., private when the base is private and unlisted when the base is unlisted.
+func (r *Repository) limitVisibilityTo(base *Repository) {
+	r.IsPrivate = r.IsPrivate || base.IsPrivate
+	r.IsUnlisted = r.IsUnlisted || base.IsUnlisted
+}
+
 func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
+
+	// 🚨 SECURITY: A fork must never be more visible than its base repository,
+	// whichever caller saves it.
+	if repo.IsFork {
+		base := new(Repository)
+		has, err := e.ID(repo.ForkID).Cols("is_private", "is_unlisted").Get(base)
+		if err != nil {
+			return errors.Wrap(err, "get base repository")
+		} else if has {
+			wasPrivate, wasUnlisted := repo.IsPrivate, repo.IsUnlisted
+			repo.limitVisibilityTo(base)
+			visibilityChanged = visibilityChanged || repo.IsPrivate != wasPrivate || repo.IsUnlisted != wasUnlisted
+		}
+	}
 
 	if len(repo.Description) > 512 {
 		repo.Description = repo.Description[:512]

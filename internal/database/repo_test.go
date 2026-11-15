@@ -282,3 +282,30 @@ func TestSyncDelegateHooks_ProtectedMeanwhile(t *testing.T) {
 	require.NoError(t, syncDelegateHooks(repoPath, hasProtectedBranch))
 	assert.True(t, osx.IsFile(hookPath), "pre-receive hook must stay installed")
 }
+
+func TestRepository_limitVisibilityTo(t *testing.T) {
+	public := Repository{}
+	unlisted := Repository{IsUnlisted: true}
+	private := Repository{IsPrivate: true}
+	tests := []struct {
+		name string
+		fork Repository
+		base Repository
+		want Repository
+	}{
+		{name: "public fork of a private base", fork: public, base: private, want: private},
+		{name: "unlisted fork of a private base", fork: unlisted, base: private, want: Repository{IsPrivate: true, IsUnlisted: true}},
+		{name: "public fork of an unlisted base", fork: public, base: unlisted, want: unlisted},
+		{name: "private fork of a public base stays private", fork: private, base: public, want: private},
+		{name: "unlisted fork of a public base stays unlisted", fork: unlisted, base: public, want: unlisted},
+		{name: "same visibility", fork: public, base: public, want: public},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fork := test.fork
+			fork.limitVisibilityTo(&test.base)
+			assert.Equal(t, test.want.IsPrivate, fork.IsPrivate, "IsPrivate")
+			assert.Equal(t, test.want.IsUnlisted, fork.IsUnlisted, "IsUnlisted")
+		})
+	}
+}
