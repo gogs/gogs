@@ -119,9 +119,7 @@ export function UserEmailSettings({ emails, activated }: { emails: UserEmail[]; 
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.add_email")}
-              </Button>
+              <Button type="submit">{t("settings.add_email")}</Button>
             </div>
           </div>
         </fieldset>
@@ -256,9 +254,7 @@ export function UserSSHKeySettings({ keys }: { keys: SSHKey[] }) {
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.add_key")}
-              </Button>
+              <Button type="submit">{t("settings.add_key")}</Button>
             </div>
           </div>
         </fieldset>
@@ -401,9 +397,7 @@ export function UserTwoFactorEnable({ enrollment }: { enrollment: TwoFactorEnrol
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.two_factor_verify")}
-              </Button>
+              <Button type="submit">{t("settings.two_factor_verify")}</Button>
             </div>
           </div>
         </fieldset>
@@ -514,9 +508,7 @@ export function UserTokenSettings({ tokens }: { tokens: Credential[] }) {
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.generate_token")}
-              </Button>
+              <Button type="submit">{t("settings.generate_token")}</Button>
             </div>
           </div>
         </fieldset>

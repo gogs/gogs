@@ -364,7 +364,7 @@ function LabelForm({
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
               {t("cancel")}
             </Button>
-            <Button type="submit" variant="outline" size="sm">
+            <Button type="submit" size="sm">
               {submitLabel}
             </Button>
           </div>

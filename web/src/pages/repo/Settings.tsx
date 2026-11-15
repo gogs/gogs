@@ -337,9 +337,7 @@ function BasicSettings({ owner, name, settings }: { owner: string; name: string;
             </fieldset>
           )}
           <div>
-            <Button type="submit" variant="outline">
-              {t("repo.settings.update_settings")}
-            </Button>
+            <Button type="submit">{t("repo.settings.update_settings")}</Button>
           </div>
         </div>
       </fieldset>
@@ -427,9 +425,7 @@ function MirrorSettings({ owner, name, mirror }: { owner: string; name: string; 
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("repo.settings.update_settings")}
-              </Button>
+              <Button type="submit">{t("repo.settings.update_settings")}</Button>
             </div>
           </div>
         </fieldset>
@@ -665,9 +661,7 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
             </FeatureGroup>
           ) : null}
           <div>
-            <Button type="submit" variant="outline">
-              {t("repo.settings.update_settings")}
-            </Button>
+            <Button type="submit">{t("repo.settings.update_settings")}</Button>
           </div>
         </div>
       </fieldset>
@@ -958,9 +952,7 @@ export function RepoCollaboration({
                 aria-describedby={fields.username ? "username-error" : undefined}
                 className="min-w-0 flex-1 basis-56"
               />
-              <Button type="submit" variant="outline">
-                {t("repo.settings.add_collaborator")}
-              </Button>
+              <Button type="submit">{t("repo.settings.add_collaborator")}</Button>
             </div>
             {fields.username ? (
               <p id="username-error" className="text-sm text-(--color-destructive)">
@@ -1122,9 +1114,7 @@ export function RepoDeployKeys({ owner, name, keys }: { owner: string; name: str
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("repo.settings.add_deploy_key")}
-              </Button>
+              <Button type="submit">{t("repo.settings.add_deploy_key")}</Button>
             </div>
           </div>
         </fieldset>
@@ -1198,9 +1188,7 @@ export function RepoBranchSettings({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button type="submit" variant="outline">
-                    {t("repo.settings.update")}
-                  </Button>
+                  <Button type="submit">{t("repo.settings.update")}</Button>
                 </div>
                 {fields.branch ? (
                   <p id="branch-error" className="mt-1.5 text-sm text-(--color-destructive)">
@@ -1393,10 +1381,8 @@ export function RepoBranchProtection({
               </div>
             ) : null}
             <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
-              <Button type="submit" variant="outline">
-                {t("repo.settings.update_settings")}
-              </Button>
-              <Button asChild variant="ghost">
+              <Button type="submit">{t("repo.settings.update_settings")}</Button>
+              <Button asChild variant="outline">
                 <Link to="/$owner/$repo/settings/branches" params={{ owner, repo: name }}>
                   {t("cancel")}
                 </Link>
@@ -1509,10 +1495,8 @@ export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: st
               />
             </FormField>
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" variant="outline">
-                {t("repo.settings.update_githook")}
-              </Button>
-              <Button asChild variant="ghost">
+              <Button type="submit">{t("repo.settings.update_githook")}</Button>
+              <Button asChild variant="outline">
                 <Link to="/$owner/$repo/settings/hooks/git" params={{ owner, repo: name }}>
                   {t("cancel")}
                 </Link>

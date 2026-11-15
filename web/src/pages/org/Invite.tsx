@@ -62,9 +62,7 @@ export function OrgInvite({ org: orgName }: { org: string }) {
                   aria-describedby={error ? "username-error" : undefined}
                   className="min-w-0 flex-1 basis-56"
                 />
-                <Button type="submit" variant="outline">
-                  {t("org.members.invite_now")}
-                </Button>
+                <Button type="submit">{t("org.members.invite_now")}</Button>
               </div>
               {error ? (
                 <p id="username-error" className="text-sm text-(--color-destructive)">

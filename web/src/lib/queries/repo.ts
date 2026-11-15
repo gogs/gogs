@@ -327,7 +327,7 @@ export interface RepoGitHook {
 }
 
 export async function fetchRepoGitHooks(owner: string, name: string) {
-  return (await fetchJSON<{ items: RepoGitHook[] }>(repoSettingsURL(owner, name, "/git-hooks"))).items;
+  return (await fetchJSON<{ items: RepoGitHook[] }>(repoSettingsURL(owner, name, "/githooks"))).items;
 }
 
 export interface RepoGitHookContent extends RepoGitHook {
@@ -335,15 +335,15 @@ export interface RepoGitHookContent extends RepoGitHook {
 }
 
 export function fetchRepoGitHook(owner: string, name: string, hook: string) {
-  return fetchJSON<RepoGitHookContent>(repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`));
+  return fetchJSON<RepoGitHookContent>(repoSettingsURL(owner, name, `/githooks/${encodeURIComponent(hook)}`));
 }
 
 export function updateRepoGitHook(owner: string, name: string, hook: string, content: string) {
-  return submit<void>("PUT", repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`), { content });
+  return submit<void>("PUT", repoSettingsURL(owner, name, `/githooks/${encodeURIComponent(hook)}`), { content });
 }
 
 export function deleteRepoGitHook(owner: string, name: string, hook: string) {
-  return send("DELETE", repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`));
+  return send("DELETE", repoSettingsURL(owner, name, `/githooks/${encodeURIComponent(hook)}`));
 }
 
 export interface RepoBranchSettingsData {

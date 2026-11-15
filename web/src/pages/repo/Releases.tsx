@@ -531,7 +531,7 @@ export function RepoReleaseEditor({
                 {t("repo.release.save_draft")}
               </Button>
             ) : null}
-            <Button asChild variant="ghost">
+            <Button asChild variant="outline">
               <Link to="/$owner/$repo/releases" params={{ owner, repo: name }} search={{}}>
                 {t("repo.release.cancel")}
               </Link>

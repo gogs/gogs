@@ -254,7 +254,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 						Get(getRepoProtectedBranch).
 						Put(bindJSON(repoProtectedBranchRequest{}), putRepoProtectedBranch)
 				}, withRepoBranchSettings)
-				f.Group("/git-hooks", func() {
+				f.Group("/githooks", func() {
 					f.Get("", getRepoGitHooks)
 					f.Combo("/{name}", withRepoGitHook).
 						Get(getRepoGitHook).
