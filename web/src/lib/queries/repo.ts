@@ -166,6 +166,8 @@ export interface RepoForkOptions {
     isUnlisted: boolean;
   };
   owners: RepoNewOwner[];
+  // The site makes every new repository, including forks, private.
+  forcePrivate: boolean;
 }
 
 export function fetchRepoForkOptions(id: number) {

@@ -110,7 +110,7 @@ All notable changes to Gogs are documented in this file.
 - A webhook delivery to an invalid payload URL or to a blocked local network address now shows as failed with the reason, instead of staying pending and being retried on every delivery run. [#8501](https://github.com/gogs/gogs/pull/8501)
 - External wiki and issue tracker URLs with a query string or fragment, e.g., `doku.php?id=start`, now open the right page instead of a page named after the escaped URL. [#8638](https://github.com/gogs/gogs/pull/8638)
 - The API now lists no branches for an empty repository instead of failing, and creating a file through the contents API in an empty repository makes its first commit. [#8396](https://github.com/gogs/gogs/issues/8396)
-- With `[repository] FORCE_PRIVATE = true`, repositories created through the API are now private, and only site admins can make a private repository public in its settings. [#8186](https://github.com/gogs/gogs/issues/8186)
+- With `[repository] FORCE_PRIVATE = true`, repositories created through the API and forks of public repositories are now private, and only site admins can make a private repository public. [#8186](https://github.com/gogs/gogs/issues/8186)
 
 ### Removed
 
