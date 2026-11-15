@@ -34,6 +34,7 @@ All notable changes to Gogs are documented in this file.
 - Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
 - The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`. It lists branches page by page with `page` and `pageSize`. Commits, branches and repository search take the page size as either `pageSize` or `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
 - API endpoints to get, create, edit and delete releases: `GET`, `PATCH` and `DELETE /repos/{owner}/{repo}/releases/{id}`, and `POST /repos/{owner}/{repo}/releases`. [#8187](https://github.com/gogs/gogs/issues/8187)
+- API endpoints to get, create, edit and delete releases: `GET`, `PATCH` and `DELETE /repos/{owner}/{repo}/releases/{id}`, and `POST /repos/{owner}/{repo}/releases`. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Changed
 
