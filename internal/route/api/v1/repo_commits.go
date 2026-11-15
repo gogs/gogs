@@ -13,19 +13,48 @@ import (
 
 const mediaApplicationSHA = "application/vnd.gogs.sha"
 
-// getAllCommits returns a slice of commits starting from HEAD.
+// getAllCommits returns a page of the commits reachable from the "sha" query
+// parameter, a branch, a tag or a commit, which defaults to HEAD.
 func getAllCommits(c *apiContext) {
-	// Get pagesize, set default if it is not specified.
 	pageSize := c.QueryInt("pageSize")
-	if pageSize == 0 {
+	if pageSize <= 0 {
 		pageSize = 30
 	}
+	pageSize = toAllowedPageSize(pageSize)
+	page := max(c.QueryInt("page"), 1)
 
-	// The response object returned as JSON
 	result := make([]*types.Commit, 0, pageSize)
-	commits, err := git.RepoLog(c.Request().Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
+	sha := c.Query("sha")
+	if sha == "" {
+		if c.Repo.Repository.IsEmpty {
+			c.JSONSuccess(result)
+			return
+		}
+		sha = "HEAD"
+	}
+
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	if err != nil {
+		c.Error(err, "open repository")
+		return
+	}
+	start, err := gitRepo.CatFileCommit(c.Request().Context(), sha)
+	if err != nil {
+		c.NotFoundOrError(git.NewError(err), "get commit")
+		return
+	}
+	total, err := start.CommitsCount(c.Request().Context())
+	if err != nil {
+		c.Error(err, "count commits")
+		return
+	}
+	commits, err := gitRepo.Log(c.Request().Context(), start.ID.String(), git.LogOptions{
+		MaxCount: pageSize,
+		Skip:     (page - 1) * pageSize,
+	})
 	if err != nil {
 		c.Error(err, "git log")
+		return
 	}
 
 	for _, commit := range commits {
@@ -37,6 +66,7 @@ func getAllCommits(c *apiContext) {
 		result = append(result, apiCommit)
 	}
 
+	c.SetLinkHeader(int(total), pageSize)
 	c.JSONSuccess(result)
 }
 
