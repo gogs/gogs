@@ -95,7 +95,7 @@ func Migrate(logger *logx.Logger, db *gorm.DB) error {
 		return errors.Wrap(err, "new goose provider")
 	}
 
-	_, err = provider.Up(context.Background())
+	_, err = provider.Up(db.Statement.Context)
 	if err != nil {
 		return errors.Wrap(err, "run migrations")
 	}
