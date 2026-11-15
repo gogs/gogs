@@ -685,6 +685,79 @@
             "description": "Repository name"
           }
         ]
+      },
+      "post": {
+        "operationId": "createBranch",
+        "summary": "Create a branch",
+        "description": "Creates a branch as if it were pushed, which fires the `create` and `push` webhooks.",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the new branch",
+                    "example": "feature"
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Branch, tag, or commit SHA to point at. Defaults to the default branch."
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Branch"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No write access to the repository, or the repository is a mirror."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Invalid branch name, the branch already exists, or the target does not exist."
+          }
+        }
       }
     },
     "/repos/{owner}/{repo}/branches/{branch}": {
@@ -5173,6 +5246,79 @@
           },
           "404": {
             "description": "Repository not found."
+          }
+        }
+      },
+      "post": {
+        "operationId": "createTag",
+        "summary": "Create a tag",
+        "description": "Creates a lightweight tag as if it were pushed, which fires the `create` webhook.",
+        "tags": [
+          "Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the new tag",
+                    "example": "v1.0.0"
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Branch, tag, or commit SHA to point at. Defaults to the default branch."
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No write access to the repository, or the repository is a mirror."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Invalid tag name, the tag already exists, or the target does not exist."
           }
         }
       }

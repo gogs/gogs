@@ -288,9 +288,13 @@ func RegisterRoutes(f *flamego.Flame) {
 					})
 				})
 				f.Get("/forks", listForks)
-				f.Get("/tags", listTags)
+				f.Combo("/tags").
+					Get(listTags).
+					Post(reqRepoWriter(), bind(createReferenceRequest{}), createTag)
 				f.Group("/branches", func() {
-					f.Get("", listBranches)
+					f.Combo("").
+						Get(listBranches).
+						Post(reqRepoWriter(), bind(createReferenceRequest{}), createBranch)
 					f.Get("/{**}", getBranch)
 				})
 				f.Group("/commits", func() {

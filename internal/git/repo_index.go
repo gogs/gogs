@@ -257,6 +257,19 @@ func (r *Repository) IsValidBranchName(ctx context.Context, name string) bool {
 	return err == nil
 }
 
+// IsValidTagName returns true if the name is allowed for a new tag.
+func (r *Repository) IsValidTagName(ctx context.Context, name string) bool {
+	ctx, span := tracer.Start(ctx, "git.Repository.IsValidTagName")
+	defer span.End()
+
+	// Git allows these, but they would be taken for an option or for HEAD.
+	if strings.HasPrefix(name, "-") || name == "HEAD" {
+		return false
+	}
+	_, err := exec(ctx, r.path, []string{"check-ref-format", RefsTags + name}, nil)
+	return err == nil
+}
+
 // signatureEnvs returns the environment variables that make Git use the
 // signature as the given role, i.e., "AUTHOR" or "COMMITTER".
 func signatureEnvs(role string, sig *Signature) []string {
