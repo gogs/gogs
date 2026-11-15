@@ -399,7 +399,36 @@ func TestAuthorize(t *testing.T) {
 				return mockStore
 			},
 			expStatusCode: http.StatusOK,
-			expBody:       "owner.Name: owner, repo.Name: repo",
+			expBody:       "owner.Name: owner, repo.Name: repo, repoIDs: [1]",
+		},
+		{
+			name:       "fork reads objects of the base repositories that the actor can read",
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				// Only the owner of a repository other than repository 3 can read it.
+				mockStore.AuthorizeRepositoryAccessFunc.SetDefaultHook(func(_ context.Context, userID int64, repoID int64, _ database.AccessMode, _ database.AccessModeOptions) bool {
+					return userID == 1 && repoID != 3
+				})
+				mockStore.GetRepositoryByNameFunc.SetDefaultReturn(&database.Repository{ID: 1, Name: "repo", IsFork: true, ForkID: 2}, nil)
+				mockStore.GetRepositoryByIDFunc.SetDefaultHook(func(_ context.Context, id int64) (*database.Repository, error) {
+					switch id {
+					case 2:
+						return &database.Repository{ID: 2, IsFork: true, ForkID: 3}, nil
+					case 3:
+						return &database.Repository{ID: 3, IsFork: true, ForkID: 4}, nil
+					case 4:
+						return &database.Repository{ID: 4}, nil
+					}
+					return nil, database.ErrRepoNotExist{}
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expBody:       "owner.Name: owner, repo.Name: repo, repoIDs: [1 2]",
 		},
 		{
 			name:       "actor is authorized",
@@ -418,7 +447,7 @@ func TestAuthorize(t *testing.T) {
 				return mockStore
 			},
 			expStatusCode: http.StatusOK,
-			expBody:       "owner.Name: owner, repo.Name: repo",
+			expBody:       "owner.Name: owner, repo.Name: repo, repoIDs: [0]",
 		},
 	}
 	for _, test := range tests {
@@ -440,8 +469,8 @@ func TestAuthorize(t *testing.T) {
 			m.Get(
 				"/{owner}/{repo}",
 				authorize(mockStore, test.accessMode),
-				func(w http.ResponseWriter, owner *database.User, repo *database.Repository) {
-					_, _ = fmt.Fprintf(w, "owner.Name: %s, repo.Name: %s", owner.Name, repo.Name)
+				func(w http.ResponseWriter, owner *database.User, repo *database.Repository, repoIDs objectRepos) {
+					_, _ = fmt.Fprintf(w, "owner.Name: %s, repo.Name: %s, repoIDs: %v", owner.Name, repo.Name, repoIDs)
 				},
 			)
 

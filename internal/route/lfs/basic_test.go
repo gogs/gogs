@@ -2,6 +2,7 @@ package lfs
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -49,6 +50,7 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 	m := flamego.New()
 	m.Use(func(c flamego.Context) {
 		c.Map(&database.Repository{Name: "repo"})
+		c.Map(objectRepos{1, 2})
 		c.Map(lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"))
 	})
 	m.Get("/", basic.serveDownload)
@@ -100,6 +102,26 @@ func TestBasicHandler_serveDownload(t *testing.T) {
 					},
 					nil,
 				)
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expHeader: http.Header{
+				"Content-Type":   []string{"application/octet-stream"},
+				"Content-Length": []string{"12"},
+			},
+			expBody: "Hello world!",
+		},
+		{
+			name:    "object exists in the base repository",
+			content: "Hello world!",
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetLFSObjectByOIDFunc.SetDefaultHook(func(_ context.Context, repoID int64, _ lfsx.OID) (*database.LFSObject, error) {
+					if repoID != 2 {
+						return nil, database.ErrLFSObjectNotExist{}
+					}
+					return &database.LFSObject{RepoID: 2, Size: 12, Storage: s.Storage()}, nil
+				})
 				return mockStore
 			},
 			expStatusCode: http.StatusOK,

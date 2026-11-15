@@ -31,6 +31,9 @@ type Store interface {
 	// access mode to the repository.
 	AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool
 
+	// GetRepositoryByID returns the repository with given ID. It returns
+	// database.ErrRepoNotExist when not found.
+	GetRepositoryByID(ctx context.Context, id int64) (*database.Repository, error)
 	// GetRepositoryByName returns the repository with given owner and name. It
 	// returns database.ErrRepoNotExist when not found.
 	GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error)
@@ -94,6 +97,10 @@ func (*store) GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfs
 
 func (*store) AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
 	return database.Handle.Permissions().Authorize(ctx, userID, repoID, desired, opts)
+}
+
+func (*store) GetRepositoryByID(ctx context.Context, id int64) (*database.Repository, error) {
+	return database.Handle.Repositories().GetByID(ctx, id)
 }
 
 func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {

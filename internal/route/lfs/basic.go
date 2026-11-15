@@ -39,8 +39,15 @@ func (h *basicHandler) Storager(storage lfsx.Storage) lfsx.Storager {
 }
 
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func (h *basicHandler) serveDownload(c flamego.Context, repo *database.Repository, oid lfsx.OID) {
-	object, err := h.store.GetLFSObjectByOID(c.Request().Context(), repo.ID, oid)
+func (h *basicHandler) serveDownload(c flamego.Context, repo *database.Repository, repoIDs objectRepos, oid lfsx.OID) {
+	var object *database.LFSObject
+	var err error
+	for _, repoID := range repoIDs {
+		object, err = h.store.GetLFSObjectByOID(c.Request().Context(), repoID, oid)
+		if !database.IsErrLFSObjectNotExist(err) {
+			break
+		}
+	}
 	if err != nil {
 		if database.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.ResponseWriter(), http.StatusNotFound, responseError{

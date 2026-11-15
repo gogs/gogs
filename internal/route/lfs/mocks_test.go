@@ -39,6 +39,9 @@ type MockStore struct {
 	// GetLFSObjectsByOIDsFunc is an instance of a mock function object
 	// controlling the behavior of the method GetLFSObjectsByOIDs.
 	GetLFSObjectsByOIDsFunc *StoreGetLFSObjectsByOIDsFunc
+	// GetRepositoryByIDFunc is an instance of a mock function object
+	// controlling the behavior of the method GetRepositoryByID.
+	GetRepositoryByIDFunc *StoreGetRepositoryByIDFunc
 	// GetRepositoryByNameFunc is an instance of a mock function object
 	// controlling the behavior of the method GetRepositoryByName.
 	GetRepositoryByNameFunc *StoreGetRepositoryByNameFunc
@@ -92,6 +95,11 @@ func NewMockStore() *MockStore {
 		},
 		GetLFSObjectsByOIDsFunc: &StoreGetLFSObjectsByOIDsFunc{
 			defaultHook: func(context.Context, int64, ...lfsx.OID) (r0 []*database.LFSObject, r1 error) {
+				return
+			},
+		},
+		GetRepositoryByIDFunc: &StoreGetRepositoryByIDFunc{
+			defaultHook: func(context.Context, int64) (r0 *database.Repository, r1 error) {
 				return
 			},
 		},
@@ -162,6 +170,11 @@ func NewStrictMockStore() *MockStore {
 				panic("unexpected invocation of MockStore.GetLFSObjectsByOIDs")
 			},
 		},
+		GetRepositoryByIDFunc: &StoreGetRepositoryByIDFunc{
+			defaultHook: func(context.Context, int64) (*database.Repository, error) {
+				panic("unexpected invocation of MockStore.GetRepositoryByID")
+			},
+		},
 		GetRepositoryByNameFunc: &StoreGetRepositoryByNameFunc{
 			defaultHook: func(context.Context, int64, string) (*database.Repository, error) {
 				panic("unexpected invocation of MockStore.GetRepositoryByName")
@@ -214,6 +227,9 @@ func NewMockStoreFrom(i Store) *MockStore {
 		},
 		GetLFSObjectsByOIDsFunc: &StoreGetLFSObjectsByOIDsFunc{
 			defaultHook: i.GetLFSObjectsByOIDs,
+		},
+		GetRepositoryByIDFunc: &StoreGetRepositoryByIDFunc{
+			defaultHook: i.GetRepositoryByID,
 		},
 		GetRepositoryByNameFunc: &StoreGetRepositoryByNameFunc{
 			defaultHook: i.GetRepositoryByName,
@@ -1024,6 +1040,114 @@ func (c StoreGetLFSObjectsByOIDsFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c StoreGetLFSObjectsByOIDsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// StoreGetRepositoryByIDFunc describes the behavior when the
+// GetRepositoryByID method of the parent MockStore instance is invoked.
+type StoreGetRepositoryByIDFunc struct {
+	defaultHook func(context.Context, int64) (*database.Repository, error)
+	hooks       []func(context.Context, int64) (*database.Repository, error)
+	history     []StoreGetRepositoryByIDFuncCall
+	mutex       sync.Mutex
+}
+
+// GetRepositoryByID delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockStore) GetRepositoryByID(v0 context.Context, v1 int64) (*database.Repository, error) {
+	r0, r1 := m.GetRepositoryByIDFunc.nextHook()(v0, v1)
+	m.GetRepositoryByIDFunc.appendCall(StoreGetRepositoryByIDFuncCall{v0, v1, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the GetRepositoryByID
+// method of the parent MockStore instance is invoked and the hook queue is
+// empty.
+func (f *StoreGetRepositoryByIDFunc) SetDefaultHook(hook func(context.Context, int64) (*database.Repository, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetRepositoryByID method of the parent MockStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *StoreGetRepositoryByIDFunc) PushHook(hook func(context.Context, int64) (*database.Repository, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *StoreGetRepositoryByIDFunc) SetDefaultReturn(r0 *database.Repository, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64) (*database.Repository, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *StoreGetRepositoryByIDFunc) PushReturn(r0 *database.Repository, r1 error) {
+	f.PushHook(func(context.Context, int64) (*database.Repository, error) {
+		return r0, r1
+	})
+}
+
+func (f *StoreGetRepositoryByIDFunc) nextHook() func(context.Context, int64) (*database.Repository, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *StoreGetRepositoryByIDFunc) appendCall(r0 StoreGetRepositoryByIDFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of StoreGetRepositoryByIDFuncCall objects
+// describing the invocations of this function.
+func (f *StoreGetRepositoryByIDFunc) History() []StoreGetRepositoryByIDFuncCall {
+	f.mutex.Lock()
+	history := make([]StoreGetRepositoryByIDFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// StoreGetRepositoryByIDFuncCall is an object that describes an invocation
+// of method GetRepositoryByID on an instance of MockStore.
+type StoreGetRepositoryByIDFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 *database.Repository
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c StoreGetRepositoryByIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c StoreGetRepositoryByIDFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 

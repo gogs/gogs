@@ -16,7 +16,7 @@ import (
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
 func serveBatch(store Store) flamego.Handler {
-	return func(c flamego.Context, owner *database.User, repo *database.Repository, token *lfsx.Token) {
+	return func(c flamego.Context, owner *database.User, repo *database.Repository, repoIDs objectRepos, token *lfsx.Token) {
 		var request batchRequest
 		defer func() { _ = c.Request().Request.Body.Close() }()
 		err := json.NewDecoder(c.Request().Request.Body).Decode(&request)
@@ -82,19 +82,27 @@ func serveBatch(store Store) flamego.Handler {
 			}
 
 		case basicOperationDownload:
-			oids := make([]lfsx.OID, 0, len(request.Objects))
-			for _, obj := range request.Objects {
-				oids = append(oids, obj.Oid)
-			}
-			stored, err := store.GetLFSObjectsByOIDs(c.Request().Context(), repo.ID, oids...)
-			if err != nil {
-				internalServerError(c.ResponseWriter())
-				log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
-				return
-			}
-			storedSet := make(map[lfsx.OID]*database.LFSObject, len(stored))
-			for _, obj := range stored {
-				storedSet[obj.OID] = obj
+			storedSet := make(map[lfsx.OID]*database.LFSObject, len(request.Objects))
+			for _, repoID := range repoIDs {
+				oids := make([]lfsx.OID, 0, len(request.Objects))
+				for _, obj := range request.Objects {
+					if storedSet[obj.Oid] == nil {
+						oids = append(oids, obj.Oid)
+					}
+				}
+				if len(oids) == 0 {
+					break
+				}
+
+				stored, err := store.GetLFSObjectsByOIDs(c.Request().Context(), repoID, oids...)
+				if err != nil {
+					internalServerError(c.ResponseWriter())
+					log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repoID, oids, err)
+					return
+				}
+				for _, obj := range stored {
+					storedSet[obj.OID] = obj
+				}
 			}
 
 			for _, obj := range request.Objects {

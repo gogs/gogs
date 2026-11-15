@@ -2,12 +2,14 @@ package lfs
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +28,7 @@ func TestServeBatch(t *testing.T) {
 		name          string
 		body          string
 		bearer        string
+		repoIDs       objectRepos
 		mockStore     func() *MockStore
 		expStatusCode int
 		expBody       string
@@ -91,6 +94,56 @@ func TestServeBatch(t *testing.T) {
 }` + "\n",
 		},
 		{
+			name: "download: objects of the base repository",
+			body: `{
+"operation": "download",
+"objects": [
+	{"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size": 123},
+	{"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57", "size": 456}
+]}`,
+			repoIDs: objectRepos{1, 2, 3},
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetLFSObjectsByOIDsFunc.SetDefaultHook(func(_ context.Context, repoID int64, oids ...lfsx.OID) ([]*database.LFSObject, error) {
+					switch repoID {
+					case 1:
+						return []*database.LFSObject{{OID: "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", Size: 123}}, nil
+					case 2:
+						if len(oids) != 1 || oids[0] != "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57" {
+							return nil, errors.Newf("repository 2 asked for %v", oids)
+						}
+						return []*database.LFSObject{{OID: "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57", Size: 456}}, nil
+					}
+					return nil, errors.Newf("repository %d asked for %v after all objects were found", repoID, oids)
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expBody: `{
+	"transfer": "basic",
+	"objects": [
+		{
+			"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+			"size": 123,
+			"actions": {
+				"download": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"
+				}
+			}
+		},
+		{
+			"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57",
+			"size": 456,
+			"actions": {
+				"download": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57"
+				}
+			}
+		}
+	]
+}` + "\n",
+		},
+		{
 			name: "download: contains non-existent oid and mismatched size",
 			body: `{
 "operation": "download",
@@ -149,6 +202,10 @@ func TestServeBatch(t *testing.T) {
 			m.Use(func(c flamego.Context) {
 				c.Map(&database.User{Name: "owner"})
 				c.Map(&database.Repository{Name: "repo"})
+				if test.repoIDs == nil {
+					test.repoIDs = objectRepos{1}
+				}
+				c.Map(test.repoIDs)
 				if test.bearer != "" {
 					c.Map(&lfsx.Token{})
 				} else {

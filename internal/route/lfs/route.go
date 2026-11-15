@@ -156,9 +156,15 @@ func authenticateToken(c flamego.Context, store Store, bearer string) {
 	c.Map(token)
 }
 
+// objectRepos is the IDs of the repositories whose LFS objects a request reads:
+// the context repository, then the repositories it was forked from that the
+// user can read. A fork has records of only the objects pushed to the fork
+// itself, and shares the rest with its base repository.
+type objectRepos []int64
+
 // authorize tries to authorize the user to the context repository with given
 // access mode, within what the token grants when the user authenticated with
-// one.
+// one. It maps the repositories to read LFS objects from as objectRepos.
 func authorize(store Store, mode database.AccessMode) flamego.Handler {
 	return func(c flamego.Context, actor *database.User, token *lfsx.Token) {
 		username := c.Param("owner")
@@ -208,10 +214,34 @@ func authorize(store Store, mode database.AccessMode) flamego.Handler {
 			return
 		}
 
+		repoIDs := objectRepos{repo.ID}
+		for forkID := repo.ForkID; forkID > 0; {
+			base, err := store.GetRepositoryByID(c.Request().Context(), forkID)
+			if err != nil {
+				if database.IsErrRepoNotExist(err) {
+					break
+				}
+				internalServerError(c.ResponseWriter())
+				log.Error("Failed to get repository [id: %d]: %v", forkID, err)
+				return
+			}
+			if !store.AuthorizeRepositoryAccess(c.Request().Context(), actor.ID, base.ID, database.AccessModeRead,
+				database.AccessModeOptions{
+					OwnerID: base.OwnerID,
+					Private: base.IsPrivate,
+				},
+			) {
+				break
+			}
+			repoIDs = append(repoIDs, base.ID)
+			forkID = base.ForkID
+		}
+
 		log.Trace("[LFS] Authorized user %q to %q", actor.Name, username+"/"+reponame)
 
 		c.Map(owner) // NOTE: Override actor
 		c.Map(repo)
+		c.Map(repoIDs)
 	}
 }
 
