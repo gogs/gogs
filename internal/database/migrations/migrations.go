@@ -78,10 +78,10 @@ func Migrate(logger *logx.Logger, db *gorm.DB) error {
 	}
 
 	// goose holds one connection for the whole run, while the migrations and its
-	// own bookkeeping need another one from the pool.
+	// own bookkeeping need another one from the pool, so a pool of one connection
+	// would wait forever.
 	if sqlDB.Stats().MaxOpenConnections == 1 {
-		sqlDB.SetMaxOpenConns(2)
-		defer sqlDB.SetMaxOpenConns(1)
+		return errors.New("[database] MAX_OPEN_CONNS must be at least 2 for migrations to run")
 	}
 
 	provider, err := goose.NewProvider(
