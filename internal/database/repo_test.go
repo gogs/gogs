@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/lfsx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 )
@@ -95,6 +96,49 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	_, err = CreateRepository(context.Background(), owner, owner, CreateRepoOptionsLegacy{Name: "Safety-Test"})
 	assert.True(t, IsErrRepoAlreadyExist(err), "want ErrRepoAlreadyExist, got %v", err)
 	assert.True(t, osx.Exist(canary))
+}
+
+func TestForkRepository_CopiesLFSObjects(t *testing.T) {
+	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir(), MaxCreationLimit: -1})
+	before := Handle
+	Handle = &DB{db: newTestDB(t, "forkRepositoryCopiesLFSObjects")}
+	t.Cleanup(func() { Handle = before })
+
+	ctx := context.Background()
+	alice, err := Handle.Users().Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := Handle.Users().Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	base := &Repository{OwnerID: alice.ID, Owner: alice, Name: "base", LowerName: "base"}
+	require.NoError(t, Handle.db.Create(base).Error)
+	other := &Repository{OwnerID: alice.ID, Owner: alice, Name: "other", LowerName: "other"}
+	require.NoError(t, Handle.db.Create(other).Error)
+	require.NoError(t, exec.Command("git", "init", "--bare", "--quiet", base.RepoPath()).Run())
+
+	require.NoError(t, Handle.LFS().CreateObject(ctx, base.ID, "aa", 1, lfsx.StorageLocal))
+	require.NoError(t, Handle.LFS().CreateObject(ctx, base.ID, "bb", 2, lfsx.StorageLocal))
+	require.NoError(t, Handle.LFS().CreateObject(ctx, other.ID, "cc", 3, lfsx.StorageLocal))
+
+	fork, err := ForkRepository(ctx, bob, bob, base, "fork", "")
+	require.NoError(t, err)
+
+	objects, err := Handle.LFS().GetObjectsByOIDs(ctx, fork.ID, "aa", "bb", "cc")
+	require.NoError(t, err)
+	got := make(map[lfsx.OID]int64, len(objects))
+	for _, object := range objects {
+		got[object.OID] = object.Size
+	}
+	assert.Equal(t, map[lfsx.OID]int64{"aa": 1, "bb": 2}, got)
+
+	// The fork keeps its records when the base repository is deleted.
+	require.NoError(t, DeleteRepository(alice.ID, base.ID))
+	objects, err = Handle.LFS().GetObjectsByOIDs(ctx, fork.ID, "aa", "bb")
+	require.NoError(t, err)
+	assert.Len(t, objects, 2)
+	objects, err = Handle.LFS().GetObjectsByOIDs(ctx, base.ID, "aa", "bb")
+	require.NoError(t, err)
+	assert.Empty(t, objects)
 }
 
 func TestSearchRepositoryByName(t *testing.T) {

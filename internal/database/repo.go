@@ -1632,9 +1632,13 @@ func DeleteRepository(ownerID, repoID int64) error {
 			&ProtectBranchWhitelist{RepoID: repoID},
 			&Webhook{RepoID: repoID},
 			&HookTask{RepoID: repoID},
-			&LFSObject{RepoID: repoID},
 		); err != nil {
 			return errors.Newf("deleteBeans: %v", err)
+		}
+		// Unlike the beans above, LFSObject has a composite primary key, which GORM
+		// would match with the zero OID of a bean.
+		if err := tx.Where("repo_id = ?", repoID).Delete(new(LFSObject)).Error; err != nil {
+			return errors.Wrap(err, "delete LFS objects")
 		}
 
 		// Delete comments and attachments.
@@ -2511,6 +2515,15 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 			return err
 		} else if err = tx.Exec("UPDATE repository SET num_forks = num_forks + 1 WHERE id = ?", baseRepo.ID).Error; err != nil {
 			return err
+		}
+
+		// The fork shares the LFS files of the base repository on disk, and gets
+		// its own records of them as it gets its own copy of the Git objects.
+		err = tx.Exec(`
+INSERT INTO lfs_object (repo_id, oid, size, storage, created_at)
+SELECT ?, oid, size, storage, created_at FROM lfs_object WHERE repo_id = ?`, repo.ID, baseRepo.ID).Error
+		if err != nil {
+			return errors.Wrap(err, "copy LFS objects")
 		}
 
 		repoPath := repo.repoPath(tx)
