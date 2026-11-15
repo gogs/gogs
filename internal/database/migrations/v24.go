@@ -13,5 +13,9 @@ func addRepositoryIsUnlisted(db *gorm.DB) error {
 	if db.Migrator().HasColumn(&repository{}, "IsUnlisted") {
 		return errMigrationSkipped
 	}
+	if db.Name() == "sqlite" {
+		// Match the column type of new installations, which GORM declares as numeric.
+		return db.Exec("ALTER TABLE `repository` ADD COLUMN `is_unlisted` INTEGER DEFAULT 0 NOT NULL").Error
+	}
 	return db.Migrator().AddColumn(&repository{}, "IsUnlisted")
 }
