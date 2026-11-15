@@ -1,0 +1,3 @@
+{{template "header" (Tr "mail.security.access_token_added")}}
+{{template "security_alert" (dict "Alert" . "Body" (Tr "mail.security.access_token_added.body" .Name AppName) "Path" "user/settings/security" "Label" (Tr "mail.security.review_security"))}}
+{{template "footer"}}

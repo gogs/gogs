@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,6 +86,29 @@ func TestCompose(t *testing.T) {
 		assert.True(t, strings.HasPrefix(m.Text, "Gogs"), m.Text)
 		assert.Contains(t, m.Text, "Hi bob,")
 	})
+}
+
+func TestSecurityAlert(t *testing.T) {
+	setupTemplates(t)
+	u := sampleUser{}
+	at := time.Date(2026, 11, 12, 23, 30, 0, 0, time.FixedZone("UTC+8", 8*60*60))
+
+	edge := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+	m, err := AlertSSHKeyAdded.compose("en-US", newSecurityAlertData("en-US", u, Activity{UserAgent: edge, IP: "198.51.100.7", Time: at}, `<i>laptop</i>`))
+	require.NoError(t, err)
+	assert.Equal(t, "An SSH key was added to your account", m.Subject)
+	assert.Contains(t, m.Text, `The SSH key "<i>laptop</i>" was added to your account on Gogs.`)
+	assert.NotContains(t, m.HTML, "<i>laptop</i>")
+	assert.Contains(t, m.Text, "Edge on Windows")
+	assert.Contains(t, m.Text, "2026-11-12 15:30 UTC")
+	assert.Contains(t, m.Text, "198.51.100.7")
+
+	// Whoever signs in chooses the user agent, so it is never shown as is.
+	m, err = AlertNewSignIn.compose("en-US", newSecurityAlertData("en-US", u, Activity{UserAgent: "Click https://evil.example", Time: at}, ""))
+	require.NoError(t, err)
+	assert.Contains(t, m.Text, "Unknown browser")
+	assert.NotContains(t, m.Text, "evil.example")
+	assert.NotContains(t, m.HTML, "evil.example")
 }
 
 func TestMessageLogo(t *testing.T) {
