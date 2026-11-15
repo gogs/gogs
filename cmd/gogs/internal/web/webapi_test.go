@@ -101,9 +101,9 @@ func TestRequireAuthenticated(t *testing.T) {
 	t.Cleanup(func() {
 		conf.Auth.RequireSigninView = beforeSigninView
 	})
-	// Dashboards, user settings, the people and teams of organizations, and the
-	// admin panel need an authenticated viewer even on sites that do not require signing in to view
-	// content.
+	// Dashboards, user settings, the people and teams of organizations, the
+	// settings of repositories, and the admin panel need an authenticated viewer even on
+	// sites that do not require signing in to view content.
 	conf.Auth.RequireSigninView = false
 
 	handler, err := newRoutingHandler()
@@ -144,6 +144,9 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/admin/notices",
 		"/api/web/repo/new",
 		"/api/web/repo/fork/1",
+		"/api/web/acme/widgets/settings",
+		"/api/web/acme/widgets/settings/collaborators",
+		"/api/web/acme/widgets/settings/keys",
 	} {
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))

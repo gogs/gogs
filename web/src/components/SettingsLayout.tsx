@@ -5,19 +5,23 @@ import { type MouseEvent, type ReactElement, type ReactNode, useState } from "re
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-// SettingsLayout puts the links between the settings pages of a team, a user
-// or an organization, or the pages of the admin panel, beside the page, which
-// takes the rest of the width. On narrow screens they move into a dropdown
-// above the page, named after the current page.
+// SettingsLayout puts the links between the settings pages of a user, an
+// organization or a repository, or the pages of the admin panel, beside the
+// page. On narrow
+// screens they move into a dropdown above the page, named after the current
+// page.
 export function SettingsLayout({
   label,
   current,
   nav,
+  className,
   children,
 }: {
   label: string;
   current: string;
   nav: ReactNode;
+  // className changes the layout, e.g., the width to line up with a header.
+  className?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -26,7 +30,12 @@ export function SettingsLayout({
     if ((e.target as Element).closest("a")) setOpen(false);
   };
   return (
-    <div className="mx-auto grid w-full max-w-6xl content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[200px_minmax(0,1fr)]">
+    <div
+      className={cn(
+        "mx-auto grid w-full max-w-6xl content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[200px_minmax(0,1fr)]",
+        className,
+      )}
+    >
       <nav aria-label={label} className="md:hidden">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
