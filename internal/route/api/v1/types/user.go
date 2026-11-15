@@ -11,6 +11,24 @@ type User struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// AdminUser is a user with the account settings that only site admins see.
+type AdminUser struct {
+	User
+	IsAdmin          bool      `json:"admin"`
+	IsActive         bool      `json:"active"`
+	ProhibitLogin    bool      `json:"prohibit_login"`
+	SourceID         int64     `json:"source_id"`
+	LoginName        string    `json:"login_name"`
+	Website          string    `json:"website"`
+	Location         string    `json:"location"`
+	AllowGitHook     bool      `json:"allow_git_hook"`
+	AllowImportLocal bool      `json:"allow_import_local"`
+	MaxRepoCreation  int       `json:"max_repo_creation"`
+	NumRepos         int       `json:"num_repos"`
+	Created          time.Time `json:"created_at"`
+	Updated          time.Time `json:"updated_at"`
+}
+
 type UserEmail struct {
 	Email    string `json:"email"`
 	Verified bool   `json:"verified"`
