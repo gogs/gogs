@@ -734,18 +734,16 @@ func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoO
 		return nil, err
 	}
 
+	// Re-fetch the repository so the update at the end does not override counts
+	// that were changed with SQL during creation, e.g., the number of watchers.
+	repo, err = getRepositoryByID(Handle.db, repo.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "get repository")
+	}
+	repo.Owner = owner
+
 	repoPath := RepoPath(owner.Name, opts.Name)
 	wikiPath := WikiPath(owner.Name, opts.Name)
-
-	if owner.IsOrganization() {
-		t, err := owner.GetOwnerTeam()
-		if err != nil {
-			return nil, err
-		}
-		repo.NumWatches = t.NumMembers
-	} else {
-		repo.NumWatches = 1
-	}
 
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
