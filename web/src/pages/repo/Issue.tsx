@@ -45,7 +45,6 @@ import {
   uploadRepoIssueAttachment,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
-import type { IssueLabel } from "@/lib/queries/user";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -854,12 +853,10 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
 function SidebarSection({
   title,
   editor,
-  popoverClassName,
   children,
 }: {
   title: string;
   editor?: (close: () => void) => ReactNode;
-  popoverClassName?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -882,11 +879,7 @@ function SidebarSection({
               </button>
             </PopoverTrigger>
           </h2>
-          <PopoverContent
-            align="end"
-            collisionPadding={16}
-            className={cn("w-64 max-w-[calc(100vw-2rem)] p-1", popoverClassName)}
-          >
+          <PopoverContent align="end" collisionPadding={16} className="w-75 max-w-[calc(100vw-2rem)] p-0">
             {editor(() => setOpen(false))}
           </PopoverContent>
         </Popover>
@@ -898,132 +891,101 @@ function SidebarSection({
   );
 }
 
-const OPTION_CLASS =
-  "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-60";
-
-// OptionList lists the choices in the popover of a sidebar section: a button
-// that clears the choice, then the options, marking the current one.
-function OptionList<T extends { id: number }>({
-  clearLabel,
+// Picker is the popover of a sidebar section, like the ones of GitHub: a
+// heading, a filter, and the options in groups, each toggled on click.
+function Picker<T extends { id: number; name: string }>({
+  heading,
+  filterLabel,
   groups,
-  current,
-  disabled,
-  render,
-  onPick,
-}: {
-  clearLabel: string;
-  groups: { label?: string; items: T[] }[];
-  current?: number;
-  disabled: boolean;
-  render: (item: T) => ReactNode;
-  onPick: (id: number) => void;
-}) {
-  return (
-    <div className="max-h-80 overflow-y-auto">
-      <button type="button" className={OPTION_CLASS} disabled={disabled || !current} onClick={() => onPick(0)}>
-        <X className="size-4 shrink-0" aria-hidden />
-        {clearLabel}
-      </button>
-      {groups.map((group, i) =>
-        group.items.length ? (
-          <div key={i} role="group" aria-label={group.label}>
-            {group.label ? (
-              <p className="px-2 pt-2 pb-1 text-xs font-semibold text-(--color-muted-foreground)">{group.label}</p>
-            ) : null}
-            {group.items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={item.id === current}
-                className={OPTION_CLASS}
-                disabled={disabled}
-                onClick={() => onPick(item.id)}
-              >
-                <Check className={cn("size-4 shrink-0", item.id !== current && "invisible")} aria-hidden />
-                {render(item)}
-              </button>
-            ))}
-          </div>
-        ) : null,
-      )}
-    </div>
-  );
-}
-
-// LabelPicker is the popover of the labels in the sidebar, like the one of
-// GitHub: a filter over the labels of the repository, each toggled on click.
-function LabelPicker({
-  issueRef,
-  options,
   checked,
   disabled,
+  render,
   onToggle,
+  footer,
 }: {
-  issueRef: IssueRef;
-  options: IssueLabel[];
+  heading: string;
+  filterLabel: string;
+  groups: { label?: string; items: T[] }[];
   checked: Set<number>;
   disabled: boolean;
+  render: (item: T) => ReactNode;
   onToggle: (id: number) => void;
+  // footer links to where the options are managed.
+  footer?: { label: string; to: "/$owner/$repo/labels" | "/$owner/$repo/milestones"; issueRef: IssueRef };
 }) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
-  // order puts the labels the issue had when the picker opened first, and
-  // keeps them in place while they are toggled.
-  const [order] = useState(() => [
-    ...options.filter((l) => checked.has(l.id)),
-    ...options.filter((l) => !checked.has(l.id)),
-  ]);
+  // ordered puts the options checked when the picker opened first in each
+  // group, and keeps them in place while they are toggled.
+  const [ordered] = useState(() =>
+    groups.map((group) => ({
+      ...group,
+      items: [...group.items.filter((i) => checked.has(i.id)), ...group.items.filter((i) => !checked.has(i.id))],
+    })),
+  );
   const query = filter.trim().toLowerCase();
-  const shown = query ? order.filter((l) => l.name.toLowerCase().includes(query)) : order;
+  const shown = ordered
+    .map((group) => ({
+      ...group,
+      items: query ? group.items.filter((i) => i.name.toLowerCase().includes(query)) : group.items,
+    }))
+    .filter((group) => group.items.length);
   return (
     <div className="flex flex-col text-sm">
-      <p className="border-b border-(--color-border) px-3 py-2 text-xs font-semibold">
-        {t("repo.issues.apply_labels")}
-      </p>
+      <p className="border-b border-(--color-border) px-3 py-2 text-xs font-semibold">{heading}</p>
       <div className="border-b border-(--color-border) p-2">
         <Input
           type="search"
           autoFocus
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder={t("repo.issues.filter_labels")}
-          aria-label={t("repo.issues.filter_labels")}
+          placeholder={filterLabel}
+          aria-label={filterLabel}
           className="h-8"
         />
       </div>
-      <div className="max-h-80 overflow-y-auto">
+      {/* -mb-px tucks the border of the last row under the edge of the popover. */}
+      <div className={cn("max-h-80 overflow-y-auto", !footer && "-mb-px")}>
         {shown.length ? (
-          shown.map((label) => (
-            <button
-              key={label.id}
-              type="button"
-              role="checkbox"
-              aria-checked={checked.has(label.id)}
-              disabled={disabled}
-              onClick={() => onToggle(label.id)}
-              className="flex w-full cursor-pointer items-center gap-2 border-b border-(--color-border) px-3 py-2 text-left last:border-b-0 hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Check className={cn("size-4 shrink-0", !checked.has(label.id) && "invisible")} aria-hidden />
-              <span
-                className="size-3.5 shrink-0 rounded-full border border-black/10"
-                style={{ backgroundColor: label.color }}
-                aria-hidden
-              />
-              <span className="min-w-0 truncate font-medium">{label.name}</span>
-            </button>
+          shown.map((group, i) => (
+            <div key={i} role="group" aria-label={group.label}>
+              {group.label ? (
+                <p className="border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-semibold text-(--color-muted-foreground)">
+                  {group.label}
+                </p>
+              ) : null}
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={checked.has(item.id)}
+                  disabled={disabled}
+                  onClick={() => onToggle(item.id)}
+                  className="flex w-full cursor-pointer items-center gap-2 border-b border-(--color-border) px-3 py-2 text-left hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Check className={cn("size-4 shrink-0", !checked.has(item.id) && "invisible")} aria-hidden />
+                  {render(item)}
+                </button>
+              ))}
+            </div>
           ))
         ) : (
-          <p className="px-3 py-4 text-center text-(--color-muted-foreground)">{t("repo.issues.no_labels_match")}</p>
+          <p className="border-b border-(--color-border) px-3 py-4 text-center text-(--color-muted-foreground)">
+            {t("repo.issues.picker_no_results")}
+          </p>
         )}
       </div>
-      <Link
-        to="/$owner/$repo/labels"
-        params={{ owner: issueRef.owner, repo: issueRef.name }}
-        className="flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-primary)"
-      >
-        <Pencil className="size-4" aria-hidden />
-        {t("repo.issues.edit_labels")}
-      </Link>
+      {footer ? (
+        <Link
+          to={footer.to}
+          params={{ owner: footer.issueRef.owner, repo: footer.issueRef.name }}
+          className="-mt-px flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-primary)"
+        >
+          <Pencil className="size-4" aria-hidden />
+          {footer.label}
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -1061,18 +1023,19 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
         editor={
           data.assigneeOptions
             ? (close) => (
-                <OptionList
-                  clearLabel={t("repo.issues.new.clear_assignee")}
+                <Picker
+                  heading={t("repo.issues.assign_someone")}
+                  filterLabel={t("repo.issues.filter_assignees")}
                   groups={[{ items: data.assigneeOptions ?? [] }]}
-                  current={data.assignee?.id}
+                  checked={new Set(data.assignee ? [data.assignee.id] : [])}
                   disabled={assignee.isPending}
                   render={(u) => (
                     <>
                       <img src={u.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-                      <span className="min-w-0 truncate">{u.name}</span>
+                      <span className="min-w-0 truncate font-medium">{u.name}</span>
                     </>
                   )}
-                  onPick={(id) => assignee.mutate(id, { onSuccess: close })}
+                  onToggle={(id) => assignee.mutate(id === data.assignee?.id ? 0 : id, { onSuccess: close })}
                 />
               )
             : undefined
@@ -1109,16 +1072,27 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
 
       <SidebarSection
         title={t("repo.issues.new.labels")}
-        popoverClassName="w-75 p-0"
         editor={
           data.labelOptions
             ? () => (
-                <LabelPicker
-                  issueRef={issueRef}
-                  options={data.labelOptions ?? []}
+                <Picker
+                  heading={t("repo.issues.apply_labels")}
+                  filterLabel={t("repo.issues.filter_labels")}
+                  groups={[{ items: data.labelOptions ?? [] }]}
                   checked={checked}
                   disabled={labels.isPending}
+                  render={(label) => (
+                    <>
+                      <span
+                        className="size-3.5 shrink-0 rounded-full border border-black/10"
+                        style={{ backgroundColor: label.color }}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 truncate font-medium">{label.name}</span>
+                    </>
+                  )}
                   onToggle={toggleLabel}
+                  footer={{ label: t("repo.issues.edit_labels"), to: "/$owner/$repo/labels", issueRef }}
                 />
               )
             : undefined
@@ -1149,8 +1123,9 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
         editor={
           data.milestoneOptions
             ? (close) => (
-                <OptionList
-                  clearLabel={t("repo.issues.new.clear_milestone")}
+                <Picker
+                  heading={t("repo.issues.set_milestone")}
+                  filterLabel={t("repo.issues.filter_milestones")}
                   groups={[
                     {
                       label: t("repo.issues.new.open_milestone"),
@@ -1161,10 +1136,11 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
                       items: data.milestoneOptions?.filter((m) => m.isClosed) ?? [],
                     },
                   ]}
-                  current={data.milestone?.id}
+                  checked={new Set(data.milestone ? [data.milestone.id] : [])}
                   disabled={milestone.isPending}
-                  render={(m) => <span className="min-w-0 truncate">{m.name}</span>}
-                  onPick={(id) => milestone.mutate(id, { onSuccess: close })}
+                  render={(m) => <span className="min-w-0 truncate font-medium">{m.name}</span>}
+                  onToggle={(id) => milestone.mutate(id === data.milestone?.id ? 0 : id, { onSuccess: close })}
+                  footer={{ label: t("repo.issues.edit_milestones"), to: "/$owner/$repo/milestones", issueRef }}
                 />
               )
             : undefined
