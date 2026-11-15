@@ -1601,7 +1601,8 @@
             },
             "description": "Repository name"
           }
-        ]
+        ],
+        "description": "Lists the releases of the repository. Drafts are only listed for users with write access."
       },
       "post": {
         "operationId": "createRelease",
@@ -5765,7 +5766,8 @@
           "404": {
             "description": "Resource not found."
           }
-        }
+        },
+        "description": "Gets a release. Drafts are only visible to users with write access."
       },
       "patch": {
         "operationId": "editRelease",

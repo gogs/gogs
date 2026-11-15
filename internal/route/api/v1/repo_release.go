@@ -91,7 +91,8 @@ func createRelease(c *apiContext, r createReleaseRequest) {
 // an error response.
 func getReleaseOfRepo(c *apiContext) *database.Release {
 	rel, err := database.GetReleaseByID(c.ParamInt64("id"))
-	if err == nil && rel.RepoID != c.Repo.Repository.ID {
+	// Only writers see drafts, as in the web interface.
+	if err == nil && (rel.RepoID != c.Repo.Repository.ID || rel.IsDraft && !c.Repo.IsWriter()) {
 		err = database.ErrReleaseNotExist{}
 	}
 	if err != nil {

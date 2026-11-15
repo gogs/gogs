@@ -143,6 +143,7 @@ All notable changes to Gogs are documented in this file.
 - Adding a deploy key through the API that the repository already has, or with a title it already uses, now says so instead of failing with a server error. [#8641](https://github.com/gogs/gogs/pull/8641)
 - When SSH keys are checked with `ssh-keygen`, adding a key it cannot read no longer shows paths of temporary files on the server, and a failure to run the check is reported as a server error instead of an invalid key. [#8641](https://github.com/gogs/gogs/pull/8641)
 - Adding an SSH or deploy key while SSH is disabled now says that SSH is disabled, instead of saying that the key is invalid. [#8641](https://github.com/gogs/gogs/pull/8641)
+- Listing releases through the API no longer shows drafts to users without write access. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Removed
 
