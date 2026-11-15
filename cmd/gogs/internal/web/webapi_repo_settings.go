@@ -85,6 +85,7 @@ type repoAdvancedSettings struct {
 	EnablePulls           bool   `json:"enablePulls"`
 	PullsIgnoreWhitespace bool   `json:"pullsIgnoreWhitespace"`
 	PullsAllowRebase      bool   `json:"pullsAllowRebase"`
+	PullsAllowSquash      bool   `json:"pullsAllowSquash"`
 }
 
 type repoSettings struct {
@@ -141,6 +142,7 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 			EnablePulls:           repo.EnablePulls,
 			PullsIgnoreWhitespace: repo.PullsIgnoreWhitespace,
 			PullsAllowRebase:      repo.PullsAllowRebase,
+			PullsAllowSquash:      repo.PullsAllowSquash,
 		},
 		CanEnablePulls:        repo.CanEnablePulls(),
 		OwnerIsOrganization:   rc.Owner.IsOrganization(),
@@ -334,6 +336,7 @@ func putRepoAdvanced(logger *logx.Logger, rc *repoAdminContext, req repoAdvanced
 	repo.EnablePulls = req.EnablePulls
 	repo.PullsIgnoreWhitespace = req.PullsIgnoreWhitespace
 	repo.PullsAllowRebase = req.PullsAllowRebase
+	repo.PullsAllowSquash = req.PullsAllowSquash
 	if err = database.UpdateRepository(logger, repo, false); err != nil {
 		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")

@@ -26,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { usePageTitle } from "@/lib/page-title";
 import {
   type IssueRef,
+  type MergeStyle,
   type RepoCommitListItem,
   type RepoPullData,
   deleteRepoPullBranch,
@@ -259,7 +260,10 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
   if (pull.state === "merged" && (pull.viewerCanDeleteBranch || pull.viewerCanRestoreBranch)) {
     body = <BranchActions issueRef={issueRef} branch={pull.headBranch} deleted={pull.viewerCanRestoreBranch} />;
   } else if (pull.state === "mergeable" && pull.viewerCanMerge) {
-    body = <MergeForm issueRef={issueRef} allowRebase={pull.allowRebase} />;
+    const styles: MergeStyle[] = ["create_merge_commit"];
+    if (pull.allowRebase) styles.push("rebase_before_merging");
+    if (pull.allowSquash) styles.push("squash_and_merge");
+    body = <MergeForm issueRef={issueRef} styles={styles} />;
   }
 
   return (
@@ -324,16 +328,17 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
   );
 }
 
-// MergeForm merges the pull request with a merge commit, or by rebasing it
-// when the repository allows it.
-function MergeForm({ issueRef, allowRebase }: { issueRef: IssueRef; allowRebase: boolean }) {
+// MergeForm merges the pull request in one of the styles the repository
+// allows, the first being the default.
+function MergeForm({ issueRef, styles }: { issueRef: IssueRef; styles: MergeStyle[] }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [style, setStyle] = useState<"create_merge_commit" | "rebase_before_merging">("create_merge_commit");
+  const [style, setStyle] = useState<MergeStyle>(styles[0]);
   const [description, setDescription] = useState("");
+  // Rebasing keeps the commits as they are, so there is no commit to describe.
+  const hasDescription = style !== "rebase_before_merging";
   const mutation = useMutation({
-    mutationFn: () =>
-      mergeRepoPull(issueRef, { style, description: style === "create_merge_commit" ? description : "" }),
+    mutationFn: () => mergeRepoPull(issueRef, { style, description: hasDescription ? description : "" }),
     onSuccess: () => router.invalidate(),
   });
   const { formError } = formErrors(mutation.error);
@@ -345,9 +350,9 @@ function MergeForm({ issueRef, allowRebase }: { issueRef: IssueRef; allowRebase:
   return (
     <form onSubmit={onSubmit} className="border-t border-(--color-border) px-4 py-3">
       <fieldset disabled={mutation.isPending} className="flex flex-col gap-3">
-        {allowRebase ? (
+        {styles.length > 1 ? (
           <div role="radiogroup" aria-label={t("repo.pulls.merge_pull_request")} className="flex flex-col gap-2">
-            {(["create_merge_commit", "rebase_before_merging"] as const).map((value) => (
+            {styles.map((value) => (
               <label key={value} className="flex cursor-pointer items-center gap-2 text-sm">
                 <input
                   type="radio"
@@ -362,7 +367,7 @@ function MergeForm({ issueRef, allowRebase }: { issueRef: IssueRef; allowRebase:
             ))}
           </div>
         ) : null}
-        {style === "create_merge_commit" ? (
+        {hasDescription ? (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="merge-description" className="text-sm font-medium">
               {t("repo.pulls.commit_description")}

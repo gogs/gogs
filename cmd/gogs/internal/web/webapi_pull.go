@@ -58,6 +58,7 @@ type repoPullInfo struct {
 	Merger       *issueUser `json:"merger,omitempty"`
 	MergedAt     *time.Time `json:"mergedAt,omitempty"`
 	AllowRebase  bool       `json:"allowRebase"`
+	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
 	ViewerCanMerge bool `json:"viewerCanMerge"`
 	// ViewerCanDeleteBranch is whether the viewer can delete the head branch
@@ -111,6 +112,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		HeadLabel:   pull.HeadUserName + "/" + pull.HeadBranch,
 		BaseLabel:   repoCtx.Owner.Name + "/" + pull.BaseBranch,
 		AllowRebase: repo.PullsAllowRebase,
+		AllowSquash: repo.PullsAllowSquash,
 	}
 	if pull.HeadRepo != nil {
 		info.HeadRepoLink = pull.HeadRepo.Link()
@@ -263,8 +265,9 @@ func getRepoPullRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 }
 
 type repoPullMergeRequest struct {
-	// Style is "create_merge_commit" or "rebase_before_merging".
-	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging"`
+	// Style is "create_merge_commit", "rebase_before_merging" or
+	// "squash_and_merge".
+	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging squash_and_merge"`
 	Description string `json:"description"`
 }
 

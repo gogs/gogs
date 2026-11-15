@@ -710,6 +710,12 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                 checked={form.pullsAllowRebase}
                 onChange={(pullsAllowRebase) => set({ pullsAllowRebase })}
               />
+              <CheckboxField
+                id="pullsAllowSquash"
+                label={t("repo.settings.pulls.allow_squash_merge")}
+                checked={form.pullsAllowSquash}
+                onChange={(pullsAllowSquash) => set({ pullsAllowSquash })}
+              />
             </FeatureGroup>
           ) : null}
           <div>
