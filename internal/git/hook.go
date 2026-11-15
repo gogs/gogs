@@ -230,20 +230,10 @@ func (h *Hook) Content() string {
 }
 
 // Update writes the content of the Git hook on filesystem. It updates the
-// memory copy of the content as well. Empty content removes the hook, because
-// an empty executable fails to run and would reject every push.
+// memory copy of the content as well.
 func (h *Hook) Update(content string) error {
 	h.content = strings.TrimSpace(content)
 	h.content = strings.ReplaceAll(h.content, "\r", "")
-
-	if h.content == "" {
-		if err := os.Remove(h.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		h.isSample = true
-		h.content = serverSideHookSamples[h.name]
-		return nil
-	}
 
 	if err := os.MkdirAll(path.Dir(h.path), os.ModePerm); err != nil {
 		return err
@@ -252,5 +242,16 @@ func (h *Hook) Update(content string) error {
 	}
 
 	h.isSample = false
+	return nil
+}
+
+// Delete removes the Git hook from filesystem, which makes it fall back to its
+// sample content. Deleting a hook that does not exist is not an error.
+func (h *Hook) Delete() error {
+	if err := os.Remove(h.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	h.isSample = true
+	h.content = serverSideHookSamples[h.name]
 	return nil
 }

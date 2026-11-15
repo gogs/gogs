@@ -342,6 +342,10 @@ export function updateRepoGitHook(owner: string, name: string, hook: string, con
   return submit<void>("PUT", repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`), { content });
 }
 
+export function deleteRepoGitHook(owner: string, name: string, hook: string) {
+  return send("DELETE", repoSettingsURL(owner, name, `/git-hooks/${encodeURIComponent(hook)}`));
+}
+
 export interface RepoBranchSettingsData {
   // isEmpty is set for a repository without commits, which has no branches
   // to manage yet.

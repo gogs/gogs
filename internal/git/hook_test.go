@@ -45,16 +45,19 @@ func TestHook_Update(t *testing.T) {
 	}
 	assert.Equal(t, "test content", string(p))
 
-	t.Run("empty content removes the hook", func(t *testing.T) {
-		err := h.Update(" \r\n ")
-		require.NoError(t, err)
+}
 
-		_, err = os.Stat(path)
-		assert.True(t, os.IsNotExist(err))
-		assert.True(t, h.IsSample())
-		assert.Equal(t, serverSideHookSamples[HookPreReceive], h.Content())
+func TestHook_Delete(t *testing.T) {
+	path := tempPath()
+	h := &Hook{name: HookPreReceive, path: path}
+	require.NoError(t, h.Update("test content"))
 
-		// Removing a hook that does not exist is not an error.
-		require.NoError(t, h.Update(""))
-	})
+	require.NoError(t, h.Delete())
+	_, err := os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
+	assert.True(t, h.IsSample())
+	assert.Equal(t, serverSideHookSamples[HookPreReceive], h.Content())
+
+	// Deleting a hook that does not exist is not an error.
+	require.NoError(t, h.Delete())
 }

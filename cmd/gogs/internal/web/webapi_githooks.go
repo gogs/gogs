@@ -3,9 +3,11 @@ package web
 import (
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"github.com/go-macaron/i18n"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/database"
@@ -87,12 +89,25 @@ type repoGitHookRequest struct {
 	Content string `json:"content"`
 }
 
-// putRepoGitHook saves the content of the hook. Empty content removes the
-// hook.
-func putRepoGitHook(hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
+// putRepoGitHook saves the content of the hook. Empty content is refused,
+// because an empty executable fails to run and would reject every push.
+func putRepoGitHook(l i18n.Locale, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
+	if strings.TrimSpace(req.Content) == "" {
+		msg := l.Tr("repo.settings.githook_content_required")
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
+	}
 	if err = hook.Update(req.Content); err != nil {
 		log.Error("putRepoGitHook: update hook %q: %v", hook.Path(), err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update hook")
+	}
+	return http.StatusNoContent, nil, nil
+}
+
+// deleteRepoGitHook removes the hook, which makes it inactive again.
+func deleteRepoGitHook(hook *git.Hook) (statusCode int, resp any, err error) {
+	if err = hook.Delete(); err != nil {
+		log.Error("deleteRepoGitHook: delete hook %q: %v", hook.Path(), err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete hook")
 	}
 	return http.StatusNoContent, nil, nil
 }

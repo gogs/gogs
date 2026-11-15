@@ -258,7 +258,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					f.Get("", getRepoGitHooks)
 					f.Combo("/{name}", withRepoGitHook).
 						Get(getRepoGitHook).
-						Put(bindJSON(repoGitHookRequest{}), putRepoGitHook)
+						Put(bindJSON(repoGitHookRequest{}), putRepoGitHook).
+						Delete(deleteRepoGitHook)
 				}, withRepoGitHooks)
 				f.Group("/hooks", func() {
 					f.Combo("").Get(getWebhooks).Post(bindJSON(webhookRequest{}), postWebhook)

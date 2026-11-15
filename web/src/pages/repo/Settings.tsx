@@ -47,6 +47,7 @@ import {
   deleteRepo,
   deleteRepoAvatar,
   deleteRepoDeployKey,
+  deleteRepoGitHook,
   deleteRepoWiki,
   removeRepoCollaborator,
   repoHeaderQuery,
@@ -1459,10 +1460,11 @@ export function RepoGitHooks({ owner, name, hooks }: { owner: string; name: stri
 }
 
 // RepoGitHookEdit changes the content of a Git hook. An inactive hook shows
-// its sample, and saving empty content makes the hook do nothing.
+// its sample, and an active one can be deleted to make it inactive again.
 export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: string; hook: RepoGitHookContent }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigate = useNavigate();
   const [content, setContent] = useState(hook.content);
   const update = useMutation({
     mutationFn: () => updateRepoGitHook(owner, name, hook.name, content),
@@ -1471,7 +1473,7 @@ export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: st
       await router.invalidate();
     },
   });
-  const { formError } = formErrors(update.error);
+  const { fields, formError } = formErrors(update.error);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -1489,7 +1491,12 @@ export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: st
         <fieldset disabled={update.isPending} className="contents">
           <FormAlert message={formError} />
           <div className="flex flex-col gap-5">
-            <FormField id="content" label={t("repo.settings.githook_content")} invalid={false}>
+            <FormField
+              id="content"
+              label={t("repo.settings.githook_content")}
+              error={fields.content}
+              invalid={"content" in fields}
+            >
               <CodeEditor
                 id="content"
                 label={t("repo.settings.githook_content")}
@@ -1510,6 +1517,20 @@ export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: st
                   {t("cancel")}
                 </Link>
               </Button>
+              {hook.isActive && (
+                <div className="ml-auto">
+                  <ConfirmButton
+                    label={t("repo.settings.delete_githook")}
+                    title={t("repo.settings.delete_githook")}
+                    description={t("repo.settings.githook_deletion_desc")}
+                    action={() => deleteRepoGitHook(owner, name, hook.name)}
+                    onDone={async () => {
+                      toast.success(t("repo.settings.delete_githook_success"));
+                      await navigate({ to: "/$owner/$repo/settings/hooks/git", params: { owner, repo: name } });
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </fieldset>
