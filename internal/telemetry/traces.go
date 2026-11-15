@@ -235,13 +235,14 @@ func (s *Store) OnStart(_ context.Context, sp sdktrace.ReadWriteSpan) {
 	}
 }
 
-// dropExpiredPending drops the traces that wait for their root longer than
-// pendingMaxAge, e.g., of a span that started after its root ended.
+// dropExpiredPending drops the traces without an open root that wait longer
+// than pendingMaxAge, e.g., of a span that started after its root ended. A
+// trace with an open root waits for it, e.g., of a long clone.
 func (s *Store) dropExpiredPending(now time.Time) {
 	s.pendingSweptAt = now
 	cutoff := now.Add(-pendingMaxAge)
 	for id, p := range s.pending {
-		if p.started.Before(cutoff) {
+		if p.openRoots <= 0 && p.started.Before(cutoff) {
 			delete(s.pending, id)
 		}
 	}
@@ -301,8 +302,10 @@ func (s *Store) OnEnd(sp sdktrace.ReadOnlySpan) {
 		return
 	}
 	localRoot := isLocalRoot(sp.Parent())
-	// A root ends after its children, so it is kept past the limit.
-	if len(p.spans) < maxSpansPerTrace || localRoot {
+	// The root that ends a trace ends after its children, so it is kept past
+	// the limit. Other roots are not, e.g., of requests that a client sent with
+	// the same trace ID.
+	if len(p.spans) < maxSpansPerTrace || (localRoot && p.openRoots == 1) {
 		p.spans = append(p.spans, copied)
 	} else {
 		p.dropped++
@@ -422,14 +425,20 @@ func (s *Store) finish(id string, p *pendingTrace) {
 		os.add(end, sp.duration, selfTime(sp), sp.err != "")
 	}
 
+	var r *ring
 	switch t.kept {
 	case KeptFailed, KeptSlow:
-		s.kept.push(t)
+		r = &s.kept
 	case KeptSampled:
-		s.sampled.push(t)
+		r = &s.sampled
 	default:
 		return
 	}
+	// A trace larger than its whole budget would push out every other one.
+	if t.size > r.budget {
+		return
+	}
+	r.push(t)
 	s.byID[id] = t
 	s.evict()
 }

@@ -169,6 +169,88 @@ func TestStore_KeepsRootPastSpanLimit(t *testing.T) {
 	assert.Equal(t, 1, got.DroppedSpans)
 }
 
+// A client can send many requests with the trace ID of one that is still
+// running, and they must not grow that trace past the limit and push out the
+// other kept traces when it ends.
+func TestStore_ReusedTraceIDWhileOpen(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+	failed := record(tracer, testRequest{route: "/a", status: 500, duration: time.Millisecond})
+
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0xcd, 1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	start := testNow.Add(-2 * time.Second)
+	request := func() trace.Span {
+		_, root := tracer.Start(ctx, "POST /b",
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithTimestamp(start),
+			trace.WithAttributes(
+				attribute.String("http.route", "/b"),
+				attribute.Int("http.response.status_code", 200),
+				attribute.String("url.path", strings.Repeat("x", 100)),
+			),
+		)
+		return root
+	}
+	open := request()
+	for range 3 * maxSpansPerTrace {
+		request().End(trace.WithTimestamp(start.Add(time.Millisecond)))
+	}
+	assert.LessOrEqual(t, len(store.pending[parent.TraceID()].spans), maxSpansPerTrace)
+	open.End(trace.WithTimestamp(testNow))
+
+	_, ok := store.Get(failed)
+	assert.True(t, ok, "the merged trace pushed out a failed one")
+	got, ok := store.Get(parent.TraceID().String())
+	require.True(t, ok)
+	assert.LessOrEqual(t, len(got.Spans), maxSpansPerTrace+1)
+}
+
+func TestStore_KeepsRequestLongerThanPendingMaxAge(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	start := testNow
+	_, clone := tracer.Start(context.Background(), "POST /{owner}/{repo}/git-upload-pack",
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithTimestamp(start),
+		trace.WithAttributes(attribute.Int("http.response.status_code", 200)),
+	)
+	later := start.Add(pendingMaxAge + time.Minute)
+	store.now = func() time.Time { return later }
+	// Starting another trace drops the expired pending ones.
+	record(tracer, testRequest{route: "/a", status: 200, start: later.Add(-time.Millisecond), duration: time.Millisecond})
+	clone.End(trace.WithTimestamp(later))
+
+	got, ok := store.Get(clone.SpanContext().TraceID().String())
+	require.True(t, ok)
+	assert.Equal(t, KeptSlow, got.Kept)
+}
+
+// The rollups cover the last hour, so a trace from before it is not compared
+// with the requests of that hour.
+func TestStore_GetOldTraceHasNoStats(t *testing.T) {
+	opts := defaultOptions()
+	opts.MaxAge = 24 * time.Hour
+	store, tracer := newTestStore(t, opts)
+
+	old := record(tracer, testRequest{route: "/a", status: 500, start: testNow.Add(-3 * time.Hour), duration: 10 * time.Millisecond, git: time.Millisecond})
+	recent := record(tracer, testRequest{route: "/a", status: 500, duration: 10 * time.Millisecond, git: time.Millisecond})
+
+	got, ok := store.Get(old)
+	require.True(t, ok)
+	assert.Nil(t, got.RouteStats)
+	assert.Empty(t, got.Operations)
+
+	got, ok = store.Get(recent)
+	require.True(t, ok)
+	assert.NotNil(t, got.RouteStats)
+	assert.NotEmpty(t, got.Operations)
+}
+
 func TestStore_Routes(t *testing.T) {
 	store, tracer := newTestStore(t, defaultOptions())
 
@@ -240,6 +322,29 @@ func TestStore_Search(t *testing.T) {
 	assert.Equal(t, 300, got.Total)
 	assert.Len(t, got.Traces, maxSearchResults)
 	assert.Equal(t, 300.0, got.Traces[0].DurationMs)
+}
+
+// The chart of a search covers the time of every match, even when there are
+// more of them than it shows.
+func TestStore_SearchPointsSpreadOverTime(t *testing.T) {
+	opts := defaultOptions()
+	opts.MaxMemory = 64 << 20
+	opts.MaxAge = 24 * time.Hour
+	store, tracer := newTestStore(t, opts)
+
+	n := 2 * maxSearchPoints
+	oldest := testNow.Add(-time.Duration(n) * time.Second)
+	for i := range n {
+		record(tracer, testRequest{route: "/a", status: 500, start: oldest.Add(time.Duration(i) * time.Second), duration: time.Duration(i%7+1) * time.Millisecond})
+	}
+
+	for _, slowest := range []bool{false, true} {
+		got := store.Search(SearchQuery{Slowest: slowest})
+		require.Equal(t, n, got.Total)
+		require.Len(t, got.Points, maxSearchPoints)
+		assert.True(t, got.Points[0].Start.Equal(oldest), "slowest=%v: the first point starts at %v", slowest, got.Points[0].Start)
+		assert.True(t, got.Points[len(got.Points)-1].Start.After(testNow.Add(-time.Minute)), "slowest=%v", slowest)
+	}
 }
 
 func TestStore_SearchAmbiguousPrefix(t *testing.T) {

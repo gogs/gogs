@@ -64,7 +64,9 @@ func Init(ctx context.Context, logger *logx.Logger, processors ...sdktrace.SpanP
 	for _, p := range processors {
 		opts = append(opts, sdktrace.WithSpanProcessor(p))
 	}
-	if len(processors) > 0 {
+	// A sampler set through OTEL_TRACES_SAMPLER decides for the processors too,
+	// since the SDK has no way to wrap it.
+	if len(processors) > 0 && os.Getenv("OTEL_TRACES_SAMPLER") == "" {
 		opts = append(opts, sdktrace.WithSampler(recordUnsampled{sdktrace.ParentBased(sdktrace.AlwaysSample())}))
 	}
 	provider := sdktrace.NewTracerProvider(opts...)

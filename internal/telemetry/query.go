@@ -84,7 +84,7 @@ func (s *Store) Overview(minutes int, rangeName string) Overview {
 		return out
 	}
 	out.Enabled = true
-	out.MaxAgeMinutes = int(s.opts.MaxAge / time.Minute)
+	out.MaxAgeMinutes = s.maxAgeMinutes()
 	minutes = min(minutes, rollupMinutes)
 
 	s.mu.Lock()
@@ -220,9 +220,9 @@ type SearchResult struct {
 }
 
 func (q *SearchQuery) match(t *storedTrace) bool {
+	// Search lowercases and trims Q.
 	if q.Q != "" {
-		id := strings.ToLower(strings.TrimSpace(q.Q))
-		return len(id) >= MinTraceIDPrefix && strings.HasPrefix(t.id, id)
+		return len(q.Q) >= MinTraceIDPrefix && strings.HasPrefix(t.id, q.Q)
 	}
 	if q.Route != "" && t.route.Name != q.Route {
 		return false
@@ -249,6 +249,11 @@ func (q *SearchQuery) match(t *storedTrace) bool {
 	return true
 }
 
+// maxAgeMinutes returns MaxAge in whole minutes, at least one.
+func (s *Store) maxAgeMinutes() int {
+	return max(int(math.Ceil(s.opts.MaxAge.Minutes())), 1)
+}
+
 // Search returns the kept traces that match q, the most recent first unless q
 // asks for the slowest.
 func (s *Store) Search(q SearchQuery) SearchResult {
@@ -261,11 +266,13 @@ func (s *Store) Search(q SearchQuery) SearchResult {
 		return out
 	}
 	out.Enabled = true
-	out.MaxAgeMinutes = int(s.opts.MaxAge / time.Minute)
+	out.MaxAgeMinutes = s.maxAgeMinutes()
 	out.SlowThresholdMs = ms(s.opts.SlowThreshold)
+	q.Q = strings.ToLower(strings.TrimSpace(q.Q))
 
+	// Kept traces do not change, so they are sorted and summed up after the
+	// lock is released, which every request takes to record its spans.
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.evict()
 	out.Now = s.now().UTC()
 
@@ -290,6 +297,8 @@ func (s *Store) Search(q SearchQuery) SearchResult {
 	if rs := s.routes[q.Route]; rs != nil {
 		routes[q.Route] = rs.route
 	}
+	s.mu.Unlock()
+
 	for _, r := range routes {
 		out.Routes = append(out.Routes, r)
 	}
@@ -304,19 +313,24 @@ func (s *Store) Search(q SearchQuery) SearchResult {
 		return cmp.Or(b.start.Compare(a.start), strings.Compare(a.id, b.id))
 	})
 	out.Total = len(matches)
-	for i, t := range matches {
-		if i < maxSearchResults {
-			out.Traces = append(out.Traces, t.summary())
-		}
-		if i < maxSearchPoints {
-			out.Points = append(out.Points, SearchPoint{
-				ID:         t.id,
-				Start:      t.start,
-				DurationMs: ms(t.duration),
-				Status:     t.status,
-				Error:      t.failed,
-			})
-		}
+	for _, t := range matches[:min(len(matches), maxSearchResults)] {
+		out.Traces = append(out.Traces, t.summary())
+	}
+
+	// The points spread over the time of every match, whatever the order of the
+	// list, so that the chart does not look empty where no point fits.
+	points := slices.Clone(matches)
+	slices.SortFunc(points, func(a, b *storedTrace) int { return a.start.Compare(b.start) })
+	n := min(len(points), maxSearchPoints)
+	for i := range n {
+		t := points[i*len(points)/n]
+		out.Points = append(out.Points, SearchPoint{
+			ID:         t.id,
+			Start:      t.start,
+			DurationMs: ms(t.duration),
+			Status:     t.status,
+			Error:      t.failed,
+		})
 	}
 	return out
 }
@@ -397,8 +411,13 @@ func (s *Store) Get(id string) (*Trace, bool) {
 	// in the trace.
 	out.Spans[0].ParentID = ""
 
+	// The rollups only cover the last hour, which says nothing about how usual
+	// an older trace was.
 	to := s.now().Unix() / 60
 	from := to - rollupMinutes + 1
+	if t.end().Unix()/60 < from {
+		return out, true
+	}
 	if rs := s.routes[t.route.Name]; rs != nil {
 		st := rs.sum(from, to)
 		if st.count > 0 {
