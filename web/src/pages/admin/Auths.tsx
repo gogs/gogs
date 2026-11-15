@@ -326,9 +326,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
-            <Button type="submit" variant="outline">
-              {source ? t("admin.auths.update") : t("admin.auths.new")}
-            </Button>
+            <Button type="submit">{source ? t("admin.auths.update") : t("admin.auths.new")}</Button>
             {source && !source.fromFile ? (
               <ConfirmButton
                 label={t("admin.auths.delete")}

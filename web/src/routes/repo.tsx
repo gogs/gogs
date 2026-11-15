@@ -10,6 +10,8 @@ import {
   fetchRepoDeployKeys,
   fetchRepoForkOptions,
   fetchRepoForks,
+  fetchRepoGitHook,
+  fetchRepoGitHooks,
   fetchRepoIssue,
   fetchRepoIssues,
   fetchRepoLabels,
@@ -48,6 +50,8 @@ import {
   RepoBranchSettings,
   RepoCollaboration,
   RepoDeployKeys,
+  RepoGitHookEdit,
+  RepoGitHooks,
   RepoOptions,
 } from "@/pages/repo/Settings";
 
@@ -318,6 +322,39 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
           owner={owner}
           name={repo}
           branch={repoBranchProtectionRoute.useLoaderData()}
+        />
+      );
+    },
+  });
+
+  const repoGitHooksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks/git",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoGitHooks(params.owner, params.repo),
+      ),
+    component: function GitHooks() {
+      const { owner, repo } = repoGitHooksRoute.useParams();
+      return <RepoGitHooks owner={owner} name={repo} hooks={repoGitHooksRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoGitHookRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks/git/$name",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoGitHook(params.owner, params.repo, params.name),
+      ),
+    component: function GitHook() {
+      const { owner, repo, name } = repoGitHookRoute.useParams();
+      return (
+        <RepoGitHookEdit
+          key={`${owner}/${repo}@${name}`}
+          owner={owner}
+          name={repo}
+          hook={repoGitHookRoute.useLoaderData()}
         />
       );
     },
@@ -662,6 +699,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoCollaborationRoute,
     repoBranchSettingsRoute,
     repoBranchProtectionRoute,
+    repoGitHooksRoute,
+    repoGitHookRoute,
     repoDeployKeysRoute,
     repoWebhooksRoute,
     repoWebhookNewRoute,

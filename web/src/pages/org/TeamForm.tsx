@@ -146,9 +146,7 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
             </fieldset>
           )}
           <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
-            <Button type="submit" variant="outline">
-              {team ? t("org.teams.update_settings") : t("org.create_new_team")}
-            </Button>
+            <Button type="submit">{team ? t("org.teams.update_settings") : t("org.create_new_team")}</Button>
           </div>
         </div>
       </fieldset>

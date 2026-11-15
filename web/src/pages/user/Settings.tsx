@@ -123,9 +123,7 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
               <Input autoComplete="off" {...field("location")} />
             </FormField>
             <div className="border-t border-(--color-border) pt-5">
-              <Button type="submit" variant="outline">
-                {t("settings.update_profile")}
-              </Button>
+              <Button type="submit">{t("settings.update_profile")}</Button>
             </div>
           </div>
         </fieldset>
@@ -196,7 +194,7 @@ function GravatarForm({ email: initialEmail }: { email: string }) {
             />
           </FormField>
           <div>
-            <Button type="submit" variant="outline" size="sm">
+            <Button type="submit" size="sm">
               {t("settings.lookup_avatar_by_mail")}
             </Button>
           </div>
@@ -273,9 +271,7 @@ export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
                 <Input autoComplete="new-password" {...field("retype")} />
               </FormField>
               <div className="border-t border-(--color-border) pt-5">
-                <Button type="submit" variant="outline">
-                  {t("settings.change_password")}
-                </Button>
+                <Button type="submit">{t("settings.change_password")}</Button>
               </div>
             </div>
           </fieldset>

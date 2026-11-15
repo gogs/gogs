@@ -206,7 +206,7 @@ function TestMailForm() {
             </FormField>
           </div>
           {/* Lines the button up with the input below the label. */}
-          <Button type="submit" variant="outline" className="sm:mt-[1.625rem]">
+          <Button type="submit" className="sm:mt-[1.625rem]">
             {t("admin.config.email.send_test_mail")}
           </Button>
         </div>

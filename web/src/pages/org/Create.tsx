@@ -68,9 +68,7 @@ export function OrgCreate() {
               />
             </FormField>
             <div className="border-t border-(--color-border) pt-5">
-              <Button type="submit" variant="outline">
-                {t("org.create_org")}
-              </Button>
+              <Button type="submit">{t("org.create_org")}</Button>
             </div>
           </div>
         </fieldset>

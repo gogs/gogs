@@ -242,9 +242,7 @@ function NewRepoPage({
           <div className="flex flex-col gap-5">
             {children}
             <div className="border-t border-(--color-border) pt-5">
-              <Button type="submit" variant="outline">
-                {submitLabel}
-              </Button>
+              <Button type="submit">{submitLabel}</Button>
             </div>
           </div>
         </fieldset>

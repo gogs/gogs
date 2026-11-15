@@ -249,9 +249,7 @@ function OptionsForm({ org, settings }: { org: string; settings: OrgSettingsData
             </FormField>
           ) : null}
           <div className="border-t border-(--color-border) pt-5">
-            <Button type="submit" variant="outline">
-              {t("org.settings.update_settings")}
-            </Button>
+            <Button type="submit">{t("org.settings.update_settings")}</Button>
           </div>
         </div>
       </fieldset>
