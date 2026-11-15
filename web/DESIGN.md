@@ -97,6 +97,8 @@ Pages that show settings or measurements, e.g., the admin dashboard and configur
 
 Show code with syntax highlighting, e.g., the payload of a webhook delivery, with `CodeBlock` from `@/components/CodeBlock`. It renders through `@pierre/diffs` with the same themes and worker pool as the files of a commit, and follows the app theme.
 
+Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a plain `<textarea>`. It is the one editor of the app, built on CodeMirror 6. Markdown wraps like prose and Tab moves focus. `code` lays out source code with line numbers and Tab indents, and Escape then Tab leaves it. Token colors are the `--code-*` variables in `index.css`. Plain text fields, such as descriptions and SSH keys, stay textareas.
+
 ## Translated markup
 
 Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.
