@@ -176,6 +176,7 @@ All notable changes to Gogs are documented in this file.
 - The raw view of a symbolic link shows its target instead of failing, and the raw view of a directory or submodule through the API says that it does not exist instead of failing with a server error. [#8609](https://github.com/gogs/gogs/pull/8609)
 - Opening a path that goes through a file, symbolic link, or submodule, e.g., `README.md/x`, in the code browser or through the API now says that it does not exist, instead of failing with a server error or showing a file of the commit that the submodule points to. [#8609](https://github.com/gogs/gogs/pull/8609)
 - Signing in through an SMTP authentication source on port 465 no longer fails with an error. [#8627](https://github.com/gogs/gogs/pull/8627)
+Migrating a repository from an SSH clone address now explains that SSH is not supported instead of reporting that importing local repositories is not allowed. [#6954](https://github.com/gogs/gogs/issues/6954)
 
 ### Removed
 
