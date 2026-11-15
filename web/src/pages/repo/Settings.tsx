@@ -733,6 +733,13 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                 </p>
               ) : null}
               <CheckboxField
+                id="pullsDeleteBranch"
+                label={t("repo.settings.pulls.delete_branch")}
+                description={t("repo.settings.pulls.delete_branch_desc")}
+                checked={form.pullsDeleteBranch}
+                onChange={(pullsDeleteBranch) => set({ pullsDeleteBranch })}
+              />
+              <CheckboxField
                 id="pullsIgnoreWhitespace"
                 label={t("repo.settings.pulls.ignore_whitespace")}
                 checked={form.pullsIgnoreWhitespace}

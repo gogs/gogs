@@ -320,6 +320,18 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
 	}
+
+	// The merge is done, so failing to delete the branch only leaves it be.
+	if repoCtx.Repo.PullsDeleteBranch {
+		info, _, _, err := describePull(c.Request().Context(), repoCtx, issue)
+		if err != nil {
+			logger.Error("Failed to describe pull request", "pullID", pull.ID, "error", err)
+		} else if info.ViewerCanDeleteBranch {
+			if _, err = deleteHeadBranch(c.Request().Context(), logger, viewer, repoCtx, pull); err != nil {
+				logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
+			}
+		}
+	}
 	return http.StatusNoContent, nil, nil
 }
 
@@ -370,21 +382,33 @@ func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	} else if !info.ViewerCanDeleteBranch {
 		return http.StatusNotFound, nil, errors.New("branch cannot be deleted")
 	}
+	deleted, err := deleteHeadBranch(ctx, logger, viewer, repoCtx, pull)
+	if err != nil {
+		logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	} else if !deleted {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+	}
+	return http.StatusNoContent, nil, nil
+}
+
+// deleteHeadBranch deletes the head branch of the merged pull request in the
+// base repository, unless it has commits that were not merged, and returns
+// whether it did.
+func deleteHeadBranch(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, pull *database.PullRequest) (deleted bool, err error) {
+	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+		return false, errors.Wrap(err, "open repository")
 	}
 	commitID, err := gitRepo.BranchCommitID(ctx, pull.HeadBranch)
 	if err != nil {
-		logger.Error("Failed to get branch commit", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get branch commit")
+		return false, errors.Wrap(err, "get branch commit")
 	} else if commitID != pull.MergedCommitID {
-		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+		return false, nil
 	}
 	if err = gitRepo.DeleteBranch(ctx, pull.HeadBranch, git.DeleteBranchOptions{Force: true}); err != nil {
-		logger.Error("Failed to delete branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete branch")
+		return false, errors.Wrap(err, "delete branch")
 	}
 	if err = database.PrepareWebhooks(logger, repo, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        pull.HeadBranch,
@@ -395,5 +419,5 @@ func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	}); err != nil {
 		logger.Error("Failed to prepare webhooks for deleted branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
 	}
-	return http.StatusNoContent, nil, nil
+	return true, nil
 }

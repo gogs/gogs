@@ -87,6 +87,7 @@ type repoAdvancedSettings struct {
 	PullsAllowMerge       bool   `json:"pullsAllowMerge"`
 	PullsAllowRebase      bool   `json:"pullsAllowRebase"`
 	PullsAllowSquash      bool   `json:"pullsAllowSquash"`
+	PullsDeleteBranch     bool   `json:"pullsDeleteBranch"`
 	// PullsMergeMessage and PullsSquashMessage are the presets of the
 	// messages merge commits and squashing start with, empty for the
 	// default message.
@@ -150,6 +151,7 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 			PullsAllowMerge:       repo.PullsAllowMerge,
 			PullsAllowRebase:      repo.PullsAllowRebase,
 			PullsAllowSquash:      repo.PullsAllowSquash,
+			PullsDeleteBranch:     repo.PullsDeleteBranch,
 			PullsMergeMessage:     repo.PullsMergeMessage,
 			PullsSquashMessage:    repo.PullsSquashMessage,
 		},
@@ -350,6 +352,7 @@ func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, r
 	repo.PullsAllowMerge = req.PullsAllowMerge
 	repo.PullsAllowRebase = req.PullsAllowRebase
 	repo.PullsAllowSquash = req.PullsAllowSquash
+	repo.PullsDeleteBranch = req.PullsDeleteBranch
 	repo.PullsMergeMessage = req.PullsMergeMessage
 	repo.PullsSquashMessage = req.PullsSquashMessage
 	if err = database.UpdateRepository(logger, repo, false); err != nil {
