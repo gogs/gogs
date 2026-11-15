@@ -1,6 +1,17 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Pencil, ShieldCheck, Users } from "lucide-react";
+import {
+  GitBranch,
+  KeyRound,
+  Pencil,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  SquareTerminal,
+  TriangleAlert,
+  Users,
+  Webhook,
+} from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -12,7 +23,7 @@ import { CredentialRow, ROW_CLASS } from "@/components/CredentialRow";
 import { CheckboxField, FormAlert, FormField, RadioField } from "@/components/FormField";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
-import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
+import { SettingsLayout, SettingsNavDivider, SettingsNavGroup, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -73,7 +84,7 @@ const TEXTAREA_CLASS =
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "short" });
 const MODES: RepoCollaboratorMode[] = ["admin", "write", "read"];
 
-type SettingsPage = "options" | "collaboration" | "branches" | "hooks" | "githooks" | "keys";
+type SettingsPage = "general" | "mirror" | "danger" | "collaboration" | "branches" | "hooks" | "githooks" | "keys";
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.
@@ -122,7 +133,9 @@ export function RepoSettingsLayout({
   usePageTitle(`${t("repo.settings")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
   const titles: Record<SettingsPage, string> = {
-    options: t("repo.settings.options"),
+    general: t("repo.settings.general"),
+    mirror: t("repo.settings.mirror"),
+    danger: t("repo.settings.danger_zone"),
     collaboration: t("repo.settings.collaboration"),
     branches: t("repo.settings.branches"),
     hooks: t("repo.settings.hooks"),
@@ -140,41 +153,65 @@ export function RepoSettingsLayout({
           className="max-w-7xl"
           nav={
             <>
-              <SettingsNavItem active={active === "options"}>
-                <Link to="/$owner/$repo/settings" params={params} activeOptions={{ exact: true }}>
-                  {titles.options}
-                </Link>
-              </SettingsNavItem>
-              <SettingsNavItem active={active === "collaboration"}>
-                <Link to="/$owner/$repo/settings/collaboration" params={params} activeOptions={{ exact: true }}>
-                  {titles.collaboration}
-                </Link>
-              </SettingsNavItem>
-              {/* Mirrors take their branches from the source repository. */}
-              {settings.mirror ? null : (
-                <SettingsNavItem active={active === "branches"}>
-                  <Link to="/$owner/$repo/settings/branches" params={params}>
-                    {titles.branches}
+              <SettingsNavGroup>
+                <SettingsNavItem active={active === "general"} icon={Settings}>
+                  <Link to="/$owner/$repo/settings" params={params} activeOptions={{ exact: true }}>
+                    {titles.general}
                   </Link>
                 </SettingsNavItem>
-              )}
-              <SettingsNavItem active={active === "hooks"}>
-                <Link to="/$owner/$repo/settings/hooks" params={params}>
-                  {titles.hooks}
-                </Link>
-              </SettingsNavItem>
-              {settings.viewerCanEditGitHooks ? (
-                <SettingsNavItem active={active === "githooks"}>
-                  <Link to="/$owner/$repo/settings/hooks/git" params={params}>
-                    {titles.githooks}
+              </SettingsNavGroup>
+              <SettingsNavGroup title={t("settings.group_access")}>
+                <SettingsNavItem active={active === "collaboration"} icon={Users}>
+                  <Link to="/$owner/$repo/settings/collaboration" params={params} activeOptions={{ exact: true }}>
+                    {titles.collaboration}
                   </Link>
                 </SettingsNavItem>
+              </SettingsNavGroup>
+              <SettingsNavGroup title={t("repo.settings.group_code")}>
+                {/* Mirrors take their branches from the source repository. */}
+                {settings.mirror ? (
+                  <SettingsNavItem active={active === "mirror"} icon={RefreshCw}>
+                    <Link to="/$owner/$repo/settings/mirror" params={params} activeOptions={{ exact: true }}>
+                      {titles.mirror}
+                    </Link>
+                  </SettingsNavItem>
+                ) : (
+                  <SettingsNavItem active={active === "branches"} icon={GitBranch}>
+                    <Link to="/$owner/$repo/settings/branches" params={params}>
+                      {titles.branches}
+                    </Link>
+                  </SettingsNavItem>
+                )}
+                <SettingsNavItem active={active === "hooks"} icon={Webhook}>
+                  <Link to="/$owner/$repo/settings/hooks" params={params}>
+                    {titles.hooks}
+                  </Link>
+                </SettingsNavItem>
+                {settings.viewerCanEditGitHooks ? (
+                  <SettingsNavItem active={active === "githooks"} icon={SquareTerminal}>
+                    <Link to="/$owner/$repo/settings/hooks/git" params={params}>
+                      {titles.githooks}
+                    </Link>
+                  </SettingsNavItem>
+                ) : null}
+              </SettingsNavGroup>
+              <SettingsNavGroup title={t("repo.settings.group_security")}>
+                <SettingsNavItem active={active === "keys"} icon={KeyRound}>
+                  <Link to="/$owner/$repo/settings/keys" params={params} activeOptions={{ exact: true }}>
+                    {titles.keys}
+                  </Link>
+                </SettingsNavItem>
+              </SettingsNavGroup>
+              {settings.viewerIsOwner ? (
+                <>
+                  <SettingsNavDivider />
+                  <SettingsNavItem active={active === "danger"} icon={TriangleAlert} destructive>
+                    <Link to="/$owner/$repo/settings/danger" params={params} activeOptions={{ exact: true }}>
+                      {titles.danger}
+                    </Link>
+                  </SettingsNavItem>
+                </>
               ) : null}
-              <SettingsNavItem active={active === "keys"}>
-                <Link to="/$owner/$repo/settings/keys" params={params} activeOptions={{ exact: true }}>
-                  {titles.keys}
-                </Link>
-              </SettingsNavItem>
             </>
           }
         >
@@ -194,15 +231,14 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-// RepoOptions changes the name, the visibility, the avatar, the mirroring and
-// the features of a repository, and holds the actions that cannot be taken
-// back.
-export function RepoOptions({ owner, name }: { owner: string; name: string }) {
+// RepoGeneral changes the name, the visibility, the avatar and the features of
+// a repository.
+export function RepoGeneral({ owner, name }: { owner: string; name: string }) {
   const { t } = useTranslation();
   const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
   const refresh = useRefresh(owner, name);
   return (
-    <RepoSettingsLayout owner={owner} name={name} active="options">
+    <RepoSettingsLayout owner={owner} name={name} active="general">
       <Section title={t("repo.settings.basic_settings")}>
         <BasicSettings owner={owner} name={name} settings={settings} />
         <div className="mt-8">
@@ -218,19 +254,34 @@ export function RepoOptions({ owner, name }: { owner: string; name: string }) {
           />
         </div>
       </Section>
-      {settings.mirror ? (
-        <Section title={t("repo.settings.mirror_settings")}>
-          <MirrorSettings owner={owner} name={name} mirror={settings.mirror} />
-        </Section>
-      ) : null}
       <Section title={t("repo.settings.advanced_settings")}>
         <AdvancedSettings owner={owner} name={name} settings={settings} />
       </Section>
-      {settings.viewerIsOwner ? (
-        <Section title={t("repo.settings.danger_zone")}>
-          <DangerZone owner={owner} name={name} settings={settings} />
-        </Section>
-      ) : null}
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoMirror changes how a mirror syncs from its source. Only mirrors get here.
+export function RepoMirror({ owner, name }: { owner: string; name: string }) {
+  const { t } = useTranslation();
+  const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="mirror">
+      <h1 className="mb-4 text-xl font-semibold">{t("repo.settings.mirror_settings")}</h1>
+      {settings.mirror ? <MirrorSettings owner={owner} name={name} mirror={settings.mirror} /> : null}
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoDangerZone holds the actions on a repository that cannot be taken back.
+// Only its owner gets here.
+export function RepoDangerZone({ owner, name }: { owner: string; name: string }) {
+  const { t } = useTranslation();
+  const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="danger">
+      <h1 className="mb-4 text-xl font-semibold">{t("repo.settings.danger_zone")}</h1>
+      <DangerZone owner={owner} name={name} settings={settings} />
     </RepoSettingsLayout>
   );
 }

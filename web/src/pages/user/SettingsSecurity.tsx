@@ -32,6 +32,7 @@ import {
 } from "@/lib/queries/settings";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
+import { PasswordSection } from "@/pages/user/Settings";
 
 const TEXTAREA_CLASS =
   "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
@@ -269,9 +270,9 @@ export function UserSSHKeySettings({ keys }: { keys: SSHKey[] }) {
   );
 }
 
-// UserSecuritySettings shows whether two-factor authentication is on, and
-// turns it on or off.
-export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
+// UserSecuritySettings changes how the viewer signs in: their password, and
+// whether two-factor authentication is on.
+export function UserSecuritySettings({ isLocal, enabled }: { isLocal: boolean; enabled: boolean }) {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useUserInfo();
@@ -279,7 +280,13 @@ export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
   const cloneExample = `${cloneURL.protocol}//{token}:x-access-token@${cloneURL.host}${cloneURL.pathname}`;
   return (
     <UserSettingsLayout active="security">
-      <SectionHeading title={t("settings.two_factor")} />
+      <h1 className="mb-4 border-b border-(--color-border) pb-3 text-xl font-semibold">
+        {t("settings.authentication")}
+      </h1>
+      <PasswordSection isLocal={isLocal} />
+      <h2 className="mt-8 mb-4 border-t border-(--color-border) pt-6 text-base font-semibold">
+        {t("settings.two_factor")}
+      </h2>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-(--color-border) px-4 py-3">
         <p className="flex items-center gap-2 text-sm">
           <span className="font-semibold">{t("settings.two_factor_status")}</span>

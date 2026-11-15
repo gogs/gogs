@@ -133,7 +133,7 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
   const { t } = useTranslation();
   return (
     <AdminLayout active="dashboard">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard")}</h1>
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.overview")}</h1>
       <Section id="build-info" title={t("admin.dashboard.build_info")}>
         <Facts>
           <Fact label={t("admin.dashboard.app_ver")}>{dashboard.appVersion}</Fact>
@@ -303,57 +303,63 @@ function Empty() {
   );
 }
 
-// AdminMonitor lists the scheduled tasks and the Git processes running now.
-export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
+// AdminCron lists the scheduled tasks of the server.
+export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="monitor">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor")}</h1>
-      <Section id="cron" title={t("admin.monitor.cron")}>
-        {monitor.cronTasks.length > 0 ? (
-          <ul className="border-t border-(--color-border)">
-            {monitor.cronTasks.map((task) => (
-              <li key={task.description} className={ROW_CLASS}>
-                <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-semibold wrap-anywhere">{task.description}</span>
-                  <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">
-                    {task.schedule}
-                  </code>
-                </p>
-                <Details>
-                  <Detail label={t("admin.monitor.next")}>
-                    {task.next ? formatAbsoluteTime(task.next) : <NotAvailable />}
-                  </Detail>
-                  <Detail label={t("admin.monitor.previous")}>
-                    {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
-                  </Detail>
-                  <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
-                </Details>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty />
-        )}
-      </Section>
-      <Section id="processes" title={t("admin.monitor.process")}>
-        {monitor.processes.length > 0 ? (
-          <ul className="border-t border-(--color-border)">
-            {monitor.processes.map((proc) => (
-              <li key={proc.pid} className={ROW_CLASS}>
-                <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
-                <Details>
-                  <Detail label="PID">{proc.pid}</Detail>
-                  <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
-                  <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
-                </Details>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty />
-        )}
-      </Section>
+    <AdminLayout active="cron">
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
+      {monitor.cronTasks.length > 0 ? (
+        <ul className="border-t border-(--color-border)">
+          {monitor.cronTasks.map((task) => (
+            <li key={task.description} className={ROW_CLASS}>
+              <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="font-semibold wrap-anywhere">{task.description}</span>
+                <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">
+                  {task.schedule}
+                </code>
+              </p>
+              <Details>
+                <Detail label={t("admin.monitor.next")}>
+                  {task.next ? formatAbsoluteTime(task.next) : <NotAvailable />}
+                </Detail>
+                <Detail label={t("admin.monitor.previous")}>
+                  {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
+                </Detail>
+                <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
+              </Details>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty />
+      )}
+    </AdminLayout>
+  );
+}
+
+// AdminProcesses lists the Git processes running now.
+export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
+  const { t } = useTranslation();
+  return (
+    <AdminLayout active="processes">
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.process")}</h1>
+      {monitor.processes.length > 0 ? (
+        <ul className="border-t border-(--color-border)">
+          {monitor.processes.map((proc) => (
+            <li key={proc.pid} className={ROW_CLASS}>
+              <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
+              <Details>
+                <Detail label="PID">{proc.pid}</Detail>
+                <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
+                <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
+              </Details>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty />
+      )}
     </AdminLayout>
   );
 }

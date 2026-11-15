@@ -12,14 +12,7 @@ import {
   fetchUserEmails,
   fetchUserSettings,
 } from "@/lib/queries/settings";
-import {
-  UserAvatarSettings,
-  UserDelete,
-  UserOrgSettings,
-  UserPasswordSettings,
-  UserProfileSettings,
-  UserRepoSettings,
-} from "@/pages/user/Settings";
+import { UserDelete, UserOrgSettings, UserProfileSettings, UserRepoSettings } from "@/pages/user/Settings";
 import {
   UserEmailSettings,
   UserRecoveryCodes,
@@ -36,24 +29,6 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
     loader: () => loadAuthenticatedPage(fetchUserSettings),
     component: function Profile() {
       return <UserProfileSettings settings={profileRoute.useLoaderData()} />;
-    },
-  });
-
-  const avatarRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/user/settings/avatar",
-    loader: () => loadAuthenticatedPage(fetchUserSettings),
-    component: function Avatar() {
-      return <UserAvatarSettings settings={avatarRoute.useLoaderData()} />;
-    },
-  });
-
-  const passwordRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/user/settings/password",
-    loader: () => loadAuthenticatedPage(fetchUserSettings),
-    component: function Password() {
-      return <UserPasswordSettings isLocal={passwordRoute.useLoaderData().isLocal} />;
     },
   });
 
@@ -82,9 +57,10 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
   const securityRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/user/settings/security",
-    loader: () => loadAuthenticatedPage(fetchTwoFactorEnabled),
+    loader: () => loadAuthenticatedPage(() => Promise.all([fetchUserSettings(), fetchTwoFactorEnabled()])),
     component: function Security() {
-      return <UserSecuritySettings enabled={securityRoute.useLoaderData()} />;
+      const [settings, enabled] = securityRoute.useLoaderData();
+      return <UserSecuritySettings isLocal={settings.isLocal} enabled={enabled} />;
     },
   });
 
@@ -141,8 +117,6 @@ export function createSettingsRoutes(rootRoute: AnyRoute) {
 
   return [
     profileRoute,
-    avatarRoute,
-    passwordRoute,
     emailRoute,
     sshRoute,
     securityRoute,
