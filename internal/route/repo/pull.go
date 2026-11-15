@@ -1,6 +1,7 @@
 package repo
 
 import (
+	gocontext "context"
 	"net/http"
 	"path"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/issuetemplate"
 )
 
 const (
@@ -23,20 +25,6 @@ const (
 
 	PullRequestTemplateKey      = "PullRequestTemplate"
 	PullRequestTitleTemplateKey = "PullRequestTitleTemplate"
-)
-
-var (
-	PullRequestTemplateCandidates = []string{
-		"PULL_REQUEST.md",
-		".gogs/PULL_REQUEST.md",
-		".github/PULL_REQUEST.md",
-	}
-
-	PullRequestTitleTemplateCandidates = []string{
-		"PULL_REQUEST_TITLE.md",
-		".gogs/PULL_REQUEST_TITLE.md",
-		".github/PULL_REQUEST_TITLE.md",
-	}
 )
 
 func checkPullInfo(c *context.Context) *database.Issue {
@@ -515,12 +503,39 @@ func PrepareCompareDiff(
 	return false
 }
 
+// setTemplateIfExists reads a template from the default branch into the
+// context data. It returns false when it wrote an error response.
+func setTemplateIfExists(c *context.Context, ctxDataKey string, find func(ctx gocontext.Context, commit *git.Commit) (string, bool, error)) bool {
+	if c.Repo.Commit == nil {
+		var err error
+		c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Req.Context(), c.Repo.Repository.DefaultBranch)
+		if err != nil {
+			return true
+		}
+	}
+	content, found, err := find(c.Req.Context(), c.Repo.Commit)
+	if err != nil {
+		c.Error(err, "read template")
+		return false
+	}
+	if found {
+		c.Data[ctxDataKey] = content
+	}
+	return true
+}
+
 func CompareAndPullRequest(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.pulls.compare_changes")
 	c.Data["PageIsComparePull"] = true
 	c.Data["IsDiffCompare"] = true
 	c.Data["RequireHighlightJS"] = true
-	setTemplateIfExists(c, PullRequestTemplateKey, PullRequestTemplateCandidates)
+	// Like on GitHub, the "template" query parameter picks a template in a
+	// PULL_REQUEST_TEMPLATE directory.
+	if !setTemplateIfExists(c, PullRequestTemplateKey, func(ctx gocontext.Context, commit *git.Commit) (string, bool, error) {
+		return issuetemplate.PullRequest(ctx, commit, c.Query("template"))
+	}) {
+		return
+	}
 	renderAttachmentSettings(c)
 
 	headUser, headRepo, headGitRepo, prInfo, baseRef, headRef := ParseCompareInfo(c)
@@ -560,7 +575,11 @@ func CompareAndPullRequest(c *context.Context) {
 	}
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
-	setTemplateIfExists(c, PullRequestTitleTemplateKey, PullRequestTitleTemplateCandidates)
+	if !setTemplateIfExists(c, PullRequestTitleTemplateKey, func(ctx gocontext.Context, commit *git.Commit) (string, bool, error) {
+		return issuetemplate.FindFile(ctx, commit, "PULL_REQUEST_TITLE.md")
+	}) {
+		return
+	}
 
 	if c.Data[PullRequestTitleTemplateKey] != nil {
 		customTitle := c.Data[PullRequestTitleTemplateKey].(string)

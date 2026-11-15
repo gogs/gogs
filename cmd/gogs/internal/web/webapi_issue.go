@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -19,6 +20,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/issuetemplate"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/pathx"
 )
@@ -720,24 +722,150 @@ func postRepoIssueAttachment(c flamego.Context, l i18n.Locale) (statusCode int, 
 	return statusCode, resp, err
 }
 
+type issueTemplateSummary struct {
+	File  string `json:"file"`
+	Name  string `json:"name"`
+	About string `json:"about"`
+}
+
+type issueTemplateOption struct {
+	Label    string `json:"label"`
+	Required bool   `json:"required,omitempty"`
+}
+
+type issueTemplateField struct {
+	Type  string `json:"type"`
+	Label string `json:"label,omitempty"`
+	// DescriptionHTML is the rendered Markdown of the description, and HTML
+	// the rendered Markdown of a markdown element.
+	DescriptionHTML string                `json:"descriptionHTML,omitempty"`
+	HTML            string                `json:"html,omitempty"`
+	Placeholder     string                `json:"placeholder,omitempty"`
+	Value           string                `json:"value,omitempty"`
+	Render          string                `json:"render,omitempty"`
+	Multiple        bool                  `json:"multiple,omitempty"`
+	Options         []issueTemplateOption `json:"options,omitempty"`
+	Default         *int                  `json:"default,omitempty"`
+	Required        bool                  `json:"required,omitempty"`
+}
+
+type issueTemplate struct {
+	issueTemplateSummary
+	Title     string   `json:"title"`
+	Labels    []string `json:"labels"`
+	Assignees []string `json:"assignees"`
+	// Body is the content of a Markdown template, and Form the fields of an
+	// issue form.
+	Body string               `json:"body"`
+	Form []issueTemplateField `json:"form,omitempty"`
+}
+
+type issueContactLink struct {
+	Name  string `json:"name"`
+	URL   string `json:"url"`
+	About string `json:"about"`
+}
+
 type repoNewIssueOptions struct {
-	// DefaultBranch is where the issue template is read from, only sent to
-	// viewers who can read the repository.
-	DefaultBranch string `json:"defaultBranch,omitempty"`
+	// The templates are only sent to viewers who can read the repository.
+	Templates          []issueTemplateSummary `json:"templates"`
+	ContactLinks       []issueContactLink     `json:"contactLinks"`
+	BlankIssuesEnabled bool                   `json:"blankIssuesEnabled"`
+	// Template is the template asked for with the "template" query parameter.
+	Template *issueTemplate `json:"template,omitempty"`
+	// Content is what a blank issue starts with, i.e., the single issue
+	// template.
+	Content string `json:"content"`
 	// The options are only sent to writers.
 	issueMetaOptions
 	Attachment     *issueAttachmentSettings `json:"attachment,omitempty"`
 	ViewerCanWrite bool                     `json:"viewerCanWrite"`
 }
 
-func getRepoNewIssue(repoCtx *repoContext) (statusCode int, resp *repoNewIssueOptions, err error) {
-	repo := repoCtx.Repo
-	resp = &repoNewIssueOptions{
-		Attachment:     attachmentSettings(issueAttachmentLimits()),
-		ViewerCanWrite: repoCtx.Viewer.CanWrite(),
+// loadIssueTemplates returns the issue templates on the default branch of the
+// repository, if the viewer can read it.
+func loadIssueTemplates(ctx context.Context, repoCtx *repoContext) (*issuetemplate.IssueTemplates, error) {
+	none := &issuetemplate.IssueTemplates{Config: issuetemplate.Config{BlankIssuesEnabled: true}}
+	if !repoCtx.Viewer.CanRead() || repoCtx.Repo.IsEmpty {
+		return none, nil
 	}
-	if repoCtx.Viewer.CanRead() && !repo.IsEmpty {
-		resp.DefaultBranch = repo.DefaultBranch
+	gitRepo, err := openRepoGit(repoCtx)
+	if err != nil {
+		return nil, errors.Wrap(err, "open repository")
+	}
+	commit, err := gitRepo.BranchCommit(ctx, repoCtx.Repo.DefaultBranch)
+	if err != nil {
+		// Like the server-rendered page, a broken default branch has no templates.
+		return none, nil
+	}
+	ts, err := issuetemplate.LoadIssueTemplates(ctx, commit)
+	if err != nil {
+		return nil, errors.Wrap(err, "load issue templates")
+	}
+	return ts, nil
+}
+
+func toIssueTemplate(repo *database.Repository, t *issuetemplate.Template) *issueTemplate {
+	markdown := func(text string) string {
+		if strings.TrimSpace(text) == "" {
+			return ""
+		}
+		return string(markup.Markdown(text, repo.Link(), repo.ComposeMetas()))
+	}
+	resp := &issueTemplate{
+		issueTemplateSummary: issueTemplateSummary{File: t.File, Name: t.Name, About: t.About},
+		Title:                t.Title,
+		Labels:               append([]string{}, t.Labels...),
+		Assignees:            append([]string{}, t.Assignees...),
+		Body:                 t.Body,
+	}
+	for _, el := range t.Form {
+		field := issueTemplateField{
+			Type:            el.Type,
+			Label:           el.Attributes.Label,
+			DescriptionHTML: markdown(el.Attributes.Description),
+			Placeholder:     el.Attributes.Placeholder,
+			Value:           el.Attributes.Value,
+			Render:          el.Attributes.Render,
+			Multiple:        el.Attributes.Multiple,
+			Default:         el.Attributes.Default,
+			Required:        el.Validations.Required,
+		}
+		if el.Type == issuetemplate.ElementMarkdown {
+			field.HTML = markdown(el.Attributes.Value)
+			field.Value = ""
+		}
+		for _, o := range el.Attributes.Options {
+			field.Options = append(field.Options, issueTemplateOption{Label: o.Label, Required: o.Required})
+		}
+		resp.Form = append(resp.Form, field)
+	}
+	return resp
+}
+
+func getRepoNewIssue(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoNewIssueOptions, err error) {
+	repo := repoCtx.Repo
+	ts, err := loadIssueTemplates(c.Request().Context(), repoCtx)
+	if err != nil {
+		log.Error("getRepoNewIssue: load issue templates of repository %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, err
+	}
+	resp = &repoNewIssueOptions{
+		Templates:          make([]issueTemplateSummary, 0, len(ts.Templates)),
+		ContactLinks:       make([]issueContactLink, 0, len(ts.Config.ContactLinks)),
+		BlankIssuesEnabled: ts.Config.BlankIssuesEnabled,
+		Content:            ts.Default,
+		Attachment:         attachmentSettings(issueAttachmentLimits()),
+		ViewerCanWrite:     repoCtx.Viewer.CanWrite(),
+	}
+	for _, t := range ts.Templates {
+		resp.Templates = append(resp.Templates, issueTemplateSummary{File: t.File, Name: t.Name, About: t.About})
+	}
+	for _, link := range ts.Config.ContactLinks {
+		resp.ContactLinks = append(resp.ContactLinks, issueContactLink(link))
+	}
+	if t := ts.Find(c.Query("template")); t != nil {
+		resp.Template = toIssueTemplate(repo, t)
 	}
 	if resp.ViewerCanWrite {
 		if resp.issueMetaOptions, err = listIssueMetaOptions(repo); err != nil {
@@ -758,13 +886,75 @@ type repoNewIssueRequest struct {
 	AssigneeID  int64   `json:"assigneeID"`
 	// Attachments are the UUIDs of the uploaded files to attach.
 	Attachments []string `json:"attachments"`
+	// Template is the file of the issue template the issue is opened with.
+	// The content of an issue form is made from Fields, which has the values
+	// of its elements in order.
+	Template string     `json:"template"`
+	Fields   [][]string `json:"fields"`
 }
 
-func postRepoIssue(l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+// templateLabelsAndAssignee returns the labels and the assignee the template
+// sets that exist in the repository.
+func templateLabelsAndAssignee(repo *database.Repository, t *issuetemplate.Template) (labelIDs []int64, assigneeID int64, err error) {
+	if len(t.Labels) > 0 {
+		labels, err := database.GetLabelsByRepoID(repo.ID)
+		if err != nil {
+			return nil, 0, errors.Wrap(err, "list labels")
+		}
+		for _, label := range labels {
+			if slices.ContainsFunc(t.Labels, func(name string) bool { return strings.EqualFold(name, label.Name) }) {
+				labelIDs = append(labelIDs, label.ID)
+			}
+		}
+	}
+	if len(t.Assignees) > 0 {
+		assignees, err := repo.GetAssignees()
+		if err != nil {
+			return nil, 0, errors.Wrap(err, "list assignees")
+		}
+		// An issue has a single assignee, the first one the template names.
+		for _, name := range t.Assignees {
+			i := slices.IndexFunc(assignees, func(u *database.User) bool { return strings.EqualFold(u.Name, name) })
+			if i >= 0 {
+				assigneeID = assignees[i].ID
+				break
+			}
+		}
+	}
+	return labelIDs, assigneeID, nil
+}
+
+func postRepoIssue(c flamego.Context, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	title := strings.TrimSpace(req.Title)
 	if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
+	}
+
+	var tmpl *issuetemplate.Template
+	if req.Template != "" {
+		ts, err := loadIssueTemplates(c.Request().Context(), repoCtx)
+		if err != nil {
+			log.Error("postRepoIssue: load issue templates of repository %d: %v", repo.ID, err)
+			return http.StatusInternalServerError, nil, err
+		}
+		if tmpl = ts.Find(req.Template); tmpl == nil {
+			return http.StatusBadRequest, nil, errors.Newf("issue template %q does not exist", req.Template)
+		}
+		if tmpl.IsForm() {
+			req.Content, err = tmpl.RenderForm(req.Fields)
+			if fieldErr := (*issuetemplate.FieldError)(nil); errors.As(err, &fieldErr) {
+				msg := fieldErr.Label + ": " + fieldErr.Message
+				if fieldErr.Missing {
+					msg = fieldErr.Label + l.Tr("form.require_error")
+				}
+				return http.StatusBadRequest, &bindingErrorResponse{
+					Fields: fieldErrors{"field-" + strconv.Itoa(fieldErr.Index): &msg},
+				}, nil
+			} else if err != nil {
+				return http.StatusBadRequest, nil, err
+			}
+		}
 	}
 	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
@@ -805,6 +995,13 @@ func postRepoIssue(l i18n.Locale, viewer *database.User, repoCtx *repoContext, r
 		labelIDs = req.LabelIDs
 		issue.MilestoneID = req.MilestoneID
 		issue.AssigneeID = req.AssigneeID
+	} else if tmpl != nil {
+		// Like on GitHub, the labels and assignees of the template apply to
+		// issues of anyone. Writers choose them on the form instead.
+		if labelIDs, issue.AssigneeID, err = templateLabelsAndAssignee(repo, tmpl); err != nil {
+			log.Error("postRepoIssue: %v", err)
+			return http.StatusInternalServerError, nil, err
+		}
 	}
 
 	// Creating the issue notifies watchers and webhooks about the repository

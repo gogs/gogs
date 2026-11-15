@@ -570,16 +570,17 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/issues/new",
     validateSearch: validateRepoNewIssueSearch,
-    loader: ({ params, context }) =>
+    loaderDeps: ({ search }: { search: RepoNewIssueSearch }) => ({ template: search.template }),
+    loader: ({ params, context, deps }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoNewIssue(params.owner, params.repo),
+        fetchRepoNewIssue(params.owner, params.repo, deps.template),
       ),
     component: function NewIssue() {
       const { owner, repo } = repoNewIssueRoute.useParams();
       const search: RepoNewIssueSearch = repoNewIssueRoute.useSearch();
       return (
         <RepoNewIssue
-          key={`${owner}/${repo}`}
+          key={`${owner}/${repo}/${search.template ?? ""}/${search.blank ?? ""}`}
           owner={owner}
           name={repo}
           options={repoNewIssueRoute.useLoaderData()}

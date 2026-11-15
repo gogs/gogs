@@ -635,34 +635,57 @@ export function fetchRepoIssue(owner: string, name: string, index: number) {
   return fetchJSON<RepoIssueData>(repoURL(owner, name, `/issues/${index}`));
 }
 
+export interface IssueTemplateSummary {
+  // file is the name of the template in the ISSUE_TEMPLATE directory.
+  file: string;
+  name: string;
+  about: string;
+}
+
+export interface IssueTemplateField {
+  type: "markdown" | "textarea" | "input" | "dropdown" | "checkboxes";
+  label?: string;
+  // descriptionHTML and html are rendered Markdown.
+  descriptionHTML?: string;
+  html?: string;
+  placeholder?: string;
+  value?: string;
+  render?: string;
+  multiple?: boolean;
+  options?: { label: string; required?: boolean }[];
+  // default is the index of the option a dropdown starts with.
+  default?: number;
+  required?: boolean;
+}
+
+export interface IssueTemplate extends IssueTemplateSummary {
+  title: string;
+  labels: string[];
+  assignees: string[];
+  // body is the content of a Markdown template, and form the fields of an
+  // issue form.
+  body: string;
+  form?: IssueTemplateField[];
+}
+
 export interface RepoNewIssueOptions extends IssueMetaOptions {
-  // defaultBranch is where the issue template is read from, only sent to
-  // viewers who can read the repository.
-  defaultBranch?: string;
+  // The templates are only sent to viewers who can read the repository.
+  templates: IssueTemplateSummary[];
+  contactLinks: { name: string; url: string; about: string }[];
+  blankIssuesEnabled: boolean;
+  // template is the one asked for, if it exists.
+  template?: IssueTemplate;
+  // content is what a blank issue starts with.
+  content: string;
   attachment?: IssueAttachmentSettings;
   viewerCanWrite: boolean;
 }
 
-// The files the issue template is read from, in the order the server-rendered
-// page looked for them.
-const ISSUE_TEMPLATE_FILES = ["ISSUE_TEMPLATE.md", ".gogs/ISSUE_TEMPLATE.md", ".github/ISSUE_TEMPLATE.md"];
-
 // fetchRepoNewIssue loads what the form to open an issue offers, along with
-// the issue template of the repository, if any.
-export async function fetchRepoNewIssue(owner: string, name: string) {
-  const options = await fetchJSON<RepoNewIssueOptions>(repoURL(owner, name, "/issues/new"));
-  let template = "";
-  if (options.defaultBranch) {
-    const branch = encodeURIComponent(options.defaultBranch);
-    const found = await Promise.all(
-      ISSUE_TEMPLATE_FILES.map(async (file) => {
-        const res = await fetch(subUrl(`/${owner}/${name}/raw/${branch}/${file}`), { credentials: "same-origin" });
-        return res.ok ? res.text() : null;
-      }),
-    );
-    template = found.find((text) => text !== null) ?? "";
-  }
-  return { ...options, template };
+// the issue templates of the repository and the chosen one, if any.
+export function fetchRepoNewIssue(owner: string, name: string, template?: string) {
+  const query = template ? `?template=${encodeURIComponent(template)}` : "";
+  return fetchJSON<RepoNewIssueOptions>(repoURL(owner, name, `/issues/new${query}`));
 }
 
 export interface RepoNewIssueForm {
@@ -672,6 +695,10 @@ export interface RepoNewIssueForm {
   milestoneID: number;
   assigneeID: number;
   attachments: string[];
+  // template is the file of the chosen template. fields are the values of
+  // the elements of an issue form, in order.
+  template?: string;
+  fields?: string[][];
 }
 
 export function createRepoIssue(owner: string, name: string, form: RepoNewIssueForm) {
