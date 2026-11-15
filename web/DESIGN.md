@@ -129,6 +129,8 @@ Pages that show settings or measurements, e.g., the admin dashboard and configur
 
 ## Highlighted code
 
+Forms that guard against bots, e.g., signing up and signing in, ask for a captcha with `CaptchaField` from `@/components/CaptchaField`. Load a new image through its `refreshKey` after every failed submission, since the server uses up a captcha on each attempt.
+
 Show code with syntax highlighting, e.g., the payload of a webhook delivery, with `CodeBlock` from `@/components/CodeBlock`. It renders through `@pierre/diffs` with the same themes and worker pool as the files of a commit, and follows the app theme.
 
 Show the changes between two commits, e.g., a commit and its parent or the range of a push, with `DiffWorkspace` from `@/components/DiffWorkspace`. It takes the raw diff and both commits, and brings the full-width layout, the file tree, the toolbar and line expansion, so a page only adds its own header above it.

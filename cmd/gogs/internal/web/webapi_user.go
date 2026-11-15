@@ -63,7 +63,8 @@ type loginSource struct {
 }
 
 type getUserSignInResponse struct {
-	LoginSources []loginSource `json:"loginSources"`
+	LoginSources   []loginSource `json:"loginSources"`
+	CaptchaEnabled bool          `json:"captchaEnabled"`
 }
 
 type getUserSignUpResponse struct {
@@ -171,13 +172,17 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 	for _, s := range sources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &getUserSignInResponse{LoginSources: loginSources}, nil
+	return http.StatusOK, &getUserSignInResponse{
+		LoginSources:   loginSources,
+		CaptchaEnabled: conf.Auth.EnableLoginCaptcha,
+	}, nil
 }
 
 type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
+	Captcha     string `json:"captcha"`
 }
 
 type getUserResetPasswordResponse struct {
@@ -268,7 +273,15 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, cpt captcha.Captcha, req userSignInRequest) (statusCode int, resp any, err error) {
+	// Checked before the password, so that a request without the right captcha
+	// tells nothing about the password.
+	if conf.Auth.EnableLoginCaptcha && !cpt.ValidText(req.Captcha) {
+		msg := l.Tr("form.captcha_incorrect")
+		return http.StatusUnauthorized, &bindingErrorResponse{
+			Fields: fieldErrors{"captcha": &msg},
+		}, nil
+	}
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
