@@ -4,16 +4,40 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Select = SelectPrimitive.Root;
+type SelectAria = Pick<React.AriaAttributes, "aria-invalid" | "aria-describedby">;
+
+const SelectAriaContext = React.createContext<SelectAria>({});
+
+// Select hands the error state and description that FormField gives it to its
+// trigger, since the root renders no element of its own.
+function Select({
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Root> & SelectAria) {
+  const aria = React.useMemo(
+    () => ({ "aria-invalid": ariaInvalid, "aria-describedby": ariaDescribedBy }),
+    [ariaInvalid, ariaDescribedBy],
+  );
+  return (
+    <SelectAriaContext.Provider value={aria}>
+      <SelectPrimitive.Root {...props} />
+    </SelectAriaContext.Provider>
+  );
+}
+
 const SelectGroup = SelectPrimitive.Group;
 const SelectValue = SelectPrimitive.Value;
 
 function SelectTrigger({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
+  const aria = React.use(SelectAriaContext);
   return (
     <SelectPrimitive.Trigger
+      {...aria}
       className={cn(
         "flex h-10 w-full items-center justify-between rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors",
         "focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)",
+        "aria-invalid:border-(--color-destructive) aria-invalid:focus-visible:border-(--color-destructive) aria-invalid:focus-visible:ring-(--color-destructive)",
         "disabled:cursor-not-allowed disabled:opacity-60",
         "data-[placeholder]:text-(--color-muted-foreground)",
         className,
