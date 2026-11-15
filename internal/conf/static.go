@@ -245,6 +245,11 @@ type AuthOpts struct {
 	RequireSigninView         bool
 	DisableRegistration       bool
 	EnableRegistrationCaptcha bool
+	// MinPasswordLength is the fewest characters a new password can have.
+	MinPasswordLength int
+	// CheckLeakedPasswords turns away new passwords that appeared in a data
+	// breach, checked with Have I Been Pwned's Pwned Passwords.
+	CheckLeakedPasswords bool
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
