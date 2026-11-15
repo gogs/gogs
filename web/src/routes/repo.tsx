@@ -8,6 +8,7 @@ import {
   fetchRepoDeployKeys,
   fetchRepoForkOptions,
   fetchRepoForks,
+  fetchRepoIssue,
   fetchRepoIssues,
   fetchRepoLabels,
   fetchRepoMilestone,
@@ -23,6 +24,7 @@ import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoForks } from "@/pages/repo/Forks";
+import { RepoIssue } from "@/pages/repo/Issue";
 import { RepoIssues } from "@/pages/repo/Issues";
 import { type RepoIssuesSearch, validateRepoIssuesSearch } from "@/pages/repo/Issues.search";
 import { RepoLabels } from "@/pages/repo/Labels";
@@ -439,6 +441,27 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
   const repoIssuesRoute = createIssueListRoute("issues");
   const repoPullsRoute = createIssueListRoute("pulls");
 
+  const repoIssueRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/issues/$index",
+    loader: ({ params, context }) => {
+      const index = Number(params.index);
+      if (!Number.isInteger(index) || index <= 0) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoIssue(params.owner, params.repo, index),
+      );
+    },
+    component: function Issue() {
+      const { owner, repo } = repoIssueRoute.useParams();
+      const data = repoIssueRoute.useLoaderData();
+      // Start over on another issue, e.g., after following a reference.
+      return <RepoIssue key={`${owner}/${repo}#${data.index}`} owner={owner} name={repo} data={data} />;
+    },
+  });
+
   const repoForksRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/forks",
@@ -458,6 +481,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoWatchersRoute,
     repoIssuesRoute,
     repoPullsRoute,
+    repoIssueRoute,
     repoForksRoute,
     repoLabelsRoute,
     repoMilestonesRoute,

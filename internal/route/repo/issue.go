@@ -312,7 +312,33 @@ func UploadIssueAttachment(c *context.Context) {
 	uploadAttachment(c, conf.Attachment.AllowedTypes)
 }
 
-func viewIssue(c *context.Context, isPullList bool) {
+// ServeIssue serves the page of an issue, and sends pull requests to their
+// own page.
+func ServeIssue(c *context.Context) {
+	index := c.ParamsInt64(":index")
+	if index <= 0 {
+		c.NotFound()
+		return
+	}
+	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, index)
+	if err != nil {
+		c.NotFoundOrError(err, "get issue by index")
+		return
+	}
+	if issue.IsPull {
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("pulls/%d", issue.Index)))
+		return
+	}
+	MustEnableIssues(c)
+	if c.Written() {
+		return
+	}
+	c.ServeWeb()
+}
+
+// ViewPull renders the page of a pull request, and sends issues to their own
+// page.
+func ViewPull(c *context.Context) {
 	c.Data["RequireHighlightJS"] = true
 	c.Data["RequireDropzone"] = true
 	renderAttachmentSettings(c)
@@ -330,29 +356,17 @@ func viewIssue(c *context.Context, isPullList bool) {
 	}
 	c.Data["Title"] = issue.Title
 
-	// Make sure type and URL matches.
-	if !isPullList && issue.IsPull {
-		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("pulls/%d", issue.Index)))
-		return
-	} else if isPullList && !issue.IsPull {
+	if !issue.IsPull {
 		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 		return
 	}
 
-	if issue.IsPull {
-		MustAllowPulls(c)
-		if c.Written() {
-			return
-		}
-		c.Data["PageIsPullList"] = true
-		c.Data["PageIsPullConversation"] = true
-	} else {
-		MustEnableIssues(c)
-		if c.Written() {
-			return
-		}
-		c.Data["PageIsIssueList"] = true
+	MustAllowPulls(c)
+	if c.Written() {
+		return
 	}
+	c.Data["PageIsPullList"] = true
+	c.Data["PageIsPullConversation"] = true
 
 	issue.RenderedContent = string(markup.Markdown(issue.Content, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
 
@@ -485,14 +499,6 @@ func viewIssue(c *context.Context, isPullList bool) {
 	c.Data["IsIssueOwner"] = c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))
 	c.Data["SignInLink"] = conf.Server.Subpath + "/user/sign-in?redirect_to=" + c.Data["Link"].(string)
 	c.Success(tmplRepoIssueView)
-}
-
-func ViewIssue(c *context.Context) {
-	viewIssue(c, false)
-}
-
-func ViewPull(c *context.Context) {
-	viewIssue(c, true)
 }
 
 func getActionIssue(c *context.Context) *database.Issue {
