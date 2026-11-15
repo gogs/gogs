@@ -196,9 +196,24 @@ func adminListUsers(c *apiContext) {
 		return
 	}
 
-	results := make([]*types.User, len(users))
-	for i := range users {
-		results[i] = toUser(users[i])
+	results := make([]*types.AdminUser, len(users))
+	for i, u := range users {
+		results[i] = &types.AdminUser{
+			User:             *toUser(u),
+			IsAdmin:          u.IsAdmin,
+			IsActive:         u.IsActive,
+			ProhibitLogin:    u.ProhibitLogin,
+			SourceID:         u.LoginSource,
+			LoginName:        u.LoginName,
+			Website:          u.Website,
+			Location:         u.Location,
+			AllowGitHook:     u.AllowGitHook,
+			AllowImportLocal: u.AllowImportLocal,
+			MaxRepoCreation:  u.MaxRepoCreation,
+			NumRepos:         u.NumRepos,
+			Created:          u.Created,
+			Updated:          u.Updated,
+		}
 	}
 	c.SetLinkHeader(int(total), pageSize)
 	c.JSONSuccess(&results)
