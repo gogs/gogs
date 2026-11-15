@@ -12,6 +12,7 @@ All notable changes to Gogs are documented in this file.
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
+- The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`, and lists branches page by page with `page` and `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Changed
 
@@ -56,6 +57,7 @@ All notable changes to Gogs are documented in this file.
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
+- Pagination links of the API, e.g., of repository search, keep the other query parameters such as `q` and `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Removed
 
