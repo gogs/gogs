@@ -463,6 +463,79 @@ func GetUserTeams(orgID, userID int64) ([]*Team, error) {
 	return getUserTeams(Handle.db, orgID, userID)
 }
 
+// repoIDsQuery returns the query of the IDs of the repositories that the team
+// gives access to. The owner team gives access to every repository of the
+// organization.
+func (t *Team) repoIDsQuery(tx *gorm.DB) *gorm.DB {
+	if t.IsOwnerTeam() {
+		return tx.Model(new(Repository)).Select("id").Where("owner_id = ?", t.OrgID)
+	}
+	return tx.Model(new(TeamRepo)).Select("repo_id").Where("team_id = ?", t.ID)
+}
+
+// recalculateMemberAccesses recalculates the accesses of the user, who just
+// joined or left the team, to the repositories of the team. The result is the
+// same as recalculateTeamAccesses for each of these repositories, which takes a
+// few queries per repository and team, but only the accesses of the user change.
+func (t *Team) recalculateMemberAccesses(tx *gorm.DB, userID int64) error {
+	var repoIDs []int64
+	if err := t.repoIDsQuery(tx).Scan(&repoIDs).Error; err != nil {
+		return errors.Wrap(err, "list repository IDs")
+	}
+
+	modes := make(map[int64]AccessMode, len(repoIDs))
+	var collaborations []*Collaboration
+	err := tx.Where("user_id = ? AND repo_id IN (?)", userID, t.repoIDsQuery(tx)).Find(&collaborations).Error
+	if err != nil {
+		return errors.Wrap(err, "list collaborations")
+	}
+	for _, c := range collaborations {
+		modes[c.RepoID] = c.Mode
+	}
+
+	teams, err := getUserTeams(tx, t.OrgID, userID)
+	if err != nil {
+		return errors.Wrap(err, "list teams of user")
+	}
+	authorizes := make(map[int64]AccessMode, len(teams))
+	for _, team := range teams {
+		if !team.IsOwnerTeam() {
+			authorizes[team.ID] = team.Authorize
+			continue
+		}
+		for _, repoID := range repoIDs {
+			modes[repoID] = AccessModeOwner
+		}
+	}
+	if len(authorizes) > 0 {
+		teamIDs := make([]int64, 0, len(authorizes))
+		for teamID := range authorizes {
+			teamIDs = append(teamIDs, teamID)
+		}
+		var teamRepos []*TeamRepo
+		err = tx.Where("team_id IN ? AND repo_id IN (?)", teamIDs, t.repoIDsQuery(tx)).Find(&teamRepos).Error
+		if err != nil {
+			return errors.Wrap(err, "list repositories of teams")
+		}
+		for _, tr := range teamRepos {
+			modes[tr.RepoID] = max(modes[tr.RepoID], authorizes[tr.TeamID])
+		}
+	}
+
+	err = tx.Where("user_id = ? AND repo_id IN (?)", userID, t.repoIDsQuery(tx)).Delete(new(Access)).Error
+	if err != nil {
+		return errors.Wrap(err, "delete accesses")
+	}
+	accesses := make([]*Access, 0, len(modes))
+	for repoID, mode := range modes {
+		accesses = append(accesses, &Access{UserID: userID, RepoID: repoID, Mode: mode})
+	}
+	if len(accesses) == 0 {
+		return nil
+	}
+	return errors.Wrap(tx.CreateInBatches(accesses, 500).Error, "create accesses")
+}
+
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
 func AddTeamMember(orgID, teamID, userID int64) error {
@@ -481,10 +554,6 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 	}
 	t.NumMembers++
 
-	if err = t.GetRepositories(); err != nil {
-		return err
-	}
-
 	return Handle.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(&TeamUser{UID: userID, OrgID: orgID, TeamID: teamID}).Error
 		if err != nil {
@@ -494,10 +563,8 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 		}
 
 		// Give access to team repositories.
-		for _, repo := range t.Repos {
-			if err = repo.recalculateTeamAccesses(tx, 0); err != nil {
-				return err
-			}
+		if err = t.recalculateMemberAccesses(tx, userID); err != nil {
+			return errors.Wrap(err, "recalculate member accesses")
 		}
 
 		// We make sure it exists before.
@@ -531,10 +598,6 @@ func removeTeamMember(tx *gorm.DB, orgID, teamID, uid int64) error {
 
 	t.NumMembers--
 
-	if err = t.getRepositories(tx); err != nil {
-		return err
-	}
-
 	// Get organization.
 	org, err := getUserByID(tx, orgID)
 	if err != nil {
@@ -549,10 +612,8 @@ func removeTeamMember(tx *gorm.DB, orgID, teamID, uid int64) error {
 	}
 
 	// Delete access to team repositories.
-	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(tx, 0); err != nil {
-			return err
-		}
+	if err = t.recalculateMemberAccesses(tx, uid); err != nil {
+		return errors.Wrap(err, "recalculate member accesses")
 	}
 
 	// This must exist.
