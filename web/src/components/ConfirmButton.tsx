@@ -4,10 +4,18 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-// ConfirmButton asks in a popover before an action that cannot be taken back,
+// ConfirmButton asks in a dialog before an action that cannot be taken back,
 // such as deleting a team or leaving a repository.
 export function ConfirmButton({
   label,
@@ -15,7 +23,6 @@ export function ConfirmButton({
   title,
   description,
   size,
-  align = "end",
   action,
   onDone,
 }: {
@@ -26,8 +33,6 @@ export function ConfirmButton({
   title: string;
   description: string;
   size?: "sm";
-  // align lines the popover up with the start or the end of the button.
-  align?: "start" | "end";
   action: () => Promise<void>;
   onDone: () => Promise<void> | void;
 }) {
@@ -42,8 +47,8 @@ export function ConfirmButton({
     onError: (err) => toast.error(err.message),
   });
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button
           type="button"
           variant="outline"
@@ -53,27 +58,28 @@ export function ConfirmButton({
         >
           {label}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align={align} collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-4">
-        <p className="font-semibold">{title}</p>
-        <p className="mt-1 text-sm text-(--color-muted-foreground)">{description}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader className="pb-3">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             {t("cancel")}
           </Button>
           <Button
             type="button"
             variant="destructive"
-            size="sm"
-            // A long title wraps in narrow popovers, so the button grows with it.
-            className="h-auto min-h-8 py-1.5"
+            // A long title wraps on narrow screens, so the button grows with it.
+            className="h-auto min-h-10"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
             {title}
           </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

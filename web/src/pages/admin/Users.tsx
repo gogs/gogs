@@ -320,7 +320,6 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
                 label={t("admin.users.delete_account")}
                 title={t("settings.delete_account_title")}
                 description={t("settings.delete_account_desc")}
-                align="start"
                 action={() => deleteAdminUser(user.id)}
                 onDone={async () => {
                   toast.success(t("admin.users.deletion_success"));

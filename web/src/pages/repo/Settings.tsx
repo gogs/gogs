@@ -12,8 +12,17 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
@@ -814,87 +823,86 @@ function DangerAction<T>({
         <p className="text-sm font-semibold">{title}</p>
         <p className="text-sm text-(--color-muted-foreground)">{description}</p>
       </div>
-      <Popover open={open} onOpenChange={onOpenChange}>
-        <PopoverTrigger asChild>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="shrink-0 text-(--color-destructive)">
             {title}
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="end"
-          collisionPadding={16}
-          // The warnings and the fields can be taller than a short screen.
-          className="max-h-(--radix-popover-content-available-height) w-80 max-w-[calc(100vw-2rem)] overflow-y-auto p-4"
-        >
-          <form onSubmit={onSubmit} noValidate>
+        </DialogTrigger>
+        <DialogContent>
+          <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
             <fieldset disabled={mutation.isPending} className="contents">
-              <p className="font-semibold">{title}</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-(--color-muted-foreground)">
-                {notices.map((text) => (
-                  <li key={text}>
-                    <RichText text={notice(text)} />
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 flex flex-col gap-4">
-                <FormAlert message={formError} />
-                <FormField
-                  id={`${id}-repoName`}
-                  label={
-                    <>
-                      {t("repo.settings.transfer_form_title")} <strong className="wrap-anywhere">{name}</strong>
-                    </>
-                  }
-                  error={fields.repoName}
-                  invalid={"repoName" in fields}
-                >
-                  <Input
-                    id={`${id}-repoName`}
-                    name="repoName"
-                    autoComplete="off"
-                    autoFocus
-                    required
-                    value={form.repoName}
-                    onChange={(e) => setForm({ ...form, repoName: e.target.value })}
-                  />
-                </FormField>
-                {askNewOwner ? (
+              <DialogHeader>
+                <DialogTitle>{title}</DialogTitle>
+                <DialogDescription className="sr-only">{description}</DialogDescription>
+              </DialogHeader>
+              <DialogBody>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-(--color-muted-foreground)">
+                  {notices.map((text) => (
+                    <li key={text}>
+                      <RichText text={notice(text)} />
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 flex flex-col gap-4">
+                  <FormAlert message={formError} />
                   <FormField
-                    id={`${id}-newOwner`}
-                    label={t("repo.settings.transfer_owner")}
-                    error={fields.newOwner}
-                    invalid={"newOwner" in fields}
+                    id={`${id}-repoName`}
+                    label={
+                      <>
+                        {t("repo.settings.transfer_form_title")} <strong className="wrap-anywhere">{name}</strong>
+                      </>
+                    }
+                    error={fields.repoName}
+                    invalid={"repoName" in fields}
                   >
                     <Input
-                      id={`${id}-newOwner`}
-                      name="newOwner"
+                      id={`${id}-repoName`}
+                      name="repoName"
                       autoComplete="off"
+                      autoFocus
                       required
-                      value={form.newOwner}
-                      onChange={(e) => setForm({ ...form, newOwner: e.target.value })}
+                      value={form.repoName}
+                      onChange={(e) => setForm({ ...form, repoName: e.target.value })}
                     />
                   </FormField>
-                ) : null}
-              </div>
-              <div className="mt-4 flex justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  {askNewOwner ? (
+                    <FormField
+                      id={`${id}-newOwner`}
+                      label={t("repo.settings.transfer_owner")}
+                      error={fields.newOwner}
+                      invalid={"newOwner" in fields}
+                    >
+                      <Input
+                        id={`${id}-newOwner`}
+                        name="newOwner"
+                        autoComplete="off"
+                        required
+                        value={form.newOwner}
+                        onChange={(e) => setForm({ ...form, newOwner: e.target.value })}
+                      />
+                    </FormField>
+                  ) : null}
+                </div>
+              </DialogBody>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   {t("cancel")}
                 </Button>
                 <Button
                   type="submit"
                   variant="destructive"
-                  size="sm"
-                  // A long label wraps in narrow popovers, so the button grows with it.
-                  className="h-auto min-h-8 py-1.5"
+                  // A long label wraps on narrow screens, so the button grows with it.
+                  className="h-auto min-h-10"
                   disabled={!ready}
                 >
                   {confirmLabel}
                 </Button>
-              </div>
+              </DialogFooter>
             </fieldset>
           </form>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

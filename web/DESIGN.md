@@ -83,7 +83,7 @@ Swap the submit label to a present-continuous string ("Signing in…", "Verifyin
 
 The settings pages of users, organizations and repositories, and the admin panel, use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem`, and mark the link to a destructive page, e.g., deleting the account, with `destructive`. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.
 
-Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a popover with `ConfirmButton`, not a modal. After such an action empties the page of a paginated list, move to the previous page instead of showing an empty one. Deleting an account asks for the password instead, with `DeleteForm`, and the danger zone of a repository asks for its name in the popover.
+Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a dialog with `ConfirmButton`. The dialog (`components/ui/dialog.tsx`) is a bottom sheet below `sm` and centered from `sm` up. Its body scrolls while the title and the actions stay in view, so the actions never get clipped on a short screen. After such an action empties the page of a paginated list, move to the previous page instead of showing an empty one. Deleting an account asks for the password instead, with `DeleteForm`, and the danger zone of a repository asks for its name in the same dialog.
 
 ## Lists
 
