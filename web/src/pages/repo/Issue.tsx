@@ -23,7 +23,6 @@ import { OpenedBy } from "@/components/IssueListItem";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -46,6 +45,7 @@ import {
   uploadRepoIssueAttachment,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
+import type { IssueLabel } from "@/lib/queries/user";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -854,10 +854,12 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
 function SidebarSection({
   title,
   editor,
+  popoverClassName,
   children,
 }: {
   title: string;
   editor?: (close: () => void) => ReactNode;
+  popoverClassName?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -880,7 +882,11 @@ function SidebarSection({
               </button>
             </PopoverTrigger>
           </h2>
-          <PopoverContent align="end" collisionPadding={16} className="w-64 max-w-[calc(100vw-2rem)] p-1">
+          <PopoverContent
+            align="end"
+            collisionPadding={16}
+            className={cn("w-64 max-w-[calc(100vw-2rem)] p-1", popoverClassName)}
+          >
             {editor(() => setOpen(false))}
           </PopoverContent>
         </Popover>
@@ -940,6 +946,84 @@ function OptionList<T extends { id: number }>({
           </div>
         ) : null,
       )}
+    </div>
+  );
+}
+
+// LabelPicker is the popover of the labels in the sidebar, like the one of
+// GitHub: a filter over the labels of the repository, each toggled on click.
+function LabelPicker({
+  issueRef,
+  options,
+  checked,
+  disabled,
+  onToggle,
+}: {
+  issueRef: IssueRef;
+  options: IssueLabel[];
+  checked: Set<number>;
+  disabled: boolean;
+  onToggle: (id: number) => void;
+}) {
+  const { t } = useTranslation();
+  const [filter, setFilter] = useState("");
+  // order puts the labels the issue had when the picker opened first, and
+  // keeps them in place while they are toggled.
+  const [order] = useState(() => [
+    ...options.filter((l) => checked.has(l.id)),
+    ...options.filter((l) => !checked.has(l.id)),
+  ]);
+  const query = filter.trim().toLowerCase();
+  const shown = query ? order.filter((l) => l.name.toLowerCase().includes(query)) : order;
+  return (
+    <div className="flex flex-col text-sm">
+      <p className="border-b border-(--color-border) px-3 py-2 text-xs font-semibold">
+        {t("repo.issues.apply_labels")}
+      </p>
+      <div className="border-b border-(--color-border) p-2">
+        <Input
+          type="search"
+          autoFocus
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder={t("repo.issues.filter_labels")}
+          aria-label={t("repo.issues.filter_labels")}
+          className="h-8"
+        />
+      </div>
+      <div className="max-h-80 overflow-y-auto">
+        {shown.length ? (
+          shown.map((label) => (
+            <button
+              key={label.id}
+              type="button"
+              role="checkbox"
+              aria-checked={checked.has(label.id)}
+              disabled={disabled}
+              onClick={() => onToggle(label.id)}
+              className="flex w-full cursor-pointer items-center gap-2 border-b border-(--color-border) px-3 py-2 text-left last:border-b-0 hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Check className={cn("size-4 shrink-0", !checked.has(label.id) && "invisible")} aria-hidden />
+              <span
+                className="size-3.5 shrink-0 rounded-full border border-black/10"
+                style={{ backgroundColor: label.color }}
+                aria-hidden
+              />
+              <span className="min-w-0 truncate font-medium">{label.name}</span>
+            </button>
+          ))
+        ) : (
+          <p className="px-3 py-4 text-center text-(--color-muted-foreground)">{t("repo.issues.no_labels_match")}</p>
+        )}
+      </div>
+      <Link
+        to="/$owner/$repo/labels"
+        params={{ owner: issueRef.owner, repo: issueRef.name }}
+        className="flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-primary)"
+      >
+        <Pencil className="size-4" aria-hidden />
+        {t("repo.issues.edit_labels")}
+      </Link>
     </div>
   );
 }
@@ -1025,35 +1109,17 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
 
       <SidebarSection
         title={t("repo.issues.new.labels")}
+        popoverClassName="w-75 p-0"
         editor={
           data.labelOptions
             ? () => (
-                <div className="max-h-80 overflow-y-auto">
-                  <button
-                    type="button"
-                    className={OPTION_CLASS}
-                    disabled={labels.isPending || checked.size === 0}
-                    onClick={() => labels.mutate([])}
-                  >
-                    <X className="size-4 shrink-0" aria-hidden />
-                    {t("repo.issues.new.clear_labels")}
-                  </button>
-                  {data.labelOptions?.map((label) => (
-                    <label key={label.id} className={cn(OPTION_CLASS, labels.isPending && "opacity-60")}>
-                      <Checkbox
-                        checked={checked.has(label.id)}
-                        disabled={labels.isPending}
-                        onCheckedChange={() => toggleLabel(label.id)}
-                      />
-                      <span
-                        className="size-3 shrink-0 rounded-full"
-                        style={{ backgroundColor: label.color }}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 truncate">{label.name}</span>
-                    </label>
-                  ))}
-                </div>
+                <LabelPicker
+                  issueRef={issueRef}
+                  options={data.labelOptions ?? []}
+                  checked={checked}
+                  disabled={labels.isPending}
+                  onToggle={toggleLabel}
+                />
               )
             : undefined
         }
