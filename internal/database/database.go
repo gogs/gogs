@@ -71,6 +71,11 @@ func NewConnection(w logger.Writer) (*gorm.DB, error) {
 	logger.Default = logger.New(w, logger.Config{
 		SlowThreshold: 100 * time.Millisecond,
 		LogLevel:      level,
+		// Lookups that find nothing are expected, e.g., signing in with an unknown
+		// email, and logging them would write user input to the log.
+		IgnoreRecordNotFoundError: true,
+		// Query arguments include emails and other personal data.
+		ParameterizedQueries: conf.IsProdMode(),
 	})
 
 	db, err := dbx.OpenDB(

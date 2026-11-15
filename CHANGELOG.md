@@ -65,6 +65,7 @@ All notable changes to Gogs are documented in this file.
 - Repository search on PostgreSQL matches descriptions regardless of case, as on other databases. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Mentioning an organization marks its members as mentioned, instead of unrelated users. [#8528](https://github.com/gogs/gogs/pull/8528)
+- `gorm.log` no longer records email addresses and other query values. Lookups that find nothing are not logged, and slow or failed queries are logged without their values in production. [#8589](https://github.com/gogs/gogs/pull/8589)
 
 ### Removed
 
