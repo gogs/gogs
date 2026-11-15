@@ -1,16 +1,18 @@
 package web
 
 import (
-	"context"
+	stdctx "context"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"github.com/flamego/session"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
@@ -45,7 +47,7 @@ func unixTime(unix int64) time.Time {
 
 // searchAdminUsers lists users or organizations by ID, or searches them by
 // name when the keyword is not empty.
-func searchAdminUsers(ctx context.Context, typ database.UserType, keyword string, page, pageSize int) ([]*database.User, int64, error) {
+func searchAdminUsers(ctx stdctx.Context, typ database.UserType, keyword string, page, pageSize int) ([]*database.User, int64, error) {
 	if keyword != "" {
 		if typ == database.UserTypeOrganization {
 			return database.Handle.Organizations().SearchByName(ctx, keyword, page, pageSize, "id ASC")
@@ -290,7 +292,7 @@ func getAdminUserOptions(logger *logx.Logger, c flamego.Context) (statusCode int
 // checkAdminLoginSource returns the field errors of the authentication source
 // and login name of a user: the source must exist, and users of a source need
 // the name they sign in with there.
-func checkAdminLoginSource(ctx context.Context, l i18n.Locale, sourceID int64, loginName string) (fieldErrors, error) {
+func checkAdminLoginSource(ctx stdctx.Context, l i18n.Locale, sourceID int64, loginName string) (fieldErrors, error) {
 	if sourceID == 0 {
 		return nil, nil
 	}
@@ -457,7 +459,7 @@ type adminUserUpdateRequest struct {
 	ProhibitLogin    bool   `json:"prohibitLogin"`
 }
 
-func patchAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetUser, req adminUserUpdateRequest) (statusCode int, resp any, err error) {
+func patchAdminUser(logger *logx.Logger, c flamego.Context, sess session.Session, l i18n.Locale, admin *database.User, target *adminTargetUser, req adminUserUpdateRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	u := target.User
 	fields, err := checkAdminLoginSource(ctx, l, req.LoginSource, req.LoginName)
@@ -497,6 +499,17 @@ func patchAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin
 		}
 		logger.Error("Failed to update user", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
+	}
+
+	// An admin who changes their own password stays signed in, like on the
+	// password settings page.
+	if req.Password != "" && u.ID == admin.ID {
+		updated, err := database.Handle.Users().GetByID(ctx, u.ID)
+		if err != nil {
+			logger.Error("Failed to get user", "userID", u.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "get user")
+		}
+		sess.Set(context.SessionKeyPasswordFingerprint, context.PasswordFingerprint(updated))
 	}
 	logger.Debug("Account updated by admin", "userName", u.Name, "adminName", admin.Name)
 	return http.StatusNoContent, nil, nil

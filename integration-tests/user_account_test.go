@@ -101,11 +101,14 @@ func TestUserResetPassword(t *testing.T) {
 	complete := func(code, password string) (int, []byte) {
 		return newClient(t).do(http.MethodPost, "/api/web/user/reset-password/complete", map[string]any{"code": code, "password": password})
 	}
+	signedIn := authenticatedClient(t, u)
 	status, body := complete(code+"x", "new-password")
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+	assert.Equal(t, u.Name, signedIn.username(), "signed out by an invalid code")
 
 	status, body = complete(code, "new-password")
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Empty(t, signedIn.username(), "a session of the password before is still signed in")
 	newClient(t).signIn(&User{Name: u.Name, Password: "new-password"})
 	status, body = newClient(t).do(http.MethodPost, "/api/web/user/sign-in", map[string]any{"username": u.Name, "password": u.Password})
 	assert.Equal(t, http.StatusUnauthorized, status, "old password still works, response: %s", body)

@@ -17,6 +17,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
@@ -287,6 +288,7 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter,
 
 	if database.Handle.TwoFactors().IsEnabled(r.Context(), logger, u.ID) {
 		sess.Set("mfaUserID", u.ID)
+		sess.Set("mfaPasswordFingerprint", context.PasswordFingerprint(u))
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
@@ -323,6 +325,7 @@ func completeSignIn(w http.ResponseWriter, r *http.Request, store session.Store,
 	}
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
+	sess.Set(context.SessionKeyPasswordFingerprint, context.PasswordFingerprint(u))
 
 	if conf.Security.EnableLoginStatusCookie {
 		http.SetCookie(w, &http.Cookie{
@@ -345,13 +348,40 @@ type userMFARequest struct {
 	Passcode string `json:"passcode" validate:"required,len=6"`
 }
 
+// mfaUser returns the user the session started signing in as with two-factor
+// authentication. It returns false when the session has not started, or when
+// the password of the user has changed since then.
+func mfaUser(ctx stdctx.Context, sess session.Session) (_ *database.User, ok bool, _ error) {
+	userID, ok := sess.Get("mfaUserID").(int64)
+	if !ok {
+		return nil, false, nil
+	}
+	u, err := database.Handle.Users().GetByID(ctx, userID)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			return nil, false, nil
+		}
+		return nil, false, errors.Wrap(err, "get user by ID")
+	}
+	if sess.Get("mfaPasswordFingerprint") != context.PasswordFingerprint(u) {
+		sess.Flush()
+		return nil, false, nil
+	}
+	return u, true, nil
+}
+
 type userMFAResponse struct{}
 
 func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
-	userID, ok := sess.Get("mfaUserID").(int64)
+	u, ok, err := mfaUser(r.Context(), sess)
+	if err != nil {
+		logger.Error("Failed to get the user signing in", "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get the user signing in")
+	}
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
 	}
+	userID := u.ID
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
 	if err != nil {
@@ -384,12 +414,6 @@ func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, st
 		logger.Error("Failed to cache two factor passcode", "userID", userID, "error", err)
 	}
 
-	u, err := database.Handle.Users().GetByID(r.Context(), userID)
-	if err != nil {
-		logger.Error("Failed to get user by ID", "userID", userID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
-	}
-
 	if err = completeSignIn(w, r, store, sess, u); err != nil {
 		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
@@ -402,10 +426,15 @@ type userMFARecoveryRequest struct {
 }
 
 func postUserMFARecovery(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
-	userID, ok := sess.Get("mfaUserID").(int64)
+	u, ok, err := mfaUser(r.Context(), sess)
+	if err != nil {
+		logger.Error("Failed to get the user signing in", "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get the user signing in")
+	}
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
 	}
+	userID := u.ID
 
 	if err := database.Handle.TwoFactors().UseRecoveryCode(r.Context(), userID, req.RecoveryCode); err != nil {
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
@@ -416,12 +445,6 @@ func postUserMFARecovery(logger *logx.Logger, r *http.Request, w http.ResponseWr
 		}
 		logger.Error("Failed to use recovery code", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "use recovery code")
-	}
-
-	u, err := database.Handle.Users().GetByID(r.Context(), userID)
-	if err != nil {
-		logger.Error("Failed to get user by ID", "userID", userID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
 	if err = completeSignIn(w, r, store, sess, u); err != nil {
