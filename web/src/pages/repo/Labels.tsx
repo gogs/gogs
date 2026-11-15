@@ -1,7 +1,7 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { Check, CircleDot, CircleHelp, Milestone, Plus, Tag } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -270,11 +270,22 @@ function LabelForm({
   const { t } = useTranslation();
   const router = useRouter();
   const [form, setForm] = useState(initial);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const colorRef = useRef<HTMLInputElement>(null);
   const mutation = useMutation({
     mutationFn: () => save(form),
     onSuccess: async () => {
       await router.invalidate();
       onClose();
+    },
+    // The fieldset is disabled while saving, which drops focus to the page,
+    // so put it back on the field that needs fixing.
+    onError: (err) => {
+      const { fields } = formErrors(err);
+      requestAnimationFrame(() => {
+        if ("name" in fields) nameRef.current?.focus();
+        else if ("color" in fields) colorRef.current?.focus();
+      });
     },
   });
   const { fields, formError } = formErrors(mutation.error);
@@ -295,6 +306,7 @@ function LabelForm({
         </div>
         <div className="flex flex-wrap items-start gap-4">
           <Input
+            ref={nameRef}
             aria-label={t("repo.issues.label_title")}
             aria-invalid={"name" in fields || undefined}
             aria-describedby={fields.name ? "label-name-error" : undefined}
@@ -316,6 +328,7 @@ function LabelForm({
               className="size-10 shrink-0 cursor-pointer rounded-md border border-(--color-input) bg-(--color-background) p-1"
             />
             <Input
+              ref={colorRef}
               aria-label={`${t("repo.issues.label_color")} (hex)`}
               aria-invalid={"color" in fields || undefined}
               aria-describedby={fields.color ? "label-color-error" : undefined}
