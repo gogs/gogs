@@ -57,11 +57,14 @@ function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
     case "code":
       return row.value ? (
-        // Cloned decoration keeps the chip's padding and corners on every line
-        // a long value wraps to.
-        <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
-          {row.value}
-        </code>
+        <>
+          {/* Cloned decoration keeps the chip's padding and corners on every
+              line a long value wraps to. */}
+          <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
+            {row.value}
+          </code>
+          {row.unit && ` ${row.unit}`}
+        </>
       ) : null;
     case "block":
       return (

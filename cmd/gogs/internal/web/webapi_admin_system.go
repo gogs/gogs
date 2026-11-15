@@ -36,6 +36,8 @@ type adminReportRow struct {
 	Value string `json:"value,omitempty"`
 	// On is the value of a "bool" row.
 	On bool `json:"on,omitempty"`
+	// Unit follows a "code" value as text, e.g., seconds.
+	Unit string `json:"unit,omitempty"`
 	// Hint is a note shown after the value, e.g., which database types use it.
 	Hint string `json:"hint,omitempty"`
 }
@@ -63,13 +65,16 @@ func (r adminReport) withHint(row adminReportRow, hintKey string) adminReportRow
 	return row
 }
 
-// textUnit is a number followed by its translated unit, e.g., minutes.
-func (r adminReport) textUnit(key string, value any, unitKey string) adminReportRow {
-	return adminReportRow{Label: r.l.Tr(key), Kind: "text", Value: fmt.Sprint(value) + " " + r.l.Tr(unitKey)}
+// code is a value as it is set in the configuration.
+func (r adminReport) code(key string, value any) adminReportRow {
+	return adminReportRow{Label: r.l.Tr(key), Kind: "code", Value: fmt.Sprint(value)}
 }
 
-func (r adminReport) code(key, value string) adminReportRow {
-	return adminReportRow{Label: r.l.Tr(key), Kind: "code", Value: value}
+// codeUnit is a code value followed by its unit, e.g., minutes.
+func (r adminReport) codeUnit(key string, value any, unit string) adminReportRow {
+	row := r.code(key, value)
+	row.Unit = unit
+	return row
 }
 
 // optional is a code row, or "unset" when the value is empty.
@@ -221,21 +226,21 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 
 	sections = append(sections, r.section("server", "admin.config.server_config",
 		rows(
-			r.text("admin.config.brand_name", conf.App.BrandName),
-			r.text("admin.config.run_user", conf.App.RunUser),
-			r.text("admin.config.run_mode", conf.App.RunMode),
+			r.code("admin.config.brand_name", conf.App.BrandName),
+			r.code("admin.config.run_user", conf.App.RunUser),
+			r.code("admin.config.run_mode", conf.App.RunMode),
 		),
 		rows(
-			r.text("admin.config.server.external_url", conf.Server.ExternalURL),
-			r.text("admin.config.server.domain", conf.Server.Domain),
-			r.text("admin.config.server.protocol", conf.Server.Protocol),
-			r.text("admin.config.server.http_addr", conf.Server.HTTPAddr),
-			r.text("admin.config.server.http_port", conf.Server.HTTPPort),
+			r.code("admin.config.server.external_url", conf.Server.ExternalURL),
+			r.code("admin.config.server.domain", conf.Server.Domain),
+			r.code("admin.config.server.protocol", conf.Server.Protocol),
+			r.code("admin.config.server.http_addr", conf.Server.HTTPAddr),
+			r.code("admin.config.server.http_port", conf.Server.HTTPPort),
 			r.code("admin.config.server.cert_file", conf.Server.CertFile),
 			r.code("admin.config.server.key_file", conf.Server.KeyFile),
-			r.text("admin.config.server.tls_min_version", conf.Server.TLSMinVersion),
+			r.code("admin.config.server.tls_min_version", conf.Server.TLSMinVersion),
 			r.code("admin.config.server.unix_socket_permission", conf.Server.UnixSocketPermission),
-			r.text("admin.config.server.local_root_url", conf.Server.LocalRootURL),
+			r.code("admin.config.server.local_root_url", conf.Server.LocalRootURL),
 		),
 		rows(
 			r.flag("admin.config.server.offline_mode", conf.Server.OfflineMode),
@@ -257,8 +262,8 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		}
 		slices.Sort(keySizes)
 		ssh.Groups[0] = append(ssh.Groups[0],
-			r.text("admin.config.ssh.domain", conf.SSH.Domain),
-			r.text("admin.config.ssh.port", conf.SSH.Port),
+			r.code("admin.config.ssh.domain", conf.SSH.Domain),
+			r.code("admin.config.ssh.port", conf.SSH.Port),
 			r.code("admin.config.ssh.root_path", conf.SSH.RootPath),
 			r.code("admin.config.ssh.keygen_path", conf.SSH.KeygenPath),
 			r.code("admin.config.ssh.key_test_path", conf.SSH.KeyTestPath),
@@ -268,8 +273,8 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		)
 		ssh.Groups = append(ssh.Groups, rows(
 			r.flag("admin.config.ssh.start_builtin_server", conf.SSH.StartBuiltinServer),
-			r.text("admin.config.ssh.listen_host", conf.SSH.ListenHost),
-			r.text("admin.config.ssh.listen_port", conf.SSH.ListenPort),
+			r.code("admin.config.ssh.listen_host", conf.SSH.ListenHost),
+			r.code("admin.config.ssh.listen_port", conf.SSH.ListenPort),
 			r.list("admin.config.ssh.server_ciphers", conf.SSH.ServerCiphers),
 			r.list("admin.config.ssh.server_macs", conf.SSH.ServerMACs),
 			r.list("admin.config.ssh.server_algorithms", conf.SSH.ServerAlgorithms),
@@ -284,12 +289,12 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.code("admin.config.repo.script_type", repo.ScriptType),
 			r.optional("admin.config.repo.ansi_chatset", repo.ANSICharset),
 			r.flag("admin.config.repo.force_private", repo.ForcePrivate),
-			r.text("admin.config.repo.max_creation_limit", repo.MaxCreationLimit),
-			r.text("admin.config.repo.preferred_licenses", strings.Join(repo.PreferredLicenses, ", ")),
+			r.code("admin.config.repo.max_creation_limit", repo.MaxCreationLimit),
+			r.list("admin.config.repo.preferred_licenses", repo.PreferredLicenses),
 			r.flag("admin.config.repo.disable_http_git", repo.DisableHTTPGit),
 			r.flag("admin.config.repo.enable_local_path_migration", repo.EnableLocalPathMigration),
 			r.flag("admin.config.repo.enable_raw_file_render_mode", repo.EnableRawFileRenderMode),
-			r.text("admin.config.repo.commits_fetch_concurrency", repo.CommitsFetchConcurrency),
+			r.code("admin.config.repo.commits_fetch_concurrency", repo.CommitsFetchConcurrency),
 		),
 		rows(
 			r.list("admin.config.repo.editor.line_wrap_extensions", repo.Editor.LineWrapExtensions),
@@ -299,34 +304,34 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.flag("admin.config.repo.upload.enabled", repo.Upload.Enabled),
 			r.code("admin.config.repo.upload.temp_path", repo.Upload.TempPath),
 			r.list("admin.config.repo.upload.allowed_types", repo.Upload.AllowedTypes),
-			r.text("admin.config.repo.upload.file_max_size", strconv.FormatInt(repo.Upload.FileMaxSize, 10)+" MB"),
-			r.text("admin.config.repo.upload.max_files", repo.Upload.MaxFiles),
+			r.codeUnit("admin.config.repo.upload.file_max_size", repo.Upload.FileMaxSize, "MB"),
+			r.code("admin.config.repo.upload.max_files", repo.Upload.MaxFiles),
 		),
 	))
 
 	db := conf.Database
 	sections = append(sections, r.section("database", "admin.config.db_config",
 		rows(
-			r.text("admin.config.db.type", db.Type),
-			r.text("admin.config.db.host", db.Host),
-			r.text("admin.config.db.name", db.Name),
-			r.withHint(r.text("admin.config.db.schema", db.Schema), "admin.config.db.schema_helper"),
-			r.text("admin.config.db.user", db.User),
-			r.withHint(r.text("admin.config.db.ssl_mode", db.SSLMode), "admin.config.db.ssl_mode_helper"),
+			r.code("admin.config.db.type", db.Type),
+			r.code("admin.config.db.host", db.Host),
+			r.code("admin.config.db.name", db.Name),
+			r.withHint(r.code("admin.config.db.schema", db.Schema), "admin.config.db.schema_helper"),
+			r.code("admin.config.db.user", db.User),
+			r.withHint(r.code("admin.config.db.ssl_mode", db.SSLMode), "admin.config.db.ssl_mode_helper"),
 			r.withHint(r.code("admin.config.db.path", db.Path), "admin.config.db.path_helper"),
 		),
 		rows(
-			r.text("admin.config.db.max_open_conns", db.MaxOpenConns),
-			r.text("admin.config.db.max_idle_conns", db.MaxIdleConns),
+			r.code("admin.config.db.max_open_conns", db.MaxOpenConns),
+			r.code("admin.config.db.max_idle_conns", db.MaxIdleConns),
 		),
 	))
 
 	sec := conf.Security
 	sections = append(sections, r.section("security", "admin.config.security_config", rows(
-		r.text("admin.config.security.login_remember_days", sec.LoginRememberDays),
+		r.code("admin.config.security.login_remember_days", sec.LoginRememberDays),
 		r.flag("admin.config.security.cookie_secure", sec.CookieSecure),
 		r.flag("admin.config.security.enable_login_status_cookie", sec.EnableLoginStatusCookie),
-		r.text("admin.config.security.login_status_cookie_name", sec.LoginStatusCookieName),
+		r.code("admin.config.security.login_status_cookie_name", sec.LoginStatusCookieName),
 		r.list("admin.config.security.local_network_allowlist", sec.LocalNetworkAllowlist),
 	)))
 
@@ -335,9 +340,9 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		e := conf.Email
 		mail.Groups[0] = append(mail.Groups[0],
 			r.code("admin.config.email.subject_prefix", e.SubjectPrefix),
-			r.text("admin.config.email.host", e.Host),
-			r.text("admin.config.email.from", e.From),
-			r.text("admin.config.email.user", e.User),
+			r.code("admin.config.email.host", e.Host),
+			r.code("admin.config.email.from", e.From),
+			r.code("admin.config.email.user", e.User),
 		)
 		mail.Groups = append(mail.Groups,
 			rows(r.optional("admin.config.email.helo_hostname", e.HELOHostname)),
@@ -358,8 +363,8 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	auth := conf.Auth
 	sections = append(sections, r.section("auth", "admin.config.auth_config",
 		rows(
-			r.textUnit("admin.config.auth.activate_code_lives", auth.ActivateCodeLives, "tool.raw_minutes"),
-			r.textUnit("admin.config.auth.reset_password_code_lives", auth.ResetPasswordCodeLives, "tool.raw_minutes"),
+			r.codeUnit("admin.config.auth.activate_code_lives", auth.ActivateCodeLives, l.Tr("tool.raw_minutes")),
+			r.codeUnit("admin.config.auth.reset_password_code_lives", auth.ResetPasswordCodeLives, l.Tr("tool.raw_minutes")),
 			r.flag("admin.config.auth.require_email_confirm", auth.RequireEmailConfirmation),
 			r.flag("admin.config.auth.require_sign_in_view", auth.RequireSigninView),
 			r.flag("admin.config.auth.disable_registration", auth.DisableRegistration),
@@ -380,19 +385,19 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 
 	sess := conf.Session
 	sections = append(sections, r.section("session", "admin.config.session_config", rows(
-		r.text("admin.config.session.provider", sess.Provider),
+		r.code("admin.config.session.provider", sess.Provider),
 		r.code("admin.config.session.provider_config", sess.ProviderConfig),
-		r.text("admin.config.session.cookie_name", sess.CookieName),
+		r.code("admin.config.session.cookie_name", sess.CookieName),
 		r.flag("admin.config.session.https_only", sess.CookieSecure),
-		r.textUnit("admin.config.session.gc_interval", sess.GCInterval, "tool.raw_seconds"),
-		r.textUnit("admin.config.session.max_life_time", sess.MaxLifeTime, "tool.raw_seconds"),
+		r.codeUnit("admin.config.session.gc_interval", sess.GCInterval, l.Tr("tool.raw_seconds")),
+		r.codeUnit("admin.config.session.max_life_time", sess.MaxLifeTime, l.Tr("tool.raw_seconds")),
 	)))
 
 	// The cache host is left out: it can hold credentials, e.g., a Redis
 	// password, and the server-rendered page never showed it.
 	sections = append(sections, r.section("cache", "admin.config.cache_config", rows(
-		r.text("admin.config.cache.adapter", conf.Cache.Adapter),
-		r.textUnit("admin.config.cache.interval", conf.Cache.Interval, "tool.raw_seconds"),
+		r.code("admin.config.cache.adapter", conf.Cache.Adapter),
+		r.codeUnit("admin.config.cache.interval", conf.Cache.Interval, l.Tr("tool.raw_seconds")),
 	)))
 
 	att := conf.Attachment
@@ -400,16 +405,16 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		r.flag("admin.config.attachment.enabled", att.Enabled),
 		r.code("admin.config.attachment.path", att.Path),
 		r.list("admin.config.attachment.allowed_types", att.AllowedTypes),
-		r.text("admin.config.attachment.max_size", strconv.FormatInt(att.MaxSize, 10)+" MB"),
-		r.text("admin.config.attachment.max_files", att.MaxFiles),
+		r.codeUnit("admin.config.attachment.max_size", att.MaxSize, "MB"),
+		r.code("admin.config.attachment.max_files", att.MaxFiles),
 	)))
 
 	rel := conf.Release.Attachment
 	sections = append(sections, r.section("release", "admin.config.release_config", rows(
 		r.flag("admin.config.release.attachment.enabled", rel.Enabled),
 		r.list("admin.config.release.attachment.allowed_types", rel.AllowedTypes),
-		r.text("admin.config.release.attachment.max_size", strconv.FormatInt(rel.MaxSize, 10)+" MB"),
-		r.text("admin.config.release.attachment.max_files", rel.MaxFiles),
+		r.codeUnit("admin.config.release.attachment.max_size", rel.MaxSize, "MB"),
+		r.code("admin.config.release.attachment.max_files", rel.MaxFiles),
 	)))
 
 	pic := conf.Picture
@@ -426,11 +431,11 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.optional("admin.config.http.access_control_allow_origin", conf.HTTP.AccessControlAllowOrigin),
 		)),
 		r.section("mirror", "admin.config.mirror_config", rows(
-			r.textUnit("admin.config.mirror.default_interval", conf.Mirror.DefaultInterval, "tool.raw_hours"),
+			r.codeUnit("admin.config.mirror.default_interval", conf.Mirror.DefaultInterval, l.Tr("tool.raw_hours")),
 		)),
 		r.section("webhook", "admin.config.webhook_config", rows(
 			r.list("admin.config.webhook.types", conf.Webhook.Types),
-			r.textUnit("admin.config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, "tool.raw_seconds"),
+			r.codeUnit("admin.config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, l.Tr("tool.raw_seconds")),
 			r.flag("admin.config.webhook.skip_tls_verify", conf.Webhook.SkipTLSVerify),
 		)),
 	)
@@ -439,22 +444,22 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	sections = append(sections, r.section("git", "admin.config.git_config",
 		rows(
 			r.flag("admin.config.git.disable_diff_highlight", git.DisableDiffHighlight),
-			r.text("admin.config.git.max_diff_lines", git.MaxDiffLines),
-			r.text("admin.config.git.max_diff_line_characters", git.MaxDiffLineChars),
-			r.text("admin.config.git.max_diff_files", git.MaxDiffFiles),
+			r.code("admin.config.git.max_diff_lines", git.MaxDiffLines),
+			r.code("admin.config.git.max_diff_line_characters", git.MaxDiffLineChars),
+			r.code("admin.config.git.max_diff_files", git.MaxDiffFiles),
 			r.optional("admin.config.git.gc_args", strings.Join(git.GCArgs, " ")),
 		),
 		rows(
-			r.textUnit("admin.config.git.migrate_timeout", git.Timeout.Migrate, "tool.raw_seconds"),
-			r.textUnit("admin.config.git.mirror_timeout", git.Timeout.Mirror, "tool.raw_seconds"),
-			r.textUnit("admin.config.git.clone_timeout", git.Timeout.Clone, "tool.raw_seconds"),
-			r.textUnit("admin.config.git.pull_timeout", git.Timeout.Pull, "tool.raw_seconds"),
-			r.textUnit("admin.config.git.gc_timeout", git.Timeout.GC, "tool.raw_seconds"),
+			r.codeUnit("admin.config.git.migrate_timeout", git.Timeout.Migrate, l.Tr("tool.raw_seconds")),
+			r.codeUnit("admin.config.git.mirror_timeout", git.Timeout.Mirror, l.Tr("tool.raw_seconds")),
+			r.codeUnit("admin.config.git.clone_timeout", git.Timeout.Clone, l.Tr("tool.raw_seconds")),
+			r.codeUnit("admin.config.git.pull_timeout", git.Timeout.Pull, l.Tr("tool.raw_seconds")),
+			r.codeUnit("admin.config.git.gc_timeout", git.Timeout.GC, l.Tr("tool.raw_seconds")),
 		),
 	))
 
 	sections = append(sections, r.section("lfs", "admin.config.lfs_config", rows(
-		r.text("admin.config.lfs.storage", conf.LFS.Storage),
+		r.code("admin.config.lfs.storage", conf.LFS.Storage),
 		r.code("admin.config.lfs.objects_path", conf.LFS.ObjectsPath),
 	)))
 
@@ -462,7 +467,7 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	for i, mode := range conf.Log.Modes {
 		options, _ := json.MarshalIndent(conf.Log.Configs[i], "", "  ")
 		logs.Groups = append(logs.Groups, rows(
-			r.text("admin.config.log_mode", strings.ToUpper(mode[:1])+mode[1:]),
+			r.code("admin.config.log_mode", mode),
 			adminReportRow{Label: l.Tr("admin.config.log_options"), Kind: "block", Value: string(options)},
 		))
 	}

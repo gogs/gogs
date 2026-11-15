@@ -159,6 +159,8 @@ export interface AdminReportRow {
   kind: "text" | "code" | "block" | "bool" | "unset";
   value?: string;
   on?: boolean;
+  // Text that follows a "code" value, e.g., seconds.
+  unit?: string;
   // A note shown after the value, e.g., which database types use it.
   hint?: string;
 }
