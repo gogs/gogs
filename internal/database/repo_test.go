@@ -111,6 +111,44 @@ func TestSearchRepositoryByName(t *testing.T) {
 		assert.Equal(t, int64(1), count, keyword)
 		assert.Len(t, repos, 1, keyword)
 	}
+
+	t.Run("visibility", func(t *testing.T) {
+		for _, repo := range []*Repository{
+			{Name: "vis-public"},
+			{Name: "vis-unlisted", IsUnlisted: true},
+			{Name: "vis-private", IsPrivate: true},
+			{Name: "vis-public-wiki", IsPrivate: true, AllowPublicWiki: true},
+			{Name: "vis-unlisted-issues", IsPrivate: true, IsUnlisted: true, AllowPublicIssues: true},
+		} {
+			repo.OwnerID = 1
+			repo.LowerName = repo.Name
+			require.NoError(t, Handle.db.Create(repo).Error)
+			if repo.Name == "vis-private" {
+				require.NoError(t, Handle.db.Create(&Access{UserID: 2, RepoID: repo.ID, Mode: AccessModeRead}).Error)
+			}
+		}
+
+		names := func(t *testing.T, userID int64) []string {
+			t.Helper()
+			repos, _, err := SearchRepositoryByName(&SearchRepoOptions{Keyword: "vis-", UserID: userID, OrderBy: "lower_name", Page: 1, PageSize: 10})
+			require.NoError(t, err)
+			names := make([]string, len(repos))
+			for i := range repos {
+				names[i] = repos[i].Name
+			}
+			return names
+		}
+
+		// Unlisted repositories stay out of listings even when they allow public
+		// access to their wiki or issues.
+		assert.Equal(t, []string{"vis-public", "vis-public-wiki"}, names(t, 0), "anonymous")
+		assert.Equal(t, []string{"vis-private", "vis-public", "vis-public-wiki"}, names(t, 2), "collaborator")
+		assert.Equal(t,
+			[]string{"vis-private", "vis-public", "vis-public-wiki", "vis-unlisted", "vis-unlisted-issues"},
+			names(t, 1),
+			"owner",
+		)
+	})
 }
 
 func TestGetRepoInitFile(t *testing.T) {
