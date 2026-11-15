@@ -87,3 +87,66 @@ export function deleteAdminNotices(ids: number[]) {
 export function deleteAllAdminNotices() {
   return send("DELETE", adminURL("/notices/all"));
 }
+
+export interface AdminUserOptions {
+  // Authentication sources besides local accounts.
+  loginSources: { id: number; name: string }[];
+  // True when the site can email a new user about their account.
+  canSendEmail: boolean;
+  // True when users may be allowed to import repositories from the local disk.
+  localPathMigrationEnabled: boolean;
+}
+
+export function fetchAdminUserOptions() {
+  return fetchJSON<AdminUserOptions>(adminURL("/user-options"));
+}
+
+export interface AdminUserCreateForm {
+  // 0 for a local account.
+  loginSource: number;
+  loginName: string;
+  name: string;
+  email: string;
+  password: string;
+  sendNotify: boolean;
+}
+
+export function createAdminUser(form: AdminUserCreateForm) {
+  return submit<{ id: number; name: string }>("POST", adminURL("/users"), form);
+}
+
+export interface AdminUserForm {
+  // 0 for a local account.
+  loginSource: number;
+  loginName: string;
+  fullName: string;
+  email: string;
+  // Left unchanged when empty.
+  password: string;
+  website: string;
+  location: string;
+  maxRepoCreation: number;
+  isActive: boolean;
+  isAdmin: boolean;
+  allowGitHook: boolean;
+  allowImportLocal: boolean;
+  prohibitLogin: boolean;
+}
+
+export interface AdminUserDetail extends Omit<AdminUserForm, "password"> {
+  id: number;
+  name: string;
+  avatarURL: string;
+}
+
+export function fetchAdminUser(id: number) {
+  return fetchJSON<AdminUserDetail>(adminURL(`/users/${id}`));
+}
+
+export function updateAdminUser(id: number, form: AdminUserForm) {
+  return submit<void>("PATCH", adminURL(`/users/${id}`), form);
+}
+
+export function deleteAdminUser(id: number) {
+  return send("DELETE", adminURL(`/users/${id}`));
+}
