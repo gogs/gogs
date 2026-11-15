@@ -2,10 +2,12 @@ package ssh
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,6 +17,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/lfsx"
 	"gogs.io/gogs/internal/telemetry"
 )
 
@@ -67,6 +70,20 @@ var allowedCommands = map[string]database.AccessMode{
 	"git-receive-pack":   database.AccessModeWrite,
 }
 
+// lfsAuthenticateCommand is the command that Git LFS runs over SSH to get the
+// URL and credentials of the LFS API of a repository, with the arguments
+// "<path> <operation>".
+const lfsAuthenticateCommand = "git-lfs-authenticate"
+
+var lfsOperations = map[string]database.AccessMode{
+	"download": database.AccessModeRead,
+	"upload":   database.AccessModeWrite,
+}
+
+// lfsTokenLifetime is how long the credentials that lfsAuthenticateCommand
+// gives remain valid. Git LFS runs the command again when they expire.
+const lfsTokenLifetime = time.Hour
+
 // Serve checks that the client may run the Git command over SSH and runs it.
 // After a push, it records the updated references and calls TriggerPushTasks.
 // Errors are of type *ServeError.
@@ -81,6 +98,14 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	}
 
 	verb, args := parseCommand(opts.Command)
+	var lfsOperation string
+	if verb == lfsAuthenticateCommand {
+		// Unlike Git, Git LFS does not quote the path, which starts with a slash
+		// for remotes like "ssh://host/owner/repo.git".
+		args, lfsOperation, _ = strings.Cut(args, " ")
+		args = strings.TrimPrefix(args, "/")
+	}
+
 	repoFullName := strings.ToLower(strings.Trim(args, "'"))
 	repoFields := strings.SplitN(repoFullName, "/", 2)
 	if len(repoFields) != 2 {
@@ -110,6 +135,12 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	telemetry.SetRepository(ctx, repo.ID)
 
 	requestMode, ok := allowedCommands[verb]
+	if verb == lfsAuthenticateCommand {
+		requestMode, ok = lfsOperations[lfsOperation]
+		if !ok {
+			return serveError("Unknown LFS operation", "Unknown LFS operation '%s'", lfsOperation)
+		}
+	}
 	if !ok {
 		return serveError("Unknown git command", "Unknown git command '%s'", verb)
 	}
@@ -193,6 +224,10 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		}
 	}
 
+	if verb == lfsAuthenticateCommand {
+		return lfsAuthenticate(ctx, opts.Stdout, key, user, repo, requestMode)
+	}
+
 	// Git finds the repository without the suffix, but recording a push runs other
 	// Git commands in the directory of the repository.
 	repoPath := filepath.Join(conf.Repository.Root, repoFullName)
@@ -245,6 +280,48 @@ func parseCommand(cmd string) (verb, args string) {
 		return "", ""
 	}
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
+}
+
+// lfsAuthenticate writes the URL of the LFS API of the repository with a token
+// that grants the access mode to it, after the key has been checked to have
+// that access.
+func lfsAuthenticate(ctx context.Context, w io.Writer, key *database.PublicKey, user *database.User, repo *database.Repository, mode database.AccessMode) error {
+	var userID int64
+	switch {
+	case user != nil:
+		userID = user.ID
+	case key.IsDeployKey():
+		// A deploy key acts for no user, so the token acts as the owner, limited to
+		// the repository and the mode the key was checked for.
+		userID = repo.OwnerID
+	default:
+		// Reading a public repository needs no user, but the LFS API needs one
+		// when signing in is required to view it.
+		keyOwner, err := database.Handle.Users().GetByKeyID(ctx, key.ID)
+		if err != nil {
+			return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
+		}
+		if keyOwner.IsDisabled() {
+			return serveError(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
+		}
+		userID = keyOwner.ID
+	}
+
+	token := lfsx.SignToken(conf.Security.SecretKey, lfsx.Token{
+		UserID:  userID,
+		RepoID:  repo.ID,
+		Upload:  mode >= database.AccessModeWrite,
+		Expires: time.Now().Add(lfsTokenLifetime).Unix(),
+	})
+	err := json.NewEncoder(w).Encode(map[string]any{
+		"href":       conf.Server.ExternalURL + repo.Owner.Name + "/" + repo.Name + ".git/info/lfs",
+		"header":     map[string]string{"Authorization": "Bearer " + token},
+		"expires_in": int(lfsTokenLifetime.Seconds()),
+	})
+	if err != nil {
+		return serveError("Internal error", "Failed to write LFS credentials: %v", err)
+	}
+	return nil
 }
 
 func checkDeployKey(ctx context.Context, key *database.PublicKey, repo *database.Repository) error {
