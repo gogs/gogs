@@ -31,7 +31,7 @@ export function AdminEmails({ preview }: { preview: AdminEmailPreview }) {
     void navigate({ to: "/admin/emails", search: { name: preview.name, language: preview.lang, ...search } });
 
   return (
-    <AdminLayout active="emails" wide>
+    <AdminLayout active="emails">
       <h1 className="text-xl font-semibold">{t("admin.emails")}</h1>
       <p className="mt-1 mb-4 text-sm text-(--color-muted-foreground)">{t("admin.emails.desc")}</p>
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
