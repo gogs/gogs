@@ -106,7 +106,7 @@ Indexes:
  Content     | content      | TEXT        | TEXT                  | TEXT                  
  CreatedUnix | created_unix | BIGINT      | BIGINT                | INTEGER               
  UpdatedUnix | updated_unix | BIGINT      | BIGINT                | INTEGER               
- CommitSHA   | commit_sha   | VARCHAR(40) | VARCHAR(40)           | TEXT                  
+ CommitSHA   | commit_sha   | VARCHAR(64) | VARCHAR(64)           | TEXT                  
 
 Primary keys: id
 Indexes: 
@@ -439,9 +439,9 @@ Indexes:
  HeadUserName   | head_user_name   | VARCHAR(255) | VARCHAR(255)          | TEXT                  
  HeadBranch     | head_branch      | VARCHAR(255) | VARCHAR(255)          | TEXT                  
  BaseBranch     | base_branch      | VARCHAR(255) | VARCHAR(255)          | TEXT                  
- MergeBase      | merge_base       | VARCHAR(40)  | VARCHAR(40)           | TEXT                  
+ MergeBase      | merge_base       | VARCHAR(64)  | VARCHAR(64)           | TEXT                  
  HasMerged      | has_merged       | BOOLEAN      | BOOLEAN               | NUMERIC               
- MergedCommitID | merged_commit_id | VARCHAR(40)  | VARCHAR(40)           | TEXT                  
+ MergedCommitID | merged_commit_id | VARCHAR(64)  | VARCHAR(64)           | TEXT                  
  MergerID       | merger_id        | BIGINT       | BIGINT                | INTEGER               
  MergedUnix     | merged_unix      | BIGINT       | BIGINT                | INTEGER               
 
@@ -462,7 +462,7 @@ Indexes:
  LowerTagName | lower_tag_name | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
  Target       | target         | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
  Title        | title          | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
- Sha1         | sha1           | VARCHAR(40)                    | VARCHAR(40)                    | TEXT                           
+ Sha1         | sha1           | VARCHAR(64)                    | VARCHAR(64)                    | TEXT                           
  NumCommits   | num_commits    | BIGINT                         | BIGINT                         | INTEGER                        
  Note         | note           | TEXT                           | TEXT                           | TEXT                           
  IsDraft      | is_draft       | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
@@ -497,7 +497,7 @@ Primary keys: id
  NumClosedMilestones   | num_closed_milestones   | INTEGER NOT NULL DEFAULT 0     | INT NOT NULL DEFAULT 0         | INTEGER NOT NULL DEFAULT 0     
  IsPrivate             | is_private              | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
  IsUnlisted            | is_unlisted             | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
- IsBare                | is_bare                 | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
+ IsEmpty               | is_bare                 | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
  IsMirror              | is_mirror               | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
  EnableWiki            | enable_wiki             | BOOLEAN NOT NULL DEFAULT TRUE  | BOOLEAN NOT NULL DEFAULT TRUE  | NUMERIC NOT NULL DEFAULT TRUE  
  AllowPublicWiki       | allow_public_wiki       | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
