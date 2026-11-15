@@ -1,14 +1,18 @@
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { cn } from "@/lib/utils";
 
-type Segment = { html: string } | { code: string; lang: string };
+interface CodeBlockContent {
+  code: string;
+  lang: string;
+}
 
-// splitCodeBlocks splits rendered Markdown at its top-level fenced code blocks
-// that name a language, so they can be highlighted.
-function splitCodeBlocks(html: string, anchorLabel: string): Segment[] {
+// extractCodeBlocks replaces the code blocks, wherever they are nested, with
+// placeholders that CodeBlock renders into.
+function extractCodeBlocks(html: string, anchorLabel: string): { html: string; blocks: CodeBlockContent[] } {
   const body = new DOMParser().parseFromString(html, "text/html").body;
   // Headings have an id like "user-content-setup", as on GitHub. Their anchor
   // gets "setup", so links to "#setup" work.
@@ -23,26 +27,19 @@ function splitCodeBlocks(html: string, anchorLabel: string): Segment[] {
     anchor.textContent = "#";
     heading.append(anchor);
   }
-  const segments: Segment[] = [];
-  let pending = "";
-  for (const node of Array.from(body.childNodes)) {
-    const code = node instanceof HTMLPreElement ? node.querySelector(":scope > code[class^='language-']") : null;
-    if (!code) {
-      // Serializing through an element keeps text escaped.
-      const box = document.createElement("div");
-      box.append(node.cloneNode(true));
-      pending += box.innerHTML;
-      continue;
-    }
-    if (pending.trim()) segments.push({ html: pending });
-    pending = "";
-    segments.push({
+  const blocks: CodeBlockContent[] = [];
+  for (const code of Array.from(body.querySelectorAll("pre > code"))) {
+    // The server sanitizer drops data attributes, so content cannot forge a
+    // placeholder.
+    const placeholder = document.createElement("div");
+    placeholder.dataset.codeBlock = String(blocks.length);
+    blocks.push({
       code: (code.textContent ?? "").replace(/\n$/, ""),
-      lang: code.className.slice("language-".length),
+      lang: code.className.startsWith("language-") ? code.className.slice("language-".length) : "text",
     });
+    code.parentElement!.replaceWith(placeholder);
   }
-  if (pending.trim()) segments.push({ html: pending });
-  return segments;
+  return { html: body.innerHTML, blocks };
 }
 
 // Markdown shows Markdown that the server rendered and sanitized, e.g., the
@@ -50,16 +47,31 @@ function splitCodeBlocks(html: string, anchorLabel: string): Segment[] {
 export function Markdown({ html, className }: { html: string; className?: string }) {
   const { t } = useTranslation();
   const anchorLabel = t("link_to_section");
-  const segments = useMemo(() => splitCodeBlocks(html, anchorLabel), [html, anchorLabel]);
+  const content = useMemo(() => extractCodeBlocks(html, anchorLabel), [html, anchorLabel]);
+  // React sets the HTML again whenever this object changes, which would drop
+  // the code blocks rendered into the placeholders.
+  const innerHTML = useMemo(() => ({ __html: content.html }), [content]);
+  const container = useRef<HTMLDivElement>(null);
+  // The placeholders exist only once React sets the HTML, so they are collected
+  // after each commit along with the content they belong to.
+  const [placeholders, setPlaceholders] = useState<{ content: typeof content; elements: HTMLElement[] }>();
+  useLayoutEffect(() => {
+    setPlaceholders({
+      content,
+      elements: Array.from(container.current!.querySelectorAll<HTMLElement>("[data-code-block]")),
+    });
+  }, [content]);
+
   return (
     <div className={cn("markdown", className)}>
-      {segments.map((segment, i) =>
-        "code" in segment ? (
-          <CodeBlock key={i} code={segment.code} lang={segment.lang} />
-        ) : (
-          <div key={i} dangerouslySetInnerHTML={{ __html: segment.html }} />
-        ),
-      )}
+      <div ref={container} dangerouslySetInnerHTML={innerHTML} />
+      {placeholders?.content === content
+        ? placeholders.elements.map((element) => {
+            const index = Number(element.dataset.codeBlock);
+            const block = content.blocks[index];
+            return createPortal(<CodeBlock code={block.code} lang={block.lang} />, element, index);
+          })
+        : null}
     </div>
   );
 }
