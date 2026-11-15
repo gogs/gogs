@@ -10,6 +10,7 @@ Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https:/
 - [Step 3: Get the code](#step-3-get-the-code)
 - [Step 4: Configure database settings](#step-4-configure-database-settings)
 - [Step 5: Start the server](#step-5-start-the-server)
+- [Build a production binary](#build-a-production-binary)
 - [Other nice things](#other-nice-things)
 
 ## Environment
@@ -22,10 +23,10 @@ Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v2.43.1 or higher)
 - [Go](https://golang.org/doc/install) (v1.27 or higher)
-- [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
+- [Node.js](https://nodejs.org/en/download) (v24 or higher) with [pnpm](https://pnpm.io/installation)
 - [Moon](https://moonrepo.dev/docs/install)
-- [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
-- [go-mockgen](https://github.com/derision-test/go-mockgen)
+- [portless](https://github.com/vercel-labs/portless)
+- [golangci-lint](https://golangci-lint.run/welcome/install/), to run `moon run gogs:lint`
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v12 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
@@ -38,12 +39,8 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git npm moon portless
+    brew install go postgresql git node pnpm moon portless golangci-lint
     portless trust
-    npm install -g less
-    npm install -g less-plugin-clean-css
-    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
-    go install golang.org/x/tools/cmd/goimports@latest
     ```
 
     `portless trust` adds the local CA to your system trust store so `https://gogs.localhost` works without browser warnings. The `moon run gogs:dev` task will start the proxy and register the route automatically.
@@ -64,28 +61,26 @@ Gogs has the following dependencies:
 
 ### Ubuntu
 
-1. Add package repositories:
+1. Add the Node.js package repository:
 
     ```bash
-    curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
-    ```
-
-1. Update repositories:
-
-    ```bash
-    sudo apt-get update
+    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
     ```
 
 1. Install dependencies:
 
     ```bash
-    sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
-    npm install -g less
-    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
-    go install golang.org/x/tools/cmd/goimports@latest
+    sudo apt install -y git postgresql postgresql-contrib nodejs
+    sudo corepack enable
+    sudo npm install -g portless
+    portless trust
     ```
 
-1. Install [Moon](https://moonrepo.dev/docs/install).
+    `corepack enable` provides the pnpm version the repository pins in `package.json`.
+
+1. Install [Go](https://go.dev/doc/install), since the `golang-go` package of most Ubuntu releases is older than the version Gogs needs.
+
+1. Install [Moon](https://moonrepo.dev/docs/install) and [golangci-lint](https://golangci-lint.run/welcome/install/).
 
 1. Configure startup services:
 
@@ -129,7 +124,8 @@ Generally, you don't need a full clone, so set `--depth` to `10`:
 git clone --depth 10 https://github.com/gogs/gogs.git
 ```
 
-**NOTE** The repository has Go modules enabled, please clone to somewhere outside of your `$GOPATH`.
+> [!NOTE]
+> The repository has Go modules enabled, please clone to somewhere outside of your `$GOPATH`.
 
 ## Step 4: Configure database settings
 
@@ -153,7 +149,21 @@ The following command will start the web server and automatically recompile and 
 moon run gogs:dev
 ```
 
-**NOTE** If you changed any file under `conf/`, `templates/` or `public/` directory, be sure to rerun `moon run gogs:dev` afterwards!
+> [!NOTE]
+> If you changed any file under `conf/`, `templates/` or `public/` directory, be sure to rerun `moon run gogs:dev` afterwards!
+
+## Build a production binary
+
+The following command builds the web frontend and a production binary with it embedded at `.bin/gogs`:
+
+```bash
+moon run gogs:build-prod
+```
+
+Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs.io/getting-started/installation#configuration) from there. Use `moon run gogs:prod` to run it locally.
+
+> [!NOTE]
+> A plain `go build` produces a development binary, which serves the web frontend from the Vite dev server that `moon run gogs:dev` starts, so it shows no pages on its own.
 
 ## Other nice things
 
