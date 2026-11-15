@@ -119,7 +119,11 @@
           {
             "group": "Releases",
             "pages": [
-              "api-reference/releases/list-releases"
+              "api-reference/releases/list-releases",
+              "api-reference/releases/create-a-release",
+              "api-reference/releases/get-a-release",
+              "api-reference/releases/edit-a-release",
+              "api-reference/releases/delete-a-release"
             ]
           },
           {
