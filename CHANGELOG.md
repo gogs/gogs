@@ -12,6 +12,7 @@ All notable changes to Gogs are documented in this file.
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
+- Git LFS works over SSH, e.g., pushing and cloning LFS files with `git@host:owner/repo.git` remotes. [#8575](https://github.com/gogs/gogs/pull/8575)
 
 ### Changed
 
