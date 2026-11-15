@@ -181,4 +181,13 @@ func TestTeamMemberAccesses(t *testing.T) {
 		}
 		assert.Equal(t, want, accesses(t), step.name)
 	}
+
+	var teamRepos []*TeamRepo
+	require.NoError(t, db.Order("team_id, repo_id").Find(&teamRepos).Error)
+	gotTeamRepos := make([][2]int64, len(teamRepos))
+	for i, tr := range teamRepos {
+		gotTeamRepos[i] = [2]int64{tr.TeamID, tr.RepoID}
+	}
+	wantTeamRepos := [][2]int64{{ownersID, repo1}, {ownersID, repo2}, {readersID, repo1}, {readersID, repo2}}
+	assert.Equal(t, wantTeamRepos, gotTeamRepos, "team-repos after deleting writers")
 }

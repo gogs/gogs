@@ -379,6 +379,11 @@ func DeleteTeam(t *Team) error {
 			return errors.Wrap(err, "recalculate member accesses")
 		}
 
+		// Delete team-repo, which the accesses above are recalculated from.
+		if err := tx.Where("team_id = ?", t.ID).Delete(new(TeamRepo)).Error; err != nil {
+			return err
+		}
+
 		// Delete team.
 		if err := tx.Where("id = ?", t.ID).Delete(new(Team)).Error; err != nil {
 			return err
