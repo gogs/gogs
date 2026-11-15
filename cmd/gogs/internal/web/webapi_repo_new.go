@@ -265,6 +265,8 @@ func cloneAddrError(l i18n.Locale, label string, err error) (statusCode int, msg
 		return http.StatusBadRequest, l.Tr("repo::migrate.invalid_local_path"), true
 	case addrErr.IsBlockedLocalAddress:
 		return http.StatusForbidden, l.Tr("repo::migrate.clone_address_resolved_to_blocked_local_address"), true
+	case addrErr.IsSSHAddress:
+		return http.StatusBadRequest, l.Tr("repo::migrate.ssh_address_not_supported"), true
 	}
 	return 0, "", false
 }

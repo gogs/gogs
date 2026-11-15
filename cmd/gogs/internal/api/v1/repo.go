@@ -327,6 +327,8 @@ func migrate(c *apiContext, f migrateRepoRequest) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid local path, it does not exist or not a directory."))
 			case addrErr.IsBlockedLocalAddress:
 				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Clone address resolved to a local network address that is implicitly blocked."))
+			case addrErr.IsSSHAddress:
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("SSH clone addresses are not supported, use the HTTP or HTTPS address with a username and password instead."))
 			default:
 				c.Error(err, "unexpected error")
 			}
