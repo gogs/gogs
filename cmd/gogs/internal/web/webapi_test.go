@@ -143,6 +143,7 @@ func TestRequireAuthenticated(t *testing.T) {
 		"/api/web/admin/repos",
 		"/api/web/admin/notices",
 		"/api/web/repo/new",
+		"/api/web/repo/fork/1",
 	} {
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, httptest.NewRequest(http.MethodGet, path, nil))

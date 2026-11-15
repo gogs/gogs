@@ -61,6 +61,26 @@ type repoNewOptions struct {
 	Readmes        []string `json:"readmes"`
 }
 
+// repoNewOwners lists the owners the viewer can create repositories for: the
+// viewer and the organizations they own, and then the given owner when it is
+// none of them, e.g., an organization a site admin asks for.
+func repoNewOwners(viewer, owner *database.User) ([]repoNewOwner, error) {
+	orgs, err := database.GetOwnedOrgsByUserIDDesc(viewer.ID, "updated_unix")
+	if err != nil {
+		return nil, errors.Wrap(err, "get owned organizations")
+	}
+	owners := []repoNewOwner{{ID: viewer.ID, Name: viewer.Name, AvatarURL: viewer.AvatarURLPath()}}
+	listed := owner.ID == viewer.ID
+	for _, org := range orgs {
+		owners = append(owners, repoNewOwner{ID: org.ID, Name: org.Name, AvatarURL: org.AvatarURLPath()})
+		listed = listed || org.ID == owner.ID
+	}
+	if !listed {
+		owners = append(owners, repoNewOwner{ID: owner.ID, Name: owner.Name, AvatarURL: owner.AvatarURLPath()})
+	}
+	return owners, nil
+}
+
 func getRepoNew(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
 	orgID, _ := strconv.ParseInt(c.Query("org"), 10, 64)
 	owner, err := repoOwner(c.Request().Context(), viewer, orgID)
@@ -71,20 +91,10 @@ func getRepoNew(c flamego.Context, viewer *database.User) (statusCode int, resp 
 		log.Error("getRepoNew: get owner %d: %v", orgID, err)
 		return http.StatusInternalServerError, nil, err
 	}
-	orgs, err := database.GetOwnedOrgsByUserIDDesc(viewer.ID, "updated_unix")
+	owners, err := repoNewOwners(viewer, owner)
 	if err != nil {
-		log.Error("getRepoNew: get organizations of user %d: %v", viewer.ID, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get owned organizations")
-	}
-
-	owners := []repoNewOwner{{ID: viewer.ID, Name: viewer.Name, AvatarURL: viewer.AvatarURLPath()}}
-	listed := owner.ID == viewer.ID
-	for _, org := range orgs {
-		owners = append(owners, repoNewOwner{ID: org.ID, Name: org.Name, AvatarURL: org.AvatarURLPath()})
-		listed = listed || org.ID == owner.ID
-	}
-	if !listed {
-		owners = append(owners, repoNewOwner{ID: owner.ID, Name: owner.Name, AvatarURL: owner.AvatarURLPath()})
+		log.Error("getRepoNew: list owners for user %d: %v", viewer.ID, err)
+		return http.StatusInternalServerError, nil, err
 	}
 	return http.StatusOK, &repoNewOptions{
 		Owners:         owners,

@@ -20,23 +20,6 @@ import (
 //  |____|_  /_______  / |____|   \_______  /_______  /|___| |____|   \_______  /____|_  // ______|
 //         \/        \/                   \/        \/                        \/       \/ \/
 
-type CreateRepo struct {
-	UserID       int64  `binding:"Required"`
-	RepoName     string `binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Private      bool
-	Unlisted     bool
-	Description  string `binding:"MaxSize(512)"`
-	AutoInit     bool
-	Gitignores   string
-	License      string
-	Readme       string
-	ObjectFormat string `binding:"OmitEmpty;In(sha1,sha256)"`
-}
-
-func (f *CreateRepo) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 type MigrateRepo struct {
 	CloneAddr    string `json:"clone_addr" binding:"Required"`
 	AuthUsername string `json:"auth_username"`
