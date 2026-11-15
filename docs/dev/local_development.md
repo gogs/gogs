@@ -124,7 +124,8 @@ Generally, you don't need a full clone, so set `--depth` to `10`:
 git clone --depth 10 https://github.com/gogs/gogs.git
 ```
 
-**NOTE** The repository has Go modules enabled, please clone to somewhere outside of your `$GOPATH`.
+> [!NOTE]
+> The repository has Go modules enabled, please clone to somewhere outside of your `$GOPATH`.
 
 ## Step 4: Configure database settings
 
@@ -148,7 +149,8 @@ The following command will start the web server and automatically recompile and 
 moon run gogs:dev
 ```
 
-**NOTE** If you changed any file under `conf/`, `templates/` or `public/` directory, be sure to rerun `moon run gogs:dev` afterwards!
+> [!NOTE]
+> If you changed any file under `conf/`, `templates/` or `public/` directory, be sure to rerun `moon run gogs:dev` afterwards!
 
 ## Build a production binary
 
@@ -160,7 +162,8 @@ moon run gogs:build-prod
 
 Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs.io/getting-started/installation#configuration) from there. Use `moon run gogs:prod` to run it locally.
 
-**NOTE** A plain `go build` produces a development binary, which serves the web frontend from the Vite dev server that `moon run gogs:dev` starts, so it shows no pages on its own.
+> [!NOTE]
+> A plain `go build` produces a development binary, which serves the web frontend from the Vite dev server that `moon run gogs:dev` starts, so it shows no pages on its own.
 
 ## Other nice things
 
