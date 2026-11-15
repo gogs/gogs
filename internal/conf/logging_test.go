@@ -220,6 +220,41 @@ USERNAME = yoyo
 	assert.Equal(t, want, got)
 }
 
+func TestInitLogging(t *testing.T) {
+	beforeFile, beforeLog := File, Log
+	t.Cleanup(func() { File, Log = beforeFile, beforeLog })
+
+	initLogging := func(t *testing.T, modes string) string {
+		rootPath := filepath.Join(t.TempDir(), "log")
+		f, err := ini.Load([]byte(`
+[log]
+MODE = ` + modes + `
+ROOT_PATH = ` + rootPath + `
+
+[log.console]
+
+[log.file]
+`))
+		require.NoError(t, err)
+		File = f
+
+		logger, err := InitLogging(nil, false)
+		require.NoError(t, err)
+		logger.Info("Hello")
+		return rootPath
+	}
+
+	t.Run("console only", func(t *testing.T) {
+		rootPath := initLogging(t, "console")
+		assert.NoDirExists(t, rootPath)
+	})
+
+	t.Run("file", func(t *testing.T) {
+		rootPath := initLogging(t, "console, file")
+		assert.FileExists(t, filepath.Join(rootPath, "gogs.log"))
+	})
+}
+
 func Test_parseLevel(t *testing.T) {
 	tests := []struct {
 		in   string
