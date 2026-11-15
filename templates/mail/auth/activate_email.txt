@@ -1,0 +1,10 @@
+{{$link := printf "%suser/activate_email?code=%s&email=%s" AppURL (urlquery .Code) (urlquery .Email) -}}
+{{template "header"}}
+
+{{Tr "mail.greeting" .Username}}
+
+{{Tr "mail.activate_email.body" .Email .ActiveCodeLives}}
+
+{{template "button" (dict "URL" $link "Label" (Tr "mail.activate_email.action"))}}
+
+{{template "footer"}}

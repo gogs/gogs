@@ -1,0 +1,7 @@
+{{template "header"}}
+
+{{Tr "mail.collaborator.body" .RepoName}}
+
+{{template "button" (dict "URL" .Link "Label" (Tr "mail.view_repository"))}}
+
+{{template "footer"}}

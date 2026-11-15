@@ -1,0 +1,9 @@
+{{template "header"}}
+
+{{Tr "mail.greeting" .Username}}
+
+{{Tr "mail.register_notify.body" AppName .Username}}
+
+{{template "button" (dict "URL" (printf "%suser/sign-in" AppURL) "Label" (Tr "mail.register_notify.action"))}}
+
+{{template "footer"}}

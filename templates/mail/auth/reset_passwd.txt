@@ -1,0 +1,12 @@
+{{$link := printf "%suser/reset-password?code=%s" AppURL (urlquery .Code) -}}
+{{template "header"}}
+
+{{Tr "mail.greeting" .Username}}
+
+{{Tr "mail.reset_password.body" AppName .ResetPwdCodeLives}}
+
+{{template "button" (dict "URL" $link "Label" (Tr "mail.reset_password.action"))}}
+
+{{Tr "mail.reset_password.ignore"}}
+
+{{template "footer"}}

@@ -1,13 +1,14 @@
 package email
 
 import (
+	"bytes"
 	"crypto/tls"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/inbucket/html2text"
 	gomail "github.com/wneessen/go-mail"
 	log "unknwon.dev/clog/v2"
 
@@ -20,8 +21,8 @@ type message struct {
 	confirmChan chan struct{}
 }
 
-func newMessageFrom(to []string, from, subject, htmlBody string) (*message, error) {
-	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
+func newMessageFrom(to []string, from string, mail *Mail) (*message, error) {
+	log.Trace("NewMessageFrom (htmlBody):\n%s", mail.HTML)
 
 	m := gomail.NewMsg()
 	if err := m.From(from); err != nil {
@@ -30,22 +31,26 @@ func newMessageFrom(to []string, from, subject, htmlBody string) (*message, erro
 	if err := m.To(to...); err != nil {
 		return nil, errors.Wrap(err, "set To addresses")
 	}
-	m.Subject(conf.Email.SubjectPrefix + subject)
+	m.Subject(conf.Email.SubjectPrefix + mail.Subject)
 	m.SetDate()
 
-	if conf.Email.UsePlainText || conf.Email.AddPlainTextAlt {
-		plainBody, err := html2text.FromString(htmlBody)
+	switch {
+	case conf.Email.UsePlainText:
+		m.SetBodyString(gomail.TypeTextPlain, mail.Text)
+	case conf.Email.AddPlainTextAlt:
+		m.SetBodyString(gomail.TypeTextPlain, mail.Text)
+		m.AddAlternativeString(gomail.TypeTextHTML, mail.HTML)
+	default:
+		m.SetBodyString(gomail.TypeTextHTML, mail.HTML)
+	}
+	// The logo goes inside the email rather than as a link to the site, which
+	// mail clients would not load without asking.
+	if !conf.Email.UsePlainText && len(mail.Logo) > 0 {
+		contentType := gomail.ContentType(http.DetectContentType(mail.Logo))
+		err := m.EmbedReader(mailLogoName, bytes.NewReader(mail.Logo), gomail.WithFileContentType(contentType))
 		if err != nil {
-			return nil, errors.Wrap(err, "convert HTML to plain text")
+			return nil, errors.Wrap(err, "embed logo")
 		}
-		if conf.Email.UsePlainText {
-			m.SetBodyString(gomail.TypeTextPlain, plainBody)
-		} else {
-			m.SetBodyString(gomail.TypeTextPlain, plainBody)
-			m.AddAlternativeString(gomail.TypeTextHTML, htmlBody)
-		}
-	} else {
-		m.SetBodyString(gomail.TypeTextHTML, htmlBody)
 	}
 
 	return &message{
@@ -54,8 +59,8 @@ func newMessageFrom(to []string, from, subject, htmlBody string) (*message, erro
 	}, nil
 }
 
-func newMessage(to []string, subject, body string) (*message, error) {
-	return newMessageFrom(to, conf.Email.From, subject, body)
+func newMessage(to []string, mail *Mail) (*message, error) {
+	return newMessageFrom(to, conf.Email.From, mail)
 }
 
 func newSMTPClient() (*gomail.Client, error) {
