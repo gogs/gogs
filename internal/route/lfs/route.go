@@ -43,20 +43,27 @@ func RegisterRoutes(logger *logx.Logger, r flamego.Router) {
 	}, authenticate(logger, store))
 }
 
+// askCredentials responds that the client needs to provide credentials.
+func askCredentials(logger *logx.Logger, w http.ResponseWriter) {
+	w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
+	responseJSON(logger, w, http.StatusUnauthorized, responseError{
+		Message: "Credentials needed",
+	})
+}
+
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
+// A request without credentials continues as an anonymous user, whose ID is 0,
+// unless signing in is required to view anything.
 func authenticate(logger *logx.Logger, store Store) flamego.Handler {
-	askCredentials := func(w http.ResponseWriter) {
-		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
-		responseJSON(logger, w, http.StatusUnauthorized, responseError{
-			Message: "Credentials needed",
-		})
-	}
-
 	return func(c flamego.Context) {
 		username, password := authx.DecodeBasic(c.Request().Header)
 		if username == "" {
-			askCredentials(c.ResponseWriter())
+			if conf.Auth.RequireSigninView {
+				askCredentials(logger, c.ResponseWriter())
+				return
+			}
+			c.Map(&database.User{Name: "anonymous"})
 			return
 		}
 
@@ -87,7 +94,7 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 				user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, password)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
-						askCredentials(c.ResponseWriter())
+						askCredentials(logger, c.ResponseWriter())
 					} else {
 						c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 						logger.Error("Failed to authenticate by access token via password", "error", err)
@@ -144,6 +151,11 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flame
 				Private: repo.IsPrivate,
 			},
 		) {
+			// An anonymous user may have access after signing in.
+			if actor.ID <= 0 {
+				askCredentials(logger, c.ResponseWriter())
+				return
+			}
 			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
