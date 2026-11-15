@@ -385,7 +385,9 @@ func RegisterRoutes(f *flamego.Flame) {
 
 		f.Group("/admin", func() {
 			f.Group("/users", func() {
-				f.Post("", bind(adminCreateUserRequest{}), adminCreateUser)
+				f.Combo("").
+					Get(adminListUsers).
+					Post(bind(adminCreateUserRequest{}), adminCreateUser)
 
 				f.Group("/{username}", func() {
 					f.Combo("").
@@ -396,6 +398,8 @@ func RegisterRoutes(f *flamego.Flame) {
 					f.Post("/repos", bind(createRepoRequest{}), adminCreateRepo)
 				})
 			})
+
+			f.Get("/repos", adminListRepos)
 
 			f.Group("/orgs/{orgname}", func() {
 				f.Group("/teams", func() {

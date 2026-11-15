@@ -9,6 +9,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
 func parseLoginSource(c *apiContext, sourceID int64) {
@@ -170,4 +171,35 @@ func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
 		return
 	}
 	createUserPublicKey(c, form, u.ID)
+}
+
+// adminListUsers lists a page of all users, or of the users whose name matches
+// the "q" query parameter.
+func adminListUsers(c *apiContext) {
+	ctx := c.Request().Context()
+	pageSize := toAllowedPageSize(c.QueryInt("limit"))
+	page := max(c.QueryInt("page"), 1)
+
+	var (
+		users []*database.User
+		total int64
+		err   error
+	)
+	if keyword := c.Query("q"); keyword != "" {
+		users, total, err = database.Handle.Users().SearchByName(ctx, keyword, page, pageSize, "id ASC")
+	} else {
+		users, err = database.Handle.Users().List(ctx, page, pageSize)
+		total = database.Handle.Users().Count(ctx)
+	}
+	if err != nil {
+		c.Error(err, "list users")
+		return
+	}
+
+	results := make([]*types.User, len(users))
+	for i := range users {
+		results[i] = toUser(users[i])
+	}
+	c.SetLinkHeader(int(total), pageSize)
+	c.JSONSuccess(&results)
 }
