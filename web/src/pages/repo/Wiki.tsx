@@ -412,7 +412,7 @@ export function RepoWikiEditor({
           </FormField>
           <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
             <Button type="submit">{t("repo.wiki.save_page")}</Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="outline">
               {page ? (
                 <Link to="/$owner/$repo/wiki/$page" params={{ owner, repo: name, page: page.name }}>
                   {t("cancel")}
