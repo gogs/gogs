@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Calendar, CalendarX, CircleCheck, CircleDot, Clock, Plus } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { Calendar as CalendarIcon, CalendarX, CircleCheck, CircleDot, Clock, Plus } from "lucide-react";
+import { type AriaAttributes, type FormEvent, Suspense, lazy, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ import { FormAlert, FormField } from "@/components/FormField";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   type RepoMilestone,
   type RepoMilestoneForm,
@@ -179,7 +180,7 @@ function MilestoneRow({
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5">
-              <Calendar className="size-4" aria-hidden />
+              <CalendarIcon className="size-4" aria-hidden />
               {milestone.deadline ?? t("repo.milestones.no_due_date")}
             </span>
           )}
@@ -331,13 +332,10 @@ export function RepoMilestoneEditor({
               error={fields.deadline}
               invalid={"deadline" in fields}
             >
-              <Input
+              <DueDatePicker
                 id="deadline"
-                name="deadline"
-                type="date"
                 value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                className="w-full sm:w-56"
+                onChange={(deadline) => setForm({ ...form, deadline })}
               />
             </FormField>
             {form.deadline ? (
@@ -370,5 +368,58 @@ export function RepoMilestoneEditor({
         </fieldset>
       </form>
     </IssueTrackerLayout>
+  );
+}
+
+// The calendar brings date-fns, so it loads with the first picker that opens.
+const Calendar = lazy(() => import("@/components/ui/calendar").then((m) => ({ default: m.Calendar })));
+
+// DueDatePicker picks a day in a calendar and keeps it as yyyy-mm-dd, the
+// format the server takes.
+function DueDatePicker({
+  id,
+  value,
+  onChange,
+  ...aria
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+} & Pick<AriaAttributes, "aria-invalid" | "aria-describedby">) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [year, month, day] = value.split("-").map(Number);
+  const selected = value ? new Date(year, month - 1, day) : undefined;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          {...aria}
+          className="w-full justify-start font-normal aria-invalid:border-(--color-destructive) sm:w-56"
+        >
+          <CalendarIcon className="size-4 text-(--color-muted-foreground)" aria-hidden />
+          {value || <span className="text-(--color-muted-foreground)">{t("repo.milestones.no_due_date")}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0">
+        <Suspense fallback={<div className="size-72" />}>
+          <Calendar
+            mode="single"
+            selected={selected}
+            defaultMonth={selected}
+            autoFocus
+            onSelect={(date) => {
+              if (!date) return;
+              const pad = (n: number) => String(n).padStart(2, "0");
+              onChange(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`);
+              setOpen(false);
+            }}
+          />
+        </Suspense>
+      </PopoverContent>
+    </Popover>
   );
 }

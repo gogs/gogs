@@ -34,6 +34,7 @@
     "i18next": "^26.2.0",
     "lucide-react": "^1.16.0",
     "react": "^19.2.6",
+    "react-day-picker": "^10.0.2",
     "react-dom": "^19.2.6",
     "react-i18next": "^17.0.8",
     "sonner": "^2.0.7",
