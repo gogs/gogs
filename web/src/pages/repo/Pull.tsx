@@ -24,11 +24,13 @@ import { PageTabs } from "@/components/PageTabs";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type IssueRef,
+  type MergeMessage,
   type MergeStyle,
   type RepoCommitListItem,
   type RepoPullData,
@@ -267,7 +269,7 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
     if (pull.allowMerge) styles.push("create_merge_commit");
     if (pull.allowSquash) styles.push("squash_and_merge");
     if (pull.allowRebase) styles.push("rebase_before_merging");
-    body = <MergeForm issueRef={issueRef} styles={styles} />;
+    body = <MergeForm issueRef={issueRef} styles={styles} defaultMessages={pull.mergeMessages ?? {}} />;
   }
 
   return (
@@ -335,16 +337,27 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
 // MergeForm merges the pull request in one of the styles the repository
 // allows, the first being the default. Like GitHub, the merge button names the
 // chosen style, and a menu beside it switches to another.
-function MergeForm({ issueRef, styles }: { issueRef: IssueRef; styles: MergeStyle[] }) {
+function MergeForm({
+  issueRef,
+  styles,
+  defaultMessages,
+}: {
+  issueRef: IssueRef;
+  styles: MergeStyle[];
+  defaultMessages: Partial<Record<MergeStyle, MergeMessage>>;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const [style, setStyle] = useState<MergeStyle>(styles[0]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [description, setDescription] = useState("");
-  // Rebasing keeps the commits as they are, so there is no commit to describe.
-  const hasDescription = style !== "rebase_before_merging";
+  // Each style keeps its own edits, so switching back to one finds them.
+  const [messages, setMessages] = useState(defaultMessages);
+  // Rebasing keeps the commits as they are, so there is no commit message.
+  const message = messages[style];
+  const setMessage = (change: Partial<MergeMessage>) =>
+    setMessages({ ...messages, [style]: { title: "", body: "", ...message, ...change } });
   const mutation = useMutation({
-    mutationFn: () => mergeRepoPull(issueRef, { style, description: hasDescription ? description : "" }),
+    mutationFn: () => mergeRepoPull(issueRef, { style, title: message?.title ?? "", body: message?.body ?? "" }),
     onSuccess: () => router.invalidate(),
   });
   const { formError } = formErrors(mutation.error);
@@ -356,19 +369,27 @@ function MergeForm({ issueRef, styles }: { issueRef: IssueRef; styles: MergeStyl
   return (
     <form onSubmit={onSubmit} className="border-t border-(--color-border) px-4 py-3">
       <fieldset disabled={mutation.isPending} className="flex flex-col gap-3">
-        {hasDescription ? (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="merge-description" className="text-sm font-medium">
-              {t("repo.pulls.commit_description")}
-            </label>
-            <textarea
-              id="merge-description"
-              rows={3}
-              className={TEXTAREA_CLASS}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
+        {message ? (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="merge-title" className="text-sm font-medium">
+                {t("repo.pulls.commit_message")}
+              </label>
+              <Input id="merge-title" value={message.title} onChange={(e) => setMessage({ title: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="merge-body" className="text-sm font-medium">
+                {t("repo.pulls.commit_description")}
+              </label>
+              <textarea
+                id="merge-body"
+                rows={6}
+                className={cn(TEXTAREA_CLASS, "font-mono")}
+                value={message.body}
+                onChange={(e) => setMessage({ body: e.target.value })}
+              />
+            </div>
+          </>
         ) : null}
         {formError ? <p className="text-sm text-(--color-destructive)">{formError}</p> : null}
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>

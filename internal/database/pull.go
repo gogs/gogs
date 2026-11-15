@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -203,9 +204,31 @@ func (repo *Repository) AllowsMergeStyle(style MergeStyle) bool {
 	}
 }
 
-// Merge merges pull request to base repository.
+// MergeMessage is the title and body of the commit that merges a pull
+// request.
+type MergeMessage struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+// DefaultMergeMessage returns the message the commit of the merge style starts
+// with, before the merger edits it. Rebasing keeps the messages of the commits,
+// so it has none.
+func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle) MergeMessage {
+	switch mergeStyle {
+	case MergeStyleRegular:
+		return MergeMessage{Title: fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch)}
+	case MergeStyleSquash:
+		return MergeMessage{Title: fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index)}
+	}
+	return MergeMessage{}
+}
+
+// Merge merges pull request to base repository. The message is used for the
+// commit that merge commits and squashing create, and its default is used
+// when its title is empty.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
-func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, message MergeMessage) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -248,6 +271,11 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 	}
 	defer cleanup()
 
+	if strings.TrimSpace(message.Title) == "" {
+		message = pr.DefaultMergeMessage(mergeStyle)
+	}
+	commitMessage := git.CleanupMessage(message.Title + "\n\n" + message.Body)
+
 	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
 	switch mergeStyle {
@@ -266,9 +294,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 			return errors.Newf("merge tree: %v", err)
 		}
 
-		// Create a merge commit for the base branch.
-		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, commitMessage, git.CommitTreeOptions{
 			Parents:   []string{baseCommitID, headCommitID},
 			Author:    committer,
 			Committer: committer,
@@ -303,8 +329,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		if pr.Issue.Poster != nil && pr.Issue.Poster.ID > 0 {
 			author = &git.Signature{Name: pr.Issue.Poster.DisplayName(), Email: pr.Issue.Poster.Email}
 		}
-		message := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index) + "\n\n" + commitDescription
-		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, commitMessage, git.CommitTreeOptions{
 			Parents:   []string{baseCommitID},
 			Author:    author,
 			Committer: committer,

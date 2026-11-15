@@ -803,6 +803,9 @@ export interface RepoPullInfo {
   allowRebase: boolean;
   allowSquash: boolean;
   viewerCanMerge: boolean;
+  // mergeMessages are the messages the commits of the merge styles that
+  // create one start with, for viewers who can merge.
+  mergeMessages?: Partial<Record<MergeStyle, MergeMessage>>;
   viewerCanDeleteBranch: boolean;
   // viewerCanRestoreBranch is whether the viewer can create the deleted head
   // branch again at the commit that was merged.
@@ -827,7 +830,12 @@ export function fetchRepoPullCommits(owner: string, name: string, index: number)
 
 export type MergeStyle = "create_merge_commit" | "rebase_before_merging" | "squash_and_merge";
 
-export function mergeRepoPull(issue: IssueRef, form: { style: MergeStyle; description: string }) {
+export interface MergeMessage {
+  title: string;
+  body: string;
+}
+
+export function mergeRepoPull(issue: IssueRef, form: { style: MergeStyle } & MergeMessage) {
   return submit<void>("POST", issueURL(issue, "/merge"), form);
 }
 

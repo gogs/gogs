@@ -62,6 +62,9 @@ type repoPullInfo struct {
 	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
 	ViewerCanMerge bool `json:"viewerCanMerge"`
+	// MergeMessages are the messages the commits of the merge styles that
+	// create one start with, for viewers who can merge.
+	MergeMessages map[database.MergeStyle]database.MergeMessage `json:"mergeMessages,omitempty"`
 	// ViewerCanDeleteBranch is whether the viewer can delete the head branch
 	// after the merge: a branch of the same repository that is not protected
 	// and has no new commits.
@@ -193,6 +196,15 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 	case pull.CanAutoMerge():
 		info.State = "mergeable"
 		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
+		if info.ViewerCanMerge {
+			pull.Issue = issue
+			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{
+				database.MergeStyleRegular: pull.DefaultMergeMessage(database.MergeStyleRegular),
+			}
+			if repo.PullsAllowSquash {
+				info.MergeMessages[database.MergeStyleSquash] = pull.DefaultMergeMessage(database.MergeStyleSquash)
+			}
+		}
 	default:
 		info.State = "conflict"
 	}
@@ -269,8 +281,11 @@ func getRepoPullRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 type repoPullMergeRequest struct {
 	// Style is "create_merge_commit", "rebase_before_merging" or
 	// "squash_and_merge".
-	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging squash_and_merge"`
-	Description string `json:"description"`
+	Style string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging squash_and_merge"`
+	// Title and Body are the message of the commit that merge commits and
+	// squashing create. The default message is used when Title is empty.
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
@@ -297,7 +312,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	if !repoCtx.Repo.AllowsMergeStyle(style) {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_style_not_allowed")}, nil
 	}
-	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, req.Description); err != nil {
+	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
 	}
