@@ -51,17 +51,17 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "admin.group_maintenance",
-    items: [
-      { page: "operations", path: "/operations", label: "admin.dashboard.operations", icon: Play },
-      { page: "cron", path: "/cron", label: "admin.monitor.cron", icon: Clock },
-    ],
-  },
-  {
     title: "admin.group_monitoring",
     items: [
       { page: "processes", path: "/processes", label: "admin.processes", icon: Cpu },
       { page: "notices", path: "/notices", label: "admin.notices", icon: Bell },
+    ],
+  },
+  {
+    title: "admin.group_maintenance",
+    items: [
+      { page: "operations", path: "/operations", label: "admin.dashboard.operations", icon: Play },
+      { page: "cron", path: "/cron", label: "admin.monitor.cron", icon: Clock },
     ],
   },
 ];
