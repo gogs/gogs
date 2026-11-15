@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/cockroachdb/errors"
 
@@ -562,6 +563,9 @@ func releases(c *apiContext) {
 	if err != nil {
 		c.Error(err, "get releases by repository ID")
 		return
+	}
+	if !c.Repo.IsWriter() {
+		releases = slices.DeleteFunc(releases, func(r *database.Release) bool { return r.IsDraft })
 	}
 	apiReleases := make([]*v1types.RepositoryRelease, 0, len(releases))
 	for _, r := range releases {

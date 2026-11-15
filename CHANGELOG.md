@@ -189,6 +189,7 @@ All notable changes to Gogs are documented in this file.
 - SSH keys of security keys, e.g., `sk-ssh-ed25519@openssh.com` keys of a YubiKey, can be added when `[server] MINIMUM_KEY_SIZE_CHECK` is enabled. They are allowed even where `ED25519` or `ECDSA` under `[ssh.minimum_key_sizes]` is set to `-1`. To keep rejecting them, set `ED25519-SK` and `ECDSA-SK` to `-1` as well. [#8580](https://github.com/gogs/gogs/pull/8580)
 - The API now lists no commits for an empty repository instead of failing. [#8582](https://github.com/gogs/gogs/pull/8582)
 - Changing or resetting the password signs out every other session of the user. [#8579](https://github.com/gogs/gogs/pull/8579)
+- Listing releases through the API no longer shows drafts to users without write access. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Removed
 
