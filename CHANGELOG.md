@@ -50,6 +50,7 @@ All notable changes to Gogs are documented in this file.
 - Uploading files in the web editor fails with a message when one of them would go into the `.git` directory, e.g., a file named `.git`. Previously the other files were committed and that one was silently left out. [#8655](https://github.com/gogs/gogs/pull/8655)
 - Avatars hosted by Gogs are now served from `/-/avatars/<id>` and `/-/repo-avatars/<id>`, so they no longer hide the pages of users named `avatars` or `repo-avatars`. Links to the old `/avatars/<id>` and `/repo-avatars/<id>` paths, e.g., in chat messages sent by webhooks, no longer load. [#8650](https://github.com/gogs/gogs/pull/8650)
 - External wiki and issue tracker URLs must start with `http://` or `https://`. Saving another URL, e.g., `javascript:alert(1)`, fails with a message, and repositories that already have one no longer send visitors to it. [#8638](https://github.com/gogs/gogs/pull/8638)
+- The API repository search matches `q` as given. A query such as `owner/name` no longer matches repositories named `name` from any owner. [#8587](https://github.com/gogs/gogs/pull/8587)
 
 ### Fixed
 
@@ -128,6 +129,7 @@ All notable changes to Gogs are documented in this file.
 - When adding an SSH or deploy key fails, e.g., because its name is already used, the key is no longer written to `authorized_keys`. Before, the leftover line could give that key the access of the next key added to the site. [#8648](https://github.com/gogs/gogs/pull/8648)
 - A deploy key added to several repositories now works for all of them, even when its comment differs between them. Before, only one of the repositories accepted it. [#8648](https://github.com/gogs/gogs/pull/8648)
 - A user can no longer add the same SSH key twice by changing its comment. When upgrading, such duplicates are merged into the key added first. [#8648](https://github.com/gogs/gogs/pull/8648)
+- The API repository search returned only repositories with a dot in their name or description when no search query was given. [#8587](https://github.com/gogs/gogs/pull/8587)
 
 ### Removed
 
