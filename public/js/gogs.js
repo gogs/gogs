@@ -1076,42 +1076,6 @@ function initCodeView() {
   }
 }
 
-function initWebhookSettings() {
-  $(".events.checkbox input").change(function() {
-    if ($(this).is(":checked")) {
-      $(".events.fields").show();
-    }
-  });
-  $(".non-events.checkbox input").change(function() {
-    if ($(this).is(":checked")) {
-      $(".events.fields").hide();
-    }
-  });
-
-  // Highlight payload on first click
-  $(".hook.history.list .toggle.button").click(function() {
-    $($(this).data("target") + " .nohighlight").each(function() {
-      var $this = $(this);
-      $this.removeClass("nohighlight");
-      setTimeout(function() {
-        hljs.highlightBlock($this[0]);
-      }, 500);
-    });
-  });
-
-  // Trigger delivery
-  $(".delivery.button, .redelivery.button").click(function() {
-    var $this = $(this);
-    $this.addClass("loading disabled");
-    $.post($this.data("link"), {
-    }).done(
-      setTimeout(function() {
-        window.location.href = $this.data("redirect");
-      }, 5000)
-    );
-  });
-}
-
 $(document).ready(function() {
   suburl = $("meta[name=_suburl]").attr("content");
 
@@ -1360,18 +1324,6 @@ $(document).ready(function() {
       default:
         $("#repo-clone-https").click();
         break;
-    }
-  }
-
-  var routes = {
-    "div.webhook.settings": initWebhookSettings
-  };
-
-  var selector;
-  for (selector in routes) {
-    if ($(selector).length > 0) {
-      routes[selector]();
-      break;
     }
   }
 });

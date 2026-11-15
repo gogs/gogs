@@ -93,6 +93,10 @@ Lists that can be searched by keyword take `q` and `page` search params, validat
 
 Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show each setting value as inline code, as it is written in the configuration, and keep units, notes and Yes or No text outside the chip. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
 
+## Highlighted code
+
+Show code with syntax highlighting, e.g., the payload of a webhook delivery, with `CodeBlock` from `@/components/CodeBlock`. It renders through `@pierre/diffs` with the same themes and worker pool as the files of a commit, and follows the app theme.
+
 ## Translated markup
 
 Some translations carry the HTML the server-rendered pages used, e.g., `<a href="%s">`, `<code>`, `<strong>` and colored `<span>` highlights, which show in bold. Render them with `RichText` from `@/components/RichText`, never with `dangerouslySetInnerHTML`. Pass link targets in `links`, in the order the links appear, since the placeholders in their `href` stay unfilled.

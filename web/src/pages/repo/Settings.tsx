@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { AvatarForm } from "@/components/AvatarForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CredentialRow, ROW_CLASS } from "@/components/CredentialRow";
-import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
+import { CheckboxField, FormAlert, FormField, RadioField } from "@/components/FormField";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
@@ -52,7 +52,7 @@ const TEXTAREA_CLASS =
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "short" });
 const MODES: RepoCollaboratorMode[] = ["admin", "write", "read"];
 
-type SettingsPage = "options" | "collaboration" | "keys";
+type SettingsPage = "options" | "collaboration" | "hooks" | "keys";
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.
@@ -84,7 +84,7 @@ function useRefresh(owner: string, name: string) {
 
 // RepoSettingsLayout heads the settings pages of a repository, with links
 // between them. Only admins of the repository get here.
-function RepoSettingsLayout({
+export function RepoSettingsLayout({
   owner,
   name,
   active,
@@ -104,6 +104,7 @@ function RepoSettingsLayout({
   const titles: Record<SettingsPage, string> = {
     options: t("repo.settings.options"),
     collaboration: t("repo.settings.collaboration"),
+    hooks: t("repo.settings.hooks"),
     keys: t("repo.settings.deploy_keys"),
   };
 
@@ -127,14 +128,16 @@ function RepoSettingsLayout({
                   {titles.collaboration}
                 </Link>
               </SettingsNavItem>
-              {/* Branches, webhooks and Git hooks are still served by the server-rendered pages. */}
+              {/* Branches and Git hooks are still served by the server-rendered pages. */}
               {settings.mirror ? null : (
                 <SettingsNavItem active={false}>
                   <a href={legacyLink("/branches")}>{t("repo.settings.branches")}</a>
                 </SettingsNavItem>
               )}
-              <SettingsNavItem active={false}>
-                <a href={legacyLink("/hooks")}>{t("repo.settings.hooks")}</a>
+              <SettingsNavItem active={active === "hooks"}>
+                <Link to="/$owner/$repo/settings/hooks" params={params}>
+                  {titles.hooks}
+                </Link>
               </SettingsNavItem>
               {settings.viewerCanEditGitHooks ? (
                 <SettingsNavItem active={false}>
@@ -162,34 +165,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="mb-4 text-xl font-semibold">{title}</h2>
       {children}
     </section>
-  );
-}
-
-function RadioField({
-  id,
-  name,
-  checked,
-  onChange,
-  label,
-}: {
-  id: string;
-  name: string;
-  checked: boolean;
-  onChange: () => void;
-  label: ReactNode;
-}) {
-  return (
-    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
-      <input
-        id={id}
-        type="radio"
-        name={name}
-        checked={checked}
-        onChange={onChange}
-        className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary)"
-      />
-      <span>{label}</span>
-    </label>
   );
 }
 

@@ -16,3 +16,14 @@ export function useTheme(): ThemeContextValue {
   }
   return ctx;
 }
+
+// resolveTheme returns the theme the page shows, following the OS for
+// "system".
+export function resolveTheme(theme: Theme): "light" | "dark" {
+  if (theme === "system") {
+    return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  return theme;
+}
