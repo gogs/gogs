@@ -12,8 +12,8 @@ const DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", mon
 
 export const ROW_CLASS = "flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) py-3";
 
-// CredentialRow shows an SSH key, a deploy key or an access token with when it
-// was added and last used, and deletes it.
+// CredentialRow shows an SSH key, a deploy key, an access token or a passkey
+// with when it was added and last used, and deletes it.
 export function CredentialRow({
   item,
   detail,
