@@ -5,10 +5,13 @@ import {
   Outlet,
   RouterProvider,
   createRootRouteWithContext,
+  createRoute,
   createRouter,
   parseSearchWith,
   stringifySearchWith,
+  useRouterState,
 } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 
 import { Footer } from "@/components/Footer";
@@ -18,6 +21,7 @@ import { webContext } from "@/lib/context";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
+import { ProhibitLogin } from "@/pages/user/ProhibitLogin";
 import { createAdminRoutes } from "@/routes/admin";
 import { createDashboardRoutes } from "@/routes/dashboard";
 import { createExploreRoutes } from "@/routes/explore";
@@ -58,6 +62,33 @@ const routeTree = rootRoute.addChildren([
   ...createProfileRoutes(rootRoute),
 ]);
 
+// ServerPage shows the page the server chose in place of the one at the path,
+// e.g., a server error. No route matches, so no loader asks for the page's
+// data again. Leaving the page loads the next one from the server.
+function ServerPage() {
+  const href = useRouterState({ select: (state) => state.location.href });
+  const [initialHref] = useState(href);
+  useEffect(() => {
+    if (href !== initialHref) window.location.reload();
+  }, [href, initialHref]);
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <Navbar />
+      {webContext.page === "prohibitLogin" ? (
+        <ProhibitLogin />
+      ) : (
+        <ServerError error={new Error(webContext.error ?? "")} version={webContext.version} />
+      )}
+      <Footer />
+    </div>
+  );
+}
+
+const serverPageRoot = createRootRouteWithContext<RouterContext>()({ component: ServerPage });
+const serverPageTree = serverPageRoot.addChildren([
+  createRoute({ getParentRoute: () => serverPageRoot, path: "$", component: () => null }),
+]);
+
 // Search values become numbers, booleans, or null only when that keeps their
 // exact text. Everything else, including `?q=1.0`, `?q="foo"` and `?q=[1]`,
 // stays the string from the URL. Throwing tells the router to keep the raw
@@ -71,7 +102,8 @@ function parseSearchValue(value: string): unknown {
 
 function makeRouter(context: RouterContext) {
   return createRouter({
-    routeTree,
+    // The trees share their context, so the router is typed by the main one.
+    routeTree: webContext.page ? (serverPageTree as unknown as typeof routeTree) : routeTree,
     basepath: webContext.subURL || "/",
     defaultNotFoundComponent: NotFound,
     defaultErrorComponent: ServerError,

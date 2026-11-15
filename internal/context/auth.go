@@ -39,8 +39,11 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		// Check prohibit login users.
 		if c.IsLogged && c.User.ProhibitLogin {
-			c.Data["Title"] = c.Tr("auth.prohibit_login")
-			c.Success("user/auth/prohibit_login")
+			c.serveWeb(WebContext{
+				Lang:   c.Language(),
+				SubURL: conf.Server.Subpath,
+				Page:   WebPageProhibitLogin,
+			})
 			return
 		}
 

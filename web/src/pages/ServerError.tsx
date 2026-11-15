@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { LoaderResponseError } from "@/lib/loader-error";
 import { usePageTitle } from "@/lib/page-title";
 
-export function ServerError({ error }: { error: unknown }) {
+// ServerError shows a failed request. Site admins also see the version of
+// Gogs, which helps them report the error.
+export function ServerError({ error, version }: { error: unknown; version?: string }) {
   const { t } = useTranslation();
   usePageTitle(t("status.internal_server_error"));
   const path = typeof window === "undefined" ? "/" : window.location.pathname;
@@ -39,6 +41,16 @@ export function ServerError({ error }: { error: unknown }) {
             {"\n"}
             <span className="text-(--color-destructive)">fatal:</span> {detail}
             {"\n"}
+            {version ? (
+              <>
+                {"\n"}
+                <span className="text-(--color-muted-foreground)">$ </span>
+                <span>gogs --version</span>
+                {"\n"}
+                gogs version {version}
+                {"\n"}
+              </>
+            ) : null}
             {"\n"}
             <span className="text-(--color-muted-foreground)">$ </span>
             <span className="inline-block w-2 animate-pulse bg-(--color-foreground) align-baseline"> </span>
