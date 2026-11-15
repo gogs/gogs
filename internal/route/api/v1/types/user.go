@@ -18,6 +18,7 @@ type UserEmail struct {
 }
 
 type UserAccessToken struct {
+	ID   int64  `json:"id"`
 	Name string `json:"name"`
 	Sha1 string `json:"sha1"`
 }

@@ -5606,6 +5606,50 @@
           }
         }
       }
+    },
+    "/users/{username}/tokens/{id}": {
+      "delete": {
+        "operationId": "deleteAccessToken",
+        "summary": "Delete an access token",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Username"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "ID of the access token, from listing or creating access tokens"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "description": "Deletes an access token of the authenticated user, which stops working right away. Requires basic authentication."
+      }
     }
   },
   "components": {
@@ -6154,6 +6198,10 @@
       "AccessToken": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
           "name": {
             "type": "string"
           },

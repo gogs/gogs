@@ -29,6 +29,7 @@ All notable changes to Gogs are documented in this file.
 - The admin panel shows recent traces of requests, with the user, repository and error behind each one, the Git commands and database queries they ran and search by trace ID, and charts of server health over the last hour and day on its own page, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. [#8554](https://github.com/gogs/gogs/pull/8554)
 - A command palette, opened with Ctrl K or ⌘K or the search button in the navbar, to jump to issues, pull requests, files, repositories, people and pages, search code, and run actions such as switching the theme or copying a clone URL. Type `>`, `#`, `@` or `/` to see only commands, issues, people or code. [#8551](https://github.com/gogs/gogs/pull/8551)
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
+- API endpoint to delete an access token: `DELETE /users/{username}/tokens/{id}`. Listing and creating access tokens now return their `id`. [#7788](https://github.com/gogs/gogs/issues/7788)
 
 ### Changed
 

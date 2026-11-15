@@ -3,6 +3,7 @@ package v1
 import (
 	gocontext "context"
 	"net/http"
+	"slices"
 
 	"github.com/flamego/flamego"
 
@@ -34,6 +35,7 @@ func (h *accessTokensHandler) List() flamego.Handler {
 		apiTokens := make([]*types.UserAccessToken, len(tokens))
 		for i := range tokens {
 			apiTokens[i] = &types.UserAccessToken{
+				ID:   tokens[i].ID,
 				Name: tokens[i].Name,
 				Sha1: tokens[i].Sha1,
 			}
@@ -58,9 +60,32 @@ func (h *accessTokensHandler) Create() flamego.Handler {
 			return
 		}
 		c.JSON(http.StatusCreated, &types.UserAccessToken{
+			ID:   t.ID,
 			Name: t.Name,
 			Sha1: t.Sha1,
 		})
+	}
+}
+
+func (h *accessTokensHandler) Delete() flamego.Handler {
+	return func(c *apiContext) {
+		ctx := c.Request().Context()
+		id := c.ParamInt64("id")
+		tokens, err := h.store.ListAccessTokens(ctx, c.User.ID)
+		if err != nil {
+			c.Error(err, "list access tokens")
+			return
+		}
+		if !slices.ContainsFunc(tokens, func(t *database.AccessToken) bool { return t.ID == id }) {
+			c.NotFound()
+			return
+		}
+
+		if err = h.store.DeleteAccessTokenByID(ctx, c.User.ID, id); err != nil {
+			c.Error(err, "delete access token")
+			return
+		}
+		c.NoContent()
 	}
 }
 
@@ -74,6 +99,9 @@ type AccessTokensStore interface {
 	CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error)
 	// ListAccessTokens returns all access tokens that belong to given user.
 	ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error)
+	// DeleteAccessTokenByID deletes the access token of the given ID that belongs
+	// to the given user.
+	DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error
 }
 
 type accessTokensStore struct{}
@@ -90,4 +118,8 @@ func (*accessTokensStore) CreateAccessToken(ctx gocontext.Context, userID int64,
 
 func (*accessTokensStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
 	return database.Handle.AccessTokens().List(ctx, userID)
+}
+
+func (*accessTokensStore) DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error {
+	return database.Handle.AccessTokens().DeleteByID(ctx, userID, id)
 }
