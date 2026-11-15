@@ -89,6 +89,8 @@ Actions that cannot be taken back, such as deleting a team or leaving a reposito
 
 Lists that can be searched by keyword take `q` and `page` search params, validated with `validateListSearch` from `@/lib/page-search`, and search with `SearchForm` from `@/components/SearchForm`, which starts over from the first page.
 
+The branches page searches as you type instead, like GitHub: the URL follows the field after a short pause, through a `query` search param validated with `validateBranchesSearch`. The field sits to the right of the view switcher from `sm` up and below it on narrow screens. Searching from the overview moves to all branches.
+
 ## Reports
 
 Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show each setting value as inline code, as it is written in the configuration, and keep units, notes and Yes or No text outside the chip. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
@@ -125,9 +127,11 @@ Page-level tabs (the repository header tabs, the explore tabs, the user profile 
 
 Switches between sibling views inside a page (labels and milestones, the branch overview and all branches) are a `<nav>` of links in one `rounded-md border border-(--color-input)` group, divided by `border-l`. Each link is `px-3 py-1.5 text-sm` with a leading `size-4` icon. The current one gets `bg-(--color-surface)`, `font-semibold`, foreground text, and `aria-current="page"`. The others are muted.
 
+A switcher with more links than fit at 375px, e.g., the five views of the branches page, scrolls sideways inside its own row, which runs to the edges of the screen below `sm`. The page itself stays 375px wide, and the current link scrolls into view when the page opens. Give each link `activeOptions={{ exact: true }}`, so that only one link is marked as the current page.
+
 ## Narrow screens
 
-Every page works at 375px wide. Only content that is meant to scroll does so sideways: code and diffs. Tab rows fold into a "More" menu instead (see Tabs).
+Every page works at 375px wide. Only content that is meant to scroll does so sideways: code, diffs, and a view switcher too long for the screen. Tab rows fold into a "More" menu instead (see Tabs).
 
 - **Wrap long text with `wrap-anywhere`, not `break-all`.** Names, URLs and emails break at hyphens and slashes first, and mid-word only when nothing else fits. `break-all` splits ordinary words, e.g., "Joined o / n". Terminal frames keep `break-all`, since real terminals wrap anywhere, but translated prose inside them does not.
 - **Keep a label and its value in one box.** Inside a flex row, wrap them in a single `<span>` so they wrap together as text instead of as two squeezed columns.

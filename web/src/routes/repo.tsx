@@ -2,8 +2,17 @@ import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { LoaderResponseError, loadAuthenticatedPage, loaderResponseError } from "@/lib/loader-error";
-import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
 import {
+  type BranchesSearch,
+  type ListSearch,
+  type PageSearch,
+  validateBranchesSearch,
+  validateListSearch,
+  validatePageSearch,
+} from "@/lib/page-search";
+import {
+  type RepoBranchesData,
+  type RepoBranchesView,
   fetchRepoBranchSettings,
   fetchRepoBranches,
   fetchRepoCollaborators,
@@ -626,31 +635,28 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  const repoBranchesRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/$owner/$repo/branches",
-    loader: ({ params, context }) =>
-      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoBranches(params.owner, params.repo),
-      ),
-    component: function Branches() {
-      const { owner, repo } = repoBranchesRoute.useParams();
-      return <RepoBranches owner={owner} name={repo} view="overview" data={repoBranchesRoute.useLoaderData()} />;
-    },
-  });
-
-  const repoAllBranchesRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/$owner/$repo/branches/all",
-    loader: ({ params, context }) =>
-      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoBranches(params.owner, params.repo),
-      ),
-    component: function AllBranches() {
-      const { owner, repo } = repoAllBranchesRoute.useParams();
-      return <RepoBranches owner={owner} name={repo} view="all" data={repoAllBranchesRoute.useLoaderData()} />;
-    },
-  });
+  // Each view of the branches page has its own path, e.g., `/branches/stale`,
+  // and the overview is `/branches`.
+  const branchesRoute = (view: RepoBranchesView) => {
+    const route = createRoute({
+      getParentRoute: () => rootRoute,
+      path: view === "overview" ? "/$owner/$repo/branches" : `/$owner/$repo/branches/${view}`,
+      validateSearch: validateBranchesSearch,
+      loaderDeps: ({ search }: { search: BranchesSearch }) => ({ query: search.query, page: search.page }),
+      loader: ({ params, deps, context }) =>
+        loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+          fetchRepoBranches(params.owner, params.repo, { view, query: deps.query, page: deps.page }),
+        ),
+      component: function Branches() {
+        const { owner, repo } = route.useParams();
+        const { query }: BranchesSearch = route.useSearch();
+        const data: RepoBranchesData = route.useLoaderData();
+        return <RepoBranches owner={owner} name={repo} query={query} data={data} />;
+      },
+    });
+    return route;
+  };
+  const repoBranchesRoutes = (["overview", "yours", "active", "stale", "all"] as const).map(branchesRoute);
 
   // The ref is followed by the path whose history to list, or by "search" to
   // search the commit messages.
@@ -946,8 +952,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoNewIssueRoute,
     repoIssueRoute,
     repoForksRoute,
-    repoBranchesRoute,
-    repoAllBranchesRoute,
+    ...repoBranchesRoutes,
     repoReleasesRoute,
     repoReleaseNewRoute,
     repoReleaseEditRoute,

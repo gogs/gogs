@@ -405,16 +405,40 @@ export interface RepoBranch {
   committerName: string;
 }
 
+// RepoBranchesView is a view of the branches page. Every view but the overview
+// is a paged list.
+export type RepoBranchesView = "overview" | "yours" | "active" | "stale" | "all";
+
+export interface RepoBranchSection {
+  kind: "default" | "yours" | "active" | "stale";
+  branches: RepoBranch[];
+  // hasMore is true when the section shows only the first of its branches.
+  hasMore: boolean;
+}
+
 export interface RepoBranchesData {
   defaultBranch: string;
+  view: RepoBranchesView;
+  // sections are the groups of the overview, and empty for the other views.
+  sections: RepoBranchSection[];
+  // branches are the page of the other views, and empty for the overview.
   branches: RepoBranch[];
+  page: number;
+  hasNext: boolean;
   viewerCanWrite: boolean;
   allowsPulls: boolean;
   viewerCanChangeDefault: boolean;
 }
 
-export function fetchRepoBranches(owner: string, name: string) {
-  return fetchJSON<RepoBranchesData>(repoURL(owner, name, "/branches"));
+export function fetchRepoBranches(
+  owner: string,
+  name: string,
+  { view, query, page }: { view: RepoBranchesView; query?: string; page?: number },
+) {
+  const params = new URLSearchParams({ view });
+  if (query) params.set("query", query);
+  if (page) params.set("page", String(page));
+  return fetchJSON<RepoBranchesData>(repoURL(owner, name, `/branches?${params.toString()}`));
 }
 
 export interface RepoLabel {
