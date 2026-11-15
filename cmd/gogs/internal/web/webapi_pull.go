@@ -62,6 +62,9 @@ type repoPullInfo struct {
 	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
 	ViewerCanMerge bool `json:"viewerCanMerge"`
+	// ViewerID is the viewer who can merge, whose browser remembers the merge
+	// style they last used in the repository.
+	ViewerID int64 `json:"viewerID,omitempty"`
 	// MergeMessages are the messages the commits of the merge styles that
 	// create one start with, for viewers who can merge.
 	MergeMessages map[database.MergeStyle]database.MergeMessage `json:"mergeMessages,omitempty"`
@@ -197,6 +200,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.State = "mergeable"
 		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
 		if info.ViewerCanMerge {
+			info.ViewerID = repoCtx.Viewer.ID()
 			pull.Issue = issue
 			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{}
 			for _, style := range []database.MergeStyle{database.MergeStyleRegular, database.MergeStyleSquash} {

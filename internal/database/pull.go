@@ -229,6 +229,60 @@ type MergeMessage struct {
 // repository. The commits are those the pull request merges, newest first.
 // Rebasing keeps the messages of the commits, so it has none.
 func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
+	message := pr.presetMergeMessage(mergeStyle, commits)
+	// Squashing leaves only the author of the pull request on the commit, so
+	// the other authors are credited the way GitHub does.
+	if mergeStyle == MergeStyleSquash {
+		if trailers := coAuthorTrailers(commits, pr.Issue.Poster); trailers != "" {
+			if message.Body != "" {
+				message.Body += "\n\n"
+			}
+			message.Body += trailers
+		}
+	}
+	return message
+}
+
+// coAuthorTrailers returns a "Co-authored-by" trailer for each author of the
+// commits, oldest first, and each co-author their messages already credit,
+// except the poster of the pull request.
+func coAuthorTrailers(commits []*git.Commit, poster *User) string {
+	seen := map[string]bool{}
+	if poster != nil && poster.ID > 0 {
+		seen[strings.ToLower(poster.Email)] = true
+	}
+	var trailers []string
+	add := func(name, email string) {
+		key := strings.ToLower(strings.TrimSpace(email))
+		if key == "" || seen[key] {
+			return
+		}
+		seen[key] = true
+		trailers = append(trailers, fmt.Sprintf("Co-authored-by: %s <%s>", strings.TrimSpace(name), strings.TrimSpace(email)))
+	}
+	const prefix = "co-authored-by:"
+	for i := len(commits) - 1; i >= 0; i-- {
+		c := commits[i]
+		if c.Author != nil {
+			add(c.Author.Name, c.Author.Email)
+		}
+		for line := range strings.Lines(c.Message) {
+			line = strings.TrimSpace(line)
+			if len(line) <= len(prefix) || !strings.EqualFold(line[:len(prefix)], prefix) {
+				continue
+			}
+			name, email, ok := strings.Cut(line[len(prefix):], "<")
+			if email, ok2 := strings.CutSuffix(email, ">"); ok && ok2 {
+				add(name, email)
+			}
+		}
+	}
+	return strings.Join(trailers, "\n")
+}
+
+// presetMergeMessage returns the message of the preset of the base repository
+// for the merge style.
+func (pr *PullRequest) presetMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
 	titled := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index)
 	switch mergeStyle {
 	case MergeStyleRegular:

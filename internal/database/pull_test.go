@@ -88,3 +88,27 @@ func TestPullRequest_DefaultMergeMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestPullRequest_DefaultMergeMessage_CoAuthors(t *testing.T) {
+	bob := &git.Signature{Name: "bob", Email: "bob@example.com"}
+	carol := &git.Signature{Name: "Carol", Email: "carol@example.com"}
+	// Newest first. bob opened the pull request, so he is not a co-author, and
+	// Carol is credited once even though she wrote two commits.
+	commits := []*git.Commit{
+		{Author: carol, Message: "Change b\n"},
+		{Author: bob, Message: "Add b\n\nCo-authored-by: Dave <DAVE@example.com>\nco-authored-by: Carol <carol@example.com>\n"},
+		{Author: carol, Message: "Change a\n"},
+	}
+	pull := &PullRequest{
+		Index:    7,
+		Issue:    &Issue{Title: "Add b and update a", Poster: &User{ID: 2, Email: "Bob@example.com"}},
+		BaseRepo: &Repository{},
+	}
+
+	got := pull.DefaultMergeMessage(MergeStyleSquash, commits)
+	want := "* Change a\n* Add b\n* Change b\n\nCo-authored-by: Carol <carol@example.com>\nCo-authored-by: Dave <DAVE@example.com>"
+	assert.Equal(t, want, got.Body)
+
+	// Merge commits keep the authors of the commits, so they credit no one.
+	assert.NotContains(t, pull.DefaultMergeMessage(MergeStyleRegular, commits).Body, "Co-authored-by")
+}

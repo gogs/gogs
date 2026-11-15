@@ -271,7 +271,12 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
     if (pull.allowRebase) styles.push("rebase_before_merging");
     body =
       styles.length > 0 ? (
-        <MergeForm issueRef={issueRef} styles={styles} defaultMessages={pull.mergeMessages ?? {}} />
+        <MergeForm
+          issueRef={issueRef}
+          viewerID={pull.viewerID ?? 0}
+          styles={styles}
+          defaultMessages={pull.mergeMessages ?? {}}
+        />
       ) : null;
   }
 
@@ -337,110 +342,178 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
   );
 }
 
+// The drafts of merge messages are kept in this browser for a day, and the
+// merge style each viewer last used in a repository until it changes.
+const MERGE_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface MergeDraft {
+  savedAt: number;
+  messages: Partial<Record<MergeStyle, MergeMessage>>;
+}
+
+function mergeDraftKey(viewerID: number, issue: IssueRef) {
+  return `gogs-merge-draft:${viewerID}:${issue.owner}/${issue.name}#${issue.index}`;
+}
+
+function mergeStyleKey(viewerID: number, issue: IssueRef) {
+  return `gogs-merge-style:${viewerID}:${issue.owner}/${issue.name}`;
+}
+
+function readMergeDraft(key: string): MergeDraft | null {
+  try {
+    const draft = JSON.parse(window.localStorage.getItem(key) ?? "null") as MergeDraft | null;
+    if (draft && Date.now() - draft.savedAt < MERGE_DRAFT_TTL_MS) return draft;
+    window.localStorage.removeItem(key);
+  } catch {
+    // A draft that cannot be read is dropped.
+  }
+  return null;
+}
+
 // MergeForm merges the pull request in one of the styles the repository
-// allows, the first being the default. Like GitHub, the merge button names the
-// chosen style, and a menu beside it switches to another.
+// allows. Like GitHub, it starts as the merge button, which names the chosen
+// style with a menu beside it to switch, and opens the commit message to edit
+// before confirming. The style defaults to the one the viewer last used in the
+// repository.
 function MergeForm({
   issueRef,
+  viewerID,
   styles,
   defaultMessages,
 }: {
   issueRef: IssueRef;
+  viewerID: number;
   styles: MergeStyle[];
   defaultMessages: Partial<Record<MergeStyle, MergeMessage>>;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [style, setStyle] = useState<MergeStyle>(styles[0]);
+  const draftKey = mergeDraftKey(viewerID, issueRef);
+  const styleKey = mergeStyleKey(viewerID, issueRef);
+  const [style, setStyle] = useState<MergeStyle>(() => {
+    const last = window.localStorage.getItem(styleKey) as MergeStyle | null;
+    return last && styles.includes(last) ? last : styles[0];
+  });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   // Each style keeps its own edits, so switching back to one finds them.
-  const [messages, setMessages] = useState(defaultMessages);
+  const [messages, setMessages] = useState(() => ({
+    ...defaultMessages,
+    ...readMergeDraft(draftKey)?.messages,
+  }));
   // Rebasing keeps the commits as they are, so there is no commit message.
   const message = messages[style];
-  const setMessage = (change: Partial<MergeMessage>) =>
-    setMessages({ ...messages, [style]: { title: "", body: "", ...message, ...change } });
+  const setMessage = (change: Partial<MergeMessage>) => {
+    const next = { ...messages, [style]: { title: "", body: "", ...message, ...change } };
+    setMessages(next);
+    window.localStorage.setItem(draftKey, JSON.stringify({ savedAt: Date.now(), messages: next } satisfies MergeDraft));
+  };
   const mutation = useMutation({
     mutationFn: () => mergeRepoPull(issueRef, { style, title: message?.title ?? "", body: message?.body ?? "" }),
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      window.localStorage.removeItem(draftKey);
+      window.localStorage.setItem(styleKey, style);
+      return router.invalidate();
+    },
   });
   const { formError } = formErrors(mutation.error);
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    mutation.mutate();
+    if (editing) mutation.mutate();
+    else setEditing(true);
   };
 
+  const buttonLabel = style === "create_merge_commit" ? t("repo.pulls.merge_pull_request") : t(`repo.pulls.${style}`);
   return (
     <form onSubmit={onSubmit} className="border-t border-(--color-border) px-4 py-3">
       <fieldset disabled={mutation.isPending} className="flex flex-col gap-3">
-        {message ? (
+        {editing ? (
           <>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="merge-title" className="text-sm font-medium">
-                {t("repo.pulls.commit_message")}
-              </label>
-              <Input id="merge-title" value={message.title} onChange={(e) => setMessage({ title: e.target.value })} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="merge-body" className="text-sm font-medium">
-                {t("repo.pulls.commit_description")}
-              </label>
-              <textarea
-                id="merge-body"
-                rows={6}
-                className={cn(TEXTAREA_CLASS, "font-mono")}
-                value={message.body}
-                onChange={(e) => setMessage({ body: e.target.value })}
-              />
+            {message ? (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="merge-title" className="text-sm font-medium">
+                    {t("repo.pulls.commit_message")}
+                  </label>
+                  <Input
+                    id="merge-title"
+                    autoFocus
+                    value={message.title}
+                    onChange={(e) => setMessage({ title: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="merge-body" className="text-sm font-medium">
+                    {t("repo.pulls.commit_description")}
+                  </label>
+                  <textarea
+                    id="merge-body"
+                    rows={6}
+                    className={cn(TEXTAREA_CLASS, "font-mono")}
+                    value={message.body}
+                    onChange={(e) => setMessage({ body: e.target.value })}
+                  />
+                </div>
+              </>
+            ) : null}
+            {formError ? <p className="text-sm text-(--color-destructive)">{formError}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" size="sm" autoFocus={!message}>
+                {t(`repo.pulls.confirm_${style}`)}
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)}>
+                {t("cancel")}
+              </Button>
             </div>
           </>
-        ) : null}
-        {formError ? <p className="text-sm text-(--color-destructive)">{formError}</p> : null}
-        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-          {/* The menu opens under the whole button group, as on GitHub. */}
-          <PopoverAnchor asChild>
-            <div className="flex w-fit">
-              <Button type="submit" size="sm" className={cn(styles.length > 1 && "rounded-r-none")}>
-                <GitMerge className="size-4" aria-hidden />
-                {style === "create_merge_commit" ? t("repo.pulls.merge_pull_request") : t(`repo.pulls.${style}`)}
-              </Button>
-              {styles.length > 1 ? (
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    size="sm"
-                    aria-label={t("repo.pulls.select_merge_method")}
-                    className="rounded-l-none border-l border-(--color-primary-foreground)/30 px-2"
-                  >
-                    <ChevronDown className="size-4" aria-hidden />
-                  </Button>
-                </PopoverTrigger>
-              ) : null}
-            </div>
-          </PopoverAnchor>
-          <PopoverContent align="start" className="w-80" role="menu" aria-label={t("repo.pulls.select_merge_method")}>
-            {styles.map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="menuitemradio"
-                aria-checked={style === value}
-                onClick={() => {
-                  setStyle(value);
-                  setMenuOpen(false);
-                }}
-                className="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface)"
-              >
-                <span className="grid size-5 shrink-0 place-items-center">
-                  {style === value ? <Check className="size-4 text-(--color-primary)" aria-hidden /> : null}
-                </span>
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">{t(`repo.pulls.${value}`)}</span>
-                  <span className="text-xs text-(--color-muted-foreground)">{t(`repo.pulls.${value}_desc`)}</span>
-                </span>
-              </button>
-            ))}
-          </PopoverContent>
-        </Popover>
+        ) : (
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            {/* The menu opens under the whole button group, as on GitHub. */}
+            <PopoverAnchor asChild>
+              <div className="flex w-fit">
+                <Button type="submit" size="sm" className={cn(styles.length > 1 && "rounded-r-none")}>
+                  <GitMerge className="size-4" aria-hidden />
+                  {buttonLabel}
+                </Button>
+                {styles.length > 1 ? (
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      aria-label={t("repo.pulls.select_merge_method")}
+                      className="rounded-l-none border-l border-(--color-primary-foreground)/30 px-2"
+                    >
+                      <ChevronDown className="size-4" aria-hidden />
+                    </Button>
+                  </PopoverTrigger>
+                ) : null}
+              </div>
+            </PopoverAnchor>
+            <PopoverContent align="start" className="w-80" role="menu" aria-label={t("repo.pulls.select_merge_method")}>
+              {styles.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={style === value}
+                  onClick={() => {
+                    setStyle(value);
+                    setMenuOpen(false);
+                  }}
+                  className="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface)"
+                >
+                  <span className="grid size-5 shrink-0 place-items-center">
+                    {style === value ? <Check className="size-4 text-(--color-primary)" aria-hidden /> : null}
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">{t(`repo.pulls.${value}`)}</span>
+                    <span className="text-xs text-(--color-muted-foreground)">{t(`repo.pulls.${value}_desc`)}</span>
+                  </span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        )}
       </fieldset>
     </form>
   );

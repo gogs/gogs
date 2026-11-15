@@ -807,6 +807,9 @@ export interface RepoPullInfo {
   allowRebase: boolean;
   allowSquash: boolean;
   viewerCanMerge: boolean;
+  // viewerID is the viewer who can merge, whose browser remembers the merge
+  // style they last used in the repository.
+  viewerID?: number;
   // mergeMessages are the messages the commits of the merge styles that
   // create one start with, for viewers who can merge.
   mergeMessages?: Partial<Record<MergeStyle, MergeMessage>>;
