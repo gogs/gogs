@@ -274,7 +274,7 @@ func (r *Repository) GetDiffPreview(branch, treePath, content string) (*gitutil.
 	}
 
 	// 🚨 SECURITY: Prevent including unintended options in the path to the Git command.
-	cmd := exec.Command("git", "diff", "--end-of-options", treePath)
+	cmd := exec.Command("git", "diff", "--", treePath)
 	cmd.Dir = localPath
 	cmd.Stderr = os.Stderr
 
