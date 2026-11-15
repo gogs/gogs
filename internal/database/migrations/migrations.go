@@ -77,6 +77,13 @@ func Migrate(logger *logx.Logger, db *gorm.DB) error {
 		return errors.Newf("unsupported dialect %q", db.Name())
 	}
 
+	// goose holds one connection for the whole run, while the migrations and its
+	// own bookkeeping need another one from the pool.
+	if sqlDB.Stats().MaxOpenConnections == 1 {
+		sqlDB.SetMaxOpenConns(2)
+		defer sqlDB.SetMaxOpenConns(1)
+	}
+
 	provider, err := goose.NewProvider(
 		dialect,
 		sqlDB,

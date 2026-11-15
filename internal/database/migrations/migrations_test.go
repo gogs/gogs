@@ -3,6 +3,7 @@ package migrations
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,6 +63,24 @@ func TestMigrate(t *testing.T) {
 		var count int64
 		require.NoError(t, db.Table("repository").Where("is_unlisted = ?", false).Count(&count).Error)
 		assert.Equal(t, int64(1), count)
+	})
+
+	t.Run("pool of one connection", func(t *testing.T) {
+		db := dbtest.NewDB(t, "migrateOneConn")
+		sqlDB, err := db.DB()
+		require.NoError(t, err)
+		sqlDB.SetMaxOpenConns(1)
+
+		done := make(chan error, 1)
+		go func() { done <- Migrate(logx.NewNoopLogger(), db) }()
+		select {
+		case err := <-done:
+			require.NoError(t, err)
+		case <-time.After(time.Minute):
+			t.Fatal("Migrate did not return with a pool of one connection")
+		}
+		assert.Equal(t, int64(24), gooseVersion(t, db))
+		assert.Equal(t, 1, sqlDB.Stats().MaxOpenConnections)
 	})
 
 	t.Run("database older than 0.12", func(t *testing.T) {
