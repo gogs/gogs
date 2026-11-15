@@ -154,14 +154,14 @@ func deleteOrgMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, view
 }
 
 // putOrgMember adds a user to the organization. Only owners can invite.
-func putOrgMember(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
+func putOrgMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
 	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("putOrgMember: %v", err)
+			logger.Error("Failed to get user by username", "username", c.Param("username"), "error", err)
 		}
 		return code, nil, err
 	}
@@ -169,7 +169,7 @@ func putOrgMember(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCod
 		return http.StatusNotFound, nil, errors.New(l.Tr("form.user_not_exist"))
 	}
 	if err = m.Org.AddMember(member.ID); err != nil {
-		log.Error("putOrgMember: add user %d to organization %d: %v", member.ID, m.Org.ID, err)
+		logger.Error("Failed to add member to organization", "userID", member.ID, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add member")
 	}
 	return http.StatusNoContent, nil, nil
@@ -470,7 +470,7 @@ func teamNameError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
 	return code, &bindingErrorResponse{Fields: fieldErrors{"teamName": &msg}}
 }
 
-func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCode int, resp any, err error) {
+func postOrgTeam(logger *logx.Logger, l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -488,7 +488,7 @@ func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCod
 		if code, resp := teamNameError(l, err); resp != nil {
 			return code, resp, nil
 		}
-		log.Error("postOrgTeam: create team %q in organization %d: %v", req.TeamName, m.Org.ID, err)
+		logger.Error("Failed to create team", "teamName", req.TeamName, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create team")
 	}
 	return http.StatusCreated, &orgTeamResponse{LowerName: t.LowerName}, nil
@@ -496,7 +496,7 @@ func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCod
 
 // patchOrgTeam changes the name, the description and the permission of a
 // team. The owners team keeps its name and permission.
-func patchOrgTeam(l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamRequest) (statusCode int, resp any, err error) {
+func patchOrgTeam(logger *logx.Logger, l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamRequest) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -521,13 +521,13 @@ func patchOrgTeam(l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamReq
 		if code, resp := teamNameError(l, err); resp != nil {
 			return code, resp, nil
 		}
-		log.Error("patchOrgTeam: update team %d: %v", t.ID, err)
+		logger.Error("Failed to update team", "teamID", t.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update team")
 	}
 	return http.StatusOK, &orgTeamResponse{LowerName: t.LowerName}, nil
 }
 
-func deleteOrgTeam(m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+func deleteOrgTeam(logger *logx.Logger, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -536,7 +536,7 @@ func deleteOrgTeam(m *orgMembership, team *orgTeam) (statusCode int, resp any, e
 		return http.StatusForbidden, nil, errors.New("the owners team cannot be deleted")
 	}
 	if err = database.DeleteTeam(team.Team); err != nil {
-		log.Error("deleteOrgTeam: delete team %d: %v", team.ID, err)
+		logger.Error("Failed to delete team", "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete team")
 	}
 	return http.StatusNoContent, nil, nil

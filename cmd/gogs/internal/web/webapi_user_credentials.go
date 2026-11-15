@@ -17,7 +17,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -35,10 +35,10 @@ type userEmails struct {
 	Items []userEmail `json:"items"`
 }
 
-func getUserEmails(c flamego.Context, viewer *database.User) (statusCode int, resp *userEmails, err error) {
+func getUserEmails(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userEmails, err error) {
 	emails, err := database.Handle.Users().ListEmails(c.Request().Context(), viewer.ID)
 	if err != nil {
-		log.Error("getUserEmails: list emails of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to list emails", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list emails")
 	}
 	items := make([]userEmail, 0, len(emails))
@@ -66,7 +66,7 @@ type userEmailAddedResponse struct {
 
 // postUserEmail adds an email address to the authenticated user, and sends it a
 // confirmation link when the site requires one.
-func postUserEmail(c flamego.Context, mc *macaron.Context, ca cache.Cache, l i18n.Locale, viewer *database.User, req userEmailRequest) (statusCode int, resp any, err error) {
+func postUserEmail(c flamego.Context, logger *logx.Logger, mc *macaron.Context, ca cache.Cache, l i18n.Locale, viewer *database.User, req userEmailRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	err = database.Handle.Users().AddEmail(ctx, viewer.ID, req.Email, !conf.Auth.RequireEmailConfirmation)
 	if err != nil {
@@ -74,25 +74,25 @@ func postUserEmail(c flamego.Context, mc *macaron.Context, ca cache.Cache, l i18
 			msg := l.Tr("form.email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		}
-		log.Error("postUserEmail: add email to user %d: %v", viewer.ID, err)
+		logger.Error("Failed to add email", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add email")
 	}
 	if !conf.Auth.RequireEmailConfirmation {
 		return http.StatusCreated, &userEmailAddedResponse{}, nil
 	}
 
-	if err := email.SendActivateEmailMail(mc, database.NewMailerUser(viewer), req.Email); err != nil {
-		log.Error("postUserEmail: send confirmation mail to user %d: %v", viewer.ID, err)
+	if err := email.SendActivateEmailMail(logger, mc, database.NewMailerUser(viewer), req.Email); err != nil {
+		logger.Error("Failed to send confirmation mail", "userID", viewer.ID, "error", err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(viewer.ID), 1, 180*time.Second); err != nil {
-		log.Error("postUserEmail: put mail resend cache for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to put mail resend cache", "userID", viewer.ID, "error", err)
 	}
 	return http.StatusCreated, &userEmailAddedResponse{ConfirmationSent: true, CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60}, nil
 }
 
 // putUserEmailPrimary makes a confirmed email address of the authenticated user
 // their primary one.
-func putUserEmailPrimary(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func putUserEmailPrimary(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	address := c.Param("email")
 	err = database.Handle.Users().MarkEmailPrimary(c.Request().Context(), viewer.ID, address)
 	if err != nil {
@@ -102,19 +102,19 @@ func putUserEmailPrimary(c flamego.Context, viewer *database.User) (statusCode i
 		case database.IsErrEmailNotVerified(err):
 			return http.StatusConflict, nil, errors.New("email address not confirmed")
 		}
-		log.Error("putUserEmailPrimary: make %q primary for user %d: %v", address, viewer.ID, err)
+		logger.Error("Failed to make email primary", "email", address, "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "make email primary")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteUserEmail(c flamego.Context, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteUserEmail(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
 	address := c.Param("email")
 	if strings.EqualFold(address, viewer.Email) {
 		return http.StatusConflict, nil, errors.New(l.Tr("settings.email_deletion_primary"))
 	}
 	if err = database.Handle.Users().DeleteEmail(c.Request().Context(), viewer.ID, address); err != nil {
-		log.Error("deleteUserEmail: delete %q of user %d: %v", address, viewer.ID, err)
+		logger.Error("Failed to delete email", "email", address, "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete email")
 	}
 	return http.StatusNoContent, nil, nil
@@ -135,10 +135,10 @@ type userSSHKeys struct {
 	Items []userSSHKey `json:"items"`
 }
 
-func getUserSSHKeys(viewer *database.User) (statusCode int, resp *userSSHKeys, err error) {
+func getUserSSHKeys(logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSSHKeys, err error) {
 	keys, err := database.ListPublicKeys(viewer.ID)
 	if err != nil {
-		log.Error("getUserSSHKeys: list keys of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to list public keys", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list public keys")
 	}
 	items := make([]userSSHKey, 0, len(keys))
@@ -157,13 +157,13 @@ type userSSHKeyRequest struct {
 	Content  string `json:"content" validate:"required"`
 }
 
-func postUserSSHKey(l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
-	content, err := database.CheckPublicKeyString(req.Content)
+func postUserSSHKey(logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
+	content, err := database.CheckPublicKeyString(logger, req.Content)
 	if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if _, err = database.AddPublicKey(viewer.ID, req.SSHTitle, content); err != nil {
+	if _, err = database.AddPublicKey(logger, viewer.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
@@ -173,7 +173,7 @@ func postUserSSHKey(l i18n.Locale, viewer *database.User, req userSSHKeyRequest)
 			msg = l.Tr("settings.ssh_key_name_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
 		}
-		log.Error("postUserSSHKey: add key for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to add public key", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add public key")
 	}
 	return http.StatusNoContent, nil, nil
@@ -181,21 +181,21 @@ func postUserSSHKey(l i18n.Locale, viewer *database.User, req userSSHKeyRequest)
 
 // deleteUserSSHKey deletes an SSH key of the authenticated user. Keys of other
 // users are not found, even for site admins.
-func deleteUserSSHKey(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteUserSSHKey(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	key, err := database.GetPublicKeyByID(id)
 	if err != nil {
 		if database.IsErrKeyNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("key not found")
 		}
-		log.Error("deleteUserSSHKey: get key %d: %v", id, err)
+		logger.Error("Failed to get public key", "keyID", id, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get public key")
 	}
 	if key.OwnerID != viewer.ID {
 		return http.StatusNotFound, nil, errors.New("key not found")
 	}
-	if err = database.DeletePublicKey(viewer, key.ID); err != nil {
-		log.Error("deleteUserSSHKey: delete key %d: %v", key.ID, err)
+	if err = database.DeletePublicKey(logger, viewer, key.ID); err != nil {
+		logger.Error("Failed to delete public key", "keyID", key.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete public key")
 	}
 	return http.StatusNoContent, nil, nil
@@ -205,8 +205,8 @@ type userTwoFactor struct {
 	Enabled bool `json:"enabled"`
 }
 
-func getUserTwoFactor(c flamego.Context, viewer *database.User) (statusCode int, resp *userTwoFactor, err error) {
-	return http.StatusOK, &userTwoFactor{Enabled: database.Handle.TwoFactors().IsEnabled(c.Request().Context(), viewer.ID)}, nil
+func getUserTwoFactor(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userTwoFactor, err error) {
+	return http.StatusOK, &userTwoFactor{Enabled: database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID)}, nil
 }
 
 // Session keys of the secret a user is enrolling in two-factor authentication
@@ -225,8 +225,8 @@ type userTwoFactorEnrollment struct {
 // getUserTwoFactorEnrollment returns the secret to add to an authentication
 // app. The same secret is returned until it is confirmed, so reloading the
 // page does not invalidate a scanned code.
-func getUserTwoFactorEnrollment(c flamego.Context, sess session.Session, viewer *database.User) (statusCode int, resp any, err error) {
-	if database.Handle.TwoFactors().IsEnabled(c.Request().Context(), viewer.ID) {
+func getUserTwoFactorEnrollment(c flamego.Context, logger *logx.Logger, sess session.Session, viewer *database.User) (statusCode int, resp any, err error) {
+	if database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is already enabled")
 	}
 
@@ -240,19 +240,19 @@ func getUserTwoFactorEnrollment(c flamego.Context, sess session.Session, viewer 
 			AccountName: viewer.Email,
 		})
 		if err != nil {
-			log.Error("getUserTwoFactorEnrollment: generate TOTP for user %d: %v", viewer.ID, err)
+			logger.Error("Failed to generate TOTP", "userID", viewer.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "generate TOTP")
 		}
 	}
 
 	img, err := key.Image(240, 240)
 	if err != nil {
-		log.Error("getUserTwoFactorEnrollment: generate image for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to generate TOTP image", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "generate image")
 	}
 	var buf bytes.Buffer
 	if err = png.Encode(&buf, img); err != nil {
-		log.Error("getUserTwoFactorEnrollment: encode image for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to encode TOTP image", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "encode image")
 	}
 
@@ -270,7 +270,7 @@ type userTwoFactorRequest struct {
 
 // postUserTwoFactor enables two-factor authentication once the user enters a
 // passcode for the secret they are enrolling with.
-func postUserTwoFactor(c flamego.Context, sess session.Session, l i18n.Locale, viewer *database.User, req userTwoFactorRequest) (statusCode int, resp any, err error) {
+func postUserTwoFactor(c flamego.Context, logger *logx.Logger, sess session.Session, l i18n.Locale, viewer *database.User, req userTwoFactorRequest) (statusCode int, resp any, err error) {
 	secret, ok := sess.Get(twoFactorSecretSessionKey).(string)
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("no two-factor authentication secret to confirm")
@@ -280,7 +280,7 @@ func postUserTwoFactor(c flamego.Context, sess session.Session, l i18n.Locale, v
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"passcode": &msg}}, nil
 	}
 	if err = database.Handle.TwoFactors().Create(c.Request().Context(), viewer.ID, conf.Security.SecretKey, secret); err != nil {
-		log.Error("postUserTwoFactor: enable two-factor authentication for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to enable two-factor authentication", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create two factor")
 	}
 	sess.Delete(twoFactorSecretSessionKey)
@@ -288,12 +288,12 @@ func postUserTwoFactor(c flamego.Context, sess session.Session, l i18n.Locale, v
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteUserTwoFactor(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
-	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), viewer.ID) {
+func deleteUserTwoFactor(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
 	if err = database.DeleteTwoFactor(viewer.ID); err != nil {
-		log.Error("deleteUserTwoFactor: disable two-factor authentication for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to disable two-factor authentication", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete two factor")
 	}
 	return http.StatusNoContent, nil, nil
@@ -308,10 +308,10 @@ type userRecoveryCodes struct {
 	Items []userRecoveryCode `json:"items"`
 }
 
-func listUserRecoveryCodes(viewer *database.User) (statusCode int, resp any, err error) {
+func listUserRecoveryCodes(logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	codes, err := database.GetRecoveryCodesByUserID(viewer.ID)
 	if err != nil {
-		log.Error("listUserRecoveryCodes: get recovery codes of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to get recovery codes", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get recovery codes")
 	}
 	items := make([]userRecoveryCode, 0, len(codes))
@@ -321,24 +321,24 @@ func listUserRecoveryCodes(viewer *database.User) (statusCode int, resp any, err
 	return http.StatusOK, &userRecoveryCodes{Items: items}, nil
 }
 
-func getUserRecoveryCodes(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
-	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), viewer.ID) {
+func getUserRecoveryCodes(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
-	return listUserRecoveryCodes(viewer)
+	return listUserRecoveryCodes(logger, viewer)
 }
 
 // postUserRecoveryCodes replaces the recovery codes of the user with new ones
 // and returns them.
-func postUserRecoveryCodes(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
-	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), viewer.ID) {
+func postUserRecoveryCodes(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
 	if err = database.RegenerateRecoveryCodes(viewer.ID); err != nil {
-		log.Error("postUserRecoveryCodes: regenerate recovery codes of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to regenerate recovery codes", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "regenerate recovery codes")
 	}
-	return listUserRecoveryCodes(viewer)
+	return listUserRecoveryCodes(logger, viewer)
 }
 
 type userAccessToken struct {
@@ -355,10 +355,10 @@ type userAccessTokens struct {
 	Items []userAccessToken `json:"items"`
 }
 
-func getUserAccessTokens(c flamego.Context, viewer *database.User) (statusCode int, resp *userAccessTokens, err error) {
+func getUserAccessTokens(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userAccessTokens, err error) {
 	tokens, err := database.Handle.AccessTokens().List(c.Request().Context(), viewer.ID)
 	if err != nil {
-		log.Error("getUserAccessTokens: list tokens of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to list access tokens", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list access tokens")
 	}
 	items := make([]userAccessToken, 0, len(tokens))
@@ -381,23 +381,23 @@ type userAccessTokenCreated struct {
 	Token string `json:"token"`
 }
 
-func postUserAccessToken(c flamego.Context, l i18n.Locale, viewer *database.User, req userAccessTokenRequest) (statusCode int, resp any, err error) {
+func postUserAccessToken(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userAccessTokenRequest) (statusCode int, resp any, err error) {
 	t, err := database.Handle.AccessTokens().Create(c.Request().Context(), viewer.ID, req.TokenName)
 	if err != nil {
 		if database.IsErrAccessTokenAlreadyExist(err) {
 			msg := l.Tr("settings.token_name_exists")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
-		log.Error("postUserAccessToken: create token for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to create access token", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create access token")
 	}
 	return http.StatusCreated, &userAccessTokenCreated{Token: t.Sha1}, nil
 }
 
-func deleteUserAccessToken(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteUserAccessToken(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err = database.Handle.AccessTokens().DeleteByID(c.Request().Context(), viewer.ID, id); err != nil {
-		log.Error("deleteUserAccessToken: delete token %d of user %d: %v", id, viewer.ID, err)
+		logger.Error("Failed to delete access token", "tokenID", id, "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete access token")
 	}
 	return http.StatusNoContent, nil, nil

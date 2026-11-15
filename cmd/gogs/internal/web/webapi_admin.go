@@ -10,7 +10,7 @@ import (
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -73,11 +73,11 @@ type adminUser struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-func getAdminUsers(c flamego.Context) (statusCode int, resp *adminListPage[adminUser], err error) {
+func getAdminUsers(logger *logx.Logger, c flamego.Context) (statusCode int, resp *adminListPage[adminUser], err error) {
 	page, pageSize := pageParam(c), conf.UI.Admin.UserPagingNum
 	users, total, err := searchAdminUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page, pageSize)
 	if err != nil {
-		log.Error("getAdminUsers: search users: %v", err)
+		logger.Error("Failed to search users", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search users")
 	}
 
@@ -107,11 +107,11 @@ type adminOrg struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-func getAdminOrgs(c flamego.Context) (statusCode int, resp *adminListPage[adminOrg], err error) {
+func getAdminOrgs(logger *logx.Logger, c flamego.Context) (statusCode int, resp *adminListPage[adminOrg], err error) {
 	page, pageSize := pageParam(c), conf.UI.Admin.OrgPagingNum
 	orgs, total, err := searchAdminUsers(c.Request().Context(), database.UserTypeOrganization, c.Query("q"), page, pageSize)
 	if err != nil {
-		log.Error("getAdminOrgs: search organizations: %v", err)
+		logger.Error("Failed to search organizations", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search organizations")
 	}
 
@@ -143,7 +143,7 @@ type adminRepo struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-func getAdminRepos(c flamego.Context) (statusCode int, resp *adminListPage[adminRepo], err error) {
+func getAdminRepos(logger *logx.Logger, c flamego.Context) (statusCode int, resp *adminListPage[adminRepo], err error) {
 	page, pageSize := pageParam(c), conf.UI.Admin.RepoPagingNum
 	var (
 		repos []*database.Repository
@@ -151,7 +151,7 @@ func getAdminRepos(c flamego.Context) (statusCode int, resp *adminListPage[admin
 	)
 	if keyword := c.Query("q"); keyword == "" {
 		repos, err = database.Repositories(page, pageSize)
-		total = database.CountRepositories(true)
+		total = database.CountRepositories(logger, true)
 	} else {
 		repos, total, err = database.SearchRepositoryByName(&database.SearchRepoOptions{
 			Keyword:  keyword,
@@ -162,11 +162,11 @@ func getAdminRepos(c flamego.Context) (statusCode int, resp *adminListPage[admin
 		})
 	}
 	if err != nil {
-		log.Error("getAdminRepos: list repositories: %v", err)
+		logger.Error("Failed to list repositories", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")
 	}
 	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
-		log.Error("getAdminRepos: load repository attributes: %v", err)
+		logger.Error("Failed to load repository attributes", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
 
@@ -187,21 +187,21 @@ func getAdminRepos(c flamego.Context) (statusCode int, resp *adminListPage[admin
 	return http.StatusOK, newAdminListPage(items, page, total, pageSize), nil
 }
 
-func deleteAdminRepo(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteAdminRepo(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	repo, err := database.GetRepositoryByID(id)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("repository not found")
 		}
-		log.Error("deleteAdminRepo: get repository %d: %v", id, err)
+		logger.Error("Failed to get repository", "repoID", id, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 	}
-	if err = database.DeleteRepository(repo.OwnerID, repo.ID); err != nil {
-		log.Error("deleteAdminRepo: delete repository %d: %v", repo.ID, err)
+	if err = database.DeleteRepository(logger, repo.OwnerID, repo.ID); err != nil {
+		logger.Error("Failed to delete repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete repository")
 	}
-	log.Trace("Repository %d deleted by admin %q", repo.ID, viewer.Name)
+	logger.Debug("Repository deleted by admin", "repoID", repo.ID, "adminName", viewer.Name)
 	return http.StatusNoContent, nil, nil
 }
 
@@ -212,12 +212,12 @@ type adminNotice struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-func getAdminNotices(c flamego.Context, l i18n.Locale) (statusCode int, resp *adminListPage[adminNotice], err error) {
+func getAdminNotices(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminListPage[adminNotice], err error) {
 	ctx := c.Request().Context()
 	page, pageSize := pageParam(c), conf.UI.Admin.NoticePagingNum
 	notices, err := database.Handle.Notices().List(ctx, page, pageSize)
 	if err != nil {
-		log.Error("getAdminNotices: list notices: %v", err)
+		logger.Error("Failed to list notices", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list notices")
 	}
 
@@ -237,20 +237,20 @@ type adminNoticesDeleteRequest struct {
 	IDs []int64 `json:"ids" validate:"required,min=1,dive,min=1"`
 }
 
-func deleteAdminNotices(c flamego.Context, req adminNoticesDeleteRequest) (statusCode int, resp any, err error) {
+func deleteAdminNotices(logger *logx.Logger, c flamego.Context, req adminNoticesDeleteRequest) (statusCode int, resp any, err error) {
 	if err = database.Handle.Notices().DeleteByIDs(c.Request().Context(), req.IDs...); err != nil {
-		log.Error("deleteAdminNotices: delete notices: %v", err)
+		logger.Error("Failed to delete notices", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete notices")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteAllAdminNotices(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteAllAdminNotices(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
 	if err = database.Handle.Notices().DeleteAll(c.Request().Context()); err != nil {
-		log.Error("deleteAllAdminNotices: delete notices: %v", err)
+		logger.Error("Failed to delete all notices", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete all notices")
 	}
-	log.Trace("System notices deleted by admin %q", viewer.Name)
+	logger.Debug("System notices deleted by admin", "adminName", viewer.Name)
 	return http.StatusNoContent, nil, nil
 }
 
@@ -271,10 +271,10 @@ type adminUserOptions struct {
 	LocalPathMigrationEnabled bool `json:"localPathMigrationEnabled"`
 }
 
-func getAdminUserOptions(c flamego.Context) (statusCode int, resp *adminUserOptions, err error) {
+func getAdminUserOptions(logger *logx.Logger, c flamego.Context) (statusCode int, resp *adminUserOptions, err error) {
 	sources, err := database.Handle.LoginSources().List(c.Request().Context(), database.ListLoginSourceOptions{})
 	if err != nil {
-		log.Error("getAdminUserOptions: list login sources: %v", err)
+		logger.Error("Failed to list login sources", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list login sources")
 	}
 	items := make([]adminLoginSource, 0, len(sources))
@@ -323,11 +323,11 @@ type adminUserCreated struct {
 	Name string `json:"name"`
 }
 
-func postAdminUser(c flamego.Context, mc *macaron.Context, l i18n.Locale, admin *database.User, req adminUserCreateRequest) (statusCode int, resp any, err error) {
+func postAdminUser(logger *logx.Logger, c flamego.Context, mc *macaron.Context, l i18n.Locale, admin *database.User, req adminUserCreateRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	fields, err := checkAdminLoginSource(ctx, l, req.LoginSource, req.LoginName)
 	if err != nil {
-		log.Error("postAdminUser: check login source %d: %v", req.LoginSource, err)
+		logger.Error("Failed to check login source", "loginSourceID", req.LoginSource, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
 	if fields == nil && req.LoginSource == 0 && req.Password == "" {
@@ -360,14 +360,14 @@ func postAdminUser(c flamego.Context, mc *macaron.Context, l i18n.Locale, admin 
 			msg = l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
-		log.Error("postAdminUser: create user %q: %v", req.UserName, err)
+		logger.Error("Failed to create user", "userName", req.UserName, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create user")
 	}
-	log.Trace("Account %q created by admin %q", user.Name, admin.Name)
+	logger.Debug("Account created by admin", "userName", user.Name, "adminName", admin.Name)
 
 	if req.SendNotify && conf.Email.Enabled {
-		if err = email.SendRegisterNotifyMail(mc, database.NewMailerUser(user)); err != nil {
-			log.Error("postAdminUser: send registration notification to user %d: %v", user.ID, err)
+		if err = email.SendRegisterNotifyMail(logger, mc, database.NewMailerUser(user)); err != nil {
+			logger.Error("Failed to send register notify mail", "userID", user.ID, "error", err)
 		}
 	}
 	return http.StatusCreated, &adminUserCreated{ID: user.ID, Name: user.Name}, nil
@@ -382,7 +382,7 @@ type adminTargetUser struct {
 // withAdminTargetUser maps the user named by the `id` path parameter as
 // *adminTargetUser. Organizations are not found, since they have their own
 // settings.
-func withAdminTargetUser(c flamego.Context) {
+func withAdminTargetUser(logger *logx.Logger, c flamego.Context) {
 	w := c.ResponseWriter()
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	user, err := database.Handle.Users().GetByID(c.Request().Context(), id)
@@ -391,7 +391,7 @@ func withAdminTargetUser(c flamego.Context) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("user not found"))
 			return
 		}
-		log.Error("withAdminTargetUser: get user %d: %v", id, err)
+		logger.Error("Failed to get user", "userID", id, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.New("internal server error"))
 		return
 	}
@@ -458,12 +458,12 @@ type adminUserUpdateRequest struct {
 	ProhibitLogin    bool   `json:"prohibitLogin"`
 }
 
-func patchAdminUser(c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetUser, req adminUserUpdateRequest) (statusCode int, resp any, err error) {
+func patchAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetUser, req adminUserUpdateRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	u := target.User
 	fields, err := checkAdminLoginSource(ctx, l, req.LoginSource, req.LoginName)
 	if err != nil {
-		log.Error("patchAdminUser: check login source %d: %v", req.LoginSource, err)
+		logger.Error("Failed to check login source", "loginSourceID", req.LoginSource, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
 	if fields != nil {
@@ -496,14 +496,14 @@ func patchAdminUser(c flamego.Context, l i18n.Locale, admin *database.User, targ
 			msg := l.Tr("form.email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		}
-		log.Error("patchAdminUser: update user %d: %v", u.ID, err)
+		logger.Error("Failed to update user", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
-	log.Trace("Account %q updated by admin %q", u.Name, admin.Name)
+	logger.Debug("Account updated by admin", "userName", u.Name, "adminName", admin.Name)
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteAdminUser(c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetUser) (statusCode int, resp any, err error) {
+func deleteAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetUser) (statusCode int, resp any, err error) {
 	u := target.User
 	if err = database.Handle.Users().DeleteByID(c.Request().Context(), u.ID, false); err != nil {
 		switch {
@@ -512,9 +512,9 @@ func deleteAdminUser(c flamego.Context, l i18n.Locale, admin *database.User, tar
 		case database.IsErrUserHasOrgs(err):
 			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin.users.still_has_org")}, nil
 		}
-		log.Error("deleteAdminUser: delete user %d: %v", u.ID, err)
+		logger.Error("Failed to delete user", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete user")
 	}
-	log.Trace("Account %q deleted by admin %q", u.Name, admin.Name)
+	logger.Debug("Account deleted by admin", "userName", u.Name, "adminName", admin.Name)
 	return http.StatusNoContent, nil, nil
 }

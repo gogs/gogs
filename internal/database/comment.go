@@ -176,8 +176,8 @@ func (c *Comment) mailParticipants(logger *logx.Logger, e Engine, opType ActionT
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(e, issue, c.Poster, mentions); err != nil {
-		log.Error("mailIssueCommentToParticipants: %v", err)
+	if err = mailIssueCommentToParticipants(logger, e, issue, c.Poster, mentions); err != nil {
+		logger.Error("Failed to mail participants", "error", err)
 	}
 
 	return nil

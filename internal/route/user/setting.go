@@ -4,7 +4,7 @@ import (
 	gocontext "context"
 	"encoding/hex"
 
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -12,7 +12,7 @@ import (
 	"gogs.io/gogs/internal/userx"
 )
 
-func parseUserFromCode(ctx gocontext.Context, code string) (user *database.User) {
+func parseUserFromCode(ctx gocontext.Context, logger *logx.Logger, code string) (user *database.User) {
 	if len(code) <= tool.TimeLimitCodeLength {
 		return nil
 	}
@@ -51,7 +51,7 @@ func ActivateEmail(c *context.Context) {
 			return
 		}
 
-		log.Trace("Email activated: %s", email.Email)
+		c.Logger.Debug("Email activated", "email", email.Email)
 		// The settings page confirms the activation.
 		c.RedirectSubpath("/user/settings/email?activated=1")
 		return

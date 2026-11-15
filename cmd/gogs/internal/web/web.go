@@ -118,14 +118,14 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 			// Like the server-rendered pages, these pages are only found in the
 			// two-factor authentication state they apply to.
 			m.Get("/security/two_factor_enable", func(c *context.Context) {
-				if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+				if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 					c.NotFound()
 					return
 				}
 				c.ServeWeb()
 			})
 			m.Get("/security/two_factor_recovery_codes", func(c *context.Context) {
-				if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+				if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 					c.NotFound()
 					return
 				}
