@@ -262,7 +262,6 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
           title={t("repo.pulls.delete_branch")}
           description={t("repo.pulls.delete_branch_desc").replace("%s", pull.headBranch)}
           size="sm"
-          align="start"
           action={() => deleteRepoPullBranch(issueRef)}
           onDone={() => router.invalidate()}
         />
