@@ -189,6 +189,10 @@ export interface RepoAdvancedSettings {
   pullsAllowMerge: boolean;
   pullsAllowRebase: boolean;
   pullsAllowSquash: boolean;
+  // The presets of the messages merge commits and squashing start with,
+  // empty for the default message.
+  pullsMergeMessage: "" | "title" | "title_description";
+  pullsSquashMessage: "" | "title" | "title_description" | "title_commits";
 }
 
 export interface RepoMirrorSettings {

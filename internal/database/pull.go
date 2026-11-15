@@ -204,6 +204,19 @@ func (repo *Repository) AllowsMergeStyle(style MergeStyle) bool {
 	}
 }
 
+// The presets of the messages merge commits and squashing start with. The
+// empty preset is the default message, like on GitHub: "Merge pull request #N
+// from <head>" for merge commits, and for squashing, the message of the commit
+// when there is one, or the title of the pull request with the subjects of
+// its commits.
+const (
+	MergeMessageDefault          = ""
+	MergeMessageTitle            = "title"
+	MergeMessageTitleDescription = "title_description"
+	// MergeMessageTitleCommits is only for squashing.
+	MergeMessageTitleCommits = "title_commits"
+)
+
 // MergeMessage is the title and body of the commit that merges a pull
 // request.
 type MergeMessage struct {
@@ -212,16 +225,59 @@ type MergeMessage struct {
 }
 
 // DefaultMergeMessage returns the message the commit of the merge style starts
-// with, before the merger edits it. Rebasing keeps the messages of the commits,
-// so it has none.
-func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle) MergeMessage {
+// with, before the merger edits it, following the preset of the base
+// repository. The commits are those the pull request merges, newest first.
+// Rebasing keeps the messages of the commits, so it has none.
+func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
+	titled := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index)
 	switch mergeStyle {
 	case MergeStyleRegular:
-		return MergeMessage{Title: fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch)}
+		switch pr.BaseRepo.PullsMergeMessage {
+		case MergeMessageTitle:
+			return MergeMessage{Title: titled}
+		case MergeMessageTitleDescription:
+			return MergeMessage{Title: titled, Body: pr.Issue.Content}
+		}
+		return MergeMessage{
+			Title: fmt.Sprintf("Merge pull request #%d from %s/%s", pr.Index, pr.HeadUserName, pr.HeadBranch),
+			Body:  pr.Issue.Title,
+		}
+
 	case MergeStyleSquash:
-		return MergeMessage{Title: fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index)}
+		switch pr.BaseRepo.PullsSquashMessage {
+		case MergeMessageTitle:
+			return MergeMessage{Title: titled}
+		case MergeMessageTitleDescription:
+			return MergeMessage{Title: titled, Body: pr.Issue.Content}
+		case MergeMessageTitleCommits:
+			return MergeMessage{Title: titled, Body: commitList(commits, true)}
+		}
+		if len(commits) == 1 {
+			title, body, _ := strings.Cut(strings.TrimSpace(commits[0].Message), "\n")
+			return MergeMessage{Title: fmt.Sprintf("%s (#%d)", title, pr.Index), Body: strings.TrimSpace(body)}
+		}
+		return MergeMessage{Title: titled, Body: commitList(commits, false)}
 	}
 	return MergeMessage{}
+}
+
+// commitList lists the subjects of the commits, oldest first, with their
+// bodies when withBodies is true.
+func commitList(commits []*git.Commit, withBodies bool) string {
+	items := make([]string, 0, len(commits))
+	for i := len(commits) - 1; i >= 0; i-- {
+		subject, body, _ := strings.Cut(strings.TrimSpace(commits[i].Message), "\n")
+		item := "* " + subject
+		if body = strings.TrimSpace(body); withBodies && body != "" {
+			item += "\n\n" + body
+		}
+		items = append(items, item)
+	}
+	sep := "\n"
+	if withBodies {
+		sep = "\n\n"
+	}
+	return strings.Join(items, sep)
 }
 
 // Merge merges pull request to base repository. The message is used for the
@@ -271,8 +327,16 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 	}
 	defer cleanup()
 
+	if !pr.BaseRepo.AllowsMergeStyle(mergeStyle) {
+		return errors.Newf("merge style %q is not allowed", mergeStyle)
+	}
+
 	if strings.TrimSpace(message.Title) == "" {
-		message = pr.DefaultMergeMessage(mergeStyle)
+		commits, err := tmpRepo.RevList(ctx, []string{baseCommitID + ".." + headCommitID})
+		if err != nil {
+			return errors.Newf("list commits: %v", err)
+		}
+		message = pr.DefaultMergeMessage(mergeStyle, commits)
 	}
 	commitMessage := git.CleanupMessage(message.Title + "\n\n" + message.Body)
 

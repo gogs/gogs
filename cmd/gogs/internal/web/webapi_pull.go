@@ -198,11 +198,11 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
 		if info.ViewerCanMerge {
 			pull.Issue = issue
-			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{
-				database.MergeStyleRegular: pull.DefaultMergeMessage(database.MergeStyleRegular),
-			}
-			if repo.PullsAllowSquash {
-				info.MergeMessages[database.MergeStyleSquash] = pull.DefaultMergeMessage(database.MergeStyleSquash)
+			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{}
+			for _, style := range []database.MergeStyle{database.MergeStyleRegular, database.MergeStyleSquash} {
+				if repo.AllowsMergeStyle(style) {
+					info.MergeMessages[style] = pull.DefaultMergeMessage(style, meta.Commits)
+				}
 			}
 		}
 	default:
