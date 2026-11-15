@@ -12,22 +12,31 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
 )
 
 func TestAuthenticate(t *testing.T) {
 	tests := []struct {
-		name          string
-		header        http.Header
-		mockStore     func() *MockStore
-		expStatusCode int
-		expHeader     http.Header
-		expBody       string
+		name              string
+		header            http.Header
+		requireSigninView bool
+		mockStore         func() *MockStore
+		expStatusCode     int
+		expHeader         http.Header
+		expBody           string
 	}{
 		{
 			name:          "no authorization",
-			expStatusCode: http.StatusUnauthorized,
+			expStatusCode: http.StatusOK,
+			expHeader:     http.Header{},
+			expBody:       "ID: 0, Name: anonymous",
+		},
+		{
+			name:              "no authorization when signing in is required to view",
+			requireSigninView: true,
+			expStatusCode:     http.StatusUnauthorized,
 			expHeader: http.Header{
 				"Lfs-Authenticate": []string{`Basic realm="Git LFS"`},
 				"Content-Type":     []string{"application/vnd.git-lfs+json"},
@@ -158,6 +167,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			conf.SetMockAuth(t, conf.AuthOpts{RequireSigninView: test.requireSigninView})
 			if test.mockStore == nil {
 				test.mockStore = NewMockStore
 			}
@@ -192,9 +202,11 @@ func TestAuthenticate(t *testing.T) {
 func TestAuthorize(t *testing.T) {
 	tests := []struct {
 		name          string
+		anonymous     bool
 		accessMode    database.AccessMode
 		mockStore     func() *MockStore
 		expStatusCode int
+		expHeader     http.Header
 		expBody       string
 	}{
 		{
@@ -238,7 +250,30 @@ func TestAuthorize(t *testing.T) {
 			},
 			expStatusCode: http.StatusNotFound,
 		},
-
+		{
+			name:       "anonymous actor is not authorized",
+			anonymous:  true,
+			accessMode: database.AccessModeWrite,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.AuthorizeRepositoryAccessFunc.SetDefaultHook(func(_ context.Context, _ int64, _ int64, desired database.AccessMode, _ database.AccessModeOptions) bool {
+					return desired <= database.AccessModeRead
+				})
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{Name: name}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusUnauthorized,
+			expHeader: http.Header{
+				"Lfs-Authenticate": []string{`Basic realm="Git LFS"`},
+				"Content-Type":     []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"Credentials needed"}` + "\n",
+		},
 		{
 			name:       "actor is authorized",
 			accessMode: database.AccessModeRead,
@@ -268,7 +303,11 @@ func TestAuthorize(t *testing.T) {
 
 			m := flamego.New()
 			m.Use(func(c flamego.Context) {
-				c.Map(&database.User{})
+				if test.anonymous {
+					c.Map(&database.User{})
+				} else {
+					c.Map(&database.User{ID: 1})
+				}
 			})
 			m.Get(
 				"/{owner}/{repo}",
@@ -288,6 +327,9 @@ func TestAuthorize(t *testing.T) {
 
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
+			if test.expHeader != nil {
+				assert.Equal(t, test.expHeader, resp.Header)
+			}
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {

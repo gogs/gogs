@@ -42,20 +42,27 @@ func RegisterRoutes(r flamego.Router) {
 	}, authenticate(store))
 }
 
+// askCredentials responds that the client needs to provide credentials.
+func askCredentials(w http.ResponseWriter) {
+	w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
+	responseJSON(w, http.StatusUnauthorized, responseError{
+		Message: "Credentials needed",
+	})
+}
+
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
+// A request without credentials continues as an anonymous user, whose ID is 0,
+// unless signing in is required to view anything.
 func authenticate(store Store) flamego.Handler {
-	askCredentials := func(w http.ResponseWriter) {
-		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
-		responseJSON(w, http.StatusUnauthorized, responseError{
-			Message: "Credentials needed",
-		})
-	}
-
 	return func(c flamego.Context) {
 		username, password := authx.DecodeBasic(c.Request().Header)
 		if username == "" {
-			askCredentials(c.ResponseWriter())
+			if conf.Auth.RequireSigninView {
+				askCredentials(c.ResponseWriter())
+				return
+			}
+			c.Map(&database.User{Name: "anonymous"})
 			return
 		}
 
@@ -143,6 +150,11 @@ func authorize(store Store, mode database.AccessMode) flamego.Handler {
 				Private: repo.IsPrivate,
 			},
 		) {
+			// An anonymous user may have access after signing in.
+			if actor.ID <= 0 {
+				askCredentials(c.ResponseWriter())
+				return
+			}
 			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
