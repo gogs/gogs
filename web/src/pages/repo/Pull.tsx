@@ -1,6 +1,8 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
+  Check,
+  ChevronDown,
   CircleAlert,
   CircleCheck,
   CircleX,
@@ -22,6 +24,7 @@ import { PageTabs } from "@/components/PageTabs";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -261,8 +264,8 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
     body = <BranchActions issueRef={issueRef} branch={pull.headBranch} deleted={pull.viewerCanRestoreBranch} />;
   } else if (pull.state === "mergeable" && pull.viewerCanMerge) {
     const styles: MergeStyle[] = ["create_merge_commit"];
-    if (pull.allowRebase) styles.push("rebase_before_merging");
     if (pull.allowSquash) styles.push("squash_and_merge");
+    if (pull.allowRebase) styles.push("rebase_before_merging");
     body = <MergeForm issueRef={issueRef} styles={styles} />;
   }
 
@@ -329,11 +332,13 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
 }
 
 // MergeForm merges the pull request in one of the styles the repository
-// allows, the first being the default.
+// allows, the first being the default. Like GitHub, the merge button names the
+// chosen style, and a menu beside it switches to another.
 function MergeForm({ issueRef, styles }: { issueRef: IssueRef; styles: MergeStyle[] }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [style, setStyle] = useState<MergeStyle>(styles[0]);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [description, setDescription] = useState("");
   // Rebasing keeps the commits as they are, so there is no commit to describe.
   const hasDescription = style !== "rebase_before_merging";
@@ -350,23 +355,6 @@ function MergeForm({ issueRef, styles }: { issueRef: IssueRef; styles: MergeStyl
   return (
     <form onSubmit={onSubmit} className="border-t border-(--color-border) px-4 py-3">
       <fieldset disabled={mutation.isPending} className="flex flex-col gap-3">
-        {styles.length > 1 ? (
-          <div role="radiogroup" aria-label={t("repo.pulls.merge_pull_request")} className="flex flex-col gap-2">
-            {styles.map((value) => (
-              <label key={value} className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="merge-style"
-                  value={value}
-                  checked={style === value}
-                  onChange={() => setStyle(value)}
-                  className="size-4 shrink-0 cursor-pointer accent-(--color-primary)"
-                />
-                {t(`repo.pulls.${value}`)}
-              </label>
-            ))}
-          </div>
-        ) : null}
         {hasDescription ? (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="merge-description" className="text-sm font-medium">
@@ -382,12 +370,52 @@ function MergeForm({ issueRef, styles }: { issueRef: IssueRef; styles: MergeStyl
           </div>
         ) : null}
         {formError ? <p className="text-sm text-(--color-destructive)">{formError}</p> : null}
-        <div>
-          <Button type="submit" size="sm">
-            <GitMerge className="size-4" aria-hidden />
-            {t("repo.pulls.merge_pull_request")}
-          </Button>
-        </div>
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          {/* The menu opens under the whole button group, as on GitHub. */}
+          <PopoverAnchor asChild>
+            <div className="flex w-fit">
+              <Button type="submit" size="sm" className={cn(styles.length > 1 && "rounded-r-none")}>
+                <GitMerge className="size-4" aria-hidden />
+                {style === "create_merge_commit" ? t("repo.pulls.merge_pull_request") : t(`repo.pulls.${style}`)}
+              </Button>
+              {styles.length > 1 ? (
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    aria-label={t("repo.pulls.select_merge_method")}
+                    className="rounded-l-none border-l border-(--color-primary-foreground)/30 px-2"
+                  >
+                    <ChevronDown className="size-4" aria-hidden />
+                  </Button>
+                </PopoverTrigger>
+              ) : null}
+            </div>
+          </PopoverAnchor>
+          <PopoverContent align="start" className="w-80" role="menu" aria-label={t("repo.pulls.select_merge_method")}>
+            {styles.map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={style === value}
+                onClick={() => {
+                  setStyle(value);
+                  setMenuOpen(false);
+                }}
+                className="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface)"
+              >
+                <span className="grid size-5 shrink-0 place-items-center">
+                  {style === value ? <Check className="size-4 text-(--color-primary)" aria-hidden /> : null}
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium">{t(`repo.pulls.${value}`)}</span>
+                  <span className="text-xs text-(--color-muted-foreground)">{t(`repo.pulls.${value}_desc`)}</span>
+                </span>
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
       </fieldset>
     </form>
   );
