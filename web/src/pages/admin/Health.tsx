@@ -247,9 +247,11 @@ export function ServerHealth({
   let readout: ReactNode = t(empty ? "admin.health.collecting" : "admin.health.help");
   if (cursor !== null) {
     const clock = CLOCK_SECONDS_FMT.format(cursor);
-    // Traces start before they end, so open a window around the moment.
-    const from = Math.round(cursor - 60_000);
-    const to = Math.round(cursor + 60_000);
+    // Traces start before they end, and a point of the 24 hours sums up the 5
+    // minutes before it, so open a window of at least a step around the moment.
+    const around = Math.max(60_000, stepMs);
+    const from = Math.round(cursor - around);
+    const to = Math.round(cursor + around);
     readout = (
       <>
         <span className="font-medium text-(--color-foreground)">
@@ -389,7 +391,7 @@ export function RangeLinks<V extends string>({
           className={cn(
             "inline-flex h-8 items-center rounded-md border px-3 text-sm",
             option.value === active
-              ? "border-(--color-ring) bg-(--color-surface) text-(--color-foreground)"
+              ? "border-(--color-ring) bg-(--color-surface) font-medium text-(--color-foreground)"
               : "border-(--color-input) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)",
           )}
         >

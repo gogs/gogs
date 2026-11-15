@@ -188,7 +188,8 @@ export function AdminDashboard({
           <RichText text={dashboard.statistics} />
         </p>
       </Section>
-      <ServerHealth health={health} range={healthRange}>
+      {/* Remount on a range switch, so that a pinned moment does not outlive its range. */}
+      <ServerHealth key={healthRange} health={health} range={healthRange}>
         <details className="mt-4 text-sm">
           <summary className="cursor-pointer text-(--color-muted-foreground) hover:text-(--color-foreground)">
             {fill(

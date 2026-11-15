@@ -124,6 +124,7 @@ function TraceIDForm({ q }: { q?: string }) {
           key={q ?? ""}
           name="q"
           defaultValue={q}
+          minLength={8}
           placeholder={t("admin.traces.trace_id")}
           aria-label={t("admin.traces.trace_id")}
           autoComplete="off"
@@ -327,7 +328,8 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
     );
   }
   const errorRate = overview.requests > 0 ? overview.errors / overview.requests : 0;
-  const percent = (share: number) => `${(share * 100).toFixed(share > 0 && share < 0.1 ? 1 : 0)}%`;
+  const percent = (share: number) =>
+    share > 0 && share < 0.001 ? "<0.1%" : `${(share * 100).toFixed(share > 0 && share < 0.1 ? 1 : 0)}%`;
   const stats: { label: string; value: string; alert?: boolean }[] = [
     { label: t("admin.traces.requests"), value: formatNumber(overview.requests) },
     { label: t("admin.traces.errors"), value: percent(errorRate), alert: overview.errors > 0 },
@@ -658,7 +660,10 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>{t("admin.traces.any_duration")}</SelectItem>
-              {DURATION_FILTERS.map((ms) => (
+              {(search.minMs && !DURATION_FILTERS.includes(search.minMs)
+                ? [...DURATION_FILTERS, search.minMs].sort((a, b) => a - b)
+                : DURATION_FILTERS
+              ).map((ms) => (
                 <SelectItem key={ms} value={String(ms)}>
                   {fill(t("admin.traces.at_least"), formatMs(ms))}
                 </SelectItem>
@@ -834,9 +839,10 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
   const roots = useMemo(() => buildTree(trace.spans), [trace.spans]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   // A failed trace opens with the details of its last failed span, which is
-  // usually where the error came from.
+  // usually where the error came from. The root comes first, so it is picked
+  // only when no other span failed.
   const [selected, setSelected] = useState<string | null>(
-    () => [...trace.spans].reverse().find((span) => span.error && span.parentId)?.id ?? null,
+    () => [...trace.spans].reverse().find((span) => span.error)?.id ?? null,
   );
   const total = Math.max(trace.durationMs, ...trace.spans.map((s) => s.startMs + s.durationMs), 0.001);
   const step = niceStep(total);
@@ -1021,9 +1027,10 @@ function RepeatedSpans({ trace }: { trace: AdminTrace }) {
   return (
     <Panel className="mt-4">
       <ul className="space-y-1">
-        {runs.slice(0, 3).map((run) => {
+        {runs.slice(0, 3).map((run, i) => {
           return (
-            <li key={run.name}>
+            // A name can repeat under more than one parent.
+            <li key={`${i}-${run.name}`}>
               {fillNodes(
                 t("admin.traces.repeated"),
                 <code className="font-mono wrap-anywhere">{run.name}</code>,
@@ -1042,7 +1049,7 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
   const { t } = useTranslation();
   const stats = trace.routeStats;
   if (!stats) return null;
-  const max = Math.max(stats.p95Ms * 1.25, trace.durationMs * 1.02);
+  const max = Math.max(stats.p95Ms * 1.25, trace.durationMs * 1.02) || 1;
   const at = (ms: number) => `${Math.min(100, (ms / max) * 100)}%`;
   return (
     <Panel className="mt-4">

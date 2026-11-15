@@ -83,6 +83,11 @@ export function validateTraceSearch(search: Record<string, unknown>): TraceSearc
     const n = Number(first(value));
     return Number.isFinite(n) && n > 0 ? n : undefined;
   };
+  // The server reads times as whole Unix milliseconds.
+  const unixMs = (value: unknown) => {
+    const n = positive(value);
+    return n !== undefined && Number.isInteger(n) ? n : undefined;
+  };
   const status = first(search.status);
   return {
     view: first(search.view) === "search" ? "search" : undefined,
@@ -92,7 +97,7 @@ export function validateTraceSearch(search: Record<string, unknown>): TraceSearc
     minMs: positive(search.minMs),
     status: status === "5xx" || status === "4xx" ? status : undefined,
     sort: first(search.sort) === "slowest" ? "slowest" : undefined,
-    from: positive(search.from),
-    to: positive(search.to),
+    from: unixMs(search.from),
+    to: unixMs(search.to),
   };
 }
