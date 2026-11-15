@@ -3,13 +3,13 @@ import type { JSX } from "react";
 
 import { LoaderResponseError, loadAuthenticatedPage } from "@/lib/loader-error";
 import {
-  type DashboardSearch,
   type ListSearch,
   type PageSearch,
+  type ProcessesSearch,
   type TraceSearch,
-  validateDashboardSearch,
   validateListSearch,
   validatePageSearch,
+  validateProcessesSearch,
   validateTraceSearch,
 } from "@/lib/page-search";
 import {
@@ -39,13 +39,9 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   const dashboardRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin",
-    validateSearch: validateDashboardSearch,
-    loaderDeps: ({ search }: { search: DashboardSearch }) => ({ health: search.health ?? ("1h" as const) }),
-    loader: ({ deps }) =>
-      loadAuthenticatedPage(() => Promise.all([fetchAdminDashboard(), fetchAdminHealth(deps.health)])),
+    loader: () => loadAuthenticatedPage(fetchAdminDashboard),
     component: function Dashboard() {
-      const [dashboard, health] = dashboardRoute.useLoaderData();
-      return <AdminDashboard dashboard={dashboard} health={health} healthRange={health.range} />;
+      return <AdminDashboard dashboard={dashboardRoute.useLoaderData()} />;
     },
   });
 
@@ -76,9 +72,13 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   const processesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin/processes",
-    loader: () => loadAuthenticatedPage(fetchAdminMonitor),
+    validateSearch: validateProcessesSearch,
+    loaderDeps: ({ search }: { search: ProcessesSearch }) => ({ health: search.health ?? ("1h" as const) }),
+    loader: ({ deps }) =>
+      loadAuthenticatedPage(() => Promise.all([fetchAdminMonitor(), fetchAdminHealth(deps.health)])),
     component: function Processes() {
-      return <AdminProcesses monitor={processesRoute.useLoaderData()} />;
+      const [monitor, health] = processesRoute.useLoaderData();
+      return <AdminProcesses monitor={monitor} health={health} />;
     },
   });
 

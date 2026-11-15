@@ -9,13 +9,11 @@ import { FormAlert, FormField } from "@/components/FormField";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fill } from "@/lib/format";
 import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
   type AdminDashboard as AdminDashboardData,
   type AdminHealth,
-  type AdminHealthRange,
   type AdminMonitor as AdminMonitorData,
   type AdminOperation,
   type AdminReportRow,
@@ -137,17 +135,9 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
   "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
 };
 
-// AdminDashboard shows how the site was built, what its database holds and how
-// the server is doing.
-export function AdminDashboard({
-  dashboard,
-  health,
-  healthRange,
-}: {
-  dashboard: AdminDashboardData;
-  health: AdminHealth;
-  healthRange: AdminHealthRange;
-}) {
+// AdminDashboard is the overview of the site: how it was built, what its
+// database holds and what the server uses right now.
+export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData }) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="dashboard">
@@ -188,20 +178,7 @@ export function AdminDashboard({
           <RichText text={dashboard.statistics} />
         </p>
       </Section>
-      {/* Remount on a range switch, so that a pinned moment does not outlive its range. */}
-      <ServerHealth key={healthRange} health={health} range={healthRange}>
-        <details className="mt-4 text-sm">
-          <summary className="cursor-pointer text-(--color-muted-foreground) hover:text-(--color-foreground)">
-            {fill(
-              t("admin.health.all_numbers"),
-              dashboard.systemStatus.groups.reduce((n, group) => n + group.length, 0),
-            )}
-          </summary>
-          <div className="mt-4">
-            <Report section={dashboard.systemStatus} />
-          </div>
-        </details>
-      </ServerHealth>
+      <Report section={dashboard.systemStatus} />
     </AdminLayout>
   );
 }
@@ -377,28 +354,33 @@ export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
   );
 }
 
-// AdminProcesses lists the Git processes running now.
-export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
+// AdminProcesses shows the health of the server and lists the Git processes
+// running now.
+export function AdminProcesses({ monitor, health }: { monitor: AdminMonitorData; health: AdminHealth }) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="processes">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.processes")}</h1>
-      {monitor.processes.length > 0 ? (
-        <ul className="glass-list border-t border-(--color-border)">
-          {monitor.processes.map((proc) => (
-            <li key={proc.pid} className={ROW_CLASS}>
-              <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
-              <Details>
-                <Detail label="PID">{proc.pid}</Detail>
-                <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
-                <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
-              </Details>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Empty />
-      )}
+      {/* Remount on a range switch, so that a pinned moment does not outlive its range. */}
+      <ServerHealth key={health.range} health={health} range={health.range} />
+      <Section id="processes" title={t("admin.monitor.process")}>
+        {monitor.processes.length > 0 ? (
+          <ul className="glass-list border-t border-(--color-border)">
+            {monitor.processes.map((proc) => (
+              <li key={proc.pid} className={ROW_CLASS}>
+                <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
+                <Details>
+                  <Detail label="PID">{proc.pid}</Detail>
+                  <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
+                  <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
+                </Details>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Empty />
+        )}
+      </Section>
     </AdminLayout>
   );
 }

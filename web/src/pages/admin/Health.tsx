@@ -191,16 +191,7 @@ function Sparkline({
 // ServerHealth shows how the server did over the last hour or day, one row per
 // measurement. Moving over a chart, or along it with the arrow keys, reads
 // every measurement at that moment, and links to the traces from then.
-export function ServerHealth({
-  health,
-  range,
-  children,
-}: {
-  health: AdminHealth;
-  range: AdminHealthRange;
-  // The numbers of right now, in a disclosure below the charts.
-  children?: ReactNode;
-}) {
+export function ServerHealth({ health, range }: { health: AdminHealth; range: AdminHealthRange }) {
   const { t } = useTranslation();
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
@@ -282,7 +273,7 @@ export function ServerHealth({
             { value: "1h", label: t("admin.traces.last_hour"), search: {} },
             { value: "24h", label: t("admin.health.last_24h"), search: { health: "24h" } },
           ]}
-          to="/admin"
+          to="/admin/processes"
         />
       </div>
       <p
@@ -351,7 +342,6 @@ export function ServerHealth({
           </div>
         );
       })}
-      {children}
     </section>
   );
 }
