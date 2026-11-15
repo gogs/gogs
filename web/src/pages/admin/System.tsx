@@ -270,12 +270,24 @@ export function AdminConfig({ config }: { config: AdminConfigData }) {
   );
 }
 
-function Meta({ children }: { children: ReactNode }) {
+// Details lays out the facts of a monitor row. Each is a line of a label and
+// its value on narrow screens, and a column with the label above its value
+// from the sm breakpoint.
+function Details({ children }: { children: ReactNode }) {
+  return <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm tabular-nums sm:grid-cols-3 sm:gap-y-2">{children}</dl>;
+}
+
+function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-(--color-muted-foreground) tabular-nums">
-      {children}
-    </p>
+    <div className="flex min-w-0 items-baseline justify-between gap-3 sm:block">
+      <dt className="shrink-0 text-xs text-(--color-muted-foreground)">{label}</dt>
+      <dd className="min-w-0 text-right wrap-anywhere sm:text-left">{children}</dd>
+    </div>
   );
+}
+
+function NotAvailable() {
+  return <span className="text-(--color-muted-foreground)">N/A</span>;
 }
 
 function Empty() {
@@ -302,17 +314,15 @@ export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
                   <span className="font-semibold wrap-anywhere">{task.description}</span>
                   <code className="rounded bg-(--color-surface) px-1 font-mono text-xs">{task.schedule}</code>
                 </p>
-                <Meta>
-                  <span>
-                    {t("admin.monitor.next")} {task.next ? formatAbsoluteTime(task.next) : "N/A"}
-                  </span>
-                  <span>
-                    {t("admin.monitor.previous")} {task.prev ? formatAbsoluteTime(task.prev) : "N/A"}
-                  </span>
-                  <span>
-                    {t("admin.monitor.execute_times")} {task.execTimes}
-                  </span>
-                </Meta>
+                <Details>
+                  <Detail label={t("admin.monitor.next")}>
+                    {task.next ? formatAbsoluteTime(task.next) : <NotAvailable />}
+                  </Detail>
+                  <Detail label={t("admin.monitor.previous")}>
+                    {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
+                  </Detail>
+                  <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
+                </Details>
               </li>
             ))}
           </ul>
@@ -326,15 +336,11 @@ export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
             {monitor.processes.map((proc) => (
               <li key={proc.pid} className={ROW_CLASS}>
                 <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
-                <Meta>
-                  <span>PID {proc.pid}</span>
-                  <span>
-                    {t("admin.monitor.start")} {formatAbsoluteTime(proc.start)}
-                  </span>
-                  <span>
-                    {t("admin.monitor.execute_time")} {formatRelativeTime(t, proc.start)}
-                  </span>
-                </Meta>
+                <Details>
+                  <Detail label="PID">{proc.pid}</Detail>
+                  <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
+                  <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
+                </Details>
               </li>
             ))}
           </ul>
