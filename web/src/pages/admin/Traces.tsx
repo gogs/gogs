@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { webContext } from "@/lib/context";
-import { fill, formatMs, formatNumber } from "@/lib/format";
+import { fill, formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
 import type {
   AdminSpan,
@@ -156,7 +156,9 @@ function TracesLayout({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
-          <p className="mt-1 text-sm text-(--color-muted-foreground)">{fill(t("admin.traces.desc"), maxAgeMinutes)}</p>
+          <p className="mt-1 text-sm text-(--color-muted-foreground)">
+            {fill(t("admin.traces.desc"), formatMinutes(maxAgeMinutes))}
+          </p>
         </div>
         <TraceIDForm q={q} />
       </div>
@@ -616,7 +618,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
         <Panel>
           <p>{fillNodes(t("admin.traces.not_found"), <code className="font-mono wrap-anywhere">{search.q}</code>)}</p>
           <p className="mt-2 text-(--color-muted-foreground)">
-            {fill(t("admin.traces.not_found_desc"), result.maxAgeMinutes)}
+            {fill(t("admin.traces.not_found_desc"), formatMinutes(result.maxAgeMinutes))}
             {result.oldest ? ` ${fill(t("admin.traces.oldest"), formatRelativeTime(t, result.oldest, now))}` : null}
           </p>
           <Link

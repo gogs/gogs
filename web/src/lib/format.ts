@@ -13,6 +13,14 @@ export function formatNumber(n: number) {
   return NUMBER_FMT.format(n);
 }
 
+// formatMinutes formats a duration in minutes, in hours when it is a whole
+// number of them, e.g., "24 hours" or "90 minutes".
+export function formatMinutes(minutes: number) {
+  const hours = minutes / 60;
+  const [value, unit] = hours >= 1 && Number.isInteger(hours) ? [hours, "hour"] : [minutes, "minute"];
+  return new Intl.NumberFormat(webContext.lang, { style: "unit", unit, unitDisplay: "long" }).format(value);
+}
+
 // formatMs formats a duration in milliseconds with about three significant
 // digits, e.g., "0.42 ms", "97 ms" or "2.52 s".
 export function formatMs(ms: number) {
