@@ -88,15 +88,11 @@ function flag(points: [number, number][], followsTraffic: boolean): { up: number
   return null;
 }
 
-// valueAt returns the last value measured at or before the time, or the first
-// one when the time is before every point.
+// valueAt returns the first value measured at or after the time, which sums
+// up the step that holds the time, or the last one when the time is after
+// every point.
 function valueAt(points: [number, number][], at: number) {
-  let value = points[0]?.[1];
-  for (const [t, v] of points) {
-    if (t > at) break;
-    value = v;
-  }
-  return value;
+  return (points.find(([t]) => t >= at) ?? points.at(-1))?.[1];
 }
 
 function Sparkline({

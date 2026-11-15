@@ -156,9 +156,12 @@ function TracesLayout({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
-          <p className="mt-1 text-sm text-(--color-muted-foreground)">
-            {fill(t("admin.traces.desc"), formatMinutes(maxAgeMinutes))}
-          </p>
+          {/* Tracing that is off keeps nothing. */}
+          {maxAgeMinutes > 0 ? (
+            <p className="mt-1 text-sm text-(--color-muted-foreground)">
+              {fill(t("admin.traces.desc"), formatMinutes(maxAgeMinutes))}
+            </p>
+          ) : null}
         </div>
         <TraceIDForm q={q} />
       </div>
@@ -466,15 +469,17 @@ const DURATION_FILTERS = [100, 500, 1000, 5000];
 
 const CLOCK_FMT = new Intl.DateTimeFormat(webContext.lang, { hour: "2-digit", minute: "2-digit" });
 
-function ScatterPlot({ result }: { result: AdminTraceSearchData }) {
+function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
   const { t } = useTranslation();
   const W = 600;
   const H = 160;
-  const end = Date.parse(result.now);
+  const now = Date.parse(result.now);
   // Start at the oldest kept trace, so that a server that started recently
-  // spreads its traces over the plot.
-  const oldest = result.oldest ? Date.parse(result.oldest) : end;
-  const start = Math.max(end - result.maxAgeMinutes * 60_000, Math.min(oldest, end - 5 * 60_000));
+  // spreads its traces over the plot, or at the window of the search.
+  const oldest = result.oldest ? Date.parse(result.oldest) : now;
+  const start = search.from ?? Math.max(now - result.maxAgeMinutes * 60_000, Math.min(oldest, now - 5 * 60_000));
+  const end = Math.max(Math.min(search.to ?? now, now), start + 60_000);
+  const windowed = search.from !== undefined || search.to !== undefined;
   const maxMs = Math.max(10, ...result.points.map((p) => p.durationMs));
   // Powers of ten from 1 ms up to the slowest trace.
   const top = Math.ceil(Math.log10(maxMs));
@@ -514,7 +519,7 @@ function ScatterPlot({ result }: { result: AdminTraceSearchData }) {
           aria-label={fill(t("admin.traces.chart_search"), result.points.length)}
           className="relative h-40 border-b border-l border-(--color-border)"
         >
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="size-full" aria-hidden>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="size-full overflow-visible" aria-hidden>
             {ticks.map((tick) => (
               <line
                 key={tick}
@@ -549,7 +554,7 @@ function ScatterPlot({ result }: { result: AdminTraceSearchData }) {
                     6,
                     slow > 0 && p.durationMs >= slow
                       ? "stroke-(--color-primary)"
-                      : "stroke-(--color-muted-foreground)/40",
+                      : "stroke-(--color-muted-foreground)/70",
                     p.id,
                   ),
             )}
@@ -557,13 +562,13 @@ function ScatterPlot({ result }: { result: AdminTraceSearchData }) {
         </div>
         <div />
         <div className="mt-1 flex justify-between text-xs text-(--color-muted-foreground)">
-          <span>{fill(t("admin.traces.minutes_ago"), Math.round((end - start) / 60_000))}</span>
-          <span>{t("admin.traces.now")}</span>
+          <span>{windowed ? CLOCK_FMT.format(start) : formatRelativeTime(t, new Date(start).toISOString(), now)}</span>
+          <span>{end < now ? CLOCK_FMT.format(end) : t("admin.traces.now")}</span>
         </div>
       </div>
       <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-muted-foreground)">
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2 rounded-full bg-(--color-muted-foreground)/40" />
+          <span aria-hidden className="size-2 rounded-full bg-(--color-muted-foreground)/70" />
           {t("admin.traces.request")}
         </span>
         {slow > 0 ? (
@@ -701,7 +706,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
           />
         </div>
       )}
-      {result.points.length > 0 ? <ScatterPlot result={result} /> : null}
+      {result.points.length > 0 ? <ScatterPlot result={result} search={search} /> : null}
 
       <div className="mt-6 mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-(--color-muted-foreground)">
