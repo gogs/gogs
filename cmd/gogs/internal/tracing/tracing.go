@@ -16,6 +16,21 @@ import (
 	"unknwon.dev/x/logx"
 )
 
+// recordUnsampled records the spans that its sampler drops, e.g., of a request
+// whose caller does not sample its trace, so that processors see every request
+// while only sampled spans are exported.
+type recordUnsampled struct {
+	sdktrace.Sampler
+}
+
+func (s recordUnsampled) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	result := s.Sampler.ShouldSample(p)
+	if result.Decision == sdktrace.Drop {
+		result.Decision = sdktrace.RecordOnly
+	}
+	return result
+}
+
 // Init records spans, e.g., of requests and Git operations. It exports them
 // over OTLP when an endpoint is set through the standard OpenTelemetry
 // environment variables, i.e., OTEL_EXPORTER_OTLP_ENDPOINT or
@@ -48,6 +63,9 @@ func Init(ctx context.Context, logger *logx.Logger, processors ...sdktrace.SpanP
 	}
 	for _, p := range processors {
 		opts = append(opts, sdktrace.WithSpanProcessor(p))
+	}
+	if len(processors) > 0 {
+		opts = append(opts, sdktrace.WithSampler(recordUnsampled{sdktrace.ParentBased(sdktrace.AlwaysSample())}))
 	}
 	provider := sdktrace.NewTracerProvider(opts...)
 	otel.SetTracerProvider(provider)

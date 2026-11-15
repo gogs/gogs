@@ -278,10 +278,17 @@ func (s *Store) Search(q SearchQuery) SearchResult {
 				start := t.start
 				out.Oldest = &start
 			}
-			if q.match(t) {
+			// Only the latest trace with an ID can be opened, e.g., when a client
+			// sent the same trace ID with two requests.
+			if s.byID[t.id] == t && q.match(t) {
 				matches = append(matches, t)
 			}
 		}
+	}
+	// The route of the query is listed even when none of its traces is kept,
+	// e.g., when it comes from the overview.
+	if rs := s.routes[q.Route]; rs != nil {
+		routes[q.Route] = rs.route
 	}
 	for _, r := range routes {
 		out.Routes = append(out.Routes, r)

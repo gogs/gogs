@@ -125,18 +125,48 @@ func TestStore_KeepRules(t *testing.T) {
 func TestStore_KeepsSlowForRoute(t *testing.T) {
 	store, tracer := newTestStore(t, defaultOptions())
 
-	for range 200 {
-		record(tracer, testRequest{route: "/a", status: 200, duration: 10 * time.Millisecond})
+	// Usual requests take 10 to 10.5 ms, within one bucket of the histogram.
+	usualDuration := func(i int) time.Duration {
+		return 10*time.Millisecond + time.Duration(i%50)*10*time.Microsecond
+	}
+	for i := range 200 {
+		record(tracer, testRequest{route: "/a", status: 200, duration: usualDuration(i)})
 	}
 	// Well below the threshold of a second, but far slower than the route.
 	outlier := record(tracer, testRequest{route: "/a", status: 200, duration: 80 * time.Millisecond})
-	usual := record(tracer, testRequest{route: "/a", status: 200, duration: 10 * time.Millisecond})
 
 	got, ok := store.Get(outlier)
 	require.True(t, ok)
 	assert.Equal(t, KeptSlow, got.Kept)
-	_, ok = store.Get(usual)
-	assert.False(t, ok)
+	for i := range 100 {
+		usual := record(tracer, testRequest{route: "/a", status: 200, duration: usualDuration(i)})
+		if got, ok := store.Get(usual); ok {
+			assert.NotEqual(t, KeptSlow, got.Kept, "a request of %v is not slow for its route", usualDuration(i))
+		}
+	}
+}
+
+func TestStore_KeepsRootPastSpanLimit(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	start := testNow.Add(-time.Second)
+	ctx, root := tracer.Start(context.Background(), "GET /{owner}/{repo}",
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithTimestamp(start),
+		trace.WithAttributes(attribute.Int("http.response.status_code", 500)),
+	)
+	for i := range maxSpansPerTrace + 1 {
+		at := start.Add(time.Duration(i) * time.Millisecond)
+		_, git := tracer.Start(ctx, "git log", trace.WithTimestamp(at))
+		git.End(trace.WithTimestamp(at.Add(time.Millisecond)))
+	}
+	root.End(trace.WithTimestamp(testNow))
+
+	got, ok := store.Get(root.SpanContext().TraceID().String())
+	require.True(t, ok)
+	assert.Equal(t, "GET /{owner}/{repo}", got.Spans[0].Name)
+	assert.Equal(t, float64(1000), got.DurationMs)
+	assert.Equal(t, 1, got.DroppedSpans)
 }
 
 func TestStore_Routes(t *testing.T) {
@@ -229,6 +259,37 @@ func TestStore_SearchAmbiguousPrefix(t *testing.T) {
 
 	got = store.Search(SearchQuery{Q: "fedcba98"})
 	assert.Equal(t, 1, got.Total)
+}
+
+// A client may send the same trace ID with two requests, and the trace page
+// redirects to the only search result, so search lists only the trace that
+// Get returns.
+func TestStore_SearchReusedTraceID(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0xab, 1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	for _, status := range []int{500, 200} {
+		_, root := tracer.Start(ctx, "GET /a",
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithTimestamp(testNow.Add(-time.Second)),
+			trace.WithAttributes(attribute.Int("http.response.status_code", status)),
+		)
+		root.End(trace.WithTimestamp(testNow))
+	}
+
+	id := parent.TraceID().String()
+	got := store.Search(SearchQuery{Q: id})
+	require.Equal(t, 1, got.Total)
+	latest, ok := store.Get(id)
+	require.True(t, ok)
+	assert.Equal(t, 200, latest.Status)
+	assert.Equal(t, 200, got.Traces[0].Status)
 }
 
 func TestStore_MaxAge(t *testing.T) {

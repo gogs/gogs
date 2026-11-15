@@ -18,12 +18,13 @@ const (
 	maxPendingTraces = 10_000
 	// pendingMaxAge is how long a trace waits for its root span to end before
 	// it is dropped, e.g., when the root never ends.
-	pendingMaxAge    = 5 * time.Minute
-	maxSpansPerTrace = 1000
-	maxAttributes    = 32
-	maxValueBytes    = 1024
-	maxRoutes        = 500
-	maxOperations    = 1000
+	pendingMaxAge        = 5 * time.Minute
+	pendingSweepInterval = time.Minute
+	maxSpansPerTrace     = 1000
+	maxAttributes        = 32
+	maxValueBytes        = 1024
+	maxRoutes            = 500
+	maxOperations        = 1000
 	// slowForRouteWindow and slowForRouteMinRequests decide when a request is
 	// slow for its route: slower than the p99 of the route in the window, once
 	// the route had enough requests in it.
@@ -169,15 +170,17 @@ type Store struct {
 	opts Options
 	now  func() time.Time
 
-	mu         sync.Mutex
-	pending    map[trace.TraceID]*pendingTrace
-	kept       ring
-	sampled    ring
-	byID       map[string]*storedTrace
-	requests   series
-	routes     map[string]*routeSeries
-	operations map[string]*operationSeries
-	samples    map[string]sampleCount
+	mu      sync.Mutex
+	pending map[trace.TraceID]*pendingTrace
+	// pendingSweptAt is when expired pending traces were last dropped.
+	pendingSweptAt time.Time
+	kept           ring
+	sampled        ring
+	byID           map[string]*storedTrace
+	requests       series
+	routes         map[string]*routeSeries
+	operations     map[string]*operationSeries
+	samples        map[string]sampleCount
 	// interval collects the requests since the last call to TakeInterval.
 	interval      histogram
 	intervalStart time.Time
@@ -217,13 +220,14 @@ func (s *Store) OnStart(_ context.Context, sp sdktrace.ReadWriteSpan) {
 	id := sp.SpanContext().TraceID()
 	p := s.pending[id]
 	if p == nil {
-		if len(s.pending) >= maxPendingTraces {
-			s.dropExpiredPending()
-			if len(s.pending) >= maxPendingTraces {
-				return
-			}
+		now := s.now()
+		if now.Sub(s.pendingSweptAt) >= pendingSweepInterval {
+			s.dropExpiredPending(now)
 		}
-		p = &pendingTrace{started: s.now()}
+		if len(s.pending) >= maxPendingTraces {
+			return
+		}
+		p = &pendingTrace{started: now}
 		s.pending[id] = p
 	}
 	if isLocalRoot(sp.Parent()) {
@@ -231,8 +235,11 @@ func (s *Store) OnStart(_ context.Context, sp sdktrace.ReadWriteSpan) {
 	}
 }
 
-func (s *Store) dropExpiredPending() {
-	cutoff := s.now().Add(-pendingMaxAge)
+// dropExpiredPending drops the traces that wait for their root longer than
+// pendingMaxAge, e.g., of a span that started after its root ended.
+func (s *Store) dropExpiredPending(now time.Time) {
+	s.pendingSweptAt = now
+	cutoff := now.Add(-pendingMaxAge)
 	for id, p := range s.pending {
 		if p.started.Before(cutoff) {
 			delete(s.pending, id)
@@ -293,12 +300,14 @@ func (s *Store) OnEnd(sp sdktrace.ReadOnlySpan) {
 	if p == nil {
 		return
 	}
-	if len(p.spans) < maxSpansPerTrace {
+	localRoot := isLocalRoot(sp.Parent())
+	// A root ends after its children, so it is kept past the limit.
+	if len(p.spans) < maxSpansPerTrace || localRoot {
 		p.spans = append(p.spans, copied)
 	} else {
 		p.dropped++
 	}
-	if !isLocalRoot(sp.Parent()) {
+	if !localRoot {
 		return
 	}
 	p.root = &copied
@@ -380,7 +389,11 @@ func (s *Store) finish(id string, p *pendingTrace) {
 	rs := s.routes[t.route.Name]
 	if rs == nil {
 		if len(s.routes) >= maxRoutes {
-			t.route = Route{Name: t.route.Method, Kind: RouteKindOther, Method: t.route.Method}
+			if t.route.Kind == RouteKindBackground {
+				t.route = Route{Name: "other", Kind: RouteKindBackground}
+			} else {
+				t.route = Route{Name: t.route.Method, Kind: RouteKindOther, Method: t.route.Method}
+			}
 			rs = s.routes[t.route.Name]
 		}
 		if rs == nil {
@@ -433,7 +446,10 @@ func (s *Store) keepReason(t *storedTrace, rs *routeSeries) KeptReason {
 	}
 	minute := t.end().Unix() / 60
 	recent := rs.sum(minute-slowForRouteWindow+1, minute)
-	if recent.count >= slowForRouteMinRequests && t.duration > recent.hist.quantile(0.99) {
+	// The p99 is the middle of its bucket, so compare buckets: most requests of a
+	// route with steady latency fall in the bucket of its p99, half of them above
+	// its middle.
+	if recent.count >= slowForRouteMinRequests && histogramBucket(t.duration) > histogramBucket(recent.hist.quantile(0.99)) {
 		return KeptSlow
 	}
 	count := s.samples[t.route.Name]
