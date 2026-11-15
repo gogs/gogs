@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 const (
@@ -124,6 +126,20 @@ var allowedCommands = map[string]database.AccessMode{
 	"git-receive-pack":   database.AccessModeWrite,
 }
 
+// lfsAuthenticateCommand is the command that Git LFS runs over SSH to get the
+// URL and credentials of the LFS API of a repository, with the arguments
+// "<path> <operation>".
+const lfsAuthenticateCommand = "git-lfs-authenticate"
+
+var lfsOperations = map[string]database.AccessMode{
+	"download": database.AccessModeRead,
+	"upload":   database.AccessModeWrite,
+}
+
+// lfsTokenLifetime is how long the credentials that lfsAuthenticateCommand
+// gives remain valid. Git LFS runs the command again when they expire.
+const lfsTokenLifetime = time.Hour
+
 func runServ(ctx context.Context, cmd *cli.Command) error {
 	setup(cmd, "serv.log", true)
 
@@ -147,6 +163,14 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	// Hooks that Git runs record their spans under this one.
 	ctx = startProcessSpan(ctx, "ssh "+verb, time.Second)
 	defer endProcessSpan()
+
+	var lfsOperation string
+	if verb == lfsAuthenticateCommand {
+		// Unlike Git, Git LFS does not quote the path, which starts with a slash
+		// for remotes like "ssh://host/owner/repo.git".
+		args, lfsOperation, _ = strings.Cut(args, " ")
+		args = strings.TrimPrefix(args, "/")
+	}
 
 	repoFullName := strings.ToLower(strings.Trim(args, "'"))
 	repoFields := strings.SplitN(repoFullName, "/", 2)
@@ -175,6 +199,12 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	repo.Owner = owner
 
 	requestMode, ok := allowedCommands[verb]
+	if verb == lfsAuthenticateCommand {
+		requestMode, ok = lfsOperations[lfsOperation]
+		if !ok {
+			fail("Unknown LFS operation", "Unknown LFS operation '%s'", lfsOperation)
+		}
+	}
 	if !ok {
 		fail("Unknown git command", "Unknown git command '%s'", verb)
 	}
@@ -258,6 +288,11 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
+	if verb == lfsAuthenticateCommand {
+		lfsAuthenticate(ctx, key, user, repo, requestMode)
+		return nil
+	}
+
 	var envs []string
 	if requestMode == database.AccessModeWrite {
 		envs = database.ComposeHookEnvs(database.ComposeHookEnvsOptions{
@@ -281,4 +316,45 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	return nil
+}
+
+// lfsAuthenticate prints the URL of the LFS API of the repository with a token
+// that grants the access mode to it, after the key has been checked to have
+// that access.
+func lfsAuthenticate(ctx context.Context, key *database.PublicKey, user *database.User, repo *database.Repository, mode database.AccessMode) {
+	var userID int64
+	switch {
+	case user != nil:
+		userID = user.ID
+	case key.IsDeployKey():
+		// A deploy key acts for no user, so the token acts as the owner, limited to
+		// the repository and the mode the key was checked for.
+		userID = repo.OwnerID
+	default:
+		// Reading a public repository needs no user, but the LFS API needs one
+		// when signing in is required to view it.
+		keyOwner, err := database.Handle.Users().GetByKeyID(ctx, key.ID)
+		if err != nil {
+			fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
+		}
+		if keyOwner.IsDisabled() {
+			fail(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
+		}
+		userID = keyOwner.ID
+	}
+
+	token := lfsx.SignToken(conf.Security.SecretKey, lfsx.Token{
+		UserID:  userID,
+		RepoID:  repo.ID,
+		Upload:  mode >= database.AccessModeWrite,
+		Expires: time.Now().Add(lfsTokenLifetime).Unix(),
+	})
+	err := json.NewEncoder(os.Stdout).Encode(map[string]any{
+		"href":       conf.Server.ExternalURL + repo.Owner.Name + "/" + repo.Name + ".git/info/lfs",
+		"header":     map[string]string{"Authorization": "Bearer " + token},
+		"expires_in": int(lfsTokenLifetime.Seconds()),
+	})
+	if err != nil {
+		fail("Internal error", "Failed to write LFS credentials: %v", err)
+	}
 }

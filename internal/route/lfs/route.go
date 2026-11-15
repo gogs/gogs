@@ -3,6 +3,7 @@ package lfs
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flamego/flamego"
 	log "unknwon.dev/clog/v2"
@@ -53,9 +54,17 @@ func askCredentials(w http.ResponseWriter) {
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
 // A request without credentials continues as an anonymous user, whose ID is 0,
-// unless signing in is required to view anything.
+// unless signing in is required to view anything. A request with a bearer
+// token, which "gogs serv" gives to clients that authenticated over SSH, is
+// limited to what the token grants, which is mapped as *lfsx.Token.
 func authenticate(store Store) flamego.Handler {
 	return func(c flamego.Context) {
+		if bearer, ok := strings.CutPrefix(c.Request().Header.Get("Authorization"), "Bearer "); ok {
+			authenticateToken(c, store, bearer)
+			return
+		}
+		c.Map((*lfsx.Token)(nil))
+
 		username, password := authx.DecodeBasic(c.Request().Header)
 		if username == "" {
 			if conf.Auth.RequireSigninView {
@@ -116,9 +125,42 @@ func authenticate(store Store) flamego.Handler {
 	}
 }
 
-// authorize tries to authorize the user to the context repository with given access mode.
+// authenticateToken authenticates the user of the bearer token.
+func authenticateToken(c flamego.Context, store Store, bearer string) {
+	token, err := lfsx.ParseToken(conf.Security.SecretKey, bearer, time.Now())
+	if err != nil {
+		log.Trace("[LFS] Invalid token: %v", err)
+		askCredentials(c.ResponseWriter())
+		return
+	}
+
+	user, err := store.GetUserByID(c.Request().Context(), token.UserID)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			askCredentials(c.ResponseWriter())
+		} else {
+			internalServerError(c.ResponseWriter())
+			log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+		}
+		return
+	}
+	if user.IsDisabled() {
+		responseJSON(c.ResponseWriter(), http.StatusForbidden, responseError{
+			Message: "User account is disabled",
+		})
+		return
+	}
+
+	log.Trace("[LFS] Authenticated user by token: %s", user.Name)
+	c.Map(user)
+	c.Map(token)
+}
+
+// authorize tries to authorize the user to the context repository with given
+// access mode, within what the token grants when the user authenticated with
+// one.
 func authorize(store Store, mode database.AccessMode) flamego.Handler {
-	return func(c flamego.Context, actor *database.User) {
+	return func(c flamego.Context, actor *database.User, token *lfsx.Token) {
 		username := c.Param("owner")
 		reponame := strings.TrimSuffix(c.Param("repo"), ".git")
 
@@ -141,6 +183,13 @@ func authorize(store Store, mode database.AccessMode) flamego.Handler {
 				internalServerError(c.ResponseWriter())
 				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
 			}
+			return
+		}
+
+		if token != nil && (token.RepoID != repo.ID || mode > database.AccessModeRead && !token.Upload) {
+			responseJSON(c.ResponseWriter(), http.StatusForbidden, responseError{
+				Message: "The token does not grant this access",
+			})
 			return
 		}
 

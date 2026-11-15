@@ -16,7 +16,7 @@ import (
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
 func serveBatch(store Store) flamego.Handler {
-	return func(c flamego.Context, owner *database.User, repo *database.Repository) {
+	return func(c flamego.Context, owner *database.User, repo *database.Repository, token *lfsx.Token) {
 		var request batchRequest
 		defer func() { _ = c.Request().Request.Body.Close() }()
 		err := json.NewDecoder(c.Request().Request.Body).Decode(&request)
@@ -32,6 +32,19 @@ func serveBatch(store Store) flamego.Handler {
 		// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/object/basic
 		baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
 
+		// Git LFS sends the token it got over SSH only to the batch API, so the
+		// actions carry it to the transfers.
+		withToken := func(header map[string]string) map[string]string {
+			if token == nil {
+				return header
+			}
+			if header == nil {
+				header = make(map[string]string, 1)
+			}
+			header["Authorization"] = c.Request().Header.Get("Authorization")
+			return header
+		}
+
 		objects := make([]batchObject, 0, len(request.Objects))
 		switch request.Operation {
 		case basicOperationUpload:
@@ -41,14 +54,15 @@ func serveBatch(store Store) flamego.Handler {
 					actions = batchActions{
 						Upload: &batchAction{
 							Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
-							Header: map[string]string{
+							Header: withToken(map[string]string{
 								// NOTE: git-lfs v2.5.0 sets the Content-Type based on the uploaded file.
 								// This ensures that the client always uses the designated value for the header.
 								"Content-Type": "application/octet-stream",
-							},
+							}),
 						},
 						Verify: &batchAction{
-							Href: fmt.Sprintf("%s/verify", baseHref),
+							Href:   fmt.Sprintf("%s/verify", baseHref),
+							Header: withToken(nil),
 						},
 					}
 				} else {
@@ -93,7 +107,8 @@ func serveBatch(store Store) flamego.Handler {
 						}
 					} else {
 						actions.Download = &batchAction{
-							Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
+							Href:   fmt.Sprintf("%s/%s", baseHref, obj.Oid),
+							Header: withToken(nil),
 						}
 					}
 				} else {
