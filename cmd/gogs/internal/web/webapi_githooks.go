@@ -87,8 +87,8 @@ type repoGitHookRequest struct {
 	Content string `json:"content"`
 }
 
-// putRepoGitHook saves the content of the hook. Empty content leaves the
-// hook in place but makes it do nothing.
+// putRepoGitHook saves the content of the hook. Empty content removes the
+// hook.
 func putRepoGitHook(hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
 	if err = hook.Update(req.Content); err != nil {
 		log.Error("putRepoGitHook: update hook %q: %v", hook.Path(), err)
