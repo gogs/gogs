@@ -15,7 +15,7 @@ Use mono only for content that **is** code, not for UI chrome (navbars, buttons,
 
 Don't mix sans and mono within the same UI surface for arbitrary reasons. If a component is showing code, all of it goes mono.
 
-Inline code within text is a chip, `rounded bg-(--color-surface) px-1 font-mono`, so it reads as code without relying on the font alone. Give it `text-(--color-foreground)` when it sits in muted text, and `box-decoration-clone` when a long value may wrap.
+Inline code within text is a chip, `rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono`, so it reads as code without relying on the font alone. The border keeps the chip visible where the surface color is close to the background. Give it `text-(--color-foreground)` when it sits in muted text, and `box-decoration-clone` when a long value may wrap.
 
 ## Color hierarchy
 

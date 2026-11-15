@@ -59,7 +59,7 @@ function ReportValue({ row }: { row: AdminReportRow }) {
       return row.value ? (
         // Cloned decoration keeps the chip's padding and corners on every line
         // a long value wraps to.
-        <code className="rounded box-decoration-clone bg-(--color-surface) px-1 align-top font-mono text-[0.8125rem] text-(--color-foreground)">
+        <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
           {row.value}
         </code>
       ) : null;
@@ -103,6 +103,7 @@ function Report({ section, children }: { section: AdminReportSection; children?:
             {group.map((row) => (
               <Fact key={row.label} label={row.label}>
                 <ReportValue row={row} />
+                {row.hint && <span className="ms-2 text-xs">{row.hint}</span>}
               </Fact>
             ))}
           </Facts>
@@ -312,7 +313,7 @@ export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
               <li key={task.description} className={ROW_CLASS}>
                 <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-semibold wrap-anywhere">{task.description}</span>
-                  <code className="rounded bg-(--color-surface) px-1 font-mono text-xs">{task.schedule}</code>
+                  <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">{task.schedule}</code>
                 </p>
                 <Details>
                   <Detail label={t("admin.monitor.next")}>

@@ -159,6 +159,8 @@ export interface AdminReportRow {
   kind: "text" | "code" | "block" | "bool" | "unset";
   value?: string;
   on?: boolean;
+  // A note shown after the value, e.g., which database types use it.
+  hint?: string;
 }
 
 export interface AdminReportSection {

@@ -36,6 +36,8 @@ type adminReportRow struct {
 	Value string `json:"value,omitempty"`
 	// On is the value of a "bool" row.
 	On bool `json:"on,omitempty"`
+	// Hint is a note shown after the value, e.g., which database types use it.
+	Hint string `json:"hint,omitempty"`
 }
 
 // adminReportSection is a titled part of a report. Groups are shown with a
@@ -53,6 +55,12 @@ type adminReport struct {
 
 func (r adminReport) text(key string, value any) adminReportRow {
 	return adminReportRow{Label: r.l.Tr(key), Kind: "text", Value: fmt.Sprint(value)}
+}
+
+// withHint returns the row with a translated note shown after its value.
+func (r adminReport) withHint(row adminReportRow, hintKey string) adminReportRow {
+	row.Hint = r.l.Tr(hintKey)
+	return row
 }
 
 // textUnit is a number followed by its translated unit, e.g., minutes.
@@ -302,10 +310,10 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.text("admin.config.db.type", db.Type),
 			r.text("admin.config.db.host", db.Host),
 			r.text("admin.config.db.name", db.Name),
-			r.text("admin.config.db.schema", strings.TrimSpace(db.Schema+" "+l.Tr("admin.config.db.schema_helper"))),
+			r.withHint(r.text("admin.config.db.schema", db.Schema), "admin.config.db.schema_helper"),
 			r.text("admin.config.db.user", db.User),
-			r.text("admin.config.db.ssl_mode", strings.TrimSpace(db.SSLMode+" "+l.Tr("admin.config.db.ssl_mode_helper"))),
-			r.text("admin.config.db.path", strings.TrimSpace(db.Path+" "+l.Tr("admin.config.db.path_helper"))),
+			r.withHint(r.text("admin.config.db.ssl_mode", db.SSLMode), "admin.config.db.ssl_mode_helper"),
+			r.withHint(r.code("admin.config.db.path", db.Path), "admin.config.db.path_helper"),
 		),
 		rows(
 			r.text("admin.config.db.max_open_conns", db.MaxOpenConns),
