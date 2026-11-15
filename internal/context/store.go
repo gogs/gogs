@@ -17,6 +17,12 @@ type Store interface {
 	// the current time.
 	TouchAccessTokenByID(ctx context.Context, id int64) error
 
+	// GetLoginSessionByToken returns the login session of the user with the given
+	// token. It returns database.ErrLoginSessionNotExist when not found.
+	GetLoginSessionByToken(ctx context.Context, userID int64, token string) (*database.LoginSession, error)
+	// TouchLoginSession records that the login session was seen now.
+	TouchLoginSession(ctx context.Context, ls *database.LoginSession) error
+
 	// GetUserByID returns the user with given ID. It returns
 	// database.ErrUserNotExist when not found.
 	GetUserByID(ctx context.Context, id int64) (*database.User, error)
@@ -57,6 +63,14 @@ func (*store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.
 
 func (*store) TouchAccessTokenByID(ctx context.Context, id int64) error {
 	return database.Handle.AccessTokens().Touch(ctx, id)
+}
+
+func (*store) GetLoginSessionByToken(ctx context.Context, userID int64, token string) (*database.LoginSession, error) {
+	return database.Handle.LoginSessions().GetByToken(ctx, userID, token)
+}
+
+func (*store) TouchLoginSession(ctx context.Context, ls *database.LoginSession) error {
+	return database.Handle.LoginSessions().Touch(ctx, ls)
 }
 
 func (*store) GetUserByID(ctx context.Context, id int64) (*database.User, error) {

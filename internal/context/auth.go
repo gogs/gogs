@@ -120,6 +120,10 @@ func turnsAway(c *Context, options *ToggleOptions) bool {
 	return options.SignInRequired
 }
 
+// LoginSessionKey is the session key of the token of the login session the
+// browser signed in with, see database.LoginSession.
+const LoginSessionKey = "loginSession"
+
 type AuthStore interface {
 	// GetAccessTokenBySHA1 returns the access token with given SHA1. It returns
 	// database.ErrAccessTokenNotExist when not found.
@@ -155,9 +159,19 @@ type AuthStore interface {
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
+// sessionAuthStore is the data layer of signing in through the web session.
+type sessionAuthStore interface {
+	AuthStore
+	// GetLoginSessionByToken returns the login session of the user with the given
+	// token. It returns database.ErrLoginSessionNotExist when not found.
+	GetLoginSessionByToken(ctx context.Context, userID int64, token string) (*database.LoginSession, error)
+	// TouchLoginSession records that the login session was seen now.
+	TouchLoginSession(ctx context.Context, ls *database.LoginSession) error
+}
+
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
-func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
+func authenticatedUserID(store sessionAuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
 	// Check access token.
 	if isAPIPath(c.Req.URL.Path) {
 		var tokenSHA string
@@ -190,7 +204,21 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
-		_, err := store.GetUserByID(c.Req.Context(), id)
+		// The browser is only signed in while its login session exists, so
+		// revoking it signs the browser out.
+		token, _ := sess.Get(LoginSessionKey).(string)
+		ls, err := store.GetLoginSessionByToken(c.Req.Context(), id, token)
+		if err != nil {
+			if !database.IsErrLoginSessionNotExist(err) {
+				log.Error("Failed to get login session: %v", err)
+			}
+			return 0, false
+		}
+		if err = store.TouchLoginSession(c.Req.Context(), ls); err != nil {
+			log.Error("Failed to touch login session: %v", err)
+		}
+
+		_, err = store.GetUserByID(c.Req.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
 				log.Error("Failed to get user by ID: %v", err)
@@ -204,7 +232,7 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
+func authenticatedUser(store sessionAuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
 	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
 
 	if uid <= 0 {

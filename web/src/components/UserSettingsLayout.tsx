@@ -12,6 +12,7 @@ export type UserSettingsPage =
   | "email"
   | "ssh"
   | "security"
+  | "sessions"
   | "repositories"
   | "organizations"
   | "applications"
@@ -25,6 +26,7 @@ const NAV: { page: UserSettingsPage; path: string; label: string }[] = [
   { page: "email", path: "/email", label: "settings.emails" },
   { page: "ssh", path: "/ssh", label: "settings.ssh_keys" },
   { page: "security", path: "/security", label: "settings.security" },
+  { page: "sessions", path: "/sessions", label: "settings.sessions" },
   { page: "repositories", path: "/repositories", label: "settings.repos" },
   { page: "organizations", path: "/organizations", label: "settings.orgs" },
   { page: "applications", path: "/applications", label: "settings.applications" },

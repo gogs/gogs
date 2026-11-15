@@ -496,6 +496,7 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 
 			{&AccessToken{}, "uid = @userID"},
 			{&Passkey{}, "user_id = @userID"},
+			{&LoginSession{}, "user_id = @userID"},
 			{&Collaboration{}, "user_id = @userID"},
 			{&Access{}, "user_id = @userID"},
 			{&Action{}, "user_id = @userID"},
@@ -969,7 +970,18 @@ func (s *UsersStore) Update(ctx context.Context, userID int64, opts UpdateUserOp
 		updates["avatar_email"] = strx.Truncate(*opts.AvatarEmail, 255)
 	}
 
-	return s.db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
+	if opts.Password == nil {
+		return s.db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
+	}
+	// A new password signs the user out everywhere, so whoever knew the old one
+	// loses access. The caller starts a new login session for the browser that
+	// changed it, when it should stay signed in.
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+			return err
+		}
+		return tx.Where("user_id = ?", userID).Delete(new(LoginSession)).Error
+	})
 }
 
 // UseCustomAvatar uses the given avatar as the user custom avatar.

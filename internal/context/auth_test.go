@@ -1,11 +1,13 @@
 package context
 
 import (
+	stdcontext "context"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-macaron/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
@@ -125,4 +127,60 @@ func TestContextNotFoundPassesUser(t *testing.T) {
 
 	m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/alice/missing", nil))
 	assert.Same(t, viewer, got)
+}
+
+// loginSessionStore signs in user 1 through the web session while the login
+// session with the token "live" exists.
+type loginSessionStore struct {
+	AuthStore
+	touched int
+}
+
+func (s *loginSessionStore) GetLoginSessionByToken(_ stdcontext.Context, userID int64, token string) (*database.LoginSession, error) {
+	if userID == 1 && token == "live" {
+		return &database.LoginSession{ID: 7, UserID: 1}, nil
+	}
+	return nil, database.ErrLoginSessionNotExist{}
+}
+
+func (s *loginSessionStore) TouchLoginSession(stdcontext.Context, *database.LoginSession) error {
+	s.touched++
+	return nil
+}
+
+func (*loginSessionStore) GetUserByID(_ stdcontext.Context, id int64) (*database.User, error) {
+	return &database.User{ID: id}, nil
+}
+
+// memorySessionStore is a web session that keeps its values in memory.
+type memorySessionStore struct {
+	session.Store
+	values map[any]any
+}
+
+func (s *memorySessionStore) Get(k any) any { return s.values[k] }
+
+func TestAuthenticatedUserID_LoginSession(t *testing.T) {
+	tests := []struct {
+		name   string
+		values map[any]any
+		wantID int64
+	}{
+		{name: "live login session", values: map[any]any{"uid": int64(1), LoginSessionKey: "live"}, wantID: 1},
+		{name: "revoked login session", values: map[any]any{"uid": int64(1), LoginSessionKey: "revoked"}},
+		{name: "signed in before login sessions existed", values: map[any]any{"uid": int64(1)}},
+		{name: "token of another user", values: map[any]any{"uid": int64(2), LoginSessionKey: "live"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &loginSessionStore{}
+			c := &macaron.Context{Req: macaron.Request{Request: httptest.NewRequest(http.MethodGet, "/", nil)}}
+			id, isToken := authenticatedUserID(store, c, &memorySessionStore{values: tc.values})
+			assert.Equal(t, tc.wantID, id)
+			assert.False(t, isToken)
+			if tc.wantID != 0 {
+				assert.Equal(t, 1, store.touched, "a live login session should be marked as seen")
+			}
+		})
+	}
 }

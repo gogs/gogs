@@ -99,6 +99,24 @@ Indexes:
 Primary keys: repo_id, oid
 ```
 
+# Table "login_session"
+
+```
+    Field     |     Column     |         PostgreSQL          |            MySQL            |           SQLite3           
+--------------+----------------+-----------------------------+-----------------------------+-----------------------------
+ ID           | id             | BIGSERIAL                   | BIGINT AUTO_INCREMENT       | INTEGER AUTOINCREMENT       
+ UserID       | user_id        | BIGINT NOT NULL             | BIGINT NOT NULL             | INTEGER NOT NULL            
+ TokenHash    | token_hash     | VARCHAR(64) NOT NULL UNIQUE | VARCHAR(64) NOT NULL UNIQUE | VARCHAR(64) NOT NULL UNIQUE 
+ UserAgent    | user_agent     | VARCHAR(512)                | VARCHAR(512)                | VARCHAR(512)                
+ IP           | ip             | VARCHAR(64)                 | VARCHAR(64)                 | VARCHAR(64)                 
+ CreatedUnix  | created_unix   | BIGINT                      | BIGINT                      | INTEGER                     
+ LastSeenUnix | last_seen_unix | BIGINT                      | BIGINT                      | INTEGER                     
+
+Primary keys: id
+Indexes: 
+	"idx_login_session_user_id" (user_id)
+```
+
 # Table "login_source"
 
 ```

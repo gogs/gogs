@@ -521,6 +521,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	for _, table := range []any{
 		&AccessToken{UserID: testUser.ID},
 		&Passkey{UserID: testUser.ID},
+		&LoginSession{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
 		&Access{UserID: testUser.ID},
 		&Action{UserID: testUser.ID},
@@ -577,6 +578,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		&PublicKey{OwnerID: testUser.ID},
 		&AccessToken{UserID: testUser.ID},
 		&Passkey{UserID: testUser.ID},
+		&LoginSession{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
 		&Access{UserID: testUser.ID},
 		&Action{UserID: testUser.ID},
@@ -626,6 +628,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		&PublicKey{OwnerID: testUser.ID},
 		&AccessToken{UserID: testUser.ID},
 		&Passkey{UserID: testUser.ID},
+		&LoginSession{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
 		&Access{UserID: testUser.ID},
 		&Action{UserID: testUser.ID},
@@ -1023,10 +1026,20 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 	t.Run("update password", func(t *testing.T) {
 		got := userx.ValidatePassword(alice.Password, alice.Salt, oldPassword)
 		require.True(t, got)
+		loginSessions := newLoginSessionsStore(s.db)
+		_, token, err := loginSessions.Create(ctx, alice.ID, "", "")
+		require.NoError(t, err)
+		_, otherToken, err := loginSessions.Create(ctx, 999, "", "")
+		require.NoError(t, err)
 
 		newPassword := "NewPassword"
 		err = s.Update(ctx, alice.ID, UpdateUserOptions{Password: &newPassword})
 		require.NoError(t, err)
+
+		_, err = loginSessions.GetByToken(ctx, alice.ID, token)
+		assert.True(t, IsErrLoginSessionNotExist(err), "A new password should sign the user out everywhere")
+		_, err = loginSessions.GetByToken(ctx, 999, otherToken)
+		assert.NoError(t, err, "Other users should stay signed in")
 		alice, err = s.GetByID(ctx, alice.ID)
 		require.NoError(t, err)
 

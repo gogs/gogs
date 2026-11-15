@@ -42,7 +42,7 @@ var Tables = []any{
 	new(Access), new(AccessToken), new(Action),
 	new(EmailAddress),
 	new(Follow),
-	new(LFSObject), new(LoginSource),
+	new(LFSObject), new(LoginSession), new(LoginSource),
 	new(Notice),
 	new(Passkey),
 }
@@ -154,6 +154,10 @@ func (db *DB) LFS() *LFSStore {
 // NOTE: It is not guarded by a mutex because it only gets written during the
 // service start.
 var loadedLoginSourceFilesStore loginSourceFilesStore
+
+func (db *DB) LoginSessions() *LoginSessionsStore {
+	return newLoginSessionsStore(db.db)
+}
 
 func (db *DB) LoginSources() *LoginSourcesStore {
 	return newLoginSourcesStore(db.db, loadedLoginSourceFilesStore)
