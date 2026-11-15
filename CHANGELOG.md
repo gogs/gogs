@@ -13,6 +13,7 @@ All notable changes to Gogs are documented in this file.
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
 - The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`, and lists branches page by page with `page` and `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
+- Site admins can list all users and all repositories, including private ones, through the API with `GET /api/v1/admin/users` and `GET /api/v1/admin/repos`. [#8583](https://github.com/gogs/gogs/pull/8583)
 
 ### Changed
 
