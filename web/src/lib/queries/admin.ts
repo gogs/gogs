@@ -253,7 +253,6 @@ export const AUTH_SOURCE_TYPES = [
   { type: 5, name: "LDAP (simple auth)" },
   { type: 3, name: "SMTP" },
   { type: 4, name: "PAM" },
-  { type: 6, name: "GitHub" },
 ] as const;
 
 export const LDAP_SECURITY_PROTOCOLS = [
@@ -309,7 +308,6 @@ export interface AdminAuthSourceConfig {
   allowedDomains: string;
   tls: boolean;
   pamServiceName: string;
-  githubAPIEndpoint: string;
   skipVerify: boolean;
 }
 

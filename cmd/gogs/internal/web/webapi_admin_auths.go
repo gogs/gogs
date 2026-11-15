@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -107,10 +105,7 @@ type adminAuthSourceConfig struct {
 	// PAM.
 	PAMServiceName string `json:"pamServiceName"`
 
-	// GitHub.
-	GitHubAPIEndpoint string `json:"githubAPIEndpoint"`
-
-	// SkipVerify applies to LDAP over TLS, SMTP and GitHub.
+	// SkipVerify applies to LDAP over TLS and SMTP.
 	SkipVerify bool `json:"skipVerify"`
 }
 
@@ -146,9 +141,6 @@ func getAdminAuthSource(target *adminTargetAuthSource) (statusCode int, resp *ad
 		cfg.AllowedDomains, cfg.TLS, cfg.SkipVerify = m.AllowedDomains, m.TLS, m.SkipVerify
 	case s.IsPAM():
 		cfg.PAMServiceName = s.PAM().ServiceName
-	case s.IsGitHub():
-		g := s.GitHub()
-		cfg.GitHubAPIEndpoint, cfg.SkipVerify = g.APIEndpoint, g.SkipVerify
 	}
 	return http.StatusOK, d, nil
 }
@@ -207,14 +199,6 @@ func checkAdminAuthSource(l i18n.Locale, typ auth.Type, req *adminAuthSourceRequ
 		requirePort("smtpPort", "admin.auths.smtpport", req.SMTPPort)
 	case auth.PAM:
 		require("pamServiceName", "admin.auths.pam_service_name", req.PAMServiceName)
-	case auth.GitHub:
-		u, err := url.ParseRequestURI(req.GitHubAPIEndpoint)
-		switch {
-		case strings.TrimSpace(req.GitHubAPIEndpoint) == "":
-			fail("githubAPIEndpoint", "admin.auths.github_api_endpoint", "form.require_error")
-		case err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "":
-			fail("githubAPIEndpoint", "admin.auths.github_api_endpoint", "form.url_error")
-		}
 	}
 	if len(fields) == 0 {
 		return nil
@@ -260,11 +244,6 @@ func adminAuthSourceProvider(typ auth.Type, req *adminAuthSourceRequest, bindPas
 		})
 	case auth.PAM:
 		return pam.NewProvider(&pam.Config{ServiceName: req.PAMServiceName})
-	case auth.GitHub:
-		return github.NewProvider(&github.Config{
-			APIEndpoint: strings.TrimSuffix(req.GitHubAPIEndpoint, "/") + "/",
-			SkipVerify:  req.SkipVerify,
-		})
 	}
 	return nil
 }

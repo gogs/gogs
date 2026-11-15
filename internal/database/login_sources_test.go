@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -128,11 +127,6 @@ func TestLoginSource_AfterFind(t *testing.T) {
 			authType: auth.PAM,
 			wantType: &pam.Provider{},
 		},
-		{
-			name:     "GitHub",
-			authType: auth.GitHub,
-			wantType: &github.Provider{},
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -189,15 +183,15 @@ func TestLoginSources(t *testing.T) {
 }
 
 func loginSourcesCreate(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
-	// Create first login source with name "GitHub"
+	// Create first login source with name "Corp PAM"
 	source, err := s.Create(ctx,
 		CreateLoginSourceOptions{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
+			Type:      auth.PAM,
+			Name:      "Corp PAM",
 			Activated: true,
 			Default:   false,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+			Config: &pam.Config{
+				ServiceName: "login",
 			},
 		},
 	)
@@ -227,12 +221,12 @@ func loginSourcesCount(t *testing.T, ctx context.Context, s *LoginSourcesStore) 
 	// Create two login sources, one in database and one as source file.
 	_, err := s.Create(ctx,
 		CreateLoginSourceOptions{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
+			Type:      auth.PAM,
+			Name:      "Corp PAM",
 			Activated: true,
 			Default:   false,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+			Config: &pam.Config{
+				ServiceName: "login",
 			},
 		},
 	)
@@ -249,12 +243,12 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 	t.Run("delete but in used", func(t *testing.T) {
 		source, err := s.Create(ctx,
 			CreateLoginSourceOptions{
-				Type:      auth.GitHub,
-				Name:      "GitHub",
+				Type:      auth.PAM,
+				Name:      "Corp PAM",
 				Activated: true,
 				Default:   false,
-				Config: &github.Config{
-					APIEndpoint: "https://api.github.com",
+				Config: &pam.Config{
+					ServiceName: "login",
 				},
 			},
 		)
@@ -280,15 +274,15 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 	})
 	setMockLoginSourceFilesStore(t, s, mock)
 
-	// Create a login source with name "GitHub2"
+	// Create a login source with name "Corp PAM2"
 	source, err := s.Create(ctx,
 		CreateLoginSourceOptions{
-			Type:      auth.GitHub,
-			Name:      "GitHub2",
+			Type:      auth.PAM,
+			Name:      "Corp PAM2",
 			Activated: true,
 			Default:   false,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+			Config: &pam.Config{
+				ServiceName: "login",
 			},
 		},
 	)
@@ -322,15 +316,15 @@ func loginSourcesGetByID(t *testing.T, ctx context.Context, s *LoginSourcesStore
 	})
 	setMockLoginSourceFilesStore(t, s, mock)
 
-	expConfig := &github.Config{
-		APIEndpoint: "https://api.github.com",
+	expConfig := &pam.Config{
+		ServiceName: "login",
 	}
 
-	// Create a login source with name "GitHub"
+	// Create a login source with name "Corp PAM"
 	source, err := s.Create(ctx,
 		CreateLoginSourceOptions{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
+			Type:      auth.PAM,
+			Name:      "Corp PAM",
 			Activated: true,
 			Default:   false,
 			Config:    expConfig,
@@ -376,14 +370,18 @@ func loginSourcesList(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
 	require.NoError(t, err)
 	_, err = s.Create(ctx,
 		CreateLoginSourceOptions{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
+			Type:      auth.PAM,
+			Name:      "Corp PAM",
 			Activated: true,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+			Config: &pam.Config{
+				ServiceName: "login",
 			},
 		},
 	)
+	require.NoError(t, err)
+	// A GitHub source stored before its support was removed is left out.
+	err = s.db.Exec(`INSERT INTO login_source (type, name, is_actived, cfg) VALUES (?, ?, ?, ?)`,
+		auth.Removed, "GitHub", true, `{"APIEndpoint":"https://api.github.com/"}`).Error
 	require.NoError(t, err)
 
 	// List all login sources
@@ -427,12 +425,12 @@ func loginSourcesResetNonDefault(t *testing.T, ctx context.Context, s *LoginSour
 	require.NoError(t, err)
 	source2, err := s.Create(ctx,
 		CreateLoginSourceOptions{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
+			Type:      auth.PAM,
+			Name:      "Corp PAM",
 			Activated: true,
 			Default:   true,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+			Config: &pam.Config{
+				ServiceName: "login",
 			},
 		},
 	)
@@ -454,23 +452,23 @@ func loginSourcesResetNonDefault(t *testing.T, ctx context.Context, s *LoginSour
 
 func loginSourcesSave(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
 	t.Run("save to database", func(t *testing.T) {
-		// Create a login source with name "GitHub"
+		// Create a login source with name "Corp PAM"
 		source, err := s.Create(ctx,
 			CreateLoginSourceOptions{
-				Type:      auth.GitHub,
-				Name:      "GitHub",
+				Type:      auth.PAM,
+				Name:      "Corp PAM",
 				Activated: true,
 				Default:   false,
-				Config: &github.Config{
-					APIEndpoint: "https://api.github.com",
+				Config: &pam.Config{
+					ServiceName: "login",
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		source.IsActived = false
-		source.Provider = github.NewProvider(&github.Config{
-			APIEndpoint: "https://api2.github.com",
+		source.Provider = pam.NewProvider(&pam.Config{
+			ServiceName: "system-auth",
 		})
 		err = s.Save(ctx, source)
 		require.NoError(t, err)
@@ -478,14 +476,14 @@ func loginSourcesSave(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
 		source, err = s.GetByID(ctx, source.ID)
 		require.NoError(t, err)
 		assert.False(t, source.IsActived)
-		assert.Equal(t, "https://api2.github.com", source.GitHub().APIEndpoint)
+		assert.Equal(t, "system-auth", source.Provider.Config().(*pam.Config).ServiceName)
 	})
 
 	t.Run("save to file", func(t *testing.T) {
 		mockFile := NewMockLoginSourceFileStore()
 		source := &LoginSource{
-			Provider: github.NewProvider(&github.Config{
-				APIEndpoint: "https://api.github.com",
+			Provider: pam.NewProvider(&pam.Config{
+				ServiceName: "login",
 			}),
 			File: mockFile,
 		}

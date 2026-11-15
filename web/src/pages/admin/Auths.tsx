@@ -26,7 +26,6 @@ const LDAP = 2;
 const SMTP = 3;
 const PAM = 4;
 const DLDAP = 5;
-const GITHUB = 6;
 
 // FIELD_ORDER is the display order of the fields, so the first one the server
 // rejects gets focus.
@@ -55,7 +54,6 @@ const FIELD_ORDER = [
   "smtpPort",
   "allowedDomains",
   "pamServiceName",
-  "githubAPIEndpoint",
 ] as const;
 
 const NEW_SOURCE: AdminAuthSourceForm = {
@@ -88,7 +86,6 @@ const NEW_SOURCE: AdminAuthSourceForm = {
   allowedDomains: "",
   tls: false,
   pamServiceName: "",
-  githubAPIEndpoint: "",
   skipVerify: false,
 };
 
@@ -134,7 +131,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
   const { fields, formError } = formErrors(save.error);
 
   const isLDAP = form.type === LDAP || form.type === DLDAP;
-  const usesTLS = form.type === SMTP || form.type === GITHUB || (isLDAP && form.securityProtocol > 0);
+  const usesTLS = form.type === SMTP || (isLDAP && form.securityProtocol > 0);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -320,12 +317,6 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
 
           {form.type === PAM
             ? textField("pamServiceName", t("admin.auths.pam_service_name"), { placeholder: "system-auth" })
-            : null}
-
-          {form.type === GITHUB
-            ? textField("githubAPIEndpoint", t("admin.auths.github_api_endpoint"), {
-                placeholder: "https://api.github.com/",
-              })
             : null}
 
           <div className="flex flex-col gap-3 border-t border-(--color-border) pt-5">
