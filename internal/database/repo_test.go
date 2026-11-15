@@ -244,3 +244,47 @@ func TestResolveMissingDefaultBranch(t *testing.T) {
 		})
 	}
 }
+
+func TestMigrateRepository_NumWatches(t *testing.T) {
+	conf.SetMockRepository(t, conf.RepositoryOpts{Root: filepath.Join(t.TempDir(), "repositories"), MaxCreationLimit: -1, DefaultBranch: "main"})
+	before := Handle
+	Handle = &DB{db: newTestDB(t, "migrateRepositoryNumWatches")}
+	t.Cleanup(func() { Handle = before })
+
+	ctx := context.Background()
+	alice, err := Handle.Users().Create(ctx, "alice", "alice@example.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+	bob, err := Handle.Users().Create(ctx, "bob", "bob@example.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+	org := &User{Name: "acme", Type: UserTypeOrganization}
+	require.NoError(t, CreateOrganization(org, alice))
+	ownerTeam, err := org.GetOwnerTeam()
+	require.NoError(t, err)
+	require.NoError(t, AddTeamMember(org.ID, ownerTeam.ID, bob.ID))
+
+	source := t.TempDir()
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"},
+		{"-c", "user.name=alice", "-c", "user.email=alice@example.com", "commit", "-q", "--allow-empty", "-m", "initial"},
+	} {
+		out, err := exec.Command("git", append([]string{"-C", source}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+
+	for _, owner := range []*User{alice, org} {
+		for _, mirror := range []bool{false, true} {
+			name := "plain"
+			if mirror {
+				name = "mirror"
+			}
+			repo, err := MigrateRepository(ctx, alice, owner, MigrateRepoOptions{Name: name, IsMirror: mirror, RemoteAddr: source})
+			require.NoError(t, err, "%s/%s", owner.Name, name)
+
+			var watches int64
+			require.NoError(t, Handle.db.Model(new(Watch)).Where("repo_id = ?", repo.ID).Count(&watches).Error)
+			saved, err := getRepositoryByID(Handle.db, repo.ID)
+			require.NoError(t, err)
+			assert.Equal(t, int(watches), saved.NumWatches, "%s/%s", owner.Name, name)
+		}
+	}
+}
