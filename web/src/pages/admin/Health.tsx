@@ -2,9 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { type KeyboardEvent, type MouseEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { webContext } from "@/lib/context";
 import { fill, formatMs, formatNumber } from "@/lib/format";
 import type { AdminHealth, AdminHealthKey, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
+import { formatAbsoluteTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 
 type HealthSection = "traffic" | "runtime" | "resources";
@@ -56,13 +56,6 @@ function formatBytes(v: number) {
   if (v >= 1 << 30) return `${(v / (1 << 30)).toFixed(2)} GB`;
   return `${Math.round(v / (1 << 20))} MB`;
 }
-
-const CLOCK_FMT = new Intl.DateTimeFormat(webContext.lang, { hour: "2-digit", minute: "2-digit" });
-const CLOCK_SECONDS_FMT = new Intl.DateTimeFormat(webContext.lang, {
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
 
 function median(values: number[]) {
   return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
@@ -154,7 +147,7 @@ function Sparkline({
       aria-valuemin={start}
       aria-valuemax={end}
       aria-valuenow={cursor ?? end}
-      aria-valuetext={CLOCK_SECONDS_FMT.format(cursor ?? end)}
+      aria-valuetext={formatAbsoluteTime(cursor ?? end)}
       onPointerMove={(e) => {
         if (e.pointerType === "mouse") onCursor(timeAt(e));
       }}
@@ -237,12 +230,12 @@ export function ServerHealth({
     if (!f) return "";
     return "up" in f
       ? fill(t("admin.health.up_recently"), f.up.toFixed(1))
-      : fill(t("admin.health.spike_from"), CLOCK_FMT.format(f.spikeAt));
+      : fill(t("admin.health.spike_from"), formatAbsoluteTime(f.spikeAt));
   };
 
   let readout: ReactNode = t(empty ? "admin.health.collecting" : "admin.health.help");
   if (cursor !== null) {
-    const clock = CLOCK_SECONDS_FMT.format(cursor);
+    const clock = formatAbsoluteTime(cursor);
     // Traces start before they end, and a point of the 24 hours sums up the 5
     // minutes before it, so open a window of at least a step around the moment.
     const around = Math.max(60_000, stepMs);
@@ -258,7 +251,7 @@ export function ServerHealth({
           search={{ view: "search", from, to }}
           className="text-(--color-primary) hover:underline"
         >
-          {fill(t("admin.health.open_traces"), CLOCK_FMT.format(from), CLOCK_FMT.format(to))}
+          {fill(t("admin.health.open_traces"), formatAbsoluteTime(from), formatAbsoluteTime(to))}
         </Link>
         {pinned !== null ? (
           <button

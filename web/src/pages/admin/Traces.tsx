@@ -8,7 +8,6 @@ import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { webContext } from "@/lib/context";
 import { fill, formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
 import type {
@@ -467,8 +466,6 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
 
 const DURATION_FILTERS = [100, 500, 1000, 5000];
 
-const CLOCK_FMT = new Intl.DateTimeFormat(webContext.lang, { hour: "2-digit", minute: "2-digit" });
-
 function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
   const { t } = useTranslation();
   const W = 600;
@@ -561,9 +558,11 @@ function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search:
           </svg>
         </div>
         <div />
-        <div className="mt-1 flex justify-between text-xs text-(--color-muted-foreground)">
-          <span>{windowed ? CLOCK_FMT.format(start) : formatRelativeTime(t, new Date(start).toISOString(), now)}</span>
-          <span>{end < now ? CLOCK_FMT.format(end) : t("admin.traces.now")}</span>
+        <div className="mt-1 flex justify-between gap-x-4 text-xs text-(--color-muted-foreground)">
+          <span>
+            {windowed ? formatAbsoluteTime(start) : formatRelativeTime(t, new Date(start).toISOString(), now)}
+          </span>
+          <span className="text-right">{end < now ? formatAbsoluteTime(end) : t("admin.traces.now")}</span>
         </div>
       </div>
       <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-muted-foreground)">
@@ -645,7 +644,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
           <Select value={search.route ?? ALL} onValueChange={(v) => refine({ route: v === ALL ? undefined : v })}>
             <SelectTrigger
               aria-label={t("admin.traces.route")}
-              className="h-9 w-full min-w-0 sm:w-auto sm:max-w-sm sm:flex-1"
+              className="h-9 w-full min-w-0 sm:w-auto sm:max-w-sm sm:min-w-48 sm:flex-1"
             >
               <SelectValue />
             </SelectTrigger>
@@ -678,11 +677,11 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             </SelectContent>
           </Select>
           {search.from || search.to ? (
-            <span className="inline-flex h-8 items-center gap-1 rounded-md border border-(--color-ring) bg-(--color-surface) pr-1 pl-3 text-sm">
+            <span className="inline-flex min-h-8 max-w-full items-center gap-1 rounded-md border border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
               {fill(
                 t("admin.traces.window"),
-                search.from ? CLOCK_FMT.format(search.from) : "",
-                search.to ? CLOCK_FMT.format(search.to) : "",
+                search.from ? formatAbsoluteTime(search.from) : "",
+                search.to ? formatAbsoluteTime(search.to) : "",
               )}
               <Link
                 to="/admin/traces"
