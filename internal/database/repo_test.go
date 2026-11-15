@@ -141,6 +141,63 @@ func TestForkRepository_CopiesLFSObjects(t *testing.T) {
 	assert.Empty(t, objects)
 }
 
+func TestDeleteRepository_RemovesLabelsAndReleaseAttachments(t *testing.T) {
+	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
+	beforeAttachmentPath := conf.Attachment.Path
+	conf.Attachment.Path = t.TempDir()
+	t.Cleanup(func() { conf.Attachment.Path = beforeAttachmentPath })
+	before := Handle
+	Handle = &DB{db: newTestDB(t, "deleteRepositoryLeftovers")}
+	t.Cleanup(func() { Handle = before })
+
+	ctx := context.Background()
+	alice, err := Handle.Users().Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	// Each repository gets a labeled issue and a release with an attachment, and
+	// only the deleted repository's rows and files should go away.
+	type fixture struct {
+		repo       *Repository
+		label      *Label
+		attachment *Attachment
+	}
+	newFixture := func(name, uuid string) fixture {
+		repo := &Repository{OwnerID: alice.ID, Owner: alice, Name: name, LowerName: name}
+		require.NoError(t, Handle.db.Create(repo).Error)
+		issue := &Issue{RepoID: repo.ID, Index: 1, PosterID: alice.ID, Title: "issue"}
+		require.NoError(t, Handle.db.Create(issue).Error)
+		label := &Label{RepoID: repo.ID, Name: "bug", Color: "#ee0701"}
+		require.NoError(t, Handle.db.Create(label).Error)
+		require.NoError(t, Handle.db.Create(&IssueLabel{IssueID: issue.ID, LabelID: label.ID}).Error)
+		release := &Release{RepoID: repo.ID, PublisherID: alice.ID, TagName: "v1"}
+		require.NoError(t, Handle.db.Create(release).Error)
+		attachment := &Attachment{UUID: uuid, ReleaseID: release.ID, Name: "asset.zip"}
+		require.NoError(t, Handle.db.Create(attachment).Error)
+		require.NoError(t, os.MkdirAll(filepath.Dir(attachment.LocalPath()), os.ModePerm))
+		require.NoError(t, os.WriteFile(attachment.LocalPath(), []byte(name), 0o644))
+		return fixture{repo: repo, label: label, attachment: attachment}
+	}
+	doomed := newFixture("doomed", "aaaaaaaa-0000-0000-0000-000000000001")
+	kept := newFixture("kept", "bbbbbbbb-0000-0000-0000-000000000002")
+
+	require.NoError(t, DeleteRepository(alice.ID, doomed.repo.ID))
+
+	count := func(model any, query string, args ...any) int64 {
+		var n int64
+		require.NoError(t, Handle.db.Model(model).Where(query, args...).Count(&n).Error)
+		return n
+	}
+	assert.Zero(t, count(new(Label), "repo_id = ?", doomed.repo.ID))
+	assert.Zero(t, count(new(IssueLabel), "label_id = ?", doomed.label.ID))
+	assert.Zero(t, count(new(Attachment), "id = ?", doomed.attachment.ID))
+	assert.False(t, osx.Exist(doomed.attachment.LocalPath()))
+
+	assert.Equal(t, int64(1), count(new(Label), "repo_id = ?", kept.repo.ID))
+	assert.Equal(t, int64(1), count(new(IssueLabel), "label_id = ?", kept.label.ID))
+	assert.Equal(t, int64(1), count(new(Attachment), "id = ?", kept.attachment.ID))
+	assert.True(t, osx.Exist(kept.attachment.LocalPath()))
+}
+
 func TestSearchRepositoryByName(t *testing.T) {
 	before := Handle
 	Handle = &DB{db: newTestDB(t, "searchRepositoryByName")}
