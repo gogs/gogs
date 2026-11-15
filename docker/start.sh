@@ -58,6 +58,11 @@ setids
 cleanup
 create_volume_subfolder
 
+# One-shot commands, such as `gogs restore`, do not source docker/s6/gogs/setup.
+# Link the volume into the app directory the same way that setup does.
+ln -sfn /data/gogs/log /app/gogs/log
+ln -sfn /data/gogs/data /app/gogs/data
+
 LINK=$(echo "$SOCAT_LINK" | tr '[:upper:]' '[:lower:]')
 if [ "$LINK" = "false" ] || [ "$LINK" = "0" ]; then
     echo "init:socat  | Will not try to create socat links as requested" 1>&2
