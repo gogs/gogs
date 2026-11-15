@@ -201,16 +201,23 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 	}
 	parent, err := gitRepo.BranchCommit(ctx, oldBranch)
 	if err != nil {
-		return errors.Wrapf(err, "get commit of branch %q", oldBranch)
+		// The first commit of an empty repository has no parent.
+		hasBranches, hasErr := gitRepo.HasBranches(ctx)
+		if hasErr != nil || hasBranches {
+			return errors.Wrapf(err, "get commit of branch %q", oldBranch)
+		}
+		parent = nil
 	}
 
 	// The push is rejected when another one updates the branch, or creates the new
 	// branch, in the meantime, so that what is recorded for it is what it changed.
-	update := git.RefUpdate{OldID: parent.ID.String(), RefName: git.RefsHeads + newBranch}
-	if newBranch != oldBranch {
-		if !gitRepo.IsValidBranchName(ctx, newBranch) {
-			return errors.Newf("invalid branch name %q", newBranch)
-		}
+	update := git.RefUpdate{RefName: git.RefsHeads + newBranch}
+	if newBranch != oldBranch && !gitRepo.IsValidBranchName(ctx, newBranch) {
+		return errors.Newf("invalid branch name %q", newBranch)
+	}
+	if parent != nil && newBranch == oldBranch {
+		update.OldID = parent.ID.String()
+	} else {
 		format, err := gitRepo.ObjectFormat(ctx)
 		if err != nil {
 			return errors.Wrap(err, "get object format")
@@ -244,8 +251,11 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 }
 
 // treeEntry returns the entry at the path in the tree of the commit, or nil if
-// there is none.
+// there is none. A nil commit stands for the empty tree of an empty repository.
 func treeEntry(ctx context.Context, commit *git.Commit, path string) (*git.TreeEntry, error) {
+	if commit == nil {
+		return nil, nil
+	}
 	entry, err := commit.TreeEntry(ctx, path)
 	if err != nil {
 		if git.IsErrRevisionNotExist(err) {

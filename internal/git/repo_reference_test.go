@@ -283,6 +283,15 @@ func TestRepository_Branches(t *testing.T) {
 	if len(expBranches) > 0 {
 		t.Fatalf("expect to be empty but got %v", expBranches)
 	}
+
+	t.Run("empty", func(t *testing.T) {
+		path := t.TempDir()
+		require.NoError(t, Init(ctx, path, InitOptions{Bare: true}))
+
+		got, err := RepoBranches(ctx, path)
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
 }
 
 func TestRepository_BranchesByCommitterDate(t *testing.T) {
