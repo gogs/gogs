@@ -1616,9 +1616,27 @@ func DeleteRepository(ownerID, repoID int64) error {
 			}
 		}
 
+		releaseIDs := tx.Model(new(Release)).Select("id").Where("repo_id = ?", repoID)
+		var releaseAttachments []*Attachment
+		if err := tx.Where("release_id IN (?)", releaseIDs).Find(&releaseAttachments).Error; err != nil {
+			return errors.Wrap(err, "list release attachments")
+		}
+		for _, attachment := range releaseAttachments {
+			attachmentPaths = append(attachmentPaths, attachment.LocalPath())
+		}
+		if err := tx.Where("release_id IN (?)", releaseIDs).Delete(new(Attachment)).Error; err != nil {
+			return errors.Wrap(err, "delete release attachments")
+		}
+
+		labelIDs := tx.Model(new(Label)).Select("id").Where("repo_id = ?", repoID)
+		if err := tx.Where("label_id IN (?)", labelIDs).Delete(new(IssueLabel)).Error; err != nil {
+			return errors.Wrap(err, "delete issue labels")
+		}
+
 		if err := deleteBeans(tx,
 			&Repository{ID: repoID},
 			&Access{RepoID: repo.ID},
+			&Label{RepoID: repoID},
 			&Action{RepoID: repo.ID},
 			&Watch{RepoID: repoID},
 			&Star{RepoID: repoID},
