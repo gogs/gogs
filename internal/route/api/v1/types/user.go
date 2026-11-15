@@ -14,8 +14,8 @@ type User struct {
 // AdminUser is a user with the account settings that only site admins see.
 type AdminUser struct {
 	User
-	IsAdmin          bool      `json:"is_admin"`
-	IsActive         bool      `json:"is_active"`
+	IsAdmin          bool      `json:"admin"`
+	IsActive         bool      `json:"active"`
 	ProhibitLogin    bool      `json:"prohibit_login"`
 	SourceID         int64     `json:"source_id"`
 	LoginName        string    `json:"login_name"`
