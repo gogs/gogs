@@ -58,6 +58,7 @@ All notable changes to Gogs are documented in this file.
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 - Cloning a public repository without signing in now downloads its Git LFS files instead of asking for credentials. [#8573](https://github.com/gogs/gogs/pull/8573)
+- Cloning a fork downloads the Git LFS files that it shares with the repository it was forked from. [#8576](https://github.com/gogs/gogs/pull/8576)
 
 ### Removed
 
