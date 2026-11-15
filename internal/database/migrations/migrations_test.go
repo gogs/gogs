@@ -74,12 +74,12 @@ func TestMigrate(t *testing.T) {
 		go func() { done <- Migrate(db) }()
 		select {
 		case err := <-done:
-			require.NoError(t, err)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "MAX_OPEN_CONNS must be at least 2")
 		case <-time.After(time.Minute):
 			t.Fatal("Migrate did not return with a pool of one connection")
 		}
-		assert.Equal(t, int64(24), gooseVersion(t, db))
-		assert.Equal(t, 1, sqlDB.Stats().MaxOpenConnections)
+		assert.False(t, db.Migrator().HasTable("user"))
 	})
 
 	t.Run("database older than 0.12", func(t *testing.T) {
