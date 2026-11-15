@@ -22,6 +22,7 @@ func TestTeamMemberAccesses(t *testing.T) {
 		aliceID = int64(1)
 		bobID   = int64(2)
 		otherID = int64(3)
+		carolID = int64(4)
 
 		repo1 = int64(11)
 		repo2 = int64(12)
@@ -39,6 +40,7 @@ func TestTeamMemberAccesses(t *testing.T) {
 		{ID: aliceID, Name: "alice", LowerName: "alice", Type: UserTypeIndividual},
 		{ID: bobID, Name: "bob", LowerName: "bob", Type: UserTypeIndividual},
 		{ID: otherID, Name: "other", LowerName: "other", Type: UserTypeIndividual},
+		{ID: carolID, Name: "carol", LowerName: "carol", Type: UserTypeIndividual},
 	}).Error)
 	require.NoError(t, db.Create([]*Repository{
 		{ID: repo1, OwnerID: orgID, Name: "r1", LowerName: "r1"},
@@ -87,12 +89,30 @@ func TestTeamMemberAccesses(t *testing.T) {
 	}
 	alice := map[int64]AccessMode{repo1: AccessModeOwner, repo2: AccessModeOwner, repo3: AccessModeOwner}
 
-	// Each step adds or removes Bob, whose access to a repository is the highest
-	// of his collaboration and his teams. Other accesses must not change.
+	setWritersAuthorize := func(mode AccessMode) error {
+		team, err := GetTeamByID(writersID)
+		if err != nil {
+			return err
+		}
+		team.Authorize = mode
+		return UpdateTeam(team, true)
+	}
+	deleteWriters := func() error {
+		team, err := GetTeamByID(writersID)
+		if err != nil {
+			return err
+		}
+		return DeleteTeam(team)
+	}
+
+	// Each step changes the teams of Bob or Carol, whose access to a repository
+	// is the highest of their collaborations and teams. Other accesses must not
+	// change.
 	steps := []struct {
-		name    string
-		change  func() error
-		wantBob map[int64]AccessMode
+		name      string
+		change    func() error
+		wantBob   map[int64]AccessMode
+		wantCarol map[int64]AccessMode
 	}{
 		{
 			name:    "add to readers",
@@ -124,10 +144,41 @@ func TestTeamMemberAccesses(t *testing.T) {
 			change:  func() error { return RemoveTeamMember(orgID, readersID, bobID) },
 			wantBob: map[int64]AccessMode{repo2: AccessModeAdmin, repo3: AccessModeWrite, otherRepo: AccessModeRead},
 		},
+		{
+			name: "add both to writers",
+			change: func() error {
+				if err := AddTeamMember(orgID, writersID, bobID); err != nil {
+					return err
+				}
+				return AddTeamMember(orgID, writersID, carolID)
+			},
+			wantBob:   map[int64]AccessMode{repo1: AccessModeWrite, repo2: AccessModeAdmin, repo3: AccessModeWrite, otherRepo: AccessModeRead},
+			wantCarol: map[int64]AccessMode{repo1: AccessModeWrite},
+		},
+		{
+			name:      "change writers to admin",
+			change:    func() error { return setWritersAuthorize(AccessModeAdmin) },
+			wantBob:   map[int64]AccessMode{repo1: AccessModeAdmin, repo2: AccessModeAdmin, repo3: AccessModeWrite, otherRepo: AccessModeRead},
+			wantCarol: map[int64]AccessMode{repo1: AccessModeAdmin},
+		},
+		{
+			name:      "change writers to read",
+			change:    func() error { return setWritersAuthorize(AccessModeRead) },
+			wantBob:   map[int64]AccessMode{repo1: AccessModeRead, repo2: AccessModeAdmin, repo3: AccessModeWrite, otherRepo: AccessModeRead},
+			wantCarol: map[int64]AccessMode{repo1: AccessModeRead},
+		},
+		{
+			name:    "delete writers",
+			change:  deleteWriters,
+			wantBob: map[int64]AccessMode{repo2: AccessModeAdmin, repo3: AccessModeWrite, otherRepo: AccessModeRead},
+		},
 	}
 	for _, step := range steps {
 		require.NoError(t, step.change(), step.name)
 		want := map[int64]map[int64]AccessMode{aliceID: alice, bobID: step.wantBob}
+		if step.wantCarol != nil {
+			want[carolID] = step.wantCarol
+		}
 		assert.Equal(t, want, accesses(t), step.name)
 	}
 }

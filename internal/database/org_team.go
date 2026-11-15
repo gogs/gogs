@@ -346,25 +346,17 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		if !authChanged {
 			return nil
 		}
-		if err := t.getRepositories(tx); err != nil {
-			return errors.Newf("getRepositories:%v", err)
+		memberIDs, err := t.memberIDs(tx)
+		if err != nil {
+			return err
 		}
-		for _, repo := range t.Repos {
-			if err := repo.recalculateTeamAccesses(tx, 0); err != nil {
-				return errors.Newf("recalculateTeamAccesses: %v", err)
-			}
-		}
-		return nil
+		return errors.Wrap(t.recalculateMemberAccesses(tx, memberIDs...), "recalculate member accesses")
 	})
 }
 
 // DeleteTeam deletes given team.
 // It's caller's responsibility to assign organization ID.
 func DeleteTeam(t *Team) error {
-	if err := t.GetRepositories(); err != nil {
-		return err
-	}
-
 	// Get organization.
 	org, err := Handle.Users().GetByID(context.TODO(), t.OrgID)
 	if err != nil {
@@ -372,16 +364,19 @@ func DeleteTeam(t *Team) error {
 	}
 
 	return Handle.db.Transaction(func(tx *gorm.DB) error {
-		// Delete all accesses.
-		for _, repo := range t.Repos {
-			if err := repo.recalculateTeamAccesses(tx, t.ID); err != nil {
-				return err
-			}
+		memberIDs, err := t.memberIDs(tx)
+		if err != nil {
+			return err
 		}
 
 		// Delete team-user.
 		if err := tx.Where("org_id = ? AND team_id = ?", org.ID, t.ID).Delete(new(TeamUser)).Error; err != nil {
 			return err
+		}
+
+		// Delete accesses that came from the team.
+		if err = t.recalculateMemberAccesses(tx, memberIDs...); err != nil {
+			return errors.Wrap(err, "recalculate member accesses")
 		}
 
 		// Delete team.
@@ -473,16 +468,39 @@ func (t *Team) repoIDsQuery(tx *gorm.DB) *gorm.DB {
 	return tx.Model(new(TeamRepo)).Select("repo_id").Where("team_id = ?", t.ID)
 }
 
-// recalculateMemberAccesses recalculates the accesses of the user, who just
-// joined or left the team, to the repositories of the team. The result is the
-// same as recalculateTeamAccesses for each of these repositories, which takes a
-// few queries per repository and team, but only the accesses of the user change.
-func (t *Team) recalculateMemberAccesses(tx *gorm.DB, userID int64) error {
+// memberIDs returns the IDs of the members of the team.
+func (t *Team) memberIDs(tx *gorm.DB) ([]int64, error) {
+	var ids []int64
+	err := tx.Model(new(TeamUser)).Where("team_id = ?", t.ID).Pluck("uid", &ids).Error
+	return ids, errors.Wrap(err, "list member IDs")
+}
+
+// recalculateMemberAccesses recalculates the accesses of the users, whose
+// membership or access through the team just changed, to the repositories of
+// the team. The result is the same as recalculateTeamAccesses for each of these
+// repositories, which takes a few queries per repository and team, but only the
+// accesses of the users change.
+func (t *Team) recalculateMemberAccesses(tx *gorm.DB, userIDs ...int64) error {
+	if len(userIDs) == 0 {
+		return nil
+	}
+
 	var repoIDs []int64
 	if err := t.repoIDsQuery(tx).Scan(&repoIDs).Error; err != nil {
 		return errors.Wrap(err, "list repository IDs")
 	}
+	for _, userID := range userIDs {
+		if err := t.recalculateUserAccesses(tx, userID, repoIDs); err != nil {
+			return errors.Wrapf(err, "user %d", userID)
+		}
+	}
+	return nil
+}
 
+// recalculateUserAccesses recalculates the accesses of the user to the
+// repositories of the team, whose IDs are repoIDs, from the user's
+// collaborations and teams.
+func (t *Team) recalculateUserAccesses(tx *gorm.DB, userID int64, repoIDs []int64) error {
 	modes := make(map[int64]AccessMode, len(repoIDs))
 	var collaborations []*Collaboration
 	err := tx.Where("user_id = ? AND repo_id IN (?)", userID, t.repoIDsQuery(tx)).Find(&collaborations).Error
