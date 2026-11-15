@@ -316,7 +316,9 @@ export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
               <li key={task.description} className={ROW_CLASS}>
                 <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-semibold wrap-anywhere">{task.description}</span>
-                  <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">{task.schedule}</code>
+                  <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">
+                    {task.schedule}
+                  </code>
                 </p>
                 <Details>
                   <Detail label={t("admin.monitor.next")}>
