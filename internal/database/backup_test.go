@@ -13,7 +13,6 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/dbtest"
@@ -176,15 +175,6 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			}),
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
-		},
-		&LoginSource{
-			Type:      auth.GitHub,
-			Name:      "GitHub.com",
-			IsActived: true,
-			Provider: github.NewProvider(&github.Config{
-				APIEndpoint: "https://api.github.com",
-			}),
-			CreatedUnix: 1588568886,
 		},
 
 		&Notice{

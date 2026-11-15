@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -103,13 +102,9 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 		}
 		s.Provider = pam.NewProvider(&cfg)
 
-	case auth.GitHub:
-		var cfg github.Config
-		err := json.Unmarshal([]byte(s.Config), &cfg)
-		if err != nil {
-			return err
-		}
-		s.Provider = github.NewProvider(&cfg)
+	case auth.Removed:
+		// Left without a provider, since the queries that return sources leave
+		// these out.
 
 	case auth.Mock:
 		var cfg mockProviderConfig
@@ -147,10 +142,6 @@ func (s *LoginSource) IsPAM() bool {
 	return s.Type == auth.PAM
 }
 
-func (s *LoginSource) IsGitHub() bool {
-	return s.Type == auth.GitHub
-}
-
 func (s *LoginSource) LDAP() *ldap.Config {
 	return s.Provider.Config().(*ldap.Config)
 }
@@ -161,10 +152,6 @@ func (s *LoginSource) SMTP() *smtp.Config {
 
 func (s *LoginSource) PAM() *pam.Config {
 	return s.Provider.Config().(*pam.Config)
-}
-
-func (s *LoginSource) GitHub() *github.Config {
-	return s.Provider.Config().(*github.Config)
 }
 
 // LoginSourcesStore is the storage layer for login sources.
@@ -227,7 +214,7 @@ func (s *LoginSourcesStore) Create(ctx context.Context, opts CreateLoginSourceOp
 // Count returns the total number of login sources.
 func (s *LoginSourcesStore) Count(ctx context.Context) int64 {
 	var count int64
-	s.db.WithContext(ctx).Model(new(LoginSource)).Count(&count)
+	s.db.WithContext(ctx).Model(new(LoginSource)).Where("type != ?", auth.Removed).Count(&count)
 	return count + int64(s.files.Len())
 }
 
@@ -261,7 +248,7 @@ func (s *LoginSourcesStore) DeleteByID(ctx context.Context, id int64) error {
 // ErrLoginSourceNotExist when not found.
 func (s *LoginSourcesStore) GetByID(ctx context.Context, id int64) (*LoginSource, error) {
 	source := new(LoginSource)
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(source).Error
+	err := s.db.WithContext(ctx).Where("id = ? AND type != ?", id, auth.Removed).First(source).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return s.files.GetByID(id)
@@ -279,7 +266,7 @@ type ListLoginSourceOptions struct {
 // List returns a list of login sources filtered by options.
 func (s *LoginSourcesStore) List(ctx context.Context, opts ListLoginSourceOptions) ([]*LoginSource, error) {
 	var sources []*LoginSource
-	query := s.db.WithContext(ctx).Order("id ASC")
+	query := s.db.WithContext(ctx).Where("type != ?", auth.Removed).Order("id ASC")
 	if opts.OnlyActivated {
 		query = query.Where("is_actived = ?", true)
 	}

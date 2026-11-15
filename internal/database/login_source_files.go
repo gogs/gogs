@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -190,13 +190,8 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			loginSource.Provider = pam.NewProvider(&cfg)
 
 		case "github":
-			var cfg github.Config
-			err = cfgSection.MapTo(&cfg)
-			if err != nil {
-				return errors.Wrap(err, `map "config" section`)
-			}
-			loginSource.Type = auth.GitHub
-			loginSource.Provider = github.NewProvider(&cfg)
+			log.Warn("Ignored login source file %q: GitHub sources are no longer supported", path)
+			return nil
 
 		default:
 			return errors.Newf("unknown type %q", authType)
