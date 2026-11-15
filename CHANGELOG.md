@@ -66,6 +66,7 @@ All notable changes to Gogs are documented in this file.
 - Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Mentioning an organization marks its members as mentioned, instead of unrelated users. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Cloning a fork downloads the Git LFS files that it shares with the repository it was forked from. [#8577](https://github.com/gogs/gogs/pull/8577)
+- Deleting a repository now also deletes its labels and the attachments of its releases, including their files. [#8595](https://github.com/gogs/gogs/pull/8595)
 
 ### Removed
 
