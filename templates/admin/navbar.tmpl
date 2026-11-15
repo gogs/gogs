@@ -4,6 +4,9 @@
 		<a class="{{if .PageIsAdminDashboard}}active{{end}} item" href="{{AppSubURL}}/admin">
 			{{.i18n.Tr "admin.dashboard"}}
 		</a>
+		<a class="item" href="{{AppSubURL}}/admin/operations">
+			{{.i18n.Tr "admin.dashboard.operations"}}
+		</a>
 		<a class="{{if .PageIsAdminUsers}}active{{end}} item" href="{{AppSubURL}}/admin/users">
 			{{.i18n.Tr "admin.users"}}
 		</a>
