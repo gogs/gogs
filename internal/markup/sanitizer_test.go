@@ -24,6 +24,9 @@ func TestSanitizer(t *testing.T) {
 		{input: `<code class="language-c++"></code>`, expVal: `<code class="language-c++"></code>`},
 		{input: `<code class="language-c#"></code>`, expVal: `<code class="language-c#"></code>`},
 
+		// Keyboard keys
+		{input: `<kbd>Ctrl</kbd>+<kbd class="ui button" style="color:red" onclick="alert(1)">C</kbd>`, expVal: `<kbd>Ctrl</kbd>+<kbd>C</kbd>`},
+
 		// Ordered list start
 		{input: `<ol start="10"><li>x</li></ol>`, expVal: `<ol start="10"><li>x</li></ol>`},
 		{input: `<ol start="1; x"><li>x</li></ol>`, expVal: `<ol><li>x</li></ol>`},
