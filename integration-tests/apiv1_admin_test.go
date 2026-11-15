@@ -58,8 +58,10 @@ func TestAPIV1AdminUsers(t *testing.T) {
 		status, body := nonAdmin.do(http.MethodPatch, "/api/v1/admin/users/"+name, edit)
 		assert.Equal(t, http.StatusForbidden, status, "edited by non-admin, response: %s", body)
 
+		signedIn := authenticatedClient(t, &User{Name: name, Password: "password"})
 		var edited apiV1User
 		admin.doJSON(http.MethodPatch, "/api/v1/admin/users/"+name, edit, http.StatusOK, &edited)
+		assert.Empty(t, signedIn.username(), "a session of the password before is still signed in")
 		assert.Equal(t, name+"@edited.example.com", edited.Email)
 		assert.Equal(t, "Edited", edited.FullName)
 

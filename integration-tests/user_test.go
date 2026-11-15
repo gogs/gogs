@@ -207,6 +207,25 @@ func TestSignInWithTwoFactor(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		assert.Empty(t, other.username())
 	})
+
+	t.Run("password changed", func(t *testing.T) {
+		c := newClient(t)
+		signIn(c)
+		newPassword := UniqueName("password-")
+		require.NoError(t, database.Handle.Users().Update(t.Context(), u.ID, database.UpdateUserOptions{Password: &newPassword}))
+		u.Password = newPassword
+
+		code := tf.RecoveryCodes[1]
+		status, body := c.do(http.MethodPost, "/api/web/user/mfa/recovery", map[string]any{"recoveryCode": code})
+		require.Equal(t, http.StatusUnauthorized, status, "signed in by the password before, response: %s", body)
+		assert.Empty(t, c.username())
+
+		// The recovery code is not used up, so it still signs in.
+		signIn(c)
+		status, body = c.do(http.MethodPost, "/api/web/user/mfa/recovery", map[string]any{"recoveryCode": code})
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, u.Name, c.username())
+	})
 }
 
 // 🚨 SECURITY: A username with a path separator maps onto the directory of
