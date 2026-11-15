@@ -12,29 +12,12 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/route"
 )
 
 const (
-	tmplAdminUserList = "admin/user/list"
 	tmplAdminUserNew  = "admin/user/new"
 	tmplAdminUserEdit = "admin/user/edit"
 )
-
-func Users(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.users")
-	c.Data["PageIsAdmin"] = true
-	c.Data["PageIsAdminUsers"] = true
-
-	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     database.UserTypeIndividual,
-		Counter:  database.Handle.Users().Count,
-		Ranger:   database.Handle.Users().List,
-		PageSize: conf.UI.Admin.UserPagingNum,
-		OrderBy:  "id ASC",
-		TplName:  tmplAdminUserList,
-	})
-}
 
 func NewUser(c *context.Context) {
 	c.Data["Title"] = c.Tr("admin.users.new_account")
@@ -244,8 +227,8 @@ func DeleteUser(c *context.Context) {
 	}
 	log.Trace("Account deleted by admin (%s): %s", c.User.Name, u.Name)
 
-	c.Flash.Success(c.Tr("admin.users.deletion_success"))
+	// The users page confirms the deletion.
 	c.JSONSuccess(map[string]any{
-		"redirect": conf.Server.Subpath + "/admin/users",
+		"redirect": conf.Server.Subpath + "/admin/users?deleted=1",
 	})
 }

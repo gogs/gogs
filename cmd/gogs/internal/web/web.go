@@ -142,20 +142,11 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Post("/config/test_mail", admin.SendTestMail)
 			m.Get("/monitor", admin.Monitor)
 
+			m.Get("/^:page(users|orgs|repos|notices)$", func(c *context.Context) { c.ServeWeb() })
 			m.Group("/users", func() {
-				m.Get("", admin.Users)
 				m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(form.AdminCrateUser{}), admin.NewUserPost)
 				m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(form.AdminEditUser{}), admin.EditUserPost)
 				m.Post("/:userid/delete", admin.DeleteUser)
-			})
-
-			m.Group("/orgs", func() {
-				m.Get("", admin.Organizations)
-			})
-
-			m.Group("/repos", func() {
-				m.Get("", admin.Repos)
-				m.Post("/delete", admin.DeleteRepo)
 			})
 
 			m.Group("/auths", func() {
@@ -164,12 +155,6 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				m.Combo("/:authid").Get(admin.EditAuthSource).
 					Post(bindIgnErr(form.Authentication{}), admin.EditAuthSourcePost)
 				m.Post("/:authid/delete", admin.DeleteAuthSource)
-			})
-
-			m.Group("/notices", func() {
-				m.Get("", admin.Notices)
-				m.Post("/delete", admin.DeleteNotices)
-				m.Get("/empty", admin.EmptyNotices)
 			})
 		}, reqAdmin)
 		// ***** END: Admin *****

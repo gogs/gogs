@@ -6,8 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 // SettingsLayout puts the links between the settings pages of a team, a user
-// or an organization beside the page, which takes the rest of the width. On
-// narrow screens they move into a dropdown
+// or an organization, or the pages of the admin panel, beside the page, which
+// takes the rest of the width. On narrow screens they move into a dropdown
 // above the page, named after the current page.
 export function SettingsLayout({
   label,
