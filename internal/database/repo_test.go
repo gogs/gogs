@@ -299,6 +299,31 @@ func TestRepository_limitVisibilityTo(t *testing.T) {
 		{name: "private fork of a public base stays private", fork: private, base: public, want: private},
 		{name: "unlisted fork of a public base stays unlisted", fork: unlisted, base: public, want: unlisted},
 		{name: "same visibility", fork: public, base: public, want: public},
+		{
+			name: "public wiki and issues of a private fork of a private base that allows neither",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: private,
+			want: private,
+		},
+		{
+			name: "public issues of a private fork of a private base that allows only them",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: Repository{IsPrivate: true, AllowPublicIssues: true},
+			want: Repository{IsPrivate: true, AllowPublicIssues: true},
+		},
+		{
+			name: "public wiki and issues of a private fork of a public base",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: public,
+			want: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+		},
+		{
+			// Explore would list the fork but not its base.
+			name: "public wiki and issues of a private fork of an unlisted base",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: unlisted,
+			want: Repository{IsPrivate: true, IsUnlisted: true},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -306,6 +331,8 @@ func TestRepository_limitVisibilityTo(t *testing.T) {
 			fork.limitVisibilityTo(&test.base)
 			assert.Equal(t, test.want.IsPrivate, fork.IsPrivate, "IsPrivate")
 			assert.Equal(t, test.want.IsUnlisted, fork.IsUnlisted, "IsUnlisted")
+			assert.Equal(t, test.want.AllowPublicWiki, fork.AllowPublicWiki, "AllowPublicWiki")
+			assert.Equal(t, test.want.AllowPublicIssues, fork.AllowPublicIssues, "AllowPublicIssues")
 		})
 	}
 }

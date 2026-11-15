@@ -1632,29 +1632,52 @@ func GetNonMirrorRepositories() ([]*Repository, error) {
 	return getNonMirrorRepositories(x)
 }
 
+// ForksMayAllowPublicWiki reports whether a private fork of the repository may
+// allow public access to its wiki without being more visible than the
+// repository. Explore lists private repositories that allow public access even
+// when they are unlisted, so forks of an unlisted public repository may not.
+func (r *Repository) ForksMayAllowPublicWiki() bool {
+	return (!r.IsPrivate && !r.IsUnlisted) || (r.IsPrivate && r.AllowPublicWiki)
+}
+
+// ForksMayAllowPublicIssues is like ForksMayAllowPublicWiki for issues.
+func (r *Repository) ForksMayAllowPublicIssues() bool {
+	return (!r.IsPrivate && !r.IsUnlisted) || (r.IsPrivate && r.AllowPublicIssues)
+}
+
 // limitVisibilityTo makes the fork at most as visible as its base repository,
-// i.e., private when the base is private and unlisted when the base is unlisted.
+// i.e., private when the base is private, unlisted when the base is unlisted,
+// and without public access to its wiki or issues unless the base allows it.
 func (r *Repository) limitVisibilityTo(base *Repository) {
 	r.IsPrivate = r.IsPrivate || base.IsPrivate
 	r.IsUnlisted = r.IsUnlisted || base.IsUnlisted
+	r.AllowPublicWiki = r.AllowPublicWiki && base.ForksMayAllowPublicWiki()
+	r.AllowPublicIssues = r.AllowPublicIssues && base.ForksMayAllowPublicIssues()
 }
 
 func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
+	visibilityCols := []string{"is_private", "is_unlisted", "allow_public_wiki", "allow_public_issues"}
+
 	// 🚨 SECURITY: A fork must never be more visible than its base repository,
 	// whichever caller saves it.
 	if repo.IsFork {
 		base := new(Repository)
-		has, err := e.ID(repo.ForkID).Cols("is_private", "is_unlisted").Get(base)
+		has, err := e.ID(repo.ForkID).Cols(visibilityCols...).Get(base)
 		if err != nil {
 			return errors.Wrap(err, "get base repository")
 		} else if has {
-			wasPrivate, wasUnlisted := repo.IsPrivate, repo.IsUnlisted
 			repo.limitVisibilityTo(base)
-			visibilityChanged = visibilityChanged || repo.IsPrivate != wasPrivate || repo.IsUnlisted != wasUnlisted
 		}
 	}
+
+	saved := new(Repository)
+	if _, err = e.ID(repo.ID).Cols(visibilityCols...).Get(saved); err != nil {
+		return errors.Wrap(err, "get saved visibility")
+	}
+	visibilityChanged = visibilityChanged || repo.IsPrivate != saved.IsPrivate || repo.IsUnlisted != saved.IsUnlisted
+	publicAccessChanged := repo.AllowPublicWiki != saved.AllowPublicWiki || repo.AllowPublicIssues != saved.AllowPublicIssues
 
 	if len(repo.Description) > 512 {
 		repo.Description = repo.Description[:512]
@@ -1692,23 +1715,28 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 			}
 		}
 
+		// Change visibility of generated actions.
+		if _, err = e.Where("repo_id = ?", repo.ID).Cols("is_private").Update(&Action{IsPrivate: repo.IsPrivate || repo.IsUnlisted}); err != nil {
+			return errors.Newf("change action visibility of repository: %v", err)
+		}
+	}
+
+	if visibilityChanged || publicAccessChanged {
 		forkRepos, err := getRepositoriesByForkID(e, repo.ID)
 		if err != nil {
 			return errors.Newf("getRepositoriesByForkID: %v", err)
 		}
+		// Saving a fork limits it to what its base allows.
 		for i := range forkRepos {
-			// Forks follow their base repository, except that forks kept private by
-			// FORCE_PRIVATE stay private.
-			forkRepos[i].IsPrivate = repo.IsPrivate || (conf.Repository.ForcePrivate && forkRepos[i].IsPrivate)
-			forkRepos[i].IsUnlisted = repo.IsUnlisted
-			if err = updateRepository(logger, e, forkRepos[i], true); err != nil {
+			if visibilityChanged {
+				// Forks follow their base repository, except that forks kept private by
+				// FORCE_PRIVATE stay private.
+				forkRepos[i].IsPrivate = repo.IsPrivate || (conf.Repository.ForcePrivate && forkRepos[i].IsPrivate)
+				forkRepos[i].IsUnlisted = repo.IsUnlisted
+			}
+			if err = updateRepository(logger, e, forkRepos[i], visibilityChanged); err != nil {
 				return errors.Newf("updateRepository[%d]: %v", forkRepos[i].ID, err)
 			}
-		}
-
-		// Change visibility of generated actions.
-		if _, err = e.Where("repo_id = ?", repo.ID).Cols("is_private").Update(&Action{IsPrivate: repo.IsPrivate || repo.IsUnlisted}); err != nil {
-			return errors.Newf("change action visibility of repository: %v", err)
 		}
 	}
 

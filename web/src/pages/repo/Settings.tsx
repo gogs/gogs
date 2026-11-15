@@ -551,7 +551,13 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                   label={t("repo.settings.allow_public_wiki_desc")}
                   checked={form.allowPublicWiki}
                   onChange={(allowPublicWiki) => set({ allowPublicWiki })}
+                  disabled={!settings.canAllowPublicWiki}
                 />
+                {settings.canAllowPublicWiki ? null : (
+                  <p className="mt-1 ml-6.5 text-sm text-(--color-muted-foreground)">
+                    {t("repo.settings.fork_public_access_limited")}
+                  </p>
+                )}
               </div>
             )}
             <RadioField
@@ -602,7 +608,13 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                   label={t("repo.settings.allow_public_issues_desc")}
                   checked={form.allowPublicIssues}
                   onChange={(allowPublicIssues) => set({ allowPublicIssues })}
+                  disabled={!settings.canAllowPublicIssues}
                 />
+                {settings.canAllowPublicIssues ? null : (
+                  <p className="mt-1 ml-6.5 text-sm text-(--color-muted-foreground)">
+                    {t("repo.settings.fork_public_access_limited")}
+                  </p>
+                )}
               </div>
             )}
             <RadioField

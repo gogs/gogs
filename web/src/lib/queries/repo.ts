@@ -226,6 +226,9 @@ export interface RepoSettingsData {
   isFork: boolean;
   // The site forces private repositories and the viewer cannot make this one public.
   forcePrivate: boolean;
+  // False for forks whose base repository does not let them allow public access.
+  canAllowPublicWiki: boolean;
+  canAllowPublicIssues: boolean;
   forkCount: number;
   avatarURL: string;
   hasCustomAvatar: boolean;

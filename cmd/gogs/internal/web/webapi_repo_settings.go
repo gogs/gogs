@@ -128,6 +128,10 @@ type repoSettings struct {
 	// ForcePrivate is true when the site forces private repositories and the
 	// viewer cannot make this one public.
 	ForcePrivate bool `json:"forcePrivate"`
+	// CanAllowPublicWiki and CanAllowPublicIssues are false for forks whose base
+	// repository does not let them allow public access.
+	CanAllowPublicWiki   bool `json:"canAllowPublicWiki"`
+	CanAllowPublicIssues bool `json:"canAllowPublicIssues"`
 }
 
 func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
@@ -168,6 +172,8 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 		OwnerIsOrganization:   rc.Owner.IsOrganization(),
 		ViewerIsOwner:         rc.viewerAccess >= database.AccessModeOwner,
 		ViewerCanEditGitHooks: viewer.CanEditGitHook(),
+		CanAllowPublicWiki:    !repo.IsFork || repo.BaseRepo.ForksMayAllowPublicWiki(),
+		CanAllowPublicIssues:  !repo.IsFork || repo.BaseRepo.ForksMayAllowPublicIssues(),
 	}
 	if avatarURL == "" {
 		// The repository shows the avatar of its owner until it has its own.
