@@ -152,7 +152,7 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
             <InlineCode>{dashboard.goVersion}</InlineCode>
           </Fact>
           <Fact label={t("admin.dashboard.build_time")}>
-            {dashboard.buildTime ? <InlineCode>{dashboard.buildTime}</InlineCode> : "N/A"}
+            <InlineCode>{dashboard.buildTime || "N/A"}</InlineCode>
           </Fact>
           <Fact label={t("admin.dashboard.build_commit")}>
             {dashboard.buildCommit ? (
@@ -166,7 +166,7 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
                 <ExternalLink className="size-3.5 shrink-0" aria-hidden />
               </a>
             ) : (
-              "N/A"
+              <InlineCode>N/A</InlineCode>
             )}
           </Fact>
         </Facts>
