@@ -1072,6 +1072,23 @@ export interface RepoCommitsData {
   tags: string[];
 }
 
+export interface RepoCompareData {
+  before: string;
+  after: string;
+  // base is the commit the changes are compared against: before, or where
+  // after forked from the default branch when before is the empty ID.
+  base: string;
+  // baseIsEmptyTree is true when base is the empty tree, so the comparison
+  // shows everything after has.
+  baseIsEmptyTree: boolean;
+  // commits are the newest commits after base up to after, at most 50 of
+  // them.
+  commits: RepoCommitListItem[];
+  // totalCommits is the number of commits after base up to after, which is
+  // more than commits.length when the list is cut off.
+  totalCommits: number;
+}
+
 // fetchRepoCommits lists the commits of the ref at the start of the path,
 // which is followed by the path whose history to list, or by "search" to
 // search the messages for the keyword.

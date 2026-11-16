@@ -129,24 +129,7 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
         </div>
 
         {data.commits.length ? (
-          <div className="flex flex-col gap-6">
-            {groupByDay(data.commits).map((group) => (
-              <section key={group.day} aria-label={group.day}>
-                <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
-                <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
-                  {group.commits.map((commit) => (
-                    <CommitRow
-                      key={commit.sha}
-                      owner={repo.owner}
-                      name={repo.name}
-                      commit={commit}
-                      browseURL={srcURL(commit.sha, data.path)}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
+          <CommitList owner={repo.owner} name={repo.name} commits={data.commits} path={data.path} />
         ) : (
           <p className="rounded-md border border-(--color-border) py-10 text-center text-sm text-(--color-muted-foreground)">
             {t("repo.commits.no_commits")}
@@ -160,6 +143,53 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
           </nav>
         ) : null}
       </main>
+    </div>
+  );
+}
+
+// CommitList lists commits grouped by the day they were authored. Their
+// "Browse files" links open the path at each commit. Compact lists show each
+// commit on one line without the actions or the days, e.g., above a diff.
+export function CommitList({
+  owner,
+  name,
+  commits,
+  path = "",
+  compact = false,
+}: {
+  owner: string;
+  name: string;
+  commits: RepoCommitListItem[];
+  path?: string;
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+        {commits.map((commit) => (
+          <CompactCommitRow key={commit.sha} owner={owner} name={name} commit={commit} />
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-6">
+      {groupByDay(commits).map((group) => (
+        <section key={group.day} aria-label={group.day}>
+          <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
+          <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+            {group.commits.map((commit) => (
+              <CommitRow
+                key={commit.sha}
+                owner={owner}
+                name={name}
+                commit={commit}
+                browseURL={subUrl(`/${owner}/${name}/src/${refPath(splatOf(commit.sha, path))}`)}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
@@ -273,6 +303,48 @@ function CommitRow({
           <TooltipContent>{t("repo.browse_files")}</TooltipContent>
         </Tooltip>
       </div>
+    </li>
+  );
+}
+
+function CompactCommitRow({ owner, name, commit }: { owner: string; name: string; commit: RepoCommitListItem }) {
+  const { t } = useTranslation();
+  const { author } = commit;
+
+  return (
+    <li className="flex items-center gap-3 px-4 py-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+        <p
+          className={cn(
+            "min-w-0 text-sm font-medium wrap-anywhere sm:truncate [&_a]:text-(--color-primary) [&_a]:hover:underline",
+            commit.isMerge && "font-normal text-(--color-muted-foreground)",
+          )}
+          dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
+        />
+        <p className="flex shrink-0 items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">
+          <img src={author.avatarURL} alt="" className="size-4 shrink-0 rounded-full" />
+          {author.profileURL ? (
+            <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
+              {author.name}
+            </a>
+          ) : (
+            <span className="font-semibold text-(--color-foreground)">{author.name}</span>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <time dateTime={author.when}>{formatRelativeTime(t, author.when)}</time>
+            </TooltipTrigger>
+            <TooltipContent>{formatAbsoluteTime(author.when)}</TooltipContent>
+          </Tooltip>
+        </p>
+      </div>
+      <Link
+        to="/$owner/$repo/commit/$sha"
+        params={{ owner, repo: name, sha: commit.sha }}
+        className="shrink-0 rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
+      >
+        {commit.sha.slice(0, 7)}
+      </Link>
     </li>
   );
 }
