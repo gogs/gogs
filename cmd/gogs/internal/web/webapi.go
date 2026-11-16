@@ -3,6 +3,7 @@ package web
 import (
 	stdctx "context"
 	"encoding/json"
+	"mime"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -111,6 +112,23 @@ func requireAuthenticated(c flamego.Context, viewer *database.User) {
 		return
 	}
 	requireViewAccess(c, viewer)
+}
+
+// requireJSON turns away requests that change something unless they are sent
+// as JSON, the only content type the browser client sends them as. Browsers
+// let any site send a form or another simple request, e.g., text/plain or no
+// body at all, without asking first. Sending JSON from another site needs a
+// CORS preflight, which Gogs does not grant.
+func requireJSON(c flamego.Context) {
+	r := c.Request()
+	switch r.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return
+	}
+	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if mediaType != "application/json" {
+		writeErrorResponse(c.ResponseWriter(), http.StatusUnsupportedMediaType, errors.New("content type must be application/json"))
+	}
 }
 
 func enforceWebAPIMaxBodySize(c flamego.Context) {
@@ -380,7 +398,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Combo("/repos/{repo}").Put(putOrgTeamRepo).Delete(deleteOrgTeamRepo)
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
-	}, enforceWebAPIMaxBodySize)
+	}, requireJSON, enforceWebAPIMaxBodySize)
 	f.Group("/api/web/{owner}/{repo}", func() {
 		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
 		f.Get("/suggestions/mentions", withIssueTracker, getRepoMentionSuggestions)
@@ -422,13 +440,13 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Combo("/wiki", withRepoWiki, withWikiWriter).
 			Post(bindJSON(repoWikiPageRequest{}), postRepoWikiPage).
 			Patch(bindJSON(repoWikiPageRequest{}), patchRepoWikiPage)
-	}, limitIssueContent, requireAuthenticated, withRepoContext)
+	}, requireJSON, limitIssueContent, requireAuthenticated, withRepoContext)
 	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireAuthenticated, withRepoContext, withRepoIssuesOrPulls, postRepoIssueAttachment)
 	f.Group("/api/web/{owner}/{repo}/editor", func() {
 		f.Get("/{path: **}", getRepoEditorTarget)
-		f.Post("/files", limitEditorContent, bindJSON(repoEditorFileRequest{}), postRepoEditorFile)
-		f.Post("/delete", limitEditorContent, bindJSON(repoEditorDeleteRequest{}), postRepoEditorDelete)
-		f.Post("/upload", limitEditorContent, bindJSON(repoEditorUploadRequest{}), postRepoEditorUpload)
+		f.Post("/files", requireJSON, limitEditorContent, bindJSON(repoEditorFileRequest{}), postRepoEditorFile)
+		f.Post("/delete", requireJSON, limitEditorContent, bindJSON(repoEditorDeleteRequest{}), postRepoEditorDelete)
+		f.Post("/upload", requireJSON, limitEditorContent, bindJSON(repoEditorUploadRequest{}), postRepoEditorUpload)
 		f.Post("/uploads", limitAttachmentUpload(repoUploadLimits()), postRepoEditorUploadFile)
 		f.Delete("/uploads/{uuid}", deleteRepoEditorUploadFile)
 	}, requireAuthenticated, withRepoContext, withRepoEditor)

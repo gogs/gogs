@@ -593,7 +593,8 @@ $(document).ready(function() {
     var doneUrl = $form.data("done-url");
     $.ajax({
       url: $form.attr("action"),
-      method: "POST"
+      method: "POST",
+      contentType: "application/json"
     }).done(function(data) {
       var target = (data && data.redirectTo) ? data.redirectTo : doneUrl;
       window.location.assign(target);

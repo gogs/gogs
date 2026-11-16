@@ -53,6 +53,7 @@ async function repoAction<T>(method: "POST" | "DELETE", owner: string, name: str
   const res = await fetch(subUrl(`/api/web/${owner}/${name}/${action}`), {
     method,
     credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as T;
@@ -87,6 +88,7 @@ export async function removeRepoWatcher(owner: string, name: string, username: s
   const res = await fetch(subUrl(`/api/web/${owner}/${name}/watchers/${encodeURIComponent(username)}`), {
     method: "DELETE",
     credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as RepoWatchResult;

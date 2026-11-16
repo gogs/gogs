@@ -222,12 +222,65 @@ func TestRequireAdmin(t *testing.T) {
 	user := &database.User{ID: 2, IsActive: true}
 	for _, r := range requests {
 		req := httptest.NewRequest(r.method, r.path, strings.NewReader(`{"ids":[1]}`))
+		req.Header.Set("Content-Type", "application/json")
 		req = req.WithContext(stdctx.WithValue(req.Context(), context.UserKey{}, user))
 		resp := httptest.NewRecorder()
 		handler.ServeHTTP(resp, req)
 		assert.Equal(t, http.StatusForbidden, resp.Code, r.method+" "+r.path)
 		assert.JSONEq(t, `{"error":"admin required"}`, resp.Body.String(), r.method+" "+r.path)
 	}
+}
+
+func TestRequireJSON(t *testing.T) {
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
+	require.NoError(t, err)
+
+	// Requests that pass the check reach the sign-in gate of each route, which
+	// answers anonymous visitors without a database.
+	paths := []string{
+		"/api/web/user/settings/ssh-keys",
+		"/api/web/admin/operations/delete-inactive-users",
+		"/api/web/alice/repo/settings/collaborators",
+		"/api/web/alice/repo/issues",
+	}
+	tests := []struct {
+		name        string
+		contentType string
+		wantCode    int
+	}{
+		{name: "form posted as text/plain", contentType: "text/plain", wantCode: http.StatusUnsupportedMediaType},
+		{name: "URL-encoded form", contentType: "application/x-www-form-urlencoded", wantCode: http.StatusUnsupportedMediaType},
+		{name: "multipart form", contentType: "multipart/form-data; boundary=x", wantCode: http.StatusUnsupportedMediaType},
+		{name: "no content type", wantCode: http.StatusUnsupportedMediaType},
+		{name: "JSON with a charset", contentType: "application/json; charset=utf-8", wantCode: http.StatusUnauthorized},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, path := range paths {
+				req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"key":"x"}`))
+				if tc.contentType != "" {
+					req.Header.Set("Content-Type", tc.contentType)
+				}
+				resp := httptest.NewRecorder()
+				handler.ServeHTTP(resp, req)
+				assert.Equal(t, tc.wantCode, resp.Code, path)
+			}
+		})
+	}
+
+	t.Run("file uploads stay forms", func(t *testing.T) {
+		for _, path := range []string{
+			"/api/web/alice/repo/issues/attachments",
+			"/api/web/alice/repo/releases/attachments",
+			"/api/web/alice/repo/editor/uploads",
+		} {
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader("--x--\r\n"))
+			req.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+			resp := httptest.NewRecorder()
+			handler.ServeHTTP(resp, req)
+			assert.Equal(t, http.StatusUnauthorized, resp.Code, path)
+		}
+	})
 }
 
 func TestCrossOriginProtection(t *testing.T) {
