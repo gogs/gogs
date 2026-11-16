@@ -1243,7 +1243,15 @@ export interface RepoSrcData {
   overview?: RepoOverviewFile[];
   file?: RepoFile;
   // summary is set for the root directory.
-  summary?: { description: string; website: string; commitCount: number; cloneLinks: RepoCloneLinks };
+  summary?: {
+    description: string;
+    website: string;
+    commitCount: number;
+    cloneLinks: RepoCloneLinks;
+    // latestRelease is the newest published release that is not a
+    // pre-release, or the newest tag without one. It is left out without tags.
+    latestRelease?: { tagName: string; title?: string; createdAt?: string };
+  };
   // editor tells whether files can be changed in the browser, or why not. It
   // is left out where files are never changed in the browser.
   editor?: "ok" | "not_branch" | "no_write";

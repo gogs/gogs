@@ -96,6 +96,36 @@ type repoSrcSummary struct {
 	Website     string          `json:"website"`
 	CommitCount int64           `json:"commitCount"`
 	CloneLinks  *repoCloneLinks `json:"cloneLinks"`
+	// LatestRelease is shown under the release count, unless there are no
+	// tags.
+	LatestRelease *repoLatestRelease `json:"latestRelease,omitempty"`
+}
+
+// repoLatestRelease is the newest published release that is not a
+// pre-release, like GitHub's "Latest", or the newest tag when there is none.
+type repoLatestRelease struct {
+	TagName string `json:"tagName"`
+	// Title and CreatedAt are only set for a release.
+	Title     string     `json:"title,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+}
+
+// latestRelease returns the newest published release that is not a
+// pre-release, or the newest of tags, which are sorted newest first.
+func latestRelease(repoID int64, tags []string) (*repoLatestRelease, error) {
+	if len(tags) == 0 {
+		return nil, nil
+	}
+	releases, err := database.GetPublishedReleasesByRepoID(repoID)
+	if err != nil {
+		return nil, errors.Wrap(err, "list published releases")
+	}
+	for _, r := range releases {
+		if !r.IsPrerelease {
+			return &repoLatestRelease{TagName: r.TagName, Title: r.Title, CreatedAt: &r.Created}, nil
+		}
+	}
+	return &repoLatestRelease{TagName: tags[0]}, nil
 }
 
 type repoPullRequestTarget struct {
@@ -250,6 +280,10 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		if resp.Summary.CommitCount, err = ref.Commit.CommitsCount(ctx); err != nil {
 			logger.Error("Failed to count commits", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "count commits")
+		}
+		if resp.Summary.LatestRelease, err = latestRelease(repo.ID, resp.Tags); err != nil {
+			logger.Error("Failed to get latest release", "repoID", repo.ID, "error", err)
+			return http.StatusInternalServerError, nil, err
 		}
 	}
 	tree, err := ref.Commit.Subtree(ctx, treePath)
