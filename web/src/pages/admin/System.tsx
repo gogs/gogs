@@ -343,7 +343,7 @@ export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="processes">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.process")}</h1>
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.processes")}</h1>
       {monitor.processes.length > 0 ? (
         <ul className="border-t border-(--color-border)">
           {monitor.processes.map((proc) => (

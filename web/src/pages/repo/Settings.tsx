@@ -183,7 +183,7 @@ export function RepoSettingsLayout({
                   </SettingsNavItem>
                 )}
                 <SettingsNavItem active={active === "hooks"} icon={Webhook}>
-                  <Link to="/$owner/$repo/settings/hooks" params={params}>
+                  <Link to="/$owner/$repo/settings/hooks" params={params} activeOptions={{ exact: true }}>
                     {titles.hooks}
                   </Link>
                 </SettingsNavItem>
@@ -224,8 +224,8 @@ export function RepoSettingsLayout({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-8 border-t border-(--color-border) pt-6 first:mt-0 first:border-t-0 first:pt-0">
-      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+    <section className="mt-8 border-t border-(--color-border) pt-6 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-0">
+      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
       {children}
     </section>
   );
@@ -239,6 +239,7 @@ export function RepoGeneral({ owner, name }: { owner: string; name: string }) {
   const refresh = useRefresh(owner, name);
   return (
     <RepoSettingsLayout owner={owner} name={name} active="general">
+      <h1 className="mb-4 text-xl font-semibold">{t("repo.settings.general")}</h1>
       <Section title={t("repo.settings.basic_settings")}>
         <BasicSettings owner={owner} name={name} settings={settings} />
         <div className="mt-8">

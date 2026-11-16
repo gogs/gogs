@@ -29,7 +29,7 @@ import {
 } from "@/lib/queries/settings";
 import { userProfileQuery } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
-import { useUserInfo } from "@/lib/use-user-info";
+import { useRefreshUserInfo, useUserInfo } from "@/lib/use-user-info";
 import { RepoIcon } from "@/pages/user/Dashboard";
 
 const PROFILE_FIELDS = ["name", "fullName", "website", "location"] as const;
@@ -40,6 +40,7 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const avatarChanged = useAvatarChanged();
   const [form, setForm] = useState<UserProfileForm>({
     name: settings.name,
     fullName: settings.fullName,
@@ -135,25 +136,42 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
           hasCustomAvatar={settings.hasCustomAvatar}
           upload={uploadUserAvatar}
           remove={deleteUserAvatar}
-          onChanged={reloadPage}
+          onChanged={avatarChanged}
         />
-        {settings.avatarEmail !== undefined ? <GravatarForm email={settings.avatarEmail} /> : null}
+        {settings.avatarEmail !== undefined ? (
+          <GravatarForm email={settings.avatarEmail} onChanged={avatarChanged} />
+        ) : null}
       </section>
     </UserSettingsLayout>
   );
 }
 
-// The navigation bar shows the avatar too, so load the page again after a
-// change.
-const reloadPage = () => window.location.reload();
+// useAvatarChanged reloads the avatar of the viewer wherever it shows, e.g.,
+// in the navigation bar, after a change. It keeps the page, so unsaved edits
+// of the profile stay.
+function useAvatarChanged() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const refreshUserInfo = useRefreshUserInfo();
+  const user = useUserInfo();
+  return async () => {
+    toast.success(t("settings.update_avatar_success"));
+    await Promise.all([
+      refreshUserInfo(),
+      user ? queryClient.invalidateQueries({ queryKey: userProfileQuery(user.username).queryKey }) : null,
+      router.invalidate(),
+    ]);
+  };
+}
 
-function GravatarForm({ email: initialEmail }: { email: string }) {
+function GravatarForm({ email: initialEmail, onChanged }: { email: string; onChanged: () => Promise<void> }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState(initialEmail);
   const inputRef = useRef<HTMLInputElement>(null);
   const save = useMutation({
     mutationFn: () => setGravatarEmail(email),
-    onSuccess: reloadPage,
+    onSuccess: onChanged,
     onError: () => requestAnimationFrame(() => inputRef.current?.focus()),
   });
   const { fields, formError } = formErrors(save.error);
