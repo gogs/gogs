@@ -132,7 +132,7 @@ func parseNotebook(p []byte, dirLink string, metas map[string]string) (*repoNote
 			source = inlineAttachments(source, c.Attachments)
 			nb.Cells = append(nb.Cells, repoNotebookCell{
 				Type: "markdown",
-				HTML: string(markup.Markdown(source, dirLink, metas)),
+				HTML: string(markup.MarkdownFile(source, dirLink, metas)),
 			})
 		case "code":
 			source := c.Source
@@ -220,7 +220,7 @@ func convertNotebookOutput(o ipynbOutput, dirLink string, metas map[string]strin
 		out.HTML = markup.Sanitize(data["text/html"])
 	case data["text/markdown"] != "":
 		out.Type = "html"
-		out.HTML = string(markup.Markdown(data["text/markdown"], dirLink, metas))
+		out.HTML = string(markup.MarkdownFile(data["text/markdown"], dirLink, metas))
 	case data["image/png"] != "", data["image/jpeg"] != "", data["image/gif"] != "":
 		out.Type = "image"
 		for _, mime := range []string{"image/png", "image/jpeg", "image/gif"} {
