@@ -18,12 +18,15 @@ import (
 const minDBVersion = 19
 
 // newMigrations returns the sequence of migrations to run against the given
-// database. Add new migrations to the bottom of the list with the next version.
+// database. Add new migrations to the bottom of the list, with the UTC time of
+// writing them as the version in the form of YYYYMMDDHHMMSS, in a file named
+// "<version>_<description>.go". Timestamps keep migrations written in parallel
+// from taking the same version.
 //
-// Versions continue the numbering of the legacy "version" table, which the
-// migrations used before they were tracked by goose in "goose_db_version". All
-// migrations up to v24 either check whether their change is already in place or
-// make a change that is the same when repeated, so that they also run safely on
+// Versions 19 to 24 continue the numbering of the legacy "version" table, which
+// the migrations used before they were tracked by goose in "goose_db_version".
+// All of them either check whether their change is already in place or make a
+// change that is the same when repeated, so that they also run safely on
 // databases migrated by the legacy runner.
 func newMigrations(db *gorm.DB) []*goose.Migration {
 	return []*goose.Migration{
