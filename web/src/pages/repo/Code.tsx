@@ -11,11 +11,9 @@ import {
   CornerLeftUp,
   Download,
   Ellipsis,
-  Eye,
   FileSymlink,
   FolderGit2,
   GitBranch,
-  GitFork,
   GitPullRequestArrow,
   History,
   Link2,
@@ -25,7 +23,6 @@ import {
   Plus,
   Scale,
   ShieldCheck,
-  Star,
   Tag,
   Trash2,
   Upload,
@@ -252,7 +249,6 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
     ) : null;
 
   if (summary) {
-    const counts = { stars: repo.starCount, watchers: repo.watchCount, forks: repo.forkCount };
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <RepoHeader repo={repo} activeTab="code" />
@@ -260,7 +256,6 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
           <h1 className="sr-only">{fullName}</h1>
           <div className="mb-4 lg:hidden">
             <AboutText summary={summary} />
-            <AboutCounts owner={repo.owner} name={repo.name} counts={counts} inline />
           </div>
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0">
@@ -309,7 +304,6 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
               </h2>
               <AboutText summary={summary} />
               <AboutDocs entries={data.entries ?? []} hasReadme={!!data.readme} srcLink={srcLink} />
-              <AboutCounts owner={repo.owner} name={repo.name} counts={counts} />
               <section aria-labelledby="repo-about-releases" className="border-t border-(--color-border) pt-4">
                 <h3 id="repo-about-releases" className="mb-1 font-semibold">
                   <Link
@@ -405,9 +399,9 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
             </div>
           </ResizableSidebar>
         ) : null}
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">
+        <main className={cn("min-w-0 flex-1 px-4 py-6 sm:px-6", treeShown && "lg:pt-3 lg:pl-3")}>
           <h1 className="sr-only">{data.path}</h1>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             {withTree && !treeOpen ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -703,51 +697,6 @@ function AboutDocs({
   );
 }
 
-function AboutCounts({
-  owner,
-  name,
-  counts,
-  inline,
-}: {
-  owner: string;
-  name: string;
-  counts: { stars: number; watchers: number; forks: number };
-  inline?: boolean;
-}) {
-  const { t } = useTranslation();
-  const params = { owner, repo: name };
-  const linkClass =
-    "inline-flex items-center gap-2 text-sm text-(--color-muted-foreground) hover:text-(--color-primary)";
-  const count = (n: number, one: string, many: string) => (
-    <>
-      <strong className="font-semibold text-(--color-foreground)">{n}</strong>
-      {t(n === 1 ? one : many)}
-    </>
-  );
-  return (
-    <ul className={inline ? "flex flex-wrap gap-x-4 gap-y-1" : "mb-4 flex flex-col gap-2"}>
-      <li>
-        <Link to="/$owner/$repo/stars" params={params} className={linkClass}>
-          <Star className="size-4 shrink-0" aria-hidden />
-          {count(counts.stars, "repo.about_star", "repo.about_stars")}
-        </Link>
-      </li>
-      <li>
-        <Link to="/$owner/$repo/watchers" params={params} className={linkClass}>
-          <Eye className="size-4 shrink-0" aria-hidden />
-          {count(counts.watchers, "repo.about_watching", "repo.about_watching")}
-        </Link>
-      </li>
-      <li>
-        <Link to="/$owner/$repo/forks" params={params} className={linkClass}>
-          <GitFork className="size-4 shrink-0" aria-hidden />
-          {count(counts.forks, "repo.about_fork", "repo.about_forks")}
-        </Link>
-      </li>
-    </ul>
-  );
-}
-
 function CloneMenu({ links, archiveLink }: { links: RepoSrcData["cloneLinks"]; archiveLink: string }) {
   const { t } = useTranslation();
   return (
@@ -966,7 +915,7 @@ function FileView({
   return (
     <section
       aria-labelledby="repo-file-heading"
-      className="mt-4 overflow-hidden rounded-md border border-(--color-border)"
+      className="mt-3 overflow-hidden rounded-md border border-(--color-border)"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2">
         {hasPreview ? (
