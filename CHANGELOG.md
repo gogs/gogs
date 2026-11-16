@@ -160,6 +160,7 @@ All notable changes to Gogs are documented in this file.
 - Listing repositories through the API no longer fails when one is a fork of a fork, and neither does listing the forks of a fork. Forked repositories in the API and in webhook payloads now include one level of parent. [#8626](https://github.com/gogs/gogs/pull/8626)
 - Creating, commenting on, or closing an issue in a fork no longer fails with a server error. [#8626](https://github.com/gogs/gogs/pull/8626)
 - The API no longer shows the parent of a fork to those who cannot read it, e.g., after the owner of the fork is removed as a collaborator of a private base repository, and the parent shows the permissions of the user on it instead of always read access. Webhook payloads no longer show a private parent. Listing the forks of a repository through the API no longer includes private forks the user cannot read. [#8626](https://github.com/gogs/gogs/pull/8626)
+- A repository whose owner no longer exists made Explore and the admin repository list fail with 500, and appeared in API search with the owner "error". Such repositories are now left out of these lists. [#8599](https://github.com/gogs/gogs/pull/8599)
 
 ### Removed
 
