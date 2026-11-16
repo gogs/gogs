@@ -249,7 +249,7 @@ type repoCompareResponse struct {
 
 // compareMaxCommits is the most commits a comparison lists, so that comparing
 // to a long history, e.g., the push of an imported branch, stays fast.
-const compareMaxCommits = 250
+const compareMaxCommits = 50
 
 // compareRange is the range of commits that a comparison of two commits
 // shows.
