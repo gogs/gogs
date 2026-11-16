@@ -7,14 +7,15 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
 	"github.com/flamego/flamego"
 	"github.com/flamego/session"
-	"github.com/flamego/validator"
 	"github.com/go-macaron/i18n"
 	macaronsession "github.com/go-macaron/session"
+	"github.com/go-playground/validator/v10"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
@@ -61,17 +62,28 @@ func flamegoInjector(c flamego.Context) {
 // session interface so the captcha middleware (and any future Flamego-native
 // session consumer) can read/write the same session store the rest of the app
 // uses.
+//
+// The Macaron session manager owns the session lifecycle and persistence, so
+// ID regeneration, deadlines, and change tracking are no-ops here.
 type flamegoSessionAdapter struct {
 	sess macaronsession.Store
 }
 
-func (s flamegoSessionAdapter) ID() string              { return s.sess.ID() }
-func (s flamegoSessionAdapter) Get(key any) any         { return s.sess.Get(key) }
-func (s flamegoSessionAdapter) Set(key, val any)        { _ = s.sess.Set(key, val) }
-func (s flamegoSessionAdapter) SetFlash(val any)        { _ = s.sess.Set("_flash", val) }
-func (s flamegoSessionAdapter) Delete(key any)          { _ = s.sess.Delete(key) }
-func (s flamegoSessionAdapter) Flush()                  { _ = s.sess.Flush() }
-func (s flamegoSessionAdapter) Encode() ([]byte, error) { return nil, nil }
+var _ session.Session = flamegoSessionAdapter{}
+
+func (s flamegoSessionAdapter) ID() string { return s.sess.ID() }
+func (flamegoSessionAdapter) RegenerateID(http.ResponseWriter, *http.Request) error {
+	return errors.New("regenerating session ID is not supported")
+}
+func (s flamegoSessionAdapter) Get(key any) any           { return s.sess.Get(key) }
+func (s flamegoSessionAdapter) Set(key, val any)          { _ = s.sess.Set(key, val) }
+func (s flamegoSessionAdapter) SetFlash(val any)          { _ = s.sess.Set("_flash", val) }
+func (s flamegoSessionAdapter) Delete(key any)            { _ = s.sess.Delete(key) }
+func (s flamegoSessionAdapter) Flush()                    { _ = s.sess.Flush() }
+func (flamegoSessionAdapter) SetDeadline(time.Time)       {}
+func (flamegoSessionAdapter) Deadline() (time.Time, bool) { return time.Time{}, false }
+func (flamegoSessionAdapter) Encode() ([]byte, error)     { return nil, nil }
+func (flamegoSessionAdapter) HasChanged() bool            { return false }
 
 // requireViewAccess turns away the same viewers as the sign-in toggle of the
 // server-rendered pages: disabled users and, when the site requires signing in
