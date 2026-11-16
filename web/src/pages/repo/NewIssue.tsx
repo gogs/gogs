@@ -394,7 +394,8 @@ function FormElement({
   if (field.type === "dropdown") {
     control = (
       <Select
-        value={value[0] ?? (field.required ? undefined : NO_OPTION)}
+        // An empty value shows the placeholder and keeps the select controlled.
+        value={value[0] ?? (field.required ? "" : NO_OPTION)}
         onValueChange={(v) => onChange(v === NO_OPTION ? [] : [v])}
         aria-invalid={aria["aria-invalid"]}
         aria-describedby={aria["aria-describedby"]}
