@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -353,30 +354,23 @@ type header struct {
 	Assignees   List   `yaml:"assignees"`
 }
 
+// frontMatterDelimiter matches a line of "---", which editors may leave with
+// trailing whitespace.
+var frontMatterDelimiter = regexp.MustCompile(`(?m)^---[ \t]*(?:\n|$)`)
+
 // parseMarkdown parses a Markdown template, which needs front matter with a
 // name to be offered.
 func parseMarkdown(p []byte) (*Template, error) {
 	p = bytes.TrimPrefix(p, []byte("\ufeff"))
 	normalized := bytes.ReplaceAll(p, []byte("\r\n"), []byte("\n"))
-	if !bytes.HasPrefix(normalized, []byte("---\n")) {
+	delims := frontMatterDelimiter.FindAllIndex(normalized, 2)
+	if len(delims) == 0 || delims[0][0] != 0 {
 		return nil, errors.New("missing front matter")
 	}
-	rest := normalized[len("---\n"):]
-	var front, body []byte
-	if bytes.HasPrefix(rest, []byte("---\n")) {
-		body = rest[len("---\n"):]
-	} else {
-		end := bytes.Index(rest, []byte("\n---\n"))
-		if end < 0 {
-			if !bytes.HasSuffix(rest, []byte("\n---")) {
-				return nil, errors.New("unterminated front matter")
-			}
-			end = len(rest) - len("\n---")
-			front = rest[:end]
-		} else {
-			front, body = rest[:end], rest[end+len("\n---\n"):]
-		}
+	if len(delims) < 2 {
+		return nil, errors.New("unterminated front matter")
 	}
+	front, body := normalized[delims[0][1]:delims[1][0]], normalized[delims[1][1]:]
 
 	var h header
 	if err := yaml.Unmarshal(front, &h); err != nil {
@@ -464,8 +458,7 @@ func parseForm(p []byte) (*Template, error) {
 type FieldError struct {
 	// Index is the position of the element in the body of the form.
 	Index int
-	// Label is the label of the field, or of the checkbox when a required one
-	// is not checked.
+	// Label is the label of the field.
 	Label string
 	// Missing is true when a required value is missing, otherwise Message
 	// says what is wrong.
@@ -550,9 +543,14 @@ func (t *Template) RenderForm(values [][]string) (string, error) {
 				if slices.Contains(chosen, o.Label) {
 					mark = "X"
 				} else if o.Required {
-					return missing(o.Label)
+					// The label of an option may be Markdown, so the error names the
+					// group, which the error is shown under.
+					return missing(label)
 				}
 				lines = append(lines, "- ["+mark+"] "+o.Label)
+			}
+			if el.Validations.Required && len(chosen) == 0 {
+				return missing(label)
 			}
 			value = strings.Join(lines, "\n")
 		}

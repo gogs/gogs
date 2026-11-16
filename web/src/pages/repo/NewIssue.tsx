@@ -366,7 +366,15 @@ function FormElement({
             onChange={(checked) => toggle(option.label, checked)}
             label={
               <>
-                {option.label}
+                {option.labelHTML ? (
+                  <span
+                    className="[&_a]:text-(--color-primary) [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-(--color-surface) [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em]"
+                    // The server renders and sanitizes the Markdown.
+                    dangerouslySetInnerHTML={{ __html: option.labelHTML }}
+                  />
+                ) : (
+                  option.label
+                )}
                 {option.required ? (
                   <span className="text-(--color-destructive)">
                     {" *"}

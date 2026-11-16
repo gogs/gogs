@@ -729,8 +729,11 @@ type issueTemplateSummary struct {
 }
 
 type issueTemplateOption struct {
-	Label    string `json:"label"`
-	Required bool   `json:"required,omitempty"`
+	Label string `json:"label"`
+	// LabelHTML is the rendered inline Markdown of the label of a checkbox,
+	// which supports bold, italics and links like on GitHub.
+	LabelHTML string `json:"labelHTML,omitempty"`
+	Required  bool   `json:"required,omitempty"`
 }
 
 type issueTemplateField struct {
@@ -836,7 +839,13 @@ func toIssueTemplate(repo *database.Repository, t *issuetemplate.Template) *issu
 			field.Value = ""
 		}
 		for _, o := range el.Attributes.Options {
-			field.Options = append(field.Options, issueTemplateOption{Label: o.Label, Required: o.Required})
+			opt := issueTemplateOption{Label: o.Label, Required: o.Required}
+			if el.Type == issuetemplate.ElementCheckboxes {
+				// A label is a single paragraph, shown inline next to its checkbox.
+				html := strings.TrimSpace(markdown(o.Label))
+				opt.LabelHTML = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>")
+			}
+			field.Options = append(field.Options, opt)
 		}
 		resp.Form = append(resp.Form, field)
 	}

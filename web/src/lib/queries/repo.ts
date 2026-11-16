@@ -652,7 +652,8 @@ export interface IssueTemplateField {
   value?: string;
   render?: string;
   multiple?: boolean;
-  options?: { label: string; required?: boolean }[];
+  // labelHTML is the rendered Markdown of the label of a checkbox.
+  options?: { label: string; labelHTML?: string; required?: boolean }[];
   // default is the index of the option a dropdown starts with.
   default?: number;
   required?: boolean;

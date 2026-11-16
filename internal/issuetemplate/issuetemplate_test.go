@@ -225,6 +225,38 @@ func TestTemplate_RenderForm(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestParseMarkdown_FrontMatterDelimiters(t *testing.T) {
+	tmpl, err := parseMarkdown([]byte("--- \r\nname: A\n---\t\nBody\n"))
+	require.NoError(t, err)
+	assert.Equal(t, "A", tmpl.Name)
+	assert.Equal(t, "Body\n", tmpl.Body)
+
+	_, err = parseMarkdown([]byte("---\nname: A\n---- \nBody\n"))
+	assert.Error(t, err)
+}
+
+func TestTemplate_RenderForm_RequiredCheckboxes(t *testing.T) {
+	tmpl, err := parseForm([]byte(`name: A
+description: B
+body:
+  - type: checkboxes
+    attributes:
+      label: OS
+      options: [mac, linux]
+    validations:
+      required: true
+`))
+	require.NoError(t, err)
+	_, err = tmpl.RenderForm([][]string{nil})
+	var fieldErr *FieldError
+	require.ErrorAs(t, err, &fieldErr)
+	assert.True(t, fieldErr.Missing)
+
+	got, err := tmpl.RenderForm([][]string{{"linux"}})
+	require.NoError(t, err)
+	assert.Equal(t, "### OS\n\n- [ ] mac\n- [X] linux", got)
+}
+
 func TestParseForm_SingleDropdown(t *testing.T) {
 	tmpl, err := parseForm([]byte(`name: A
 description: B
