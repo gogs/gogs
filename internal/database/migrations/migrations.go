@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -27,7 +29,9 @@ const minDBVersion = 19
 // the migrations used before they were tracked by goose in "goose_db_version".
 // All of them either check whether their change is already in place or make a
 // change that is the same when repeated, so that they also run safely on
-// databases migrated by the legacy runner.
+// databases migrated by the legacy runner. So do the migrations that add what
+// XORM and GORM used to add on startup, because databases that ran a version
+// from before goose already have it.
 func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 	return []*goose.Migration{
 		newMigration(logger, db, 19, "create missing tables", createBaselineTables),
@@ -40,6 +44,10 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 22, "noop", func(*gorm.DB) error { return nil }),
 		newMigration(logger, db, 23, "widen commit ID columns for SHA-256", widenCommitIDColumns),
 		newMigration(logger, db, 24, "add repository.is_unlisted", addRepositoryIsUnlisted),
+		newMigration(logger, db, 20261116224300, "create passkey table", createPasskeyTable),
+		newMigration(logger, db, 20261116224400, "add repository.pulls_allow_merge and repository.pulls_allow_squash", addRepositoryPullsAllowMergeAndSquash),
+		newMigration(logger, db, 20261116224500, "add attachment.uploader_id", addAttachmentUploaderID),
+		newMigration(logger, db, 20261116225300, "add repository pull request merge settings", addRepositoryPullsMergeSettings),
 	}
 }
 
@@ -184,4 +192,31 @@ func createBaselineTables(db *gorm.DB) error {
 		}
 		return nil
 	})
+}
+
+// addMissingColumns adds each column that the table does not have yet, with the
+// definition XORM used for the dialect of the database.
+func addMissingColumns(db *gorm.DB, table string, columns map[string]map[string]string) error {
+	added := false
+	for _, name := range slices.Sorted(maps.Keys(columns)) {
+		if db.Migrator().HasColumn(table, name) {
+			continue
+		}
+		err := db.Exec("ALTER TABLE " + quote(db, table) + " ADD COLUMN " + quote(db, name) + " " + columns[name][db.Name()]).Error
+		if err != nil {
+			return errors.Wrapf(err, "add column %q", name)
+		}
+		added = true
+	}
+	if !added {
+		return errMigrationSkipped
+	}
+	return nil
+}
+
+func quote(db *gorm.DB, name string) string {
+	if db.Name() == "postgres" {
+		return `"` + name + `"`
+	}
+	return "`" + name + "`"
 }
