@@ -30,7 +30,10 @@ function renderDiagram(id: string, code: string, theme: "light" | "dark"): Promi
       // A diagram that fails to draw is shown as code instead of Mermaid's
       // error graphic, which it would add to the end of the page.
       suppressErrorRendering: true,
-      theme: theme === "dark" ? "dark" : "default",
+      look: "neo",
+      theme: theme === "dark" ? "neo-dark" : "neo",
+      // Labels use the font of the rest of the page.
+      fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--font-sans"),
       ...window.MERMAID_INITIALIZE_OPTIONS,
     });
     const { svg } = await mermaid.render(id, code);
