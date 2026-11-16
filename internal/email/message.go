@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -15,21 +16,39 @@ import (
 	"gogs.io/gogs/internal/conf"
 )
 
+// message is one email for each of its recipients, queued and sent together.
 type message struct {
 	info        string
-	msg         *gomail.Msg
+	msgs        []*gomail.Msg
 	confirmChan chan struct{}
 }
 
+// newMessageFrom returns a message with an email for each address in to, so
+// recipients do not see each other's addresses.
 func newMessageFrom(to []string, from string, mail *Mail) (*message, error) {
 	log.Trace("NewMessageFrom (htmlBody):\n%s", mail.HTML)
 
+	msgs := make([]*gomail.Msg, 0, len(to))
+	for _, addr := range to {
+		m, err := newMsg(addr, from, mail)
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, m)
+	}
+	return &message{
+		msgs:        msgs,
+		confirmChan: make(chan struct{}),
+	}, nil
+}
+
+func newMsg(to, from string, mail *Mail) (*gomail.Msg, error) {
 	m := gomail.NewMsg()
 	if err := m.From(from); err != nil {
 		return nil, errors.Wrapf(err, "set From address %q", from)
 	}
-	if err := m.To(to...); err != nil {
-		return nil, errors.Wrap(err, "set To addresses")
+	if err := m.To(to); err != nil {
+		return nil, errors.Wrapf(err, "set To address %q", to)
 	}
 	m.Subject(conf.Email.SubjectPrefix + mail.Subject)
 	m.SetDate()
@@ -52,11 +71,7 @@ func newMessageFrom(to []string, from string, mail *Mail) (*message, error) {
 			return nil, errors.Wrap(err, "embed logo")
 		}
 	}
-
-	return &message{
-		msg:         m,
-		confirmChan: make(chan struct{}),
-	}, nil
+	return m, nil
 }
 
 func newMessage(to []string, mail *Mail) (*message, error) {
@@ -113,24 +128,107 @@ func newSMTPClient() (*gomail.Client, error) {
 	return gomail.NewClient(host, clientOpts...)
 }
 
-func sendMessage(msg *message) error {
-	client, err := newSMTPClient()
-	if err != nil {
-		return err
+// smtpSender sends emails over one connection to the SMTP server, which it
+// opens when needed and opens again when it breaks.
+type smtpSender struct {
+	client *gomail.Client
+}
+
+// errConnect marks errors from connecting to the SMTP server.
+var errConnect = errors.New("connect to SMTP server")
+
+// sendMsg sends m, connecting first if there is no connection. When the
+// connection turns out to be broken, e.g., the server closed it while idle, it
+// connects again and retries once.
+func (s *smtpSender) sendMsg(m *gomail.Msg) error {
+	for attempt := 0; ; attempt++ {
+		if s.client == nil {
+			client, err := newSMTPClient()
+			if err != nil {
+				return errors.Mark(errors.Wrap(err, "new SMTP client"), errConnect)
+			}
+			if err = client.DialWithContext(context.Background()); err != nil {
+				return errors.Mark(errors.Wrap(err, "dial"), errConnect)
+			}
+			s.client = client
+		}
+
+		err := s.client.Send(m)
+		if err == nil {
+			return nil
+		}
+		// The server accepted the email but the connection broke afterwards,
+		// e.g., when resetting it for the next email. Sending it again would
+		// deliver it twice.
+		if m.IsDelivered() {
+			s.close()
+			return nil
+		}
+		// A reply from the server is about this email, e.g., a rejected recipient,
+		// and the connection can still be used. Any other error leaves the
+		// connection in an unknown state.
+		var sendErr *gomail.SendError
+		if errors.As(err, &sendErr) && sendErr.ErrorCode() != 0 {
+			return err
+		}
+		s.close()
+		if attempt > 0 {
+			return err
+		}
 	}
-	return client.DialAndSend(msg.msg)
+}
+
+// send sends every email of msg. A failed email does not stop the others,
+// except when the server cannot be reached.
+func (s *smtpSender) send(msg *message) error {
+	var errs []error
+	for i, m := range msg.msgs {
+		to := strings.Join(m.GetToString(), ", ")
+		err := s.sendMsg(m)
+		if err == nil {
+			log.Trace("E-mail sent %s: %s", to, msg.info)
+			continue
+		}
+		log.Error("Failed to send e-mail %s: %s - %v", to, msg.info, err)
+		errs = append(errs, err)
+		if errors.Is(err, errConnect) {
+			if rest := len(msg.msgs) - i - 1; rest > 0 {
+				log.Error("Skipped %d more e-mails: %s", rest, msg.info)
+			}
+			break
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (s *smtpSender) close() {
+	if s.client == nil {
+		return
+	}
+	if err := s.client.Close(); err != nil {
+		log.Trace("Close SMTP connection: %v", err)
+	}
+	s.client = nil
+}
+
+// sendMessage sends msg over a new connection and waits for the result.
+func sendMessage(msg *message) error {
+	var s smtpSender
+	defer s.close()
+	return s.send(msg)
 }
 
 func processMailQueue() {
+	var s smtpSender
 	for msg := range mailQueue {
-		to := strings.Join(msg.msg.GetToString(), ", ")
-		log.Trace("New e-mail sending request %s: %s", to, msg.info)
-		if err := sendMessage(msg); err != nil {
-			log.Error("Failed to send emails %s: %s - %v", to, msg.info, err)
-		} else {
-			log.Trace("E-mails sent %s: %s", to, msg.info)
-		}
+		log.Trace("New e-mail sending request: %s", msg.info)
+		_ = s.send(msg)
 		msg.confirmChan <- struct{}{}
+		// The connection stays open while more emails are waiting, and is not
+		// left idle for the server to close.
+		if len(mailQueue) == 0 {
+			s.close()
+		}
 	}
 }
 
