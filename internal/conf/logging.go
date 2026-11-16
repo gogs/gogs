@@ -79,11 +79,9 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 		Configs:  make([]*loggerConf, 0, len(modes)),
 	}
 	switch format := strings.ToLower(strings.TrimSpace(cfg.Section("log").Key("FORMAT").String())); format {
-	case "":
-		lc.JSON = IsProdMode()
+	case "", "text":
 	case "json":
 		lc.JSON = true
-	case "text":
 	default:
 		return nil, hasConsole, errors.Errorf(`unknown [log] FORMAT %q, want "text" or "json"`, format)
 	}

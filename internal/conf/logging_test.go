@@ -407,7 +407,7 @@ func Test_newLogger(t *testing.T) {
 		assert.EqualValues(t, 0, record["rows"])
 	})
 
-	t.Run("production writes JSON", func(t *testing.T) {
+	t.Run("JSON format", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := newLogger(newCharmHandler(&buf, slog.LevelInfo, true))
 
