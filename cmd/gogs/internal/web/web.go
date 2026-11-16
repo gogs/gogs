@@ -529,7 +529,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		m.Group("/:username/:reponame", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })
-		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment())
+		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(logger))
 		// ***** END: Repository *****
 
 		// **********************

@@ -192,7 +192,7 @@ func getRepoEditorIndent(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 	// 🚨 SECURITY: Prevent path traversal.
 	resp, err = editorconfigIndent(ctx, commit, pathx.Clean(c.Query("path")))
 	if err != nil {
-		log.Error("getRepoEditorIndent: get indent from .editorconfig of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to get indent from .editorconfig", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
 	return http.StatusOK, resp, nil

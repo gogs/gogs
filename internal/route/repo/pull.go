@@ -669,7 +669,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig(c.Req.Context())
 	if err != nil && !git.IsErrRevisionNotExist(err) {
-		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
+		c.Logger.Warn("Failed to get editorconfig", "repoID", c.Repo.Repository.ID, "error", err)
 		return
 	}
 	c.Data["Editorconfig"] = ec

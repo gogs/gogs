@@ -11,7 +11,6 @@ require (
 	github.com/cockroachdb/errors v1.13.0
 	github.com/derision-test/go-mockgen/v2 v2.1.1
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
-	github.com/fatih/color v1.18.0
 	github.com/flamego/binding v1.4.0
 	github.com/flamego/cache v1.5.1
 	github.com/flamego/captcha v1.3.0
@@ -74,8 +73,6 @@ require (
 
 require (
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
-	charm.land/lipgloss/v2 v2.0.1 // indirect
-	charm.land/log/v2 v2.0.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect
