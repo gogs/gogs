@@ -22,7 +22,7 @@ import {
   UnfoldVertical,
   X,
 } from "lucide-react";
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -36,6 +36,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/she
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { repoMarkdownFileQuery } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
+import { TREE_THEME_STYLE } from "@/lib/tree-theme";
 import { subUrl } from "@/lib/url";
 import type { RepoCommitSearch } from "@/pages/repo/Commit.search";
 
@@ -146,23 +147,6 @@ function richFileDiffOf(fileDiff: FileDiffMetadata): FileDiffMetadata {
   }
   return copy;
 }
-
-// Bridge app tokens into the @pierre/trees shadow root.
-const TREE_THEME_STYLE: CSSProperties = {
-  // @ts-expect-error -- CSS custom properties are valid in style objects.
-  "--trees-fg-override": "var(--color-foreground)",
-  "--trees-fg-muted-override": "var(--color-muted-foreground)",
-  "--trees-bg-override": "var(--color-background)",
-  "--trees-bg-muted-override": "var(--color-surface)",
-  "--trees-accent-override": "var(--color-primary)",
-  "--trees-border-color-override": "var(--color-border)",
-  "--trees-selected-bg-override": "var(--color-surface)",
-  "--trees-focus-ring-color-override": "var(--color-ring)",
-  // `--trees-input-bg` uses `light-dark()` off the shadow host's
-  // `color-scheme`, which follows the OS, not the app's class-based theme.
-  "--trees-search-bg-override": "var(--color-surface)",
-  "--trees-search-fg-override": "var(--color-foreground)",
-};
 
 // DiffWorkspace shows the files a patch changes, between the old and the new
 // revision, with a tree of the files beside them. It locks to the viewport

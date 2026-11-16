@@ -98,3 +98,42 @@ func TestCompareRange_ListCommits(t *testing.T) {
 		})
 	}
 }
+
+func TestCoAuthorsOf(t *testing.T) {
+	author := &git.Signature{Name: "Alice", Email: "alice@example.com"}
+	tests := []struct {
+		name    string
+		message string
+		want    []string
+	}{
+		{
+			name:    "no trailers",
+			message: "Fix the bug\n\nCo-authored-by is how pairs get credit.\n",
+			want:    nil,
+		},
+		{
+			name:    "in order of the trailers",
+			message: "Fix the bug\n\nCo-authored-by: Carol <carol@example.com>\nco-authored-by:Bob Smith <bob@example.com>\n",
+			want:    []string{"Carol <carol@example.com>", "Bob Smith <bob@example.com>"},
+		},
+		{
+			name:    "once per email and not the author",
+			message: "Fix\n\nCo-authored-by: Alice <ALICE@example.com>\nCo-authored-by: Carol <carol@example.com>\nCo-authored-by: Carol C <Carol@Example.com>\n",
+			want:    []string{"Carol <carol@example.com>"},
+		},
+		{
+			name:    "carriage returns and a missing name",
+			message: "Fix\r\n\r\nCo-Authored-By: <dave@example.com>\r\n",
+			want:    []string{"dave@example.com <dave@example.com>"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var got []string
+			for _, s := range coAuthorsOf(test.message, author) {
+				got = append(got, fmt.Sprintf("%s <%s>", s.Name, s.Email))
+			}
+			assert.Equal(t, test.want, got)
+		})
+	}
+}

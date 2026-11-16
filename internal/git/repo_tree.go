@@ -39,6 +39,30 @@ func unescapeChars(in []byte) []byte {
 	return out
 }
 
+// TreePaths returns the paths of every file in the tree of the revision and
+// its subtrees, in the order Git lists them. Submodules are left out, since
+// they have no content in the tree.
+func (r *Repository) TreePaths(ctx context.Context, rev string) ([]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TreePaths")
+	defer span.End()
+
+	// Use NUL-terminated output so that file names are printed verbatim rather
+	// than quoted.
+	stdout, err := exec(ctx, r.path, []string{"ls-tree", "-r", "-z", "--end-of-options", rev}, nil)
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, entry := range bytes.Split(stdout, []byte{0}) {
+		meta, path, ok := bytes.Cut(entry, []byte{'\t'})
+		if !ok || bytes.HasPrefix(meta, []byte("160000 ")) {
+			continue
+		}
+		paths = append(paths, string(path))
+	}
+	return paths, nil
+}
+
 // parseTree parses tree information from the (uncompressed) raw data of the
 // tree object, as printed by "git ls-tree -z".
 func parseTree(t *Tree, data []byte) ([]*TreeEntry, error) {

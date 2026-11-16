@@ -4,34 +4,57 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   BookOpen,
+  Check,
   ChevronDown,
   Code,
+  Copy,
   CornerLeftUp,
   Download,
+  Ellipsis,
   FileSymlink,
-  Folder,
   FolderGit2,
   GitBranch,
   GitPullRequestArrow,
   History,
+  Link2,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Plus,
+  Scale,
+  ShieldCheck,
   Tag,
   Trash2,
   Upload,
+  Users,
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { CloneBox } from "@/components/CloneBox";
 import { CodeBlock } from "@/components/CodeBlock";
-import { FileIcon } from "@/components/FileIcon";
+import { CommitAuthors } from "@/components/CommitAuthors";
+import { FileIcon, FolderIcon } from "@/components/FileIcon";
+import { GoToFile } from "@/components/GoToFile";
 import { Markdown } from "@/components/Markdown";
 import { RefPicker } from "@/components/RefPicker";
+import { RepoFileTree } from "@/components/RepoFileTree";
 import { RepoHeader } from "@/components/RepoHeader";
+import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
@@ -75,6 +98,7 @@ function formatFileSize(bytes: number) {
 export function RepoCode({ owner, name, data }: { owner: string; name: string; data: RepoSrcData }) {
   const { t } = useTranslation();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
+  const [treeOpen, setTreeOpen] = useState(() => localStorage.getItem(FILE_TREE_KEY) !== "closed");
   const summary = data.summary;
   const fullName = `${repo.owner}/${repo.name}`;
   let title = summary?.description ? `${fullName}: ${summary.description}` : fullName;
@@ -102,189 +126,574 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
   const pathParts = data.path ? data.path.split("/") : [];
   const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
   const editorPath = refPath(splatOf(data.ref, data.path));
+  const toggleTree = (open: boolean) => {
+    setTreeOpen(open);
+    localStorage.setItem(FILE_TREE_KEY, open ? "open" : "closed");
+  };
+  // The tree shows beside files and directories below the root, on wide
+  // screens.
+  const withTree = !summary;
+  const treeShown = withTree && treeOpen;
+
+  const refPicker = (
+    <RefPicker
+      current={data.ref}
+      type={data.refType}
+      branches={data.branches}
+      tags={data.tags}
+      renderLink={(ref, className, children) => srcLink(data.path, ref, className, children)}
+    />
+  );
+  const compareButton = data.pullRequest ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <a
+          href={subUrl(
+            `${data.pullRequest.repoLink}/compare/${refPath(data.pullRequest.baseBranch)}...${refPath(data.pullRequest.head).replace(/%3A/g, ":")}`,
+          )}
+          aria-label={t("repo.pulls.compare_changes")}
+          className="grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
+        >
+          <GitPullRequestArrow className="size-4 text-(--color-success)" aria-hidden />
+        </a>
+      </TooltipTrigger>
+      <TooltipContent>{t("repo.pulls.compare_changes")}</TooltipContent>
+    </Tooltip>
+  ) : null;
+  const goToFile = (className?: string) => (
+    <GoToFile owner={repo.owner} name={repo.name} gitRef={data.ref} commitID={data.commitID} className={className} />
+  );
+  const addFile =
+    data.kind === "dir" && data.editor === "ok" ? (
+      <AddFileMenu
+        newFile={
+          <Link
+            to="/$owner/$repo/_new/$"
+            params={{ ...params, _splat: splatOf(data.ref, data.path) }}
+            className={ITEM_CLASS}
+          >
+            <Plus className="size-4 text-(--color-muted-foreground)" aria-hidden />
+            {t("repo.editor.new_file")}
+          </Link>
+        }
+        upload={
+          data.canUploadFile ? (
+            <Link
+              to="/$owner/$repo/_upload/$"
+              params={{ ...params, _splat: splatOf(data.ref, data.path) }}
+              className={ITEM_CLASS}
+            >
+              <Upload className="size-4 text-(--color-muted-foreground)" aria-hidden />
+              {t("repo.editor.upload_file")}
+            </Link>
+          ) : null
+        }
+      />
+    ) : null;
+  const latestCommit = data.latestCommit ? (
+    <LatestCommit
+      owner={repo.owner}
+      name={repo.name}
+      commit={data.latestCommit}
+      history={
+        <Link
+          to="/$owner/$repo/commits/$"
+          params={{ ...params, _splat: splatOf(data.ref, data.path) }}
+          className="inline-flex shrink-0 items-center gap-1 text-(--color-foreground) hover:text-(--color-primary)"
+        >
+          <History className="size-4" aria-hidden />
+          {summary ? (
+            <span>
+              <strong className="font-semibold">{summary.commitCount}</strong>{" "}
+              {t(summary.commitCount === 1 ? "repo.commit" : "repo.commits")}
+            </span>
+          ) : (
+            t("repo.file_history")
+          )}
+        </Link>
+      }
+    />
+  ) : null;
+  const entryList =
+    data.kind === "dir" ? (
+      <EntryList
+        owner={repo.owner}
+        name={repo.name}
+        entries={data.entries ?? []}
+        parent={pathParts.length ? srcLink(pathParts.slice(0, -1).join("/"), data.ref, LINK_CLASS, "..") : null}
+        linkOf={(entry) =>
+          srcLink(data.path ? `${data.path}/${entry.name}` : entry.name, data.ref, undefined, entry.name)
+        }
+      />
+    ) : null;
+  const readme =
+    data.kind === "dir" && data.readme ? (
+      <section
+        id="readme"
+        aria-labelledby="repo-readme-heading"
+        className="mt-6 scroll-mt-20 overflow-hidden rounded-md border border-(--color-border)"
+      >
+        <h2
+          id="repo-readme-heading"
+          className="flex items-center gap-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2 text-sm font-semibold"
+        >
+          <BookOpen className="size-4 text-(--color-muted-foreground)" aria-hidden />
+          {data.readme.name}
+        </h2>
+        {data.readme.html !== undefined ? (
+          <Markdown html={data.readme.html} className="p-4 sm:p-6" />
+        ) : (
+          <pre className="p-4 font-mono text-sm wrap-anywhere whitespace-pre-wrap">{data.readme.text}</pre>
+        )}
+      </section>
+    ) : null;
+
+  if (summary) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <RepoHeader repo={repo} activeTab="code" />
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+          <h1 className="sr-only">{fullName}</h1>
+          <div className="mb-4 lg:hidden">
+            <AboutText summary={summary} />
+          </div>
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="min-w-0">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {refPicker}
+                {compareButton}
+                <span className="order-3 hidden flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:flex">
+                  <Link
+                    to="/$owner/$repo/branches"
+                    params={params}
+                    className="inline-flex items-center gap-1 hover:text-(--color-primary)"
+                  >
+                    <GitBranch className="size-4 text-(--color-muted-foreground)" aria-hidden />
+                    <strong className="font-semibold">{data.branches.length}</strong>
+                    <span className="text-(--color-muted-foreground)">
+                      {t(data.branches.length === 1 ? "repo.branch" : "repo.branches")}
+                    </span>
+                  </Link>
+                  <Link
+                    to="/$owner/$repo/releases"
+                    params={params}
+                    className="inline-flex items-center gap-1 hover:text-(--color-primary)"
+                  >
+                    <Tag className="size-4 text-(--color-muted-foreground)" aria-hidden />
+                    <strong className="font-semibold">{data.tags.length}</strong>
+                    <span className="text-(--color-muted-foreground)">
+                      {t(data.tags.length === 1 ? "repo.tag" : "repo.tags")}
+                    </span>
+                  </Link>
+                </span>
+                {goToFile("min-w-40 flex-1 sm:order-4 sm:ml-auto sm:max-w-64")}
+                <span className="order-5 flex items-center gap-2">
+                  {addFile}
+                  <CloneMenu links={summary.cloneLinks} archiveLink={`${repoLink}/archive/${refPath(data.ref)}`} />
+                </span>
+              </div>
+              <div className="overflow-hidden rounded-md border border-(--color-border)">
+                {latestCommit}
+                {entryList}
+              </div>
+              {readme}
+            </div>
+            <aside aria-labelledby="repo-about-heading" className="hidden min-w-0 lg:block">
+              <h2 id="repo-about-heading" className="mb-3 font-semibold">
+                {t("repo.about")}
+              </h2>
+              <AboutText summary={summary} />
+              <AboutDocs entries={data.entries ?? []} hasReadme={!!data.readme} srcLink={srcLink} />
+              <section aria-labelledby="repo-about-releases" className="border-t border-(--color-border) pt-4">
+                <h3 id="repo-about-releases" className="mb-1 font-semibold">
+                  <Link
+                    to="/$owner/$repo/releases"
+                    params={params}
+                    className="inline-flex items-center gap-2 hover:text-(--color-primary)"
+                  >
+                    {t("repo.releases")}
+                    {data.tags.length ? (
+                      <span className="rounded-full bg-(--color-surface) px-2 text-xs font-semibold">
+                        {data.tags.length}
+                      </span>
+                    ) : null}
+                  </Link>
+                </h3>
+                {!data.tags.length ? (
+                  <p className="text-sm text-(--color-muted-foreground)">{t("repo.no_releases")}</p>
+                ) : null}
+              </section>
+            </aside>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const breadcrumb = (
+    <nav aria-label={t("repo.files")} className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm">
+      {srcLink("", data.ref, cn(LINK_CLASS, "font-semibold wrap-anywhere"), repo.name)}
+      {pathParts.map((part, i) => (
+        <span key={i} className="contents">
+          <span className="text-(--color-muted-foreground)" aria-hidden>
+            /
+          </span>
+          {i === pathParts.length - 1 ? (
+            <span className="font-semibold wrap-anywhere" aria-current="page">
+              {part}
+            </span>
+          ) : (
+            srcLink(pathParts.slice(0, i + 1).join("/"), data.ref, cn(LINK_CLASS, "wrap-anywhere"), part)
+          )}
+        </span>
+      ))}
+      <CopyButton text={data.path} label={t("repo.copy_file_path")} />
+    </nav>
+  );
+  // The picker and the finder move to the tree while it shows.
+  const inMain = treeShown ? "lg:hidden" : undefined;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RepoHeader repo={repo} activeTab="code" />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
-        <h1 className="sr-only">{data.path || fullName}</h1>
-        {summary ? (
-          <p className="mb-4 text-sm wrap-anywhere">
-            {summary.description ? (
-              <span className="whitespace-pre-line">{summary.description}</span>
-            ) : (
-              <span className="text-(--color-muted-foreground) italic">{t("repo.no_desc")}</span>
-            )}
-            {summary.website ? (
-              <a href={summary.website} className={cn(LINK_CLASS, "ml-2")} rel="nofollow noopener noreferrer">
-                {summary.website}
-              </a>
-            ) : null}
-          </p>
-        ) : null}
-
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <RefPicker
-            current={data.ref}
-            type={data.refType}
-            branches={data.branches}
-            tags={data.tags}
-            renderLink={(ref, className, children) => srcLink(data.path, ref, className, children)}
-          />
-          {data.pullRequest ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <a
-                  href={subUrl(
-                    `${data.pullRequest.repoLink}/compare/${refPath(data.pullRequest.baseBranch)}...${refPath(data.pullRequest.head).replace(/%3A/g, ":")}`,
-                  )}
-                  aria-label={t("repo.pulls.compare_changes")}
-                  className="grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
-                >
-                  <GitPullRequestArrow className="size-4 text-(--color-success)" aria-hidden />
-                </a>
-              </TooltipTrigger>
-              <TooltipContent>{t("repo.pulls.compare_changes")}</TooltipContent>
-            </Tooltip>
-          ) : null}
-          {pathParts.length ? (
-            <nav aria-label={t("repo.files")} className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm">
-              {srcLink("", data.ref, cn(LINK_CLASS, "font-semibold wrap-anywhere"), repo.name)}
-              {pathParts.map((part, i) => (
-                <span key={i} className="contents">
-                  <span className="text-(--color-muted-foreground)" aria-hidden>
-                    /
-                  </span>
-                  {i === pathParts.length - 1 ? (
-                    <span className="font-semibold wrap-anywhere" aria-current="page">
-                      {part}
-                    </span>
-                  ) : (
-                    srcLink(pathParts.slice(0, i + 1).join("/"), data.ref, cn(LINK_CLASS, "wrap-anywhere"), part)
-                  )}
-                </span>
-              ))}
-            </nav>
-          ) : summary ? (
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <Link
-                to="/$owner/$repo/branches"
-                params={params}
-                className="inline-flex items-center gap-1 hover:underline"
-              >
-                <GitBranch className="size-4 text-(--color-muted-foreground)" aria-hidden />
-                <strong className="font-semibold">{data.branches.length}</strong>
-                <span className="text-(--color-muted-foreground)">
-                  {t(data.branches.length === 1 ? "repo.branch" : "repo.branches")}
-                </span>
-              </Link>
-              <Link
-                to="/$owner/$repo/releases"
-                params={params}
-                className="inline-flex items-center gap-1 hover:underline"
-              >
-                <Tag className="size-4 text-(--color-muted-foreground)" aria-hidden />
-                <strong className="font-semibold">{data.tags.length}</strong>
-                <span className="text-(--color-muted-foreground)">
-                  {t(data.tags.length === 1 ? "repo.release" : "repo.releases")}
-                </span>
-              </Link>
-            </span>
-          ) : null}
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {data.kind === "dir" && data.editor === "ok" ? (
-              <>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/$owner/$repo/_new/$" params={{ ...params, _splat: splatOf(data.ref, data.path) }}>
-                    <Plus className="size-4" aria-hidden />
-                    {t("repo.editor.new_file")}
-                  </Link>
-                </Button>
-                {data.canUploadFile ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/$owner/$repo/_upload/$" params={{ ...params, _splat: splatOf(data.ref, data.path) }}>
-                      <Upload className="size-4" aria-hidden />
-                      {t("repo.editor.upload_file")}
-                    </Link>
-                  </Button>
-                ) : null}
-              </>
-            ) : null}
-            {summary ? (
-              <CloneMenu links={summary.cloneLinks} archiveLink={`${repoLink}/archive/${refPath(data.ref)}`} />
-            ) : null}
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-md border border-(--color-border)">
-          {data.latestCommit ? (
-            <LatestCommit
-              owner={repo.owner}
-              name={repo.name}
-              commit={data.latestCommit}
-              history={
-                <Link
-                  to="/$owner/$repo/commits/$"
-                  params={{ ...params, _splat: splatOf(data.ref, data.path) }}
-                  className="inline-flex shrink-0 items-center gap-1 text-sm hover:text-(--color-primary)"
-                >
-                  <History className="size-4" aria-hidden />
-                  {summary ? (
-                    <span>
-                      <strong className="font-semibold">{summary.commitCount}</strong>{" "}
-                      {t(summary.commitCount === 1 ? "repo.commit" : "repo.commits")}
-                    </span>
-                  ) : (
-                    t("repo.file_history")
-                  )}
-                </Link>
-              }
-            />
-          ) : null}
-          {data.kind === "dir" ? (
-            <EntryList
-              owner={repo.owner}
-              name={repo.name}
-              entries={data.entries ?? []}
-              parent={pathParts.length ? srcLink(pathParts.slice(0, -1).join("/"), data.ref, LINK_CLASS, "..") : null}
-              linkOf={(entry) =>
-                srcLink(data.path ? `${data.path}/${entry.name}` : entry.name, data.ref, undefined, entry.name)
-              }
-            />
-          ) : null}
-        </div>
-
-        {data.kind === "dir" && data.readme ? (
-          <section
-            aria-labelledby="repo-readme-heading"
-            className="mt-6 overflow-hidden rounded-md border border-(--color-border)"
+      <div className={cn("flex min-h-0 w-full flex-1", !treeShown && "mx-auto max-w-7xl")}>
+        {treeShown ? (
+          <ResizableSidebar
+            defaultWidth={300}
+            minWidth={220}
+            maxWidth={480}
+            className="hidden border-r border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px)] lg:flex lg:h-[calc(100dvh-3.5rem-1px)] lg:self-start"
           >
-            <h2
-              id="repo-readme-heading"
-              className="flex items-center gap-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2 text-sm font-semibold"
-            >
-              <BookOpen className="size-4 text-(--color-muted-foreground)" aria-hidden />
-              {data.readme.name}
-            </h2>
-            {data.readme.html !== undefined ? (
-              <Markdown html={data.readme.html} className="p-4 sm:p-6" />
-            ) : (
-              <pre className="p-4 font-mono text-sm wrap-anywhere whitespace-pre-wrap">{data.readme.text}</pre>
-            )}
-          </section>
+            <div className="flex flex-col gap-2 p-3">
+              <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => toggleTree(false)}
+                      aria-label={t("repo.hide_file_tree")}
+                      aria-expanded
+                      className={ICON_BUTTON_CLASS}
+                    >
+                      <PanelLeftClose className="size-4" aria-hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("repo.hide_file_tree")}</TooltipContent>
+                </Tooltip>
+                <h2 className="font-semibold">{t("repo.files")}</h2>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 [&>*:first-child]:justify-start">
+                {refPicker}
+                {compareButton}
+              </div>
+              {goToFile()}
+            </div>
+            <div className="min-h-0 flex-1">
+              <RepoFileTree
+                owner={repo.owner}
+                name={repo.name}
+                gitRef={data.ref}
+                commitID={data.commitID}
+                path={data.path}
+              />
+            </div>
+          </ResizableSidebar>
         ) : null}
+        <main className={cn("min-w-0 flex-1 px-4 py-6 sm:px-6", treeShown && "lg:pt-3 lg:pl-3")}>
+          <h1 className="sr-only">{data.path}</h1>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {withTree && !treeOpen ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => toggleTree(true)}
+                    aria-label={t("repo.show_file_tree")}
+                    aria-expanded={false}
+                    className={cn(ICON_BUTTON_CLASS, "hidden border border-(--color-border) lg:grid")}
+                  >
+                    <PanelLeftOpen className="size-4" aria-hidden />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t("repo.show_file_tree")}</TooltipContent>
+              </Tooltip>
+            ) : null}
+            <span className={cn("flex min-w-0 items-center gap-2", inMain)}>
+              {refPicker}
+              {compareButton}
+            </span>
+            {breadcrumb}
+            <div className="ml-auto flex items-center gap-2">
+              {data.kind === "dir" ? (
+                <>
+                  {goToFile(cn("w-56", inMain))}
+                  {addFile}
+                </>
+              ) : (
+                <FileMenu
+                  permalink={
+                    data.refType !== "commit"
+                      ? srcLink(data.path, data.commitID, ITEM_CLASS, t("repo.file_permalink"))
+                      : null
+                  }
+                  permalinkURL={`${window.location.origin}${subUrl(`/${repo.owner}/${repo.name}/src/${refPath(splatOf(data.commitID, data.path))}`)}`}
+                  canGoToLine={!!data.file?.content}
+                />
+              )}
+            </div>
+          </div>
 
-        {data.file ? (
-          <FileView
-            owner={repo.owner}
-            name={repo.name}
-            data={data}
-            file={data.file}
-            rawURL={subUrl(`/${repo.owner}/${repo.name}/raw/${editorPath}`)}
-          />
-        ) : null}
-      </main>
+          {data.kind === "dir" ? (
+            <div className="overflow-hidden rounded-md border border-(--color-border)">
+              {latestCommit}
+              {entryList}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-(--color-border) [&>div]:border-b-0">
+              {latestCommit}
+            </div>
+          )}
+          {readme}
+
+          {data.file ? (
+            <FileView
+              owner={repo.owner}
+              name={repo.name}
+              data={data}
+              file={data.file}
+              rawURL={subUrl(`/${repo.owner}/${repo.name}/raw/${editorPath}`)}
+            />
+          ) : null}
+        </main>
+      </div>
     </div>
+  );
+}
+
+const FILE_TREE_KEY = "gogs.code.fileTree";
+
+const ITEM_CLASS =
+  "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none";
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          onClick={() =>
+            void navigator.clipboard.writeText(text).then(
+              () => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              },
+              () => toast.error(t("copy_failed")),
+            )
+          }
+          className={cn(ICON_BUTTON_CLASS, "size-7")}
+        >
+          {copied ? (
+            <Check className="size-4 text-(--color-success)" aria-hidden />
+          ) : (
+            <Copy className="size-4" aria-hidden />
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{copied ? t("copied") : label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function AddFileMenu({ newFile, upload }: { newFile: ReactNode; upload: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm">
+          {t("repo.add_file")}
+          <ChevronDown className="size-3.5" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="flex w-48 flex-col p-1">
+        {newFile}
+        {upload}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// FileMenu holds the actions on the file that GitHub keeps behind "...":
+// its permalink, copying the permalink, and jumping to a line.
+function FileMenu({
+  permalink,
+  permalinkURL,
+  canGoToLine,
+}: {
+  permalink: ReactNode;
+  permalinkURL: string;
+  canGoToLine: boolean;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [goingToLine, setGoingToLine] = useState(false);
+  const [line, setLine] = useState("");
+  return (
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" className="size-8" aria-label={t("repo.more_file_actions")}>
+                <Ellipsis className="size-4" aria-hidden />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t("repo.more_file_actions")}</TooltipContent>
+        </Tooltip>
+        <PopoverContent align="end" className="flex w-52 flex-col p-1" onClick={() => setOpen(false)}>
+          {permalink}
+          <button
+            type="button"
+            className={ITEM_CLASS}
+            onClick={() =>
+              void navigator.clipboard.writeText(permalinkURL).then(
+                () => toast.success(t("copied")),
+                () => toast.error(t("copy_failed")),
+              )
+            }
+          >
+            {t("repo.copy_permalink")}
+          </button>
+          {canGoToLine ? (
+            <button type="button" className={ITEM_CLASS} onClick={() => setGoingToLine(true)}>
+              {t("repo.go_to_line")}
+            </button>
+          ) : null}
+        </PopoverContent>
+      </Popover>
+      <Dialog
+        open={goingToLine}
+        onOpenChange={(next) => {
+          setGoingToLine(next);
+          if (!next) setLine("");
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <form
+            noValidate
+            className="flex min-h-0 flex-1 flex-col"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = Number(line);
+              if (!Number.isInteger(n) || n < 1) return;
+              window.location.hash = `L${n}`;
+              setGoingToLine(false);
+              setLine("");
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>{t("repo.go_to_line")}</DialogTitle>
+              <DialogDescription className="sr-only">{t("repo.go_to_line")}</DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <Input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                autoFocus
+                aria-label={t("repo.line_number")}
+                placeholder={t("repo.line_number")}
+                value={line}
+                onChange={(e) => setLine(e.target.value)}
+              />
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setGoingToLine(false)}>
+                {t("cancel")}
+              </Button>
+              <Button type="submit">{t("repo.go_to_line_submit")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function AboutText({ summary }: { summary: NonNullable<RepoSrcData["summary"]> }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mb-3 flex flex-col gap-2">
+      {summary.description ? (
+        <p className="whitespace-pre-line wrap-anywhere">{summary.description}</p>
+      ) : (
+        <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.no_desc")}</p>
+      )}
+      {summary.website ? (
+        <a
+          href={summary.website}
+          className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-(--color-primary) hover:underline"
+          rel="nofollow noopener noreferrer"
+        >
+          <Link2 className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">{summary.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+const DOC_FILES = [
+  { pattern: /^(licen[cs]e|copying)(\..+)?$/i, label: "repo.license", Icon: Scale },
+  { pattern: /^contributing(\..+)?$/i, label: "repo.contributing", Icon: Users },
+  { pattern: /^security(\..+)?$/i, label: "repo.security_policy", Icon: ShieldCheck },
+] as const;
+
+// AboutDocs links the README and the license, contributing guide and
+// security policy at the root, like GitHub's About.
+function AboutDocs({
+  entries,
+  hasReadme,
+  srcLink,
+}: {
+  entries: RepoTreeEntry[];
+  hasReadme: boolean;
+  srcLink: (path: string, ref?: string, className?: string, children?: ReactNode) => ReactNode;
+}) {
+  const { t } = useTranslation();
+  const linkClass = "flex items-center gap-2 text-sm text-(--color-muted-foreground) hover:text-(--color-primary)";
+  const docs = DOC_FILES.flatMap((doc) => {
+    const entry = entries.find((e) => e.type === "file" && doc.pattern.test(e.name));
+    return entry ? [{ ...doc, name: entry.name }] : [];
+  });
+  if (!hasReadme && !docs.length) return null;
+  return (
+    <ul className="mb-4 flex flex-col gap-2">
+      {hasReadme ? (
+        <li>
+          <a href="#readme" className={linkClass}>
+            <BookOpen className="size-4 shrink-0" aria-hidden />
+            {t("repo.readme")}
+          </a>
+        </li>
+      ) : null}
+      {docs.map(({ name, label, Icon }) => (
+        <li key={name}>
+          {srcLink(
+            name,
+            undefined,
+            linkClass,
+            <>
+              <Icon className="size-4 shrink-0" aria-hidden />
+              {t(label)}
+            </>,
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -350,32 +759,29 @@ function LatestCommit({
   commit: RepoCommitListItem;
   history: ReactNode;
 }) {
-  const { author } = commit;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-(--color-border) bg-(--color-surface) px-4 py-2.5 text-sm">
-      <span className="flex min-w-0 flex-1 basis-60 items-center gap-2">
-        <img src={author.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-        {author.profileURL ? (
-          <a href={author.profileURL} className="shrink-0 font-semibold hover:underline">
-            {author.name}
-          </a>
-        ) : (
-          <span className="shrink-0 font-semibold">{author.name}</span>
-        )}
-        <span
-          className="min-w-0 truncate text-(--color-muted-foreground) [&_a]:text-(--color-primary) [&_a]:hover:underline"
-          dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
-        />
-      </span>
-      <span className="flex items-center gap-3 text-(--color-muted-foreground)">
-        <Link
-          to="/$owner/$repo/commit/$sha"
-          params={{ owner, repo: name, sha: commit.sha }}
-          className="font-mono text-xs hover:text-(--color-primary) hover:underline"
-        >
-          {commit.sha.slice(0, 7)}
-        </Link>
-        <RelativeTime when={author.when} />
+    <div className="flex items-center gap-3 border-b border-(--color-border) bg-(--color-surface) px-4 py-2.5 text-sm">
+      <CommitAuthors
+        author={commit.author}
+        coAuthors={commit.coAuthors}
+        className="max-w-[60%] [&_img+img]:ring-(--color-surface)"
+      />
+      <span
+        className="hidden min-w-0 flex-1 truncate text-(--color-muted-foreground) sm:block [&_a]:text-(--color-primary) [&_a]:hover:underline"
+        dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
+      />
+      <span className="ml-auto flex shrink-0 items-center gap-3 text-(--color-muted-foreground)">
+        <span className="hidden items-center gap-1 text-xs sm:flex">
+          <Link
+            to="/$owner/$repo/commit/$sha"
+            params={{ owner, repo: name, sha: commit.sha }}
+            className="font-mono hover:text-(--color-primary) hover:underline"
+          >
+            {commit.sha.slice(0, 7)}
+          </Link>
+          <span aria-hidden>·</span>
+          <RelativeTime when={commit.author.when} />
+        </span>
         {history}
       </span>
     </div>
@@ -384,13 +790,9 @@ function LatestCommit({
 
 function EntryIcon({ type, name }: { type: RepoTreeEntry["type"]; name: string }) {
   if (type === "file") return <FileIcon name={name} />;
-  const Icon = { dir: Folder, symlink: FileSymlink, submodule: FolderGit2 }[type];
-  return (
-    <Icon
-      className={cn("size-4 shrink-0", type === "dir" ? "text-(--color-primary)" : "text-(--color-muted-foreground)")}
-      aria-hidden
-    />
-  );
+  if (type === "dir") return <FolderIcon />;
+  const Icon = type === "symlink" ? FileSymlink : FolderGit2;
+  return <Icon className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />;
 }
 
 function EntryList({
@@ -478,7 +880,11 @@ function FileView({
   const { t } = useTranslation();
   const params = { owner, repo: name };
   const splat = splatOf(data.ref, data.path);
-  const lineCount = useMemo(() => (file.content ? file.content.replace(/\n$/, "").split("\n").length : 0), [file]);
+  const { lineCount, locCount } = useMemo(() => {
+    const lines = file.content ? file.content.replace(/\n$/, "").split("\n") : [];
+    return { lineCount: lines.length, locCount: lines.filter((line) => line.trim() !== "").length };
+  }, [file]);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
   const plain = useSearch({ strict: false, select: (search: { plain?: unknown }) => search.plain === true });
   // Rendered files can also show their source, like GitHub's "Preview" and
@@ -509,7 +915,7 @@ function FileView({
   return (
     <section
       aria-labelledby="repo-file-heading"
-      className="mt-4 overflow-hidden rounded-md border border-(--color-border)"
+      className="mt-3 overflow-hidden rounded-md border border-(--color-border)"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2">
         {hasPreview ? (
@@ -536,24 +942,57 @@ function FileView({
           )}
           <span className="font-semibold wrap-anywhere">{file.name}</span>
         </h2>
-        <span className="text-xs text-(--color-muted-foreground)">
-          {lineCount ? `${t(lineCount === 1 ? "repo.file_line" : "repo.file_lines", { count: lineCount })} · ` : null}
+        <span className="font-mono text-xs text-(--color-muted-foreground)">
+          {lineCount
+            ? `${t(lineCount === 1 ? "repo.file_line" : "repo.file_lines", { count: lineCount })} (${t("repo.file_loc", { count: locCount })}) · `
+            : null}
           {formatFileSize(file.size)}
         </span>
         <div className="ml-auto flex items-center gap-1">
-          <div className="mr-1 flex overflow-hidden rounded-md border border-(--color-border) text-xs [&>*+*]:border-l [&>*+*]:border-(--color-border)">
-            {data.refType !== "commit" ? (
-              <Link
-                to="/$owner/$repo/src/$"
-                params={{ ...params, _splat: splatOf(data.commitID, data.path) }}
-                className="bg-(--color-background) px-2.5 py-1.5 hover:bg-(--color-surface)"
-              >
-                {t("repo.file_permalink")}
-              </Link>
-            ) : null}
-            <a href={rawURL} className="bg-(--color-background) px-2.5 py-1.5 hover:bg-(--color-surface)">
+          <div className="mr-1 flex h-8 overflow-hidden rounded-md border border-(--color-border) text-xs [&>*]:bg-(--color-background) [&>*:hover]:bg-(--color-surface) [&>*+*]:border-l [&>*+*]:border-(--color-border)">
+            <a href={rawURL} className="grid place-items-center px-2.5">
               {t("repo.file_raw")}
             </a>
+            {file.content !== undefined ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t("repo.copy_raw_file")}
+                    className="grid w-8 cursor-pointer place-items-center text-(--color-muted-foreground) hover:text-(--color-foreground)"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(file.content ?? "").then(
+                        () => {
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        },
+                        () => toast.error(t("copy_failed")),
+                      )
+                    }
+                  >
+                    {copied ? (
+                      <Check className="size-4 text-(--color-success)" aria-hidden />
+                    ) : (
+                      <Copy className="size-4" aria-hidden />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{copied ? t("copied") : t("repo.copy_raw_file")}</TooltipContent>
+              </Tooltip>
+            ) : null}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={rawURL}
+                  download={file.name}
+                  aria-label={t("repo.download_raw_file")}
+                  className="grid w-8 place-items-center text-(--color-muted-foreground) hover:text-(--color-foreground)"
+                >
+                  <Download className="size-4" aria-hidden />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>{t("repo.download_raw_file")}</TooltipContent>
+            </Tooltip>
           </div>
           {data.editor ? (
             <>
@@ -722,6 +1161,19 @@ function SourceView({ file }: { file: RepoFile }) {
     };
     frame = window.requestAnimationFrame(scroll);
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  // Going to a line, e.g., from the file menu, changes the hash.
+  useEffect(() => {
+    const onHashChange = () => {
+      const range = selectedLinesOf(window.location.hash);
+      if (!range) return;
+      setSelected(range);
+      const root = wrapper.current?.querySelector("diffs-container")?.shadowRoot;
+      root?.querySelector(`[data-line="${range.start}"]`)?.scrollIntoView({ block: "center" });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
   const tabCSS = file.tabWidth ? `pre, code { tab-size: ${file.tabWidth}; }` : "";
 
