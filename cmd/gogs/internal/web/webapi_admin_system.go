@@ -117,13 +117,12 @@ type adminDashboard struct {
 func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
 	s := database.GetStatistic(c.Request().Context(), logger).Counter
 	r := adminReport{l: l}
-	// Measurements show the number as code and its unit after it.
+	// Measurements show the whole value, with its unit, as code.
 	size := func(key string, n uint64) adminReportRow {
-		value, unit, _ := strings.Cut(tool.FileSize(int64(n)), " ")
-		return r.codeUnit(key, value, unit)
+		return r.code(key, tool.FileSize(int64(n)))
 	}
 	seconds := func(key string, ns uint64, precision int) adminReportRow {
-		return r.codeUnit(key, strconv.FormatFloat(float64(ns)/float64(time.Second), 'f', precision, 64), "s")
+		return r.code(key, strconv.FormatFloat(float64(ns)/float64(time.Second), 'f', precision, 64)+"s")
 	}
 
 	m := new(runtime.MemStats)

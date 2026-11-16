@@ -94,7 +94,7 @@ The branches page searches as you type instead, like GitHub: the URL follows the
 
 ## Reports
 
-Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show each setting value as inline code, as it is written in the configuration, and keep units, notes and Yes or No text outside the chip. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
+Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show each setting value as inline code, as it is written in the configuration, and keep units, notes and Yes or No text outside the chip. Measurements, e.g., memory sizes and durations on the admin dashboard, show the whole value with its unit in the chip. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
 
 ## Highlighted code
 
