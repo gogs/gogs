@@ -264,6 +264,10 @@ func TestRequireJSON(t *testing.T) {
 				resp := httptest.NewRecorder()
 				handler.ServeHTTP(resp, req)
 				assert.Equal(t, tc.wantCode, resp.Code, path)
+				if tc.wantCode == http.StatusUnsupportedMediaType {
+					// Nothing after the check writes to the response.
+					assert.JSONEq(t, `{"error":"content type must be application/json"}`, resp.Body.String(), path)
+				}
 			}
 		})
 	}
@@ -290,9 +294,13 @@ func TestCrossOriginProtection(t *testing.T) {
 
 	crossOrigin, err := newCrossOriginProtection()
 	require.NoError(t, err)
+	var reached bool
 	m := macaron.New()
 	m.Use(crossOrigin)
-	m.Any("/*", func(w http.ResponseWriter) { w.WriteHeader(http.StatusNoContent) })
+	m.Any("/*", func(w http.ResponseWriter) {
+		reached = true
+		w.WriteHeader(http.StatusNoContent)
+	})
 
 	tests := []struct {
 		name     string
@@ -366,6 +374,7 @@ func TestCrossOriginProtection(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			reached = false
 			req := httptest.NewRequest(tc.method, tc.path, nil)
 			req.Host = "127.0.0.1:3000"
 			for k, v := range tc.header {
@@ -374,6 +383,7 @@ func TestCrossOriginProtection(t *testing.T) {
 			resp := httptest.NewRecorder()
 			m.ServeHTTP(resp, req)
 			assert.Equal(t, tc.wantCode, resp.Code)
+			assert.Equal(t, tc.wantCode != http.StatusForbidden, reached, "route reached")
 		})
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	macaronsession "github.com/go-macaron/session"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -446,8 +445,8 @@ func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 }
 
 // postRepoReleaseAttachment stores a file to attach to a release.
-func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, sess macaronsession.Store) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, sess, releaseAttachmentLimits())
+func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, viewer, releaseAttachmentLimits())
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}

@@ -92,6 +92,15 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		return errors.Wrap(err, "initialize web handler")
 	}
 
+	// Flag for port number in case first time run conflict. Apply it before
+	// anything reads the external URL.
+	if portOverride > 0 {
+		port := strconv.Itoa(portOverride)
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
+		conf.Server.ExternalURL = conf.Server.URL.String()
+		conf.Server.HTTPPort = portOverride
+	}
+
 	crossOrigin, err := newCrossOriginProtection()
 	if err != nil {
 		return errors.Wrap(err, "initialize cross-origin protection")
@@ -213,11 +222,9 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 				}
 				// A file that is not attached was either just uploaded, e.g., to
 				// preview it before the issue or comment is created, or left out of a
-				// release by an earlier edit. Only the session that uploaded it can
-				// download it.
+				// release by an earlier edit. Only its uploader can download it.
 				if repo == nil {
-					uploaded, _ := c.Session.Get(uploadedAttachmentsSessionKey).([]string)
-					if !slices.Contains(uploaded, attach.UUID) {
+					if !c.IsLogged || attach.UploaderID != c.User.ID {
 						c.NotFound()
 						return
 					}
@@ -557,14 +564,6 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 			m.Post("/sanitize_ipynb", app.SanitizeIpynb()) // "/-/api/sanitize_ipynb"
 		})
 	})
-
-	// Flag for port number in case first time run conflict.
-	if portOverride > 0 {
-		port := strconv.Itoa(portOverride)
-		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
-		conf.Server.ExternalURL = conf.Server.URL.String()
-		conf.Server.HTTPPort = portOverride
-	}
 
 	var listenAddr string
 	if conf.Server.Protocol == "unix" {
