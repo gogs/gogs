@@ -202,7 +202,7 @@ export function RepoSettingsLayout({
                   </Link>
                 </SettingsNavItem>
               </SettingsNavGroup>
-              {settings.viewerIsOwner ? (
+              {hasDangerZone(settings) ? (
                 <>
                   <SettingsNavDivider />
                   <SettingsNavItem active={active === "danger"} icon={TriangleAlert} destructive>
@@ -231,8 +231,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-// RepoGeneral changes the name, the visibility, the avatar and the features of
-// a repository.
+// RepoGeneral changes the name, the avatar and the features of a repository.
 export function RepoGeneral({ owner, name }: { owner: string; name: string }) {
   const { t } = useTranslation();
   const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
@@ -274,8 +273,15 @@ export function RepoMirror({ owner, name }: { owner: string; name: string }) {
   );
 }
 
-// RepoDangerZone holds the actions on a repository that cannot be taken back.
-// Only its owner gets here.
+// hasDangerZone tells whether the viewer has anything to do in the danger zone.
+// Admins can change the visibility, and only the owner can do the rest. Forks
+// keep the visibility of their base repository.
+function hasDangerZone(settings: RepoSettingsData) {
+  return settings.viewerIsOwner || !settings.isFork;
+}
+
+// RepoDangerZone holds the actions on a repository that are hard or impossible
+// to take back.
 export function RepoDangerZone({ owner, name }: { owner: string; name: string }) {
   const { t } = useTranslation();
   const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
@@ -362,32 +368,6 @@ function BasicSettings({ owner, name, settings }: { owner: string; name: string;
               onChange={(e) => setForm({ ...form, website: e.target.value })}
             />
           </FormField>
-          {/* Forks keep the visibility of their base repository. */}
-          {settings.isFork ? null : (
-            <fieldset
-              className="flex flex-col gap-3"
-              aria-describedby={settings.forkCount ? "visibility-helper" : undefined}
-            >
-              <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
-              <CheckboxField
-                id="private"
-                label={<RichText text={t("repo.visiblity_helper")} />}
-                checked={form.private}
-                onChange={(checked) => setForm({ ...form, private: checked })}
-              />
-              <CheckboxField
-                id="unlisted"
-                label={<RichText text={t("repo.unlisted_helper")} />}
-                checked={form.unlisted}
-                onChange={(checked) => setForm({ ...form, unlisted: checked })}
-              />
-              {settings.forkCount ? (
-                <p id="visibility-helper" className="text-sm text-(--color-muted-foreground)">
-                  {t("repo.visiblity_fork_helper")}
-                </p>
-              ) : null}
-            </fieldset>
-          )}
           <div>
             <Button type="submit">{t("repo.settings.update_settings")}</Button>
           </div>
@@ -721,8 +701,9 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
   );
 }
 
-// DangerZone converts, transfers or deletes the repository, or erases its
-// wiki, once the viewer types its name.
+// DangerZone changes the visibility of the repository. For its owner, it also
+// converts, transfers or deletes the repository, or erases its wiki, once the
+// owner types its name.
 function DangerZone({ owner, name, settings }: { owner: string; name: string; settings: RepoSettingsData }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -734,69 +715,184 @@ function DangerZone({ owner, name, settings }: { owner: string; name: string; se
 
   return (
     <div className="rounded-md border border-(--color-destructive)">
-      {settings.mirror ? (
-        <DangerAction
-          id="convert"
-          name={settings.name}
-          title={t("repo.settings.convert")}
-          description={t("repo.settings.convert_desc")}
-          notices={[t("repo.settings.convert_notices_1")]}
-          confirmLabel={t("repo.settings.convert_confirm")}
-          action={(form) => convertRepo(owner, name, form.repoName)}
-          onDone={() => repoHome(owner, name)}
-        />
+      {settings.isFork ? null : <VisibilityAction owner={owner} name={name} settings={settings} />}
+      {settings.viewerIsOwner ? (
+        <>
+          {settings.mirror ? (
+            <DangerAction
+              id="convert"
+              name={settings.name}
+              title={t("repo.settings.convert")}
+              description={t("repo.settings.convert_desc")}
+              notices={[t("repo.settings.convert_notices_1")]}
+              confirmLabel={t("repo.settings.convert_confirm")}
+              action={(form) => convertRepo(owner, name, form.repoName)}
+              onDone={() => repoHome(owner, name)}
+            />
+          ) : null}
+          <DangerAction
+            id="transfer"
+            name={settings.name}
+            title={t("repo.settings.transfer")}
+            description={t("repo.settings.transfer_desc")}
+            notices={[t("repo.settings.transfer_notices_1"), t("repo.settings.transfer_notices_2")]}
+            confirmLabel={t("repo.settings.make_transfer")}
+            askNewOwner
+            action={(form) => transferRepo(owner, name, form)}
+            onDone={(repo) => repoHome(repo.owner, repo.name)}
+          />
+          {settings.advanced.enableWiki ? (
+            <DangerAction
+              id="deleteWiki"
+              name={settings.name}
+              title={t("repo.settings.wiki_delete")}
+              description={t("repo.settings.wiki_delete_desc")}
+              notices={[
+                t("repo.settings.delete_notices_1"),
+                t("repo.settings.wiki_delete_notices_1").replace(/%(?:\[1\])?s/, settings.name),
+              ]}
+              confirmLabel={t("repo.settings.confirm_delete")}
+              action={(form) => deleteRepoWiki(owner, name, form.repoName)}
+              onDone={async () => {
+                toast.success(t("repo.settings.wiki_deletion_success"));
+                await refresh();
+              }}
+            />
+          ) : null}
+          <DangerAction
+            id="delete"
+            name={settings.name}
+            title={t("repo.settings.delete")}
+            description={t("repo.settings.delete_desc")}
+            notices={[
+              t("repo.settings.delete_notices_1"),
+              t("repo.settings.delete_notices_2"),
+              ...(settings.forkCount ? [t("repo.settings.delete_notices_fork_1")] : []),
+            ]}
+            confirmLabel={t("repo.settings.confirm_delete")}
+            action={(form) => deleteRepo(owner, name, form.repoName)}
+            onDone={async () => {
+              toast.success(t("repo.settings.deletion_success"));
+              if (settings.ownerIsOrganization) {
+                await navigate({ to: "/org/$org/dashboard", params: { org: owner } });
+              } else {
+                await navigate({ to: "/" });
+              }
+              queryClient.removeQueries({ queryKey: ["repo", owner, name] });
+            }}
+          />
+        </>
       ) : null}
-      <DangerAction
-        id="transfer"
-        name={settings.name}
-        title={t("repo.settings.transfer")}
-        description={t("repo.settings.transfer_desc")}
-        notices={[t("repo.settings.transfer_notices_1"), t("repo.settings.transfer_notices_2")]}
-        confirmLabel={t("repo.settings.make_transfer")}
-        askNewOwner
-        action={(form) => transferRepo(owner, name, form)}
-        onDone={(repo) => repoHome(repo.owner, repo.name)}
-      />
-      {settings.advanced.enableWiki ? (
-        <DangerAction
-          id="deleteWiki"
-          name={settings.name}
-          title={t("repo.settings.wiki_delete")}
-          description={t("repo.settings.wiki_delete_desc")}
-          notices={[
-            t("repo.settings.delete_notices_1"),
-            t("repo.settings.wiki_delete_notices_1").replace(/%(?:\[1\])?s/, settings.name),
-          ]}
-          confirmLabel={t("repo.settings.confirm_delete")}
-          action={(form) => deleteRepoWiki(owner, name, form.repoName)}
-          onDone={async () => {
-            toast.success(t("repo.settings.wiki_deletion_success"));
-            await refresh();
-          }}
-        />
-      ) : null}
-      <DangerAction
-        id="delete"
-        name={settings.name}
-        title={t("repo.settings.delete")}
-        description={t("repo.settings.delete_desc")}
-        notices={[
-          t("repo.settings.delete_notices_1"),
-          t("repo.settings.delete_notices_2"),
-          ...(settings.forkCount ? [t("repo.settings.delete_notices_fork_1")] : []),
-        ]}
-        confirmLabel={t("repo.settings.confirm_delete")}
-        action={(form) => deleteRepo(owner, name, form.repoName)}
-        onDone={async () => {
-          toast.success(t("repo.settings.deletion_success"));
-          if (settings.ownerIsOrganization) {
-            await navigate({ to: "/org/$org/dashboard", params: { org: owner } });
-          } else {
-            await navigate({ to: "/" });
-          }
-          queryClient.removeQueries({ queryKey: ["repo", owner, name] });
-        }}
-      />
+    </div>
+  );
+}
+
+// VisibilityAction makes the repository private or unlisted, or public again.
+function VisibilityAction({ owner, name, settings }: { owner: string; name: string; settings: RepoSettingsData }) {
+  const { t } = useTranslation();
+  const refresh = useRefresh(owner, name);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ private: settings.private, unlisted: settings.unlisted });
+  const mutation = useMutation({
+    // The settings are saved together, so the rest stays as it is.
+    mutationFn: () =>
+      updateRepoSettings(owner, name, {
+        name: settings.name,
+        description: settings.description,
+        website: settings.website,
+        ...form,
+      }),
+    onSuccess: async () => {
+      setOpen(false);
+      toast.success(t("repo.settings.update_settings_success"));
+      await refresh();
+    },
+  });
+  const { formError } = formErrors(mutation.error);
+  const changed = form.private !== settings.private || form.unlisted !== settings.unlisted;
+  const title = t("repo.settings.change_visibility");
+  const description = [
+    t(settings.private ? "repo.settings.visibility_private" : "repo.settings.visibility_public"),
+    settings.unlisted ? t("repo.settings.visibility_unlisted") : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setForm({ private: settings.private, unlisted: settings.unlisted });
+      mutation.reset();
+    }
+  };
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (changed) mutation.mutate();
+  };
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-(--color-border) px-4 py-3 first:border-t-0">
+      <div className="min-w-0 flex-1 basis-56">
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="text-sm text-(--color-muted-foreground)">{description}</p>
+      </div>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="shrink-0 text-(--color-destructive)">
+            {title}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+            <fieldset disabled={mutation.isPending} className="contents">
+              <DialogHeader>
+                <DialogTitle>{title}</DialogTitle>
+                <DialogDescription>{description}</DialogDescription>
+              </DialogHeader>
+              <DialogBody>
+                <FormAlert message={formError} />
+                <fieldset
+                  className="flex flex-col gap-3"
+                  aria-describedby={settings.forkCount ? "visibility-helper" : undefined}
+                >
+                  <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
+                  <CheckboxField
+                    id="private"
+                    label={<RichText text={t("repo.visiblity_helper")} />}
+                    checked={form.private}
+                    onChange={(checked) => setForm((f) => ({ ...f, private: checked }))}
+                  />
+                  <CheckboxField
+                    id="unlisted"
+                    label={<RichText text={t("repo.unlisted_helper")} />}
+                    checked={form.unlisted}
+                    onChange={(checked) => setForm((f) => ({ ...f, unlisted: checked }))}
+                  />
+                  {settings.forkCount ? (
+                    <p id="visibility-helper" className="text-sm text-(--color-muted-foreground)">
+                      {t("repo.visiblity_fork_helper")}
+                    </p>
+                  ) : null}
+                </fieldset>
+              </DialogBody>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  {t("cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  // A long label wraps on narrow screens, so the button grows with it.
+                  className="h-auto min-h-10"
+                  disabled={!changed}
+                >
+                  {t("repo.settings.change_visibility_confirm")}
+                </Button>
+              </DialogFooter>
+            </fieldset>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
