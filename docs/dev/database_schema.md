@@ -11,6 +11,7 @@
 Primary keys: id
 Indexes: 
 	"access_user_repo_unique" UNIQUE (user_id, repo_id)
+	"idx_access_repo_id" (repo_id)
 ```
 
 # Table "access_token"
