@@ -92,6 +92,20 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		return errors.Wrap(err, "initialize web handler")
 	}
 
+	// Flag for port number in case first time run conflict. Apply it before
+	// anything reads the external URL.
+	if portOverride > 0 {
+		port := strconv.Itoa(portOverride)
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
+		conf.Server.ExternalURL = conf.Server.URL.String()
+		conf.Server.HTTPPort = portOverride
+	}
+
+	crossOrigin, err := newCrossOriginProtection()
+	if err != nil {
+		return errors.Wrap(err, "initialize cross-origin protection")
+	}
+
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
 
@@ -206,11 +220,11 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 					}
 					repo = release.Repo
 				}
-				// A file that is not attached yet was just uploaded, e.g., to preview
-				// it before the issue or comment is created. Only its uploader knows
-				// the random UUID.
+				// A file that is not attached was either just uploaded, e.g., to
+				// preview it before the issue or comment is created, or left out of a
+				// release by an earlier edit. Only its uploader can download it.
 				if repo == nil {
-					if !c.IsLogged {
+					if !c.IsLogged || attach.UploaderID != c.User.ID {
 						c.NotFound()
 						return
 					}
@@ -508,6 +522,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		m.Get("/captcha/*", flamegoBridger(webHandler))
 		m.Any("/*", func(c *context.Context) { c.ServeWeb() })
 	},
+		crossOrigin,
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,
 			ProviderConfig: conf.Session.ProviderConfig,
@@ -549,14 +564,6 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 			m.Post("/sanitize_ipynb", app.SanitizeIpynb()) // "/-/api/sanitize_ipynb"
 		})
 	})
-
-	// Flag for port number in case first time run conflict.
-	if portOverride > 0 {
-		port := strconv.Itoa(portOverride)
-		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
-		conf.Server.ExternalURL = conf.Server.URL.String()
-		conf.Server.HTTPPort = portOverride
-	}
 
 	var listenAddr string
 	if conf.Server.Protocol == "unix" {
@@ -652,6 +659,30 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		}
 		return nil
 	}
+}
+
+// newCrossOriginProtection returns the middleware that turns away the requests
+// browsers send to change something from another site, e.g., a form on another
+// site that posts to Gogs. Browsers mark where each request comes from with
+// the Sec-Fetch-Site header, or the Origin header in older browsers. API v1 is
+// exempt, because the site can allow other origins to call it
+// (`[http] ACCESS_CONTROL_ALLOW_ORIGIN`).
+func newCrossOriginProtection() (macaron.Handler, error) {
+	p := http.NewCrossOriginProtection()
+	// A reverse proxy may pass its own address as the Host header, which older
+	// browsers without Sec-Fetch-Site are checked against.
+	if conf.Server.URL.Host != "" {
+		err := p.AddTrustedOrigin(conf.Server.URL.Scheme + "://" + conf.Server.URL.Host)
+		if err != nil {
+			return nil, errors.Wrap(err, "trust external URL")
+		}
+	}
+	p.AddInsecureBypassPattern("/api/v1/")
+	return func(c *macaron.Context) {
+		if err := p.Check(c.Req.Request); err != nil {
+			http.Error(c.Resp, "Cross-origin request denied", http.StatusForbidden)
+		}
+	}, nil
 }
 
 // newTracingHandler returns a handler that records a span for every request, so

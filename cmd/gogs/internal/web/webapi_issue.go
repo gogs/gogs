@@ -809,14 +809,14 @@ func readUploadedFile(c flamego.Context, l i18n.Locale, lim attachmentLimits) (_
 
 // storeAttachment stores the file uploaded as the "file" form field, and
 // returns its UUID.
-func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (statusCode int, resp any, err error) {
+func storeAttachment(c flamego.Context, l i18n.Locale, viewer *database.User, lim attachmentLimits) (statusCode int, resp any, err error) {
 	f, statusCode, err := readUploadedFile(c, l, lim)
 	if err != nil {
 		return statusCode, nil, err
 	}
 	defer func() { _ = f.File.Close() }()
 
-	attachment, err := database.NewAttachment(f.Header.Filename, f.Head, f.File)
+	attachment, err := database.NewAttachment(viewer.ID, f.Header.Filename, f.Head, f.File)
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}
@@ -824,8 +824,8 @@ func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (st
 }
 
 // postRepoIssueAttachment stores a file to attach to an issue or a comment.
-func postRepoIssueAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, issueAttachmentLimits())
+func postRepoIssueAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, viewer, issueAttachmentLimits())
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}

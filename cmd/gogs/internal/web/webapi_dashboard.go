@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -326,6 +327,11 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 	if err != nil {
 		logger.Error("Failed to get repositories of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repositories")
+	}
+	// A member of an organization only sees the repositories of the teams they
+	// are on, not every repository the organization owns.
+	if repoID > 0 && owner.IsOrganization() && !slices.ContainsFunc(repos, func(r *database.Repository) bool { return r.ID == repoID }) {
+		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 
 	dc, err := newDashboardContext(c.Request().Context(), viewer, owner)

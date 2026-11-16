@@ -316,11 +316,26 @@ func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, sess session.
 	if passkey == nil {
 		return http.StatusUnauthorized, failed, nil
 	}
+	// Like signing in with a password, an account of an authentication source
+	// that was deactivated or removed cannot sign in.
+	if !owner.IsLocal() {
+		source, err := database.Handle.LoginSources().GetByID(ctx, owner.LoginSource)
+		if err != nil && !database.IsErrLoginSourceNotExist(err) {
+			logger.Error("Failed to get login source", "loginSourceID", owner.LoginSource, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "get login source")
+		}
+		if source == nil || !source.IsActived {
+			return http.StatusUnauthorized, failed, nil
+		}
+	}
 	if err = database.Handle.Passkeys().MarkUsed(ctx, passkey.ID, *credential); err != nil {
 		logger.Error("Failed to mark passkey used", "passkeyID", passkey.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "mark passkey used")
 	}
 
-	completeSignIn(sess, mc, owner.User)
+	if err = completeSignIn(sess, mc, owner.User); err != nil {
+		logger.Error("Failed to complete sign-in", "userID", owner.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
+	}
 	return http.StatusNoContent, nil, nil
 }

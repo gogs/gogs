@@ -271,6 +271,10 @@ type repoReleaseRequest struct {
 	IsDraft      bool     `json:"isDraft"`
 	IsPrerelease bool     `json:"isPrerelease"`
 	Attachments  []string `json:"attachments"`
+	// RemovedAttachments are the UUIDs of the downloads the editor removed. The
+	// others it does not send were attached after it loaded, e.g., by someone
+	// else, and stay.
+	RemovedAttachments []string `json:"removedAttachments"`
 }
 
 func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoReleaseRequest) (statusCode int, resp any, err error) {
@@ -378,6 +382,24 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	}
 	// The files already attached to the release stay unless left out, the
 	// others must be new.
+	// The editor sends the downloads it keeps and the new files. The files the
+	// note no longer links to and the downloads the editor removed are deleted
+	// rather than left without a release, and the others stay. Files the note
+	// links to do not count toward the limit.
+	var unlinked []*database.Attachment
+	var noteLinked []string
+	for _, a := range rel.Attachments {
+		switch {
+		case slices.Contains(req.Attachments, a.UUID):
+		case linksAttachment(req.Content, a.UUID):
+			noteLinked = append(noteLinked, a.UUID)
+		case linksAttachment(rel.Note, a.UUID), slices.Contains(req.RemovedAttachments, a.UUID):
+			unlinked = append(unlinked, a)
+		default:
+			req.Attachments = append(req.Attachments, a.UUID)
+		}
+	}
+
 	var added []string
 	for _, uuid := range req.Attachments {
 		if !slices.ContainsFunc(rel.Attachments, func(a *database.Attachment) bool { return a.UUID == uuid }) {
@@ -395,24 +417,12 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		return statusCode, nil, err
 	}
 
+	req.Attachments = append(req.Attachments, noteLinked...)
+
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
-	}
-
-	// The editor only sends the downloads it keeps and the new files, so the
-	// files the note still links to stay, and those whose links were removed
-	// are deleted.
-	var unlinked []*database.Attachment
-	for _, a := range rel.Attachments {
-		switch {
-		case slices.Contains(req.Attachments, a.UUID):
-		case linksAttachment(req.Content, a.UUID):
-			req.Attachments = append(req.Attachments, a.UUID)
-		case linksAttachment(rel.Note, a.UUID):
-			unlinked = append(unlinked, a)
-		}
 	}
 
 	// A published release has its tag, so it cannot go back to a draft.
@@ -445,8 +455,8 @@ func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 }
 
 // postRepoReleaseAttachment stores a file to attach to a release.
-func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, releaseAttachmentLimits())
+func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, viewer, releaseAttachmentLimits())
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}

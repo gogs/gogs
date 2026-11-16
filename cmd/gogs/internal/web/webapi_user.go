@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -290,7 +291,10 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, sess session.Session, 
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	completeSignIn(sess, mc, u)
+	if err = completeSignIn(sess, mc, u); err != nil {
+		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
+	}
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
@@ -298,14 +302,72 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, sess session.Session, 
 // clears any in-flight MFA state, and sets the login-status cookie. The
 // caller is responsible for navigating to a post-login destination via
 // /redirect?to=.
-func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) {
-	sess.Set("uid", u.ID)
-	sess.Set("uname", u.Name)
-	sess.Delete("mfaUserID")
+func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User) error {
+	// Sign in under a new session ID, so a session ID planted in the browser
+	// before signing in (session fixation) is not signed in too. The old
+	// session is emptied rather than carried over.
+	old := sess.(flamegoSessionAdapter).sess
+	if err := old.Flush(); err != nil {
+		return errors.Wrap(err, "flush session")
+	}
+	// RegenerateId renames the session named by the request's cookie. Point it
+	// at the session in use, which the session middleware started anew when
+	// the browser sent a malformed or unknown session ID.
+	mc.Req.Header.Del("Cookie")
+	mc.Req.AddCookie(&http.Cookie{Name: conf.Session.CookieName, Value: old.ID()})
+	signedIn, err := old.RegenerateId(mc)
+	if err != nil {
+		return errors.Wrap(err, "regenerate session ID")
+	}
+	setSessionCookie(mc, signedIn.ID())
+	// Providers that store sessions outside memory read the new session from
+	// storage, which still has the data from before this request.
+	if err = signedIn.Flush(); err != nil {
+		return errors.Wrap(err, "flush signed-in session")
+	}
+	if err = signedIn.Set("uid", u.ID); err != nil {
+		return errors.Wrap(err, "set session user ID")
+	}
+	if err = signedIn.Set("uname", u.Name); err != nil {
+		return errors.Wrap(err, "set session username")
+	}
+	if err = signedIn.Release(); err != nil {
+		return errors.Wrap(err, "save session")
+	}
 
 	if conf.Security.EnableLoginStatusCookie {
 		mc.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
+	return nil
+}
+
+// setSessionCookie replaces the session cookie set on the response with one
+// for the session ID, which carries the same attributes as the cookie the
+// session middleware sets, including SameSite.
+func setSessionCookie(mc *macaron.Context, sid string) {
+	header := mc.Resp.Header()
+	cookies := header.Values("Set-Cookie")
+	header.Del("Set-Cookie")
+	for _, c := range cookies {
+		if !strings.HasPrefix(c, conf.Session.CookieName+"=") {
+			header.Add("Set-Cookie", c)
+		}
+	}
+	// Like the session middleware, the cookie path is the root when Gogs is
+	// not served under a subpath.
+	path := conf.Server.Subpath
+	if path == "" {
+		path = "/"
+	}
+	http.SetCookie(mc.Resp, &http.Cookie{
+		Name:     conf.Session.CookieName,
+		Value:    sid,
+		Path:     path,
+		MaxAge:   86400 * conf.Security.LoginRememberDays,
+		HttpOnly: true,
+		Secure:   conf.Session.CookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 func getUserMFA(sess session.Session) (statusCode int, resp any, err error) {
@@ -364,7 +426,10 @@ func postUserMFA(logger *logx.Logger, r *http.Request, sess session.Session, mc 
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	completeSignIn(sess, mc, u)
+	if err = completeSignIn(sess, mc, u); err != nil {
+		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
+	}
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -395,7 +460,10 @@ func postUserMFARecovery(logger *logx.Logger, r *http.Request, sess session.Sess
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	completeSignIn(sess, mc, u)
+	if err = completeSignIn(sess, mc, u); err != nil {
+		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
+	}
 	return http.StatusOK, &userMFAResponse{}, nil
 }
 
@@ -502,7 +570,10 @@ func postUserActivateComplete(logger *logx.Logger, r *http.Request, sess session
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
 	if !database.Handle.TwoFactors().IsEnabled(r.Context(), logger, target.ID) {
-		completeSignIn(sess, mc, target)
+		if err := completeSignIn(sess, mc, target); err != nil {
+			logger.Error("Failed to complete sign-in", "userID", target.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
+		}
 	}
 	return http.StatusNoContent, nil, nil
 }

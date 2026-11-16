@@ -64,6 +64,7 @@ async function signInWithPasskey(stop: AbortSignal): Promise<PasskeyResult> {
     const challenge = await fetch(subUrl("/api/web/user/sign-in/passkey/challenge"), {
       method: "POST",
       credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
       signal: stop,
     });
     if (!challenge.ok) return "failed";

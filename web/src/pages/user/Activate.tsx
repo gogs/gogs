@@ -69,6 +69,7 @@ export function Activate() {
         const res = await fetch(subUrl("/api/web/user/activate"), {
           method: "POST",
           credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as ActivateErrorResponse;

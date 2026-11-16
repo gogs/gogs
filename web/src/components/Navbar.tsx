@@ -361,6 +361,7 @@ async function signOut() {
     const res = await fetch(subUrl("/api/web/user/sign-out"), {
       method: "POST",
       credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
     });
     if (res.ok && res.status !== 204) {
       const body = (await res.json().catch(() => null)) as {

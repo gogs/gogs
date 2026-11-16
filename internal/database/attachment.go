@@ -23,7 +23,10 @@ type Attachment struct {
 	IssueID   int64  `xorm:"INDEX"`
 	CommentID int64
 	ReleaseID int64 `xorm:"INDEX"`
-	Name      string
+	// UploaderID is the user who uploaded the file, the only one who can
+	// download it before it is attached to an issue, a comment or a release.
+	UploaderID int64
+	Name       string
 
 	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix int64
@@ -51,10 +54,11 @@ func (a *Attachment) LocalPath() string {
 }
 
 // NewAttachment creates a new attachment object.
-func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
+func NewAttachment(uploaderID int64, name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
 	attach := &Attachment{
-		UUID: uuid.New().String(),
-		Name: name,
+		UUID:       uuid.New().String(),
+		UploaderID: uploaderID,
+		Name:       name,
 	}
 
 	localPath := attach.LocalPath()
@@ -189,12 +193,14 @@ func DeleteAttachment(a *Attachment, remove bool) error {
 func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 	for i, a := range attachments {
 		if remove {
-			if err := os.Remove(a.LocalPath()); err != nil {
+			if err := os.Remove(a.LocalPath()); err != nil && !os.IsNotExist(err) {
 				return i, err
 			}
 		}
 
-		if _, err := x.Delete(a); err != nil {
+		// Delete by ID alone, because the other fields may be stale, e.g., a release
+		// detaches its files before deleting those that were left out.
+		if _, err := x.ID(a.ID).Delete(new(Attachment)); err != nil {
 			return i, err
 		}
 	}
