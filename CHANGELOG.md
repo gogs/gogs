@@ -74,7 +74,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
-- GitHub authentication sources, which could no longer sign anyone in since GitHub stopped accepting passwords for its API. Existing GitHub sources and `custom/conf/auth.d` files with `type = github` are ignored. They also let anyone sign in as a local user of the same name with their own GitHub credentials. [#8466](https://github.com/gogs/gogs/pull/8466) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
+- _Security:_ GitHub authentication sources, which let anyone with a GitHub account sign in as any user of the source with their own GitHub token. Existing GitHub sources and `custom/conf/auth.d` files with `type = github` are ignored. [#8466](https://github.com/gogs/gogs/pull/8466) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
 - The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)
 - Support for overriding full page templates (e.g., `custom/templates/home.tmpl`), as the web interface no longer renders pages from server-side templates. Content injection through `custom/templates/inject/head.tmpl` and `custom/templates/inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides remain supported. [#8392](https://github.com/gogs/gogs/pull/8392)
 - Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)
