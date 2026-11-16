@@ -4,6 +4,8 @@ export type Theme = "light" | "dark" | "system";
 
 export interface ThemeContextValue {
   theme: Theme;
+  // systemDark is true when the OS prefers dark colors.
+  systemDark: boolean;
   setTheme: (next: Theme) => void;
 }
 
