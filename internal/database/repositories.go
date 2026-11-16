@@ -337,15 +337,44 @@ func (r *Repository) DeleteAvatar(logger *logx.Logger) error {
 	return Handle.Repositories().Update(context.TODO(), logger, r, false)
 }
 
-// APIFormatLegacy returns the API format of the repository. It assumes the
-// following fields have been assigned with valid values:
-// Required - BaseRepo (if fork)
-// Arguments that are allowed to be nil: permission
+// APIFormatLegacy returns the API format of the repository, with its base
+// repository as the parent if it is a fork. The permission is allowed to be
+// nil.
 //
 // Deprecated: Use APIFormat instead.
-func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *v1types.RepositoryPermission, user ...*User) *v1types.Repository {
+func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *v1types.RepositoryPermission) *v1types.Repository {
+	apiRepo := r.apiFormatLegacyWithoutParent(permission)
+	if !r.IsFork {
+		return apiRepo
+	}
+
+	// Repositories of a request context come without their base repository.
+	base := r.BaseRepo
+	if base == nil {
+		var err error
+		base, err = Handle.Repositories().GetByID(context.TODO(), r.ForkID)
+		if IsErrRepoNotExist(err) {
+			// Like LoadAttributes, a fork whose base repository is gone is not a fork.
+			apiRepo.Fork = false
+			return apiRepo
+		} else if err != nil {
+			logger.Error("Failed to get base repository", "repoID", r.ID, "baseRepoID", r.ForkID, "error", err)
+			return apiRepo
+		}
+	}
+	// Webhooks of the fork go to whoever its admins choose, who may not be able
+	// to read a private base repository.
+	if base.IsPrivate {
+		return apiRepo
+	}
+	// The parent does not include its own parent.
+	apiRepo.Parent = base.apiFormatLegacyWithoutParent(&v1types.RepositoryPermission{Pull: true})
+	return apiRepo
+}
+
+func (r *Repository) apiFormatLegacyWithoutParent(permission *v1types.RepositoryPermission) *v1types.Repository {
 	cloneLink := r.CloneLink()
-	apiRepo := &v1types.Repository{
+	return &v1types.Repository{
 		ID:            r.ID,
 		Owner:         r.Owner.APIFormat(),
 		Name:          r.Name,
@@ -371,24 +400,6 @@ func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *v1types.Re
 		// Reserved for go-gogs-client change
 		//		AvatarUrl:     r.AvatarLink(),
 	}
-	if r.IsFork {
-		p := &v1types.RepositoryPermission{Pull: true}
-		if len(user) != 0 {
-			accessMode := Handle.Permissions().AccessMode(
-				context.TODO(), logger,
-				user[0].ID,
-				r.ID,
-				AccessModeOptions{
-					OwnerID: r.OwnerID,
-					Private: r.IsPrivate,
-				},
-			)
-			p.Admin = accessMode >= AccessModeAdmin
-			p.Push = accessMode >= AccessModeWrite
-		}
-		apiRepo.Parent = r.BaseRepo.APIFormatLegacy(logger, p)
-	}
-	return apiRepo
 }
 
 func (r *Repository) getOwner(tx *gorm.DB) (err error) {

@@ -60,9 +60,19 @@ func searchRepos(c *apiContext) {
 		return
 	}
 
+	basePerms, err := basePermissions(c, repos...)
+	if err != nil {
+		c.Logger.Error("Failed to get permissions of base repositories", "error", err)
+		c.JSON(http.StatusInternalServerError, map[string]any{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+
 	results := make([]*v1types.Repository, len(repos))
 	for i := range repos {
-		results[i] = toRepository(repos[i], nil)
+		results[i] = toRepository(repos[i], nil, basePerms[repos[i].ForkID])
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
@@ -109,6 +119,11 @@ func listReposOfUser(c *apiContext, username string) {
 			c.Error(err, "get access modes")
 			return
 		}
+		basePerms, err := basePermissions(c, ownRepos...)
+		if err != nil {
+			c.Error(err, "get permissions of base repositories")
+			return
+		}
 		repos := make([]*v1types.Repository, len(ownRepos))
 		for i, repo := range ownRepos {
 			accessMode := accessModes[repo.ID]
@@ -121,7 +136,7 @@ func listReposOfUser(c *apiContext, username string) {
 				Admin: accessMode >= database.AccessModeAdmin,
 				Push:  accessMode >= database.AccessModeWrite,
 				Pull:  accessMode >= database.AccessModeRead,
-			})
+			}, basePerms[repo.ForkID])
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -142,10 +157,16 @@ func listReposOfUser(c *apiContext, username string) {
 		return
 	}
 
+	basePerms, err := basePermissions(c, append(ownRepos, accessibleRepos...)...)
+	if err != nil {
+		c.Error(err, "get permissions of base repositories")
+		return
+	}
+
 	numOwnRepos := len(ownRepos)
 	repos := make([]*v1types.Repository, 0, numOwnRepos+len(accessibleReposWithAccessMode))
 	for _, r := range ownRepos {
-		repos = append(repos, toRepository(r, &v1types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+		repos = append(repos, toRepository(r, &v1types.RepositoryPermission{Admin: true, Push: true, Pull: true}, basePerms[r.ForkID]))
 	}
 
 	for repo, access := range accessibleReposWithAccessMode {
@@ -154,7 +175,7 @@ func listReposOfUser(c *apiContext, username string) {
 				Admin: access >= database.AccessModeAdmin,
 				Push:  access >= database.AccessModeWrite,
 				Pull:  true,
-			}),
+			}, basePerms[repo.ForkID]),
 		)
 	}
 
@@ -222,7 +243,7 @@ func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) 
 		return
 	}
 
-	c.JSON(201, toRepository(repo, &v1types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(repo, &v1types.RepositoryPermission{Admin: true, Push: true, Pull: true}, nil))
 }
 
 func createRepo(c *apiContext, opt createRepoRequest) {
@@ -338,7 +359,7 @@ func migrate(c *apiContext, f migrateRepoRequest) {
 	}
 
 	c.Logger.Debug("Repository migrated", "ownerName", ctxUser.Name, "repoName", f.RepoName)
-	c.JSON(201, toRepository(repo, &v1types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, toRepository(repo, &v1types.RepositoryPermission{Admin: true, Push: true, Pull: true}, nil))
 }
 
 // FIXME: inject in the handler chain
@@ -374,11 +395,16 @@ func getRepo(c *apiContext) {
 		return
 	}
 
+	basePerms, err := basePermissions(c, repo)
+	if err != nil {
+		c.Error(err, "get permissions of base repository")
+		return
+	}
 	c.JSONSuccess(toRepository(repo, &v1types.RepositoryPermission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
-	}))
+	}, basePerms[repo.ForkID]))
 }
 
 func deleteRepo(c *apiContext) {
@@ -408,31 +434,25 @@ func listForks(c *apiContext) {
 		return
 	}
 
-	apiForks := make([]*v1types.Repository, len(forks))
-	for i := range forks {
-		if err := forks[i].GetOwner(); err != nil {
+	accessModes, err := database.Handle.Permissions().AccessModes(c.Request().Context(), c.UserID(), forks)
+	if err != nil {
+		c.Error(err, "get access modes")
+		return
+	}
+	// Every fork has the repository of the request as its base.
+	basePerm := accessPermission(c, c.Repo.AccessMode)
+
+	apiForks := make([]*v1types.Repository, 0, len(forks))
+	for _, fork := range forks {
+		perm := accessPermission(c, accessModes[fork.ID])
+		if !perm.Pull {
+			continue
+		}
+		if err := fork.GetOwner(); err != nil {
 			c.Error(err, "get owner")
 			return
 		}
-
-		accessMode := database.Handle.Permissions().AccessMode(
-			c.Request().Context(),
-			c.Logger,
-			c.User.ID,
-			forks[i].ID,
-			database.AccessModeOptions{
-				OwnerID: forks[i].OwnerID,
-				Private: forks[i].IsPrivate,
-			},
-		)
-
-		apiForks[i] = toRepository(forks[i],
-			&v1types.RepositoryPermission{
-				Admin: accessMode >= database.AccessModeAdmin,
-				Push:  accessMode >= database.AccessModeWrite,
-				Pull:  true,
-			},
-		)
+		apiForks = append(apiForks, toRepository(fork, perm, basePerm))
 	}
 
 	c.JSONSuccess(&apiForks)
@@ -555,4 +575,45 @@ func releases(c *apiContext) {
 	}
 
 	c.JSONSuccess(&apiReleases)
+}
+
+// accessPermission returns the permission of the access mode, with site admins
+// given full access through the API, the same as elsewhere in the API.
+func accessPermission(c *apiContext, mode database.AccessMode) *v1types.RepositoryPermission {
+	if c.IsTokenAuth && c.User.IsAdmin {
+		mode = database.AccessModeOwner
+	}
+	return &v1types.RepositoryPermission{
+		Admin: mode >= database.AccessModeAdmin,
+		Push:  mode >= database.AccessModeWrite,
+		Pull:  mode >= database.AccessModeRead,
+	}
+}
+
+// basePermissions returns the permission the viewer has to the base repository
+// of each of the forks, keyed by the ID of the base repository. A base
+// repository the viewer cannot read is left out, e.g., after the owner of the
+// fork is removed as a collaborator of it, so that it is not shown as a parent.
+func basePermissions(c *apiContext, repos ...*database.Repository) (map[int64]*v1types.RepositoryPermission, error) {
+	var bases []*database.Repository
+	for _, repo := range repos {
+		if repo.IsFork && repo.BaseRepo != nil {
+			bases = append(bases, repo.BaseRepo)
+		}
+	}
+	if len(bases) == 0 {
+		return nil, nil
+	}
+
+	modes, err := database.Handle.Permissions().AccessModes(c.Request().Context(), c.UserID(), bases)
+	if err != nil {
+		return nil, errors.Wrap(err, "get access modes")
+	}
+	perms := make(map[int64]*v1types.RepositoryPermission, len(bases))
+	for _, base := range bases {
+		if perm := accessPermission(c, modes[base.ID]); perm.Pull {
+			perms[base.ID] = perm
+		}
+	}
+	return perms, nil
 }
