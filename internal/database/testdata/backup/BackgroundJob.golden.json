@@ -1,0 +1,2 @@
+{"ID":1,"Kind":"mirror_sync","UniqueKey":"1","Payload":"eyJSZXBvSUQiOjF9","State":"pending","Priority":50,"Attempts":0,"MaxAttempts":3,"RunAt":"2020-05-04T05:08:06Z","LeaseExpiresAt":null,"LastError":"","CreatedAt":"2020-05-04T05:08:06Z","UpdatedAt":"2020-05-04T05:08:06Z"}
+{"ID":2,"Kind":"webhook","UniqueKey":"","Payload":"eyJIb29rVGFza0lEIjoxfQ==","State":"failed","Priority":100,"Attempts":3,"MaxAttempts":3,"RunAt":"2020-05-04T05:08:06Z","LeaseExpiresAt":null,"LastError":"connection refused","CreatedAt":"2020-05-04T05:08:06Z","UpdatedAt":"2020-05-04T06:08:06Z"}

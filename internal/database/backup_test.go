@@ -26,7 +26,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 8
+	const wantTables = 9
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -184,6 +184,32 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 				APIEndpoint: "https://api.github.com",
 			}),
 			CreatedUnix: 1588568886,
+		},
+
+		&BackgroundJob{
+			ID:          1,
+			Kind:        "mirror_sync",
+			UniqueKey:   "1",
+			Payload:     []byte(`{"RepoID":1}`),
+			State:       BackgroundJobStatePending,
+			Priority:    BackgroundJobPriorityHigh,
+			MaxAttempts: 3,
+			RunAt:       time.Unix(1588568886, 0).UTC(),
+			CreatedAt:   time.Unix(1588568886, 0).UTC(),
+			UpdatedAt:   time.Unix(1588568886, 0).UTC(),
+		},
+		&BackgroundJob{
+			ID:          2,
+			Kind:        "webhook",
+			Payload:     []byte(`{"HookTaskID":1}`),
+			State:       BackgroundJobStateFailed,
+			Priority:    BackgroundJobPriorityNormal,
+			Attempts:    3,
+			MaxAttempts: 3,
+			RunAt:       time.Unix(1588568886, 0).UTC(),
+			LastError:   "connection refused",
+			CreatedAt:   time.Unix(1588568886, 0).UTC(),
+			UpdatedAt:   time.Unix(1588572486, 0).UTC(),
 		},
 
 		&Notice{
