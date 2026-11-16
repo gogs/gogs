@@ -75,14 +75,6 @@ func (br *Branch) GetCommit(ctx context.Context) (*git.Commit, error) {
 	return git.RepoBranchCommit(ctx, br.RepoPath, br.Name)
 }
 
-type ProtectBranchWhitelist struct {
-	ID              int64
-	ProtectBranchID int64
-	RepoID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
-	Name            string `xorm:"UNIQUE(protect_branch_whitelist)"`
-	UserID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
-}
-
 // IsUserInProtectBranchWhitelist returns true if given user is in the whitelist
 // of a branch in a repository, either by name or as a current member of a
 // whitelisted team.
