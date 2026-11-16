@@ -1,0 +1,106 @@
+# A made-up monorepo pipeline that stresses the planner: diamonds, a chain
+# through four levels of called workflows, matrices built from outputs that
+# come up through those levels, and every status function.
+name: Stress
+on: push
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.f.outputs.services }}
+      docs: ${{ steps.f.outputs.docs }}
+    steps:
+      - id: f
+        run: ./detect
+  lint:
+    needs: Changes
+    runs-on: ubuntu-latest
+    steps:
+      - run: make lint
+  unit:
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, windows, macos]
+        node: [20, 22]
+        exclude:
+          - os: macos
+            node: 20
+        include:
+          - os: ubuntu
+            node: 24
+            experimental: true
+    name: unit ${{ matrix.os }} node ${{ matrix.node }}
+    continue-on-error: ${{ matrix.experimental == true }}
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+      - run: npm test
+  build:
+    needs: [changes, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    name: build ${{ matrix.service }} (${{ strategy.job-index }}/${{ strategy.job-total }})
+    uses: ./.github/workflows/service.yml
+    with:
+      service: ${{ matrix.service }}
+    secrets: inherit
+  integration:
+    needs: [build, unit]
+    strategy:
+      matrix:
+        shard: ${{ fromJSON(needs.build.outputs.shards) }}
+    name: integration ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: make integration
+  e2e:
+    needs: [integration, build]
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.e.outputs.ok }}
+    steps:
+      - id: e
+        run: make e2e
+  docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: make docs
+  publish-docs:
+    needs: docs
+    runs-on: ubuntu-latest
+    steps:
+      - run: make publish-docs
+  deploy:
+    needs: [e2e, integration, publish-docs]
+    if: ${{ !failure() && !cancelled() && needs.e2e.result == 'success' }}
+    strategy:
+      max-parallel: 1
+      matrix:
+        env: [staging, production]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      env: ${{ matrix.env }}
+  notify-failure:
+    needs: deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./notify
+  summary:
+    needs: [unit, build, integration, e2e, docs, deploy]
+    if: always()
+    name: ${{ contains(needs.*.result, 'failure') && 'summary (red)' || 'summary (green)' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./summary
+  cleanup:
+    needs: summary
+    if: cancelled()
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./cleanup

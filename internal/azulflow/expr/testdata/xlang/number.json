@@ -1,0 +1,51 @@
+{
+  "number": [
+    { "expr": "1", "result": { "kind": "Number", "value": 1.0 } },
+    { "expr": ".5", "result": { "kind": "Number", "value": 0.5 } },
+    { "expr": "0.5", "result": { "kind": "Number", "value": 0.5 } },
+    { "expr": "2", "result": { "kind": "Number", "value": 2.0 } },
+    { "expr": "-1", "result": { "kind": "Number", "value": -1.0 } },
+    { "expr": "+1", "result": { "kind": "Number", "value": 1.0 } },
+    { "expr": "-.5", "result": { "kind": "Number", "value": -0.5 } },
+    { "expr": "-2", "result": { "kind": "Number", "value": -2.0 } },
+    { "expr": "format('{0}', -Infinity)", "result": { "kind": "String", "value": "-Infinity" } },
+    { "expr": "format('{0}', Infinity)", "result": { "kind": "String", "value": "Infinity" } },
+    { "expr": "format('{0}', +Infinity)", "result": { "kind": "String", "value": "Infinity" } },
+    { "expr": "format('{0}', NaN)", "result": { "kind": "String", "value": "NaN" } },
+    { "expr": "0", "result": { "kind": "Number", "value": 0.0 } },
+    { "expr": "0.0", "result": { "kind": "Number", "value": 0.0 } },
+    { "expr": "-0", "result": { "kind": "Number", "value": -0.0 } },
+    { "expr": "-0.0", "result": { "kind": "Number", "value": -0.0 } },
+    { "expr": "0x0", "result": { "kind": "Number", "value": 0.0 } },
+    { "expr": "0x00", "result": { "kind": "Number", "value": 0.0 } },
+    { "expr": "0xf", "result": { "kind": "Number", "value": 15.0 } },
+    { "expr": "0xfF", "result": { "kind": "Number", "value": 255.0 } },
+    { "expr": "0xfFf", "result": { "kind": "Number", "value": 4095.0 } },
+    { "expr": "0o0", "result": { "kind": "Number", "value": 0.0 } },
+    { "expr": "0o7", "result": { "kind": "Number", "value": 7.0 } },
+    { "expr": "0o77", "result": { "kind": "Number", "value": 63.0 } },
+    { "expr": "0o777", "result": { "kind": "Number", "value": 511.0 } },
+    { "expr": "1e1", "result": { "kind": "Number", "value": 10.0 } },
+    { "expr": "1e2", "result": { "kind": "Number", "value": 100.0 } },
+    { "expr": "1E1", "result": { "kind": "Number", "value": 10.0 } },
+    { "expr": "1E+1", "result": { "kind": "Number", "value": 10.0 } },
+    { "expr": "1e-1", "result": { "kind": "Number", "value": 0.1 } },
+    { "expr": "1E-1", "result": { "kind": "Number", "value": 0.1 } },
+    {
+      "expr": "0x01p2",
+      "err": { "kind": "lexing", "value": "Unexpected symbol: '0x01p2'. Located at position 1 within expression: 0x01p2" }
+    },
+    {
+      "expr": "-Inf",
+      "err": { "kind": "lexing", "value": "Unexpected symbol: '-Inf'. Located at position 1 within expression: -Inf" }
+    },
+    {
+      "expr": "-0xFF",
+      "err": { "kind": "lexing", "value": "Unexpected symbol: '-0xFF'. Located at position 1 within expression: -0xFF" }
+    },
+    {
+      "expr": "0xFZ",
+      "err": { "kind": "lexing", "value": "Unexpected symbol: '0xFZ'. Located at position 1 within expression: 0xFZ" }
+    }
+  ]
+}

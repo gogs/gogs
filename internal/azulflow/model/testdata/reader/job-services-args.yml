@@ -1,0 +1,193 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: linux
+    env:
+      super_secret: ${{ secrets.SuperSecret }}
+    services:
+      nginx:
+        image: nginx
+        ports:
+          - 8080:80
+        env:
+          SERVER: production
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.github_token }}
+        volumes:
+           - my_docker_volume:/volume_mount
+        options: 
+           --blkio-weight 10 
+           --add-host 100.00.1.11
+           --cpus 3
+      redis:
+        image: redis
+        ports:
+          - 6379/tcp
+        env:
+          FIRST_NAME: Mona
+          LAST_NAME: Cat
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        options: --cpu-rt-runtime 1000
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "env": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "super_secret",
+            "Value": {
+              "type": 3,
+              "expr": "secrets.SuperSecret"
+            }
+          }
+        ]
+      },
+      "runs-on": "linux",
+      "services": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "nginx",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "image",
+                  "Value": "nginx"
+                },
+                {
+                  "Key": "ports",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "8080:80"
+                    ]
+                  }
+                },
+                {
+                  "Key": "env",
+                  "Value": {
+                    "type": 2,
+                    "map": [
+                      {
+                        "Key": "SERVER",
+                        "Value": "production"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Key": "credentials",
+                  "Value": {
+                    "type": 2,
+                    "map": [
+                      {
+                        "Key": "username",
+                        "Value": {
+                          "type": 3,
+                          "expr": "github.actor"
+                        }
+                      },
+                      {
+                        "Key": "password",
+                        "Value": {
+                          "type": 3,
+                          "expr": "secrets.github_token"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Key": "volumes",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "my_docker_volume:/volume_mount"
+                    ]
+                  }
+                },
+                {
+                  "Key": "options",
+                  "Value": "--blkio-weight 10 --add-host 100.00.1.11 --cpus 3"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "redis",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "image",
+                  "Value": "redis"
+                },
+                {
+                  "Key": "ports",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "6379/tcp"
+                    ]
+                  }
+                },
+                {
+                  "Key": "env",
+                  "Value": {
+                    "type": 2,
+                    "map": [
+                      {
+                        "Key": "FIRST_NAME",
+                        "Value": "Mona"
+                      },
+                      {
+                        "Key": "LAST_NAME",
+                        "Value": "Cat"
+                      },
+                      {
+                        "Key": "GITHUB_TOKEN",
+                        "Value": {
+                          "type": 3,
+                          "expr": "secrets.GITHUB_TOKEN"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Key": "options",
+                  "Value": "--cpu-rt-runtime 1000"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

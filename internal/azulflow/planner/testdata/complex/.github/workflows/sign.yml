@@ -1,0 +1,28 @@
+on:
+  workflow_call:
+    inputs:
+      digest:
+        type: string
+    outputs:
+      ticket:
+        value: ${{ jobs.notarize.outputs.ticket }}
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      keys: ${{ steps.k.outputs.keys }}
+    steps:
+      - id: k
+        run: ./keys
+  sign:
+    needs: prepare
+    strategy:
+      matrix:
+        key: ${{ fromJSON(needs.prepare.outputs.keys) }}
+    name: sign with ${{ matrix.key }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./sign ${{ inputs.digest }}
+  notarize:
+    needs: sign
+    uses: ./.github/workflows/notarize.yml

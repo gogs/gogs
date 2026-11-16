@@ -1,0 +1,48 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  one:
+    runs-on: ubuntu-latest
+    outputs:
+      job-out: ${{ steps.test.outputs.foo }}
+    steps:
+      - run: echo 1
+        id: test
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "one",
+      "name": "one",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "outputs": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "job-out",
+            "Value": {
+              "type": 3,
+              "expr": "steps.test.outputs.foo"
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "test",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo 1"
+        }
+      ]
+    }
+  ]
+}

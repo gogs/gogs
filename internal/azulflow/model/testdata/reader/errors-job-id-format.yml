@@ -1,0 +1,67 @@
+include-source: false # Drop file/line/col from output
+---
+name: CI
+on:
+  push:
+jobs:
+  my.job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  my%job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  my^job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  .myjob:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  0myjob:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  " myjob":
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  " ":
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  -myjob:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 5, Col: 3): The identifier 'my.job' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 9, Col: 3): The identifier 'my%job' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 13, Col: 3): The identifier 'my^job' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 17, Col: 3): The identifier '.myjob' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 21, Col: 3): The identifier '0myjob' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 25, Col: 3): The identifier ' myjob' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 29, Col: 3): The identifier ' ' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-format.yml (Line: 33, Col: 3): The identifier '-myjob' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    }
+  ]
+}

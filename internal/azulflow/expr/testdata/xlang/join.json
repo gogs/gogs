@@ -1,0 +1,113 @@
+{
+  "join": [
+    {
+      "expr": "join(github.event.issue.labels.*.name, ', ')",
+      "contexts": {
+        "github": {
+          "event": {
+            "issue": {
+              "labels": [
+                {
+                  "name": "bug"
+                },
+                {
+                  "name": "enhancement"
+                },
+                {
+                  "name": "help wanted"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "result": { "kind": "String", "value": "bug, enhancement, help wanted" }
+    },
+    {
+      "expr": "join(null)",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "join(true)",
+      "result": { "kind": "String", "value": "true" }
+    },
+    {
+      "expr": "join(123.456)",
+      "result": { "kind": "String", "value": "123.456" }
+    },
+    {
+      "expr": "join('abc')",
+      "result": { "kind": "String", "value": "abc" }
+    },
+    {
+      "expr": "join(myArray)",
+      "contexts": { "myArray": [] },
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "join(myObject)",
+      "contexts": { "myObject": {} },
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "join(myObject)",
+      "contexts": { "myObject": { "key1": "value1" } },
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "join(myArray)",
+      "contexts": { "myArray": [ null, true, 123.456, "abc", [], ["def"], {}, { "key1": "value1" } ] },
+      "result": { "kind": "String", "value": ",true,123.456,abc,Array,Array,Object,Object" }
+    },
+    {
+      "expr": "join(myArray, null)",
+      "contexts": { "myArray": [ "_ITEM-1_", "_ITEM-2_", "_ITEM-3_" ] },
+      "result": { "kind": "String", "value": "_ITEM-1__ITEM-2__ITEM-3_" }
+    },
+    {
+      "expr": "join(myArray, true)",
+      "contexts": { "myArray": [ "_ITEM-1_", "_ITEM-2_", "_ITEM-3_" ] },
+      "result": { "kind": "String", "value": "_ITEM-1_true_ITEM-2_true_ITEM-3_" }
+    },
+    {
+      "expr": "join(myArray, 123.456)",
+      "contexts": { "myArray": [ "_ITEM-1_", "_ITEM-2_", "_ITEM-3_" ] },
+      "result": { "kind": "String", "value": "_ITEM-1_123.456_ITEM-2_123.456_ITEM-3_" }
+    },
+    {
+      "expr": "join(myArray, ' | ')",
+      "contexts": { "myArray": [ "_ITEM-1_", "_ITEM-2_", "_ITEM-3_" ] },
+      "result": { "kind": "String", "value": "_ITEM-1_ | _ITEM-2_ | _ITEM-3_" }
+    },
+    {
+      "expr": "join(myArray, mySeparator)",
+      "contexts": {
+        "myArray": [ "_ITEM-1_", "_ITEM-2_", "_ITEM-3_" ],
+        "mySeparator": []
+      },
+      "result": { "kind": "String", "value": "_ITEM-1_,_ITEM-2_,_ITEM-3_" }
+    },
+    {
+      "expr": "join(myArray, mySeparator)",
+      "contexts": {
+        "myArray": [ "_ITEM-1_", "_ITEM-2_", "_ITEM-3_" ],
+        "mySeparator": {}
+      },
+      "result": { "kind": "String", "value": "_ITEM-1_,_ITEM-2_,_ITEM-3_" }
+    },
+    {
+      "expr": "join()",
+      "err": {
+        "kind": "parsing",
+        "value": "Too few parameters supplied: "
+      }
+    },
+    {
+      "expr": "join(1, 2, 3)",
+      "err": {
+        "kind": "parsing",
+        "value": "Too many parameters supplied: "
+      }
+    }
+  ]
+}

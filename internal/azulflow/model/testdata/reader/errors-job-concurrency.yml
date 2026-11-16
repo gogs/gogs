@@ -1,0 +1,17 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency: ${{ secrets.foo }}
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-concurrency.yml (Line: 5, Col: 18): Unrecognized named-value: 'secrets'. Located at position 1 within expression: secrets.foo"
+    }
+  ]
+}

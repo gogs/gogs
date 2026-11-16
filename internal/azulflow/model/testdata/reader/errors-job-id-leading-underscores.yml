@@ -1,0 +1,40 @@
+include-source: false # Drop file/line/col from output
+---
+name: CI
+on:
+  push:
+jobs:
+  # Valid
+  _:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  _a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  a__:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+
+  # Invalid
+  __:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  __a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-id-leading-underscores.yml (Line: 20, Col: 3): The identifier '__' is invalid. IDs starting with '__' are reserved."
+    },
+    {
+      "Message": ".github/workflows/errors-job-id-leading-underscores.yml (Line: 24, Col: 3): The identifier '__a' is invalid. IDs starting with '__' are reserved."
+    }
+  ]
+}

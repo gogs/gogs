@@ -1,0 +1,38 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+permissions:
+  actions: write
+on: push
+jobs:
+  deploy-level-0:
+    uses: contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1:
+    permissions:
+      actions: read
+    uses: contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+on: workflow_call
+permissions:
+  actions: write
+jobs:
+  deploy-level-2:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": "contoso/templates/.github/workflows/deploy-level-1.yml@v1 (Line: 3, Col: 3): Error calling workflow 'contoso/templates/.github/workflows/deploy-level-2.yml@v1'. The workflow 'contoso/templates/.github/workflows/deploy-level-2.yml@v1' is requesting 'actions: write', but is only allowed 'actions: read'."
+    }
+  ]
+}

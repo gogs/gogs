@@ -1,0 +1,76 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+max-nested-reusable-workflows-depth: 2
+---
+on: push
+jobs:
+  deploy-level-0:
+    uses: contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1:
+    uses: contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "reusableWorkflowJob",
+      "id": "deploy-level-0",
+      "name": "deploy-level-0",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy-level-1.yml@v1",
+      "jobs": [
+        {
+          "type": "reusableWorkflowJob",
+          "id": "deploy-level-1",
+          "name": "deploy-level-1",
+          "needs": [],
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "ref": "contoso/templates/.github/workflows/deploy-level-2.yml@v1",
+          "jobs": [
+            {
+              "type": "job",
+              "id": "deploy-level-1",
+              "name": "deploy-level-1",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "runs-on": "ubuntu-latest",
+              "steps": [
+                {
+                  "id": "__run",
+                  "if": {
+                    "type": 3,
+                    "expr": "success()"
+                  },
+                  "run": "echo hi"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

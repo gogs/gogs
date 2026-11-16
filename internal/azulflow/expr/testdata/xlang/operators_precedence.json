@@ -1,0 +1,171 @@
+{
+  "operator_precedence_._and_._evaluate_left_to_right": [
+    {
+      "expr": "foo.bar.baz",
+      "contexts": { "foo": { "bar": { "baz": 2 } } },
+      "result": { "kind": "Number", "value": 2.0 }
+    }
+  ],
+  "operator_precedence_._is_higher_than_!": [
+    {
+      "expr": "!foo.bar",
+      "contexts": { "foo": { "bar": true } },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "(!foo).bar",
+      "contexts": { "foo": { "bar": true } },
+      "result": { "kind": "Null", "value": null }
+    }
+  ],
+  "operator_precedence_._is_higher_than_>": [
+    {
+      "expr": "3 > foo.bar",
+      "contexts": { "foo": { "bar": 2 } },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "foo.bar > 2",
+      "contexts": { "foo": { "bar": 3 } },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+  "operator_precedence_[]_is_higher_than_>": [
+    {
+      "expr": "3 > foo['bar']",
+      "contexts": { "foo": { "bar": 2 } },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "foo['bar'] > 2",
+      "contexts": { "foo": { "bar": 3 } },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+  "operator_precedence_!_is_higher_than_<": [
+    {
+      "expr": "!2 < 3",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "!(2 < 3)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_<_and_<_evaluate_left_to_right": [
+    {
+      "expr": "3 < 2 < 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "3 < (2 < 1)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_<_and_<=_evaluate_left_to_right": [
+    {
+      "expr": "3 < 2 <= 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "3 < (2 <= 1)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_<=_and_<_evaluate_left_to_right": [
+    {
+      "expr": "3 <= 2 < 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "3 <= (2 < 1)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_>_and_<_evaluate_left_to_right": [
+    {
+      "expr": "0 > 0 < 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 > (0 < 1)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_>_and_>_evaluate_left_to_right": [
+    {
+      "expr": "2 > 2 > 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "2 > (2 > 0)",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+  "operator_precedence_<=_is_higher_than_==": [
+    {
+      "expr": "2 <= 3 == true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "2 <= (3 == true)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_==_and_==_evaluate_left_to_right": [
+    {
+      "expr": "2 == 2 == 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "2 == (2 == 1)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_==_and_!=_evaluate_left_to_right": [
+    {
+      "expr": "2 == 2 != 0",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "2 == (2 != 0)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_==_is_higher_than_&&": [
+    {
+      "expr": "1 == 1 && 2",
+      "result": { "kind": "Number", "value": 2.0 }
+    },
+    {
+      "expr": "1 == (1 && 2)",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'a' == 'a' && 'b'",
+      "result": { "kind": "String", "value": "b" }
+    },
+    {
+      "expr": "'a' == ('a' && 'b')",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "operator_precedence_&&_is_higher_than_||": [
+    {
+      "expr": "false && 0 || null",
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "false && (0 || null)",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1 || 2 && 3",
+      "result": { "kind": "Number", "value": 1.0 }
+    },
+    {
+      "expr": "(1 || 2) && 3",
+      "result": { "kind": "Number", "value": 3.0 }
+    }
+  ]
+}

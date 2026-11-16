@@ -1,0 +1,62 @@
+include-source: false # Drop file/line/col from output
+---
+on:
+  workflow_dispatch:
+    inputs:
+      input1:
+        default: value
+        type: string
+      input2:
+        type: boolean
+      input3:
+        description: Log level
+        required: true
+        default: warning
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
+      # Defaults to string
+      input4:
+      input5-Env:
+        description: 'Test environment'
+        type: environment
+        required: true
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "input-types": {
+    "input1": "string",
+    "input2": "boolean",
+    "input3": "choice",
+    "input4": "string",
+    "input5-Env": "environment"
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "my-job",
+      "name": "my-job",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

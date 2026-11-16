@@ -1,0 +1,67 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello world
+      - uses: actions/setup-node@master
+      - run: echo hello world
+        name: My Step Name
+      - uses: actions/setup-node@master
+        name: ${{ github.sha }}
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hello world"
+        },
+        {
+          "id": "__actions_setup-node",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/setup-node@master"
+        },
+        {
+          "id": "__run_2",
+          "name": "My Step Name",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hello world"
+        },
+        {
+          "id": "__actions_setup-node_2",
+          "name": {
+            "type": 3,
+            "expr": "github.sha"
+          },
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/setup-node@master"
+        }
+      ]
+    }
+  ]
+}

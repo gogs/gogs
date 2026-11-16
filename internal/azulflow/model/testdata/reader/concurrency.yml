@@ -1,0 +1,173 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+    concurrency:
+      group: ${{ github.ref }}
+      cancel-in-progress: true
+  build2:
+    runs-on: linux
+    concurrency: ci-${{ github.ref }}
+  build3:
+    runs-on: linux
+    concurrency: staging
+  build4:
+    runs-on: macos-latest
+    concurrency:
+      group: ref
+      cancel-in-progress: ${{ github.ref }}
+  build5:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy
+      queue: max
+
+---
+{
+  "concurrency": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "group",
+        "Value": {
+          "type": 3,
+          "expr": "github.ref"
+        }
+      },
+      {
+        "Key": "cancel-in-progress",
+        "Value": true
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": {
+              "type": 3,
+              "expr": "github.ref"
+            }
+          },
+          {
+            "Key": "cancel-in-progress",
+            "Value": true
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": true,
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": {
+        "type": 3,
+        "expr": "format('ci-{0}', github.ref)"
+      },
+      "runs-on": "linux"
+    },
+    {
+      "type": "job",
+      "id": "build3",
+      "name": "build3",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": "staging",
+      "runs-on": "linux"
+    },
+    {
+      "type": "job",
+      "id": "build4",
+      "name": "build4",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "ref"
+          },
+          {
+            "Key": "cancel-in-progress",
+            "Value": {
+              "type": 3,
+              "expr": "github.ref"
+            }
+          }
+        ]
+      },
+      "runs-on": "macos-latest"
+    },
+    {
+      "type": "job",
+      "id": "build5",
+      "name": "build5",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "deploy"
+          },
+          {
+            "Key": "queue",
+            "Value": "max"
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+
+  one:
+    needs: two
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+
+  three:
+    needs:
+      - four
+      - five
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+
+  six:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-needs-unknown-job.yml (Line: 5, Col: 12): Job 'one' depends on unknown job 'two'."
+    },
+    {
+      "Message": ".github/workflows/errors-job-needs-unknown-job.yml (Line: 12, Col: 9): Job 'three' depends on unknown job 'four'."
+    },
+    {
+      "Message": ".github/workflows/errors-job-needs-unknown-job.yml (Line: 13, Col: 9): Job 'three' depends on unknown job 'five'."
+    }
+  ]
+}

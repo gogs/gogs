@@ -1,0 +1,18 @@
+include-source: false # Drop file/line/col from output
+skip:
+- TypeScript
+---
+on: push
+jobs:
+  parse-bool-error:
+    runs-on: !!bool test
+    steps:
+      - uses: actions/checkout@v2
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-parse-boolean.yml: The value 'test' on line 4 and column 14 is invalid for the type 'tag:yaml.org,2002:bool'"
+    }
+  ]
+}

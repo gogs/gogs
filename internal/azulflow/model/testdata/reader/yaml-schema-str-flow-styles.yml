@@ -1,0 +1,104 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Values are based on YAML 1.2 core schema - https://yaml.org/spec/1.2.0/#id2604037
+        vector-1:
+          # String, implicit type
+          - NaN
+          - Infinity
+          - -Infinity
+          - foo bar       # Unquoted
+          - "foo bar"     # Double quotes
+          - 'foo bar'     # Single quotes
+
+          # String, explicit type
+          - !!str null
+          - !!str true
+          - !!str 0
+          - !!str foo bar
+          - !!str \"foo bar\"
+          - !!str 'foo bar'
+          - !<tag:yaml.org,2002:str> null
+          - !<tag:yaml.org,2002:str> true
+          - !<tag:yaml.org,2002:str> 0
+          - !<tag:yaml.org,2002:str> foo bar
+          - !<tag:yaml.org,2002:str> \"foo bar\"
+          - !<tag:yaml.org,2002:str> 'foo bar'
+
+          # Customer-breaking change we discovered when upgrading from YamlDotNet.Signed 6.0.0 to YamlDotNet 12.0.2.
+          # YamlDotNet 12.0.2 produces the error "While scanning a multi-line double-quoted scalar, found wrong indentation."
+          - "hello
+          world"
+
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "vector-1",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "NaN",
+                      "Infinity",
+                      "-Infinity",
+                      "foo bar",
+                      "foo bar",
+                      "foo bar",
+                      "null",
+                      "true",
+                      "0",
+                      "foo bar",
+                      "\\\"foo bar\\\"",
+                      "foo bar",
+                      "null",
+                      "true",
+                      "0",
+                      "foo bar",
+                      "\\\"foo bar\\\"",
+                      "foo bar",
+                      "hello world"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

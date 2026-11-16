@@ -1,0 +1,47 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Switch to using Python 3.10 by default
+      uses: actions/setup-python@v4
+      with:
+        python-version: >-
+          3.10
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_setup-python",
+          "name": "Switch to using Python 3.10 by default",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/setup-python@v4",
+          "with": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "python-version",
+                "Value": "3.10"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

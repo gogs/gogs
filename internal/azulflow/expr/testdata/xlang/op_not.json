@@ -1,0 +1,28 @@
+{
+  "not": [
+    { "expr": "!!true", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!false", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!1", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!.5", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!0.5", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!2", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!-1", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!-.5", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!-2", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!-Infinity", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!Infinity", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!NaN", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!0", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!0.0", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!-0", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!-0.0", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!'a'", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!'false'", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!'0'", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!' '", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!''", "result": { "kind": "Boolean", "value": false } },
+    { "expr": "!!fromJson('[]')", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!fromJson('{}')", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "!!null", "result": { "kind": "Boolean", "value": false } }
+  ]
+}

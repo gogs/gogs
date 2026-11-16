@@ -1,0 +1,18 @@
+include-source: false # Drop file/line/col from output
+max-file-size: 124
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo Building...
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-max-file-size.yml: The maximum file size of 124 characters has been exceeded"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+# Publish uv version information to the versions repository.
+#
+# Assumed to run as a subworkflow of .github/workflows/release.yml; specifically, as a post-announce
+# job within `cargo-dist`.
+name: publish-versions
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+permissions: {}
+
+env:
+  ACTIONS_CACHE_MODE: none
+  UV_LOCKED: 1
+  UV_PYTHON_DOWNLOADS_JSON_URL: ${{ github.workspace }}/crates/uv-python-managed/download-metadata.json
+
+jobs:
+  publish-versions:
+    permissions:
+      contents: read
+      id-token: write # for the credential broker
+    runs-on: ${{ github.repository_owner == 'astral-sh' && 'github-ubuntu-24.04-x86_64-4' || 'ubuntu-latest' }}
+    environment:
+      name: release
+    env:
+      VERSION: ${{ fromJson(inputs.plan).announcement_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: "Set branch name"
+        run: echo "BRANCH_NAME=update-versions-$VERSION-$(date +%s)" >> $GITHUB_ENV
+
+      - name: "Get versions token"
+        id: token
+        uses: astral-sh/github-actions/simple-token-service@eb81cf4d13127c3f9539f621c17e4c65327636c8
+        with:
+          exchange-url: ${{ secrets.RELEASES_STS_API_URL }}/exchange
+          audience: ${{ secrets.RELEASES_STS_API_URL }}
+          repository: astral-sh/versions
+          permissions: |
+            contents: write
+            pull_requests: write
+
+      - name: "Checkout versions repo"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: astral-sh/versions
+          ref: main
+          path: astral-versions
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: false
+
+      - uses: $/.github/actions/setup-uv-toolchain
+
+      - name: "Update versions"
+        env:
+          PLAN: ${{ inputs.plan }}
+        run: printf '%s' "$PLAN" | uv run astral-versions/scripts/convert-cargo-dist-plan.py | uv run astral-versions/scripts/insert-versions.py --name uv
+
+      - name: "Commit versions"
+        working-directory: astral-versions
+        run: |
+          git config user.name "astral-releases-bot[bot]"
+          git config user.email "328004183+astral-releases-bot[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          git add -A
+          git commit -m "Update uv to version $VERSION"
+
+      - name: "Create Pull Request"
+        working-directory: astral-versions
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          pull_request_title="Add uv $VERSION"
+
+          gh pr list --state open --json title --jq ".[] | select(.title == \"$pull_request_title\") | .number" | \
+            xargs -I {} gh pr close {}
+
+          gh auth setup-git
+          git push origin "$BRANCH_NAME"
+
+          gh pr create --base main --head "$BRANCH_NAME" \
+            --title "$pull_request_title" \
+            --body "Automated versions update for $VERSION" \
+            --label "automation"
+
+      - name: "Merge Pull Request"
+        if: ${{ !fromJson(inputs.plan).announcement_tag_is_implicit }}
+        working-directory: astral-versions
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          # Wait for PR to be created before merging
+          sleep 10
+          # Use admin to bypass required review
+          gh pr merge --squash --admin "$BRANCH_NAME"

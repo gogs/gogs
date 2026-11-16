@@ -1,0 +1,17 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    runs-on: duplicate-key
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-value-already-defined.yml (Line: 5, Col: 5): 'runs-on' is already defined"
+    }
+  ]
+}

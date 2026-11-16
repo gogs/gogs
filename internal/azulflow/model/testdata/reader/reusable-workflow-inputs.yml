@@ -1,0 +1,254 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  build:
+    uses: contoso/templates/.github/workflows/build.yml@v1
+    with:
+      some-boolean-1: true
+      some-boolean-2: false
+      some-number-1: 123
+      some-number-2: 456
+      some-string-1: abc
+      some-string-2: def
+---
+contoso/templates/.github/workflows/build.yml@v1
+---
+on:
+  workflow_call:
+    inputs:
+      some-boolean-1:
+        type: boolean
+      some-boolean-2:
+        required: true
+        type: boolean
+      some-boolean-3:
+        type: boolean
+        default: true
+      some-number-1:
+        type: number
+      some-number-2:
+        required: true
+        type: number
+      some-number-3:
+        type: number
+        default: 789
+      some-string-1:
+        type: string
+      some-string-2:
+        required: true
+        type: string
+      some-string-3:
+        type: string
+        default: ghi
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 1
+---
+{
+  "jobs": [
+    {
+      "type": "reusableWorkflowJob",
+      "id": "build",
+      "name": "build",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/build.yml@v1",
+      "input-definitions": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "some-boolean-1",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "type",
+                  "Value": "boolean"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-boolean-2",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                },
+                {
+                  "Key": "type",
+                  "Value": "boolean"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-boolean-3",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "type",
+                  "Value": "boolean"
+                },
+                {
+                  "Key": "default",
+                  "Value": true
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-number-1",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "type",
+                  "Value": "number"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-number-2",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                },
+                {
+                  "Key": "type",
+                  "Value": "number"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-number-3",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "type",
+                  "Value": "number"
+                },
+                {
+                  "Key": "default",
+                  "Value": 789
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-string-1",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "type",
+                  "Value": "string"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-string-2",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                },
+                {
+                  "Key": "type",
+                  "Value": "string"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "some-string-3",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "type",
+                  "Value": "string"
+                },
+                {
+                  "Key": "default",
+                  "Value": "ghi"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input-values": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "some-boolean-1",
+            "Value": true
+          },
+          {
+            "Key": "some-boolean-2",
+            "Value": false
+          },
+          {
+            "Key": "some-number-1",
+            "Value": 123
+          },
+          {
+            "Key": "some-number-2",
+            "Value": 456
+          },
+          {
+            "Key": "some-string-1",
+            "Value": "abc"
+          },
+          {
+            "Key": "some-string-2",
+            "Value": "def"
+          }
+        ]
+      },
+      "jobs": [
+        {
+          "type": "job",
+          "id": "deploy",
+          "name": "deploy",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "runs-on": "ubuntu-latest",
+          "steps": [
+            {
+              "id": "__run",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "run": "echo 1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

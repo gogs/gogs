@@ -1,0 +1,327 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+env:
+  time: 5
+jobs:
+  build:
+    if: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build2:
+    if: ""
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build3:
+    if: ${{ github.foo == 'bar' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build4:
+    needs:
+      - build
+      - build2
+    if: ${{ success('build', 'build2') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build5:
+    if: github.foo == 'bar'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build6:
+    if: null
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build7:
+    if: false || (always() && true)
+    runs-on: linux
+    steps:
+    - run: echo Hello World
+  build8:
+    if: false || (true && true)
+    runs-on: macos-latest
+    steps:
+    - run: echo Hello World
+  build9:
+    if: false && success()
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo 1
+  build10:
+    if: ${{ toJSON( github.actor) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Hello World
+  build11:
+    runs-on: linux
+    steps:
+      - if: ${{always() && fromJSON(env.time) == 5 }}
+        run: echo Hello World
+  build12:
+    if: fromJson(toJSON(success()))
+    runs-on: linux
+    steps:
+      - run: echo Hello World
+---
+{
+  "env": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "time",
+        "Value": "5"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success() && (true)"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build3",
+      "name": "build3",
+      "if": {
+        "type": 3,
+        "expr": "success() && (github.foo == 'bar')"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build4",
+      "name": "build4",
+      "needs": [
+        "build",
+        "build2"
+      ],
+      "if": {
+        "type": 3,
+        "expr": "success('build', 'build2')"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build5",
+      "name": "build5",
+      "if": {
+        "type": 3,
+        "expr": "success() && (github.foo == 'bar')"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build6",
+      "name": "build6",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build7",
+      "name": "build7",
+      "if": {
+        "type": 3,
+        "expr": "false || (always() && true)"
+      },
+      "runs-on": "linux",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Hello World"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build8",
+      "name": "build8",
+      "if": {
+        "type": 3,
+        "expr": "success() && (false || (true && true))"
+      },
+      "runs-on": "macos-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Hello World"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build9",
+      "name": "build9",
+      "if": {
+        "type": 3,
+        "expr": "false && success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo 1"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build10",
+      "name": "build10",
+      "if": {
+        "type": 3,
+        "expr": "success() && (toJSON( github.actor))"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Hello World"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build11",
+      "name": "build11",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "linux",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "always() && fromJSON(env.time) == 5"
+          },
+          "run": "echo Hello World"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build12",
+      "name": "build12",
+      "if": {
+        "type": 3,
+        "expr": "fromJson(toJSON(success()))"
+      },
+      "runs-on": "linux",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Hello World"
+        }
+      ]
+    }
+  ]
+}

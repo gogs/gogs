@@ -1,0 +1,242 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Values are based on YAML 1.2 core schema - https://yaml.org/spec/1.2.0/#id2604037
+        vector-1:
+          # String, implicit type, block style
+          #
+          # Scalar style:
+          #   | "literal" block (keep newlines)
+          #   > "folded" block (replace newlines with spaces)
+          #
+          # Chomp style:
+          #   (empty) clip (remove all trailing newlines except the first)
+          #   - strip (remove all trailing newlines)
+          #   + keep (retain all trailing newlines)
+          #
+
+          # literal, clip, implicit indent
+          - |
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # literal, strip, implicit indent
+          - |-
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # literal, keep, implicit indent
+          - |+
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # literal, clip, explicit indent
+          - |2
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # literal, strip, explicit indent
+          - |-2
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # literal, keep, explicit indent
+          - |+2
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # folded, clip, implicit indent
+          - >
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # folded, strip, implicit indent
+          - >-
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # folded, keep, implicit indent
+          - >+
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # folded, clip, explicit indent
+          - >2
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # folded, strip, explicit indent
+          - >-2
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # folded, keep, explicit indent
+          - >+2
+            Line 1
+            Line 2
+
+            Line 4
+              Line 5
+            Line 6
+            Line 7
+
+
+          # String, explicit type, block style
+          - !!str |
+            hello
+            world
+          - !<tag:yaml.org,2002:str> |
+            hello
+            world
+
+          # Customer-breaking change we discovered when upgrading from YamlDotNet.Signed 6.0.0 to YamlDotNet 12.0.2.
+          # YamlDotNet 12.0.2 produces the error "While scanning a literal block scalar, found extra spaces in first line."
+          #
+          # Note, the first line is empty.
+          - |
+
+              hello
+
+          # Customer-breaking change we discovered when upgrading from YamlDotNet.Signed 6.0.0 to YamlDotNet 12.0.2.
+          # YamlDotNet 12.0.2 produces the error "While scanning a literal block scalar, found extra spaces in first line."
+          #
+          # Note, the first line is whitespace.
+          - |
+              
+              hello
+
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "vector-1",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "Line 1\nLine 2\n\nLine 4\n  Line 5\nLine 6\nLine 7\n",
+                      "Line 1\nLine 2\n\nLine 4\n  Line 5\nLine 6\nLine 7",
+                      "Line 1\nLine 2\n\nLine 4\n  Line 5\nLine 6\nLine 7\n\n\n",
+                      "Line 1\nLine 2\n\nLine 4\n  Line 5\nLine 6\nLine 7\n",
+                      "Line 1\nLine 2\n\nLine 4\n  Line 5\nLine 6\nLine 7",
+                      "Line 1\nLine 2\n\nLine 4\n  Line 5\nLine 6\nLine 7\n\n\n",
+                      "Line 1 Line 2\nLine 4\n  Line 5\nLine 6 Line 7\n",
+                      "Line 1 Line 2\nLine 4\n  Line 5\nLine 6 Line 7",
+                      "Line 1 Line 2\nLine 4\n  Line 5\nLine 6 Line 7\n\n\n",
+                      "Line 1 Line 2\nLine 4\n  Line 5\nLine 6 Line 7\n",
+                      "Line 1 Line 2\nLine 4\n  Line 5\nLine 6 Line 7",
+                      "Line 1 Line 2\nLine 4\n  Line 5\nLine 6 Line 7\n\n\n",
+                      "hello\nworld\n",
+                      "hello\nworld\n",
+                      "\nhello\n",
+                      "\nhello\n"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

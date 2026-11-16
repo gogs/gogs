@@ -1,0 +1,20 @@
+{
+  "bool": [
+    {
+      "expr": "false <= true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "false <= false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true <= false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true <= true",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ]
+}

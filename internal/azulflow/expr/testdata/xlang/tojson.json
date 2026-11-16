@@ -1,0 +1,223 @@
+{
+  "basics": [
+    {
+      "expr": "tojson(null)",
+      "result": {
+        "kind": "String",
+        "value": "null"
+      }
+    },
+    {
+      "expr": "tojson(true)",
+      "result": {
+        "kind": "String",
+        "value": "true"
+      }
+    },
+    {
+      "expr": "tojson(false)",
+      "result": {
+        "kind": "String",
+        "value": "false"
+      }
+    },
+    {
+      "expr": "tojson(0)",
+      "result": {
+        "kind": "String",
+        "value": "0"
+      }
+    },
+    {
+      "expr": "tojson(-0)",
+      "result": {
+        "kind": "String",
+        "value": "0"
+      }
+    },
+    {
+      "expr": "tojson(123456789)",
+      "result": {
+        "kind": "String",
+        "value": "123456789"
+      }
+    },
+    {
+      "expr": "tojson(-123456789)",
+      "result": {
+        "kind": "String",
+        "value": "-123456789"
+      }
+    },
+    {
+      "expr": "tojson(1234.5)",
+      "result": {
+        "kind": "String",
+        "value": "1234.5"
+      }
+    },
+    {
+      "expr": "tojson(-1234.5)",
+      "result": {
+        "kind": "String",
+        "value": "-1234.5"
+      }
+    },
+    {
+      "expr": "tojson('')",
+      "result": {
+        "kind": "String",
+        "value": "\"\""
+      }
+    },
+    {
+      "expr": "tojson('abc')",
+      "result": {
+        "kind": "String",
+        "value": "\"abc\""
+      }
+    },
+    {
+      "expr": "tojson('abc''def')",
+      "result": {
+        "kind": "String",
+        "value": "\"abc'def\""
+      }
+    },
+    {
+      "expr": "tojson('abc\\\"def')",
+      "result": {
+        "kind": "String",
+        "value": "\"abc\\\\\\\"def\""
+      }
+    },
+    {
+      "expr": "tojson(emptyArray)",
+      "contexts": {
+        "emptyArray": []
+      },
+      "result": {
+        "kind": "String",
+        "value": "[]"
+      }
+    },
+    {
+      "expr": "tojson(emptyObject)",
+      "contexts": {
+        "emptyObject": {}
+      },
+      "result": {
+        "kind": "String",
+        "value": "{}"
+      }
+    }
+  ],
+  "arrays": [
+    {
+      "expr": "tojson(myArray)",
+      "contexts": {
+        "myArray": []
+      },
+      "result": {
+        "kind": "String",
+        "value": "[]"
+      }
+    },
+    {
+      "expr": "tojson(myArray)",
+      "contexts": {
+        "myArray": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": {
+        "kind": "String",
+        "value": "[\n  1,\n  2,\n  3\n]"
+      }
+    },
+    {
+      "expr": "tojson(myArray)",
+      "contexts": {
+        "myArray": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            "abc",
+            "def",
+            "ghi"
+          ],
+          [
+            true,
+            false,
+            null,
+            [],
+            {}
+          ]
+        ]
+      },
+      "result": {
+        "kind": "String",
+        "value": "[\n  [\n    1,\n    2,\n    3\n  ],\n  [\n    \"abc\",\n    \"def\",\n    \"ghi\"\n  ],\n  [\n    true,\n    false,\n    null,\n    [],\n    {}\n  ]\n]"
+      }
+    }
+  ],
+  "object": [
+    {
+      "expr": "tojson(myObject)",
+      "contexts": {
+        "myObject": {}
+      },
+      "result": {
+        "kind": "String",
+        "value": "{}"
+      }
+    },
+    {
+      "expr": "tojson(myObject)",
+      "contexts": {
+        "myObject": {
+          "one": "value one",
+          "two" : "value two",
+          "three": "value three"
+        }
+      },
+      "result": {
+        "kind": "String",
+        "value": "{\n  \"one\": \"value one\",\n  \"two\": \"value two\",\n  \"three\": \"value three\"\n}"
+      }
+    },
+    {
+      "expr": "tojson(myObject)",
+      "contexts": {
+        "myObject": {
+          "nested-one": {
+            "one": 1,
+            "two": 2,
+            "three": 3
+          },
+          "nested-two": {
+            "string one": "value one",
+            "string two": "value two",
+            "string three": "value three"
+          },
+          "nested-three": {
+            "true": true,
+            "false": false,
+            "null": null,
+            "array": [],
+            "object": {}
+          }
+        }
+      },
+      "result": {
+        "kind": "String",
+        "value": "{\n  \"nested-one\": {\n    \"one\": 1,\n    \"two\": 2,\n    \"three\": 3\n  },\n  \"nested-two\": {\n    \"string one\": \"value one\",\n    \"string two\": \"value two\",\n    \"string three\": \"value three\"\n  },\n  \"nested-three\": {\n    \"true\": true,\n    \"false\": false,\n    \"null\": null,\n    \"array\": [],\n    \"object\": {}\n  }\n}"
+      }
+    }
+  ]
+}

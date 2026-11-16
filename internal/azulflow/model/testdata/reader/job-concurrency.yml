@@ -1,0 +1,123 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency: foo
+    steps:
+      - run: echo hi
+  build2:
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            concurrency: ubuntu
+          - runs-on: windows-latest
+            concurrency: windows
+    runs-on: ${{ matrix.runs-on }}
+    cancel-timeout-minutes: ${{ matrix.concurrency }}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": "foo",
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "include",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "runs-on",
+                            "Value": "ubuntu-latest"
+                          },
+                          {
+                            "Key": "concurrency",
+                            "Value": "ubuntu"
+                          }
+                        ]
+                      },
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "runs-on",
+                            "Value": "windows-latest"
+                          },
+                          {
+                            "Key": "concurrency",
+                            "Value": "windows"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "cancel-timeout-minutes": {
+        "type": 3,
+        "expr": "matrix.concurrency"
+      },
+      "runs-on": {
+        "type": 3,
+        "expr": "matrix.runs-on"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  deploy:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+    with:
+      some-boolean: not-a-boolean
+      some-number: not-a-number
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on:
+  workflow_call:
+    inputs:
+      some-boolean:
+        type: boolean
+      some-number:
+        type: number
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-job-inputs-type-mismatch.yml (Line: 6, Col: 21): Unexpected value 'not-a-boolean'"
+    },
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-job-inputs-type-mismatch.yml (Line: 7, Col: 20): Unexpected value 'not-a-number'"
+    }
+  ]
+}

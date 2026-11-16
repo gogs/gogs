@@ -1,0 +1,49 @@
+include-source: false
+skip:
+  - C#
+  - Go
+---
+on:
+  image_version:
+    names: testing
+    versions: 1.*
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "events": {
+    "image_version": {
+      "versions": [
+        "1.*"
+      ],
+      "names": [
+        "testing"
+      ]
+    }
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "my-job",
+      "name": "my-job",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

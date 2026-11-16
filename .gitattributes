@@ -10,3 +10,4 @@ public/js/semantic-* linguist-vendored
 # Specification examples are compared byte for byte, so their line endings
 # must not be converted on checkout.
 internal/markup/dariomark/testdata/** -text
+internal/azulflow/*/testdata/** -text

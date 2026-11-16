@@ -1,0 +1,40 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+max-nested-reusable-workflows-depth: 2
+---
+on: push
+jobs:
+  deploy-level-0:
+    uses: contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1:
+    uses: contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-2:
+    uses: contoso/templates/.github/workflows/deploy-level-3.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-3.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-3:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": "Nested reusable workflow depth exceeded 2."
+    }
+  ]
+}

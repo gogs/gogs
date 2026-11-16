@@ -1,0 +1,123 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 123
+    steps:
+      - run: echo hi
+  build2:
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            timeout-minutes: 5
+          - runs-on: windows-latest
+            timeout-minutes: 6
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: ${{ matrix.timeout-minutes }}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "timeout-minutes": 123,
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "include",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "runs-on",
+                            "Value": "ubuntu-latest"
+                          },
+                          {
+                            "Key": "timeout-minutes",
+                            "Value": 5
+                          }
+                        ]
+                      },
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "runs-on",
+                            "Value": "windows-latest"
+                          },
+                          {
+                            "Key": "timeout-minutes",
+                            "Value": 6
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "timeout-minutes": {
+        "type": 3,
+        "expr": "matrix.timeout-minutes"
+      },
+      "runs-on": {
+        "type": 3,
+        "expr": "matrix.runs-on"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

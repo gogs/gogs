@@ -1,0 +1,21 @@
+include-source: false # Drop file/line/col from output
+max-depth: 5
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14 # Depth = 5, equals max-depth, raises error
+      - run: echo Building...
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-max-depth.yml: Maximum object depth exceeded"
+    }
+  ]
+}

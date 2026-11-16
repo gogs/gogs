@@ -1,0 +1,16 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ github.event_name
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-expression-not-closed.yml (Line: 6, Col: 14): The expression is not closed. An unescaped ${{ sequence was found, but the closing }} sequence was not found."
+    }
+  ]
+}

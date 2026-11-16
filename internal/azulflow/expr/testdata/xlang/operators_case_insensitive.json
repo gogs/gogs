@@ -1,0 +1,376 @@
+{
+  "lower-vs-upper": [
+    {
+      "expr": "'abcdefghijklmnopqrstuvwxyz' == 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'abcdefghijklmnopqrstuvwxyz' != 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'abcdefghijklmnopqrstuvwxyz' < 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'abcdefghijklmnopqrstuvwxyz' <= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'abcdefghijklmnopqrstuvwxyz' > 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'abcdefghijklmnopqrstuvwxyz' >= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "upper-vs-lower": [
+    {
+      "expr": "'ABCDEFGHIJKLMNOPQRSTUVWXYZ' == 'abcdefghijklmnopqrstuvwxyz'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ABCDEFGHIJKLMNOPQRSTUVWXYZ' != 'abcdefghijklmnopqrstuvwxyz'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ABCDEFGHIJKLMNOPQRSTUVWXYZ' < 'abcdefghijklmnopqrstuvwxyz'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ABCDEFGHIJKLMNOPQRSTUVWXYZ' <= 'abcdefghijklmnopqrstuvwxyz'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ABCDEFGHIJKLMNOPQRSTUVWXYZ' > 'abcdefghijklmnopqrstuvwxyz'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ABCDEFGHIJKLMNOPQRSTUVWXYZ' >= 'abcdefghijklmnopqrstuvwxyz'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "a-z-equivalent-to-A-Z-wrt-chars-between-Z-and-a": [
+    {
+      "expr": "'A' < '['",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'A' <= '['",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'A' > '['",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'A' >= '['",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'a' < '['",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'a' <= '['",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'a' > '['",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'a' >= '['",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "case-insensitive-ς-(final-lowercase-sigma)-Σ-(capital-sigma)-σ-(non-final-sigma)": [
+    {
+      "expr": "'ς' == 'Σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ς' != 'Σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ς' < 'Σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ς' <= 'Σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ς' > 'Σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ς' >= 'Σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ς' == 'σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ς' != 'σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ς' < 'σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ς' <= 'σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ς' > 'σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ς' >= 'σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Σ' == 'σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Σ' != 'σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Σ' < 'σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Σ' <= 'σ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Σ' > 'σ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Σ' >= 'σ'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-insensitive-ü-Ü": [
+    {
+      "expr": "'ü' == 'Ü'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ü' != 'Ü'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ü' < 'Ü'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ü' <= 'Ü'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ü' > 'Ü'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ü' >= 'Ü'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Ü' == 'ü'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Ü' != 'ü'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Ü' < 'ü'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Ü' <= 'ü'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Ü' > 'ü'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Ü' >= 'ü'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-insensitive-ç-Ç": [
+    {
+      "expr": "'ç' == 'Ç'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ç' != 'Ç'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ç' < 'Ç'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ç' <= 'Ç'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ç' > 'Ç'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ç' >= 'Ç'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Ç' == 'ç'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Ç' != 'ç'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Ç' < 'ç'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Ç' <= 'ç'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Ç' > 'ç'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'Ç' >= 'ç'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-sensitive-i-İ": [
+    {
+      "expr": "'i' == 'İ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'i' != 'İ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'i' < 'İ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'i' <= 'İ'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'i' > 'İ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'i' >= 'İ'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'İ' == 'i'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'İ' != 'i'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'İ' < 'i'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'İ' <= 'i'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'İ' > 'i'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'İ' >= 'i'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-sensitive-ı-I": [
+    {
+      "expr": "'ı' == 'I'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ı' != 'I'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ı' < 'I'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ı' <= 'I'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'ı' > 'I'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'ı' >= 'I'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'I' == 'ı'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'I' != 'ı'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'I' < 'ı'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'I' <= 'ı'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'I' > 'ı'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'I' >= 'ı'",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "cyrillic-letters": [
+    {
+      "expr": "'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЬЭЮЯ' == 'абвгдежзийклмнопрстуфхцчшщьэюя'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ]
+}

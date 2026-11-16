@@ -1,0 +1,18 @@
+include-source: false # Drop file/line/col from output
+---
+name: CI
+on:
+  push:
+jobs:
+  "":
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-id-empty.yml (Line: 5, Col: 3): Unexpected value ''"
+    }
+  ]
+}

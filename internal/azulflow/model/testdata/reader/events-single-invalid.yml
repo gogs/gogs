@@ -1,0 +1,29 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+  - C#
+---
+on:
+  workflow_dispatch:
+    unknown_value: test
+    inputs:
+      name:
+        another_unknown_value: 123
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/events-single-invalid.yml (Line: 3, Col: 5): Unexpected value 'unknown_value'"
+    },
+    {
+      "Message": ".github/workflows/events-single-invalid.yml (Line: 6, Col: 9): Unexpected value 'another_unknown_value'"
+    }
+  ]
+}

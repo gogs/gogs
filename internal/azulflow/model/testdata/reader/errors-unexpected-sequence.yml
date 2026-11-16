@@ -1,0 +1,20 @@
+include-source: false # Drop file/line/col from output
+---
+name:
+  - no
+  - sequence
+  - here
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-unexpected-sequence.yml (Line: 2, Col: 3): A sequence was not expected"
+    }
+  ]
+}

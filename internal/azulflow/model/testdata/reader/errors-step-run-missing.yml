@@ -1,0 +1,16 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - shell: foo
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-step-run-missing.yml (Line: 6, Col: 9): Required property is missing: run"
+    }
+  ]
+}

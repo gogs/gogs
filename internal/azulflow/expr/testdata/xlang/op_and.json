@@ -1,0 +1,51 @@
+{
+  "operator_and": [
+    {
+      "expr": "true && true && true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    { "expr": "true && true", "result": { "kind": "Boolean", "value": true } },
+    {
+      "expr": "true && true && false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true && false && true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false && true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false && false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    { "expr": "true && 1 && 2", "result": { "kind": "Number", "value": 2.0 } },
+    { "expr": "true && 0 && 2", "result": { "kind": "Number", "value": 0.0 } },
+    {
+      "expr": "true && 'a' && 'b'",
+      "result": { "kind": "String", "value": "b" }
+    },
+    {
+      "expr": "true && '' && 'asdf'",
+      "result": { "kind": "String", "value": "" }
+    },
+    { "expr": "null && true", "result": { "kind": "Null", "value": null } },
+    {
+      "expr": "test && 123",
+      "contexts": { "test": {} },
+      "result": { "kind": "Number", "value": 123.0 }
+    },
+    {
+      "expr": "test && 456",
+      "contexts": { "test": {} },
+      "result": { "kind": "Number", "value": 456.0 }
+    },
+    {
+      "expr": "test && 789",
+      "contexts": { "test": [] },
+      "result": { "kind": "Number", "value": 789.0 }
+    }
+  ]
+}

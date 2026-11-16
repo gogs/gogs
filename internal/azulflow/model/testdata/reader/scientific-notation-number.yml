@@ -1,0 +1,79 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Value Difference!
+        env:
+          MIN: 1345678912345678912
+  max-double:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Value Difference!
+        env:
+          MIN: 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "env": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "MIN",
+                "Value": "1.34567891234568E+18"
+              }
+            ]
+          },
+          "run": "echo Value Difference!"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "max-double",
+      "name": "max-double",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "env": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "MIN",
+                "Value": "1.79769313486232E+308"
+              }
+            ]
+          },
+          "run": "echo Value Difference!"
+        }
+      ]
+    }
+  ]
+}

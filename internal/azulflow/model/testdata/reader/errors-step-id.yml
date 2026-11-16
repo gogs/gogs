@@ -1,0 +1,64 @@
+include-source: false # Drop file/line/col from output
+---
+name: CI
+on:
+  push:
+jobs:
+  build:
+    runs-on: [ self-hosted ]
+    steps:
+      # Valid
+      - run: echo no-id # no id
+      - id: valid-id
+        run: echo valid-id
+      - id: _
+        run: echo _
+      - id: _a
+        run: echo _a
+      - id: a__
+        run: echo a__
+
+      # Duplicate
+      - id: my-step
+        run: echo my-step
+      - id: my-step
+        run: echo my-step-duplicate
+
+      # Duplicate (case insensitive)
+      - id: step1
+        run: echo step1
+      - id: STEP1
+        run: echo STEP1
+
+      # Invalid
+      - id: _invalid$stuff
+        run: echo _invalid$stuff
+      - id: -invalid-step!
+        run: echo -invalid-step!
+      - id: __
+        run: echo __
+      - id: __a
+        run: echo __a
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-step-id.yml (Line: 22, Col: 13): The identifier 'my-step' may not be used more than once within the same scope."
+    },
+    {
+      "Message": ".github/workflows/errors-step-id.yml (Line: 28, Col: 13): The identifier 'STEP1' may not be used more than once within the same scope."
+    },
+    {
+      "Message": ".github/workflows/errors-step-id.yml (Line: 32, Col: 13): The identifier '_invalid$stuff' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-step-id.yml (Line: 34, Col: 13): The identifier '-invalid-step!' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters."
+    },
+    {
+      "Message": ".github/workflows/errors-step-id.yml (Line: 36, Col: 13): The identifier '__' is invalid. IDs starting with '__' are reserved."
+    },
+    {
+      "Message": ".github/workflows/errors-step-id.yml (Line: 38, Col: 13): The identifier '__a' is invalid. IDs starting with '__' are reserved."
+    }
+  ]
+}

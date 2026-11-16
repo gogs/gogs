@@ -1,0 +1,124 @@
+{
+  "null": [
+    {
+      "expr": "null == 0",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+  "boolean": [
+    {
+      "expr": "true == 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "false == 0",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+  "string": [
+    {
+      "expr": "'' == 0",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 123456.789 ' == 123456.789",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' +123456.789 ' == 123456.789",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' -123456.789 ' == -123456.789",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 0xff ' == 255",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 0xFF ' == 255",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 0o10 ' == 8",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' Infinity ' == Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' -Infinity ' == -Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' NaN ' != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' NaN ' == NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' NaN ' > NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' NaN ' < NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' abc ' != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' abc ' == NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' abc ' > NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' abc ' < NaN",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "array": [
+    {
+      "expr": "fromjson('[]') != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "fromjson('[]') == NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "fromjson('[]') > NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "fromjson('[]') < NaN",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+  "object": [
+    {
+      "expr": "fromjson('[]') != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "fromjson('[]') == NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "fromjson('[]') > NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "fromjson('[]') < NaN",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ]
+}

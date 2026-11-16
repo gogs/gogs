@@ -1,0 +1,55 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 2
+        continue-on-error: true
+      - run: exit 1
+        continue-on-error: false
+      - run: exit 1
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": true,
+          "run": "exit 2"
+        },
+        {
+          "id": "__run_2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": false,
+          "run": "exit 1"
+        },
+        {
+          "id": "__run_3",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "exit 1"
+        }
+      ]
+    }
+  ]
+}

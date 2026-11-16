@@ -1,0 +1,20 @@
+include-source: false # Drop file/line/col from output
+skip:
+ - TypeScript
+---
+on: push
+jobs:
+  build:
+    if: ${{ contains('a', 'b' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-unclosed-tokens.yml (Line: 4, Col: 9): Unexpected end of expression: ''b''. Located at position 15 within expression: contains('a', 'b'"
+    }
+  ]
+}

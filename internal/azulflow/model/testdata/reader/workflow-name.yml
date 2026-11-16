@@ -1,0 +1,34 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+name: my-workflow-name
+jobs:
+  one:
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo hello
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "one",
+      "name": "one",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hello"
+        }
+      ]
+    }
+  ]
+}

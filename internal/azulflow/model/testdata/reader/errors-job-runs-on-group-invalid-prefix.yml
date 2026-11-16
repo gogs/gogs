@@ -1,0 +1,33 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on:
+      group: ent/org/my-group
+    steps:
+      - run: echo hi
+  build2:
+    runs-on:
+      group: asdf/my-group
+    steps:
+      - run: echo hi
+  build3:
+    runs-on:
+      group: ent/
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-runs-on-group-invalid-prefix.yml (Line: 5, Col: 14): Invalid runs-on group name 'ent/org/my-group'. Please use 'organization/' or 'enterprise/' prefix to target a single runner group."
+    },
+    {
+      "Message": ".github/workflows/errors-job-runs-on-group-invalid-prefix.yml (Line: 10, Col: 14): Invalid runs-on group name 'asdf/my-group'. Please use 'organization/' or 'enterprise/' prefix to target a single runner group."
+    },
+    {
+      "Message": ".github/workflows/errors-job-runs-on-group-invalid-prefix.yml (Line: 15, Col: 14): Invalid runs-on group name 'ent/'."
+    }
+  ]
+}

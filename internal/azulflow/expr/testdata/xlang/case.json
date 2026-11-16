@@ -1,0 +1,157 @@
+{
+  "case": [
+    {
+      "expr": "case(true, 'first', 'default')",
+      "result": { "kind": "String", "value": "first" }
+    },
+    {
+      "expr": "case(false, 'first', 'default')",
+      "result": { "kind": "String", "value": "default" }
+    },
+    {
+      "expr": "case(true, 'first', false, 'second', 'default')",
+      "result": { "kind": "String", "value": "first" }
+    },
+    {
+      "expr": "case(false, 'first', true, 'second', 'default')",
+      "result": { "kind": "String", "value": "second" }
+    },
+    {
+      "expr": "case(false, 'first', false, 'second', 'default')",
+      "result": { "kind": "String", "value": "default" }
+    },
+    {
+      "expr": "case(1 == 1, 'equal', 'not equal')",
+      "result": { "kind": "String", "value": "equal" }
+    },
+    {
+      "expr": "case(1 == 2, 'equal', 'not equal')",
+      "result": { "kind": "String", "value": "not equal" }
+    },
+    {
+      "expr": "case(github.ref == 'refs/heads/main', 'main', github.event_name == 'pull_request', 'pr', 'other')",
+      "contexts": {
+        "github": {
+          "ref": "refs/heads/main",
+          "event_name": "push"
+        }
+      },
+      "result": { "kind": "String", "value": "main" }
+    },
+    {
+      "expr": "case(github.ref == 'refs/heads/main', 'main', github.event_name == 'pull_request', 'pr', 'other')",
+      "contexts": {
+        "github": {
+          "ref": "refs/heads/develop",
+          "event_name": "pull_request"
+        }
+      },
+      "result": { "kind": "String", "value": "pr" }
+    },
+    {
+      "expr": "case(github.ref == 'refs/heads/main', 'main', github.event_name == 'pull_request', 'pr', 'other')",
+      "contexts": {
+        "github": {
+          "ref": "refs/heads/develop",
+          "event_name": "push"
+        }
+      },
+      "result": { "kind": "String", "value": "other" }
+    },
+    {
+      "expr": "case(true, 123, 456)",
+      "result": { "kind": "Number", "value": 123 }
+    },
+    {
+      "expr": "case(false, 123, 456)",
+      "result": { "kind": "Number", "value": 456 }
+    },
+    {
+      "expr": "case(github.event == 'pull_request', 0, 1)",
+      "contexts": {
+        "github": {
+          "event": "pull_request"
+        }
+      },
+      "result": { "kind": "Number", "value": 0 }
+    },
+    {
+      "expr": "case(false, 0, 1)",
+      "result": { "kind": "Number", "value": 1 }
+    },
+    {
+      "expr": "case(true, false, true)",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "case(false, false, true)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "case(true, '', 'default')",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "case(false, 'first', '')",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "case(true, fromJSON('[1,2,3]'), 'default')",
+      "result": { "kind": "Array", "value": [1, 2, 3] }
+    },
+    {
+      "expr": "case(true, fromJSON('{\"key\":\"value\"}'), 'default')",
+      "result": { "kind": "Object", "value": { "key": "value" } }
+    },
+    {
+      "expr": "case(false, 'first', false, 'second', false, 'third', false, 'fourth', 'default')",
+      "result": { "kind": "String", "value": "default" }
+    },
+    {
+      "expr": "case(false, 'first', false, 'second', true, 'third', false, 'fourth', 'default')",
+      "result": { "kind": "String", "value": "third" }
+    },
+    {
+      "expr": "case('not a boolean', 'first', 'default')",
+      "err": {
+        "kind": "evaluation",
+        "value": "case predicate must evaluate to a boolean value"
+      }
+    },
+    {
+      "expr": "case(1, 'first', 'default')",
+      "err": {
+        "kind": "evaluation",
+        "value": "case predicate must evaluate to a boolean value"
+      }
+    },
+    {
+      "expr": "case(null, 'first', 'default')",
+      "err": {
+        "kind": "evaluation",
+        "value": "case predicate must evaluate to a boolean value"
+      }
+    },
+    {
+      "expr": "case(fromJSON('[]'), 'first', 'default')",
+      "err": {
+        "kind": "evaluation",
+        "value": "case predicate must evaluate to a boolean value"
+      }
+    },
+    {
+      "expr": "case(fromJSON('{}'), 'first', 'default')",
+      "err": {
+        "kind": "evaluation",
+        "value": "case predicate must evaluate to a boolean value"
+      }
+    },
+    {
+      "expr": "case(true, 'first', false, 'second')",
+      "err": {
+        "kind": "parsing",
+        "value": "Even number of parameters supplied, requires an odd number of parameters: 'case'. Located at position 1 within expression: case(true, 'first', false, 'second')"
+      }
+    }
+  ]
+}

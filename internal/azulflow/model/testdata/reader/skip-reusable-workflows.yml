@@ -1,0 +1,113 @@
+include-source: true # Preserve file/line/col from output
+skip:
+  - Go
+skip-reusable-workflows: true # Only supported by C# parser
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  deploy-1:
+    needs: build
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on: workflow_call
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi from reusable workflow
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": {
+        "type": 0,
+        "file": 1,
+        "line": 3,
+        "col": 3,
+        "lit": "build"
+      },
+      "name": {
+        "type": 0,
+        "file": 1,
+        "line": 3,
+        "col": 3,
+        "lit": "build"
+      },
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 0,
+        "file": 1,
+        "line": 4,
+        "col": 14,
+        "lit": "ubuntu-latest"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": {
+            "type": 0,
+            "file": 1,
+            "line": 6,
+            "col": 14,
+            "lit": "echo hi"
+          }
+        }
+      ]
+    },
+    {
+      "type": "reusableWorkflowJob",
+      "id": {
+        "type": 0,
+        "file": 1,
+        "line": 7,
+        "col": 3,
+        "lit": "deploy-1"
+      },
+      "name": {
+        "type": 0,
+        "file": 1,
+        "line": 7,
+        "col": 3,
+        "lit": "deploy-1"
+      },
+      "needs": [
+        {
+          "type": 0,
+          "file": 1,
+          "line": 8,
+          "col": 12,
+          "lit": "build"
+        }
+      ],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": {
+        "type": 0,
+        "file": 1,
+        "line": 9,
+        "col": 11,
+        "lit": "contoso/templates/.github/workflows/deploy.yml@v1"
+      },
+      "jobs": []
+    }
+  ],
+  "file-table": [
+    ".github/workflows/skip-reusable-workflows.yml"
+  ]
+}

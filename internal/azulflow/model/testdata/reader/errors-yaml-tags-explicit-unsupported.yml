@@ -1,0 +1,20 @@
+include-source: false # Drop file/line/col from output
+skip:
+- TypeScript
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: github/issue-labeler@v2.5
+      with:
+        not-before: !!timestamp 2022-10-26T00:00:00Z # explicitly set unsupported tag
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-yaml-tags-explicit-unsupported.yml: Unexpected tag 'tag:yaml.org,2002:timestamp'"
+    }
+  ]
+}

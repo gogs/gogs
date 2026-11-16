@@ -1,0 +1,601 @@
+skip:
+  - C#
+  - Go
+---
+on:
+  branch_protection_rule:
+    types:
+      - created
+      - edited
+      - deleted
+  check_run:
+    types:
+      - created
+      - completed
+      - requested_action
+      - rerequested
+  check_suite:
+    types:
+      - completed
+  create:
+  delete:
+  deployment:
+  deployment_status:
+  discussion:
+    types:
+      - created
+      - edited
+      - deleted
+      - transferred
+      - pinned
+      - unpinned
+      - labeled
+      - unlabeled
+      - locked
+      - unlocked
+      - category_changed
+      - answered
+      - unanswered
+  discussion_comment:
+    types:
+      - created
+      - edited
+      - deleted
+  fork:
+  gollum:
+  issue_comment:
+    types:
+      - created
+      - edited
+      - deleted
+  issues:
+    types:
+      - opened
+      - edited
+      - deleted
+      - transferred
+      - pinned
+      - unpinned
+      - closed
+      - reopened
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - locked
+      - unlocked
+      - milestoned
+      - demilestoned
+      - field_added
+      - field_removed
+  label:
+    types:
+      - created
+      - edited
+      - deleted
+  merge_group:
+    branches: 
+      - master 
+      - main
+    branches-ignore:
+      - develop
+    types: 
+      - checks_requested
+  milestone:
+    types:
+      - created
+      - closed
+      - opened
+      - edited
+      - deleted
+  page_build:
+  project:
+    types:
+      - created
+      - closed
+      - reopened
+      - edited
+      - deleted
+  project_card:
+    types:
+      - created
+      - moved
+      - converted
+      - edited
+      - deleted
+  project_column:
+    types:
+      - created
+      - updated
+      - moved
+      - deleted
+  public:
+  pull_request:
+    branches:
+      - master
+      - 'main'
+    branches-ignore: [ develop ]
+    paths: file
+    paths-ignore: 'file'
+    types:
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - milestoned
+      - demilestoned
+      - opened
+      - edited
+      - closed
+      - reopened
+      - synchronize
+      - converted_to_draft
+      - ready_for_review
+      - locked
+      - unlocked
+      - enqueued
+      - dequeued
+      - review_requested
+      - review_request_removed
+      - auto_merge_enabled
+      - auto_merge_disabled
+      - stacked
+  pull_request_comment:
+    types:
+      - created
+      - edited
+      - deleted
+  pull_request_review:
+    types:
+      - submitted
+      - edited
+      - dismissed
+  pull_request_review_comment:
+    types:
+      - created
+      - edited
+      - deleted
+  pull_request_target:
+    branches:
+      - master
+      - 'main'
+    branches-ignore: [ develop ]
+    paths: file
+    paths-ignore: 'file'
+    types:
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - milestoned
+      - demilestoned
+      - opened
+      - edited
+      - closed
+      - reopened
+      - synchronize
+      - converted_to_draft
+      - ready_for_review
+      - locked
+      - unlocked
+      - enqueued
+      - dequeued
+      - review_requested
+      - review_request_removed
+      - auto_merge_enabled
+      - auto_merge_disabled
+      - stacked
+  push:
+    branches:
+      - master
+      - 'main'
+    branches-ignore: [ develop ]
+    tags:
+      - v1
+      - 'v2'
+    tags-ignore: [ 'v3' ]
+    paths: file
+    paths-ignore: 'file'
+  registry_package:
+    types:
+      - published
+      - updated
+  release:
+    types:
+      - published
+      - unpublished
+      - created
+      - edited
+      - deleted
+      - prereleased
+      - released
+  schedule:
+    - cron: "* * * * 5"
+    - cron: "* * * * 6"
+  status:
+  watch:
+    types: started
+  workflow_call:
+    inputs:
+      foo:
+        type: string
+        description: 'Foo'
+        required: true
+        default: 'bar'
+    secrets:
+      password:
+        description: 'Password'
+        required: true
+  workflow_run:
+    workflows: ci
+    types:
+      - requested
+      - completed
+      - in_progress
+    branches:
+      - master
+      - 'main'
+    branches-ignore: [ develop ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+---
+{
+  "events": {
+    "branch_protection_rule": {
+      "types": [
+        "created",
+        "edited",
+        "deleted"
+      ]
+    },
+    "check_run": {
+      "types": [
+        "created",
+        "completed",
+        "requested_action",
+        "rerequested"
+      ]
+    },
+    "check_suite": {
+      "types": [
+        "completed"
+      ]
+    },
+    "create": {},
+    "delete": {},
+    "deployment": {},
+    "deployment_status": {},
+    "discussion": {
+      "types": [
+        "created",
+        "edited",
+        "deleted",
+        "transferred",
+        "pinned",
+        "unpinned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "category_changed",
+        "answered",
+        "unanswered"
+      ]
+    },
+    "discussion_comment": {
+      "types": [
+        "created",
+        "edited",
+        "deleted"
+      ]
+    },
+    "fork": {},
+    "gollum": {},
+    "issue_comment": {
+      "types": [
+        "created",
+        "edited",
+        "deleted"
+      ]
+    },
+    "issues": {
+      "types": [
+        "opened",
+        "edited",
+        "deleted",
+        "transferred",
+        "pinned",
+        "unpinned",
+        "closed",
+        "reopened",
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "milestoned",
+        "demilestoned",
+        "field_added",
+        "field_removed"
+      ]
+    },
+    "label": {
+      "types": [
+        "created",
+        "edited",
+        "deleted"
+      ]
+    },
+    "merge_group": {
+      "branches": [
+        "master",
+        "main"
+      ],
+      "branches-ignore": [
+        "develop"
+      ],
+      "types": [
+        "checks_requested"
+      ]
+    },
+    "milestone": {
+      "types": [
+        "created",
+        "closed",
+        "opened",
+        "edited",
+        "deleted"
+      ]
+    },
+    "page_build": {},
+    "project": {
+      "types": [
+        "created",
+        "closed",
+        "reopened",
+        "edited",
+        "deleted"
+      ]
+    },
+    "project_card": {
+      "types": [
+        "created",
+        "moved",
+        "converted",
+        "edited",
+        "deleted"
+      ]
+    },
+    "project_column": {
+      "types": [
+        "created",
+        "updated",
+        "moved",
+        "deleted"
+      ]
+    },
+    "public": {},
+    "pull_request": {
+      "branches": [
+        "master",
+        "main"
+      ],
+      "branches-ignore": [
+        "develop"
+      ],
+      "paths": [
+        "file"
+      ],
+      "paths-ignore": [
+        "file"
+      ],
+      "types": [
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "milestoned",
+        "demilestoned",
+        "opened",
+        "edited",
+        "closed",
+        "reopened",
+        "synchronize",
+        "converted_to_draft",
+        "ready_for_review",
+        "locked",
+        "unlocked",
+        "enqueued",
+        "dequeued",
+        "review_requested",
+        "review_request_removed",
+        "auto_merge_enabled",
+        "auto_merge_disabled",
+        "stacked"
+      ]
+    },
+    "pull_request_comment": {
+      "types": [
+        "created",
+        "edited",
+        "deleted"
+      ]
+    },
+    "pull_request_review": {
+      "types": [
+        "submitted",
+        "edited",
+        "dismissed"
+      ]
+    },
+    "pull_request_review_comment": {
+      "types": [
+        "created",
+        "edited",
+        "deleted"
+      ]
+    },
+    "pull_request_target": {
+      "branches": [
+        "master",
+        "main"
+      ],
+      "branches-ignore": [
+        "develop"
+      ],
+      "paths": [
+        "file"
+      ],
+      "paths-ignore": [
+        "file"
+      ],
+      "types": [
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "milestoned",
+        "demilestoned",
+        "opened",
+        "edited",
+        "closed",
+        "reopened",
+        "synchronize",
+        "converted_to_draft",
+        "ready_for_review",
+        "locked",
+        "unlocked",
+        "enqueued",
+        "dequeued",
+        "review_requested",
+        "review_request_removed",
+        "auto_merge_enabled",
+        "auto_merge_disabled",
+        "stacked"
+      ]
+    },
+    "push": {
+      "branches": [
+        "master",
+        "main"
+      ],
+      "branches-ignore": [
+        "develop"
+      ],
+      "tags": [
+        "v1",
+        "v2"
+      ],
+      "tags-ignore": [
+        "v3"
+      ],
+      "paths": [
+        "file"
+      ],
+      "paths-ignore": [
+        "file"
+      ]
+    },
+    "registry_package": {
+      "types": [
+        "published",
+        "updated"
+      ]
+    },
+    "release": {
+      "types": [
+        "published",
+        "unpublished",
+        "created",
+        "edited",
+        "deleted",
+        "prereleased",
+        "released"
+      ]
+    },
+    "schedule": [
+      {
+        "cron": "* * * * 5"
+      },
+      {
+        "cron": "* * * * 6"
+      }
+    ],
+    "status": {},
+    "watch": {
+      "types": [
+        "started"
+      ]
+    },
+    "workflow_call": {
+      "inputs": {
+        "foo": {
+          "type": "string",
+          "description": "Foo",
+          "required": true,
+          "default": "bar"
+        }
+      },
+      "secrets": {
+        "password": {
+          "description": "Password",
+          "required": true
+        }
+      }
+    },
+    "workflow_run": {
+      "branches": [
+        "master",
+        "main"
+      ],
+      "branches-ignore": [
+        "develop"
+      ],
+      "types": [
+        "requested",
+        "completed",
+        "in_progress"
+      ],
+      "workflows": [
+        "ci"
+      ]
+    }
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": true,
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

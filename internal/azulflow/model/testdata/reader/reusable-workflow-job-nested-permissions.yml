@@ -1,0 +1,115 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+max-nested-reusable-workflows-depth: 3
+---
+on: push
+permissions:
+  actions: write
+jobs:
+  deploy-level-0:
+    uses: contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-1.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1:
+    uses: contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2.yml@v1
+---
+on: workflow_call
+permissions:
+  actions: read
+jobs:
+  deploy-level-3:
+    uses: contoso/templates/.github/workflows/deploy-level-3.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-3.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-3:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "permissions": {
+    "actions": "write"
+  },
+  "jobs": [
+    {
+      "type": "reusableWorkflowJob",
+      "id": "deploy-level-0",
+      "name": "deploy-level-0",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy-level-1.yml@v1",
+      "permissions": {
+        "actions": "write"
+      },
+      "jobs": [
+        {
+          "type": "reusableWorkflowJob",
+          "id": "deploy-level-1",
+          "name": "deploy-level-1",
+          "needs": [],
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "ref": "contoso/templates/.github/workflows/deploy-level-2.yml@v1",
+          "permissions": {
+            "actions": "read"
+          },
+          "jobs": [
+            {
+              "type": "reusableWorkflowJob",
+              "id": "deploy-level-3",
+              "name": "deploy-level-3",
+              "needs": [],
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "ref": "contoso/templates/.github/workflows/deploy-level-3.yml@v1",
+              "permissions": {
+                "actions": "read"
+              },
+              "jobs": [
+                {
+                  "type": "job",
+                  "id": "deploy-level-3",
+                  "name": "deploy-level-3",
+                  "if": {
+                    "type": 3,
+                    "expr": "success()"
+                  },
+                  "permissions": {
+                    "actions": "read"
+                  },
+                  "runs-on": "ubuntu-latest",
+                  "steps": [
+                    {
+                      "id": "__run",
+                      "if": {
+                        "type": 3,
+                        "expr": "success()"
+                      },
+                      "run": "echo hi"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

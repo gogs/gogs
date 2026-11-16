@@ -1,0 +1,31 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+permissions-policy: LimitedRead
+---
+on: push
+jobs:
+  deploy:
+    permissions:
+      checks: read
+    uses: a/b/.github/workflows/c.yml@v1
+---
+a/b/.github/workflows/c.yml@v1
+---
+on:  workflow_call
+jobs:
+  deploy:
+    name: Deploy 1
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-permissions-not-allowed-request-checks-write.yml (Line: 3, Col: 3): Error calling workflow 'a/b/.github/workflows/c.yml@v1'. The nested job 'Deploy 1' is requesting 'checks: write', but is only allowed 'checks: read'."
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+
+  one:
+    needs: two
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+
+  two:
+    needs: one
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-needs-no-start-node.yml (Line: 4, Col: 3): The workflow must contain at least one job with no dependencies."
+    }
+  ]
+}

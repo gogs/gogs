@@ -1,0 +1,78 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+env:
+  time: < #mapping token
+jobs:
+  build:
+    if: false || ${{ true && true }} #expression token
+    runs-on: [macos-latest,linux,self-hosted, <] #sequence token
+    steps:
+    - run: echo Hello && World #string token
+  build2:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo 1
+---
+{
+  "env": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "time",
+        "Value": "<"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success() && (format('false || {0}', true && true))"
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "macos-latest",
+          "linux",
+          "self-hosted",
+          "<"
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Hello && World"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success() && (false)"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo 1"
+        }
+      ]
+    }
+  ]
+}

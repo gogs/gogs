@@ -1,0 +1,95 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repro
+        uses: actions/checkout@v3
+        with:
+         first_name: Mona
+         middle_name: The
+         last_name: Octocat
+         entrypoint: /bin/echo
+         args: The ${{ github.event_name }} event triggered this step.
+      - run: echo hi
+        shell: bash
+        working-directory: scripts
+        timeout-minutes: 360
+        env:
+          GITHUB_TOKEN: secret_token
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "name": "Repro",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3",
+          "with": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "first_name",
+                "Value": "Mona"
+              },
+              {
+                "Key": "middle_name",
+                "Value": "The"
+              },
+              {
+                "Key": "last_name",
+                "Value": "Octocat"
+              },
+              {
+                "Key": "entrypoint",
+                "Value": "/bin/echo"
+              },
+              {
+                "Key": "args",
+                "Value": {
+                  "type": 3,
+                  "expr": "format('The {0} event triggered this step.', github.event_name)"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "timeout-minutes": 360,
+          "env": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "GITHUB_TOKEN",
+                "Value": "secret_token"
+              }
+            ]
+          },
+          "working-directory": "scripts",
+          "shell": "bash",
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

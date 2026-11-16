@@ -1,0 +1,178 @@
+{
+  "null": [
+    {
+      "expr": "format('{0}', null)",
+      "result": { "kind": "String", "value": "" }
+    }
+  ],
+  "boolean": [
+    {
+      "expr": "format('{0}', true)",
+      "result": { "kind": "String", "value": "true" }
+    },
+    {
+      "expr": "format('{0}', false)",
+      "result": { "kind": "String", "value": "false" }
+    }
+  ],
+  "number": [
+    {
+      "expr": "format('{0}', 1)",
+      "result": { "kind": "String", "value": "1" }
+    },
+    {
+      "expr": "format('{0}', .5)",
+      "result": { "kind": "String", "value": "0.5" }
+    },
+    {
+      "expr": "format('{0}', 0.5)",
+      "result": { "kind": "String", "value": "0.5" }
+    },
+    {
+      "expr": "format('{0}', 2)",
+      "result": { "kind": "String", "value": "2" }
+    },
+    {
+      "expr": "format('{0}', -1)",
+      "result": { "kind": "String", "value": "-1" }
+    },
+    {
+      "expr": "format('{0}', -.5)",
+      "result": { "kind": "String", "value": "-0.5" }
+    },
+    {
+      "expr": "format('{0}', -0.5)",
+      "result": { "kind": "String", "value": "-0.5" }
+    },
+    {
+      "expr": "format('{0}', -2.0)",
+      "result": { "kind": "String", "value": "-2" }
+    },
+    {
+      "expr": "format('{0}', 0)",
+      "result": { "kind": "String", "value": "0" }
+    },
+    {
+      "expr": "format('{0}', 0.0)",
+      "result": { "kind": "String", "value": "0" }
+    },
+    {
+      "expr": "format('{0}', -0)",
+      "result": { "kind": "String", "value": "0" }
+    },
+    {
+      "expr": "format('{0}', -0.0)",
+      "result": { "kind": "String", "value": "0" }
+    },
+    {
+      "expr": "format('{0}', 123456.789)",
+      "result": { "kind": "String", "value": "123456.789" }
+    },
+    {
+      "expr": "format('{0}', +123456.789)",
+      "result": { "kind": "String", "value": "123456.789" }
+    },
+    {
+      "expr": "format('{0}', -123456.789)",
+      "result": { "kind": "String", "value": "-123456.789" }
+    },
+    {
+      "expr": "format('{0}', 0.84551240822557006)",
+      "result": { "kind": "String", "value": "0.84551240822557" }
+    },
+    {
+      "expr": "format('{0}', 1.9)",
+      "result": { "kind": "String", "value": "1.9" }
+    },
+    {
+      "expr": "format('{0}', 1234.56)",
+      "result": { "kind": "String", "value": "1234.56" }
+    },
+    {
+      "expr": "format('{0}', 0xff)",
+      "result": { "kind": "String", "value": "255" }
+    },
+    {
+      "expr": "format('{0}', 0xFF)",
+      "result": { "kind": "String", "value": "255" }
+    },
+    {
+      "expr": "format('{0}', 0o10)",
+      "result": { "kind": "String", "value": "8" }
+    },
+    {
+      "expr": "format('{0}', 1.2e2)",
+      "result": { "kind": "String", "value": "120" }
+    },
+    {
+      "expr": "format('{0}', 1.2E2)",
+      "result": { "kind": "String", "value": "120" }
+    },
+    {
+      "expr": "format('{0}', 1.2e+2)",
+      "result": { "kind": "String", "value": "120" }
+    },
+    {
+      "expr": "format('{0}', 1.2E+2)",
+      "result": { "kind": "String", "value": "120" }
+    },
+    {
+      "expr": "format('{0}', 1.2e-2)",
+      "result": { "kind": "String", "value": "0.012" }
+    },
+    {
+      "expr": "format('{0}', 1.2E-2)",
+      "result": { "kind": "String", "value": "0.012" }
+    },
+    {
+      "expr": "format('{0}', Infinity)",
+      "result": { "kind": "String", "value": "Infinity" }
+    },
+    {
+      "expr": "format('{0}', -Infinity)",
+      "result": { "kind": "String", "value": "-Infinity" }
+    },
+    {
+      "expr": "format('{0}', NaN)",
+      "result": { "kind": "String", "value": "NaN" }
+    }
+  ],
+  "string": [
+    {
+      "expr": "format('{0}', 'string value')",
+      "result": { "kind": "String", "value": "string value" }
+    }
+  ],
+  "array": [
+    {
+      "expr": "format('{0}', context)",
+      "contexts": {
+        "context": []
+      },
+      "result": { "kind": "String", "value": "Array" }
+    },
+    {
+      "expr": "format('{0}', context)",
+      "contexts": {
+        "context": [1, 2, 3]
+      },
+      "result": { "kind": "String", "value": "Array" }
+    }
+  ],
+  "object": [
+    {
+      "expr": "format('{0}', context)",
+      "contexts": {
+        "context": {}
+      },
+      "result": { "kind": "String", "value": "Object" }
+    },
+    {
+      "expr": "format('{0}', context)",
+      "contexts": {
+        "context": { "a": 1, "b": 2, "c": 3 }
+      },
+      "result": { "kind": "String", "value": "Object" }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+max-job-limit: 8
+---
+on: push
+jobs:
+  deploy:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+  deploy1:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+  deploy2:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on:  workflow_call
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  deploy2:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": "The workflow may not contain more than 8 jobs"
+    }
+  ]
+}

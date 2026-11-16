@@ -1,0 +1,49 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build1:
+    runs-on: linux
+    container:
+      image: node:14.16
+      credentials:
+        badkey: somevalue
+    steps:
+      - run: echo hi
+  build2:
+    runs-on: linux
+    container:
+      image:
+    steps:
+      - run: echo hi
+  build3:
+    runs-on: linux
+    services:
+      servicename:
+        badkey: somevalue
+    steps:
+      - run: echo hi
+  build4:
+    runs-on: linux
+    services:
+      servicename:
+        image:
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/job-container-invalid.yml (Line: 8, Col: 9): Unexpected value 'badkey'"
+    },
+    {
+      "Message": ".github/workflows/job-container-invalid.yml (Line: 14, Col: 13): Unexpected value ''"
+    },
+    {
+      "Message": ".github/workflows/job-container-invalid.yml (Line: 21, Col: 9): Unexpected value 'badkey'"
+    },
+    {
+      "Message": ".github/workflows/job-container-invalid.yml (Line: 28, Col: 15): Unexpected value ''"
+    }
+  ]
+}

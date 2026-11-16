@@ -1,0 +1,42 @@
+include-source: false # Drop file/line/col from output
+---
+# on: push
+# jobs:
+#   job1:
+#     runs-on: windows-2019
+#     snapshot: custom-image
+#     steps:
+#     - run: echo 1
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+    snapshot: custom-image
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ],
+      "snapshot": "custom-image"
+    }
+  ]
+}

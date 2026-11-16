@@ -1,0 +1,124 @@
+include-source: true # Preserve file/line/col in serialized output
+---
+# This is meant to cover all the different types of TemplateToken that are output
+# with include-source: true. Currently it is missing type 4 (insert expression)
+# and type 7 (null), once we have matrix strategy we should be able to get null or combine
+# this test with preserves-source-info-basic.yml.
+on: push
+jobs:
+  build: # string, type 0
+    concurrency: # map, type 2
+      group: ${{ github.ref }} # basic expression, type 3
+      cancel-in-progress: true # boolean, type 5
+    runs-on: # sequence, type 1
+      - ubuntu-latest
+    steps:
+      - run: echo hi
+        timeout-minutes: 360 # number, type 6
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": {
+        "type": 0,
+        "file": 1,
+        "line": 7,
+        "col": 3,
+        "lit": "build"
+      },
+      "name": {
+        "type": 0,
+        "file": 1,
+        "line": 7,
+        "col": 3,
+        "lit": "build"
+      },
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "concurrency": {
+        "type": 2,
+        "file": 1,
+        "line": 9,
+        "col": 7,
+        "map": [
+          {
+            "Key": {
+              "type": 0,
+              "file": 1,
+              "line": 9,
+              "col": 7,
+              "lit": "group"
+            },
+            "Value": {
+              "type": 3,
+              "file": 1,
+              "line": 9,
+              "col": 14,
+              "expr": "github.ref"
+            }
+          },
+          {
+            "Key": {
+              "type": 0,
+              "file": 1,
+              "line": 10,
+              "col": 7,
+              "lit": "cancel-in-progress"
+            },
+            "Value": {
+              "type": 5,
+              "file": 1,
+              "line": 10,
+              "col": 27,
+              "bool": true
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 1,
+        "file": 1,
+        "line": 12,
+        "col": 7,
+        "seq": [
+          {
+            "type": 0,
+            "file": 1,
+            "line": 12,
+            "col": 9,
+            "lit": "ubuntu-latest"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "timeout-minutes": {
+            "type": 6,
+            "file": 1,
+            "line": 15,
+            "col": 26,
+            "num": 360
+          },
+          "run": {
+            "type": 0,
+            "file": 1,
+            "line": 14,
+            "col": 14,
+            "lit": "echo hi"
+          }
+        }
+      ]
+    }
+  ],
+  "file-table": [
+    ".github/workflows/preserves-source-info-simple.yml"
+  ]
+}

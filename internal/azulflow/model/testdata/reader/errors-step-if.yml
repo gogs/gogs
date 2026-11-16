@@ -1,0 +1,19 @@
+include-source: false # Drop file/line/col from output
+---
+on: 
+  push:
+jobs:
+  build:
+      runs-on: ubuntu-latest    
+      steps:
+        - name: Checkout
+          if: (steps.publish-pdf.outcome != 'Skipped' || steps.publish-json.outcome != 'Skipped) && success()          
+          run: echo "Hello"
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-step-if.yml (Line: 8, Col: 15): Unexpected symbol: ''Skipped) && success()'. Located at position 74 within expression: (steps.publish-pdf.outcome != 'Skipped' || steps.publish-json.outcome != 'Skipped) && success()"
+    }
+  ]
+}

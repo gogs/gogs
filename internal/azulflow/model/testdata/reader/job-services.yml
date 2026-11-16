@@ -1,0 +1,121 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: linux
+    services:
+      nginx: nginx
+      redis: redis:latest
+      postgres:
+        image: postgres:latest
+        ports:
+          - 5432
+        volumes:
+          - /dbdata:/data
+      service_from_gpr:
+        image: docker.pkg.github.com
+        credentials:
+          username: username
+          password: ${{ github.token }}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "linux",
+      "services": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "nginx",
+            "Value": "nginx"
+          },
+          {
+            "Key": "redis",
+            "Value": "redis:latest"
+          },
+          {
+            "Key": "postgres",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "image",
+                  "Value": "postgres:latest"
+                },
+                {
+                  "Key": "ports",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "5432"
+                    ]
+                  }
+                },
+                {
+                  "Key": "volumes",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "/dbdata:/data"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Key": "service_from_gpr",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "image",
+                  "Value": "docker.pkg.github.com"
+                },
+                {
+                  "Key": "credentials",
+                  "Value": {
+                    "type": 2,
+                    "map": [
+                      {
+                        "Key": "username",
+                        "Value": "username"
+                      },
+                      {
+                        "Key": "password",
+                        "Value": {
+                          "type": 3,
+                          "expr": "github.token"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - TypeScript
+---
+on: push
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_map: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - run: echo hi
+  run:
+    runs-on: ubuntu-latest
+    needs: generate
+    env:
+      ${{ insert }}: ${{ fromJson(needs.generate.outputs.matrix_map) }}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "generate",
+      "name": "generate",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "outputs": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix_map",
+            "Value": {
+              "type": 3,
+              "expr": "steps.set-matrix.outputs.matrix"
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "run",
+      "name": "run",
+      "needs": [
+        "generate"
+      ],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "env": {
+        "type": 2,
+        "map": [
+          {
+            "Key": {
+              "type": 4,
+              "directive": "insert"
+            },
+            "Value": {
+              "type": 3,
+              "expr": "fromJson(needs.generate.outputs.matrix_map)"
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

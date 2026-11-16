@@ -1,0 +1,22 @@
+include-source: false # Drop file/line/col from output
+---
+name: CI
+on:
+  push:
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  MY-JOB:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-id-unique.yml (Line: 9, Col: 3): 'MY-JOB' is already defined"
+    }
+  ]
+}

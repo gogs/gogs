@@ -1,0 +1,16 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ }}
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-empty-expression.yml (Line: 6, Col: 14): An expression was expected"
+    }
+  ]
+}

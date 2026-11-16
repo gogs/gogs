@@ -1,0 +1,19 @@
+include-source: false # Drop file/line/col from output
+skip:
+- TypeScript
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    cancel-timeout-minutes: !!int "300"
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-yaml-invalid-style.yml: The scalar style 'DoubleQuoted' on line 5 and column 29 is not valid with the tag 'tag:yaml.org,2002:int'"
+    }
+  ]
+}

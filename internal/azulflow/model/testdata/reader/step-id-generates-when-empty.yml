@@ -1,0 +1,60 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: org with space/repo with space@v2
+      - uses: docker://alpine:latest
+      - run: echo hello
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "my-job",
+      "name": "my-job",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v2"
+        },
+        {
+          "id": "__org_with_space_repo_with_space",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "org with space/repo with space@v2"
+        },
+        {
+          "id": "__alpine_latest",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "docker://alpine:latest"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hello"
+        }
+      ]
+    }
+  ]
+}

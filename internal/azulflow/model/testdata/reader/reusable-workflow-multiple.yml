@@ -1,0 +1,99 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    uses: contoso/templates/.github/workflows/build.yml@v1
+  build2:
+    uses: contoso2/templates2/.github/workflows/build2.yml@v1
+---
+contoso/templates/.github/workflows/build.yml@v1
+---
+on:
+  workflow_call:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 1
+---
+contoso2/templates2/.github/workflows/build2.yml@v1
+---
+on:
+  workflow_call:
+jobs:
+  deploy2:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 1
+---
+{
+  "jobs": [
+    {
+      "type": "reusableWorkflowJob",
+      "id": "build",
+      "name": "build",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/build.yml@v1",
+      "jobs": [
+        {
+          "type": "job",
+          "id": "deploy",
+          "name": "deploy",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "runs-on": "ubuntu-latest",
+          "steps": [
+            {
+              "id": "__run",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "run": "echo 1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "reusableWorkflowJob",
+      "id": "build2",
+      "name": "build2",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso2/templates2/.github/workflows/build2.yml@v1",
+      "jobs": [
+        {
+          "type": "job",
+          "id": "deploy2",
+          "name": "deploy2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "runs-on": "ubuntu-latest",
+          "steps": [
+            {
+              "id": "__run",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "run": "echo 1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

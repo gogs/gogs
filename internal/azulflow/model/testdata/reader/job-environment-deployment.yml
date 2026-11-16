@@ -1,0 +1,91 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - C#
+---
+on: push
+jobs:
+  build:
+    environment:
+      name: production
+      deployment: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build2:
+    environment:
+      name: staging
+      deployment: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "name",
+            "Value": "production"
+          },
+          {
+            "Key": "deployment",
+            "Value": false
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "name",
+            "Value": "staging"
+          },
+          {
+            "Key": "deployment",
+            "Value": true
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

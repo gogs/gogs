@@ -1,0 +1,96 @@
+skip:
+  - C#
+  - Go
+---
+on:
+  repository_dispatch:
+    types: [custom-type]
+  workflow_dispatch:
+    inputs:
+      name:
+        type: string
+        default: monalisa
+        description: Name to greet
+      send_emojis:
+        type: boolean
+        default: true
+      greeting:
+        type: choice
+        default: hello
+        options:
+          - hello
+          - hallo
+      env:
+        type: environment
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+---
+{
+  "events": {
+    "repository_dispatch": {
+      "types": [
+        "custom-type"
+      ]
+    },
+    "workflow_dispatch": {
+      "inputs": {
+        "name": {
+          "type": "string",
+          "description": "Name to greet",
+          "default": "monalisa"
+        },
+        "send_emojis": {
+          "type": "boolean",
+          "default": true
+        },
+        "greeting": {
+          "type": "choice",
+          "options": [
+            "hello",
+            "hallo"
+          ],
+          "default": "hello"
+        },
+        "env": {
+          "type": "environment"
+        }
+      }
+    }
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": true,
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

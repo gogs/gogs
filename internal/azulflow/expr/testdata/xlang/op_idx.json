@@ -1,0 +1,354 @@
+{
+  "array-index-coercion": [
+    {
+      "expr": "foo[null]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "String", "value": "zero" }
+    },
+    {
+      "expr": "foo[false]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "String", "value": "zero" }
+    },
+    {
+      "expr": "foo[true]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "String", "value": "one" }
+    },
+    {
+      "expr": "foo[' 0.0 ']",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "String", "value": "zero" }
+    },
+    {
+      "expr": "foo[' 0x02 ']",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "String", "value": "two" }
+    },
+    {
+      "expr": "foo[' asdf ']",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[fromjson('[]')]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[fromjson('{}')]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    }
+  ],
+  "array-index-out-of-range": [
+    {
+      "expr": "foo[-1]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[3]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[-Infinity]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[Infinity]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[NaN]",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Null", "value": null }
+    }
+  ],
+  "object-case-insensitive": [
+    {
+      "expr": "foo['bAr']",
+      "contexts": {
+        "foo": {
+          "BaR": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    }
+  ],
+  "object-index-coercion": [
+    {
+      "expr": "foo[5]",
+      "contexts": {
+        "foo": {
+          "5": "it's 5"
+        }
+      },
+      "result": { "kind": "String", "value": "it's 5" }
+    },
+    {
+      "expr": "foo[.5]",
+      "contexts": {
+        "foo": {
+          "0.5": "it's 0.5"
+        }
+      },
+      "result": { "kind": "String", "value": "it's 0.5" }
+    },
+    {
+      "expr": "foo[-.5]",
+      "contexts": {
+        "foo": {
+          "-0.5": "it's -0.5"
+        }
+      },
+      "result": { "kind": "String", "value": "it's -0.5" }
+    },
+    {
+      "expr": "foo[0x0f]",
+      "contexts": {
+        "foo": {
+          "15": "it's 15"
+        }
+      },
+      "result": { "kind": "String", "value": "it's 15" }
+    },
+    {
+      "expr": "foo[NaN]",
+      "contexts": {
+        "foo": {
+          "NaN": "it's NaN"
+        }
+      },
+      "result": { "kind": "String", "value": "it's NaN" }
+    },
+    {
+      "expr": "foo[Infinity]",
+      "contexts": {
+        "foo": {
+          "Infinity": "it's Infinity"
+        }
+      },
+      "result": { "kind": "String", "value": "it's Infinity" }
+    },
+    {
+      "expr": "foo[-Infinity]",
+      "contexts": {
+        "foo": {
+          "-Infinity": "it's -Infinity"
+        }
+      },
+      "result": { "kind": "String", "value": "it's -Infinity" }
+    },
+    {
+      "expr": "foo[null]",
+      "contexts": {
+        "foo": {
+          "": "it's null"
+        }
+      },
+      "result": { "kind": "String", "value": "it's null" }
+    },
+    {
+      "expr": "foo[true]",
+      "contexts": {
+        "foo": {
+          "true": "it's true"
+        }
+      },
+      "result": { "kind": "String", "value": "it's true" }
+    },
+    {
+      "expr": "foo[false]",
+      "contexts": {
+        "foo": {
+          "false": "it's false"
+        }
+      },
+      "result": { "kind": "String", "value": "it's false" }
+    },
+    {
+      "expr": "foo[fromJson('{}')]",
+      "contexts": {
+        "foo": {
+          "Object": "It's Object"
+        }
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[format('{0}', fromJson('{}'))]",
+      "contexts": {
+        "foo": {
+          "Object": "It's Object"
+        }
+      },
+      "result": { "kind": "String", "value": "It's Object" }
+    },
+    {
+      "expr": "foo[fromJson('[]')]",
+      "contexts": {
+        "foo": {
+          "Array": "It's Array"
+        }
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo[format('{0}', fromJson('[]'))]",
+      "contexts": {
+        "foo": {
+          "Array": "It's Array"
+        }
+      },
+      "result": { "kind": "String", "value": "It's Array" }
+    }
+  ],
+  "object-index-out-of-range": [
+    {
+      "expr": "foo['']",
+      "contexts": {
+        "foo": {
+          "bar": "baz"
+        }
+      },
+      "result": { "kind": "Null", "value": null }
+    },
+    {
+      "expr": "foo['asdf']",
+      "contexts": {
+        "foo": {
+          "bar": "baz"
+        }
+      },
+      "result": { "kind": "Null", "value": null }
+    }
+  ],
+  "index-following-function": [
+    {
+      "expr": "fromJson('[\"one\", \"two\"]')[1]",
+      "result": { "kind": "String", "value": "two" }
+    }
+  ],
+  "index-following-group": [
+    {
+      "expr": "(fromJson('[\"one\", \"two\"]'))[1]",
+      "result": { "kind": "String", "value": "two" }
+    }
+  ],
+  "index-star": [
+    {
+      "expr": "foo[*]",
+      "contexts": {
+        "foo": {
+          "one": "one val",
+          "two": "two val",
+          "*": "star val"
+        }
+      },
+      "result": { "kind": "Array", "value": ["one val", "two val", "star val"] }
+    },
+    {
+      "expr": "foo['*']",
+      "contexts": {
+        "foo": {
+          "one": "one val",
+          "two": "two val",
+          "*": "star val"
+        }
+      },
+      "result": { "kind": "String", "value": "star val" }
+    },
+    {
+      "expr": "foo[*]",
+      "contexts": {
+        "foo": [
+          "one",
+          "two"
+        ]
+      },
+      "result": { "kind": "Array", "value": ["one", "two"] }
+    }
+  ]
+}

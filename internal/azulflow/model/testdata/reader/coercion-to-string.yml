@@ -1,0 +1,100 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Env is a string-string mapping. Null, bool, and numbers are all coerced to strings.
+      #
+      # When numbers are coerced to string, choosing too high/low of a precision are both problematic.
+      # This is due to how fractional numbers are represented in double-precision floating point format.
+      #
+      # The chosen format specifier produces the best results overall results.
+      - run: printenv
+        env:
+          "null": !!null
+          bool1: !!bool true
+          bool2: !!bool false
+          num1: !!float 0.84551240822557006 # Coerces to string "0.84551240822557"
+          num2: !!float 123456
+          num3: !!float 0.123456
+          num4: !!float 123456.123456
+          num5: !!float 1587106672383762434 # Coerces to string "1.58710667238376E+18" ; It would be nicer if this number successfully round-tripped, i.e. coerces to string "1587106672383762434"
+          num6: !!float .inf
+          num7: !!float -.inf
+          num8: !!float .nan
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "env": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "null",
+                "Value": ""
+              },
+              {
+                "Key": "bool1",
+                "Value": "true"
+              },
+              {
+                "Key": "bool2",
+                "Value": "false"
+              },
+              {
+                "Key": "num1",
+                "Value": "0.84551240822557"
+              },
+              {
+                "Key": "num2",
+                "Value": "123456"
+              },
+              {
+                "Key": "num3",
+                "Value": "0.123456"
+              },
+              {
+                "Key": "num4",
+                "Value": "123456.123456"
+              },
+              {
+                "Key": "num5",
+                "Value": "1.58710667238376E+18"
+              },
+              {
+                "Key": "num6",
+                "Value": "Infinity"
+              },
+              {
+                "Key": "num7",
+                "Value": "-Infinity"
+              },
+              {
+                "Key": "num8",
+                "Value": "NaN"
+              }
+            ]
+          },
+          "run": "printenv"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,556 @@
+{
+  "filtered-array-from-literal": [
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": null
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": false
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": true
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": 123
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": "abc"
+      },
+      "result": { "kind": "Array", "value": [] }
+    }
+  ],
+  "filtered-array-from-array": [
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": [
+          "zero",
+          "one"
+        ]
+      },
+      "result": { "kind": "Array", "value": ["zero", "one"] }
+    }
+  ],
+  "filtered-array-from-object": [
+    {
+      "expr": "foo.*",
+      "contexts": {
+        "foo": {
+          "one": "one val",
+          "two": "two val"
+        }
+      },
+      "result": { "kind": "Array", "value": ["one val", "two val"] }
+    }
+  ],
+  "nested-object": [
+    {
+      "expr": "foo.*.one",
+      "contexts": {
+        "foo": [
+          {
+            "one": "obj_1_prop_1",
+            "two": "obj_1_prop_2"
+          },
+          {
+            "one": "obj_2_prop_1",
+            "two": "obj_2_prop_2"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["obj_1_prop_1", "obj_2_prop_1"] }
+    },
+    {
+      "expr": "foo[*]['']",
+      "contexts": {
+        "foo": [
+          {
+            "": "empty string"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["empty string"] }
+    }
+  ],
+  "nested-object-property-case-insensitive": [
+    {
+      "expr": "foo.*.thePROPERTY",
+      "contexts": {
+        "foo": [
+          {
+            "THEproperty": "the property"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["the property"] }
+    }
+  ],
+  "nested-object-property-not-found": [
+    {
+      "expr": "foo.*.one",
+      "contexts": {
+        "foo": [
+          {
+            "one": "obj_1_prop_1",
+            "two": "obj_1_prop_2"
+          },
+          {
+            "zero": "obj_2_prop_0",
+            "three": "obj_2_prop_3"
+          },
+          {
+            "one": "obj_3_prop_1",
+            "two": "obj_3_prop_2"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["obj_1_prop_1", "obj_3_prop_1"] }
+    }
+  ],
+  "nested-object-property-coercion": [
+    {
+      "expr": "foo[*][null]",
+      "contexts": {
+        "foo": [
+          {
+            "": "empty string"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["empty string"] }
+    },
+    {
+      "expr": "foo[*][false]",
+      "contexts": {
+        "foo": [
+          {
+            "false": "It's false"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["It's false"] }
+    },
+    {
+      "expr": "foo[*][true]",
+      "contexts": {
+        "foo": [
+          {
+            "true": "It's true"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["It's true"] }
+    },
+    {
+      "expr": "foo[*][0x0f]",
+      "contexts": {
+        "foo": [
+          {
+            "15": "fifteen"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["fifteen"] }
+    },
+    {
+      "expr": "foo[*][NaN]",
+      "contexts": {
+        "foo": [
+          {
+            "NaN": "It's NaN"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["It's NaN"] }
+    },
+    {
+      "expr": "foo[*][Infinity]",
+      "contexts": {
+        "foo": [
+          {
+            "Infinity": "It's Infinity"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["It's Infinity"] }
+    },
+    {
+      "expr": "foo[*][-Infinity]",
+      "contexts": {
+        "foo": [
+          {
+            "-Infinity": "It's -Infinity"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["It's -Infinity"] }
+    },
+    {
+      "expr": "foo[*][fromjson('[]')]",
+      "contexts": {
+        "foo": [
+          {
+            "": "empty string",
+            "Array": "It's array"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][fromjson('{}')]",
+      "contexts": {
+        "foo": [
+          {
+            "": "empty string",
+            "Object": "It's object"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    }
+  ],
+  "nested-array": [
+    {
+      "expr": "foo[*][1]",
+      "contexts": {
+        "foo": [
+          [
+            "ary_0_idx_0",
+            "ary_0_idx_1",
+            "ary_0_idx_2"
+          ],
+          [
+            "ary_1_idx_0",
+            "ary_1_idx_1",
+            "ary_1_idx_2"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["ary_0_idx_1", "ary_1_idx_1"] }
+    }
+  ],
+  "nested-array-index-not-found": [
+    {
+      "expr": "foo[*][1]",
+      "contexts": {
+        "foo": [
+          [
+            "ary_0_idx_0",
+            "ary_0_idx_1",
+            "ary_0_idx_2"
+          ],
+          [
+            "ary_1_idx_0"
+          ],
+          [
+            "ary_2_idx_0",
+            "ary_2_idx_1",
+            "ary_2_idx_2"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["ary_0_idx_1", "ary_2_idx_1"] }
+    },
+    {
+      "expr": "foo[*][-1]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][NaN]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][Infinity]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][Infinity]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    }
+  ],
+  "nested-array-index-coercion": [
+    {
+      "expr": "foo[*][null]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["zero"] }
+    },
+    {
+      "expr": "foo[*][false]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["zero"] }
+    },
+    {
+      "expr": "foo[*][true]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["one"] }
+    },
+    {
+      "expr": "foo[*]['']",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["zero"] }
+    },
+    {
+      "expr": "foo[*]['abc']",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][' 0x01 ']",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["one"] }
+    },
+    {
+      "expr": "foo[*][fromjson('[]')]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][fromjson('{}')]",
+      "contexts": {
+        "foo": [
+          [
+            "zero",
+            "one",
+            "two"
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": [] }
+    }
+  ],
+  "double-star": [
+    {
+      "expr": "foo.*.*",
+      "contexts": {
+        "foo": [
+          null,
+          false,
+          true,
+          123,
+          "hello",
+          [
+            "zero",
+            "one",
+            "two"
+          ],
+          {
+            "p1": "v1",
+            "p2": "v2",
+            "p3": "v3"
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["zero", "one", "two", "v1", "v2", "v3"] }
+    }
+  ],
+  "double-property": [
+    {
+      "expr": "foo.*.p.nestedp",
+      "contexts": {
+        "foo": [
+          {
+            "p": {
+              "nestedp": "val 1"
+            }
+          },
+          {
+            "p": {
+              "nestedp": "val 2"
+            }
+          }
+        ]
+      },
+      "result": { "kind": "Array", "value": ["val 1", "val 2"] }
+    }
+  ],
+  "double-index": [
+    {
+      "expr": "foo[*][1][2]",
+      "contexts": {
+        "foo": [
+          [
+            [
+              "0_0_0",
+              "0_0_1",
+              "0_0_2",
+              "0_0_3"
+            ],
+            [
+              "0_1_0",
+              "0_1_1",
+              "0_1_2",
+              "0_1_3"
+            ],
+            [
+              "0_2_0",
+              "0_2_1",
+              "0_2_2",
+              "0_2_3"
+            ]
+          ],
+          [
+            [
+              "1_0_0",
+              "1_0_1",
+              "1_0_2",
+              "1_0_3"
+            ],
+            [
+              "1_1_0",
+              "1_1_1",
+              "1_1_2",
+              "1_1_3"
+            ],
+            [
+              "1_2_0",
+              "1_2_1",
+              "1_2_2",
+              "1_2_3"
+            ]
+          ]
+        ]
+      },
+      "result": { "kind": "Array", "value": ["0_1_2", "1_1_2"] }
+    }
+  ],
+  "not-found-always-returns-empty-array": [
+    {
+      "expr": "foo[*][1]",
+      "contexts": {
+        "foo": []
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo[*][1][2]",
+      "contexts": {
+        "foo": []
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo.*.bar",
+      "contexts": {
+        "foo": {}
+      },
+      "result": { "kind": "Array", "value": [] }
+    },
+    {
+      "expr": "foo.*.bar.baz",
+      "contexts": {
+        "foo": []
+      },
+      "result": { "kind": "Array", "value": [] }
+    }
+  ]
+}

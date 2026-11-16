@@ -1,0 +1,17 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - with:
+          foo: bar
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-step-uses-missing.yml (Line: 6, Col: 9): Required property is missing: uses"
+    }
+  ]
+}

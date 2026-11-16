@@ -1,0 +1,28 @@
+include-source: false # Drop file/line/col from output
+---
+on:
+  push:
+    branches:
+      - main
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+        deprecationMessage: blah blah
+    secrets:
+      shh:
+        required: true
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-on-workflow_call-input-unexpected-property.yml (Line: 10, Col: 9): Unexpected value 'deprecationMessage'"
+    }
+  ]
+}

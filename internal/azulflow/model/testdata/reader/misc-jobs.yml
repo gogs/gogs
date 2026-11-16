@@ -1,0 +1,251 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    name: ${{ github.actor }}
+    timeout-minutes: ${{ github.ref }}
+    cancel-timeout-minutes: 300
+    concurrency:
+      group: ${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    environment:
+      url:  ${{ steps.step_id.outputs.url_output }}
+      name: production_environment
+    outputs:
+      output1: ${{ steps.step1.outputs.test }}
+      output2: ${{ steps.step2.outputs.test }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: scripts
+  build2:
+    runs-on: [self-hosted, linux]
+    continue-on-error: true
+    name: Jobs Repro Hardcode
+    timeout-minutes: 360
+    cancel-timeout-minutes: 300
+    concurrency:
+      group: groupA
+      cancel-in-progress: true
+    env:
+      GITHUB_TOKEN: secret_token
+    environment:
+      name: environment-${{ github.event.number }}
+      url:  https://github.com
+    outputs:
+      output1: Hello
+      output2: World
+    defaults:
+      run:
+        shell: bash
+        working-directory: scripts
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": {
+        "type": 3,
+        "expr": "github.actor"
+      },
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "continue-on-error": {
+        "type": 3,
+        "expr": "matrix.experimental"
+      },
+      "timeout-minutes": {
+        "type": 3,
+        "expr": "github.ref"
+      },
+      "cancel-timeout-minutes": 300,
+      "concurrency": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": {
+              "type": 3,
+              "expr": "github.ref"
+            }
+          },
+          {
+            "Key": "cancel-in-progress",
+            "Value": true
+          }
+        ]
+      },
+      "env": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "GITHUB_TOKEN",
+            "Value": {
+              "type": 3,
+              "expr": "secrets.GITHUB_TOKEN"
+            }
+          }
+        ]
+      },
+      "environment": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "url",
+            "Value": {
+              "type": 3,
+              "expr": "steps.step_id.outputs.url_output"
+            }
+          },
+          {
+            "Key": "name",
+            "Value": "production_environment"
+          }
+        ]
+      },
+      "defaults": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "run",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "shell",
+                  "Value": "bash"
+                },
+                {
+                  "Key": "working-directory",
+                  "Value": "scripts"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 3,
+        "expr": "matrix.os"
+      },
+      "outputs": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "output1",
+            "Value": {
+              "type": 3,
+              "expr": "steps.step1.outputs.test"
+            }
+          },
+          {
+            "Key": "output2",
+            "Value": {
+              "type": 3,
+              "expr": "steps.step2.outputs.test"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "Jobs Repro Hardcode",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "continue-on-error": true,
+      "timeout-minutes": 360,
+      "cancel-timeout-minutes": 300,
+      "concurrency": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "groupA"
+          },
+          {
+            "Key": "cancel-in-progress",
+            "Value": true
+          }
+        ]
+      },
+      "env": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "GITHUB_TOKEN",
+            "Value": "secret_token"
+          }
+        ]
+      },
+      "environment": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "name",
+            "Value": {
+              "type": 3,
+              "expr": "format('environment-{0}', github.event.number)"
+            }
+          },
+          {
+            "Key": "url",
+            "Value": "https://github.com"
+          }
+        ]
+      },
+      "defaults": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "run",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "shell",
+                  "Value": "bash"
+                },
+                {
+                  "Key": "working-directory",
+                  "Value": "scripts"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "self-hosted",
+          "linux"
+        ]
+      },
+      "outputs": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "output1",
+            "Value": "Hello"
+          },
+          {
+            "Key": "output2",
+            "Value": "World"
+          }
+        ]
+      }
+    }
+  ]
+}

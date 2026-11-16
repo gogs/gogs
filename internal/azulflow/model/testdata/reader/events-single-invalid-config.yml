@@ -1,0 +1,25 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+  - C#
+---
+on:
+  push:
+    inputs:
+      name:
+        type: string
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/events-single-invalid-config.yml (Line: 3, Col: 5): Unexpected value 'inputs'"
+    }
+  ]
+}
