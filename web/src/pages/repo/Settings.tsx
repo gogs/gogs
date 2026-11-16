@@ -25,6 +25,7 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { SettingsLayout, SettingsNavDivider, SettingsNavGroup, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogBody,
@@ -524,6 +525,68 @@ function FeatureGroup({
   );
 }
 
+type MergeMethodKey = "pullsAllowMerge" | "pullsAllowSquash" | "pullsAllowRebase";
+
+// MergeMethods allows the ways to merge pull requests, like GitHub, and keeps
+// the last allowed one from being turned off.
+function MergeMethods({
+  form,
+  set,
+}: {
+  form: RepoAdvancedSettings;
+  set: (change: Partial<RepoAdvancedSettings>) => void;
+}) {
+  const { t } = useTranslation();
+  const methods: { key: MergeMethodKey; label: string; description: string }[] = [
+    {
+      key: "pullsAllowMerge",
+      label: t("repo.settings.pulls.allow_merge_commit"),
+      description: t("repo.settings.pulls.allow_merge_commit_desc"),
+    },
+    {
+      key: "pullsAllowSquash",
+      label: t("repo.settings.pulls.allow_squash_merge"),
+      description: t("repo.settings.pulls.allow_squash_merge_desc"),
+    },
+    {
+      key: "pullsAllowRebase",
+      label: t("repo.settings.pulls.allow_rebase_merge"),
+      description: t("repo.settings.pulls.allow_rebase_merge_desc"),
+    },
+  ];
+  const allowedCount = methods.filter((m) => form[m.key]).length;
+  return (
+    <fieldset>
+      <legend className="mb-3 text-sm font-medium">{t("repo.settings.pulls.merge_methods")}</legend>
+      <div className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+        {methods.map(({ key, label, description }) => {
+          const locked = form[key] && allowedCount === 1;
+          return (
+            <div key={key} className="flex items-start gap-2.5 px-4 py-3 text-sm">
+              <Checkbox
+                id={key}
+                className="mt-0.5"
+                checked={form[key]}
+                disabled={locked}
+                aria-describedby={`${key}-desc`}
+                onCheckedChange={(c) => set({ [key]: c === true })}
+              />
+              <div className="min-w-0">
+                <label htmlFor={key} className={cn("font-medium", locked ? "cursor-not-allowed" : "cursor-pointer")}>
+                  {label}
+                </label>
+                <p id={`${key}-desc`} className="mt-0.5 text-(--color-muted-foreground)">
+                  {description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 function AdvancedSettings({ owner, name, settings }: { owner: string; name: string; settings: RepoSettingsData }) {
   const { t } = useTranslation();
   const refresh = useRefresh(owner, name);
@@ -704,18 +767,7 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                 checked={form.pullsIgnoreWhitespace}
                 onChange={(pullsIgnoreWhitespace) => set({ pullsIgnoreWhitespace })}
               />
-              <CheckboxField
-                id="pullsAllowRebase"
-                label={t("repo.settings.pulls.allow_rebase_merge")}
-                checked={form.pullsAllowRebase}
-                onChange={(pullsAllowRebase) => set({ pullsAllowRebase })}
-              />
-              <CheckboxField
-                id="pullsAllowSquash"
-                label={t("repo.settings.pulls.allow_squash_merge")}
-                checked={form.pullsAllowSquash}
-                onChange={(pullsAllowSquash) => set({ pullsAllowSquash })}
-              />
+              <MergeMethods form={form} set={set} />
             </FeatureGroup>
           ) : null}
           <div>

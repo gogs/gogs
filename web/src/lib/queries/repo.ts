@@ -184,6 +184,7 @@ export interface RepoAdvancedSettings {
   externalTrackerStyle: string;
   enablePulls: boolean;
   pullsIgnoreWhitespace: boolean;
+  pullsAllowMerge: boolean;
   pullsAllowRebase: boolean;
   pullsAllowSquash: boolean;
 }
@@ -796,6 +797,7 @@ export interface RepoPullInfo {
   fileCount: number;
   merger?: IssueUser;
   mergedAt?: string;
+  allowMerge: boolean;
   allowRebase: boolean;
   allowSquash: boolean;
   viewerCanMerge: boolean;

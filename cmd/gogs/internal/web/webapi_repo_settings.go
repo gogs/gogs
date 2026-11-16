@@ -84,6 +84,7 @@ type repoAdvancedSettings struct {
 	ExternalTrackerStyle  string `json:"externalTrackerStyle" validate:"omitempty,oneof=numeric alphanumeric"`
 	EnablePulls           bool   `json:"enablePulls"`
 	PullsIgnoreWhitespace bool   `json:"pullsIgnoreWhitespace"`
+	PullsAllowMerge       bool   `json:"pullsAllowMerge"`
 	PullsAllowRebase      bool   `json:"pullsAllowRebase"`
 	PullsAllowSquash      bool   `json:"pullsAllowSquash"`
 }
@@ -141,6 +142,7 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 			ExternalTrackerStyle:  repo.ExternalTrackerStyle,
 			EnablePulls:           repo.EnablePulls,
 			PullsIgnoreWhitespace: repo.PullsIgnoreWhitespace,
+			PullsAllowMerge:       repo.PullsAllowMerge,
 			PullsAllowRebase:      repo.PullsAllowRebase,
 			PullsAllowSquash:      repo.PullsAllowSquash,
 		},
@@ -321,7 +323,11 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 
 // putRepoAdvanced turns the wiki, the issues and the pull requests of the
 // repository on or off.
-func putRepoAdvanced(logger *logx.Logger, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+	if !req.PullsAllowMerge && !req.PullsAllowRebase && !req.PullsAllowSquash {
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.merge_style_required")}, nil
+	}
+
 	repo := rc.Repo
 	repo.EnableWiki = req.EnableWiki
 	repo.AllowPublicWiki = req.AllowPublicWiki && req.EnableWiki && !req.EnableExternalWiki
@@ -335,6 +341,7 @@ func putRepoAdvanced(logger *logx.Logger, rc *repoAdminContext, req repoAdvanced
 	repo.ExternalTrackerStyle = req.ExternalTrackerStyle
 	repo.EnablePulls = req.EnablePulls
 	repo.PullsIgnoreWhitespace = req.PullsIgnoreWhitespace
+	repo.PullsAllowMerge = req.PullsAllowMerge
 	repo.PullsAllowRebase = req.PullsAllowRebase
 	repo.PullsAllowSquash = req.PullsAllowSquash
 	if err = database.UpdateRepository(logger, repo, false); err != nil {

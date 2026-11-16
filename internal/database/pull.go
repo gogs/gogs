@@ -188,6 +188,21 @@ const (
 	MergeStyleSquash  MergeStyle = "squash_and_merge"
 )
 
+// AllowsMergeStyle returns whether pull requests of the repository can be
+// merged with the style.
+func (repo *Repository) AllowsMergeStyle(style MergeStyle) bool {
+	switch style {
+	case MergeStyleRegular:
+		return repo.PullsAllowMerge
+	case MergeStyleRebase:
+		return repo.PullsAllowRebase
+	case MergeStyleSquash:
+		return repo.PullsAllowSquash
+	default:
+		return false
+	}
+}
+
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
 func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
@@ -232,12 +247,6 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		return errors.Newf("create temporary repository: %v", err)
 	}
 	defer cleanup()
-
-	// Check if merge style is allowed, reset to default style if not
-	if (mergeStyle == MergeStyleRebase && !pr.BaseRepo.PullsAllowRebase) ||
-		(mergeStyle == MergeStyleSquash && !pr.BaseRepo.PullsAllowSquash) {
-		mergeStyle = MergeStyleRegular
-	}
 
 	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
