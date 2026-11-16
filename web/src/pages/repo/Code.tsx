@@ -17,6 +17,7 @@ import {
   GitPullRequestArrow,
   History,
   Link2,
+  List,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
@@ -39,6 +40,7 @@ import { CommitAuthors } from "@/components/CommitAuthors";
 import { FileIcon, FolderIcon } from "@/components/FileIcon";
 import { GoToFile } from "@/components/GoToFile";
 import { Markdown } from "@/components/Markdown";
+import { PageTabs } from "@/components/PageTabs";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoFileTree } from "@/components/RepoFileTree";
 import { RepoHeader } from "@/components/RepoHeader";
@@ -61,6 +63,8 @@ import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoCommitListItem,
   type RepoFile,
+  type RepoOverviewFile,
+  type RepoOverviewKind,
   type RepoSrcData,
   type RepoTreeEntry,
   refPath,
@@ -93,9 +97,19 @@ function formatFileSize(bytes: number) {
 }
 
 // RepoCode browses the files of a repository at a branch, a tag or a commit:
-// a directory with its README, or a file. An empty repository shows how to
-// push to it.
-export function RepoCode({ owner, name, data }: { owner: string; name: string; data: RepoSrcData }) {
+// a directory with its README and other overview files, or a file. An empty
+// repository shows how to push to it.
+export function RepoCode({
+  owner,
+  name,
+  data,
+  overviewTab,
+}: {
+  owner: string;
+  name: string;
+  data: RepoSrcData;
+  overviewTab?: string;
+}) {
   const { t } = useTranslation();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
   const [treeOpen, setTreeOpen] = useState(() => localStorage.getItem(FILE_TREE_KEY) !== "closed");
@@ -227,26 +241,7 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
       />
     ) : null;
   const readme =
-    data.kind === "dir" && data.readme ? (
-      <section
-        id="readme"
-        aria-labelledby="repo-readme-heading"
-        className="mt-6 scroll-mt-20 overflow-hidden rounded-md border border-(--color-border)"
-      >
-        <h2
-          id="repo-readme-heading"
-          className="flex items-center gap-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2 text-sm font-semibold"
-        >
-          <BookOpen className="size-4 text-(--color-muted-foreground)" aria-hidden />
-          {data.readme.name}
-        </h2>
-        {data.readme.html !== undefined ? (
-          <Markdown html={data.readme.html} className="p-4 sm:p-6" />
-        ) : (
-          <pre className="p-4 font-mono text-sm wrap-anywhere whitespace-pre-wrap">{data.readme.text}</pre>
-        )}
-      </section>
-    ) : null;
+    data.kind === "dir" && data.overview?.length ? <Overview files={data.overview} activeTab={overviewTab} /> : null;
 
   if (summary) {
     return (
@@ -303,7 +298,11 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
                 {t("repo.about")}
               </h2>
               <AboutText summary={summary} />
-              <AboutDocs entries={data.entries ?? []} hasReadme={!!data.readme} srcLink={srcLink} />
+              <AboutDocs
+                entries={data.entries ?? []}
+                hasReadme={!!data.overview?.some((file) => file.kind === "readme")}
+                srcLink={srcLink}
+              />
               <section aria-labelledby="repo-about-releases" className="border-t border-(--color-border) pt-4">
                 <h3 id="repo-about-releases" className="mb-1 font-semibold">
                   <Link
@@ -694,6 +693,137 @@ function AboutDocs({
         </li>
       ))}
     </ul>
+  );
+}
+
+// OVERVIEW_TABS are the values of the "tab" search parameter that show each
+// kind of overview file, the same as on GitHub.
+const OVERVIEW_TABS: Record<RepoOverviewKind, string> = {
+  readme: "readme-ov-file",
+  code_of_conduct: "coc-ov-file",
+  contributing: "contributing-ov-file",
+  license: "license-ov-file",
+  security: "security-ov-file",
+};
+
+interface OutlineHeading {
+  level: number;
+  text: string;
+  slug: string;
+}
+
+// outlineOf lists the headings of rendered Markdown that have an id, which
+// Markdown gives an anchor to link to.
+function outlineOf(html: string): OutlineHeading[] {
+  const body = new DOMParser().parseFromString(html, "text/html").body;
+  return Array.from(body.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6"))
+    .filter((heading) => heading.id.startsWith("user-content-"))
+    .map((heading) => ({
+      level: Number(heading.tagName.slice(1)),
+      text: heading.textContent?.trim() ?? "",
+      slug: heading.id.slice("user-content-".length),
+    }));
+}
+
+// Overview shows the README of a directory below its file list, and in the
+// root directory also the code of conduct, contributing guide, license and
+// security policy, in tabs as on GitHub.
+function Overview({ files, activeTab }: { files: RepoOverviewFile[]; activeTab?: string }) {
+  const { t } = useTranslation();
+  const shown = files.find((file) => OVERVIEW_TABS[file.kind] === activeTab) ?? files[0];
+  const outline = useMemo(() => (shown.html ? outlineOf(shown.html) : []), [shown.html]);
+  const tabs = files.map((file) => ({ key: file.kind, label: t(`repo.overview_${file.kind}`) }));
+
+  return (
+    <section
+      id="readme"
+      aria-label={t("repo.overview_files")}
+      className="mt-6 scroll-mt-20 rounded-md border border-(--color-border)"
+    >
+      <div className="flex items-center justify-between gap-2 border-b border-(--color-border) pr-2 pl-1">
+        <PageTabs
+          label={t("repo.overview_files")}
+          tabs={tabs}
+          active={shown.kind}
+          inline={2}
+          className="min-w-0 pt-1"
+          renderLink={(tab, props) => (
+            <Link
+              to="."
+              search={{ tab: tab.key === files[0].kind ? undefined : OVERVIEW_TABS[tab.key] }}
+              resetScroll={false}
+              activeOptions={{ exact: true }}
+              {...props}
+            />
+          )}
+        />
+        {outline.length ? <OutlineMenu headings={outline} /> : null}
+      </div>
+      {shown.html !== undefined ? (
+        <Markdown html={shown.html} className="p-4 sm:p-6" />
+      ) : (
+        <pre className="p-4 font-mono text-sm wrap-anywhere whitespace-pre-wrap">{shown.text}</pre>
+      )}
+    </section>
+  );
+}
+
+// OutlineMenu lists the headings of the shown file in a menu that can be
+// filtered, like the outline of a README on GitHub.
+function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const topLevel = Math.min(...headings.map((heading) => heading.level));
+  const query = filter.trim().toLowerCase();
+  const shown = query ? headings.filter((heading) => heading.text.toLowerCase().includes(query)) : headings;
+  const label = t("repo.overview_outline");
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setFilter("");
+      }}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button type="button" aria-label={label} className={cn(ICON_BUTTON_CLASS, "cursor-pointer")}>
+              <List className="size-4" aria-hidden />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-2">
+        <Input
+          type="search"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder={t("repo.overview_filter_headings")}
+          aria-label={t("repo.overview_filter_headings")}
+        />
+        <ul className="mt-2 max-h-[60vh] overflow-y-auto">
+          {shown.map((heading) => (
+            <li key={heading.slug}>
+              <a
+                href={`#${encodeURIComponent(heading.slug)}`}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "block rounded py-1.5 pr-2 text-sm wrap-anywhere text-(--color-foreground) hover:bg-(--color-surface)",
+                  heading.level === topLevel && "font-semibold",
+                )}
+                style={{ paddingLeft: `${0.5 + (heading.level - topLevel)}rem` }}
+              >
+                {heading.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -59,9 +60,15 @@ type repoTreeEntry struct {
 	Commit          *repoEntryCommit `json:"commit,omitempty"`
 }
 
-type repoReadme struct {
-	Name string `json:"name"`
-	// HTML is set for a README in a markup language, and Text otherwise.
+// repoOverviewFile is a file shown in a tab below the file list, e.g., the
+// README or the license.
+type repoOverviewFile struct {
+	// Kind is "readme", "code_of_conduct", "contributing", "license" or
+	// "security".
+	Kind string `json:"kind"`
+	// Path is relative to the directory being viewed, e.g., ".github/CONTRIBUTING.md".
+	Path string `json:"path"`
+	// HTML is set for a file in a markup language, and Text otherwise.
 	HTML string `json:"html,omitempty"`
 	Text string `json:"text,omitempty"`
 }
@@ -117,8 +124,10 @@ type repoSrcResponse struct {
 	Kind         string              `json:"kind"`
 	LatestCommit *repoCommitListItem `json:"latestCommit,omitempty"`
 	Entries      []repoTreeEntry     `json:"entries,omitempty"`
-	Readme       *repoReadme         `json:"readme,omitempty"`
-	File         *repoFile           `json:"file,omitempty"`
+	// Overview lists the files shown in tabs below the file list, in the
+	// order of the tabs.
+	Overview []repoOverviewFile `json:"overview,omitempty"`
+	File     *repoFile          `json:"file,omitempty"`
 	// Summary is set for the root directory.
 	Summary *repoSrcSummary `json:"summary,omitempty"`
 	// Editor tells whether files can be changed in the browser: "ok", or why
@@ -301,28 +310,9 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		resp.Entries = append(resp.Entries, item)
 	}
 
-	for _, e := range entries {
-		if e.IsTree() || !markup.IsReadmeFile(e.Name()) {
-			continue
-		}
-		p, err := e.Blob().Bytes(ctx)
-		if err != nil {
-			logger.Error("Failed to read README", "fileName", e.Name(), "repoID", repo.ID, "error", err)
-			return http.StatusInternalServerError, nil, errors.Wrap(err, "read README")
-		}
-		if !tool.IsTextFile(p) {
-			break
-		}
-		resp.Readme = &repoReadme{Name: e.Name()}
-		switch markup.Detect(e.Name()) {
-		case markup.TypeMarkdown:
-			resp.Readme.HTML = string(markup.MarkdownFile(p, treeLink, metas))
-		case markup.TypeOrgMode:
-			resp.Readme.HTML = string(markup.OrgMode(p, treeLink, metas))
-		default:
-			resp.Readme.Text = toUTF8(logger, p)
-		}
-		break
+	if resp.Overview, err = readOverviewFiles(ctx, logger, ref.Commit, entries, treePath == "", treeLink, metas); err != nil {
+		logger.Error("Failed to read overview files", "treePath", treePath, "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "read overview files")
 	}
 	return http.StatusOK, resp, nil
 }
@@ -352,6 +342,113 @@ func flattenDir(ctx context.Context, tree *git.Tree, name string) (string, error
 			return "", errors.Wrap(err, "get subtree")
 		}
 	}
+}
+
+// overviewKinds are the kinds of overview files, in the order of their tabs.
+var overviewKinds = []string{"readme", "code_of_conduct", "contributing", "license", "security"}
+
+// overviewKindOf returns the kind of overview file that a file named name is,
+// or an empty string if it is none.
+func overviewKindOf(name string) string {
+	base := strings.ToLower(strings.TrimSuffix(name, path.Ext(name)))
+	switch {
+	case markup.IsReadmeFile(name):
+		return "readme"
+	case base == "code_of_conduct" || base == "code-of-conduct":
+		return "code_of_conduct"
+	case base == "contributing":
+		return "contributing"
+	case base == "license" || base == "licence" || base == "copying" || base == "unlicense" ||
+		strings.HasPrefix(base, "license-") || strings.HasPrefix(base, "licence-"):
+		return "license"
+	case base == "security":
+		return "security"
+	}
+	return ""
+}
+
+// readOverviewFiles reads the text files shown in tabs below the file list of
+// a directory with the given entries, in the order of their tabs. A
+// subdirectory shows only its README. The root directory also shows its
+// license, and its code of conduct, contributing guide and security policy,
+// which are looked up in ".github", then in the root directory, then in
+// "docs", as on GitHub. Relative links in a file resolve against its
+// directory under treeLink.
+func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Commit, entries git.Entries, isRoot bool, treeLink string, metas map[string]string) ([]repoOverviewFile, error) {
+	type found struct {
+		dir   string
+		entry *git.TreeEntry
+	}
+	files := make(map[string]found, len(overviewKinds))
+	add := func(dir string, entries git.Entries) {
+		for _, e := range entries {
+			if e.IsTree() || e.IsCommit() {
+				continue
+			}
+			kind := overviewKindOf(e.Name())
+			if kind == "" || (kind != "readme" && !isRoot) || (dir != "" && (kind == "readme" || kind == "license")) {
+				continue
+			}
+			if _, ok := files[kind]; !ok {
+				files[kind] = found{dir: dir, entry: e}
+			}
+		}
+	}
+	subdirEntries := func(dir string) (git.Entries, error) {
+		for _, e := range entries {
+			if e.IsTree() && e.Name() == dir {
+				tree, err := commit.Subtree(ctx, dir)
+				if err != nil {
+					return nil, errors.Wrapf(err, "get subtree %q", dir)
+				}
+				return tree.Entries(ctx)
+			}
+		}
+		return nil, nil
+	}
+
+	if isRoot {
+		githubEntries, err := subdirEntries(".github")
+		if err != nil {
+			return nil, err
+		}
+		add(".github", githubEntries)
+	}
+	add("", entries)
+	if isRoot {
+		docsEntries, err := subdirEntries("docs")
+		if err != nil {
+			return nil, err
+		}
+		add("docs", docsEntries)
+	}
+
+	var overview []repoOverviewFile
+	for _, kind := range overviewKinds {
+		f, ok := files[kind]
+		if !ok {
+			continue
+		}
+		p, err := f.entry.Blob().Bytes(ctx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "read %q", path.Join(f.dir, f.entry.Name()))
+		}
+		if !tool.IsTextFile(p) {
+			continue
+		}
+		file := repoOverviewFile{Kind: kind, Path: path.Join(f.dir, f.entry.Name())}
+		dirLink := strings.TrimSuffix(treeLink+"/"+f.dir, "/")
+		switch markup.Detect(f.entry.Name()) {
+		case markup.TypeMarkdown:
+			file.HTML = string(markup.MarkdownFile(p, dirLink, metas))
+		case markup.TypeOrgMode:
+			file.HTML = string(markup.OrgMode(p, dirLink, metas))
+		default:
+			file.Text = toUTF8(logger, p)
+		}
+		overview = append(overview, file)
+	}
+	return overview, nil
 }
 
 // describeRepoFile reads the file of the entry to show it. Relative links in
