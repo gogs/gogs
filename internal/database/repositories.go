@@ -133,18 +133,19 @@ func (s *RepositoriesStore) Create(ctx context.Context, ownerID int64, opts Crea
 	}
 
 	repo := &Repository{
-		OwnerID:       ownerID,
-		LowerName:     strings.ToLower(opts.Name),
-		Name:          opts.Name,
-		Description:   opts.Description,
-		DefaultBranch: opts.DefaultBranch,
-		IsPrivate:     opts.Private,
-		IsMirror:      opts.Mirror,
-		EnableWiki:    opts.EnableWiki,
-		EnableIssues:  opts.EnableIssues,
-		EnablePulls:   opts.EnablePulls,
-		IsFork:        opts.Fork,
-		ForkID:        opts.ForkID,
+		OwnerID:         ownerID,
+		LowerName:       strings.ToLower(opts.Name),
+		Name:            opts.Name,
+		Description:     opts.Description,
+		DefaultBranch:   opts.DefaultBranch,
+		IsPrivate:       opts.Private,
+		IsMirror:        opts.Mirror,
+		EnableWiki:      opts.EnableWiki,
+		EnableIssues:    opts.EnableIssues,
+		EnablePulls:     opts.EnablePulls,
+		IsFork:          opts.Fork,
+		ForkID:          opts.ForkID,
+		PullsAllowMerge: true,
 	}
 	return repo, s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err = tx.Create(repo).Error

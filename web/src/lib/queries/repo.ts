@@ -189,6 +189,11 @@ export interface RepoAdvancedSettings {
   pullsAllowMerge: boolean;
   pullsAllowRebase: boolean;
   pullsAllowSquash: boolean;
+  pullsDeleteBranch: boolean;
+  // The presets of the messages merge commits and squashing start with,
+  // empty for the default message.
+  pullsMergeMessage: "" | "title" | "title_description";
+  pullsSquashMessage: "" | "title" | "title_description" | "title_commits";
 }
 
 export interface RepoMirrorSettings {
@@ -803,6 +808,12 @@ export interface RepoPullInfo {
   allowRebase: boolean;
   allowSquash: boolean;
   viewerCanMerge: boolean;
+  // viewerID is the viewer who can merge, whose browser remembers the merge
+  // style they last used in the repository.
+  viewerID?: number;
+  // mergeMessages are the messages the commits of the merge styles that
+  // create one start with, for viewers who can merge.
+  mergeMessages?: Partial<Record<MergeStyle, MergeMessage>>;
   viewerCanDeleteBranch: boolean;
   // viewerCanRestoreBranch is whether the viewer can create the deleted head
   // branch again at the commit that was merged.
@@ -827,7 +838,12 @@ export function fetchRepoPullCommits(owner: string, name: string, index: number)
 
 export type MergeStyle = "create_merge_commit" | "rebase_before_merging" | "squash_and_merge";
 
-export function mergeRepoPull(issue: IssueRef, form: { style: MergeStyle; description: string }) {
+export interface MergeMessage {
+  title: string;
+  body: string;
+}
+
+export function mergeRepoPull(issue: IssueRef, form: { style: MergeStyle } & MergeMessage) {
   return submit<void>("POST", issueURL(issue, "/merge"), form);
 }
 

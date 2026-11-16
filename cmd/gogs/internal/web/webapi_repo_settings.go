@@ -87,6 +87,12 @@ type repoAdvancedSettings struct {
 	PullsAllowMerge       bool   `json:"pullsAllowMerge"`
 	PullsAllowRebase      bool   `json:"pullsAllowRebase"`
 	PullsAllowSquash      bool   `json:"pullsAllowSquash"`
+	PullsDeleteBranch     bool   `json:"pullsDeleteBranch"`
+	// PullsMergeMessage and PullsSquashMessage are the presets of the
+	// messages merge commits and squashing start with, empty for the
+	// default message.
+	PullsMergeMessage  string `json:"pullsMergeMessage" validate:"omitempty,oneof=title title_description"`
+	PullsSquashMessage string `json:"pullsSquashMessage" validate:"omitempty,oneof=title title_description title_commits"`
 }
 
 type repoSettings struct {
@@ -145,6 +151,9 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 			PullsAllowMerge:       repo.PullsAllowMerge,
 			PullsAllowRebase:      repo.PullsAllowRebase,
 			PullsAllowSquash:      repo.PullsAllowSquash,
+			PullsDeleteBranch:     repo.PullsDeleteBranch,
+			PullsMergeMessage:     repo.PullsMergeMessage,
+			PullsSquashMessage:    repo.PullsSquashMessage,
 		},
 		CanEnablePulls:        repo.CanEnablePulls(),
 		OwnerIsOrganization:   rc.Owner.IsOrganization(),
@@ -324,10 +333,9 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 // putRepoAdvanced turns the wiki, the issues and the pull requests of the
 // repository on or off.
 func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
-	if !req.PullsAllowMerge && !req.PullsAllowRebase && !req.PullsAllowSquash {
-		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.merge_style_required")}, nil
+	if req.EnablePulls && !req.PullsAllowMerge && !req.PullsAllowSquash && !req.PullsAllowRebase {
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.no_merge_method")}, nil
 	}
-
 	repo := rc.Repo
 	repo.EnableWiki = req.EnableWiki
 	repo.AllowPublicWiki = req.AllowPublicWiki && req.EnableWiki && !req.EnableExternalWiki
@@ -344,6 +352,9 @@ func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, r
 	repo.PullsAllowMerge = req.PullsAllowMerge
 	repo.PullsAllowRebase = req.PullsAllowRebase
 	repo.PullsAllowSquash = req.PullsAllowSquash
+	repo.PullsDeleteBranch = req.PullsDeleteBranch
+	repo.PullsMergeMessage = req.PullsMergeMessage
+	repo.PullsSquashMessage = req.PullsSquashMessage
 	if err = database.UpdateRepository(logger, repo, false); err != nil {
 		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")

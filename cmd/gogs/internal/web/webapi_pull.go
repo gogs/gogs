@@ -62,6 +62,12 @@ type repoPullInfo struct {
 	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
 	ViewerCanMerge bool `json:"viewerCanMerge"`
+	// ViewerID is the viewer who can merge, whose browser remembers the merge
+	// style they last used in the repository.
+	ViewerID int64 `json:"viewerID,omitempty"`
+	// MergeMessages are the messages the commits of the merge styles that
+	// create one start with, for viewers who can merge.
+	MergeMessages map[database.MergeStyle]database.MergeMessage `json:"mergeMessages,omitempty"`
 	// ViewerCanDeleteBranch is whether the viewer can delete the head branch
 	// after the merge: a branch of the same repository that is not protected
 	// and has no new commits.
@@ -193,6 +199,16 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 	case pull.CanAutoMerge():
 		info.State = "mergeable"
 		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
+		if info.ViewerCanMerge {
+			info.ViewerID = repoCtx.Viewer.ID()
+			pull.Issue = issue
+			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{}
+			for _, style := range []database.MergeStyle{database.MergeStyleRegular, database.MergeStyleSquash} {
+				if repo.AllowsMergeStyle(style) {
+					info.MergeMessages[style] = pull.DefaultMergeMessage(style, meta.Commits)
+				}
+			}
+		}
 	default:
 		info.State = "conflict"
 	}
@@ -269,8 +285,11 @@ func getRepoPullRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 type repoPullMergeRequest struct {
 	// Style is "create_merge_commit", "rebase_before_merging" or
 	// "squash_and_merge".
-	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging squash_and_merge"`
-	Description string `json:"description"`
+	Style string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging squash_and_merge"`
+	// Title and Body are the message of the commit that merge commits and
+	// squashing create. The default message is used when Title is empty.
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
@@ -297,9 +316,21 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	if !repoCtx.Repo.AllowsMergeStyle(style) {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_style_not_allowed")}, nil
 	}
-	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, req.Description); err != nil {
+	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
+	}
+
+	// The merge is done, so failing to delete the branch only leaves it be.
+	if repoCtx.Repo.PullsDeleteBranch {
+		info, _, _, err := describePull(c.Request().Context(), repoCtx, issue)
+		if err != nil {
+			logger.Error("Failed to describe pull request", "pullID", pull.ID, "error", err)
+		} else if info.ViewerCanDeleteBranch {
+			if _, err = deleteHeadBranch(c.Request().Context(), logger, viewer, repoCtx, pull); err != nil {
+				logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
+			}
+		}
 	}
 	return http.StatusNoContent, nil, nil
 }
@@ -351,21 +382,33 @@ func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	} else if !info.ViewerCanDeleteBranch {
 		return http.StatusNotFound, nil, errors.New("branch cannot be deleted")
 	}
+	deleted, err := deleteHeadBranch(ctx, logger, viewer, repoCtx, pull)
+	if err != nil {
+		logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	} else if !deleted {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+	}
+	return http.StatusNoContent, nil, nil
+}
+
+// deleteHeadBranch deletes the head branch of the merged pull request in the
+// base repository, unless it has commits that were not merged, and returns
+// whether it did.
+func deleteHeadBranch(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, pull *database.PullRequest) (deleted bool, err error) {
+	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+		return false, errors.Wrap(err, "open repository")
 	}
 	commitID, err := gitRepo.BranchCommitID(ctx, pull.HeadBranch)
 	if err != nil {
-		logger.Error("Failed to get branch commit", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get branch commit")
+		return false, errors.Wrap(err, "get branch commit")
 	} else if commitID != pull.MergedCommitID {
-		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+		return false, nil
 	}
 	if err = gitRepo.DeleteBranch(ctx, pull.HeadBranch, git.DeleteBranchOptions{Force: true}); err != nil {
-		logger.Error("Failed to delete branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete branch")
+		return false, errors.Wrap(err, "delete branch")
 	}
 	if err = database.PrepareWebhooks(logger, repo, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        pull.HeadBranch,
@@ -376,5 +419,5 @@ func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	}); err != nil {
 		logger.Error("Failed to prepare webhooks for deleted branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
 	}
-	return http.StatusNoContent, nil, nil
+	return true, nil
 }

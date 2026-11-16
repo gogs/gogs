@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -203,9 +205,179 @@ func (repo *Repository) AllowsMergeStyle(style MergeStyle) bool {
 	}
 }
 
-// Merge merges pull request to base repository.
+// The presets of the messages merge commits and squashing start with. The
+// empty preset is the default message, like on GitHub: "Merge pull request #N
+// from <head>" for merge commits, and for squashing, the message of the commit
+// when there is one, or the title of the pull request with the subjects of
+// its commits.
+const (
+	MergeMessageDefault          = ""
+	MergeMessageTitle            = "title"
+	MergeMessageTitleDescription = "title_description"
+	// MergeMessageTitleCommits is only for squashing.
+	MergeMessageTitleCommits = "title_commits"
+)
+
+// MergeMessage is the title and body of the commit that merges a pull
+// request.
+type MergeMessage struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+// DefaultMergeMessage returns the message the commit of the merge style starts
+// with, before the merger edits it, following the preset of the base
+// repository. The commits are those the pull request merges, newest first.
+// Rebasing keeps the messages of the commits, so it has none.
+func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
+	message := pr.presetMergeMessage(mergeStyle, commits)
+	// Squashing leaves only the author of the pull request on the commit, so
+	// the other authors are credited the way GitHub does. The trailers must
+	// end the message to count, so those the body copies from commit messages
+	// or the description move there, and each person is credited once.
+	if mergeStyle == MergeStyleSquash {
+		var credited []string
+		message.Body, credited = cutCoAuthorLines(message.Body)
+		if trailers := coAuthorTrailers(commits, credited, pr.Issue.Poster); trailers != "" {
+			if message.Body != "" {
+				message.Body += "\n\n"
+			}
+			message.Body += trailers
+		}
+	}
+	return message
+}
+
+// parseCoAuthorLine returns the name and email of a "Co-authored-by" trailer
+// line, matched case-insensitively.
+func parseCoAuthorLine(line string) (name, email string, ok bool) {
+	const prefix = "co-authored-by:"
+	line = strings.TrimSpace(line)
+	if len(line) <= len(prefix) || !strings.EqualFold(line[:len(prefix)], prefix) {
+		return "", "", false
+	}
+	name, email, ok = strings.Cut(line[len(prefix):], "<")
+	email, closed := strings.CutSuffix(email, ">")
+	return name, email, ok && closed
+}
+
+// cutCoAuthorLines removes the "Co-authored-by" lines from the text, and
+// returns the text left and the lines removed.
+func cutCoAuthorLines(text string) (rest string, lines []string) {
+	var kept strings.Builder
+	for line := range strings.Lines(text) {
+		if _, _, ok := parseCoAuthorLine(line); ok {
+			lines = append(lines, line)
+			continue
+		}
+		kept.WriteString(line)
+	}
+	if lines == nil {
+		return text, nil
+	}
+	// Removing the lines can leave runs of blank lines behind.
+	return strings.TrimSpace(blankLines.ReplaceAllString(kept.String(), "\n\n")), lines
+}
+
+var blankLines = regexp.MustCompile(`\n(?:[ \t]*\n){2,}`)
+
+// coAuthorTrailers returns a "Co-authored-by" trailer for each author of the
+// commits, oldest first, each co-author their messages already credit, and
+// then each co-author of the credited lines, except the poster of the pull
+// request.
+func coAuthorTrailers(commits []*git.Commit, credited []string, poster *User) string {
+	seen := map[string]bool{}
+	if poster != nil && poster.ID > 0 {
+		seen[strings.ToLower(poster.Email)] = true
+	}
+	var trailers []string
+	add := func(name, email string) {
+		key := strings.ToLower(strings.TrimSpace(email))
+		if key == "" || seen[key] {
+			return
+		}
+		seen[key] = true
+		trailers = append(trailers, fmt.Sprintf("Co-authored-by: %s <%s>", strings.TrimSpace(name), strings.TrimSpace(email)))
+	}
+	addLine := func(line string) {
+		if name, email, ok := parseCoAuthorLine(line); ok {
+			add(name, email)
+		}
+	}
+	for i := len(commits) - 1; i >= 0; i-- {
+		c := commits[i]
+		if c.Author != nil {
+			add(c.Author.Name, c.Author.Email)
+		}
+		for line := range strings.Lines(c.Message) {
+			addLine(line)
+		}
+	}
+	for _, line := range credited {
+		addLine(line)
+	}
+	return strings.Join(trailers, "\n")
+}
+
+// presetMergeMessage returns the message of the preset of the base repository
+// for the merge style.
+func (pr *PullRequest) presetMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
+	titled := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index)
+	switch mergeStyle {
+	case MergeStyleRegular:
+		switch pr.BaseRepo.PullsMergeMessage {
+		case MergeMessageTitle:
+			return MergeMessage{Title: titled}
+		case MergeMessageTitleDescription:
+			return MergeMessage{Title: titled, Body: pr.Issue.Content}
+		}
+		return MergeMessage{
+			Title: fmt.Sprintf("Merge pull request #%d from %s/%s", pr.Index, pr.HeadUserName, pr.HeadBranch),
+			Body:  pr.Issue.Title,
+		}
+
+	case MergeStyleSquash:
+		switch pr.BaseRepo.PullsSquashMessage {
+		case MergeMessageTitle:
+			return MergeMessage{Title: titled}
+		case MergeMessageTitleDescription:
+			return MergeMessage{Title: titled, Body: pr.Issue.Content}
+		case MergeMessageTitleCommits:
+			return MergeMessage{Title: titled, Body: commitList(commits, true)}
+		}
+		if len(commits) == 1 {
+			title, body, _ := strings.Cut(strings.TrimSpace(commits[0].Message), "\n")
+			return MergeMessage{Title: fmt.Sprintf("%s (#%d)", title, pr.Index), Body: strings.TrimSpace(body)}
+		}
+		return MergeMessage{Title: titled, Body: commitList(commits, false)}
+	}
+	return MergeMessage{}
+}
+
+// commitList lists the subjects of the commits, oldest first, with their
+// bodies when withBodies is true.
+func commitList(commits []*git.Commit, withBodies bool) string {
+	items := make([]string, 0, len(commits))
+	for i := len(commits) - 1; i >= 0; i-- {
+		subject, body, _ := strings.Cut(strings.TrimSpace(commits[i].Message), "\n")
+		item := "* " + subject
+		if body = strings.TrimSpace(body); withBodies && body != "" {
+			item += "\n\n" + body
+		}
+		items = append(items, item)
+	}
+	sep := "\n"
+	if withBodies {
+		sep = "\n\n"
+	}
+	return strings.Join(items, sep)
+}
+
+// Merge merges pull request to base repository. The message is used for the
+// commit that merge commits and squashing create, and its default is used
+// when its title is empty.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
-func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, message MergeMessage) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -248,6 +420,19 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 	}
 	defer cleanup()
 
+	if !pr.BaseRepo.AllowsMergeStyle(mergeStyle) {
+		return errors.Newf("merge style %q is not allowed", mergeStyle)
+	}
+
+	if strings.TrimSpace(message.Title) == "" {
+		commits, err := tmpRepo.RevList(ctx, []string{baseCommitID + ".." + headCommitID})
+		if err != nil {
+			return errors.Newf("list commits: %v", err)
+		}
+		message = pr.DefaultMergeMessage(mergeStyle, commits)
+	}
+	commitMessage := git.CleanupMessage(message.Title + "\n\n" + message.Body)
+
 	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
 	switch mergeStyle {
@@ -266,9 +451,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 			return errors.Newf("merge tree: %v", err)
 		}
 
-		// Create a merge commit for the base branch.
-		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, commitMessage, git.CommitTreeOptions{
 			Parents:   []string{baseCommitID, headCommitID},
 			Author:    committer,
 			Committer: committer,
@@ -303,8 +486,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		if pr.Issue.Poster != nil && pr.Issue.Poster.ID > 0 {
 			author = &git.Signature{Name: pr.Issue.Poster.DisplayName(), Email: pr.Issue.Poster.Email}
 		}
-		message := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index) + "\n\n" + commitDescription
-		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, commitMessage, git.CommitTreeOptions{
 			Parents:   []string{baseCommitID},
 			Author:    author,
 			Committer: committer,

@@ -212,6 +212,14 @@ type Repository struct {
 	PullsAllowMerge       bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
 	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	PullsAllowSquash      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	// PullsDeleteBranch is whether head branches in the repository are
+	// deleted after their pull requests are merged.
+	PullsDeleteBranch bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	// PullsMergeMessage and PullsSquashMessage are the presets of the
+	// messages merge commits and squashing start with, e.g.,
+	// MergeMessageTitle.
+	PullsMergeMessage  string `xorm:"NOT NULL DEFAULT ''" gorm:"not null;default:''"`
+	PullsSquashMessage string `xorm:"NOT NULL DEFAULT ''" gorm:"not null;default:''"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	ForkID   int64
