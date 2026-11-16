@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
@@ -26,7 +28,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 8
+	const wantTables = 9
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -182,6 +184,22 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Type:        NoticeTypeRepository,
 			Description: "This is a notice",
 			CreatedUnix: 1588568886,
+		},
+
+		&Passkey{
+			ID:     1,
+			UserID: 1,
+			Name:   "Laptop",
+			Credential: webauthn.Credential{
+				ID:              []byte("credential-1"),
+				PublicKey:       []byte("public-key-1"),
+				AttestationType: "none",
+				Transport:       []protocol.AuthenticatorTransport{protocol.Internal, protocol.Hybrid},
+				Flags:           webauthn.CredentialFlags{UserPresent: true, UserVerified: true, BackupEligible: true, BackupState: true},
+				Authenticator:   webauthn.Authenticator{SignCount: 5},
+			},
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486, // 1 hour later
 		},
 	}
 	for _, val := range vals {

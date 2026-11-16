@@ -1,0 +1,1 @@
+{"ID":1,"UserID":1,"Name":"Laptop","Credential":{"id":"Y3JlZGVudGlhbC0x","publicKey":"cHVibGljLWtleS0x","attestationFormat":"none","transport":["internal","hybrid"],"flags":{"userPresent":true,"userVerified":true,"backupEligible":true,"backupState":true},"authenticator":{"signCount":5},"attestation":{}},"CreatedUnix":1588568886,"UpdatedUnix":1588572486}

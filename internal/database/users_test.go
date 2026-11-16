@@ -520,6 +520,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	// Mock random entries in related tables
 	for _, table := range []any{
 		&AccessToken{UserID: testUser.ID},
+		&Passkey{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
 		&Access{UserID: testUser.ID},
 		&Action{UserID: testUser.ID},
@@ -575,6 +576,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		&Follow{UserID: testUser.ID},
 		&PublicKey{OwnerID: testUser.ID},
 		&AccessToken{UserID: testUser.ID},
+		&Passkey{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
 		&Access{UserID: testUser.ID},
 		&Action{UserID: testUser.ID},
@@ -623,6 +625,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		&Follow{UserID: testUser.ID},
 		&PublicKey{OwnerID: testUser.ID},
 		&AccessToken{UserID: testUser.ID},
+		&Passkey{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
 		&Access{UserID: testUser.ID},
 		&Action{UserID: testUser.ID},
