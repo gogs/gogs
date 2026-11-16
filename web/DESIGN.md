@@ -108,7 +108,7 @@ Show Markdown that the server rendered and sanitized, e.g., the content of an is
 
 Forms that open or change issues and releases share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set on issues. `useAttachmentUploads` takes `"releases"` to upload under the release attachment limits.
 
-The issue and pull request pages share their parts from `pages/repo/Issue.tsx`: `IssueHeader` for the title, the state pill and a summary, and `IssueConversation` for the comments, the form to comment and the sidebar. The pull request page adds its tabs below the header and its merge box above the form to comment.
+The issue and pull request pages share their parts from `pages/repo/Issue.tsx`: `IssueHeader` for the title, the state pill and a summary, and `IssueConversation` for the comments, the form to comment and the sidebar. The pull request page adds its tabs below the header and its merge box above the form to comment. When the pull request depends on others, or others depend on it, it lists them with `PullStack`, one row each with a rail drawing the dependencies like `git log --graph`, first in the sidebar and above the conversation below `md`. It shows only what the pull request depends on and what depends on it until the viewer asks for the rest, so a large stack stays short, and lists the ones it depends on through the `sidebar` slot of `IssueConversation`.
 
 ## Repository refs and clone URLs
 

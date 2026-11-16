@@ -4,22 +4,38 @@ import {
   CircleAlert,
   CircleCheck,
   CircleX,
+  Clock,
   FileDiff,
   GitCommitHorizontal,
   GitMerge,
+  GitPullRequest,
+  GitPullRequestClosed,
   LoaderCircle,
   type LucideIcon,
   MessagesSquare,
+  RefreshCw,
 } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { DiffWorkspace } from "@/components/DiffWorkspace";
+import { Picker, SidebarSection } from "@/components/IssueForm";
 import { PageTabs } from "@/components/PageTabs";
+import { PullStack } from "@/components/PullStack";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -28,7 +44,10 @@ import {
   type RepoPullData,
   deleteRepoPullBranch,
   mergeRepoPull,
+  mergeRepoPullStack,
   repoHeaderQuery,
+  setRepoPullParents,
+  updateRepoPullBranch,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
@@ -81,11 +100,34 @@ export function RepoPull({
         <PullTabs issueRef={ref} data={data} tab={tab} />
       </section>
       {tab === "conversation" ? (
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
+          {/* Below md the sidebar comes after the conversation, so the stack
+              moves above it to stay at hand. */}
+          {pull.stack ? (
+            <PullStack
+              owner={repo.owner}
+              repo={repo.name}
+              stack={pull.stack}
+              current={data.index}
+              className="rounded-md border border-(--color-border) px-3 py-2 md:hidden"
+            />
+          ) : null}
           <IssueConversation
             issueRef={ref}
             data={data}
             mergeBox={<MergeBox issueRef={ref} data={data} />}
+            sidebar={<PullParents issueRef={ref} pull={pull} />}
+            aside={
+              pull.stack ? (
+                <PullStack
+                  owner={repo.owner}
+                  repo={repo.name}
+                  stack={pull.stack}
+                  current={data.index}
+                  className="hidden border-b border-(--color-border) pb-4 mb-4 md:block"
+                />
+              ) : null
+            }
             canChangeState={data.viewerCanEdit && !merged}
           />
         </main>
@@ -122,6 +164,85 @@ export function RepoPull({
         )
       ) : null}
     </div>
+  );
+}
+
+const PARENT_STATE_ICONS = { open: GitPullRequest, closed: GitPullRequestClosed, merged: GitMerge } as const;
+
+const PARENT_STATE_CLASSES = {
+  open: "text-(--color-success)",
+  closed: "text-(--color-destructive)",
+  merged: "text-(--color-merged)",
+} as const;
+
+// PullParents lists the pull requests the pull request depends on, which its
+// changes are reviewed on top of, and lets writers change them.
+function PullParents({ issueRef, pull }: { issueRef: IssueRef; pull: RepoPullData["pull"] }) {
+  const { t } = useTranslation();
+  const { parents, parentOptions } = pull;
+  const router = useRouter();
+  const change = useMutation({
+    mutationFn: (indexes: number[]) => setRepoPullParents(issueRef, indexes),
+    onSuccess: () => router.invalidate(),
+    onError: (err) => toast.error(err.message),
+  });
+  const checked = new Set(parents.map((p) => p.index));
+  const toggle = (index: number) =>
+    change.mutate(checked.has(index) ? [...checked].filter((i) => i !== index) : [...checked, index]);
+  return (
+    <SidebarSection
+      title={t("repo.pulls.depends_on")}
+      editor={
+        pull.viewerCanEditParents && parentOptions
+          ? () => (
+              <Picker
+                heading={t("repo.pulls.set_parents")}
+                filterLabel={t("repo.pulls.filter_parents")}
+                groups={[{ items: parentOptions.map((p) => ({ ...p, id: p.index, name: `#${p.index} ${p.title}` })) }]}
+                checked={checked}
+                disabled={change.isPending}
+                render={(p) => {
+                  const Icon = PARENT_STATE_ICONS[p.state];
+                  return (
+                    <>
+                      <Icon className={cn("size-4 shrink-0", PARENT_STATE_CLASSES[p.state])} aria-hidden />
+                      <span className="min-w-0 truncate">
+                        <span className="text-(--color-muted-foreground)">#{p.index}</span> {p.title}
+                      </span>
+                    </>
+                  );
+                }}
+                onToggle={toggle}
+              />
+            )
+          : undefined
+      }
+    >
+      {parents.length ? (
+        <ul className="flex flex-col gap-1">
+          {parents.map((parent) => {
+            const Icon = PARENT_STATE_ICONS[parent.state];
+            return (
+              <li key={parent.index}>
+                <Link
+                  to="/$owner/$repo/pulls/$index"
+                  params={{ owner: issueRef.owner, repo: issueRef.name, index: String(parent.index) }}
+                  className="flex min-h-6 items-start gap-1.5 text-sm hover:text-(--color-primary)"
+                >
+                  <Icon className={cn("mt-0.5 size-4 shrink-0", PARENT_STATE_CLASSES[parent.state])} aria-hidden />
+                  <span className="min-w-0 wrap-anywhere">
+                    <span className="text-(--color-muted-foreground)">#{parent.index}</span> {parent.title}
+                    <span className="sr-only"> ({t(`repo.pulls.parent_state_${parent.state}`)})</span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-sm text-(--color-muted-foreground)">{t("repo.pulls.no_parents")}</p>
+      )}
+    </SidebarSection>
   );
 }
 
@@ -230,6 +351,7 @@ const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon
   merged: { icon: GitMerge, color: "text-(--color-merged)", tint: "bg-(--color-merged)/15" },
   closed: { icon: CircleX, color: "text-(--color-muted-foreground)", tint: "bg-(--color-surface)" },
   broken: { icon: CircleAlert, color: "text-(--color-destructive)", tint: "bg-(--color-destructive)/15" },
+  blocked: { icon: Clock, color: "text-(--color-muted-foreground)", tint: "bg-(--color-surface)" },
   checking: { icon: LoaderCircle, color: "text-(--color-muted-foreground)", tint: "bg-(--color-surface)" },
   mergeable: { icon: CircleCheck, color: "text-(--color-success)", tint: "bg-(--color-success)/15" },
   conflict: { icon: CircleAlert, color: "text-(--color-destructive)", tint: "bg-(--color-destructive)/15" },
@@ -247,6 +369,7 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
     merged: t("repo.pulls.has_merged"),
     closed: t("repo.pulls.reopen_to_merge"),
     broken: t("repo.pulls.data_broken"),
+    blocked: t("repo.pulls.blocked_desc").replace("%s", listIndexes(pull.waiting)),
     checking: t("repo.pulls.is_checking"),
     mergeable: t("repo.pulls.can_auto_merge_desc"),
     conflict: t("repo.pulls.cannot_auto_merge_desc"),
@@ -268,6 +391,8 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
     );
   } else if (pull.state === "mergeable" && pull.viewerCanMerge) {
     body = <MergeForm issueRef={issueRef} allowRebase={pull.allowRebase} />;
+  } else if (pull.state === "blocked" && (pull.viewerCanUpdate || pull.viewerCanMergeStack)) {
+    body = <StackActions issueRef={issueRef} pull={pull} />;
   }
 
   return (
@@ -283,12 +408,132 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
             {pull.state === "conflict" ? (
               <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.cannot_auto_merge_helper")}</p>
             ) : null}
+            {pull.state === "blocked" ? (
+              <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.blocked_helper")}</p>
+            ) : null}
+            {pull.state === "blocked" && pull.parents.some((p) => p.state === "closed") ? (
+              <p className="mt-1 text-(--color-destructive)">
+                {t("repo.pulls.blocked_closed").replace(
+                  "%s",
+                  listIndexes(pull.parents.filter((p) => p.state === "closed").map((p) => p.index)),
+                )}
+              </p>
+            ) : null}
           </div>
         </div>
         {body}
       </div>
     </section>
   );
+}
+
+// listIndexes names pull requests by number, e.g., "#1, #2".
+function listIndexes(indexes: number[]) {
+  return indexes.map((i) => `#${i}`).join(", ");
+}
+
+// StackActions lets writers bring the changes of the parents into the branch
+// of a pull request that waits for them, and merge it together with them.
+function StackActions({ issueRef, pull }: { issueRef: IssueRef; pull: RepoPullData["pull"] }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const update = useMutation({
+    mutationFn: () => updateRepoPullBranch(issueRef),
+    onSuccess: () => router.invalidate(),
+    onError: (err) => toast.error(err.message),
+  });
+  const merge = useMutation({
+    mutationFn: () => mergeRepoPullStack(issueRef),
+    onSuccess: async () => {
+      setOpen(false);
+      await router.invalidate();
+    },
+  });
+  const { formError } = formErrors(merge.error);
+  const ancestors = listIndexes(stackAncestors(pull));
+
+  return (
+    <div className="flex flex-col divide-y divide-(--color-border) border-t border-(--color-border)">
+      {pull.viewerCanUpdate ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+          <p className="flex min-w-0 items-start gap-2">
+            <RefreshCw className="mt-0.5 size-4 shrink-0 text-(--color-primary)" aria-hidden />
+            <span>{t("repo.pulls.behind_desc").replace("%s", listIndexes(pull.behind))}</span>
+          </p>
+          <Button type="button" size="sm" variant="outline" disabled={update.isPending} onClick={() => update.mutate()}>
+            <RefreshCw className={cn("size-4", update.isPending && "motion-safe:animate-spin")} aria-hidden />
+            {update.isPending ? t("repo.pulls.updating_branch") : t("repo.pulls.update_branch")}
+          </Button>
+        </div>
+      ) : null}
+      {pull.viewerCanMergeStack ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+          <p className="min-w-0 text-(--color-muted-foreground)">
+            {t("repo.pulls.merge_stack_hint").replace("%s", ancestors)}
+          </p>
+          <Dialog
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (!next) merge.reset();
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button type="button" size="sm">
+                <GitMerge className="size-4" aria-hidden />
+                {t("repo.pulls.merge_stack")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader className="pb-3">
+                <DialogTitle>{t("repo.pulls.merge_stack")}</DialogTitle>
+                <DialogDescription>
+                  {t("repo.pulls.merge_stack_desc")
+                    .replace("%[1]s", ancestors)
+                    .replace("%[2]s", `#${issueRef.index}`)
+                    .replace("%[3]s", pull.baseBranch)}
+                </DialogDescription>
+              </DialogHeader>
+              {formError ? (
+                <p role="alert" className="px-6 pb-3 text-sm text-(--color-destructive)">
+                  {formError}
+                </p>
+              ) : null}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  {t("cancel")}
+                </Button>
+                <Button type="button" disabled={merge.isPending} onClick={() => merge.mutate()}>
+                  <GitMerge className="size-4" aria-hidden />
+                  {merge.isPending ? t("repo.pulls.merging_stack") : t("repo.pulls.merge_stack")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// stackAncestors returns the numbers of the pull requests the pull request
+// waits for, directly or through others, parents first, as merging the stack
+// merges them.
+function stackAncestors(pull: RepoPullData["pull"]) {
+  const nodes = pull.stack?.nodes ?? [];
+  const byIndex = new Map(nodes.map((n) => [n.index, n]));
+  const seen = new Set<number>();
+  const pending = [...pull.waiting];
+  while (pending.length) {
+    const index = pending.pop() as number;
+    const node = byIndex.get(index);
+    if (seen.has(index) || !node || node.status === "merged") continue;
+    seen.add(index);
+    pending.push(...node.parents);
+  }
+  // The nodes are parents first, which is the order they merge in.
+  return nodes.filter((n) => seen.has(n.index)).map((n) => n.index);
 }
 
 // MergeForm merges the pull request with a merge commit, or by rebasing it
