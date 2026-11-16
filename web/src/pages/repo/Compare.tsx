@@ -73,7 +73,7 @@ export function RepoCompare({
         </div>
         {commits.length ? (
           <>
-            <CommitList owner={owner} name={name} commits={commits.slice(0, commits.length - hiddenCommits)} />
+            <CommitList owner={owner} name={name} commits={commits.slice(0, commits.length - hiddenCommits)} compact />
             {hiddenCommits > 0 ? (
               <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowAll(true)}>
                 {t(hiddenCommits === 1 ? "repo.commits.show_more_commit" : "repo.commits.show_more_commits", {
