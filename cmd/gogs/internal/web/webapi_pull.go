@@ -64,6 +64,9 @@ type repoPullInfo struct {
 	// after the merge: a branch of the same repository that is not protected
 	// and has no new commits.
 	ViewerCanDeleteBranch bool `json:"viewerCanDeleteBranch"`
+	// ViewerCanRestoreBranch is whether the viewer can create the deleted head
+	// branch again at the commit that was merged.
+	ViewerCanRestoreBranch bool `json:"viewerCanRestoreBranch"`
 	// Diff is what the pull request changes, unless it is broken. Its raw
 	// text is served by getRepoPullRaw.
 	Diff *pullDiff `json:"diff,omitempty"`
@@ -133,12 +136,16 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		}
 		info.CommitCount, info.FileCount = len(commits), len(names)
 
-		if repoCtx.Viewer.CanWrite() && pull.HeadRepoID == pull.BaseRepoID && baseGitRepo.HasBranch(ctx, pull.HeadBranch) {
-			protected, err := database.GetProtectBranchOfRepoByName(repo.ID, pull.HeadBranch)
-			if err != nil && !database.IsErrBranchNotExist(err) {
-				return nil, nil, nil, errors.Wrap(err, "get protected branch")
+		if repoCtx.Viewer.CanWrite() && pull.HeadRepoID == pull.BaseRepoID {
+			if baseGitRepo.HasBranch(ctx, pull.HeadBranch) {
+				protected, err := database.GetProtectBranchOfRepoByName(repo.ID, pull.HeadBranch)
+				if err != nil && !database.IsErrBranchNotExist(err) {
+					return nil, nil, nil, errors.Wrap(err, "get protected branch")
+				}
+				info.ViewerCanDeleteBranch = (protected == nil || !protected.Protected) && pull.HeadBranch != repo.DefaultBranch
+			} else {
+				info.ViewerCanRestoreBranch = true
 			}
-			info.ViewerCanDeleteBranch = (protected == nil || !protected.Protected) && pull.HeadBranch != repo.DefaultBranch
 		}
 		return info, rng, commits, nil
 	}
@@ -285,6 +292,40 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, viewer *database.
 	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, req.Description); err != nil {
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
+	}
+	return http.StatusNoContent, nil, nil
+}
+
+// postRepoPullBranch restores the deleted head branch of the merged pull
+// request at the commit that was merged, like GitHub's "Restore branch".
+func postRepoPullBranch(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
+	repo := repoCtx.Repo
+	pull := issue.PullRequest
+	info, _, _, err := describePull(ctx, repoCtx, issue)
+	if err != nil {
+		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	} else if !info.ViewerCanRestoreBranch {
+		return http.StatusNotFound, nil, errors.New("branch cannot be restored")
+	}
+	gitRepo, err := openRepoGit(repoCtx)
+	if err != nil {
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+	}
+	if err = gitRepo.CreateBranch(ctx, pull.HeadBranch, pull.MergedCommitID); err != nil {
+		logger.Error("Failed to create branch", "branch", pull.HeadBranch, "commitID", pull.MergedCommitID, "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "create branch")
+	}
+	if err = database.PrepareWebhooks(logger, repo, database.HookEventTypeCreate, &apiv1types.WebhookCreatePayload{
+		Ref:           pull.HeadBranch,
+		RefType:       "branch",
+		DefaultBranch: repo.DefaultBranch,
+		Repo:          repo.APIFormatLegacy(logger, nil),
+		Sender:        viewer.APIFormat(),
+	}); err != nil {
+		logger.Error("Failed to prepare webhooks for restored branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
 	}
 	return http.StatusNoContent, nil, nil
 }

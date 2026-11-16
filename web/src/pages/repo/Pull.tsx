@@ -10,11 +10,13 @@ import {
   LoaderCircle,
   type LucideIcon,
   MessagesSquare,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
-import { ConfirmButton } from "@/components/ConfirmButton";
 import { DiffWorkspace } from "@/components/DiffWorkspace";
 import { PageTabs } from "@/components/PageTabs";
 import { RepoHeader } from "@/components/RepoHeader";
@@ -29,6 +31,7 @@ import {
   deleteRepoPullBranch,
   mergeRepoPull,
   repoHeaderQuery,
+  restoreRepoPullBranch,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
@@ -237,10 +240,9 @@ const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon
 };
 
 // MergeBox says whether the pull request can be merged, lets writers merge it
-// when it can, and lets them delete its branch once it is merged.
+// when it can, and lets them delete or restore its branch once it is merged.
 function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }) {
   const { t } = useTranslation();
-  const router = useRouter();
   const { pull } = data;
   const { icon: Icon, color, tint } = MERGE_BOX_STATES[pull.state];
   const iconClassName = cn(color, pull.state === "checking" && "animate-spin");
@@ -254,19 +256,8 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
   }[pull.state];
 
   let body: ReactNode = null;
-  if (pull.state === "merged" && pull.viewerCanDeleteBranch) {
-    body = (
-      <div className="border-t border-(--color-border) px-4 py-3">
-        <ConfirmButton
-          label={t("repo.pulls.delete_branch")}
-          title={t("repo.pulls.delete_branch")}
-          description={t("repo.pulls.delete_branch_desc").replace("%s", pull.headBranch)}
-          size="sm"
-          action={() => deleteRepoPullBranch(issueRef)}
-          onDone={() => router.invalidate()}
-        />
-      </div>
-    );
+  if (pull.state === "merged" && (pull.viewerCanDeleteBranch || pull.viewerCanRestoreBranch)) {
+    body = <BranchActions issueRef={issueRef} branch={pull.headBranch} deleted={pull.viewerCanRestoreBranch} />;
   } else if (pull.state === "mergeable" && pull.viewerCanMerge) {
     body = <MergeForm issueRef={issueRef} allowRebase={pull.allowRebase} />;
   }
@@ -289,6 +280,47 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
         {body}
       </div>
     </section>
+  );
+}
+
+// BranchActions deletes the head branch of a merged pull request right away,
+// and restores it once deleted, like GitHub.
+function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; branch: string; deleted: boolean }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const mutation = useMutation({
+    mutationFn: () => (deleted ? restoreRepoPullBranch(issueRef) : deleteRepoPullBranch(issueRef)),
+    onSuccess: () => router.invalidate(),
+    onError: (err) => toast.error(err.message),
+  });
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--color-border) px-4 py-3 text-sm">
+      {deleted ? (
+        <p className="min-w-0 text-(--color-muted-foreground)">
+          <RichText text={t("repo.pulls.branch_deleted")} code={[branch]} />
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        variant={deleted ? "outline" : "destructive"}
+        size="sm"
+        disabled={mutation.isPending}
+        onClick={() => mutation.mutate()}
+        className={cn(!deleted && "ml-auto")}
+      >
+        {deleted ? (
+          <>
+            <RotateCcw className="size-4" aria-hidden />
+            {t("repo.pulls.restore_branch")}
+          </>
+        ) : (
+          <>
+            <Trash2 className="size-4" aria-hidden />
+            {t("repo.pulls.delete_branch")}
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
 

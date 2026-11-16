@@ -798,6 +798,9 @@ export interface RepoPullInfo {
   allowRebase: boolean;
   viewerCanMerge: boolean;
   viewerCanDeleteBranch: boolean;
+  // viewerCanRestoreBranch is whether the viewer can create the deleted head
+  // branch again at the commit that was merged.
+  viewerCanRestoreBranch: boolean;
   // diff is the commits the changes are between, in the repository that has
   // both, unless the pull request is broken.
   // markdownExtensions are the extensions of files that show a rich diff.
@@ -826,6 +829,12 @@ export function mergeRepoPull(
 // deleteRepoPullBranch deletes the head branch of the merged pull request.
 export function deleteRepoPullBranch(issue: IssueRef) {
   return send("DELETE", issueURL(issue, "/branch"));
+}
+
+// restoreRepoPullBranch creates the deleted head branch of the merged pull
+// request again at the commit that was merged.
+export function restoreRepoPullBranch(issue: IssueRef) {
+  return send("POST", issueURL(issue, "/branch"));
 }
 
 // renderRepoMarkdown renders Markdown the way the issues of the repository
