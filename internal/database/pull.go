@@ -194,6 +194,13 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
+	unmerged, err := pr.UnmergedParents(ctx)
+	if err != nil {
+		return errors.Newf("list unmerged parents: %v", err)
+	} else if len(unmerged) > 0 {
+		return errors.Wrapf(ErrPullRequestParentsNotMerged, "#%d", unmerged[0].Index)
+	}
+
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -391,6 +398,29 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 		return errors.Newf("create temporary repository: %v", err)
 	}
 	defer cleanup()
+
+	// The patch of a pull request with parents is relative to their merged
+	// heads, so it can apply to the base branch even when the branch itself
+	// does not merge, e.g., when it lacks the latest changes of a parent.
+	// Merge the branch the way merging the pull request would instead.
+	parentIDs, err := Handle.PullRequestParents().ListParentIDs(ctx, pr.ID)
+	if err != nil {
+		return errors.Newf("list parent IDs: %v", err)
+	} else if len(parentIDs) > 0 {
+		headCommitID, err := git.RepoBranchCommitID(ctx, pr.BaseRepo.RepoPath(), pr.HeadBranch)
+		if err != nil {
+			return errors.Newf("get head branch %q commit ID: %v", pr.HeadBranch, err)
+		}
+		pr.Status = PullRequestStatusChecking
+		_, err = tmpRepo.MergeTree(ctx, baseCommitID, headCommitID)
+		if errors.Is(err, git.ErrMergeConflict) {
+			log.Trace("PullRequest[%d].testPatch (merge): has conflict", pr.ID)
+			pr.Status = PullRequestStatusConflict
+			return nil
+		}
+		return err
+	}
+
 	if err = tmpRepo.ReadTree(ctx, baseCommitID); err != nil {
 		return errors.Newf("read tree: %v", err)
 	}
@@ -598,24 +628,36 @@ func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
 		return errors.Newf("open repository: %v", err)
 	}
 
-	// Add a temporary remote.
-	tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
-	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
-	err = headGitRepo.RemoteAdd(ctx, tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
+	parents, err := pr.loadParents(ctx)
 	if err != nil {
-		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+		return errors.Newf("load parents: %v", err)
 	}
-	defer func() {
-		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
-			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+	if len(parents) > 0 {
+		pr.MergeBase, err = pr.updateSyntheticBase(ctx, headGitRepo, parents)
+		if err != nil {
+			return errors.Newf("update synthetic base: %v", err)
 		}
-	}()
+	} else {
+		// Add a temporary remote.
+		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
+		baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
+		err = headGitRepo.RemoteAdd(ctx, tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
+		if err != nil {
+			return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+		}
+		defer func() {
+			if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
+				log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+			}
+		}()
 
-	remoteBranch := "remotes/" + tmpRemote + "/" + pr.BaseBranch
-	pr.MergeBase, err = headGitRepo.MergeBase(ctx, remoteBranch, pr.HeadBranch)
-	if err != nil {
-		return errors.Newf("get merge base: %v", err)
-	} else if err = pr.Update(); err != nil {
+		remoteBranch := "remotes/" + tmpRemote + "/" + pr.BaseBranch
+		pr.MergeBase, err = headGitRepo.MergeBase(ctx, remoteBranch, pr.HeadBranch)
+		if err != nil {
+			return errors.Newf("get merge base: %v", err)
+		}
+	}
+	if err = pr.Update(); err != nil {
 		return errors.Newf("update: %v", err)
 	}
 
@@ -785,6 +827,7 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 	}
 
 	addHeadRepoTasks(prs)
+	addChildTasks(context.Background(), prs)
 
 	log.Trace("AddTestPullRequestTask [base_repo_id: %d, base_branch: %s]: finding pull requests", repoID, branch)
 	prs, err = GetUnmergedPullRequestsByBaseInfo(repoID, branch)

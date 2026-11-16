@@ -65,6 +65,34 @@ func RepoBranchCommitID(ctx context.Context, repoPath, branch string) (string, e
 	return r.BranchCommitID(ctx, branch)
 }
 
+// UpdateRefOptions contains optional arguments for updating a reference.
+//
+// Docs: https://git-scm.com/docs/git-update-ref
+type UpdateRefOptions struct {
+	// The commit the reference must point at for the update to happen, which
+	// guards against overwriting a concurrent update.
+	OldValue string
+}
+
+// UpdateRef points the fully qualified reference, e.g.,
+// "refs/pull/1/base", at the commit, creating the reference if it does not
+// exist.
+func (r *Repository) UpdateRef(ctx context.Context, ref, commitID string, opts ...UpdateRefOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.UpdateRef")
+	defer span.End()
+
+	var opt UpdateRefOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+	args := []string{"update-ref", "--end-of-options", ref, commitID}
+	if opt.OldValue != "" {
+		args = append(args, opt.OldValue)
+	}
+	_, err := exec(ctx, r.path, args, nil)
+	return err
+}
+
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {
@@ -243,6 +271,23 @@ func (r *Repository) Branches(ctx context.Context) ([]string, error) {
 		branches[i] = strings.TrimPrefix(heads[i].Refspec, RefsHeads)
 	}
 	return branches, nil
+}
+
+// BranchCommitIDs returns the commit ID of every branch in the repository,
+// keyed by the short name of the branch.
+func (r *Repository) BranchCommitIDs(ctx context.Context) (map[string]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchCommitIDs")
+	defer span.End()
+
+	heads, err := r.showRef(ctx, showRefOptions{Heads: true})
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[string]string, len(heads))
+	for _, head := range heads {
+		ids[strings.TrimPrefix(head.Refspec, RefsHeads)] = head.ID
+	}
+	return ids, nil
 }
 
 // RepoBranches is like Repository.Branches for the repository in given path.

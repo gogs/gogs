@@ -725,10 +725,39 @@ export function setRepoIssueAssignee(issue: IssueRef, id: number) {
   return submit<void>("PUT", issueURL(issue, "/assignee"), { id });
 }
 
+// PullParent is a pull request another one depends on, or may depend on.
+export interface PullParent {
+  index: number;
+  title: string;
+  state: "open" | "closed" | "merged";
+}
+
+// PullStackStatus is where a pull request of a stack stands: "behind" when it
+// lacks changes of a parent, and "blocked" while a parent is not merged.
+export type PullStackStatus = "merged" | "closed" | "behind" | "blocked" | "checking" | "mergeable" | "conflict";
+
+export interface PullStackNode {
+  index: number;
+  title: string;
+  headBranch: string;
+  status: PullStackStatus;
+  // parents are the numbers of the pull requests it depends on.
+  parents: number[];
+  poster: IssueUser;
+  updatedAt: string;
+  comments: number;
+}
+
+// PullStack is the pull requests connected by dependencies, parents first.
+export interface PullStack {
+  baseBranch: string;
+  nodes: PullStackNode[];
+}
+
 export interface RepoPullInfo {
-  // state is "broken" when a branch or the fork is gone, and "checking"
-  // while conflicts are checked.
-  state: "merged" | "closed" | "broken" | "checking" | "mergeable" | "conflict";
+  // state is "broken" when a branch or the fork is gone, "blocked" while a
+  // parent is not merged, and "checking" while conflicts are checked.
+  state: "merged" | "closed" | "broken" | "blocked" | "checking" | "mergeable" | "conflict";
   headBranch: string;
   baseBranch: string;
   // headLabel and baseLabel name the branches after their owners, or are
@@ -746,6 +775,20 @@ export interface RepoPullInfo {
   // diff is the commits the changes are between, in the repository that has
   // both, unless the pull request is broken.
   diff?: { base: string; head: string; owner: string; name: string };
+  // parents are the pull requests it depends on. Its changes are reviewed
+  // against the merge of their head branches instead of the base branch.
+  parents: PullParent[];
+  // waiting are the numbers of the parents not merged yet, and behind the
+  // ones with changes its branch lacks.
+  waiting: number[];
+  behind: number[];
+  stack?: PullStack;
+  // parentOptions are the pull requests it may depend on, for those who can
+  // change its parents.
+  parentOptions?: PullParent[];
+  viewerCanEditParents: boolean;
+  viewerCanUpdate: boolean;
+  viewerCanMergeStack: boolean;
 }
 
 export interface RepoPullData extends RepoIssueData {
@@ -765,6 +808,22 @@ export function mergeRepoPull(
   form: { style: "create_merge_commit" | "rebase_before_merging"; description: string },
 ) {
   return submit<void>("POST", issueURL(issue, "/merge"), form);
+}
+
+// mergeRepoPullStack merges the pull requests the pull request waits for, and
+// then the pull request, after checking they all merge cleanly.
+export function mergeRepoPullStack(issue: IssueRef) {
+  return submit<void>("POST", issueURL(issue, "/merge"), { stack: true });
+}
+
+// setRepoPullParents replaces the pull requests the pull request depends on.
+export function setRepoPullParents(issue: IssueRef, parents: number[]) {
+  return submit<void>("PUT", issueURL(issue, "/parents"), { parents });
+}
+
+// updateRepoPullBranch merges the changes of the parents into the head branch.
+export function updateRepoPullBranch(issue: IssueRef) {
+  return submit<void>("POST", issueURL(issue, "/update"), {});
 }
 
 // deleteRepoPullBranch deletes the head branch of the merged pull request.

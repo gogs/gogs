@@ -1670,6 +1670,11 @@ func DeleteRepository(ownerID, repoID int64) error {
 		}
 	}
 
+	// Pull requests only depend on others of the same repository.
+	if _, err = sess.Exec("DELETE FROM pull_request_parent WHERE pull_id IN (SELECT id FROM pull_request WHERE base_repo_id = ?)", repoID); err != nil {
+		return errors.Newf("delete pull request parents: %v", err)
+	}
+
 	if err = deleteBeans(sess,
 		&Repository{ID: repoID},
 		&Access{RepoID: repo.ID},

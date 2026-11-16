@@ -125,6 +125,25 @@ func TestRepository_PullRequestMeta(t *testing.T) {
 		assert.Equal(t, 3, meta.NumFiles)
 	})
 
+	t.Run("given base that is not an ancestor", func(t *testing.T) {
+		// Like a commit that merges the branches the pull request depends on:
+		// the head branch has its tree but not the commit itself.
+		parent, err := head.RevParse(ctx, "feature~1")
+		require.NoError(t, err)
+		tree, err := head.RevParse(ctx, "feature~1^{tree}")
+		require.NoError(t, err)
+		sig := &Signature{Name: "alice", Email: "alice@example.com"}
+		synthetic, err := head.CommitTree(ctx, tree, "synthetic\n", CommitTreeOptions{Parents: []string{parent}, Author: sig, Committer: sig})
+		require.NoError(t, err)
+
+		meta, err := head.PullRequestMeta(ctx, base.Path(), "feature", "master", PullRequestMetaOptions{Base: synthetic})
+		require.NoError(t, err)
+		assert.Equal(t, synthetic, meta.MergeBase)
+		require.Len(t, meta.Commits, 1)
+		assert.Equal(t, "Update c.txt", meta.Commits[0].Summary())
+		assert.Equal(t, 1, meta.NumFiles)
+	})
+
 	t.Run("no merge base", func(t *testing.T) {
 		commitFiles(t, head, "lonely", map[string]string{"lonely.txt": "lonely"})
 

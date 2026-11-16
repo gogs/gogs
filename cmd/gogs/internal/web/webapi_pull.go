@@ -41,8 +41,8 @@ func withRepoPull(c flamego.Context, repoCtx *repoContext) {
 
 type repoPullInfo struct {
 	// State is "merged", "closed", "broken" when a branch or the fork is
-	// gone, "checking" while conflicts are checked, "mergeable" or
-	// "conflict".
+	// gone, "blocked" while a parent is not merged, "checking" while
+	// conflicts are checked, "mergeable" or "conflict".
 	State      string `json:"state"`
 	HeadBranch string `json:"headBranch"`
 	BaseBranch string `json:"baseBranch"`
@@ -66,6 +66,28 @@ type repoPullInfo struct {
 	// Diff is what the pull request changes, unless it is broken. Its raw
 	// text is served by getRepoPullRaw.
 	Diff *pullDiff `json:"diff,omitempty"`
+	// Parents are the pull requests it depends on. Its changes are reviewed
+	// against the merge of their head branches instead of the base branch.
+	Parents []pullParent `json:"parents"`
+	// Waiting are the numbers of the parents that are not merged yet. It
+	// cannot be merged before them, which makes its state "blocked".
+	Waiting []int64 `json:"waiting"`
+	// Behind are the numbers of the parents with changes its head branch
+	// does not have yet.
+	Behind []int64 `json:"behind"`
+	// Stack is the graph of the pull requests connected to it, when there are
+	// any.
+	Stack *pullStack `json:"stack,omitempty"`
+	// ParentOptions are the pull requests it may depend on, for those who can
+	// change its parents.
+	ParentOptions        []pullParent `json:"parentOptions,omitempty"`
+	ViewerCanEditParents bool         `json:"viewerCanEditParents"`
+	// ViewerCanUpdate is whether the viewer can merge the changes of the
+	// parents it is behind into its head branch.
+	ViewerCanUpdate bool `json:"viewerCanUpdate"`
+	// ViewerCanMergeStack is whether the viewer can merge it together with
+	// the pull requests it waits for.
+	ViewerCanMergeStack bool `json:"viewerCanMergeStack"`
 }
 
 // pullDiff is the commits the changes of a pull request are between, in the
@@ -114,6 +136,10 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "open repository")
 	}
+	pull.Issue = issue
+	if err = describePullStack(ctx, repoCtx, baseGitRepo, pull, info); err != nil {
+		return nil, nil, nil, errors.Wrap(err, "describe stack")
+	}
 	if pull.HasMerged {
 		info.State = "merged"
 		mergedAt := pull.Merged.UTC()
@@ -121,10 +147,17 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		merger := toIssueUser(pull.Merger)
 		info.Merger = &merger
 		rng = &pullRange{GitRepo: baseGitRepo, Owner: repoCtx.Owner.Name, Name: repo.Name, Base: pull.MergeBase, Head: pull.MergedCommitID}
-		if commits, err = baseGitRepo.RevList(ctx, []string{pull.MergeBase + "..." + pull.MergedCommitID}); err != nil {
+		// The synthetic base of a pull request with parents is not an
+		// ancestor of its head, so only count what the head adds to it.
+		hasParents := len(info.Parents) > 0
+		revRange := pull.MergeBase + "..." + pull.MergedCommitID
+		if hasParents {
+			revRange = pull.MergeBase + ".." + pull.MergedCommitID
+		}
+		if commits, err = baseGitRepo.RevList(ctx, []string{revRange}); err != nil {
 			return nil, nil, nil, errors.Wrap(err, "list commits")
 		}
-		names, err := baseGitRepo.DiffNameOnly(ctx, pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+		names, err := baseGitRepo.DiffNameOnly(ctx, pull.MergeBase, pull.MergedCommitID, git.DiffNameOnlyOptions{NeedsMergeBase: !hasParents})
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "list changed files")
 		}
@@ -161,7 +194,13 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		return info, nil, nil, nil
 	}
 
-	meta, err := headGitRepo.PullRequestMeta(ctx, database.RepoPath(repoCtx.Owner.Name, repo.Name), pull.HeadBranch, pull.BaseBranch)
+	// A pull request with parents is reviewed against the synthetic base built
+	// from their head branches, which is stored as its merge base.
+	var metaOpts git.PullRequestMetaOptions
+	if len(info.Parents) > 0 {
+		metaOpts.Base = pull.MergeBase
+	}
+	meta, err := headGitRepo.PullRequestMeta(ctx, database.RepoPath(repoCtx.Owner.Name, repo.Name), pull.HeadBranch, pull.BaseBranch, metaOpts)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "get pull request meta")
 	}
@@ -181,6 +220,12 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
 	default:
 		info.State = "conflict"
+	}
+	// Whether its own changes merge cleanly matters only once its parents
+	// are in the base branch.
+	if !issue.IsClosed && len(info.Waiting) > 0 {
+		info.State = "blocked"
+		info.ViewerCanMerge = false
 	}
 	return info, rng, meta.Commits, nil
 }
@@ -250,12 +295,15 @@ type repoPullMergeRequest struct {
 	// Style is "create_merge_commit" or "rebase_before_merging".
 	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging"`
 	Description string `json:"description"`
+	// Stack merges the pull requests it waits for first, each with a merge
+	// commit, after checking they all merge cleanly together.
+	Stack bool `json:"stack"`
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
 func postRepoPullMerge(c flamego.Context, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
 	pull := issue.PullRequest
-	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
+	if issue.IsClosed || pull.HasMerged || (!req.Stack && !pull.CanAutoMerge()) {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
 	}
 	gitRepo, err := openRepoGit(repoCtx)
@@ -269,11 +317,25 @@ func postRepoPullMerge(c flamego.Context, viewer *database.User, repoCtx *repoCo
 	}
 	pull.Issue = issue
 	pull.Issue.Repo = repoCtx.Repo
+	if req.Stack {
+		_, err = database.MergePullRequestStack(c.Request().Context(), viewer, repoCtx.Repo, gitRepo, pull)
+		if errors.Is(err, database.ErrPullRequestStackNotMergeable) {
+			return http.StatusConflict, &bindingErrorResponse{Error: err.Error()}, nil
+		} else if err != nil {
+			log.Error("postRepoPullMerge: merge stack of pull request %d: %v", pull.ID, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "merge stack")
+		}
+		return http.StatusNoContent, nil, nil
+	}
+
 	style := database.MergeStyle(req.Style)
 	if style == "" {
 		style = database.MergeStyleRegular
 	}
-	if err = pull.Merge(c.Request().Context(), viewer, gitRepo, style, req.Description); err != nil {
+	err = pull.Merge(c.Request().Context(), viewer, gitRepo, style, req.Description)
+	if errors.Is(err, database.ErrPullRequestParentsNotMerged) {
+		return http.StatusConflict, &bindingErrorResponse{Error: err.Error()}, nil
+	} else if err != nil {
 		log.Error("postRepoPullMerge: merge pull request %d: %v", pull.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
 	}

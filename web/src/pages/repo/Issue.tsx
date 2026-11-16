@@ -133,12 +133,18 @@ export function IssueConversation({
   issueRef,
   data,
   mergeBox,
+  sidebar,
+  aside,
   canChangeState = data.viewerCanEdit,
   className,
 }: {
   issueRef: IssueRef;
   data: RepoIssueData;
   mergeBox?: ReactNode;
+  // sidebar is shown in the sidebar before the participants, and aside above
+  // the sidebar.
+  sidebar?: ReactNode;
+  aside?: ReactNode;
   canChangeState?: boolean;
   className?: string;
 }) {
@@ -196,7 +202,12 @@ export function IssueConversation({
         {mergeBox}
         <NewComment issueRef={ref} data={data} canChangeState={canChangeState} />
       </div>
-      <IssueSidebar issueRef={ref} data={data} />
+      <div className="flex min-w-0 flex-col">
+        {aside}
+        <IssueSidebar issueRef={ref} data={data}>
+          {sidebar}
+        </IssueSidebar>
+      </div>
     </div>
   );
 }
@@ -706,7 +717,7 @@ function NewComment({
 
 // IssueSidebar shows the labels, the milestone, the assignee and the
 // participants of the issue, and lets writers change the first three.
-function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueData }) {
+function IssueSidebar({ issueRef, data, children }: { issueRef: IssueRef; data: RepoIssueData; children?: ReactNode }) {
   const { t } = useTranslation();
   const labels = useIssueChange((ids: number[]) => setRepoIssueLabels(issueRef, ids));
   const milestone = useIssueChange((id: number) => setRepoIssueMilestone(issueRef, id));
@@ -722,6 +733,7 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
       onMilestone={milestone.mutateAsync}
       onAssignee={assignee.mutateAsync}
     >
+      {children}
       <SidebarSection
         title={t("repo.issues.num_participants").replace(/%(?:\[1\])?d/, String(data.participants.length))}
       >

@@ -241,7 +241,7 @@ export function SidebarSection({
 
 // Picker is the popover of a sidebar section, like the ones of GitHub: a
 // heading, a filter, and the options in groups, each toggled on click.
-function Picker<T extends { id: number; name: string }>({
+export function Picker<T extends { id: number; name: string }>({
   heading,
   filterLabel,
   groups,
