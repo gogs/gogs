@@ -111,36 +111,6 @@ func RetrieveRepoMetas(c *context.Context, repo *database.Repository) []*databas
 	return labels
 }
 
-func getFileContentFromDefaultBranch(c *context.Context, filename string) (string, bool) {
-	if c.Repo.Commit == nil {
-		var err error
-		c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Req.Context(), c.Repo.Repository.DefaultBranch)
-		if err != nil {
-			return "", false
-		}
-	}
-
-	entry, err := c.Repo.Commit.TreeEntry(c.Req.Context(), filename)
-	if err != nil {
-		return "", false
-	}
-	p, err := entry.Blob().Bytes(c.Req.Context())
-	if err != nil {
-		return "", false
-	}
-	return string(p), true
-}
-
-func setTemplateIfExists(c *context.Context, ctxDataKey string, possibleFiles []string) {
-	for _, filename := range possibleFiles {
-		content, found := getFileContentFromDefaultBranch(c, filename)
-		if found {
-			c.Data[ctxDataKey] = content
-			return
-		}
-	}
-}
-
 func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int64) {
 	var (
 		repo = c.Repo.Repository

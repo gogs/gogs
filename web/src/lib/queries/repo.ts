@@ -635,34 +635,60 @@ export function fetchRepoIssue(owner: string, name: string, index: number) {
   return fetchJSON<RepoIssueData>(repoURL(owner, name, `/issues/${index}`));
 }
 
+export interface IssueTemplateSummary {
+  // file is the name of the template in the ISSUE_TEMPLATE directory.
+  file: string;
+  name: string;
+  about: string;
+}
+
+export interface IssueTemplateField {
+  type: "markdown" | "textarea" | "input" | "dropdown" | "checkboxes" | "upload";
+  label?: string;
+  // descriptionHTML and html are rendered Markdown.
+  descriptionHTML?: string;
+  html?: string;
+  placeholder?: string;
+  value?: string;
+  render?: string;
+  multiple?: boolean;
+  // labelHTML is the rendered Markdown of the label of a checkbox.
+  options?: { label: string; labelHTML?: string; required?: boolean }[];
+  // default is the index of the option a dropdown starts with.
+  default?: number;
+  required?: boolean;
+  // accept is the comma-separated file extensions an upload takes.
+  accept?: string;
+}
+
+export interface IssueTemplate extends IssueTemplateSummary {
+  title: string;
+  labels: string[];
+  assignees: string[];
+  // body is the content of a Markdown template, and form the fields of an
+  // issue form.
+  body: string;
+  form?: IssueTemplateField[];
+}
+
 export interface RepoNewIssueOptions extends IssueMetaOptions {
-  // defaultBranch is where the issue template is read from, only sent to
-  // viewers who can read the repository.
-  defaultBranch?: string;
+  // The templates are only sent to viewers who can read the repository.
+  templates: IssueTemplateSummary[];
+  contactLinks: { name: string; url: string; about: string }[];
+  blankIssuesEnabled: boolean;
+  // template is the one asked for, if it exists.
+  template?: IssueTemplate;
+  // content is what a blank issue starts with.
+  content: string;
   attachment?: IssueAttachmentSettings;
   viewerCanWrite: boolean;
 }
 
-// The files the issue template is read from, in the order the server-rendered
-// page looked for them.
-const ISSUE_TEMPLATE_FILES = ["ISSUE_TEMPLATE.md", ".gogs/ISSUE_TEMPLATE.md", ".github/ISSUE_TEMPLATE.md"];
-
 // fetchRepoNewIssue loads what the form to open an issue offers, along with
-// the issue template of the repository, if any.
-export async function fetchRepoNewIssue(owner: string, name: string) {
-  const options = await fetchJSON<RepoNewIssueOptions>(repoURL(owner, name, "/issues/new"));
-  let template = "";
-  if (options.defaultBranch) {
-    const branch = encodeURIComponent(options.defaultBranch);
-    const found = await Promise.all(
-      ISSUE_TEMPLATE_FILES.map(async (file) => {
-        const res = await fetch(subUrl(`/${owner}/${name}/raw/${branch}/${file}`), { credentials: "same-origin" });
-        return res.ok ? res.text() : null;
-      }),
-    );
-    template = found.find((text) => text !== null) ?? "";
-  }
-  return { ...options, template };
+// the issue templates of the repository and the chosen one, if any.
+export function fetchRepoNewIssue(owner: string, name: string, template?: string) {
+  const query = template ? `?template=${encodeURIComponent(template)}` : "";
+  return fetchJSON<RepoNewIssueOptions>(repoURL(owner, name, `/issues/new${query}`));
 }
 
 export interface RepoNewIssueForm {
@@ -672,17 +698,22 @@ export interface RepoNewIssueForm {
   milestoneID: number;
   assigneeID: number;
   attachments: string[];
+  // template is the file of the chosen template. fields are the values of
+  // the elements of an issue form, in order.
+  template?: string;
+  fields?: string[][];
 }
 
 export function createRepoIssue(owner: string, name: string, form: RepoNewIssueForm) {
   return submit<{ index: number }>("POST", repoURL(owner, name, "/issues"), form);
 }
 
+// attachments are the UUIDs of the files uploaded while editing the content.
 export function updateRepoIssue(
   owner: string,
   name: string,
   index: number,
-  form: { title?: string; content?: string },
+  form: { title?: string; content?: string; attachments?: string[] },
 ) {
   return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}`), form);
 }
@@ -700,8 +731,15 @@ export function createRepoIssueComment(
   return submit<{ id: number }>("POST", repoURL(owner, name, `/issues/${index}/comments`), form);
 }
 
-export function updateRepoIssueComment(owner: string, name: string, index: number, id: number, content: string) {
-  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content });
+export function updateRepoIssueComment(
+  owner: string,
+  name: string,
+  index: number,
+  id: number,
+  content: string,
+  attachments: string[] = [],
+) {
+  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content, attachments });
 }
 
 export function deleteRepoIssueComment(owner: string, name: string, index: number, id: number) {
@@ -735,7 +773,8 @@ export async function renderRepoMarkdown(
 }
 
 // uploadRepoAttachment uploads a file to attach to an issue, a comment or a
-// release, or to commit with the editor, and returns its UUID.
+// release, or to commit with the editor, and returns its UUID and, except for
+// the editor, the URL content links to it with.
 export async function uploadRepoAttachment(
   owner: string,
   name: string,
@@ -750,7 +789,7 @@ export async function uploadRepoAttachment(
     body,
   });
   if (!res.ok) throw await loaderResponseError(res);
-  return ((await res.json()) as { uuid: string }).uuid;
+  return (await res.json()) as { uuid: string; url?: string };
 }
 
 export interface RepoReleaseAttachment {

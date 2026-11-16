@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { AttachFilesButton, IssueMeta, MarkdownEditor, PendingFiles, SidebarSection } from "@/components/IssueForm";
+import { AttachFilesButton, IssueMeta, MarkdownEditor, SidebarSection } from "@/components/IssueForm";
 import { OpenedBy } from "@/components/IssueListItem";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { usePageTitle } from "@/lib/page-title";
 import {
   type IssueAttachment,
+  type IssueAttachmentSettings,
   type IssueComment,
   type IssueUser,
   type RepoIssueData,
@@ -32,7 +33,7 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -105,11 +106,13 @@ export function RepoIssue({ owner, name, data }: { owner: string; name: string; 
               createdAt={data.createdAt}
               html={data.contentHTML}
               attachments={data.attachments}
+              attachment={data.attachment}
               edit={
                 data.viewerCanEdit
                   ? {
                       content: data.content,
-                      save: (content) => updateRepoIssue(ref.owner, ref.name, ref.index, { content }),
+                      save: (content, attachments) =>
+                        updateRepoIssue(ref.owner, ref.name, ref.index, { content, attachments }),
                     }
                   : undefined
               }
@@ -125,12 +128,13 @@ export function RepoIssue({ owner, name, data }: { owner: string; name: string; 
                   html={comment.contentHTML ?? ""}
                   tag={comment.tag}
                   attachments={comment.attachments ?? []}
+                  attachment={data.attachment}
                   edit={
                     comment.viewerCanEdit
                       ? {
                           content: comment.content ?? "",
-                          save: (content) =>
-                            updateRepoIssueComment(ref.owner, ref.name, ref.index, comment.id, content),
+                          save: (content, attachments) =>
+                            updateRepoIssueComment(ref.owner, ref.name, ref.index, comment.id, content, attachments),
                           remove: () => deleteRepoIssueComment(ref.owner, ref.name, ref.index, comment.id),
                         }
                       : undefined
@@ -285,6 +289,7 @@ function CommentCard({
   html,
   tag,
   attachments,
+  attachment,
   edit,
 }: {
   issueRef: IssueRef;
@@ -293,10 +298,17 @@ function CommentCard({
   createdAt: string;
   html: string;
   tag?: IssueComment["tag"];
+  // attachments are the files the content does not link to, listed after it.
   attachments: IssueAttachment[];
-  // edit saves the content, and remove deletes the comment, for viewers who
-  // can change it.
-  edit?: { content: string; save: (content: string) => Promise<void>; remove?: () => Promise<void> };
+  // attachment is how files are added while editing.
+  attachment?: IssueAttachmentSettings;
+  // edit saves the content with the files uploaded while editing, and remove
+  // deletes the comment, for viewers who can change it.
+  edit?: {
+    content: string;
+    save: (content: string, attachments: string[]) => Promise<void>;
+    remove?: () => Promise<void>;
+  };
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -358,6 +370,7 @@ function CommentCard({
         {editing && edit ? (
           <ContentEditor
             issueRef={issueRef}
+            attachment={attachment}
             initial={edit.content}
             save={edit.save}
             onClose={() => setEditing(false)}
@@ -416,20 +429,23 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
 // ContentEditor edits the content of the issue or a comment in place.
 function ContentEditor({
   issueRef,
+  attachment,
   initial,
   save,
   onClose,
 }: {
   issueRef: IssueRef;
+  attachment?: IssueAttachmentSettings;
   initial: string;
-  save: (content: string) => Promise<void>;
+  save: (content: string, attachments: string[]) => Promise<void>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [content, setContent] = useState(initial);
+  const uploads = useAttachmentUploads(issueRef.owner, issueRef.name, attachment);
   const mutation = useMutation({
-    mutationFn: () => save(content),
+    mutationFn: () => save(content, linkedUploads(uploads.uploaded, content)),
     onSuccess: async () => {
       await router.invalidate();
       onClose();
@@ -452,14 +468,19 @@ function ContentEditor({
           error={fields.content ?? formError}
           autoFocus
           disabled={mutation.isPending}
+          uploads={uploads}
+          linkFiles
         />
-        <div className="mt-3 flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
-            {t("repo.issues.cancel")}
-          </Button>
-          <Button type="submit" size="sm">
-            {t("repo.issues.save")}
-          </Button>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <AttachFilesButton uploads={uploads} />
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              {t("repo.issues.cancel")}
+            </Button>
+            <Button type="submit" size="sm" disabled={uploads.uploading}>
+              {t("repo.issues.save")}
+            </Button>
+          </div>
         </div>
       </fieldset>
     </form>
@@ -534,7 +555,8 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
     }
   }, [data]);
   const { uploaded, uploading } = uploads;
-  const hasComment = content.trim() !== "" || uploaded.length > 0;
+  // Files are linked in the content, so a comment is never only files.
+  const hasComment = content.trim() !== "";
 
   const mutation = useMutation({
     mutationFn: async (changeState: boolean) => {
@@ -542,7 +564,7 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
       if (hasComment) {
         ({ id } = await createRepoIssueComment(issueRef.owner, issueRef.name, issueRef.index, {
           content,
-          attachments: uploaded,
+          attachments: linkedUploads(uploaded, content),
         }));
       }
       if (changeState) await setRepoIssueClosed(issueRef.owner, issueRef.name, issueRef.index, !data.isClosed);
@@ -613,8 +635,8 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
             error={fields.content ?? formError}
             disabled={mutation.isPending}
             uploads={uploads}
+            linkFiles
           />
-          <PendingFiles uploads={uploads} />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <AttachFilesButton uploads={uploads} />
             <div className="flex flex-wrap justify-end gap-2">

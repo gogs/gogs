@@ -126,6 +126,24 @@ func getUnboundAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, erro
 	return attachments, e.Where(unboundAttachmentCond).In("uuid", uuids).Find(&attachments)
 }
 
+// BindAttachments links the unbound attachments with the given UUIDs to the
+// issue, and to the comment when commentID is not 0, e.g., files added while
+// editing them.
+func BindAttachments(issueID, commentID int64, uuids []string) error {
+	attachments, err := getUnboundAttachmentsByUUIDs(x, uuids)
+	if err != nil {
+		return errors.Wrap(err, "get unbound attachments")
+	}
+	for _, a := range attachments {
+		a.IssueID = issueID
+		a.CommentID = commentID
+		if _, err = x.ID(a.ID).Cols("issue_id", "comment_id").Update(a); err != nil {
+			return errors.Wrapf(err, "update attachment %d", a.ID)
+		}
+	}
+	return nil
+}
+
 // GetAttachmentByUUID returns attachment by given UUID.
 func GetAttachmentByUUID(uuid string) (*Attachment, error) {
 	return getAttachmentByUUID(x, uuid)
