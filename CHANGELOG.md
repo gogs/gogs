@@ -61,6 +61,7 @@ All notable changes to Gogs are documented in this file.
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 - A long word in a commit message body, e.g., a file path, no longer runs past the commit page. [#8606](https://github.com/gogs/gogs/pull/8606)
+- Push whitelists of protected branches now follow team membership: users who join a whitelisted team can push, and users who leave it can no longer push. Previously the whitelist only changed when the branch settings were saved again. [#8643](https://github.com/gogs/gogs/pull/8643)
 
 ### Removed
 
