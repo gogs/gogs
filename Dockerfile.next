@@ -57,7 +57,7 @@ RUN chmod +x start.sh && \
 # Configure Docker Container
 VOLUME ["/data", "/backup"]
 EXPOSE 22 3000
-HEALTHCHECK CMD (curl --noproxy localhost -o /dev/null -sS http://localhost:3000/healthcheck) || exit 1
+HEALTHCHECK CMD ["/app/gogs/gogs", "healthcheck"]
 
 # Run as non-root user by default for better K8s security context support.
 USER git:git

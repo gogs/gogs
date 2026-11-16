@@ -20,6 +20,14 @@ gogs web
 
 The `web` command starts the HTTP server that powers the web UI, the REST API, and Git HTTP operations. Use the `--port` (`-p`) flag to override the default listening port.
 
+## Health check
+
+```bash
+gogs healthcheck
+```
+
+The `healthcheck` command requests the health check of the running web server at the address set by `PROTOCOL`, `HTTP_ADDR`, and `HTTP_PORT` in `[server]`, including a Unix socket, and exits with a non-zero status when the server is unreachable or unhealthy. The Docker images use it as their `HEALTHCHECK`, so changing the listening address or port in `app.ini` needs no other change.
+
 ## Administration
 
 ```bash
