@@ -250,15 +250,15 @@ function UserLink({ user, className, children }: { user: IssueUser; className?: 
   );
 }
 
-// EventSentence renders a translated sentence about something that happened,
-// e.g., "commented <a>3 hours ago</a>", making its link the time, which links
-// to the anchor of the event.
 // useIsLinked reports whether the URL links to the anchor, e.g., to a comment,
 // which is then highlighted like on GitHub.
 function useIsLinked(anchor: string) {
   return useRouterState({ select: (state) => state.location.hash === anchor });
 }
 
+// EventSentence renders a translated sentence about something that happened,
+// e.g., "commented <a>3 hours ago</a>", making its link the time, which links
+// to the anchor of the event.
 function EventSentence({ text, anchor, time }: { text: string; anchor: string; time: string }) {
   const { t } = useTranslation();
   return (
