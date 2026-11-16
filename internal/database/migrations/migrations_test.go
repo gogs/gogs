@@ -36,11 +36,11 @@ func TestMigrate(t *testing.T) {
 		assert.Contains(t, tables, "user")
 		assert.NotContains(t, tables, "version")
 		assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))
-		assert.Equal(t, int64(24), gooseVersion(t, db))
+		assert.Equal(t, int64(27), gooseVersion(t, db))
 
 		// Running again changes nothing.
 		require.NoError(t, Migrate(db))
-		assert.Equal(t, int64(24), gooseVersion(t, db))
+		assert.Equal(t, int64(27), gooseVersion(t, db))
 	})
 
 	t.Run("database migrated by the legacy runner from 0.12", func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestMigrate(t *testing.T) {
 		require.NoError(t, db.Exec("INSERT INTO repository (id, owner_id, lower_name, name) VALUES (1, 1, 'example', 'example')").Error)
 
 		require.NoError(t, Migrate(db))
-		assert.Equal(t, int64(24), gooseVersion(t, db))
+		assert.Equal(t, int64(27), gooseVersion(t, db))
 		assert.True(t, db.Migrator().HasColumn("repository", "is_unlisted"))
 		assert.True(t, db.Migrator().HasTable("lfs_object"))
 
