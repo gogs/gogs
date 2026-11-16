@@ -132,7 +132,8 @@ func TestRepository_PullRequestMeta(t *testing.T) {
 		require.NoError(t, err)
 		tree, err := head.RevParse(ctx, "feature~1^{tree}")
 		require.NoError(t, err)
-		synthetic, err := head.CommitTree(ctx, tree, "synthetic\n", CommitTreeOptions{Parents: []string{parent}})
+		sig := &Signature{Name: "alice", Email: "alice@example.com"}
+		synthetic, err := head.CommitTree(ctx, tree, "synthetic\n", CommitTreeOptions{Parents: []string{parent}, Author: sig, Committer: sig})
 		require.NoError(t, err)
 
 		meta, err := head.PullRequestMeta(ctx, base.Path(), "feature", "master", PullRequestMetaOptions{Base: synthetic})

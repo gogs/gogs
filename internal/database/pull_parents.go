@@ -541,6 +541,9 @@ func (s *PullRequestStack) Descendants(pullID int64) map[int64]bool {
 // order, whose head commit cannot be merged into the base commit together with
 // the ones before it. The head commits are given in the same order.
 func checkStackMerge(ctx context.Context, gitRepo *git.Repository, baseID string, pulls []*PullRequest, headIDs []string) error {
+	// The server may have no Git identity of its own to sign the commits that
+	// are thrown away after the check.
+	sig := &git.Signature{Name: "Gogs", Email: "noreply@" + conf.Server.Domain, When: time.Now()}
 	current := baseID
 	for i, p := range pulls {
 		headID := headIDs[i]
@@ -556,7 +559,11 @@ func checkStackMerge(ctx context.Context, gitRepo *git.Repository, baseID string
 		} else if err != nil {
 			return errors.Wrapf(err, "merge #%d", p.Index)
 		}
-		current, err = gitRepo.CommitTree(ctx, tree, "Check stack merge\n", git.CommitTreeOptions{Parents: []string{current, headID}})
+		current, err = gitRepo.CommitTree(ctx, tree, "Check stack merge\n", git.CommitTreeOptions{
+			Parents:   []string{current, headID},
+			Author:    sig,
+			Committer: sig,
+		})
 		if err != nil {
 			return errors.Wrap(err, "commit tree")
 		}
