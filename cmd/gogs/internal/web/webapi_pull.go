@@ -198,7 +198,10 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.State = "checking"
 	case pull.CanAutoMerge():
 		info.State = "mergeable"
-		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
+		info.ViewerCanMerge, err = canMergeInto(repoCtx, pull.BaseBranch)
+		if err != nil {
+			return nil, nil, nil, errors.Wrap(err, "check merge permission")
+		}
 		if info.ViewerCanMerge {
 			info.ViewerID = repoCtx.Viewer.ID()
 			pull.Issue = issue
@@ -292,11 +295,38 @@ type repoPullMergeRequest struct {
 	Body  string `json:"body"`
 }
 
+// canMergeInto returns whether the viewer may merge into the branch. A merge
+// pushes to the branch, so a protected branch with a push whitelist takes the
+// same whitelist as the pre-receive hook does for pushes.
+func canMergeInto(repoCtx *repoContext, branch string) (bool, error) {
+	if !repoCtx.Viewer.CanWrite() {
+		return false, nil
+	}
+	protectBranch, err := database.GetProtectBranchOfRepoByName(repoCtx.Repo.ID, branch)
+	if err != nil {
+		if database.IsErrBranchNotExist(err) {
+			return true, nil
+		}
+		return false, errors.Wrap(err, "get protected branch")
+	}
+	if !protectBranch.Protected || !protectBranch.EnableWhitelist {
+		return true, nil
+	}
+	return database.IsUserInProtectBranchWhitelist(repoCtx.Repo.ID, repoCtx.Viewer.ID(), branch), nil
+}
+
 // postRepoPullMerge merges the pull request into its base branch.
 func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
 	pull := issue.PullRequest
 	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
+	}
+	canMerge, err := canMergeInto(repoCtx, pull.BaseBranch)
+	if err != nil {
+		log.Error("postRepoPullMerge: check merge permission of pull request %d: %v", pull.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check merge permission")
+	} else if !canMerge {
+		return http.StatusForbidden, nil, errors.New("branch is protected and you are not in the push whitelist")
 	}
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
