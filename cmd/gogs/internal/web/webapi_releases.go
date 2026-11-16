@@ -66,9 +66,14 @@ type repoReleaseAttachment struct {
 	URL  string `json:"url"`
 }
 
-func toReleaseAttachments(attachments []*database.Attachment) []repoReleaseAttachment {
+// toReleaseAttachments returns the files of the release its note does not
+// link to, i.e., its downloads.
+func toReleaseAttachments(attachments []*database.Attachment, note string) []repoReleaseAttachment {
 	list := make([]repoReleaseAttachment, 0, len(attachments))
 	for _, a := range attachments {
+		if linksAttachment(note, a.UUID) {
+			continue
+		}
 		list = append(list, repoReleaseAttachment{UUID: a.UUID, Name: a.Name, URL: conf.Server.Subpath + "/attachments/" + a.UUID})
 	}
 	return list
@@ -187,7 +192,7 @@ func getRepoReleases(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 			item.IsPrerelease = r.IsPrerelease
 			item.Publisher = &publisher
 			item.NoteHTML = string(markup.Markdown(r.Note, repo.Link(), repo.ComposeMetas()))
-			item.Attachments = toReleaseAttachments(r.Attachments)
+			item.Attachments = toReleaseAttachments(r.Attachments, r.Note)
 			if r.CreatedUnix > 0 {
 				item.CreatedAt = &r.Created
 			}
@@ -362,7 +367,7 @@ func getRepoRelease(rel *database.Release) (statusCode int, resp *repoReleaseEdi
 		Content:      rel.Note,
 		IsDraft:      rel.IsDraft,
 		IsPrerelease: rel.IsPrerelease,
-		Attachments:  toReleaseAttachments(rel.Attachments),
+		Attachments:  toReleaseAttachments(rel.Attachments, rel.Note),
 		Attachment:   attachmentSettings(releaseAttachmentLimits()),
 	}, nil
 }
@@ -396,6 +401,20 @@ func patchRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, r
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
+	// The editor only sends the downloads it keeps and the new files, so the
+	// files the note still links to stay, and those whose links were removed
+	// are deleted.
+	var unlinked []*database.Attachment
+	for _, a := range rel.Attachments {
+		switch {
+		case slices.Contains(req.Attachments, a.UUID):
+		case linksAttachment(req.Content, a.UUID):
+			req.Attachments = append(req.Attachments, a.UUID)
+		case linksAttachment(rel.Note, a.UUID):
+			unlinked = append(unlinked, a)
+		}
+	}
+
 	// A published release has its tag, so it cannot go back to a draft.
 	isPublish := rel.IsDraft && !req.IsDraft
 	rel.Title = req.Title
@@ -409,6 +428,10 @@ func patchRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, r
 		}
 		log.Error("patchRepoRelease: update release %d: %v", rel.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update release")
+	}
+	if _, err = database.DeleteAttachments(unlinked, true); err != nil {
+		log.Error("patchRepoRelease: delete unlinked files of release %d: %v", rel.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete unlinked files")
 	}
 	return http.StatusNoContent, nil, nil
 }

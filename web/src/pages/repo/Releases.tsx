@@ -38,7 +38,7 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 
 const LINK_CLASS = "text-(--color-primary) hover:underline";
 
@@ -366,6 +366,9 @@ export function RepoReleaseEditor({
     settings && { ...settings, maxFiles: Math.max(settings.maxFiles - kept.length, 0) },
     "releases",
   );
+  // noteUploads are the files dropped or pasted in the note, which show in
+  // place like on GitHub. The others are downloads.
+  const noteUploads = useAttachmentUploads(owner, name, settings, "releases");
   const toList = () => navigate({ to: "/$owner/$repo/releases", params: { owner, repo: name }, search: {} });
 
   const mutation = useMutation({
@@ -375,7 +378,7 @@ export function RepoReleaseEditor({
         content,
         isDraft,
         isPrerelease,
-        attachments: [...kept.map((a) => a.uuid), ...uploads.uploaded],
+        attachments: [...kept.map((a) => a.uuid), ...uploads.uploaded, ...linkedUploads(noteUploads.uploaded, content)],
       };
       return release
         ? updateRepoRelease(owner, name, release.tagName, form)
@@ -471,7 +474,8 @@ export function RepoReleaseEditor({
               value={content}
               onChange={setContent}
               disabled={mutation.isPending}
-              uploads={uploads}
+              uploads={noteUploads}
+              linkFiles
             />
             {kept.length ? (
               <ul className="mt-2 flex flex-col gap-1">
@@ -515,11 +519,16 @@ export function RepoReleaseEditor({
             <p className="mt-1 ml-6.5 text-sm text-(--color-muted-foreground)">{t("repo.release.prerelease_helper")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
-            <Button type="submit" value="publish" disabled={uploads.uploading}>
+            <Button type="submit" value="publish" disabled={uploads.uploading || noteUploads.uploading}>
               {release && !release.isDraft ? t("repo.release.edit_release") : t("repo.release.publish")}
             </Button>
             {canSaveDraft ? (
-              <Button type="submit" value="draft" variant="outline" disabled={uploads.uploading}>
+              <Button
+                type="submit"
+                value="draft"
+                variant="outline"
+                disabled={uploads.uploading || noteUploads.uploading}
+              >
                 {t("repo.release.save_draft")}
               </Button>
             ) : null}
