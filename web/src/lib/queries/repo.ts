@@ -810,6 +810,9 @@ export interface RepoPullInfo {
   allowRebase: boolean;
   allowSquash: boolean;
   viewerCanMerge: boolean;
+  // viewerNotInAllowlist is whether the viewer could merge if they were in
+  // the push allowlist of the protected base branch.
+  viewerNotInAllowlist: boolean;
   // viewerID is the viewer who can merge, whose browser remembers the merge
   // style they last used in the repository.
   viewerID?: number;

@@ -293,6 +293,9 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
             {pull.state === "conflict" ? (
               <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.cannot_auto_merge_helper")}</p>
             ) : null}
+            {pull.state === "mergeable" && pull.viewerNotInAllowlist ? (
+              <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.merge_not_in_allowlist")}</p>
+            ) : null}
           </div>
         </div>
         {body}
