@@ -195,7 +195,8 @@ func Test_parseLevel(t *testing.T) {
 		in   string
 		want slog.Level
 	}{
-		{"trace", slog.LevelDebug},
+		{"debug", slog.LevelDebug},
+		{"Trace", slog.LevelDebug},
 		{"", slog.LevelDebug},
 		{"Info", slog.LevelInfo},
 		{"warning", slog.LevelWarn},

@@ -70,7 +70,7 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 	}
 
 	modes := strings.Split(cfg.Section("log").Key("MODE").MustString("console"), ",")
-	parentLevel := cfg.Section("log").Key("LEVEL").MustString("trace")
+	parentLevel := cfg.Section("log").Key("LEVEL").MustString("debug")
 	lc := &logConf{
 		RootPath: ensureAbs(rootPath),
 		Modes:    make([]string, 0, len(modes)),
@@ -266,10 +266,12 @@ func newCharmLogger(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
 	return handler
 }
 
-// parseLevel maps [log] LEVEL names to slog levels. "trace", the historical
-// default, is debug.
+// parseLevel maps [log] LEVEL names to slog levels. "trace", the default of
+// older versions, is debug.
 func parseLevel(s string) slog.Level {
 	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "debug", "trace":
+		return slog.LevelDebug
 	case "info":
 		return slog.LevelInfo
 	case "warn", "warning":
