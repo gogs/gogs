@@ -239,9 +239,17 @@ type repoCompareResponse struct {
 	// BaseIsEmptyTree is true when Base is the empty tree, so the comparison
 	// shows everything After has.
 	BaseIsEmptyTree bool `json:"baseIsEmptyTree"`
-	// Commits are the commits after Base up to After, newest first.
+	// Commits are the newest commits after Base up to After, at most
+	// compareMaxCommits of them.
 	Commits []repoCommitListItem `json:"commits"`
+	// TotalCommits is the number of commits after Base up to After, which is
+	// more than len(Commits) when the list is cut off.
+	TotalCommits int64 `json:"totalCommits"`
 }
+
+// compareMaxCommits is the most commits a comparison lists, so that comparing
+// to a long history, e.g., the push of an imported branch, stays fast.
+const compareMaxCommits = 250
 
 // compareRange is the range of commits that a comparison of two commits
 // shows.
@@ -249,8 +257,23 @@ type compareRange struct {
 	base            string
 	baseIsEmptyTree bool
 	after           *git.Commit
-	// commits are the commits after base up to after, newest first.
-	commits []*git.Commit
+}
+
+// listCommits returns the newest commits after base up to after, at most
+// compareMaxCommits of them, and the number of all of them.
+func (r *compareRange) listCommits(ctx context.Context, gitRepo *git.Repository) (_ []*git.Commit, total int64, _ error) {
+	rev := r.base + "..." + r.after.ID.String()
+	if r.baseIsEmptyTree {
+		rev = r.after.ID.String()
+	}
+	commits, err := gitRepo.Log(ctx, rev, git.LogOptions{MaxCount: compareMaxCommits})
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "list commits")
+	}
+	if total, err = gitRepo.RevListCount(ctx, []string{rev}); err != nil {
+		return nil, 0, errors.Wrap(err, "count commits")
+	}
+	return commits, total, nil
 }
 
 // resolveCompareRange resolves the comparison from before to after. The empty
@@ -278,17 +301,9 @@ func resolveCompareRange(ctx context.Context, gitRepo *git.Repository, defaultBr
 			}
 			r.base = objectFormat.EmptyTreeID()
 			r.baseIsEmptyTree = true
-			if r.commits, err = gitRepo.RevList(ctx, []string{after}); err != nil {
-				return nil, errors.Wrap(err, "list commits")
-			}
-			return r, nil
 		}
 	} else if _, err = gitRepo.CatFileCommit(ctx, before); err != nil {
 		return nil, errors.Wrap(err, "get base commit")
-	}
-
-	if r.commits, err = afterCommit.CommitsAfter(ctx, r.base); err != nil {
-		return nil, errors.Wrap(err, "list commits")
 	}
 	return r, nil
 }
@@ -312,11 +327,17 @@ func getRepoCompare(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		log.Error("getRepoCompare: compare %q to %q in repo %d: %v", before, after, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "compare commits")
 	}
+	commits, total, err := r.listCommits(ctx, gitRepo)
+	if err != nil {
+		log.Error("getRepoCompare: list commits from %q to %q in repo %d: %v", r.base, after, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "list commits")
+	}
 	return http.StatusOK, &repoCompareResponse{
 		Before:          before,
 		After:           after,
 		Base:            r.base,
 		BaseIsEmptyTree: r.baseIsEmptyTree,
-		Commits:         toCommitListItems(ctx, repo, r.commits),
+		Commits:         toCommitListItems(ctx, repo, commits),
+		TotalCommits:    total,
 	}, nil
 }

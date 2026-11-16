@@ -1,14 +1,21 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DiffWorkspace } from "@/components/DiffWorkspace";
 import { RepoHeader } from "@/components/RepoHeader";
+import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoCompareData, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 
 import type { RepoCommitSearch } from "./Commit.search";
 import { CommitList } from "./Commits";
+
+// collapsedCommits is how many commits show before "Show more", which keeps
+// the diff near the top of the page for long ranges.
+const collapsedCommits = 10;
 
 // RepoCompare shows the commits and the changes from one commit to another,
 // e.g., of a push in the activity feed.
@@ -25,7 +32,9 @@ export function RepoCompare({
 }) {
   const { t } = useTranslation();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
-  const { before, after, base, baseIsEmptyTree, commits, patch } = data;
+  const { before, after, base, baseIsEmptyTree, commits, totalCommits, patch } = data;
+  const [showAll, setShowAll] = useState(false);
+  const hiddenCommits = showAll ? 0 : Math.max(commits.length - collapsedCommits, 0);
   const repoLink = subUrl(`/${owner}/${name}`);
   usePageTitle(`${base.slice(0, 7)}...${after.slice(0, 7)} - ${owner}/${name}`);
 
@@ -44,7 +53,9 @@ export function RepoCompare({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xl font-semibold text-(--color-foreground)">
             <span>
-              {t(commits.length === 1 ? "repo.commits.n_commit" : "repo.commits.n_commits", { count: commits.length })}
+              {t(totalCommits === 1 ? "repo.commits.n_commit" : "repo.commits.n_commits", {
+                count: totalCommits.toLocaleString(),
+              })}
             </span>
             <span className="inline-flex items-center gap-1 font-normal text-(--color-muted-foreground)">
               {/* The empty tree is not a commit, so it has no page to link to. */}
@@ -61,7 +72,28 @@ export function RepoCompare({
           </a>
         </div>
         {commits.length ? (
-          <CommitList owner={owner} name={name} commits={commits} />
+          <>
+            <CommitList owner={owner} name={name} commits={commits.slice(0, commits.length - hiddenCommits)} />
+            {hiddenCommits > 0 ? (
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowAll(true)}>
+                {t(hiddenCommits === 1 ? "repo.commits.show_more_commit" : "repo.commits.show_more_commits", {
+                  count: hiddenCommits,
+                })}
+              </Button>
+            ) : null}
+            {showAll && totalCommits > commits.length ? (
+              <p className="mt-4 text-sm text-(--color-muted-foreground)">
+                {t("repo.commits.compare_truncated", { count: commits.length })}{" "}
+                <Link
+                  to="/$owner/$repo/commits/$"
+                  params={{ owner, repo: name, _splat: after }}
+                  className="text-(--color-primary) hover:underline"
+                >
+                  {t("repo.commits.view_full_history")}
+                </Link>
+              </p>
+            ) : null}
+          </>
         ) : (
           <p className="rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
             {t("repo.commits.no_commits")}

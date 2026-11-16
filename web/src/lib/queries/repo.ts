@@ -1081,8 +1081,12 @@ export interface RepoCompareData {
   // baseIsEmptyTree is true when base is the empty tree, so the comparison
   // shows everything after has.
   baseIsEmptyTree: boolean;
-  // commits are the commits after base up to after, newest first.
+  // commits are the newest commits after base up to after, at most 250 of
+  // them.
   commits: RepoCommitListItem[];
+  // totalCommits is the number of commits after base up to after, which is
+  // more than commits.length when the list is cut off.
+  totalCommits: number;
 }
 
 // fetchRepoCommits lists the commits of the ref at the start of the path,
