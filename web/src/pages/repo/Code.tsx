@@ -8,7 +8,6 @@ import {
   Code,
   CornerLeftUp,
   Download,
-  File,
   FileSymlink,
   Folder,
   FolderGit2,
@@ -27,6 +26,7 @@ import { useTranslation } from "react-i18next";
 
 import { CloneBox } from "@/components/CloneBox";
 import { CodeBlock } from "@/components/CodeBlock";
+import { FileIcon } from "@/components/FileIcon";
 import { Markdown } from "@/components/Markdown";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
@@ -174,7 +174,9 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
               >
                 <GitBranch className="size-4 text-(--color-muted-foreground)" aria-hidden />
                 <strong className="font-semibold">{data.branches.length}</strong>
-                <span className="text-(--color-muted-foreground)">{t("repo.branches")}</span>
+                <span className="text-(--color-muted-foreground)">
+                  {t(data.branches.length === 1 ? "repo.branch" : "repo.branches")}
+                </span>
               </Link>
               <Link
                 to="/$owner/$repo/releases"
@@ -183,7 +185,9 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
               >
                 <Tag className="size-4 text-(--color-muted-foreground)" aria-hidden />
                 <strong className="font-semibold">{data.tags.length}</strong>
-                <span className="text-(--color-muted-foreground)">{t("repo.releases")}</span>
+                <span className="text-(--color-muted-foreground)">
+                  {t(data.tags.length === 1 ? "repo.release" : "repo.releases")}
+                </span>
               </Link>
             </span>
           ) : null}
@@ -227,7 +231,8 @@ export function RepoCode({ owner, name, data }: { owner: string; name: string; d
                   <History className="size-4" aria-hidden />
                   {summary ? (
                     <span>
-                      <strong className="font-semibold">{summary.commitCount}</strong> {t("repo.commits")}
+                      <strong className="font-semibold">{summary.commitCount}</strong>{" "}
+                      {t(summary.commitCount === 1 ? "repo.commit" : "repo.commits")}
                     </span>
                   ) : (
                     t("repo.file_history")
@@ -377,8 +382,9 @@ function LatestCommit({
   );
 }
 
-function EntryIcon({ type }: { type: RepoTreeEntry["type"] }) {
-  const Icon = { dir: Folder, file: File, symlink: FileSymlink, submodule: FolderGit2 }[type];
+function EntryIcon({ type, name }: { type: RepoTreeEntry["type"]; name: string }) {
+  if (type === "file") return <FileIcon name={name} />;
+  const Icon = { dir: Folder, symlink: FileSymlink, submodule: FolderGit2 }[type];
   return (
     <Icon
       className={cn("size-4 shrink-0", type === "dir" ? "text-(--color-primary)" : "text-(--color-muted-foreground)")}
@@ -412,7 +418,7 @@ function EntryList({
       {entries.map((entry) => (
         <li key={entry.name} className="flex items-center gap-x-4 px-4 py-2 hover:bg-(--color-surface)">
           <span className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-xs sm:flex-none sm:basis-1/3">
-            <EntryIcon type={entry.type} />
+            <EntryIcon type={entry.type} name={entry.name} />
             {entry.type === "submodule" ? (
               <span className="min-w-0 truncate">
                 {entry.submoduleURL ? (
@@ -500,7 +506,7 @@ function FileView({
           ) : file.isReadme ? (
             <BookOpen className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
           ) : (
-            <File className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
+            <FileIcon name={file.name} />
           )}
           <span className="font-semibold wrap-anywhere">{file.name}</span>
         </h2>
@@ -639,6 +645,16 @@ function selectedLinesOf(hash: string): SelectedLineRange | null {
   return { start: Math.min(start, end), end: Math.max(start, end) };
 }
 
+// Pierre's dark theme colors punctuation #636363 and tints selected lines
+// strongly, which leaves code below 4.5:1 on them. Dark mode lifts the
+// punctuation and tints the selection less.
+const DARK_CONTRAST_CSS = `[data-line] span[style*="--diffs-token-dark:#636363"] {
+  color: light-dark(var(--diffs-token-light), #9a9a9a);
+}
+[data-line][data-selected-line] {
+  --mix-selection-dark: 85%;
+}`;
+
 // SourceView shows a text file highlighted, with line numbers that select
 // lines into the URL hash, e.g., "#L5-L9" like the server-rendered pages.
 function SourceView({ file }: { file: RepoFile }) {
@@ -663,7 +679,7 @@ function SourceView({ file }: { file: RepoFile }) {
     frame = window.requestAnimationFrame(scroll);
     return () => window.cancelAnimationFrame(frame);
   }, []);
-  const tabCSS = file.tabWidth ? `pre, code { tab-size: ${file.tabWidth}; }` : undefined;
+  const tabCSS = file.tabWidth ? `pre, code { tab-size: ${file.tabWidth}; }` : "";
 
   return (
     <div ref={wrapper} className="text-sm">
@@ -677,7 +693,7 @@ function SourceView({ file }: { file: RepoFile }) {
           disableFileHeader: true,
           overflow: "scroll",
           enableLineSelection: true,
-          unsafeCSS: tabCSS,
+          unsafeCSS: DARK_CONTRAST_CSS + tabCSS,
           onLineSelected: (range) => {
             setSelected(range);
             const hash = range
