@@ -177,8 +177,8 @@ func isASCIIAlnum(c byte) bool {
 }
 
 // markdownOptions returns the rendering options for Markdown without
-// post-processing.
-func markdownOptions(urlPrefix string) *dariomark.Options {
+// post-processing. hardWraps renders every line break as written.
+func markdownOptions(urlPrefix string, hardWraps bool) *dariomark.Options {
 	opts := &dariomark.Options{
 		Tables:                    true,
 		Strikethrough:             true,
@@ -190,7 +190,7 @@ func markdownOptions(urlPrefix string) *dariomark.Options {
 		Alerts:                    true,
 		HeadingIDs:                true,
 		HeadingIDPrefix:           "user-content-",
-		HardWraps:                 conf.Markdown.EnableHardLineBreak,
+		HardWraps:                 hardWraps,
 		RelativeLinks:             true,
 		LinkBase:                  urlPrefix,
 		IsLink:                    isLink,
@@ -222,12 +222,13 @@ func footnoteIDPrefix(body []byte) string {
 }
 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
-// The output is not sanitized. Like Render, it shows a document larger than
+// The output is not sanitized. Like MarkdownFile, it keeps line breaks only
+// with [markdown] ENABLE_HARD_LINE_BREAK, and shows a document larger than
 // [ui] MAX_DISPLAY_FILE_SIZE as escaped plain text.
 func RawMarkdown(body []byte, urlPrefix string) []byte {
 	body = bytes.TrimPrefix(body, utf8BOM)
 	return guardRender(body, func() []byte {
-		opts := markdownOptions(urlPrefix)
+		opts := markdownOptions(urlPrefix, conf.Markdown.EnableHardLineBreak)
 		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 		return dariomark.HTML(body, opts)
 	})
@@ -235,8 +236,8 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 
 // renderMarkdown renders content in Markdown syntax to HTML with special
 // links, and reports whether the HTML is sanitized already.
-func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]byte, bool) {
-	opts := markdownOptions(urlPrefix)
+func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hardWraps bool) ([]byte, bool) {
+	opts := markdownOptions(urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.PostProcess = true
 	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
@@ -325,8 +326,17 @@ func isMentionChar(c byte) bool {
 	return isASCIIAlnum(c) || c == '-' || c == '_' || c == '.'
 }
 
-// Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
+// Markdown takes a string or []byte of Markdown that is not a file, e.g., an
+// issue, a comment or a release note, and renders it to HTML with special
+// links. It renders every line break as written.
 func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
+	return renderInput(TypeMarkdown, input, urlPrefix, metas, true)
+}
+
+// MarkdownFile is Markdown for Markdown files, e.g., READMEs and wiki pages.
+// It joins the lines of a paragraph, unless [markdown] ENABLE_HARD_LINE_BREAK
+// is set.
+func MarkdownFile(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
 }
 

@@ -622,11 +622,11 @@ type markdownRequest struct {
 // or the way its wiki pages are.
 func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
-	base := repo.Link()
+	html := markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas())
 	if req.Wiki {
-		base += "/wiki"
+		html = markup.MarkdownFile(req.Text, repo.Link()+"/wiki", repo.ComposeMetas())
 	}
-	return http.StatusOK, map[string]string{"html": string(markup.Markdown(req.Text, base, repo.ComposeMetas()))}, nil
+	return http.StatusOK, map[string]string{"html": string(html)}, nil
 }
 
 // limitAttachmentUpload caps the size of an uploaded attachment.
