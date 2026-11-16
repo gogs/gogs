@@ -72,6 +72,16 @@ func (r *Repository) InitWiki(ctx context.Context) error {
 	return nil
 }
 
+// InitWikiForPush creates the wiki repository for a push to a wiki that has no
+// pages yet, so a wiki can be started by pushing to it instead of from the web.
+// It does nothing when the repository has no wiki or uses an external one.
+func (r *Repository) InitWikiForPush(ctx context.Context) error {
+	if !r.EnableWiki || r.EnableExternalWiki {
+		return nil
+	}
+	return r.InitWiki(ctx)
+}
+
 // wikiParent returns the branch that wiki pages are committed to and its
 // latest commit, which is nil when the wiki has no pages yet.
 func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error) {

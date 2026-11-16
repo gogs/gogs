@@ -236,6 +236,15 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
+		if !isPull && isWiki {
+			repo.Owner = owner
+			if err := repo.InitWikiForPush(c.Request().Context()); err != nil {
+				c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+				logger.Error("Failed to initialize wiki", "repoID", repo.ID, "error", err)
+				return
+			}
+		}
+
 		c.Map(&HTTPContext{
 			Context:   c,
 			OwnerName: ownerName,
