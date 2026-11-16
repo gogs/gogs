@@ -237,8 +237,9 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hard
 	opts := markdownOptions(urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.PostProcess = true
+	commits := resolveCommits(body, metas)
 	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
-		return findSpecialLinks(text, urlPrefix, metas)
+		return findSpecialLinks(text, urlPrefix, metas, commits)
 	}
 	opts.Emoji = emoji
 	if file {

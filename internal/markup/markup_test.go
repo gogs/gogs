@@ -1,9 +1,13 @@
 package markup_test
 
 import (
+	"os"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "gogs.io/gogs/internal/markup"
 )
@@ -311,4 +315,125 @@ func TestRenderCommitMessage(t *testing.T) {
 			assert.Equal(t, test.want, RenderCommitMessage(test.input, "/user/repo", metas))
 		})
 	}
+}
+
+// newCommitRepo creates a repository in given object format with one commit
+// and one blob, and returns its path and the IDs of the commit and the blob.
+func newCommitRepo(t *testing.T, objectFormat string) (repoPath, commitID, blobID string) {
+	t.Helper()
+	repoPath = t.TempDir()
+	git := func(stdin string, args ...string) string {
+		cmd := exec.Command("git", append([]string{"-C", repoPath}, args...)...)
+		cmd.Stdin = strings.NewReader(stdin)
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=a", "GIT_AUTHOR_EMAIL=a@example.com", "GIT_COMMITTER_NAME=a", "GIT_COMMITTER_EMAIL=a@example.com")
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	git("", "init", "-q", "--bare", "--object-format="+objectFormat)
+	tree := git("", "mktree")
+	commitID = git("", "commit-tree", "-m", "initial", tree)
+	blobID = git("checksum", "hash-object", "-w", "--stdin")
+	return repoPath, commitID, blobID
+}
+
+func TestMarkdown_CommitIDs(t *testing.T) {
+	repoPath, commitID, blobID := newCommitRepo(t, "sha1")
+	metas := map[string]string{
+		"repoLink": "/someuser/somerepo",
+		"repoPath": repoPath,
+	}
+	sha256RepoPath, sha256ID, _ := newCommitRepo(t, "sha256")
+	sha256Metas := map[string]string{
+		"repoLink": "/someuser/somerepo",
+		"repoPath": sha256RepoPath,
+	}
+	link := func(id, text string) string {
+		return `<a href="/someuser/somerepo/commit/` + id + `" rel="nofollow"><code>` + text + `</code></a>`
+	}
+
+	tests := []struct {
+		desc   string
+		input  string
+		metas  map[string]string
+		expVal string
+	}{
+		{
+			desc:   "Full SHA (40 symbols)",
+			input:  commitID,
+			metas:  metas,
+			expVal: link(commitID, commitID[:10]),
+		},
+		{
+			desc:   "Short SHA links to the full ID",
+			input:  "Fixed in " + commitID[:8] + ".",
+			metas:  metas,
+			expVal: "Fixed in " + link(commitID, commitID[:8]) + ".",
+		},
+		{
+			desc:   "Next to Chinese characters",
+			input:  "修复了" + commitID[:10] + "的问题",
+			metas:  metas,
+			expVal: "修复了" + link(commitID, commitID[:10]) + "的问题",
+		},
+		{
+			desc:   "Full SHA-256 (64 symbols) in a SHA-256 repository",
+			input:  sha256ID,
+			metas:  sha256Metas,
+			expVal: link(sha256ID, sha256ID[:10]),
+		},
+		{
+			desc:   "64 symbols in a SHA-1 repository, e.g., a checksum",
+			input:  sha256ID,
+			metas:  metas,
+			expVal: sha256ID,
+		},
+		{
+			desc:   "UUID",
+			input:  "123e4567-e89b-12d3-a456-426614174000",
+			metas:  metas,
+			expVal: "123e4567-e89b-12d3-a456-426614174000",
+		},
+		{
+			desc:   "Hex string that names no object",
+			input:  "deadbeef",
+			metas:  metas,
+			expVal: "deadbeef",
+		},
+		{
+			desc:   "ID of an object that is not a commit",
+			input:  blobID,
+			metas:  metas,
+			expVal: blobID,
+		},
+		{
+			desc:   "Commit ID without a repository to check it in",
+			input:  commitID,
+			metas:  map[string]string{"repoLink": "/someuser/somerepo"},
+			expVal: commitID,
+		},
+		{
+			desc:   "9 digits",
+			input:  "123456789",
+			metas:  metas,
+			expVal: "123456789",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(Markdown(test.input, "/someuser/somerepo", test.metas)))
+		})
+	}
+}
+
+func TestMarkdown_CommitLinks(t *testing.T) {
+	repoPath, commitID, _ := newCommitRepo(t, "sha1")
+	metas := map[string]string{
+		"repoLink": "/user/repo",
+		"repoPath": repoPath,
+	}
+	input := "Fixed in " + commitID[:7] + ", see " + commitID + ". UUID 123e4567-e89b-12d3-a456-426614174000.\n\n`" + commitID + "`"
+	want := `<p>Fixed in <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:7] + `</code></a>, see <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:10] + "</code></a>. UUID 123e4567-e89b-12d3-a456-426614174000.</p>\n<p><code>" + commitID + "</code></p>\n"
+	assert.Equal(t, want, string(Markdown(input, "/user/repo", metas)))
 }

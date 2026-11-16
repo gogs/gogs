@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/markup/dariomark"
 )
@@ -55,10 +56,8 @@ var (
 	CrossReferenceIssueNumericPattern = lazyregexp.New(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g., d8a994ef243349f321568f9e36d5c3f444b99cae
-	// FIXME: This pattern matches pure numbers as well, so findSha1s skips matches that parse as positive numbers.
-	// Only full SHA-256 commit IDs are longer than 40, so other hex strings, e.g.,
-	// checksums of 41 to 63 characters, are not mistaken for commit IDs. Those of
-	// 64 characters are only linked in SHA-256 repositories.
+	// It only finds candidates, which are linked when they name a commit of the
+	// repository, see resolveCommits. Pure numbers are never linked.
 	Sha1CurrentPattern = lazyregexp.New(`\b(?:[0-9a-f]{7,40}|[0-9a-f]{64})\b`)
 )
 
@@ -269,18 +268,46 @@ func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
 	return mergeSpans(skip, spans)
 }
 
+// resolveCommits returns the full IDs of the commits that the commit ID
+// candidates in text name in the repository in metas["repoPath"], keyed by the
+// candidate. It returns nil without a repository, or when the commits cannot be
+// resolved, so that the candidates stay text.
+func resolveCommits(text []byte, metas map[string]string) map[string]string {
+	repoPath := metas["repoPath"]
+	if repoPath == "" {
+		return nil
+	}
+	var ids []string
+	seen := make(map[string]bool)
+	for _, m := range Sha1CurrentPattern.FindAll(text, -1) {
+		id := string(m)
+		if v, _ := strconv.Atoi(id); v > 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	commits, err := git.RepoCommitIDs(context.Background(), repoPath, ids)
+	if err != nil {
+		return nil
+	}
+	return commits
+}
+
 // findSha1s returns the spans of skip merged with the commit IDs in text that
-// do not overlap them.
-func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan {
+// name a commit in commits, see resolveCommits, and do not overlap them.
+func findSha1s(text []byte, metas, commits map[string]string, skip []linkSpan) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range Sha1CurrentPattern.FindAllIndex(text, -1) {
 		m := text[loc[0]:loc[1]]
-		if v, _ := strconv.Atoi(string(m)); v > 0 {
-			continue
-		} else if len(m) == 64 && metas["objectFormat"] != "sha256" {
+		fullID, ok := commits[string(m)]
+		if !ok {
 			continue
 		}
-		href := fmt.Appendf(nil, "%s/commit/%s", html.EscapeString(metas["repoLink"]), m)
+		href := fmt.Appendf(nil, "%s/commit/%s", html.EscapeString(metas["repoLink"]), fullID)
 		spans = append(spans, linkSpan{Start: loc[0], End: loc[1], Href: href, Text: m[:min(len(m), 10)], Code: true})
 	}
 	return mergeSpans(skip, spans)
@@ -290,12 +317,13 @@ func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan
 // It replaces each reference where it is found, in a single pass, and a
 // reference that overlaps an earlier kind of reference is left as text.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	return replaceSpans(rawBytes, findSpecialLinks(rawBytes, urlPrefix, metas))
+	return replaceSpans(rawBytes, findSpecialLinks(rawBytes, urlPrefix, metas, resolveCommits(rawBytes, metas)))
 }
 
 // findSpecialLinks returns the mentions, issue references, cross-references
-// and commit IDs in text, see RenderSpecialLink.
-func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string) []linkSpan {
+// and commit IDs in text, see RenderSpecialLink. Commit IDs are linked only
+// when they are in commits, see resolveCommits.
+func findSpecialLinks(rawBytes []byte, urlPrefix string, metas, commits map[string]string) []linkSpan {
 	kinds := specialLinkKinds(rawBytes, metas)
 	if kinds == 0 {
 		return nil
@@ -311,7 +339,7 @@ func findSpecialLinks(rawBytes []byte, urlPrefix string, metas map[string]string
 		spans = findCrossReferences(rawBytes, spans)
 	}
 	if kinds&linkCommit != 0 {
-		spans = findSha1s(rawBytes, metas, spans)
+		spans = findSha1s(rawBytes, metas, commits, spans)
 	}
 	return spans
 }
@@ -390,13 +418,15 @@ func postProcessHTML(rawHTML []byte, urlPrefix string, metas map[string]string) 
 	startTags := make([]string, 0, 5)
 	buf := bytes.NewBuffer(nil)
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHTML))
+	commits := resolveCommits(rawHTML, metas)
 
 outerLoop:
 	for html.ErrorToken != tokenizer.Next() {
 		token := tokenizer.Token()
 		switch token.Type {
 		case html.TextToken:
-			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix, metas))
+			text := []byte(token.String())
+			buf.Write(replaceSpans(text, findSpecialLinks(text, urlPrefix, metas, commits)))
 
 		case html.StartTagToken:
 			tagName := token.Data

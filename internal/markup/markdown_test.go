@@ -120,11 +120,6 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 			want:  "<p><a href=\"/user\" rel=\"nofollow\">@user</a>, see <a href=\"https://tracker.example.com/user/repo/issues/12\" rel=\"nofollow\">#12</a> and <a href=\"http://localhost:3000/user/repo/issues/7\" rel=\"nofollow\">user/repo#7</a>.</p>\n",
 		},
 		{
-			name:  "commit",
-			input: "Fixed in d8a994ef243349f321568f9e36d5c3f444b99cae.",
-			want:  "<p>Fixed in <a href=\"/user/repo/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\" rel=\"nofollow\"><code>d8a994ef24</code></a>.</p>\n",
-		},
-		{
 			name:  "links and code are left alone",
 			input: "[#12](http://example.com) `#12` and ```@user```",
 			want:  "<p><a href=\"http://example.com\" rel=\"nofollow\">#12</a> <code>#12</code> and <code>@user</code></p>\n",
@@ -582,7 +577,7 @@ func FuzzMarkdown(f *testing.F) {
 		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 		opts.PostProcess = true
 		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
-			return findSpecialLinks(text, urlPrefix, trackerMetas())
+			return findSpecialLinks(text, urlPrefix, trackerMetas(), nil)
 		}
 		opts.Emoji = emoji
 		if file {
