@@ -318,9 +318,47 @@ export function RepoCode({
                     ) : null}
                   </Link>
                 </h3>
-                {!data.tags.length ? (
+                {summary.latestRelease ? (
+                  <>
+                    <Link
+                      to="/$owner/$repo/releases"
+                      params={params}
+                      className="mt-3 flex min-w-0 items-start gap-2 text-sm hover:text-(--color-primary)"
+                    >
+                      <Tag className="mt-0.5 size-4 shrink-0 text-(--color-success)" aria-hidden />
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-semibold wrap-anywhere">
+                            {summary.latestRelease.title || summary.latestRelease.tagName}
+                          </span>
+                          {summary.latestRelease.createdAt ? (
+                            <span className="rounded-full border border-(--color-success) px-2 text-xs leading-5 font-medium text-(--color-success)">
+                              {t("repo.release.latest")}
+                            </span>
+                          ) : null}
+                        </span>
+                        {summary.latestRelease.createdAt ? (
+                          <span className="block text-xs text-(--color-muted-foreground)">
+                            <RelativeTime when={summary.latestRelease.createdAt} />
+                          </span>
+                        ) : null}
+                      </span>
+                    </Link>
+                    {data.tags.length > 1 ? (
+                      <Link
+                        to="/$owner/$repo/releases"
+                        params={params}
+                        className="mt-2 inline-block text-xs text-(--color-primary) hover:underline"
+                      >
+                        {t(data.tags.length === 2 ? "repo.release.n_more_release" : "repo.release.n_more_releases", {
+                          count: data.tags.length - 1,
+                        })}
+                      </Link>
+                    ) : null}
+                  </>
+                ) : (
                   <p className="text-sm text-(--color-muted-foreground)">{t("repo.no_releases")}</p>
-                ) : null}
+                )}
               </section>
             </aside>
           </div>
