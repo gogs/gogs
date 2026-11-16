@@ -79,7 +79,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 			switch markup.Detect(readmeFile.Name()) {
 			case markup.TypeMarkdown:
 				c.Data["IsMarkdown"] = true
-				p = markup.Markdown(p, treeLink, c.Repo.Repository.ComposeMetas())
+				p = markup.MarkdownFile(p, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.TypeOrgMode:
 				c.Data["IsMarkdown"] = true
 				p = markup.OrgMode(p, treeLink, c.Repo.Repository.ComposeMetas())
@@ -149,7 +149,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 		switch markup.Detect(blob.Name()) {
 		case markup.TypeMarkdown:
 			c.Data["IsMarkdown"] = true
-			c.Data["FileContent"] = string(markup.Markdown(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
+			c.Data["FileContent"] = string(markup.MarkdownFile(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
 		case markup.TypeOrgMode:
 			c.Data["IsMarkdown"] = true
 			c.Data["FileContent"] = string(markup.OrgMode(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))

@@ -177,8 +177,26 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 	}
 }
 
+// TestMarkdown_LineBreaks checks that text written in Gogs keeps its line
+// breaks, and files keep them only with [markdown] ENABLE_HARD_LINE_BREAK, as
+// GitHub renders comments and files.
+func TestMarkdown_LineBreaks(t *testing.T) {
+	NewSanitizer()
+	defer func(old bool) { conf.Markdown.EnableHardLineBreak = old }(conf.Markdown.EnableHardLineBreak)
+
+	const input = "Fixed it\n:tada: thanks"
+	conf.Markdown.EnableHardLineBreak = false
+	assert.Equal(t, "<p>Fixed it<br>\n🎉 thanks</p>\n", string(Markdown(input, "/user/repo", nil)))
+	assert.Equal(t, "<p>Fixed it\n:tada: thanks</p>\n", string(MarkdownFile(input, "/user/repo", nil)))
+	assert.Equal(t, "<p>Fixed it\n:tada: thanks</p>\n", string(RawMarkdown([]byte(input), "")))
+
+	conf.Markdown.EnableHardLineBreak = true
+	assert.Equal(t, "<p>Fixed it<br>\n🎉 thanks</p>\n", string(MarkdownFile(input, "/user/repo", nil)))
+}
+
 // TestMarkdown_Emoji checks that emoji shortcodes render as on GitHub, with
-// and without raw HTML in the document.
+// and without raw HTML in the document. It renders files, whose line endings
+// do not split text, the way GitHub renders files.
 func TestMarkdown_Emoji(t *testing.T) {
 	conf.Server.ExternalURL = "http://localhost:3000/"
 	NewSanitizer()
@@ -249,12 +267,12 @@ func TestMarkdown_Emoji(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", nil)
+			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", nil, false)
 			require.True(t, sanitized, "takes the fast path")
-			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", nil)))
+			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
 			// A raw HTML comment, which renders as a line ending, takes the
 			// path that tokenizes the HTML.
-			assert.Equal(t, test.want+"\n", string(Markdown(test.input+"\n\n<!-- -->", "/user/repo", nil)))
+			assert.Equal(t, test.want+"\n", string(MarkdownFile(test.input+"\n\n<!-- -->", "/user/repo", nil)))
 		})
 	}
 
@@ -281,7 +299,7 @@ func TestMarkdown_Emoji(t *testing.T) {
 	}
 	for _, test := range rawTests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", nil)))
+			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
 		})
 	}
 }
@@ -321,7 +339,7 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas())
+			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas(), true)
 			assert.True(t, sanitized, "takes the fast path")
 			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
 		})
@@ -417,7 +435,7 @@ func TestMarkdown_HeadingIDs(t *testing.T) {
 	// Documents with raw HTML are sanitized by bluemonday instead.
 	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
 
-	got := dariomark.Render([]byte(input), markdownOptions("")).Headings
+	got := dariomark.Render([]byte(input), markdownOptions("", true)).Headings
 	assert.Equal(t, []dariomark.Heading{
 		{Level: 1, Text: "Hello, World!", ID: "user-content-hello-world"},
 		{Level: 2, Text: "Setup fast", ID: "user-content-setup-fast"},
@@ -433,7 +451,7 @@ func TestMarkdown_TaskLists(t *testing.T) {
 	input := "- [ ] write\n- [x] review\n  details\n  - [ ] sub\n- plain\n\n3. [x] ship\n"
 	want := `<ul class="contains-task-list">
 <li class="task-list-item" data-source-lines="1-1"><input disabled="" type="checkbox"> write</li>
-<li class="task-list-item" data-source-lines="2-4"><input checked="" disabled="" type="checkbox"> review
+<li class="task-list-item" data-source-lines="2-4"><input checked="" disabled="" type="checkbox"> review<br>
 details
 <ul class="contains-task-list">
 <li class="task-list-item" data-source-lines="4-4"><input disabled="" type="checkbox"> sub</li>
@@ -445,7 +463,7 @@ details
 <li class="task-list-item" data-source-lines="7-7"><input checked="" disabled="" type="checkbox"> ship</li>
 </ol>
 `
-	_, sanitized := renderMarkdown([]byte(input), "/user/repo", nil)
+	_, sanitized := renderMarkdown([]byte(input), "/user/repo", nil, true)
 	assert.True(t, sanitized, "takes the fast path")
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
 	// Documents with raw HTML are sanitized by bluemonday instead.
@@ -499,7 +517,7 @@ func TestMarkdown_CodeInListItems(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", nil)))
+			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
 		})
 	}
 }
@@ -517,24 +535,28 @@ func FuzzMarkdown(f *testing.F) {
 		"@user #12 user/repo#7 d8a994ef24 ABC-12 http://localhost:3000/user/repo/issues/1\n",
 		"[x](javascript:alert(1)) ![y](data:image/png;base64,AAA) <a@b.c> [z](//evil.example.com \"t\\\" onclick=\\\"x\")\n",
 		"```c++\nx\n```\n\n    @user\n\n<b>raw</b> <textarea>@user</textarea>\n",
+		"a\nb :tada:\nc  \nd\\\ne\n",
 	} {
 		f.Add(s)
 	}
 	const urlPrefix = "/user/repo"
 	f.Fuzz(func(t *testing.T, s string) {
 		body := []byte(s)
-		got, sanitized := renderMarkdown(body, urlPrefix, trackerMetas())
+		// Both line break modes, comments and files, chosen by the input.
+		hardWraps := len(s)%2 == 0
+		got, sanitized := renderMarkdown(body, urlPrefix, trackerMetas(), hardWraps)
 		if !sanitized {
 			SanitizeBytes(got)
 			return
 		}
 
-		opts := markdownOptions(urlPrefix)
+		opts := markdownOptions(urlPrefix, hardWraps)
 		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 		opts.PostProcess = true
 		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
 			return findSpecialLinks(text, urlPrefix, trackerMetas())
 		}
+		opts.Emoji = emoji
 		want := SanitizeBytes(dariomark.Render(body, opts).HTML)
 		if string(got) != string(want) {
 			t.Fatalf("sanitizing while rendering differs from bluemonday for %q\ngot  %q\nwant %q", s, got, want)

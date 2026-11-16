@@ -66,7 +66,7 @@ func FindAllMentions(content string) []string {
 	body := bytes.TrimPrefix([]byte(content), utf8BOM)
 	var names []string
 	guardRender(body, func() []byte {
-		opts := markdownOptions("")
+		opts := markdownOptions("", true)
 		opts.PostProcess = true
 		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
 			if bytes.IndexByte(text, '@') >= 0 {
@@ -499,10 +499,18 @@ var renderSemaphore = semaphore.NewWeighted(renderBudget)
 var utf8BOM = []byte("\ufeff")
 
 // Render takes a string or []byte and renders to sanitized HTML in given type of syntax with special links.
+// It renders files: Markdown keeps line breaks only with [markdown]
+// ENABLE_HARD_LINE_BREAK.
 //
 // A document larger than [ui] MAX_DISPLAY_FILE_SIZE is shown as escaped plain
 // text instead of being rendered.
 func Render(typ Type, input any, urlPrefix string, metas map[string]string) []byte {
+	return renderInput(typ, input, urlPrefix, metas, conf.Markdown.EnableHardLineBreak)
+}
+
+// renderInput is Render, with hardWraps rendering every line break of
+// Markdown as written.
+func renderInput(typ Type, input any, urlPrefix string, metas map[string]string, hardWraps bool) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {
 	case []byte:
@@ -518,7 +526,7 @@ func Render(typ Type, input any, urlPrefix string, metas map[string]string) []by
 	}
 	rawBytes = bytes.TrimPrefix(rawBytes, utf8BOM)
 	return guardRender(rawBytes, func() []byte {
-		return render(typ, rawBytes, urlPrefix, metas)
+		return render(typ, rawBytes, urlPrefix, metas, hardWraps)
 	})
 }
 
@@ -537,13 +545,13 @@ func guardRender(body []byte, render func() []byte) []byte {
 	return render()
 }
 
-func render(typ Type, rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+func render(typ Type, rawBytes []byte, urlPrefix string, metas map[string]string, hardWraps bool) []byte {
 	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:
 		var sanitized bool
-		rawHTML, sanitized = renderMarkdown(rawBytes, urlPrefix, metas)
+		rawHTML, sanitized = renderMarkdown(rawBytes, urlPrefix, metas, hardWraps)
 		if sanitized {
 			return rawHTML
 		}
