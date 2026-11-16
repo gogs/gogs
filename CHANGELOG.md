@@ -14,7 +14,7 @@ All notable changes to Gogs are documented in this file.
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
-- Issue templates, issue forms and pull request templates in the same locations and formats as on GitHub, e.g., `.github/ISSUE_TEMPLATE/bug.yml` and `.github/pull_request_template.md`. Opening an issue offers a template chooser when the repository has templates. [#8588](https://github.com/gogs/gogs/pull/8588)
+- Issue templates, issue forms and pull request templates in the same formats as on GitHub, read from the repository root, `.gogs` or `.github`, e.g., `.github/ISSUE_TEMPLATE/bug.yml` and `.github/pull_request_template.md`. Opening an issue offers a template chooser when the repository has templates. [#8588](https://github.com/gogs/gogs/pull/8588)
 
 ### Changed
 

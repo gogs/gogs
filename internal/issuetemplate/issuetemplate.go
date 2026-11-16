@@ -20,7 +20,7 @@ import (
 // locations are the directories templates are read from, in the order they
 // are looked at. ".gogs" comes before ".github" so a repository mirrored from
 // GitHub can override the templates for Gogs.
-var locations = []string{"", ".gogs", ".github", "docs"}
+var locations = []string{"", ".gogs", ".github"}
 
 // List is a comma-separated string or a sequence of strings, e.g., the labels
 // of a template.

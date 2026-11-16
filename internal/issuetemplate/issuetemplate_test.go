@@ -91,7 +91,7 @@ func TestLoadIssueTemplates(t *testing.T) {
 			".github/ISSUE_TEMPLATE/notes.txt":     "---\nname: Not a template\n---\n",
 			".github/ISSUE_TEMPLATE/config.yml":    "blank_issues_enabled: false\ncontact_links:\n  - name: Forum\n    url: https://example.com/forum\n    about: Ask questions here.\n  - name: Unsafe\n    url: javascript:alert(1)\n",
 			".github/ISSUE_TEMPLATE/nested/c.md":   "---\nname: Nested\n---\n",
-			"docs/ISSUE_TEMPLATE/ignored.md":       "---\nname: Shadowed by .github\n---\n",
+			"docs/ISSUE_TEMPLATE/ignored.md":       "---\nname: Not read from docs\n---\n",
 			".github/PULL_REQUEST_TEMPLATE/one.md": "One",
 		}))
 		require.NoError(t, err)
@@ -139,7 +139,8 @@ func TestLoadIssueTemplates(t *testing.T) {
 func TestPullRequest(t *testing.T) {
 	ctx := context.Background()
 	commit := commitFiles(t, map[string]string{
-		"docs/pull_request_template.md":            "Default",
+		".github/pull_request_template.md":         "Default",
+		"docs/PULL_REQUEST_TEMPLATE/docs.md":       "Not read from docs",
 		".github/PULL_REQUEST_TEMPLATE/feature.md": "Feature",
 		"PULL_REQUEST_TITLE.md":                    "{{headBranch}}",
 	})
@@ -153,6 +154,7 @@ func TestPullRequest(t *testing.T) {
 		{name: "default", template: "", wantContent: "Default", wantFound: true},
 		{name: "named", template: "feature.md", wantContent: "Feature", wantFound: true},
 		{name: "missing", template: "nope.md", wantFound: false},
+		{name: "docs is not a location", template: "docs.md", wantFound: false},
 		{name: "path traversal", template: "../pull_request_template.md", wantFound: false},
 	}
 	for _, test := range tests {
