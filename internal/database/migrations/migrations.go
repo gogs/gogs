@@ -40,7 +40,7 @@ func newMigrations(db *gorm.DB) []*goose.Migration {
 		newMigration(db, 22, "noop", func(*gorm.DB) error { return nil }),
 		newMigration(db, 23, "widen commit ID columns for SHA-256", widenCommitIDColumns),
 		newMigration(db, 24, "add repository.is_unlisted", addRepositoryIsUnlisted),
-		newMigration(db, 25, "delete team-repo relations of deleted teams", deleteOrphanedTeamRepos),
+		newMigration(db, 20261115050252, "delete team-repo relations of deleted teams", deleteOrphanedTeamRepos),
 	}
 }
 
