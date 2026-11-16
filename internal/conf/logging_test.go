@@ -309,6 +309,32 @@ func Test_rotatingWriter(t *testing.T) {
 		assert.Equal(t, "third\n", string(current))
 	})
 
+	t.Run("starts when the rotation at startup fails", func(t *testing.T) {
+		if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+			t.Skip("needs a directory that denies renames")
+		}
+
+		dir := t.TempDir()
+		filename := filepath.Join(dir, "gogs.log")
+		require.NoError(t, os.WriteFile(filename, []byte("yesterday\n"), 0o600))
+		yesterday := time.Now().Add(-24 * time.Hour)
+		require.NoError(t, os.Chtimes(filename, yesterday, yesterday))
+
+		// A read-only directory fails the rename like a file held open by another
+		// process does on Windows.
+		require.NoError(t, os.Chmod(dir, 0o500))
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+		w, err := newRotatingWriter(filename, FileRotation{Rotate: true, Daily: true, MaxDays: 7})
+		require.NoError(t, err)
+		_, err = w.Write([]byte("today\n"))
+		require.NoError(t, err)
+
+		current, err := os.ReadFile(filename)
+		require.NoError(t, err)
+		assert.Equal(t, "yesterday\ntoday\n", string(current))
+	})
+
 	t.Run("drops lines it cannot write", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("Windows cannot remove a directory with an open file")
