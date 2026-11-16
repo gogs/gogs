@@ -31,8 +31,8 @@ function options() {
 }
 
 // emojiCompletion completes emoji shortcodes, e.g., ":ta" to ":tada:", that
-// start a line or follow whitespace, outside code, the way GitHub does. Names
-// that start with what was typed come first, then names that contain it.
+// start a line or follow whitespace, outside code. Names that start with what
+// was typed come first, then names that contain it.
 export async function emojiCompletion(context: CompletionContext): Promise<CompletionResult | null> {
   const typed = context.matchBefore(/:[\w+-]+$/);
   if (!typed) return null;
