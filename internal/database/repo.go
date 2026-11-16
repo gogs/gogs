@@ -1342,8 +1342,15 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Use
 	return repo, nil
 }
 
+// ownerExistsCond returns the condition that leaves out repositories whose
+// owner no longer exists, given the column of the owner ID. They cannot be
+// rendered, and counting them would add pages that list nothing.
+func ownerExistsCond(ownerIDColumn string) string {
+	return ownerIDColumn + dbx.Quote(" IN (SELECT id FROM %s)", "user")
+}
+
 func countRepositories(logger *logx.Logger, userID int64, private bool) int64 {
-	sess := x.Where("id > 0")
+	sess := x.Where("id > 0").And(ownerExistsCond("owner_id"))
 
 	if userID > 0 {
 		sess.And("owner_id = ?", userID)
@@ -1375,7 +1382,7 @@ func CountUserRepositories(logger *logx.Logger, userID int64, private bool) int6
 
 func Repositories(page, pageSize int) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
-	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
+	return repos, x.Where(ownerExistsCond("owner_id")).Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
 // RepositoriesWithUsers returns repositories in given page with their owners
@@ -2056,6 +2063,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	if opts.OwnerID > 0 {
 		sess.And("repo.owner_id = ?", opts.OwnerID)
 	}
+	sess.And(ownerExistsCond("repo.owner_id"))
 
 	// We need all fields (repo.*) in final list but only ID (repo.id) is good enough for counting.
 	count, err = sess.Clone().Distinct("repo.id").Count(new(Repository))
