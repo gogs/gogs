@@ -8,65 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"unknwon.dev/x/logx"
 )
-
-// DiffOptions contains optional arguments for parsing diff.
-//
-// Docs: https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---full-index
-type DiffOptions struct {
-	// The commit ID to use for computing diff between a range of commits (base,
-	// revision]. When not set, only computes diff for a single commit at revision.
-	Base string
-}
-
-// Diff returns a parsed diff object between given commits of the repository.
-func (r *Repository) Diff(ctx context.Context, logger *logx.Logger, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (_ *Diff, err error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Diff", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev), attribute.Int64("git.max_files", int64(maxFiles))))
-	defer func() { endSpan(span, err) }()
-
-	var opt DiffOptions
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
-	commit, err := r.CatFileCommit(ctx, rev)
-	if err != nil {
-		return nil, err
-	}
-
-	var args []string
-	if opt.Base == "" {
-		// First commit of repository
-		if commit.ParentsCount() == 0 {
-			args = []string{"show", "--full-index", "--end-of-options", rev}
-		} else {
-			c, err := commit.Parent(ctx, 0)
-			if err != nil {
-				return nil, err
-			}
-			args = []string{"diff", "--full-index", "-M", c.ID.String(), "--end-of-options", rev}
-		}
-	} else {
-		args = []string{"diff", "--full-index", "-M", opt.Base, "--end-of-options", rev}
-	}
-	return r.parseDiff(ctx, logger, args, nil, maxFiles, maxFileLines, maxLineChars)
-}
-
-func (r *Repository) parseDiff(ctx context.Context, logger *logx.Logger, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
-	stdout, w := io.Pipe()
-	done := make(chan streamParseDiffResult)
-	go streamParseDiff(logger, stdout, done, maxFiles, maxFileLines, maxLineChars)
-
-	err := pipe(ctx, r.path, args, envs, w)
-	_ = w.Close() // Close writer to exit parsing goroutine.
-	if err != nil {
-		return nil, err
-	}
-
-	result := <-done
-	return result.Diff, result.Err
-}
 
 // RawDiffFormat is the format of a raw diff.
 type RawDiffFormat string
@@ -135,7 +77,7 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 	}
 	args = slices.Concat(args[:1], opt.Args, args[1:])
 
-	if err = pipe(ctx, r.path, args, nil, w); err != nil {
+	if err = pipe(ctx, r.path, args, w); err != nil {
 		return err
 	}
 	return nil
