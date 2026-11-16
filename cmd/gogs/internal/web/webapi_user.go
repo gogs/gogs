@@ -310,6 +310,11 @@ func completeSignIn(sess session.Session, mc *macaron.Context, u *database.User)
 	if err := old.Flush(); err != nil {
 		return errors.Wrap(err, "flush session")
 	}
+	// RegenerateId renames the session named by the request's cookie. Point it
+	// at the session in use, which the session middleware started anew when
+	// the browser sent a malformed or unknown session ID.
+	mc.Req.Header.Del("Cookie")
+	mc.Req.AddCookie(&http.Cookie{Name: conf.Session.CookieName, Value: old.ID()})
 	signedIn, err := old.RegenerateId(mc)
 	if err != nil {
 		return errors.Wrap(err, "regenerate session ID")

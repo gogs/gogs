@@ -432,6 +432,11 @@ func TestCompleteSignInRegeneratesSessionID(t *testing.T) {
 				return found
 			}
 
+			// A malformed session ID is replaced rather than failing the sign-in.
+			fresh := sessionCookie(get("/sign-in", "garbage"))
+			require.NotNil(t, fresh)
+			assert.Equal(t, "7 false", get("/whoami", fresh.Value).Body.String())
+
 			// The attacker's session ID, planted in the victim's browser.
 			planted := sessionCookie(get("/plant", ""))
 			require.NotNil(t, planted)
