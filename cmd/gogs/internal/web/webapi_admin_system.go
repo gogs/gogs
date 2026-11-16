@@ -65,7 +65,7 @@ func (r adminReport) withHint(row adminReportRow, hintKey string) adminReportRow
 	return row
 }
 
-// code is a value as it is set in the configuration.
+// code is a value shown as code, e.g., as it is set in the configuration.
 func (r adminReport) code(key string, value any) adminReportRow {
 	return adminReportRow{Label: r.l.Tr(key), Kind: "code", Value: fmt.Sprint(value)}
 }
@@ -117,9 +117,12 @@ type adminDashboard struct {
 func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
 	s := database.GetStatistic(c.Request().Context(), logger).Counter
 	r := adminReport{l: l}
-	size := func(n uint64) string { return tool.FileSize(int64(n)) }
-	seconds := func(ns uint64, precision int) string {
-		return strconv.FormatFloat(float64(ns)/float64(time.Second), 'f', precision, 64) + "s"
+	// Measurements show the whole value, with its unit, as code.
+	size := func(key string, n uint64) adminReportRow {
+		return r.code(key, tool.FileSize(int64(n)))
+	}
+	seconds := func(key string, ns uint64, precision int) adminReportRow {
+		return r.code(key, strconv.FormatFloat(float64(ns)/float64(time.Second), 'f', precision, 64)+"s")
 	}
 
 	m := new(runtime.MemStats)
@@ -127,41 +130,41 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	status := r.section("system-status", "admin.dashboard.system_status",
 		rows(
 			r.text("admin.dashboard.server_uptime", tool.TimeSincePro(initTime)),
-			r.text("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
+			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
 		),
 		rows(
-			r.text("admin.dashboard.current_memory_usage", size(m.Alloc)),
-			r.text("admin.dashboard.total_memory_allocated", size(m.TotalAlloc)),
-			r.text("admin.dashboard.memory_obtained", size(m.Sys)),
-			r.text("admin.dashboard.pointer_lookup_times", m.Lookups),
-			r.text("admin.dashboard.memory_allocate_times", m.Mallocs),
-			r.text("admin.dashboard.memory_free_times", m.Frees),
+			size("admin.dashboard.current_memory_usage", m.Alloc),
+			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
+			size("admin.dashboard.memory_obtained", m.Sys),
+			r.code("admin.dashboard.pointer_lookup_times", m.Lookups),
+			r.code("admin.dashboard.memory_allocate_times", m.Mallocs),
+			r.code("admin.dashboard.memory_free_times", m.Frees),
 		),
 		rows(
-			r.text("admin.dashboard.current_heap_usage", size(m.HeapAlloc)),
-			r.text("admin.dashboard.heap_memory_obtained", size(m.HeapSys)),
-			r.text("admin.dashboard.heap_memory_idle", size(m.HeapIdle)),
-			r.text("admin.dashboard.heap_memory_in_use", size(m.HeapInuse)),
-			r.text("admin.dashboard.heap_memory_released", size(m.HeapReleased)),
-			r.text("admin.dashboard.heap_objects", m.HeapObjects),
+			size("admin.dashboard.current_heap_usage", m.HeapAlloc),
+			size("admin.dashboard.heap_memory_obtained", m.HeapSys),
+			size("admin.dashboard.heap_memory_idle", m.HeapIdle),
+			size("admin.dashboard.heap_memory_in_use", m.HeapInuse),
+			size("admin.dashboard.heap_memory_released", m.HeapReleased),
+			r.code("admin.dashboard.heap_objects", m.HeapObjects),
 		),
 		rows(
-			r.text("admin.dashboard.bootstrap_stack_usage", size(m.StackInuse)),
-			r.text("admin.dashboard.stack_memory_obtained", size(m.StackSys)),
-			r.text("admin.dashboard.mspan_structures_usage", size(m.MSpanInuse)),
-			r.text("admin.dashboard.mspan_structures_obtained", size(m.MSpanSys)),
-			r.text("admin.dashboard.mcache_structures_usage", size(m.MCacheInuse)),
-			r.text("admin.dashboard.mcache_structures_obtained", size(m.MCacheSys)),
-			r.text("admin.dashboard.profiling_bucket_hash_table_obtained", size(m.BuckHashSys)),
-			r.text("admin.dashboard.gc_metadata_obtained", size(m.GCSys)),
-			r.text("admin.dashboard.other_system_allocation_obtained", size(m.OtherSys)),
+			size("admin.dashboard.bootstrap_stack_usage", m.StackInuse),
+			size("admin.dashboard.stack_memory_obtained", m.StackSys),
+			size("admin.dashboard.mspan_structures_usage", m.MSpanInuse),
+			size("admin.dashboard.mspan_structures_obtained", m.MSpanSys),
+			size("admin.dashboard.mcache_structures_usage", m.MCacheInuse),
+			size("admin.dashboard.mcache_structures_obtained", m.MCacheSys),
+			size("admin.dashboard.profiling_bucket_hash_table_obtained", m.BuckHashSys),
+			size("admin.dashboard.gc_metadata_obtained", m.GCSys),
+			size("admin.dashboard.other_system_allocation_obtained", m.OtherSys),
 		),
 		rows(
-			r.text("admin.dashboard.next_gc_recycle", size(m.NextGC)),
-			r.text("admin.dashboard.last_gc_time", seconds(uint64(time.Now().UnixNano())-m.LastGC, 1)),
-			r.text("admin.dashboard.total_gc_pause", seconds(m.PauseTotalNs, 1)),
-			r.text("admin.dashboard.last_gc_pause", seconds(m.PauseNs[(m.NumGC+255)%256], 3)),
-			r.text("admin.dashboard.gc_times", m.NumGC),
+			size("admin.dashboard.next_gc_recycle", m.NextGC),
+			seconds("admin.dashboard.last_gc_time", uint64(time.Now().UnixNano())-m.LastGC, 1),
+			seconds("admin.dashboard.total_gc_pause", m.PauseTotalNs, 1),
+			seconds("admin.dashboard.last_gc_pause", m.PauseNs[(m.NumGC+255)%256], 3),
+			r.code("admin.dashboard.gc_times", m.NumGC),
 		),
 	)
 
