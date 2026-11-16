@@ -1,13 +1,15 @@
+import { acceptCompletion, autocompletion } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { Language, StreamLanguage, defineLanguageFacet, syntaxHighlighting } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
-import { Compartment, EditorState } from "@codemirror/state";
+import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { classHighlighter, tagHighlighter, tags } from "@lezer/highlight";
 import { GFM, parser as markdownParser } from "@lezer/markdown";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { CodeEditorProps } from "@/components/CodeEditor";
+import { emojiCompletion } from "@/lib/emoji-completion";
 
 // MARKDOWN_HIGHLIGHTER marks what classHighlighter leaves out of Markdown:
 // inline code, quotes, and the characters of the markup.
@@ -41,7 +43,37 @@ const THEME = EditorView.theme({
     borderRight: "1px solid var(--color-border)",
   },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 0.5rem 0 0.75rem" },
+  ".cm-tooltip.cm-tooltip-autocomplete": {
+    backgroundColor: "var(--color-popover)",
+    color: "var(--color-popover-foreground)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "0.375rem",
+    boxShadow: "0 4px 12px rgb(0 0 0 / 0.12)",
+    overflow: "hidden",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+    fontFamily: "var(--font-sans)",
+    maxHeight: "15rem",
+    minWidth: "12rem",
+    maxWidth: "min(20rem, calc(100vw - 2rem))",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": {
+    padding: "0.375rem 0.5rem",
+    lineHeight: "1.25rem",
+    cursor: "pointer",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+    backgroundColor: "var(--color-primary)",
+    color: "var(--color-primary-foreground)",
+  },
 });
+
+// MARKDOWN_COMPLETION completes emoji shortcodes. Enter or Tab inserts the
+// selected one. Without a completion open, Tab still leaves the editor.
+const MARKDOWN_COMPLETION = [
+  autocompletion({ override: [emojiCompletion], icons: false }),
+  Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
+];
 
 // CodeEditorView is the CodeMirror half of CodeEditor, loaded on demand. The
 // language and the layout are fixed once it mounts.
@@ -81,6 +113,7 @@ export default function CodeEditorView({
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap, ...(initial.code ? [indentWithTab] : [])]),
           LANGUAGES[initial.lang](),
+          initial.lang === "markdown" ? MARKDOWN_COMPLETION : [],
           syntaxHighlighting(classHighlighter),
           syntaxHighlighting(MARKDOWN_HIGHLIGHTER),
           THEME,
