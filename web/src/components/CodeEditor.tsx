@@ -1,6 +1,7 @@
 import { type AriaAttributes, type Ref, Suspense, lazy } from "react";
 
 import type { CodeLanguage } from "@/lib/code-language";
+import type { RepoRef } from "@/lib/reference-completion";
 import { cn } from "@/lib/utils";
 
 const CodeEditorView = lazy(() => import("@/components/CodeEditorView"));
@@ -14,6 +15,9 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   value: string;
   onChange: (value: string) => void;
   lang: CodeLanguage;
+  // repo is the repository the Markdown belongs to, whose users and issues
+  // are suggested when mentioning or referencing one.
+  repo?: RepoRef;
   // code lays the text out as source code: line numbers, long lines scroll
   // instead of wrapping, and Tab indents. Escape then Tab leaves the editor.
   code?: boolean;

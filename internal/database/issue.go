@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -1006,6 +1007,56 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		}
 	}
 
+	return issues, nil
+}
+
+// SuggestIssuesOptions is the options for SuggestIssues.
+type SuggestIssuesOptions struct {
+	RepoID int64
+	// Keyword matches the issues whose number starts with it or whose title
+	// contains it, ignoring case. An empty keyword matches every issue.
+	Keyword       string
+	IncludeIssues bool
+	IncludePulls  bool
+	Limit         int
+}
+
+// SuggestIssues returns the issues and pull requests to suggest when
+// referencing one, without loading their attributes. The issue whose number is
+// the keyword comes first, then the most recently updated ones.
+func SuggestIssues(opts SuggestIssuesOptions) ([]*Issue, error) {
+	if !opts.IncludeIssues && !opts.IncludePulls {
+		return []*Issue{}, nil
+	}
+
+	sess := x.Where("repo_id = ?", opts.RepoID)
+	if opts.IncludeIssues != opts.IncludePulls {
+		sess.And("is_pull = ?", opts.IncludePulls)
+	}
+
+	keyword := strings.TrimSpace(opts.Keyword)
+	if keyword != "" {
+		conds := []string{"LOWER(name) LIKE ?"}
+		args := []any{"%" + strings.ToLower(keyword) + "%"}
+		if index, err := strconv.ParseInt(keyword, 10, 64); err == nil && index > 0 {
+			// Numbers starting with n are in [n, n+1), [10n, 10n+10) and so on.
+			indexCol := x.Quote("index")
+			for lo, hi := index, index+1; ; lo, hi = lo*10, hi*10 {
+				conds = append(conds, fmt.Sprintf("(%[1]s >= ? AND %[1]s < ?)", indexCol))
+				args = append(args, lo, hi)
+				if lo > math.MaxInt64/10 || hi > math.MaxInt64/10 {
+					break
+				}
+			}
+			sess.OrderBy(fmt.Sprintf("CASE WHEN %s = %d THEN 0 ELSE 1 END", indexCol, index))
+		}
+		sess.And("("+strings.Join(conds, " OR ")+")", args...)
+	}
+
+	issues := make([]*Issue, 0, opts.Limit)
+	if err := sess.Desc("updated_unix").Limit(opts.Limit).Find(&issues); err != nil {
+		return nil, errors.Wrap(err, "find")
+	}
 	return issues, nil
 }
 

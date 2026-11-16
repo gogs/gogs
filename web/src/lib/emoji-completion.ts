@@ -1,5 +1,6 @@
 import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { syntaxTree } from "@codemirror/language";
+import type { EditorState } from "@codemirror/state";
 
 // emoji.json lists the names of emoji shortcodes with their text, sorted by
 // name. It is generated from internal/markup/emoji.go, the names that Markdown
@@ -7,8 +8,19 @@ import { syntaxTree } from "@codemirror/language";
 import emojiURL from "@/lib/emoji.json?url";
 
 // NOT_TEXT are the Markdown syntax nodes whose text keeps its emoji
-// shortcodes, or that are not text at all.
+// shortcodes, mentions and issue references, or that are not text at all.
 const NOT_TEXT = new Set(["InlineCode", "FencedCode", "CodeBlock", "URL", "Autolink", "HTMLTag", "CommentBlock"]);
+
+// isMarkdownText tells whether the position is in Markdown text, where
+// emoji shortcodes, mentions and issue references render.
+export function isMarkdownText(state: EditorState, pos: number) {
+  let node = syntaxTree(state).resolveInner(pos, 1);
+  for (;;) {
+    if (NOT_TEXT.has(node.name)) return false;
+    if (!node.parent) return true;
+    node = node.parent;
+  }
+}
 
 let table: Promise<Completion[]> | undefined;
 
@@ -40,12 +52,7 @@ export async function emojiCompletion(context: CompletionContext): Promise<Compl
     const before = context.state.sliceDoc(typed.from - 1, typed.from);
     if (before !== " " && before !== "\t") return null;
   }
-  let node = syntaxTree(context.state).resolveInner(typed.from, 1);
-  for (;;) {
-    if (NOT_TEXT.has(node.name)) return null;
-    if (!node.parent) break;
-    node = node.parent;
-  }
+  if (!isMarkdownText(context.state, typed.from)) return null;
 
   const query = typed.text.slice(1).toLowerCase();
   // A source that rejects is not queried again until the cursor moves, so a

@@ -18,6 +18,7 @@ import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from
 import type { CodeEditorProps } from "@/components/CodeEditor";
 import type { CodeLanguage } from "@/lib/code-language";
 import { emojiCompletion } from "@/lib/emoji-completion";
+import { type RepoRef, referenceCompletions, renderReferenceIcon } from "@/lib/reference-completion";
 
 // MARKDOWN_HIGHLIGHTER marks what classHighlighter leaves out of Markdown:
 // inline code, quotes, and the characters of the markup.
@@ -109,14 +110,39 @@ const THEME = EditorView.theme({
     backgroundColor: "var(--color-primary)",
     color: "var(--color-primary-foreground)",
   },
+  ".cm-referenceIcon": {
+    display: "inline-block",
+    width: "1rem",
+    height: "1rem",
+    marginRight: "0.5rem",
+    verticalAlign: "-0.1875rem",
+  },
+  ".cm-referenceAvatar": { borderRadius: "9999px" },
+  ".cm-referenceIcon svg": { display: "block" },
+  ".cm-referenceOpen": { color: "var(--color-success)" },
+  ".cm-referenceClosed": { color: "var(--color-muted-foreground)" },
+  "li[aria-selected] .cm-referenceIcon": { color: "inherit" },
+  ".cm-completionDetail": {
+    marginLeft: "0.5rem",
+    fontStyle: "normal",
+    color: "var(--color-muted-foreground)",
+  },
+  "li[aria-selected] .cm-completionDetail": { color: "inherit", opacity: "0.85" },
 });
 
-// MARKDOWN_COMPLETION completes emoji shortcodes. Enter or Tab inserts the
-// selected one. Without a completion open, Tab still leaves the editor.
-const MARKDOWN_COMPLETION = [
-  autocompletion({ override: [emojiCompletion], icons: false }),
-  Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
-];
+// markdownCompletion completes emoji shortcodes, and mentions and issue
+// references when the Markdown belongs to a repository. Enter or Tab inserts
+// the selected one. Without a completion open, Tab still leaves the editor.
+function markdownCompletion(repo?: RepoRef) {
+  return [
+    autocompletion({
+      override: [emojiCompletion, ...(repo ? referenceCompletions(repo) : [])],
+      icons: false,
+      addToOptions: [{ render: renderReferenceIcon, position: 20 }],
+    }),
+    Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
+  ];
+}
 
 // layoutOf lays the text out as source code or as prose.
 function layoutOf(code: boolean, wrap: boolean): Extension {
@@ -138,6 +164,7 @@ export default function CodeEditorView({
   value,
   onChange,
   lang,
+  repo,
   code = false,
   wrap = !code,
   indentUnit = "  ",
@@ -158,6 +185,8 @@ export default function CodeEditorView({
   const [layout] = useState(() => new Compartment());
   const [indentation] = useState(() => new Compartment());
   const [initial] = useState(() => ({ value, minLines, autoFocus }));
+  // The repository is fixed once the editor mounts.
+  const [completion] = useState(() => markdownCompletion(repo));
   const emitChange = useEffectEvent((text: string) => onChange(text));
   // takeFiles hands over pasted or dropped files, and tells whether anyone
   // took them.
@@ -218,7 +247,7 @@ export default function CodeEditorView({
     const v = view.current;
     if (!v) return;
     if (lang === "markdown" || lang === "plain") {
-      v.dispatch({ effects: language.reconfigure(lang === "markdown" ? [markdownLanguage, MARKDOWN_COMPLETION] : []) });
+      v.dispatch({ effects: language.reconfigure(lang === "markdown" ? [markdownLanguage, completion] : []) });
       return;
     }
     let current = true;
@@ -228,7 +257,7 @@ export default function CodeEditorView({
     return () => {
       current = false;
     };
-  }, [language, lang]);
+  }, [language, completion, lang]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: layout.reconfigure(layoutOf(code, wrap)) });
