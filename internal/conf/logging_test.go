@@ -225,7 +225,12 @@ func TestInitLogging(t *testing.T) {
 	t.Cleanup(func() { File, Log = beforeFile, beforeLog })
 
 	initLogging := func(t *testing.T, modes string) string {
-		rootPath := filepath.Join(t.TempDir(), "log")
+		// The file logger keeps gogs.log open until the process exits, which
+		// stops Windows from removing a t.TempDir, so cleanup is best-effort.
+		dir, err := os.MkdirTemp("", "TestInitLogging")
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = os.RemoveAll(dir) })
+		rootPath := filepath.Join(dir, "log")
 		f, err := ini.Load([]byte(`
 [log]
 MODE = ` + modes + `
