@@ -19,11 +19,11 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
 import { AttachFilesButton, MarkdownEditor, PendingFiles } from "@/components/IssueForm";
 import { Markdown } from "@/components/Markdown";
+import { RelativeTime } from "@/components/RelativeTime";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoRelease,
@@ -37,7 +37,6 @@ import {
   updateRepoRelease,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 
@@ -238,14 +237,7 @@ function ReleaseRow({
         </div>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-(--color-muted-foreground)">
           <Publisher publisher={release.publisher} />
-          {release.createdAt ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <time dateTime={release.createdAt}>{formatRelativeTime(t, release.createdAt)}</time>
-              </TooltipTrigger>
-              <TooltipContent>{formatAbsoluteTime(release.createdAt)}</TooltipContent>
-            </Tooltip>
-          ) : null}
+          {release.createdAt ? <RelativeTime time={release.createdAt} /> : null}
           {release.target ? (
             <>
               <span aria-hidden className="max-sm:hidden">

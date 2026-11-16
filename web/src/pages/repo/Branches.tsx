@@ -4,12 +4,11 @@ import { GitBranch, GitPullRequest, List, ShieldCheck } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RelativeTime } from "@/components/RelativeTime";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoBranch, type RepoBranchesData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
@@ -176,14 +175,7 @@ function UpdatedBy({ branch }: { branch: RepoBranch }) {
     <>
       {parts.map((part, i) => {
         if (part === "%[1]s") {
-          return (
-            <Tooltip key={i}>
-              <TooltipTrigger asChild>
-                <time dateTime={branch.committedAt}>{formatRelativeTime(t, branch.committedAt)}</time>
-              </TooltipTrigger>
-              <TooltipContent>{formatAbsoluteTime(branch.committedAt)}</TooltipContent>
-            </Tooltip>
-          );
+          return <RelativeTime key={i} time={branch.committedAt} />;
         }
         if (part === "%[2]s") {
           return (

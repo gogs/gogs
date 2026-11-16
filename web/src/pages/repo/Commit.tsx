@@ -28,12 +28,12 @@ import { DiffFileTree, type DiffFileTreeHandle } from "@/components/DiffFileTree
 import { DiffSearch } from "@/components/DiffSearch";
 import { DiffToolbar, type DiffToolbarSettings, type WhitespaceMode } from "@/components/DiffToolbar";
 import { FileHeaderMenu } from "@/components/FileHeaderMenu";
+import { RelativeTime } from "@/components/RelativeTime";
 import { RepoHeader } from "@/components/RepoHeader";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { repoHeaderQuery } from "@/lib/queries/repo";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 
@@ -670,12 +670,7 @@ export function RepoCommit() {
             <img src={author.avatarURL} alt="" className="size-6 rounded-full" />
             {authorLabel}
             <span>{t("repo.authored")}</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <time dateTime={author.when}>{formatRelativeTime(t, author.when)}</time>
-              </TooltipTrigger>
-              <TooltipContent>{formatAbsoluteTime(author.when)}</TooltipContent>
-            </Tooltip>
+            <RelativeTime time={author.when} />
           </span>
           {/* TODO: Verified pill once the backend exposes signature verification. */}
 

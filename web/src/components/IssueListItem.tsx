@@ -3,9 +3,9 @@ import { CircleCheck, CircleDot, GitPullRequest, GitPullRequestClosed, MessageSq
 import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RelativeTime } from "@/components/RelativeTime";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DashboardIssue } from "@/lib/queries/user";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
@@ -155,14 +155,7 @@ export function OpenedBy({ issue }: { issue: Pick<DashboardIssue, "poster" | "cr
           );
         }
         if (part.startsWith("%[1]")) {
-          return (
-            <Tooltip key={i}>
-              <TooltipTrigger asChild>
-                <time dateTime={issue.createdAt}>{formatRelativeTime(t, issue.createdAt)}</time>
-              </TooltipTrigger>
-              <TooltipContent>{formatAbsoluteTime(issue.createdAt)}</TooltipContent>
-            </Tooltip>
-          );
+          return <RelativeTime key={i} time={issue.createdAt} />;
         }
         return part;
       })}
