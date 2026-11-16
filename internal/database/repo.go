@@ -1125,6 +1125,22 @@ func createRepository(tx *gorm.DB, doer, owner *User, repo *Repository) (err err
 		return err
 	}
 
+	// The limit is checked by the same statement that counts the repository, so
+	// creations that run at the same time cannot all pass it. The statement also
+	// locks the owner until the transaction ends.
+	query := dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user")
+	args := []any{owner.ID}
+	if limit := owner.maxNumRepos(); limit > -1 {
+		query += " AND num_repos < ?"
+		args = append(args, limit)
+	}
+	result := tx.Exec(query, args...)
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "increase owned repository count")
+	} else if result.RowsAffected == 0 {
+		return ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
+	}
+
 	has, err := isRepositoryExist(tx, owner, repo.Name)
 	if err != nil {
 		return errors.Newf("IsRepositoryExist: %v", err)
@@ -1146,11 +1162,6 @@ func createRepository(tx *gorm.DB, doer, owner *User, repo *Repository) (err err
 	}).Error
 	if err != nil {
 		return errors.Wrap(err, "restore feature switches")
-	}
-
-	err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
-	if err != nil {
-		return errors.Wrap(err, "increase owned repository count")
 	}
 
 	// Give access to all members in owner team.
@@ -1202,10 +1213,6 @@ func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOpt
 	if osx.Exist(repoPath) {
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
 	}
-	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
-	}
-
 	repo := &Repository{
 		OwnerID:      owner.ID,
 		Owner:        owner,
@@ -2481,10 +2488,6 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
-
-	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
-	}
 
 	repo := &Repository{
 		OwnerID:       owner.ID,

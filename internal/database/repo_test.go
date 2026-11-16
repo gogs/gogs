@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
@@ -217,4 +219,36 @@ func TestResolveMissingDefaultBranch(t *testing.T) {
 			assert.Equal(t, test.wantHEAD, git(t, dir, "symbolic-ref", "HEAD"))
 		})
 	}
+}
+
+func TestCreateRepository_Limit(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	db := newTestDB(t, "createRepositoryLimit")
+	alice, err := newUsersStore(db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	// Requests that run at the same time each load the owner before any of
+	// them has added a repository, so all of them see no repositories.
+	alice.MaxRepoCreation = 2
+	for i := range 3 {
+		err = db.Transaction(func(tx *gorm.DB) error {
+			return createRepository(tx, alice, alice, &Repository{OwnerID: alice.ID, Owner: alice, Name: fmt.Sprintf("r%d", i), LowerName: fmt.Sprintf("r%d", i)})
+		})
+		if i < 2 {
+			require.NoError(t, err)
+		}
+	}
+	assert.Equal(t, ErrReachLimitOfRepo{Limit: 2}, err)
+
+	got, err := newUsersStore(db).GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, got.NumRepos)
+	var count int64
+	require.NoError(t, db.Model(new(Repository)).Where("owner_id = ?", alice.ID).Count(&count).Error)
+	assert.Equal(t, int64(2), count)
 }
