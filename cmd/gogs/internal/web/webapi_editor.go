@@ -281,8 +281,7 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"summary": &msg}}, nil
 	}
 	req.NewBranch = strings.TrimSpace(req.NewBranch)
-	if req.NewBranch == "" || req.NewBranch == req.Branch {
-		req.NewBranch = ""
+	if req.NewBranch == "" {
 		return 0, nil, nil
 	}
 	var msg string
@@ -508,6 +507,29 @@ func postRepoEditorDelete(c flamego.Context, l i18n.Locale, viewer *database.Use
 		return http.StatusNotFound, nil, errors.New("file does not exist")
 	}
 
+	// The directories that only hold the file go away with it, so the page
+	// after the commit is the closest directory that is left.
+	dir := path.Dir(req.Path)
+	for dir != "." {
+		tree, err := commit.Subtree(ctx, dir)
+		if err != nil {
+			log.Error("postRepoEditorDelete: get directory %q of repo %d: %v", dir, repo.ID, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "get directory")
+		}
+		entries, err := tree.Entries(ctx)
+		if err != nil {
+			log.Error("postRepoEditorDelete: list directory %q of repo %d: %v", dir, repo.ID, err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "list directory")
+		}
+		if len(entries) > 1 {
+			break
+		}
+		dir = path.Dir(dir)
+	}
+	if dir == "." {
+		dir = ""
+	}
+
 	err = repo.DeleteRepoFile(ctx, viewer, database.DeleteRepoFileOptions{
 		LastCommitID: commit.ID.String(),
 		OldBranch:    req.Branch,
@@ -519,7 +541,7 @@ func postRepoEditorDelete(c flamego.Context, l i18n.Locale, viewer *database.Use
 		log.Error("postRepoEditorDelete: delete %q in repo %d: %v", req.Path, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete file")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(repoCtx, req.repoEditorCommitRequest, path.Dir("/" + req.Path)[1:])}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(repoCtx, req.repoEditorCommitRequest, dir)}, nil
 }
 
 type repoEditorUploadRequest struct {
@@ -590,7 +612,7 @@ func postRepoEditorUpload(c flamego.Context, l i18n.Locale, viewer *database.Use
 		OldBranch:    req.Branch,
 		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
 		TreePath:     req.Path,
-		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo.editor.upload_files_to_dir", req.Path)),
+		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo.editor.upload_files_to_dir", cmp.Or(req.Path, "/"))),
 		Files:        req.Files,
 	})
 	if err != nil {

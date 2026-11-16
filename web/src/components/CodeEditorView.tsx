@@ -5,6 +5,7 @@ import {
   StreamLanguage,
   type StreamParser,
   defineLanguageFacet,
+  indentOnInput,
   indentUnit as indentUnitFacet,
   syntaxHighlighting,
 } from "@codemirror/language";
@@ -175,6 +176,8 @@ export default function CodeEditorView({
           indentation.of([]),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           language.of([]),
+          // Closing a block, e.g., typing "}", moves the line back to its indentation.
+          indentOnInput(),
           syntaxHighlighting(classHighlighter),
           syntaxHighlighting(MARKDOWN_HIGHLIGHTER),
           THEME,

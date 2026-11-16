@@ -274,7 +274,7 @@ function CommitForm({
           <Button type="submit" variant={destructive ? "destructive" : "default"} disabled={submitDisabled}>
             {t("repo.editor.commit_changes")}
           </Button>
-          <Button asChild variant="ghost">
+          <Button asChild variant="outline">
             <a href={cancelURL}>{t("cancel")}</a>
           </Button>
         </div>
@@ -691,7 +691,7 @@ export function RepoFileUpload({ owner, name, target }: { owner: string; name: s
             target={target}
             value={commit}
             onChange={setCommit}
-            defaultSummary={t("repo.editor.upload_files_to_dir").replace("%s", path)}
+            defaultSummary={t("repo.editor.upload_files_to_dir").replace("%s", path || "/")}
             errors={fields}
             cancelURL={srcURL(owner, name, target.branch, target.path)}
             submitDisabled={uploads.uploading}
