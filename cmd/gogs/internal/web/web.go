@@ -369,7 +369,8 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 					c.ServeWeb()
 				})
 				m.Get("/danger", func(c *context.Context) {
-					if !c.Repo.IsOwner() {
+					// Admins can change the visibility, which forks cannot.
+					if !c.Repo.IsOwner() && c.Repo.Repository.IsFork {
 						c.NotFound()
 						return
 					}
