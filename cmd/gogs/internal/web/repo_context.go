@@ -6,7 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 )
@@ -21,7 +21,7 @@ type Viewer struct {
 
 // newViewer returns the viewer for the request. Disabled users are effectively
 // visiting as anonymous users.
-func newViewer(ctx context.Context, user *database.User, owner *database.User, repo *database.Repository) *Viewer {
+func newViewer(ctx context.Context, logger *logx.Logger, user *database.User, owner *database.User, repo *database.Repository) *Viewer {
 	v := &Viewer{}
 	if user != nil && !user.IsDisabled() {
 		v.User = user
@@ -31,7 +31,7 @@ func newViewer(ctx context.Context, user *database.User, owner *database.User, r
 		return v
 	}
 	v.access = database.Handle.Permissions().AccessMode(
-		ctx,
+		ctx, logger,
 		v.ID(),
 		repo.ID,
 		database.AccessModeOptions{
@@ -76,7 +76,7 @@ type repoContext struct {
 
 // withRepoContext injects the repoContext of the repository derived from the
 // route.
-func withRepoContext(c flamego.Context, user *database.User) {
+func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User) {
 	ctx := c.Request().Context()
 	w := c.ResponseWriter()
 	ownerName := c.Param("owner")
@@ -88,7 +88,7 @@ func withRepoContext(c flamego.Context, user *database.User) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 			return
 		}
-		log.Error("repoContext: get user by username %q: %v", ownerName, err)
+		logger.Error("Failed to get repository owner by username", "ownerName", ownerName, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get owner"))
 		return
 	}
@@ -99,7 +99,7 @@ func withRepoContext(c flamego.Context, user *database.User) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 			return
 		}
-		log.Error("repoContext: get repo by name %q/%q: %v", ownerName, repoName, err)
+		logger.Error("Failed to get repository by name", "ownerName", ownerName, "repoName", repoName, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get repo"))
 		return
 	}
@@ -107,6 +107,6 @@ func withRepoContext(c flamego.Context, user *database.User) {
 	c.Map(&repoContext{
 		Owner:  owner,
 		Repo:   repo,
-		Viewer: newViewer(ctx, user, owner, repo),
+		Viewer: newViewer(ctx, logger, user, owner, repo),
 	})
 }

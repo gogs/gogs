@@ -6,7 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -49,27 +49,27 @@ type repoIssues struct {
 	NewPullRequestURL string `json:"newPullRequestURL,omitempty"`
 }
 
-func getRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
+func getRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
 	repo := repoCtx.Repo
 	// Like the server-rendered page, guests can list the issues of a
 	// repository when its issues are public.
 	if !repo.EnableIssues || repo.EnableExternalTracker || (!repoCtx.Viewer.CanRead() && !repo.CanGuestViewIssues()) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	return listRepoIssues(c, viewer, repoCtx, false)
+	return listRepoIssues(c, logger, viewer, repoCtx, false)
 }
 
-func getRepoPulls(c flamego.Context, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
+func getRepoPulls(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
 	if !repoCtx.Viewer.CanRead() || !repoCtx.Repo.AllowsPulls() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	return listRepoIssues(c, viewer, repoCtx, true)
+	return listRepoIssues(c, logger, viewer, repoCtx, true)
 }
 
 // listRepoIssues lists the issues or pull requests of the repository, filtered
 // and sorted like the server-rendered page by the `type`, `labels`,
 // `milestone`, `assignee`, `state`, `sort` and `page` query parameters.
-func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoContext, isPull bool) (statusCode int, resp *repoIssues, err error) {
+func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, isPull bool) (statusCode int, resp *repoIssues, err error) {
 	repo := repoCtx.Repo
 	filterMode := database.FilterModeYourRepos
 	assigneeID := c.QueryInt64("assignee")
@@ -128,7 +128,7 @@ func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoConte
 		SortType:    c.Query("sort"),
 	})
 	if err != nil {
-		log.Error("listRepoIssues: list issues of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to list issues", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list issues")
 	}
 
@@ -136,7 +136,7 @@ func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoConte
 	if viewer != nil {
 		reads, err = database.GetIssueUsers(repo.ID, viewer.ID, isClosed)
 		if err != nil {
-			log.Error("listRepoIssues: get read states in repository %d: %v", repo.ID, err)
+			logger.Error("Failed to get issue read states", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get read states")
 		}
 	}
@@ -178,7 +178,7 @@ func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoConte
 
 	labelList, err := database.GetLabelsByRepoID(repo.ID)
 	if err != nil {
-		log.Error("listRepoIssues: list labels of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to list labels", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list labels")
 	}
 	resp.Labels = make([]dashboardIssueLabel, 0, len(labelList))
@@ -188,7 +188,7 @@ func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoConte
 
 	milestones, err := database.GetMilestonesByRepoID(repo.ID)
 	if err != nil {
-		log.Error("listRepoIssues: list milestones of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to list milestones", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list milestones")
 	}
 	resp.Milestones = make([]repoIssueFilterMilestone, 0, len(milestones))
@@ -201,7 +201,7 @@ func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoConte
 
 	assignees, err := repo.GetAssignees()
 	if err != nil {
-		log.Error("listRepoIssues: list assignees of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to list assignees", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list assignees")
 	}
 	resp.Assignees = make([]repoIssueAssignee, 0, len(assignees))
@@ -212,7 +212,7 @@ func listRepoIssues(c flamego.Context, viewer *database.User, repoCtx *repoConte
 	if isPull && viewer != nil {
 		resp.NewPullRequestURL, err = newPullRequestURL(c, viewer, repoCtx)
 		if err != nil {
-			log.Error("listRepoIssues: find where to propose a pull request to repository %d: %v", repo.ID, err)
+			logger.Error("Failed to get new pull request URL", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "find where to propose a pull request")
 		}
 	}
@@ -275,7 +275,7 @@ type repoFork struct {
 }
 
 // getRepoForks lists the forks of the repository that the viewer can see.
-func getRepoForks(c flamego.Context, viewer *database.User, repoCtx *repoContext) (statusCode int, resp map[string][]repoFork, err error) {
+func getRepoForks(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp map[string][]repoFork, err error) {
 	repo := repoCtx.Repo
 	// Like the server-rendered page, an empty repository has no forks page.
 	if !repoCtx.Viewer.CanRead() || repo.IsEmpty {
@@ -283,7 +283,7 @@ func getRepoForks(c flamego.Context, viewer *database.User, repoCtx *repoContext
 	}
 	forks, err := repo.GetForks()
 	if err != nil {
-		log.Error("getRepoForks: list forks of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to list forks", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list forks")
 	}
 
@@ -291,14 +291,14 @@ func getRepoForks(c flamego.Context, viewer *database.User, repoCtx *repoContext
 	items := make([]repoFork, 0, len(forks))
 	for _, fork := range forks {
 		if fork.IsPrivate && (viewer == nil || !viewer.IsAdmin) &&
-			database.Handle.Permissions().AccessMode(ctx, repoCtx.Viewer.ID(), fork.ID, database.AccessModeOptions{
+			database.Handle.Permissions().AccessMode(ctx, logger, repoCtx.Viewer.ID(), fork.ID, database.AccessModeOptions{
 				OwnerID: fork.OwnerID,
 				Private: true,
 			}) < database.AccessModeRead {
 			continue
 		}
 		if err = fork.GetOwner(); err != nil {
-			log.Error("getRepoForks: get owner of fork %d: %v", fork.ID, err)
+			logger.Error("Failed to get fork owner", "forkID", fork.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get owner")
 		}
 		items = append(items, repoFork{

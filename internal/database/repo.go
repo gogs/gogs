@@ -20,8 +20,8 @@ import (
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
 	"golang.org/x/image/draw"
-	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
 
 	embedConf "gogs.io/gogs/conf"
@@ -66,21 +66,21 @@ var (
 	ItemsPerPage = 40
 )
 
-func LoadRepoConfig() {
+func LoadRepoConfig(logger *logx.Logger) {
 	// Load .gitignore and license files and readme templates.
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
 	for i, t := range types {
 		files, err := embedConf.FileNames(t)
 		if err != nil {
-			log.Fatal("Failed to get %q files: %v", t, err)
+			logger.FatalContext(context.Background(), "Failed to get embedded config files", "type", t, "error", err)
 		}
 
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
 		if osx.IsDir(customPath) {
 			entries, err := os.ReadDir(customPath)
 			if err != nil {
-				log.Fatal("Failed to get custom %s files: %v", t, err)
+				logger.FatalContext(context.Background(), "Failed to get custom config files", "type", t, "error", err)
 			}
 
 			for _, entry := range entries {
@@ -117,43 +117,43 @@ func LoadRepoConfig() {
 	Licenses = sortedLicenses
 }
 
-func NewRepoContext() {
+func NewRepoContext(logger *logx.Logger) {
 	zip.Verbose = false
 
 	// Check Git installation and version.
 	var err error
 	conf.Git.Version, err = git.BinVersion(context.TODO())
 	if err != nil {
-		log.Fatal("Failed to get Git version: %v", err)
+		logger.FatalContext(context.Background(), "Failed to get Git version", "error", err)
 	}
 
-	log.Trace("Git version: %s", conf.Git.Version)
+	logger.Debug("Git version", "version", conf.Git.Version)
 	if semverx.Compare(conf.Git.Version, "<", "2.43.1") {
-		log.Fatal("Gogs requires Git version greater or equal to 2.43.1, but got %s", conf.Git.Version)
+		logger.FatalContext(context.Background(), "Gogs requires Git version 2.43.1 or later", "version", conf.Git.Version)
 	}
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
 		value, err := git.ConfigGet(context.TODO(), configKey)
 		if err != nil {
-			log.Fatal("Failed to get git %s: %v", configKey, err)
+			logger.FatalContext(context.Background(), "Failed to get Git config", "configKey", configKey, "error", err)
 		} else if value != "" {
 			continue
 		}
 
 		if err = git.SetGlobalConfig(context.TODO(), configKey, defaultValue); err != nil {
-			log.Fatal("Failed to set git %s: %v", configKey, err)
+			logger.FatalContext(context.Background(), "Failed to set Git config", "configKey", configKey, "error", err)
 		}
-		log.Info("Git config %s set to %s", configKey, defaultValue)
+		logger.Info("Git config set", "configKey", configKey, "configValue", defaultValue)
 	}
 
 	// Set git some configurations.
 	if err = git.SetGlobalConfig(context.TODO(), "core.quotepath", "false"); err != nil {
-		log.Fatal("Failed to execute 'git config --global core.quotepath false': %v", err)
+		logger.FatalContext(context.Background(), "Failed to set Git config", "configKey", "core.quotepath", "error", err)
 	}
 
-	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(conf.Server.AppDataPath, "tmp"))
-	RemoveAllWithNotice("Clean up LFS temporary data", conf.LFS.ObjectsTempPath)
+	RemoveAllWithNotice(logger, "Clean up repository temporary data", filepath.Join(conf.Server.AppDataPath, "tmp"))
+	RemoveAllWithNotice(logger, "Clean up LFS temporary data", conf.LFS.ObjectsTempPath)
 }
 
 // Repository contains information of a repository.
@@ -350,14 +350,14 @@ func (r *Repository) UploadAvatar(data []byte) error {
 }
 
 // DeleteAvatar deletes the repository custom avatar.
-func (r *Repository) DeleteAvatar() error {
-	log.Trace("DeleteAvatar [%d]: %s", r.ID, r.CustomAvatarPath())
+func (r *Repository) DeleteAvatar(logger *logx.Logger) error {
+	logger.Debug("Deleting repository avatar", "repoID", r.ID, "avatarPath", r.CustomAvatarPath())
 	if err := os.Remove(r.CustomAvatarPath()); err != nil {
 		return err
 	}
 
 	r.UseCustomAvatar = false
-	return UpdateRepository(r, false)
+	return UpdateRepository(logger, r, false)
 }
 
 // This method assumes following fields have been assigned with valid values:
@@ -365,7 +365,7 @@ func (r *Repository) DeleteAvatar() error {
 // Arguments that are allowed to be nil: permission
 //
 // Deprecated: Use APIFormat instead.
-func (r *Repository) APIFormatLegacy(permission *apiv1types.RepositoryPermission, user ...*User) *apiv1types.Repository {
+func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *apiv1types.RepositoryPermission, user ...*User) *apiv1types.Repository {
 	cloneLink := r.CloneLink()
 	apiRepo := &apiv1types.Repository{
 		ID:            r.ID,
@@ -397,7 +397,7 @@ func (r *Repository) APIFormatLegacy(permission *apiv1types.RepositoryPermission
 		p := &apiv1types.RepositoryPermission{Pull: true}
 		if len(user) != 0 {
 			accessMode := Handle.Permissions().AccessMode(
-				context.TODO(),
+				context.TODO(), logger,
 				user[0].ID,
 				r.ID,
 				AccessModeOptions{
@@ -408,7 +408,7 @@ func (r *Repository) APIFormatLegacy(permission *apiv1types.RepositoryPermission
 			p.Admin = accessMode >= AccessModeAdmin
 			p.Push = accessMode >= AccessModeWrite
 		}
-		apiRepo.Parent = r.BaseRepo.APIFormatLegacy(p)
+		apiRepo.Parent = r.BaseRepo.APIFormatLegacy(logger, p)
 	}
 	return apiRepo
 }
@@ -464,7 +464,7 @@ func (r *Repository) ComposeMetas() map[string]string {
 	// repositories, because elsewhere they are checksums and the like.
 	objectFormat, err := git.RepoObjectFormat(context.Background(), r.RepoPath())
 	if err != nil {
-		log.Error("Failed to get object format of repository %q: %v", r.FullName(), err)
+		handleLogger().Error("Failed to get object format of repository", "repo", r.FullName(), "error", err)
 	} else if objectFormat == git.ObjectFormatSHA256 {
 		r.ExternalMetas["objectFormat"] = string(objectFormat)
 	}
@@ -486,8 +486,8 @@ func (r *Repository) ComposeMetas() map[string]string {
 }
 
 // DeleteWiki removes the repository wiki.
-func (r *Repository) DeleteWiki() {
-	RemoveAllWithNotice("Delete repository wiki", r.WikiPath())
+func (r *Repository) DeleteWiki(logger *logx.Logger) {
+	RemoveAllWithNotice(logger, "Delete repository wiki", r.WikiPath())
 }
 
 // getUsersWithAccesMode returns users that have at least given access mode to the repository.
@@ -538,10 +538,10 @@ func (r *Repository) GetAssignees() (_ []*User, err error) {
 }
 
 // GetAssigneeByID returns the user that has write access of repository by given ID.
-func (r *Repository) GetAssigneeByID(userID int64) (*User, error) {
+func (r *Repository) GetAssigneeByID(logger *logx.Logger, userID int64) (*User, error) {
 	ctx := context.TODO()
 	if !Handle.Permissions().Authorize(
-		ctx,
+		ctx, logger,
 		userID,
 		r.ID,
 		AccessModeRead,
@@ -601,8 +601,8 @@ func (r *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
 	return fmt.Sprintf("%s/%s/compare/%s...%s", r.MustOwner().Name, r.Name, oldCommitID, newCommitID)
 }
 
-func (r *Repository) HasAccess(userID int64) bool {
-	return Handle.Permissions().Authorize(context.TODO(), userID, r.ID, AccessModeRead,
+func (r *Repository) HasAccess(logger *logx.Logger, userID int64) bool {
+	return Handle.Permissions().Authorize(context.TODO(), logger, userID, r.ID, AccessModeRead,
 		AccessModeOptions{
 			OwnerID: r.OwnerID,
 			Private: r.IsPrivate,
@@ -737,12 +737,12 @@ func wikiRemoteURL(remote string) string {
 }
 
 // MigrateRepository migrates a existing repository from other project hosting.
-func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
+func MigrateRepository(ctx context.Context, logger *logx.Logger, doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	repo, err := CreateRepository(ctx, doer, owner, CreateRepoOptionsLegacy{
+	repo, err := CreateRepository(ctx, logger, doer, owner, CreateRepoOptionsLegacy{
 		Name:        opts.Name,
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
@@ -778,17 +778,17 @@ func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoO
 		})
 	}
 
-	RemoveAllWithNotice("Repository path erase before creation", repoPath)
+	RemoveAllWithNotice(logger, "Repository path erase before creation", repoPath)
 	if err := mirrorClone(opts.RemoteAddr, repoPath); err != nil {
 		return repo, errors.Newf("clone: %v", err)
 	}
 
 	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
 	if len(wikiRemotePath) > 0 {
-		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
+		RemoveAllWithNotice(logger, "Repository wiki path erase before creation", wikiPath)
 		if err := mirrorClone(wikiRemotePath, wikiPath); err != nil {
-			log.Error("Failed to clone wiki: %v", err)
-			RemoveAllWithNotice("Delete repository wiki for initialization failure", wikiPath)
+			logger.Error("Failed to clone wiki", "error", err)
+			RemoveAllWithNotice(logger, "Delete repository wiki for initialization failure", wikiPath)
 		}
 	}
 
@@ -827,7 +827,7 @@ func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoO
 
 	if !repo.IsEmpty {
 		if err = repo.UpdateSize(ctx); err != nil {
-			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
+			logger.Error("Failed to update repository size", "repoID", repo.ID, "error", err)
 		}
 	}
 
@@ -842,10 +842,10 @@ func MigrateRepository(ctx context.Context, doer, owner *User, opts MigrateRepoO
 		}
 
 		repo.IsMirror = true
-		return repo, UpdateRepository(repo, false)
+		return repo, UpdateRepository(logger, repo, false)
 	}
 
-	return CleanUpMigrateInfo(repo)
+	return CleanUpMigrateInfo(logger, repo)
 }
 
 // setDefaultBranchIfMissing replaces the saved default branch when it does not
@@ -930,7 +930,7 @@ func createDelegateHooks(repoPath string) (err error) {
 }
 
 // Finish migrating repository and/or wiki with things that don't need to be done for mirrors.
-func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
+func CleanUpMigrateInfo(logger *logx.Logger, repo *Repository) (*Repository, error) {
 	repoPath := repo.RepoPath()
 	if err := createDelegateHooks(repoPath); err != nil {
 		return repo, errors.Newf("createDelegateHooks: %v", err)
@@ -950,7 +950,7 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 		}
 	}
 
-	return repo, UpdateRepository(repo, false)
+	return repo, UpdateRepository(logger, repo, false)
 }
 
 // initRepoCommit commits the files to the default branch of the empty
@@ -1059,7 +1059,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 }
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
-func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
+func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Init bare new repository.
 	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
@@ -1114,7 +1114,7 @@ func initRepository(ctx context.Context, e Engine, repoPath string, doer *User, 
 	}
 
 	saved.DefaultBranch = conf.Repository.DefaultBranch
-	if err = updateRepository(e, saved, false); err != nil {
+	if err = updateRepository(logger, e, saved, false); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 
@@ -1220,7 +1220,7 @@ func (err ErrReachLimitOfRepo) Error() string {
 }
 
 // CreateRepository creates a repository for given user or organization.
-func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
+func CreateRepository(ctx context.Context, logger *logx.Logger, doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1258,8 +1258,8 @@ func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOpt
 
 	// No need for init mirror.
 	if !opts.IsMirror {
-		if err = initRepository(ctx, sess, repoPath, doer, repo, opts); err != nil {
-			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
+		if err = initRepository(ctx, logger, sess, repoPath, doer, repo, opts); err != nil {
+			RemoveAllWithNotice(logger, "Delete repository for initialization failure", repoPath)
 			return nil, errors.Newf("initRepository: %v", err)
 		}
 	}
@@ -1276,7 +1276,7 @@ func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOpt
 	return repo, nil
 }
 
-func countRepositories(userID int64, private bool) int64 {
+func countRepositories(logger *logx.Logger, userID int64, private bool) int64 {
 	sess := x.Where("id > 0")
 
 	if userID > 0 {
@@ -1288,7 +1288,7 @@ func countRepositories(userID int64, private bool) int64 {
 
 	count, err := sess.Count(new(Repository))
 	if err != nil {
-		log.Error("countRepositories: %v", err)
+		logger.Error("Failed to count repositories", "error", err)
 	}
 	return count
 }
@@ -1296,15 +1296,15 @@ func countRepositories(userID int64, private bool) int64 {
 // CountRepositories returns number of repositories.
 // Argument private only takes effect when it is false,
 // set it true to count all repositories.
-func CountRepositories(private bool) int64 {
-	return countRepositories(-1, private)
+func CountRepositories(logger *logx.Logger, private bool) int64 {
+	return countRepositories(logger, -1, private)
 }
 
 // CountUserRepositories returns number of repositories user owns.
 // Argument private only takes effect when it is false,
 // set it true to count all repositories.
-func CountUserRepositories(userID int64, private bool) int64 {
-	return countRepositories(userID, private)
+func CountUserRepositories(logger *logx.Logger, userID int64, private bool) int64 {
+	return countRepositories(logger, userID, private)
 }
 
 func Repositories(page, pageSize int) (_ []*Repository, err error) {
@@ -1559,7 +1559,7 @@ func GetNonMirrorRepositories() ([]*Repository, error) {
 	return getNonMirrorRepositories(x)
 }
 
-func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err error) {
+func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
 	if len(repo.Description) > 512 {
@@ -1588,11 +1588,11 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
 		if repo.IsPrivate && osx.Exist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
-				log.Error("Failed to remove %s: %v", daemonExportFile, err)
+				logger.Error("Failed to remove Git daemon export file", "path", daemonExportFile, "error", err)
 			}
 		} else if !repo.IsPrivate && !osx.Exist(daemonExportFile) {
 			if f, err := os.Create(daemonExportFile); err != nil {
-				log.Error("Failed to create %s: %v", daemonExportFile, err)
+				logger.Error("Failed to create Git daemon export file", "path", daemonExportFile, "error", err)
 			} else {
 				f.Close()
 			}
@@ -1605,7 +1605,7 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 		for i := range forkRepos {
 			forkRepos[i].IsPrivate = repo.IsPrivate
 			forkRepos[i].IsUnlisted = repo.IsUnlisted
-			if err = updateRepository(e, forkRepos[i], true); err != nil {
+			if err = updateRepository(logger, e, forkRepos[i], true); err != nil {
 				return errors.Newf("updateRepository[%d]: %v", forkRepos[i].ID, err)
 			}
 		}
@@ -1619,14 +1619,14 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 	return nil
 }
 
-func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
+func UpdateRepository(logger *logx.Logger, repo *Repository, visibilityChanged bool) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = updateRepository(x, repo, visibilityChanged); err != nil {
+	if err = updateRepository(logger, x, repo, visibilityChanged); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 
@@ -1634,7 +1634,7 @@ func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
 }
 
 // DeleteRepository deletes a repository for a user or organization.
-func DeleteRepository(ownerID, repoID int64) error {
+func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	repo := &Repository{ID: repoID, OwnerID: ownerID}
 	has, err := x.Get(repo)
 	if err != nil {
@@ -1735,18 +1735,18 @@ func DeleteRepository(ownerID, repoID int64) error {
 
 	// Remove repository files.
 	repoPath := repo.RepoPath()
-	RemoveAllWithNotice("Delete repository files", repoPath)
+	RemoveAllWithNotice(logger, "Delete repository files", repoPath)
 
-	repo.DeleteWiki()
+	repo.DeleteWiki(logger)
 
 	// Remove attachment files.
 	for i := range attachmentPaths {
-		RemoveAllWithNotice("Delete attachment", attachmentPaths[i])
+		RemoveAllWithNotice(logger, "Delete attachment", attachmentPaths[i])
 	}
 
 	if repo.NumForks > 0 {
 		if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
-			log.Error("reset 'fork_id' and 'is_fork': %v", err)
+			logger.Error("Failed to reset fork status of forks", "repoID", repo.ID, "error", err)
 		}
 	}
 
@@ -1905,14 +1905,14 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	return repos, count, sess.Distinct("repo.*").Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
 }
 
-func DeleteOldRepositoryArchives() {
+func DeleteOldRepositoryArchives(logger *logx.Logger) {
 	if taskStatusTable.IsRunning(taskNameCleanOldArchives) {
 		return
 	}
 	taskStatusTable.Start(taskNameCleanOldArchives)
 	defer taskStatusTable.Stop(taskNameCleanOldArchives)
 
-	log.Trace("Doing: DeleteOldRepositoryArchives")
+	logger.Debug("Deleting old repository archives")
 
 	formats := []string{"zip", "targz"}
 	oldestTime := time.Now().Add(-conf.Cron.RepoArchiveCleanup.OlderThan)
@@ -1928,14 +1928,14 @@ func DeleteOldRepositoryArchives() {
 
 				dir, err := os.Open(dirPath)
 				if err != nil {
-					log.Error("Failed to open directory '%s': %v", dirPath, err)
+					logger.Error("Failed to open directory", "dirPath", dirPath, "error", err)
 					continue
 				}
 
 				fis, err := dir.Readdir(0)
 				dir.Close()
 				if err != nil {
-					log.Error("Failed to read directory '%s': %v", dirPath, err)
+					logger.Error("Failed to read directory", "dirPath", dirPath, "error", err)
 					continue
 				}
 
@@ -1946,14 +1946,13 @@ func DeleteOldRepositoryArchives() {
 
 					archivePath := filepath.Join(dirPath, fi.Name())
 					if err = os.Remove(archivePath); err != nil {
-						const fmtStr = "Failed to health delete archive %q: %v"
-						log.Warn(fmtStr, archivePath, err)
+						logger.Warn("Failed to delete old repository archive", "archivePath", archivePath, "error", err)
 						if err = Handle.Notices().Create(
 							context.TODO(),
 							NoticeTypeRepository,
-							fmt.Sprintf(fmtStr, archivePath, err),
+							fmt.Sprintf("Failed to health delete archive %q: %v", archivePath, err),
 						); err != nil {
-							log.Error("CreateRepositoryNotice: %v", err)
+							logger.Error("Failed to create repository notice", "error", err)
 						}
 					}
 				}
@@ -1961,7 +1960,7 @@ func DeleteOldRepositoryArchives() {
 
 			return nil
 		}); err != nil {
-		log.Error("DeleteOldRepositoryArchives: %v", err)
+		logger.Error("Failed to delete old repository archives", "error", err)
 	}
 }
 
@@ -1998,7 +1997,7 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 }
 
 // DeleteMissingRepositories deletes all repository records that lost Git files.
-func DeleteMissingRepositories() error {
+func DeleteMissingRepositories(logger *logx.Logger) error {
 	repos, err := gatherMissingRepoRecords()
 	if err != nil {
 		return errors.Newf("gatherMissingRepoRecords: %v", err)
@@ -2009,8 +2008,8 @@ func DeleteMissingRepositories() error {
 	}
 
 	for _, repo := range repos {
-		log.Trace("Deleting %d/%d...", repo.OwnerID, repo.ID)
-		if err := DeleteRepository(repo.OwnerID, repo.ID); err != nil {
+		logger.Debug("Deleting missing repository", "ownerID", repo.OwnerID, "repoID", repo.ID)
+		if err := DeleteRepository(logger, repo.OwnerID, repo.ID); err != nil {
 			if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
 				return errors.Newf("CreateRepositoryNotice: %v", err)
 			}
@@ -2020,7 +2019,7 @@ func DeleteMissingRepositories() error {
 }
 
 // ReinitMissingRepositories reinitializes all repository records that lost Git files.
-func ReinitMissingRepositories() error {
+func ReinitMissingRepositories(logger *logx.Logger) error {
 	repos, err := gatherMissingRepoRecords()
 	if err != nil {
 		return errors.Newf("gatherMissingRepoRecords: %v", err)
@@ -2031,7 +2030,7 @@ func ReinitMissingRepositories() error {
 	}
 
 	for _, repo := range repos {
-		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
+		logger.Debug("Reinitializing missing repository", "ownerID", repo.OwnerID, "repoID", repo.ID)
 		if err := git.Init(context.TODO(), repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
 			if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
 				return errors.Newf("create repository notice: %v", err)
@@ -2069,14 +2068,14 @@ const (
 )
 
 // GitFsck calls 'git fsck' to check repository health.
-func GitFsck() {
+func GitFsck(logger *logx.Logger) {
 	if taskStatusTable.IsRunning(taskNameGitFSCK) {
 		return
 	}
 	taskStatusTable.Start(taskNameGitFSCK)
 	defer taskStatusTable.Stop(taskNameGitFSCK)
 
-	log.Trace("Doing: GitFsck")
+	logger.Debug("Running health checks on repositories")
 
 	if err := x.Where("id>0").Iterate(new(Repository),
 		func(idx int, bean any) error {
@@ -2088,19 +2087,18 @@ func GitFsck() {
 			})
 			cancel()
 			if err != nil {
-				const fmtStr = "Failed to perform health check on repository %q: %v"
-				log.Warn(fmtStr, repoPath, err)
+				logger.Warn("Failed to perform health check on repository", "repoPath", repoPath, "error", err)
 				if err = Handle.Notices().Create(
 					context.TODO(),
 					NoticeTypeRepository,
-					fmt.Sprintf(fmtStr, repoPath, err),
+					fmt.Sprintf("Failed to perform health check on repository %q: %v", repoPath, err),
 				); err != nil {
-					log.Error("CreateRepositoryNotice: %v", err)
+					logger.Error("Failed to create repository notice", "error", err)
 				}
 			}
 			return nil
 		}); err != nil {
-		log.Error("GitFsck: %v", err)
+		logger.Error("Failed to run health checks on repositories", "error", err)
 	}
 }
 
@@ -2122,30 +2120,30 @@ type repoChecker struct {
 	desc                 string
 }
 
-func repoStatsCheck(checker *repoChecker) {
+func repoStatsCheck(logger *logx.Logger, checker *repoChecker) {
 	results, err := x.Query(checker.querySQL)
 	if err != nil {
-		log.Error("Select %s: %v", checker.desc, err)
+		logger.Error("Failed to find inconsistent stats", "check", checker.desc, "error", err)
 		return
 	}
 	for _, result := range results {
 		id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
-		log.Trace("Updating %s: %d", checker.desc, id)
+		logger.Debug("Correcting inconsistent stats", "check", checker.desc, "id", id)
 		_, err = x.Exec(checker.correctSQL, id, id)
 		if err != nil {
-			log.Error("Update %s[%d]: %v", checker.desc, id, err)
+			logger.Error("Failed to correct inconsistent stats", "check", checker.desc, "id", id, "error", err)
 		}
 	}
 }
 
-func CheckRepoStats() {
+func CheckRepoStats(logger *logx.Logger) {
 	if taskStatusTable.IsRunning(taskNameCheckRepoStats) {
 		return
 	}
 	taskStatusTable.Start(taskNameCheckRepoStats)
 	defer taskStatusTable.Stop(taskNameCheckRepoStats)
 
-	log.Trace("Doing: CheckRepoStats")
+	logger.Debug("Checking repository stats")
 
 	checkers := []*repoChecker{
 		// Repository.NumWatches
@@ -2180,21 +2178,21 @@ func CheckRepoStats() {
 		},
 	}
 	for i := range checkers {
-		repoStatsCheck(checkers[i])
+		repoStatsCheck(logger, checkers[i])
 	}
 
 	// ***** START: Repository.NumClosedIssues *****
 	desc := "repository count 'num_closed_issues'"
 	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, false)
 	if err != nil {
-		log.Error("Select %s: %v", desc, err)
+		logger.Error("Failed to find inconsistent stats", "check", desc, "error", err)
 	} else {
 		for _, result := range results {
 			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
-			log.Trace("Updating %s: %d", desc, id)
+			logger.Debug("Correcting inconsistent stats", "check", desc, "id", id)
 			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
 			if err != nil {
-				log.Error("Update %s[%d]: %v", desc, id, err)
+				logger.Error("Failed to correct inconsistent stats", "check", desc, "id", id, "error", err)
 			}
 		}
 	}
@@ -2204,27 +2202,27 @@ func CheckRepoStats() {
 	// ***** START: Repository.NumForks *****
 	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
 	if err != nil {
-		log.Error("Select repository count 'num_forks': %v", err)
+		logger.Error("Failed to find inconsistent stats", "check", "repository count 'num_forks'", "error", err)
 	} else {
 		for _, result := range results {
 			id, _ := strconv.ParseInt(string(result["id"]), 10, 64)
-			log.Trace("Updating repository count 'num_forks': %d", id)
+			logger.Debug("Correcting inconsistent stats", "check", "repository count 'num_forks'", "id", id)
 
 			repo, err := GetRepositoryByID(id)
 			if err != nil {
-				log.Error("GetRepositoryByID[%d]: %v", id, err)
+				logger.Error("Failed to get repository", "repoID", id, "error", err)
 				continue
 			}
 
 			rawResult, err := x.Query("SELECT COUNT(*) FROM `repository` WHERE fork_id=?", repo.ID)
 			if err != nil {
-				log.Error("Select count of forks[%d]: %v", repo.ID, err)
+				logger.Error("Failed to count forks", "repoID", repo.ID, "error", err)
 				continue
 			}
 			repo.NumForks = int(parseCountResult(rawResult))
 
-			if err = UpdateRepository(repo, false); err != nil {
-				log.Error("UpdateRepository[%d]: %v", id, err)
+			if err = UpdateRepository(logger, repo, false); err != nil {
+				logger.Error("Failed to update repository", "repoID", id, "error", err)
 				continue
 			}
 		}
@@ -2529,7 +2527,7 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 }
 
 // ForkRepository creates a fork of target repository under another user domain.
-func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -2564,12 +2562,12 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	}
 
 	repoPath := repo.repoPath(sess)
-	RemoveAllWithNotice("Repository path erase before creation", repoPath)
+	RemoveAllWithNotice(logger, "Repository path erase before creation", repoPath)
 
 	cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	if err = git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
-		RemoveAllWithNotice("Delete fork repository for clone failure", repoPath)
+		RemoveAllWithNotice(logger, "Delete fork repository for clone failure", repoPath)
 		return nil, errors.Newf("git clone: %v", err)
 	}
 
@@ -2588,14 +2586,14 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	}
 
 	if err = repo.UpdateSize(ctx); err != nil {
-		log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
+		logger.Error("Failed to update repository size", "repoID", repo.ID, "error", err)
 	}
-	if err = PrepareWebhooks(baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{
-		Forkee: repo.APIFormatLegacy(nil),
-		Repo:   baseRepo.APIFormatLegacy(nil),
+	if err = PrepareWebhooks(logger, baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{
+		Forkee: repo.APIFormatLegacy(logger, nil),
+		Repo:   baseRepo.APIFormatLegacy(logger, nil),
 		Sender: doer.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks [repo_id: %d]: %v", baseRepo.ID, err)
+		logger.Error("Failed to prepare webhooks", "repoID", baseRepo.ID, "error", err)
 	}
 	return repo, nil
 }

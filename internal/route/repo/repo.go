@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -48,7 +46,7 @@ func Action(c *context.Context) {
 
 		c.Repo.Repository.Description = c.Query("desc")
 		c.Repo.Repository.Website = c.Query("site")
-		err = database.UpdateRepository(c.Repo.Repository, false)
+		err = database.UpdateRepository(c.Logger, c.Repo.Repository, false)
 	}
 
 	if err != nil {
@@ -82,7 +80,7 @@ func Download(c *context.Context) {
 		archivePath = filepath.Join(c.Repo.GitRepo.Path(), "archives", "targz")
 		archiveFormat = git.ArchiveTarGz
 	default:
-		log.Trace("Unknown format: %s", uri)
+		c.Logger.Debug("Unknown archive format", "uri", uri)
 		c.NotFound()
 		return
 	}

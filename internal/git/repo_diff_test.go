@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"unknwon.dev/x/logx"
 )
 
 func TestRepository_Diff(t *testing.T) {
@@ -281,7 +282,7 @@ func TestRepository_Diff(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			diff, err := testrepo.Diff(ctx, test.rev, test.maxFiles, test.maxFileLines, test.maxLineChars, test.opt)
+			diff, err := testrepo.Diff(ctx, logx.NewNoopLogger(), test.rev, test.maxFiles, test.maxFileLines, test.maxLineChars, test.opt)
 			if err != nil {
 				t.Fatal(err)
 			}

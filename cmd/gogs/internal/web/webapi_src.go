@@ -11,7 +11,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -135,7 +135,7 @@ type repoSrcResponse struct {
 // getRepoSrc describes the directory or the file at the path after the ref
 // in the route, for the code browser, or the quick guide of an empty
 // repository.
-func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoSrcResponse, err error) {
+func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSrcResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	if !repoCtx.Viewer.CanRead() {
@@ -157,12 +157,12 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoSrc: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	ref, err := resolveRepoRef(ctx, repo, gitRepo, c.Param("path"))
 	if err != nil {
-		log.Error("getRepoSrc: resolve ref %q in repo %d: %v", c.Param("path"), repo.ID, err)
+		logger.Error("Failed to resolve ref", "path", c.Param("path"), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "resolve ref")
 	} else if ref == nil {
 		return http.StatusNotFound, nil, errors.New("ref does not exist")
@@ -174,7 +174,7 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("path does not exist")
 		}
-		log.Error("getRepoSrc: get entry %q of repo %d: %v", treePath, repo.ID, err)
+		logger.Error("Failed to get tree entry", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get tree entry")
 	}
 
@@ -194,14 +194,14 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		}
 	}
 	if ref.Type == "branch" {
-		resp.PullRequest = pullRequestTarget(ctx, repoCtx, ref.Name)
+		resp.PullRequest = pullRequestTarget(ctx, logger, repoCtx, ref.Name)
 	}
 	if resp.Branches, err = gitRepo.Branches(ctx); err != nil {
-		log.Error("getRepoSrc: list branches of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
 	if resp.Tags, err = gitRepo.Tags(ctx); err != nil {
-		log.Error("getRepoSrc: list tags of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list tags", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list tags")
 	}
 
@@ -209,11 +209,11 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 	if treePath != "" {
 		latestCommit, err = ref.Commit.CommitByPath(ctx, git.CommitByRevisionOptions{Path: treePath})
 		if err != nil {
-			log.Error("getRepoSrc: get last commit of %q in repo %d: %v", treePath, repo.ID, err)
+			logger.Error("Failed to get last commit", "treePath", treePath, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get last commit")
 		}
 	}
-	resp.LatestCommit = &toCommitListItems(ctx, repo, []*git.Commit{latestCommit})[0]
+	resp.LatestCommit = &toCommitListItems(ctx, logger, repo, []*git.Commit{latestCommit})[0]
 
 	// Relative links in rendered files resolve against the directory they
 	// are in.
@@ -223,9 +223,9 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 	}
 	if !entry.IsTree() {
 		resp.Kind = "file"
-		resp.File, err = describeRepoFile(ctx, repo, ref.Commit, entry, treePath, path.Dir(treeLink))
+		resp.File, err = describeRepoFile(ctx, logger, repo, ref.Commit, entry, treePath, path.Dir(treeLink))
 		if err != nil {
-			log.Error("getRepoSrc: read %q of repo %d: %v", treePath, repo.ID, err)
+			logger.Error("Failed to read file", "treePath", treePath, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "read file")
 		}
 		return http.StatusOK, resp, nil
@@ -239,18 +239,18 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 			CloneLinks:  repoCloneLinksOf(repoCtx.Owner.Name, repo.Name, false),
 		}
 		if resp.Summary.CommitCount, err = ref.Commit.CommitsCount(ctx); err != nil {
-			log.Error("getRepoSrc: count commits of repo %d: %v", repo.ID, err)
+			logger.Error("Failed to count commits", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "count commits")
 		}
 	}
 	tree, err := ref.Commit.Subtree(ctx, treePath)
 	if err != nil {
-		log.Error("getRepoSrc: get tree %q of repo %d: %v", treePath, repo.ID, err)
+		logger.Error("Failed to get tree", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get subtree")
 	}
 	entries, err := tree.Entries(ctx)
 	if err != nil {
-		log.Error("getRepoSrc: list entries of %q in repo %d: %v", treePath, repo.ID, err)
+		logger.Error("Failed to list tree entries", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list entries")
 	}
 	entries.Sort()
@@ -261,7 +261,7 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
 	})
 	if err != nil {
-		log.Error("getRepoSrc: get last commits of entries of %q in repo %d: %v", treePath, repo.ID, err)
+		logger.Error("Failed to get last commits of tree entries", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get commits info")
 	}
 	metas := repo.ComposeMetas()
@@ -307,7 +307,7 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		}
 		p, err := e.Blob().Bytes(ctx)
 		if err != nil {
-			log.Error("getRepoSrc: read README %q of repo %d: %v", e.Name(), repo.ID, err)
+			logger.Error("Failed to read README", "fileName", e.Name(), "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "read README")
 		}
 		if !tool.IsTextFile(p) {
@@ -320,7 +320,7 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		case markup.TypeOrgMode:
 			resp.Readme.HTML = string(markup.OrgMode(p, treeLink, metas))
 		default:
-			resp.Readme.Text = toUTF8(p)
+			resp.Readme.Text = toUTF8(logger, p)
 		}
 		break
 	}
@@ -356,7 +356,7 @@ func flattenDir(ctx context.Context, tree *git.Tree, name string) (string, error
 
 // describeRepoFile reads the file of the entry to show it. Relative links in
 // a file in a markup language resolve against dirLink.
-func describeRepoFile(ctx context.Context, repo *database.Repository, commit *git.Commit, entry *git.TreeEntry, treePath, dirLink string) (*repoFile, error) {
+func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.Repository, commit *git.Commit, entry *git.TreeEntry, treePath, dirLink string) (*repoFile, error) {
 	blob := entry.Blob()
 	p, err := blob.Bytes(ctx)
 	if err != nil {
@@ -374,7 +374,7 @@ func describeRepoFile(ctx context.Context, repo *database.Repository, commit *gi
 			file.Kind = "too_large"
 			break
 		}
-		content := toUTF8(p)
+		content := toUTF8(logger, p)
 		file.Content = &content
 		indent, err := editorconfigIndent(ctx, commit, treePath)
 		if err != nil {
@@ -407,8 +407,8 @@ func describeRepoFile(ctx context.Context, repo *database.Repository, commit *gi
 
 // toUTF8 converts text in another encoding to UTF-8, keeping it as is when
 // the encoding is not known.
-func toUTF8(p []byte) string {
-	content, err := template.ToUTF8WithErr(p)
+func toUTF8(logger *logx.Logger, p []byte) string {
+	content, err := template.ToUTF8WithErr(logger, p)
 	if err != nil {
 		return string(p)
 	}
@@ -464,7 +464,7 @@ func editorconfigIndent(ctx context.Context, commit *git.Commit, filePath string
 // branch, like the server-rendered pages: writers and those who forked the
 // repository can, when the repository, or its base for a fork, takes pull
 // requests.
-func pullRequestTarget(ctx context.Context, repoCtx *repoContext, branch string) *repoPullRequestTarget {
+func pullRequestTarget(ctx context.Context, logger *logx.Logger, repoCtx *repoContext, branch string) *repoPullRequestTarget {
 	repo := repoCtx.Repo
 	viewer := repoCtx.Viewer
 	if !viewer.CanWrite() && (!viewer.Authenticated() || !database.Handle.Repositories().HasForkedBy(ctx, repo.ID, viewer.ID())) {
@@ -479,7 +479,7 @@ func pullRequestTarget(ctx context.Context, repoCtx *repoContext, branch string)
 	base, err := database.GetRepositoryByID(repo.ForkID)
 	if err != nil {
 		if !database.IsErrRepoNotExist(err) {
-			log.Error("pullRequestTarget: get base of repo %d: %v", repo.ID, err)
+			logger.Error("Failed to get base repository", "repoID", repo.ID, "error", err)
 		}
 		return nil
 	} else if !base.AllowsPulls() {

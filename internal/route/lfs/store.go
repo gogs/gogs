@@ -3,6 +3,8 @@ package lfs
 import (
 	"context"
 
+	"unknwon.dev/x/logx"
+
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsx"
 )
@@ -65,11 +67,13 @@ type Store interface {
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
-type store struct{}
+type store struct {
+	logger *logx.Logger
+}
 
 // NewStore returns a new Store using the global database handle.
-func NewStore() Store {
-	return &store{}
+func NewStore(logger *logx.Logger) Store {
+	return &store{logger: logger}
 }
 
 func (*store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.AccessToken, error) {
@@ -92,16 +96,16 @@ func (*store) GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfs
 	return database.Handle.LFS().GetObjectsByOIDs(ctx, repoID, oids...)
 }
 
-func (*store) AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
-	return database.Handle.Permissions().Authorize(ctx, userID, repoID, desired, opts)
+func (s *store) AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
+	return database.Handle.Permissions().Authorize(ctx, s.logger, userID, repoID, desired, opts)
 }
 
 func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
 	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
 }
 
-func (*store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
-	return database.Handle.TwoFactors().IsEnabled(ctx, userID)
+func (s *store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
+	return database.Handle.TwoFactors().IsEnabled(ctx, s.logger, userID)
 }
 
 func (*store) GetUserByID(ctx context.Context, id int64) (*database.User, error) {
@@ -116,6 +120,6 @@ func (*store) CreateUser(ctx context.Context, username, email string, opts datab
 	return database.Handle.Users().Create(ctx, username, email, opts)
 }
 
-func (*store) AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error) {
-	return database.Handle.Users().Authenticate(ctx, login, password, loginSourceID)
+func (s *store) AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error) {
+	return database.Handle.Users().Authenticate(ctx, s.logger, login, password, loginSourceID)
 }

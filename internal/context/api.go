@@ -8,7 +8,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/paginater"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
@@ -46,7 +45,7 @@ func (c *APIContext) ErrorStatus(status int, err error) {
 
 // Error renders the 500 response.
 func (c *APIContext) Error(err error, msg string) {
-	log.ErrorDepth(4, "%s: %v", msg, err)
+	c.Logger.Error("Internal server error", "method", c.Req.Method, "path", c.Req.URL.Path, "operation", msg, "error", err)
 	c.ErrorStatus(
 		http.StatusInternalServerError,
 		errors.New("Something went wrong, please check the server logs for more information."),

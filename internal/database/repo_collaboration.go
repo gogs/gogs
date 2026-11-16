@@ -2,7 +2,7 @@ package database
 
 import (
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -29,21 +29,21 @@ func (c *Collaboration) ModeI18nKey() string {
 }
 
 // IsCollaborator returns true if the user is a collaborator of the repository.
-func IsCollaborator(repoID, userID int64) bool {
+func IsCollaborator(logger *logx.Logger, repoID, userID int64) bool {
 	collaboration := &Collaboration{
 		RepoID: repoID,
 		UserID: userID,
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
-		log.Error("get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		logger.Error("Failed to get collaboration", "repoID", repoID, "userID", userID, "error", err)
 		return false
 	}
 	return has
 }
 
-func (r *Repository) IsCollaborator(userID int64) bool {
-	return IsCollaborator(r.ID, userID)
+func (r *Repository) IsCollaborator(logger *logx.Logger, userID int64) bool {
+	return IsCollaborator(logger, r.ID, userID)
 }
 
 // AddCollaborator adds new collaboration to a repository with default access mode.
@@ -198,8 +198,8 @@ func (r *Repository) ChangeCollaborationAccessMode(actorMode AccessMode, userID 
 }
 
 // DeleteCollaboration removes collaboration relation between the user and repository.
-func DeleteCollaboration(repo *Repository, userID int64) (err error) {
-	if !IsCollaborator(repo.ID, userID) {
+func DeleteCollaboration(logger *logx.Logger, repo *Repository, userID int64) (err error) {
+	if !IsCollaborator(logger, repo.ID, userID) {
 		return nil
 	}
 
@@ -223,6 +223,6 @@ func DeleteCollaboration(repo *Repository, userID int64) (err error) {
 	return sess.Commit()
 }
 
-func (r *Repository) DeleteCollaboration(userID int64) error {
-	return DeleteCollaboration(r, userID)
+func (r *Repository) DeleteCollaboration(logger *logx.Logger, userID int64) error {
+	return DeleteCollaboration(logger, r, userID)
 }

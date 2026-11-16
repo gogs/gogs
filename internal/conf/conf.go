@@ -11,32 +11,16 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/fatih/color"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/semverx"
 )
-
-func init() {
-	// fatih/color disables ANSI codes when stdout is not a TTY, which is the
-	// case under process managers like moon. Honor TTY_FORCE so callers can
-	// opt back in without a real terminal.
-	if os.Getenv("TTY_FORCE") != "" {
-		color.NoColor = false
-	}
-
-	// Initialize the primary logger until logging service is up.
-	err := log.NewConsole()
-	if err != nil {
-		panic("init console logger: " + err.Error())
-	}
-}
 
 // File is the configuration object.
 var File *ini.File
@@ -49,7 +33,7 @@ var File *ini.File
 // NOTE: The order of loading configuration sections matters as one may depend on another.
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
-func Init(customConf string) error {
+func Init(logger *logx.Logger, customConf string) error {
 	data, err := conf.Files.ReadFile("app.ini")
 	if err != nil {
 		return errors.Wrap(err, `read default "app.ini"`)
@@ -151,16 +135,14 @@ func Init(customConf string) error {
 		// the "ssh-keygen" in Windows does not print key type.
 		// See https://github.com/gogs/gogs/issues/4507.
 		if SSH.MinimumKeySizeCheck {
-			sshVersion, err := openSSHVersion()
+			sshVersion, err := openSSHVersion(logger)
 			if err != nil {
 				return errors.Wrap(err, "get OpenSSH version")
 			}
 
 			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
 				if !HookMode {
-					log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
-	1. Windows server
-	2. OpenSSH version is lower than 5.1`)
+					logger.Warn("SSH minimum key size check is disabled because it requires a non-Windows server with OpenSSH 5.1 or later", "windowsRuntime", IsWindowsRuntime(), "openSSHVersion", sshVersion)
 				}
 			} else {
 				SSH.MinimumKeySizes = map[string]int{}
@@ -396,7 +378,7 @@ func Init(customConf string) error {
 	handleDeprecated()
 	if !HookMode {
 		for _, warning := range checkInvalidOptions(File) {
-			log.Warn("%s", warning)
+			logger.Warn("Found invalid configuration", "warning", warning)
 		}
 	}
 

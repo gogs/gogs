@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -21,7 +22,7 @@ func TestRequireViewAccess(t *testing.T) {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
 	require.NoError(t, err)
 
 	// The gate runs before any database or Git access, so these requests are
@@ -120,7 +121,7 @@ func TestRequireAuthenticated(t *testing.T) {
 	// sites that do not require signing in to view content.
 	conf.Auth.RequireSigninView = false
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
 	require.NoError(t, err)
 
 	for _, path := range []string{
@@ -180,7 +181,7 @@ func TestRequireAuthenticated(t *testing.T) {
 }
 
 func TestRequireAdmin(t *testing.T) {
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
 	require.NoError(t, err)
 
 	// An authenticated user who is not a site admin reaches none of the admin panel,

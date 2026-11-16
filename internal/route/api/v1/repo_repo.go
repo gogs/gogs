@@ -5,7 +5,6 @@ import (
 	"path"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -170,7 +169,7 @@ type createRepoRequest struct {
 }
 
 func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoRequest) {
-	repo, err := database.CreateRepository(c.Req.Context(), c.User, owner, database.CreateRepoOptionsLegacy{
+	repo, err := database.CreateRepository(c.Req.Context(), c.Logger, c.User, owner, database.CreateRepoOptionsLegacy{
 		Name:         opt.Name,
 		Description:  opt.Description,
 		Gitignores:   opt.Gitignores,
@@ -186,8 +185,8 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			if repo != nil {
-				if err = database.DeleteRepository(c.User.ID, repo.ID); err != nil {
-					log.Error("Failed to delete repository: %v", err)
+				if err = database.DeleteRepository(c.Logger, c.User.ID, repo.ID); err != nil {
+					c.Logger.Error("Failed to delete repository", "error", err)
 				}
 			}
 			c.Error(err, "create repository")
@@ -281,7 +280,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.Req.Context(), c.User, ctxUser, database.MigrateRepoOptions{
+	repo, err := database.MigrateRepository(c.Req.Context(), c.Logger, c.User, ctxUser, database.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
@@ -290,8 +289,8 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 	})
 	if err != nil {
 		if repo != nil {
-			if errDelete := database.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-				log.Error("DeleteRepository: %v", errDelete)
+			if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
+				c.Logger.Error("Failed to delete repository", "error", errDelete)
 			}
 		}
 
@@ -303,7 +302,7 @@ func migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
+	c.Logger.Debug("Repository migrated", "ownerName", ctxUser.Name, "repoName", f.RepoName)
 	c.JSON(201, toRepository(repo, &types.RepositoryPermission{Admin: true, Push: true, Pull: true}))
 }
 
@@ -352,12 +351,12 @@ func deleteRepo(c *context.APIContext) {
 		return
 	}
 
-	if err := database.DeleteRepository(owner.ID, repo.ID); err != nil {
+	if err := database.DeleteRepository(c.Logger, owner.ID, repo.ID); err != nil {
 		c.Error(err, "delete repository")
 		return
 	}
 
-	log.Trace("Repository deleted: %s/%s", owner.Name, repo.Name)
+	c.Logger.Debug("Repository deleted", "ownerName", owner.Name, "repoName", repo.Name)
 	c.NoContent()
 }
 
@@ -376,7 +375,7 @@ func listForks(c *context.APIContext) {
 		}
 
 		accessMode := database.Handle.Permissions().AccessMode(
-			c.Req.Context(),
+			c.Req.Context(), c.Logger,
 			c.User.ID,
 			forks[i].ID,
 			database.AccessModeOptions{
@@ -427,7 +426,7 @@ func issueTracker(c *context.APIContext, form editIssueTrackerRequest) {
 		repo.ExternalTrackerStyle = *form.TrackerIssueStyle
 	}
 
-	if err := database.UpdateRepository(repo, false); err != nil {
+	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}
@@ -460,7 +459,7 @@ func wiki(c *context.APIContext, form editWikiRequest) {
 	if form.ExternalWikiURL != nil {
 		repo.ExternalWikiURL = *form.ExternalWikiURL
 	}
-	if err := database.UpdateRepository(repo, false); err != nil {
+	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}

@@ -29,7 +29,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
@@ -57,13 +57,25 @@ import (
 )
 
 // Run starts the web server with the given configuration path and port
-// override, and stops it when the context is done.
-func Run(ctx gocontext.Context, configPath string, portOverride int) error {
-	err := initServices(configPath)
+// override, and stops it when the context is done. Once logging is configured,
+// it reports a failure through the configured logger and exits.
+func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOverride int) (err error) {
+	configured, err := initServices(logger, configPath)
+	if configured == nil {
+		return errors.Wrap(err, "initialize application")
+	}
+	logger = configured
+	// The caller only has the console logger, which skips the file and webhook
+	// sinks.
+	defer func() {
+		if err != nil {
+			logger.FatalContext(ctx, "Failed to start application", "error", err)
+		}
+	}()
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
-	shutdownTracing, err := tracing.Init(ctx)
+	shutdownTracing, err := tracing.Init(ctx, logger)
 	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
 	}
@@ -72,12 +84,12 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		defer shutdownTracing(5 * time.Second)
 	}
 
-	m, err := newMacaron()
+	m, err := newMacaron(logger)
 	if err != nil {
 		return errors.Wrap(err, "initialize macaron")
 	}
 
-	webHandler, err := newRoutingHandler()
+	webHandler, err := newRoutingHandler(logger)
 	if err != nil {
 		return errors.Wrap(err, "initialize web handler")
 	}
@@ -106,14 +118,14 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			// Like the server-rendered pages, these pages are only found in the
 			// two-factor authentication state they apply to.
 			m.Get("/security/two_factor_enable", func(c *context.Context) {
-				if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+				if database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 					c.NotFound()
 					return
 				}
 				c.ServeWeb()
 			})
 			m.Get("/security/two_factor_recovery_codes", func(c *context.Context) {
-				if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.User.ID) {
+				if !database.Handle.TwoFactors().IsEnabled(c.Req.Context(), c.Logger, c.User.ID) {
 					c.NotFound()
 					return
 				}
@@ -206,7 +218,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 						c.NotFound()
 						return
 					}
-				} else if !repo.HasAccess(c.UserID()) {
+				} else if !repo.HasAccess(logger, c.UserID()) {
 					c.NotFound()
 					return
 				}
@@ -327,7 +339,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				c.ServeWeb()
 			})
 			m.Get("/fork/:repoid", func(c *context.Context) {
-				_, err := forkBaseRepo(c.User, c.ParamsInt64(":repoid"))
+				_, err := forkBaseRepo(c.Logger, c.User, c.ParamsInt64(":repoid"))
 				if errors.Is(err, errForkBaseNotFound) {
 					c.NotFound()
 					return
@@ -382,14 +394,14 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			}, func(c *context.Context) {
 				c.Data["PageIsSettings"] = true
 			})
-		}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
+		}, reqSignIn, context.RepoAssignment(logger), reqRepoAdmin, context.RepoRef())
 
-		m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
+		m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(logger), repo.Action)
 		m.Group("/:username/:reponame", func() {
 			m.Get("/issues", repo.MustEnableIssues, repo.ServeIssueList)
 			m.Get("/issues/:index", repo.ServeIssue)
 			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
-		}, ignSignIn, context.RepoAssignment(true))
+		}, ignSignIn, context.RepoAssignment(logger, true))
 		m.Group("/:username/:reponame", func() {
 			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
 			// So they can apply their own enable/disable logic on routers.
@@ -406,13 +418,13 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 				m.Post("", repo.UpdateCommentContent)
 				m.Post("/delete", repo.DeleteComment)
 			})
-		}, reqSignIn, context.RepoAssignment(true))
+		}, reqSignIn, context.RepoAssignment(logger, true))
 		m.Group("/:username/:reponame", func() {
 			m.Group("/wiki", func() {
 				m.Get("/?:page", repo.ServeWikiPage)
 				m.Get("/_pages", func(c *context.Context) { c.ServeWeb() })
 			}, repo.MustEnableWiki)
-		}, ignSignIn, context.RepoAssignment(false, true))
+		}, ignSignIn, context.RepoAssignment(logger, false, true))
 
 		m.Group("/:username/:reponame", func() {
 			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
@@ -469,7 +481,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					return
 				}
 			})
-		}, reqSignIn, context.RepoAssignment())
+		}, reqSignIn, context.RepoAssignment(logger))
 
 		m.Group("/:username/:reponame", func() {
 			m.Group("", func() {
@@ -513,11 +525,11 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})\\.diff", flamegoBridger(webHandler))
 			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
-		}, ignSignIn, context.RepoAssignment())
+		}, ignSignIn, context.RepoAssignment(logger))
 		m.Group("/:username/:reponame", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })
-		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment())
+		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(logger))
 		// ***** END: Repository *****
 
 		// **********************
@@ -526,7 +538,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 		// TODO: Without session
 		m.Group("/api", func() {
-			apiv1.RegisterRoutes(m)
+			apiv1.RegisterRoutes(logger, m)
 		}, ignSignIn)
 
 		m.Any("/api/web/*", flamegoBridger(webHandler))
@@ -544,7 +556,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			Secure:         conf.Session.CookieSecure,
 			CookieLifeTime: 86400 * conf.Security.LoginRememberDays,
 		}),
-		context.Contexter(context.NewStore(), webHandler),
+		context.Contexter(logger, context.NewStore(logger), webHandler),
 	)
 
 	// ***************************
@@ -555,10 +567,10 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		m.Get("/tasks/trigger", repo.TriggerTask)
 
 		m.Group("/info/lfs", func() {
-			lfs.RegisterRoutes(m.Router)
+			lfs.RegisterRoutes(logger.Scoped("lfs"), m.Router)
 		})
 
-		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(repo.NewStore()), repo.HTTP}
+		gitHTTP := []macaron.Handler{context.ServeGoGet(), repo.HTTPContexter(logger.Scoped("git"), repo.NewStore(logger)), repo.HTTP}
 		m.Route("/info/refs", "GET,OPTIONS", gitHTTP...)
 		m.Route("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
 		m.Route("/git-receive-pack", "POST,OPTIONS", gitHTTP...)
@@ -590,7 +602,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	} else {
 		listenAddr = fmt.Sprintf("%s:%d", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 	}
-	log.Info("Available on %s", conf.Server.ExternalURL)
+	logger.Info("Server is available", "externalURL", conf.Server.ExternalURL)
 
 	var handler http.Handler = m
 	if shutdownTracing != nil {
@@ -692,8 +704,9 @@ func newTracingHandler(h http.Handler) http.Handler {
 	}))
 }
 
-func newRoutingHandler() (http.Handler, error) {
+func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 	f := flamego.New()
+	f.Map(logger)
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
 	f.Use(flamegoInjector)
 	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
@@ -737,7 +750,7 @@ func newRoutingHandler() (http.Handler, error) {
 
 	mountWebLocaleRoutes(f)
 	mountWebAPIRoutes(f)
-	err = mountWebAppRoutes(f)
+	err = mountWebAppRoutes(logger, f)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
@@ -761,8 +774,9 @@ func getRobotsTxt(w http.ResponseWriter, r *http.Request) {
 }
 
 // newMacaron initializes Macaron instance.
-func newMacaron() (*macaron.Macaron, error) {
+func newMacaron(logger *logx.Logger) (*macaron.Macaron, error) {
 	m := macaron.New()
+	m.Map(logger)
 	if !conf.Server.DisableRouterLog {
 		m.Use(macaron.Logger())
 	}
@@ -815,7 +829,7 @@ func newMacaron() (*macaron.Macaron, error) {
 	renderOpt := macaron.RenderOptions{
 		Directory:         filepath.Join(conf.WorkDir(), "templates"),
 		AppendDirectories: []string{customDir},
-		Funcs:             template.FuncMap(),
+		Funcs:             template.FuncMap(logger),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
 	if !conf.Server.LoadAssetsFromDisk {
@@ -944,20 +958,26 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("* Database connection: OK\n"))
 }
 
-func initServices(customConf string) error {
-	err := conf.Init(customConf)
+// initServices returns the logger built from the loaded configuration, which
+// replaces the given console logger. It also returns that logger with errors
+// that happen after logging is configured.
+func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) {
+	err := conf.Init(logger, customConf)
 	if err != nil {
-		return errors.Wrap(err, "init configuration")
+		return nil, errors.Wrap(err, "init configuration")
 	}
 
-	conf.InitLogging(false)
-	log.Info("%s %s", conf.App.BrandName, conf.App.Version)
-	log.Trace("Work directory: %s", conf.WorkDir())
-	log.Trace("Custom path: %s", conf.CustomDir())
-	log.Trace("Custom config: %s", conf.CustomConf)
-	log.Trace("Log path: %s", conf.Log.RootPath)
-	log.Trace("Build time: %s", conf.BuildTime)
-	log.Trace("Build commit: %s", conf.BuildCommit)
+	logger, err = conf.InitLogging(logger, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "init logging")
+	}
+	logger.Info("Starting application", "brandName", conf.App.BrandName, "version", conf.App.Version)
+	logger.Debug("Work directory", "workDir", conf.WorkDir())
+	logger.Debug("Custom path", "customDir", conf.CustomDir())
+	logger.Debug("Custom config", "customConf", conf.CustomConf)
+	logger.Debug("Log path", "logPath", conf.Log.RootPath)
+	logger.Debug("Build time", "buildTime", conf.BuildTime)
+	logger.Debug("Build commit", "buildCommit", conf.BuildCommit)
 
 	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
@@ -967,48 +987,48 @@ func initServices(customConf string) error {
 	} else {
 		git.SetOutput(os.Stdout)
 	}
-	log.Info("Run mode: %s", strings.Title(macaron.Env))
+	logger.Info("Run mode", "runMode", strings.Title(macaron.Env))
 
 	if conf.Email.Enabled {
-		log.Trace("Email service is enabled")
+		logger.Debug("Email service is enabled")
 	}
 
-	email.NewContext()
+	email.NewContext(logger)
 
 	highlight.NewContext()
 	markup.NewSanitizer()
-	if err := database.NewEngine(); err != nil {
-		return errors.Wrap(err, "initialize ORM engine")
+	if err := database.NewEngine(logger); err != nil {
+		return logger, errors.Wrap(err, "initialize ORM engine")
 	}
 
-	database.LoadRepoConfig()
-	database.NewRepoContext()
+	database.LoadRepoConfig(logger)
+	database.NewRepoContext(logger)
 
-	cron.NewContext()
-	database.InitSyncMirrors()
-	database.InitDeliverHooks()
-	database.InitTestPullRequests()
+	cron.NewContext(logger)
+	database.InitSyncMirrors(logger)
+	database.InitDeliverHooks(logger)
+	database.InitTestPullRequests(logger)
 
 	if conf.HasMinWinSvc {
-		log.Info("Builtin Windows Service is supported")
+		logger.Info("Builtin Windows Service is supported")
 	}
 	if conf.Server.LoadAssetsFromDisk {
-		log.Trace("Assets are loaded from disk")
+		logger.Debug("Assets are loaded from disk")
 	}
 
 	if conf.SSH.StartBuiltinServer {
-		ssh.Listen(conf.SSH, conf.Server.AppDataPath)
-		log.Info("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
-		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
-		log.Trace("SSH server MAC list: %v", conf.SSH.ServerMACs)
-		log.Trace("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
+		ssh.Listen(logger, conf.SSH, conf.Server.AppDataPath)
+		logger.Info("Builtin SSH server started", "listenHost", conf.SSH.ListenHost, "listenPort", conf.SSH.ListenPort)
+		logger.Debug("SSH server cipher list", "serverCiphers", conf.SSH.ServerCiphers)
+		logger.Debug("SSH server MAC list", "serverMACs", conf.SSH.ServerMACs)
+		logger.Debug("SSH server algorithms", "serverAlgorithms", conf.SSH.ServerAlgorithms)
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
-		if err := database.RewriteAuthorizedKeys(); err != nil {
-			log.Warn("Failed to rewrite authorized_keys file: %v", err)
+		if err := database.RewriteAuthorizedKeys(logger); err != nil {
+			logger.Warn("Failed to rewrite authorized_keys file", "error", err)
 		}
 	}
 
-	return nil
+	return logger, nil
 }

@@ -39,7 +39,7 @@ func addIssueLabels(c *context.APIContext, form issueLabelsRequest) {
 		return
 	}
 
-	if err = issue.AddLabels(c.User, labels); err != nil {
+	if err = issue.AddLabels(c.Logger, c.User, labels); err != nil {
 		c.Error(err, "add labels")
 		return
 	}
@@ -120,7 +120,7 @@ func clearIssueLabels(c *context.APIContext) {
 		return
 	}
 
-	if err := issue.ClearLabels(c.User); err != nil {
+	if err := issue.ClearLabels(c.Logger, c.User); err != nil {
 		c.Error(err, "clear labels")
 		return
 	}

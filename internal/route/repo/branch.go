@@ -1,8 +1,6 @@
 package repo
 
 import (
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
@@ -32,7 +30,7 @@ func DeleteBranchPost(c *context.Context) {
 
 	protectBranch, err := database.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branchName)
 	if err != nil && !database.IsErrBranchNotExist(err) {
-		log.Error("Failed to get protected branch %q: %v", branchName, err)
+		c.Logger.Error("Failed to get protected branch", "branch", branchName, "error", err)
 		return
 	}
 	if protectBranch != nil && protectBranch.Protected {
@@ -43,7 +41,7 @@ func DeleteBranchPost(c *context.Context) {
 	if len(commitID) > 0 {
 		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(c.Req.Context(), branchName)
 		if err != nil {
-			log.Error("Failed to get commit ID of branch %q: %v", branchName, err)
+			c.Logger.Error("Failed to get commit ID of branch", "branch", branchName, "error", err)
 			return
 		}
 
@@ -56,18 +54,18 @@ func DeleteBranchPost(c *context.Context) {
 	if err := c.Repo.GitRepo.DeleteBranch(c.Req.Context(), branchName, git.DeleteBranchOptions{
 		Force: true,
 	}); err != nil {
-		log.Error("Failed to delete branch %q: %v", branchName, err)
+		c.Logger.Error("Failed to delete branch", "branch", branchName, "error", err)
 		return
 	}
 
-	if err := database.PrepareWebhooks(c.Repo.Repository, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
+	if err := database.PrepareWebhooks(c.Logger, c.Repo.Repository, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        branchName,
 		RefType:    "branch",
 		PusherType: apiv1types.WebhookPusherTypeUser,
-		Repo:       c.Repo.Repository.APIFormatLegacy(nil),
+		Repo:       c.Repo.Repository.APIFormatLegacy(c.Logger, nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {
-		log.Error("Failed to prepare webhooks for %q: %v", database.HookEventTypeDelete, err)
+		c.Logger.Error("Failed to prepare webhooks", "eventType", database.HookEventTypeDelete, "error", err)
 		return
 	}
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cron"
@@ -114,8 +114,8 @@ type adminDashboard struct {
 	SystemStatus adminReportSection `json:"systemStatus"`
 }
 
-func getAdminDashboard(c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
-	s := database.GetStatistic(c.Request().Context()).Counter
+func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
+	s := database.GetStatistic(c.Request().Context(), logger).Counter
 	r := adminReport{l: l}
 	size := func(n uint64) string { return tool.FileSize(int64(n)) }
 	seconds := func(ns uint64, precision int) string {
@@ -182,15 +182,15 @@ func getAdminDashboard(c flamego.Context, l i18n.Locale) (statusCode int, resp *
 // adminOperations are the maintenance tasks an admin can run from the
 // dashboard, by name, with the key of the message shown when one succeeds.
 var adminOperations = map[string]struct {
-	run        func() error
+	run        func(*logx.Logger) error
 	successKey string
 }{
-	"delete-inactive-users": {func() error { return database.Handle.Users().DeleteInactivated() }, "admin.dashboard.delete_inactivate_accounts_success"},
-	"delete-repo-archives":  {database.DeleteRepositoryArchives, "admin.dashboard.delete_repo_archives_success"},
+	"delete-inactive-users": {func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() }, "admin.dashboard.delete_inactivate_accounts_success"},
+	"delete-repo-archives":  {func(*logx.Logger) error { return database.DeleteRepositoryArchives() }, "admin.dashboard.delete_repo_archives_success"},
 	"delete-missing-repos":  {database.DeleteMissingRepositories, "admin.dashboard.delete_missing_repos_success"},
-	"git-gc-repos":          {database.GitGcRepos, "admin.dashboard.git_gc_repos_success"},
+	"git-gc-repos":          {func(*logx.Logger) error { return database.GitGcRepos() }, "admin.dashboard.git_gc_repos_success"},
 	"resync-ssh-keys":       {database.RewriteAuthorizedKeys, "admin.dashboard.resync_all_sshkeys_success"},
-	"resync-repo-hooks":     {database.SyncRepositoryHooks, "admin.dashboard.resync_all_hooks_success"},
+	"resync-repo-hooks":     {func(*logx.Logger) error { return database.SyncRepositoryHooks() }, "admin.dashboard.resync_all_hooks_success"},
 	"reinit-missing-repos":  {database.ReinitMissingRepositories, "admin.dashboard.reinit_missing_repos_success"},
 }
 
@@ -198,19 +198,19 @@ type adminMessage struct {
 	Message string `json:"message"`
 }
 
-func postAdminOperation(c flamego.Context, l i18n.Locale, admin *database.User) (statusCode int, resp any, err error) {
+func postAdminOperation(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User) (statusCode int, resp any, err error) {
 	name := c.Param("name")
 	op, ok := adminOperations[name]
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("operation not found")
 	}
-	if err = op.run(); err != nil {
-		log.Error("postAdminOperation: run %q: %v", name, err)
+	if err = op.run(logger); err != nil {
+		logger.Error("Failed to run admin operation", "operation", name, "error", err)
 		// Admins need the reason to fix what failed, e.g., the repository that
 		// could not be collected, as the server-rendered dashboard showed it.
 		return http.StatusInternalServerError, &bindingErrorResponse{Error: err.Error()}, nil
 	}
-	log.Trace("Admin operation %q run by %q", name, admin.Name)
+	logger.Debug("Admin operation run", "operation", name, "adminName", admin.Name)
 	return http.StatusOK, &adminMessage{Message: l.Tr(op.successKey)}, nil
 }
 
@@ -480,12 +480,12 @@ type adminTestMailRequest struct {
 	Email string `json:"email" validate:"required,email,max=254"`
 }
 
-func postAdminTestMail(l i18n.Locale, req adminTestMailRequest) (statusCode int, resp any, err error) {
+func postAdminTestMail(logger *logx.Logger, l i18n.Locale, req adminTestMailRequest) (statusCode int, resp any, err error) {
 	if !conf.Email.Enabled {
 		return http.StatusNotFound, nil, errors.New("email is not enabled")
 	}
-	if err = email.SendTestMail(req.Email); err != nil {
-		log.Error("postAdminTestMail: send to %q: %v", req.Email, err)
+	if err = email.SendTestMail(logger, req.Email); err != nil {
+		logger.Error("Failed to send test mail", "email", req.Email, "error", err)
 		// The mail server refused or could not be reached, and the reason helps
 		// the admin fix the settings.
 		return http.StatusBadGateway, &bindingErrorResponse{Error: l.Tr("admin.config.email.test_mail_failed", req.Email, err)}, nil

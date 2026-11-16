@@ -63,7 +63,7 @@ func isCollaborator(c *context.APIContext) {
 		return
 	}
 
-	if !c.Repo.Repository.IsCollaborator(collaborator.ID) {
+	if !c.Repo.Repository.IsCollaborator(c.Logger, collaborator.ID) {
 		c.NotFound()
 	} else {
 		c.NoContent()
@@ -81,7 +81,7 @@ func deleteCollaborator(c *context.APIContext) {
 		return
 	}
 
-	if err := c.Repo.Repository.DeleteCollaboration(collaborator.ID); err != nil {
+	if err := c.Repo.Repository.DeleteCollaboration(c.Logger, collaborator.ID); err != nil {
 		c.Error(err, "delete collaboration")
 		return
 	}

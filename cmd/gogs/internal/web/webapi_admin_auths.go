@@ -10,7 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
@@ -59,10 +59,10 @@ type adminAuthSourceList struct {
 	Items []adminAuthSource `json:"items"`
 }
 
-func getAdminAuthSources(c flamego.Context) (statusCode int, resp *adminAuthSourceList, err error) {
+func getAdminAuthSources(c flamego.Context, logger *logx.Logger) (statusCode int, resp *adminAuthSourceList, err error) {
 	sources, err := database.Handle.LoginSources().List(c.Request().Context(), database.ListLoginSourceOptions{})
 	if err != nil {
-		log.Error("getAdminAuthSources: list login sources: %v", err)
+		logger.Error("Failed to list login sources", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list login sources")
 	}
 	items := make([]adminAuthSource, 0, len(sources))
@@ -269,7 +269,7 @@ type adminAuthSourceCreated struct {
 	Name string `json:"name"`
 }
 
-func postAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User, req adminAuthSourceRequest) (statusCode int, resp any, err error) {
+func postAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale, admin *database.User, req adminAuthSourceRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if adminAuthSourceProvider(req.Type, &req, "") == nil {
 		msg := l.Tr("admin.auths.auth_type") + l.Tr("form.require_error")
@@ -282,7 +282,7 @@ func postAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User,
 	// them here.
 	fields, err := adminAuthSourceNameTaken(c, l, 0, req.AuthSourceName)
 	if err != nil {
-		log.Error("postAdminAuthSource: check name %q: %v", req.AuthSourceName, err)
+		logger.Error("Failed to check login source name", "loginSourceName", req.AuthSourceName, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if fields != nil {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fields}, nil
@@ -301,16 +301,16 @@ func postAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User,
 			msg := l.Tr("admin.auths.login_source_exist", req.AuthSourceName)
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
-		log.Error("postAdminAuthSource: create login source %q: %v", req.AuthSourceName, err)
+		logger.Error("Failed to create login source", "loginSourceName", req.AuthSourceName, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create login source")
 	}
 	if source.IsDefault {
 		if err = database.Handle.LoginSources().ResetNonDefault(ctx, source); err != nil {
-			log.Error("postAdminAuthSource: reset non-default login sources: %v", err)
+			logger.Error("Failed to reset non-default login sources", "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "reset non-default login sources")
 		}
 	}
-	log.Trace("Authentication source %q created by admin %q", source.Name, admin.Name)
+	logger.Debug("Authentication source created", "loginSourceName", source.Name, "adminName", admin.Name)
 	return http.StatusCreated, &adminAuthSourceCreated{ID: source.ID, Name: source.Name}, nil
 }
 
@@ -320,7 +320,7 @@ type adminTargetAuthSource struct {
 	*database.LoginSource
 }
 
-func withAdminTargetAuthSource(c flamego.Context) {
+func withAdminTargetAuthSource(c flamego.Context, logger *logx.Logger) {
 	w := c.ResponseWriter()
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	source, err := database.Handle.LoginSources().GetByID(c.Request().Context(), id)
@@ -329,14 +329,14 @@ func withAdminTargetAuthSource(c flamego.Context) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("authentication source not found"))
 			return
 		}
-		log.Error("withAdminTargetAuthSource: get login source %d: %v", id, err)
+		logger.Error("Failed to get login source", "loginSourceID", id, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.New("internal server error"))
 		return
 	}
 	c.Map(&adminTargetAuthSource{LoginSource: source})
 }
 
-func patchAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetAuthSource, req adminAuthSourceRequest) (statusCode int, resp any, err error) {
+func patchAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale, admin *database.User, target *adminTargetAuthSource, req adminAuthSourceRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	source := target.LoginSource
 	if fields := checkAdminAuthSource(l, source.Type, &req); fields != nil {
@@ -344,7 +344,7 @@ func patchAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User
 	}
 	fields, err := adminAuthSourceNameTaken(c, l, source.ID, req.AuthSourceName)
 	if err != nil {
-		log.Error("patchAdminAuthSource: check name %q: %v", req.AuthSourceName, err)
+		logger.Error("Failed to check login source name", "loginSourceName", req.AuthSourceName, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if fields != nil {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fields}, nil
@@ -359,20 +359,20 @@ func patchAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User
 	source.IsDefault = req.IsDefault
 	source.Provider = adminAuthSourceProvider(source.Type, &req, bindPassword)
 	if err = database.Handle.LoginSources().Save(ctx, source); err != nil {
-		log.Error("patchAdminAuthSource: save login source %d: %v", source.ID, err)
+		logger.Error("Failed to save login source", "loginSourceID", source.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save login source")
 	}
 	if source.IsDefault {
 		if err = database.Handle.LoginSources().ResetNonDefault(ctx, source); err != nil {
-			log.Error("patchAdminAuthSource: reset non-default login sources: %v", err)
+			logger.Error("Failed to reset non-default login sources", "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "reset non-default login sources")
 		}
 	}
-	log.Trace("Authentication source %d updated by admin %q", source.ID, admin.Name)
+	logger.Debug("Authentication source updated", "loginSourceID", source.ID, "adminName", admin.Name)
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.User, target *adminTargetAuthSource) (statusCode int, resp any, err error) {
+func deleteAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale, admin *database.User, target *adminTargetAuthSource) (statusCode int, resp any, err error) {
 	source := target.LoginSource
 	if source.File != nil {
 		// Deleting the database row would leave the file, which loads the
@@ -383,9 +383,9 @@ func deleteAdminAuthSource(c flamego.Context, l i18n.Locale, admin *database.Use
 		if database.IsErrLoginSourceInUse(err) {
 			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin.auths.still_in_used")}, nil
 		}
-		log.Error("deleteAdminAuthSource: delete login source %d: %v", source.ID, err)
+		logger.Error("Failed to delete login source", "loginSourceID", source.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete login source")
 	}
-	log.Trace("Authentication source %d deleted by admin %q", source.ID, admin.Name)
+	logger.Debug("Authentication source deleted", "loginSourceID", source.ID, "adminName", admin.Name)
 	return http.StatusNoContent, nil, nil
 }

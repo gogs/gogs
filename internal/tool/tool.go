@@ -13,10 +13,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/unknwon/i18n"
-	log "unknwon.dev/clog/v2"
-
 	"github.com/gogs/chardet"
+	"github.com/unknwon/i18n"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
@@ -31,19 +30,19 @@ func ShortSHA1(sha1 string) string {
 }
 
 // DetectEncoding returns best guess of encoding of given content.
-func DetectEncoding(content []byte) (string, error) {
+func DetectEncoding(logger *logx.Logger, content []byte) (string, error) {
 	if utf8.Valid(content) {
-		log.Trace("Detected encoding: UTF-8 (fast)")
+		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
 		return "UTF-8", nil
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
 	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
-		log.Trace("Using default ANSICharset: %s", conf.Repository.ANSICharset)
+		logger.Debug("Using default ANSI charset", "charset", conf.Repository.ANSICharset)
 		return conf.Repository.ANSICharset, err
 	}
 
-	log.Trace("Detected encoding: %s", result.Charset)
+	logger.Debug("Detected encoding", "charset", result.Charset)
 	return result.Charset, err
 }
 
@@ -130,13 +129,13 @@ func HashEmail(email string) string {
 // AvatarLink returns relative avatar link to the site domain by given email,
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
-func AvatarLink(email string) (url string) {
+func AvatarLink(logger *logx.Logger, email string) (url string) {
 	if conf.Picture.EnableFederatedAvatar && conf.Picture.LibravatarService != nil &&
 		strings.Contains(email, "@") {
 		var err error
 		url, err = conf.Picture.LibravatarService.FromEmail(email)
 		if err != nil {
-			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
+			logger.Warn("Failed to get Libravatar link", "email", email, "error", err)
 		}
 	}
 	if url == "" && !conf.Picture.DisableGravatar {
