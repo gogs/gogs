@@ -723,9 +723,9 @@ export function setRepoIssueAssignee(owner: string, name: string, index: number,
 }
 
 // renderRepoMarkdown renders Markdown the way the issues of the repository
-// are.
-export async function renderRepoMarkdown(owner: string, name: string, text: string) {
-  return (await submit<{ html: string }>("POST", repoURL(owner, name, "/markdown"), { text })).html;
+// are, or with wiki set, the way its wiki pages are.
+export async function renderRepoMarkdown(owner: string, name: string, text: string, wiki = false) {
+  return (await submit<{ html: string }>("POST", repoURL(owner, name, "/markdown"), { text, wiki })).html;
 }
 
 // uploadRepoAttachment uploads a file to attach to an issue, a comment or a

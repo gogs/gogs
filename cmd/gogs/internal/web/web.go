@@ -391,7 +391,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		}, reqSignIn, context.RepoAssignment(true))
 		m.Group("/:username/:reponame", func() {
 			m.Group("/wiki", func() {
-				m.Get("/?:page", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/?:page", repo.ServeWikiPage)
 				m.Get("/_pages", func(c *context.Context) { c.ServeWeb() })
 			}, repo.MustEnableWiki)
 		}, ignSignIn, context.RepoAssignment(false, true))

@@ -140,6 +140,12 @@ func getRepoWiki(c flamego.Context, repoCtx *repoContext) (statusCode int, resp 
 	}
 	name := wikiPageName(c)
 	content, found, err := readWikiPage(c, commit, name)
+	// Links written like GitHub's, e.g., "Getting-started", reach the page
+	// saved as "Getting started".
+	if err == nil && !found && strings.Contains(name, "-") {
+		name = strings.ReplaceAll(name, "-", " ")
+		content, found, err = readWikiPage(c, commit, name)
+	}
 	if err != nil {
 		log.Error("getRepoWiki: read page %q of repo %d: %v", name, repo.ID, err)
 		return http.StatusInternalServerError, nil, err
@@ -161,7 +167,7 @@ func getRepoWiki(c flamego.Context, repoCtx *repoContext) (statusCode int, resp 
 	resp.HasWiki = true
 	resp.Page = &wikiPage{
 		Name:   name,
-		HTML:   string(markup.Markdown(content, repo.Link(), repo.ComposeMetas())),
+		HTML:   string(markup.Markdown(content, repo.Link()+"/wiki", repo.ComposeMetas())),
 		Author: wikiPageAuthor{Name: commits[0].Author.Name, When: commits[0].Author.When},
 	}
 	resp.Pages = pages

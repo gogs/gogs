@@ -613,12 +613,20 @@ func deleteRepoIssueComment(viewer *database.User, comment *database.Comment) (s
 
 type markdownRequest struct {
 	Text string `json:"text"`
+	// Wiki resolves relative links against the wiki instead of the
+	// repository.
+	Wiki bool `json:"wiki"`
 }
 
-// postRepoMarkdown renders Markdown the way the issues of the repository are.
+// postRepoMarkdown renders Markdown the way the issues of the repository are,
+// or the way its wiki pages are.
 func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
-	return http.StatusOK, map[string]string{"html": string(markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas()))}, nil
+	base := repo.Link()
+	if req.Wiki {
+		base += "/wiki"
+	}
+	return http.StatusOK, map[string]string{"html": string(markup.Markdown(req.Text, base, repo.ComposeMetas()))}, nil
 }
 
 // limitAttachmentUpload caps the size of an uploaded attachment.

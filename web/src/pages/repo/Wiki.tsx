@@ -392,6 +392,7 @@ export function RepoWikiEditor({
           </FormField>
           <div className="rounded-md border border-(--color-border) p-3">
             <MarkdownEditor
+              wiki
               repo={{ owner, name }}
               label={t("repo.wiki.page_content")}
               value={content}

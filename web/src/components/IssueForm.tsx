@@ -34,6 +34,7 @@ export function MarkdownEditor({
   disabled,
   uploads,
   minLines,
+  wiki = false,
 }: {
   repo: RepoRef;
   label: string;
@@ -45,13 +46,15 @@ export function MarkdownEditor({
   // uploads attaches the files pasted or dropped into the editor.
   uploads?: AttachmentUploads;
   minLines?: number;
+  // wiki previews relative links the way wiki pages resolve them.
+  wiki?: boolean;
 }) {
   const { t } = useTranslation();
   const id = useId();
   const [tab, setTab] = useState<"write" | "preview">("write");
   const preview = useQuery({
-    queryKey: ["markdown", repo.owner, repo.name, value],
-    queryFn: () => renderRepoMarkdown(repo.owner, repo.name, value),
+    queryKey: ["markdown", repo.owner, repo.name, value, wiki],
+    queryFn: () => renderRepoMarkdown(repo.owner, repo.name, value, wiki),
     enabled: tab === "preview" && value.trim() !== "",
     staleTime: Infinity,
   });
