@@ -70,6 +70,7 @@ const (
 	ElementInput      = "input"
 	ElementDropdown   = "dropdown"
 	ElementCheckboxes = "checkboxes"
+	ElementUpload     = "upload"
 )
 
 // Element is an element of the body of an issue form.
@@ -89,6 +90,9 @@ type Element struct {
 	} `yaml:"attributes"`
 	Validations struct {
 		Required bool `yaml:"required"`
+		// Accept is the comma-separated file extensions an upload element
+		// takes, e.g., ".png,.log". Empty takes any file.
+		Accept string `yaml:"accept"`
 	} `yaml:"validations"`
 }
 
@@ -420,7 +424,7 @@ func parseForm(p []byte) (*Template, error) {
 				return nil, errors.Newf("body[%d]: missing value", i)
 			}
 			continue
-		case ElementTextarea, ElementInput:
+		case ElementTextarea, ElementInput, ElementUpload:
 		case ElementDropdown, ElementCheckboxes:
 			if len(el.Attributes.Options) == 0 {
 				return nil, errors.Newf("body[%d]: missing options", i)
@@ -475,12 +479,38 @@ func (e *FieldError) Error() string {
 
 const noResponse = "_No response_"
 
+// File is an uploaded file the value of an upload element names.
+type File struct {
+	Name    string
+	URL     string
+	IsImage bool
+}
+
+// accepts reports whether the file name has one of the comma-separated
+// extensions, e.g., ".png,.tar.gz".
+func accepts(accept, name string) bool {
+	if strings.TrimSpace(accept) == "" {
+		return true
+	}
+	name = strings.ToLower(name)
+	for _, ext := range strings.Split(accept, ",") {
+		if ext = strings.ToLower(strings.TrimSpace(ext)); ext != "" && strings.HasSuffix(name, ext) {
+			return true
+		}
+	}
+	return false
+}
+
+var linkTextEscaper = strings.NewReplacer(`\`, `\\`, "[", `\[`, "]", `\]`)
+
 // RenderForm returns the issue content for the values of the fields of an
 // issue form, in the format GitHub uses. values has an entry per element of
-// the form: the text of an input or a textarea, or the chosen option labels of
-// a dropdown or checkboxes. It returns a *FieldError when a value is not
+// the form: the text of an input or a textarea, the chosen option labels of a
+// dropdown or checkboxes, or the IDs of the files of an upload element, which
+// files looks up. A nil files means uploads are disabled, so upload elements
+// are left without a response. It returns a *FieldError when a value is not
 // valid.
-func (t *Template) RenderForm(values [][]string) (string, error) {
+func (t *Template) RenderForm(values [][]string, files func(id string) (File, bool)) (string, error) {
 	if len(values) != len(t.Form) {
 		return "", errors.Newf("expect %d form values but got %d", len(t.Form), len(values))
 	}
@@ -530,6 +560,33 @@ func (t *Template) RenderForm(values [][]string) (string, error) {
 				value = noResponse
 			} else {
 				value = strings.Join(chosen, ", ")
+			}
+
+		case ElementUpload:
+			links := make([]string, 0, len(values[i]))
+			if files != nil {
+				for _, id := range values[i] {
+					f, ok := files(id)
+					if !ok {
+						return fail("file does not exist")
+					}
+					if !accepts(el.Validations.Accept, f.Name) {
+						return fail(f.Name + " is not an accepted file type")
+					}
+					link := "[" + linkTextEscaper.Replace(f.Name) + "](" + f.URL + ")"
+					if f.IsImage {
+						link = "!" + link
+					}
+					links = append(links, link)
+				}
+			}
+			if len(links) == 0 {
+				if el.Validations.Required && files != nil {
+					return missing(label)
+				}
+				value = noResponse
+			} else {
+				value = strings.Join(links, "\n")
 			}
 
 		case ElementCheckboxes:

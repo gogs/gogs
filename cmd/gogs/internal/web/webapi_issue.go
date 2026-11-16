@@ -88,16 +88,57 @@ type issueAttachment struct {
 	IsImage bool   `json:"isImage"`
 }
 
-func toIssueAttachments(attachments []*database.Attachment) []issueAttachment {
+// attachmentURL is the absolute URL of an attachment, which content links to
+// so it works wherever the content is shown, e.g., in email notifications.
+func attachmentURL(uuid string) string {
+	return conf.Server.ExternalURL + "attachments/" + uuid
+}
+
+// linksAttachment reports whether the content links to the attachment, i.e.,
+// shows it in place like on GitHub.
+func linksAttachment(content, uuid string) bool {
+	return strings.Contains(content, "/attachments/"+uuid)
+}
+
+func isImageName(name string) bool {
+	return strings.HasPrefix(mime.TypeByExtension(filepath.Ext(name)), "image/")
+}
+
+// toIssueAttachments returns the attachments the content does not link to,
+// e.g., files attached before they were linked in place, which are listed
+// after the content.
+func toIssueAttachments(attachments []*database.Attachment, content string) []issueAttachment {
 	items := make([]issueAttachment, 0, len(attachments))
 	for _, a := range attachments {
+		if linksAttachment(content, a.UUID) {
+			continue
+		}
 		items = append(items, issueAttachment{
 			Name:    a.Name,
 			URL:     conf.Server.Subpath + "/attachments/" + a.UUID,
-			IsImage: strings.HasPrefix(mime.TypeByExtension(filepath.Ext(a.Name)), "image/"),
+			IsImage: isImageName(a.Name),
 		})
 	}
 	return items
+}
+
+// updateLinkedAttachments attaches the new files to the issue or comment, and
+// deletes the attached files the content no longer links to. Files that were
+// never linked, e.g., attached before files were linked in place, are kept.
+func updateLinkedAttachments(issueID, commentID int64, attached []*database.Attachment, oldContent, newContent string, uuids []string) error {
+	if err := database.BindAttachments(issueID, commentID, uuids); err != nil {
+		return errors.Wrap(err, "attach files")
+	}
+	var unlinked []*database.Attachment
+	for _, a := range attached {
+		if linksAttachment(oldContent, a.UUID) && !linksAttachment(newContent, a.UUID) {
+			unlinked = append(unlinked, a)
+		}
+	}
+	if _, err := database.DeleteAttachments(unlinked, true); err != nil {
+		return errors.Wrap(err, "delete unlinked files")
+	}
+	return nil
 }
 
 type issueComment struct {
@@ -251,7 +292,7 @@ func getRepoIssue(c flamego.Context, viewer *database.User, repoCtx *repoContext
 		CreatedAt:   issue.Created.UTC(),
 		ContentHTML: string(markup.Markdown(issue.Content, repo.Link(), metas)),
 		Content:     issue.Content,
-		Attachments: toIssueAttachments(issue.Attachments),
+		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
 		Labels:      make([]dashboardIssueLabel, 0, len(issue.Labels)),
 
@@ -293,7 +334,7 @@ func getRepoIssue(c flamego.Context, viewer *database.User, repoCtx *repoContext
 			item.ContentHTML = markup.Sanitize(comment.Content)
 		case database.CommentTypeComment:
 			item.ContentHTML = string(markup.Markdown(comment.Content, repo.Link(), metas))
-			item.Attachments = toIssueAttachments(comment.Attachments)
+			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
 			// Like the server-rendered page, the poster and admins can change a
 			// comment.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
@@ -362,6 +403,9 @@ func requireIssueEditor(c flamego.Context, repoCtx *repoContext, issue *database
 type repoIssueRequest struct {
 	Title   *string `json:"title"`
 	Content *string `json:"content"`
+	// Attachments are the UUIDs of the files uploaded while editing the
+	// content.
+	Attachments []string `json:"attachments"`
 }
 
 func patchRepoIssue(l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
@@ -378,9 +422,24 @@ func patchRepoIssue(l i18n.Locale, viewer *database.User, issue *database.Issue,
 		}
 	}
 	if req.Content != nil && *req.Content != issue.Content {
+		if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+			if statusCode == http.StatusInternalServerError {
+				log.Error("patchRepoIssue: %v", err)
+			}
+			return statusCode, nil, err
+		}
+		oldContent := issue.Content
 		if err = issue.ChangeContent(viewer, *req.Content); err != nil {
 			log.Error("patchRepoIssue: change content of issue %d: %v", issue.ID, err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "change content")
+		}
+		attached, err := database.GetAttachmentsByIssueID(issue.ID)
+		if err == nil {
+			err = updateLinkedAttachments(issue.ID, 0, attached, oldContent, issue.Content, req.Attachments)
+		}
+		if err != nil {
+			log.Error("patchRepoIssue: update files of issue %d: %v", issue.ID, err)
+			return http.StatusInternalServerError, nil, err
 		}
 	}
 	return http.StatusNoContent, nil, nil
@@ -599,11 +658,25 @@ func patchRepoIssueComment(l i18n.Locale, viewer *database.User, comment *databa
 		msg := l.Tr("form.Content") + l.Tr("form.require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
+	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+		if statusCode == http.StatusInternalServerError {
+			log.Error("patchRepoIssueComment: %v", err)
+		}
+		return statusCode, nil, err
+	}
 	oldContent := comment.Content
 	comment.Content = req.Content
 	if err = database.UpdateComment(viewer, comment, oldContent); err != nil {
 		log.Error("patchRepoIssueComment: update comment %d: %v", comment.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update comment")
+	}
+	attached, err := database.GetAttachmentsByCommentID(comment.ID)
+	if err == nil {
+		err = updateLinkedAttachments(comment.IssueID, comment.ID, attached, oldContent, comment.Content, req.Attachments)
+	}
+	if err != nil {
+		log.Error("patchRepoIssueComment: update files of comment %d: %v", comment.ID, err)
+		return http.StatusInternalServerError, nil, err
 	}
 	return http.StatusNoContent, nil, nil
 }
@@ -710,7 +783,7 @@ func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (st
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}
-	return http.StatusCreated, map[string]string{"uuid": attachment.UUID}, nil
+	return http.StatusCreated, map[string]string{"uuid": attachment.UUID, "url": attachmentURL(attachment.UUID)}, nil
 }
 
 // postRepoIssueAttachment stores a file to attach to an issue or a comment.
@@ -750,6 +823,8 @@ type issueTemplateField struct {
 	Options         []issueTemplateOption `json:"options,omitempty"`
 	Default         *int                  `json:"default,omitempty"`
 	Required        bool                  `json:"required,omitempty"`
+	// Accept is the comma-separated file extensions an upload takes.
+	Accept string `json:"accept,omitempty"`
 }
 
 type issueTemplate struct {
@@ -833,6 +908,7 @@ func toIssueTemplate(repo *database.Repository, t *issuetemplate.Template) *issu
 			Multiple:        el.Attributes.Multiple,
 			Default:         el.Attributes.Default,
 			Required:        el.Validations.Required,
+			Accept:          el.Validations.Accept,
 		}
 		if el.Type == issuetemplate.ElementMarkdown {
 			field.HTML = markdown(el.Attributes.Value)
@@ -951,7 +1027,18 @@ func postRepoIssue(c flamego.Context, l i18n.Locale, viewer *database.User, repo
 			return http.StatusBadRequest, nil, errors.Newf("issue template %q does not exist", req.Template)
 		}
 		if tmpl.IsForm() {
-			req.Content, err = tmpl.RenderForm(req.Fields)
+			// The files of upload elements are uploaded but not attached yet.
+			var files func(id string) (issuetemplate.File, bool)
+			if issueAttachmentLimits().Enabled {
+				files = func(id string) (issuetemplate.File, bool) {
+					a, err := database.GetAttachmentByUUID(id)
+					if err != nil || a.IssueID > 0 || a.CommentID > 0 || a.ReleaseID > 0 {
+						return issuetemplate.File{}, false
+					}
+					return issuetemplate.File{Name: a.Name, URL: attachmentURL(a.UUID), IsImage: isImageName(a.Name)}, true
+				}
+			}
+			req.Content, err = tmpl.RenderForm(req.Fields, files)
 			if fieldErr := (*issuetemplate.FieldError)(nil); errors.As(err, &fieldErr) {
 				msg := fieldErr.Label + ": " + fieldErr.Message
 				if fieldErr.Missing {
@@ -962,6 +1049,11 @@ func postRepoIssue(c flamego.Context, l i18n.Locale, viewer *database.User, repo
 				}, nil
 			} else if err != nil {
 				return http.StatusBadRequest, nil, err
+			}
+			for i, el := range tmpl.Form {
+				if el.Type == issuetemplate.ElementUpload && files != nil {
+					req.Attachments = append(req.Attachments, req.Fields[i]...)
+				}
 			}
 		}
 	}

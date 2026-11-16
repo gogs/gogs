@@ -198,11 +198,15 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 					}
 					repo = release.Repo
 				}
+				// A file that is not attached yet was just uploaded, e.g., to preview
+				// it before the issue or comment is created. Only its uploader knows
+				// the random UUID.
 				if repo == nil {
-					c.NotFound()
-					return
-				}
-				if !repo.HasAccess(c.UserID()) {
+					if !c.IsLogged {
+						c.NotFound()
+						return
+					}
+				} else if !repo.HasAccess(c.UserID()) {
 					c.NotFound()
 					return
 				}

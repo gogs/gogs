@@ -13,7 +13,7 @@ import { Compartment, EditorState, type Extension, Prec } from "@codemirror/stat
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { classHighlighter, tagHighlighter, tags } from "@lezer/highlight";
 import { GFM, parser as markdownParser } from "@lezer/markdown";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from "react";
 
 import type { CodeEditorProps } from "@/components/CodeEditor";
 import type { CodeLanguage } from "@/lib/code-language";
@@ -146,6 +146,7 @@ export default function CodeEditorView({
   disabled = false,
   autoFocus = false,
   onFiles,
+  editorRef,
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
 }: CodeEditorProps) {
@@ -238,6 +239,33 @@ export default function CodeEditorView({
       effects: indentation.reconfigure([indentUnitFacet.of(indentUnit), EditorState.tabSize.of(tabSize)]),
     });
   }, [indentation, indentUnit, tabSize]);
+
+  useImperativeHandle(
+    editorRef,
+    () => ({
+      insert: (text) => {
+        const v = view.current;
+        if (!v) return;
+        const { from, to } = v.state.selection.main;
+        const line = v.state.doc.lineAt(from);
+        const before = from > line.from ? "\n" : "";
+        const insert = `${before}${text}\n`;
+        v.dispatch({
+          changes: { from, to, insert },
+          selection: { anchor: from + insert.length },
+          scrollIntoView: true,
+        });
+      },
+      replace: (search, text) => {
+        const v = view.current;
+        const from = v ? v.state.doc.toString().indexOf(search) : -1;
+        if (!v || from < 0) return false;
+        v.dispatch({ changes: { from, to: from + search.length, insert: text } });
+        return true;
+      },
+    }),
+    [],
+  );
 
   // Take the value from outside when it changes there, e.g., cleared after
   // submitting.

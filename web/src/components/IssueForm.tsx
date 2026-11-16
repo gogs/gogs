@@ -1,16 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, Paperclip, Pencil, Settings, X } from "lucide-react";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CodeEditor } from "@/components/CodeEditor";
+import { CodeEditor, type CodeEditorHandle } from "@/components/CodeEditor";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type IssueMetaOptions, type RepoIssueData, renderRepoMarkdown } from "@/lib/queries/repo";
-import type { AttachmentUploads } from "@/lib/use-attachment-uploads";
+import type { AttachmentUploads, UploadLinker } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,18 @@ import { cn } from "@/lib/utils";
 interface RepoRef {
   owner: string;
   name: string;
+}
+
+// uploadingText is what holds the place of a file in the text while it uploads,
+// like on GitHub.
+function uploadingText(file: File) {
+  return `${file.type.startsWith("image/") ? "!" : ""}[Uploading ${file.name}…]()`;
+}
+
+// fileLink links a file in Markdown, showing an image in place.
+function fileLink(file: File, url: string) {
+  const text = file.name.replace(/[\\[\]]/g, "\\$&");
+  return `${file.type.startsWith("image/") ? "!" : ""}[${text}](${url})`;
 }
 
 // MarkdownEditor is a text area for Markdown with a tab that previews it the
@@ -35,6 +47,7 @@ export function MarkdownEditor({
   uploads,
   minLines,
   wiki = false,
+  linkFiles,
 }: {
   repo: RepoRef;
   label: string;
@@ -48,10 +61,41 @@ export function MarkdownEditor({
   minLines?: number;
   // wiki previews relative links the way wiki pages resolve them.
   wiki?: boolean;
+  // linkFiles links the files picked, pasted or dropped where the cursor is,
+  // like on GitHub, instead of only attaching them.
+  linkFiles?: boolean;
 }) {
   const { t } = useTranslation();
   const id = useId();
   const [tab, setTab] = useState<"write" | "preview">("write");
+  const editor = useRef<CodeEditorHandle>(null);
+  // latest is the text to change while the editor is not shown, e.g., on the
+  // preview tab when an upload finishes.
+  const latest = useRef(value);
+  useLayoutEffect(() => {
+    latest.current = value;
+  }, [value]);
+  const setText = (text: string) => {
+    latest.current = text;
+    onChange(text);
+  };
+  const linker: UploadLinker = {
+    start: (file) => {
+      const text = uploadingText(file);
+      if (editor.current) editor.current.insert(text);
+      else setText(latest.current ? `${latest.current.replace(/\n*$/, "")}\n${text}\n` : `${text}\n`);
+    },
+    done: (file, url) => {
+      const from = uploadingText(file);
+      const to = url ? fileLink(file, url) : "";
+      if (!editor.current?.replace(from, to)) setText(latest.current.replace(from, to));
+    },
+  };
+  useEffect(() => {
+    if (!linkFiles || !uploads) return;
+    uploads.setLinker(linker);
+    return () => uploads.setLinker(null);
+  });
   const preview = useQuery({
     queryKey: ["markdown", repo.owner, repo.name, value, wiki],
     queryFn: () => renderRepoMarkdown(repo.owner, repo.name, value, { wiki }),
@@ -89,6 +133,7 @@ export function MarkdownEditor({
       {tab === "write" ? (
         <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
           <CodeEditor
+            editorRef={editor}
             id={`${id}-input`}
             label={label}
             lang="markdown"

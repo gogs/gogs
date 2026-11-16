@@ -1,7 +1,7 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { ExternalLink, Upload } from "lucide-react";
+import { type FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CheckboxField, FormAlert } from "@/components/FormField";
@@ -14,13 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
 import {
+  type IssueAttachmentSettings,
   type IssueTemplateField,
   type RepoNewIssueOptions,
   createRepoIssue,
   repoHeaderQuery,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { cn } from "@/lib/utils";
 import type { RepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
 
 const TEXTAREA_CLASS =
@@ -184,7 +186,7 @@ function NewIssueForm({
         labelIDs,
         milestoneID,
         assigneeID,
-        attachments: uploads.uploaded,
+        attachments: form ? [] : linkedUploads(uploads.uploaded, content),
         template: template?.file,
         fields: form ? fieldValues : undefined,
       }),
@@ -208,6 +210,10 @@ function NewIssueForm({
   };
   const setFieldValue = (index: number, value: string[]) =>
     setFieldValues((values) => values.map((v, i) => (i === index ? value : v)));
+  // fieldsUploading has the upload fields whose files are still uploading.
+  const [fieldsUploading, setFieldsUploading] = useState<number[]>([]);
+  const setFieldUploading = (index: number, uploading: boolean) =>
+    setFieldsUploading((list) => (uploading ? [...new Set([...list, index])] : list.filter((i) => i !== index)));
 
   return (
     <form onSubmit={onSubmit} className="grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]">
@@ -253,10 +259,12 @@ function NewIssueForm({
                   value={fieldValues[i]}
                   onChange={(value) => setFieldValue(i, value)}
                   error={fields[`field-${i}`]}
+                  upload={{ owner, name, settings: options.attachment }}
+                  onUploading={(uploading) => setFieldUploading(i, uploading)}
                 />
               ))}
               <div className="flex justify-end">
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" disabled={fieldsUploading.length > 0}>
                   {t("repo.issues.create")}
                 </Button>
               </div>
@@ -270,8 +278,8 @@ function NewIssueForm({
                 onChange={setContent}
                 disabled={mutation.isPending}
                 uploads={uploads}
+                linkFiles
               />
-              <PendingFiles uploads={uploads} />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <AttachFilesButton uploads={uploads} />
                 <Button type="submit" size="sm" disabled={uploads.uploading}>
@@ -308,12 +316,17 @@ function FormElement({
   value,
   onChange,
   error,
+  upload,
+  onUploading,
 }: {
   id: string;
   field: IssueTemplateField;
   value: string[];
   onChange: (value: string[]) => void;
   error?: string | null;
+  // upload is where the files of an upload element go.
+  upload: { owner: string; name: string; settings?: IssueAttachmentSettings };
+  onUploading: (uploading: boolean) => void;
 }) {
   const { t } = useTranslation();
   if (field.type === "markdown") {
@@ -349,6 +362,24 @@ function FormElement({
       {error}
     </p>
   ) : null;
+
+  if (field.type === "upload") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        {description}
+        <UploadField
+          id={id}
+          accept={field.accept}
+          upload={upload}
+          onChange={onChange}
+          onUploading={onUploading}
+          aria={aria}
+        />
+        {errorText}
+      </div>
+    );
+  }
 
   // Checkboxes and multiple-choice dropdowns are a group of checkboxes.
   if (field.type === "checkboxes" || (field.type === "dropdown" && field.multiple)) {
@@ -442,6 +473,88 @@ function FormElement({
       {description}
       {control}
       {errorText}
+    </div>
+  );
+}
+
+// UploadField takes the files of an upload element, dropped on it or picked,
+// and uploads them right away. Its value is the IDs of the uploaded files.
+function UploadField({
+  id,
+  accept,
+  upload,
+  onChange,
+  onUploading,
+  aria,
+}: {
+  id: string;
+  accept?: string;
+  upload: { owner: string; name: string; settings?: IssueAttachmentSettings };
+  onChange: (value: string[]) => void;
+  onUploading: (uploading: boolean) => void;
+  aria: { "aria-invalid"?: boolean; "aria-describedby"?: string; "aria-required"?: boolean };
+}) {
+  const { t } = useTranslation();
+  const uploads = useAttachmentUploads(upload.owner, upload.name, upload.settings);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const report = useEffectEvent((uuids: string[], uploading: boolean) => {
+    onChange(uuids);
+    onUploading(uploading);
+  });
+  const uploadedKey = uploads.uploaded.join(",");
+  useEffect(() => {
+    report(uploadedKey ? uploadedKey.split(",") : [], uploads.uploading);
+  }, [uploadedKey, uploads.uploading]);
+
+  if (!upload.settings) {
+    return (
+      <p id={id} className="text-sm text-(--color-muted-foreground) italic">
+        {t("repo.issues.new.uploads_disabled")}
+      </p>
+    );
+  }
+  const full = uploads.files.length >= upload.settings.maxFiles;
+  return (
+    <div>
+      <input
+        ref={fileInput}
+        type="file"
+        multiple
+        hidden
+        accept={
+          accept || (upload.settings.allowedTypes.includes("*/*") ? undefined : upload.settings.allowedTypes.join(","))
+        }
+        onChange={(e) => {
+          if (e.target.files) uploads.add(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <button
+        id={id}
+        type="button"
+        disabled={full}
+        onClick={() => fileInput.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          if (e.dataTransfer.files.length) uploads.add(e.dataTransfer.files);
+        }}
+        className={cn(
+          "flex w-full cursor-pointer flex-col items-center gap-1.5 rounded-md border border-dashed border-(--color-input) px-4 py-6 text-sm text-(--color-muted-foreground) outline-none transition-colors hover:bg-(--color-surface) focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)",
+          dragging && "border-(--color-primary) bg-(--color-surface)",
+        )}
+        {...aria}
+      >
+        <Upload className="size-5" aria-hidden />
+        {t("dropzone.default_message")}
+      </button>
+      <PendingFiles uploads={uploads} />
     </div>
   );
 }

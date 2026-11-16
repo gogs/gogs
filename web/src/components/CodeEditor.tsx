@@ -1,4 +1,4 @@
-import { type AriaAttributes, Suspense, lazy } from "react";
+import { type AriaAttributes, type Ref, Suspense, lazy } from "react";
 
 import type { CodeLanguage } from "@/lib/code-language";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,17 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   // onFiles takes the files pasted or dropped into the editor, e.g., to
   // attach them. Without it, dropped files are ignored.
   onFiles?: (files: FileList) => void;
+  // editorRef edits the text in place, keeping the cursor where it is.
+  editorRef?: Ref<CodeEditorHandle>;
+}
+
+export interface CodeEditorHandle {
+  // insert puts the text on its own line at the cursor, and moves the cursor
+  // to the next line.
+  insert: (text: string) => void;
+  // replace replaces the first occurrence of the text, and tells whether it
+  // was found.
+  replace: (search: string, text: string) => boolean;
 }
 
 // CodeEditor is the editor for every Markdown and source code field. Its

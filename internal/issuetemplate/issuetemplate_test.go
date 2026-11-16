@@ -188,7 +188,7 @@ func TestTemplate_RenderForm(t *testing.T) {
 			{"panic: oops"},
 			{"Safari", "Firefox"},
 			{"I searched existing issues"},
-		})
+		}, nil)
 		require.NoError(t, err)
 		want := "### Version\n\n1.2.3\n\n" +
 			"### Logs\n\n```shell\npanic: oops\n```\n\n" +
@@ -198,7 +198,7 @@ func TestTemplate_RenderForm(t *testing.T) {
 	})
 
 	t.Run("no response", func(t *testing.T) {
-		got, err := tmpl.RenderForm([][]string{nil, {"1"}, {"  "}, nil, {"I searched existing issues"}})
+		got, err := tmpl.RenderForm([][]string{nil, {"1"}, {"  "}, nil, {"I searched existing issues"}}, nil)
 		require.NoError(t, err)
 		assert.Contains(t, got, "### Logs\n\n_No response_\n\n### Browsers\n\n_No response_\n\n")
 	})
@@ -214,14 +214,14 @@ func TestTemplate_RenderForm(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := tmpl.RenderForm(test.values)
+			_, err := tmpl.RenderForm(test.values, nil)
 			var fieldErr *FieldError
 			require.ErrorAs(t, err, &fieldErr)
 			assert.Equal(t, test.wantIndex, fieldErr.Index)
 		})
 	}
 
-	_, err = tmpl.RenderForm([][]string{nil})
+	_, err = tmpl.RenderForm([][]string{nil}, nil)
 	assert.Error(t, err)
 }
 
@@ -247,14 +247,51 @@ body:
       required: true
 `))
 	require.NoError(t, err)
-	_, err = tmpl.RenderForm([][]string{nil})
+	_, err = tmpl.RenderForm([][]string{nil}, nil)
 	var fieldErr *FieldError
 	require.ErrorAs(t, err, &fieldErr)
 	assert.True(t, fieldErr.Missing)
 
-	got, err := tmpl.RenderForm([][]string{{"linux"}})
+	got, err := tmpl.RenderForm([][]string{{"linux"}}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "### OS\n\n- [ ] mac\n- [X] linux", got)
+}
+
+func TestTemplate_RenderForm_Upload(t *testing.T) {
+	tmpl, err := parseForm([]byte(`name: A
+description: B
+body:
+  - type: upload
+    attributes:
+      label: Screenshots
+    validations:
+      required: true
+      accept: ".png, .tar.gz"
+`))
+	require.NoError(t, err)
+	files := func(id string) (File, bool) {
+		f, ok := map[string]File{
+			"a": {Name: "shot [1].PNG", URL: "https://example.com/attachments/a", IsImage: true},
+			"b": {Name: "logs.tar.gz", URL: "https://example.com/attachments/b"},
+			"c": {Name: "notes.txt", URL: "https://example.com/attachments/c"},
+		}[id]
+		return f, ok
+	}
+
+	got, err := tmpl.RenderForm([][]string{{"a", "b"}}, files)
+	require.NoError(t, err)
+	assert.Equal(t, "### Screenshots\n\n![shot \\[1\\].PNG](https://example.com/attachments/a)\n[logs.tar.gz](https://example.com/attachments/b)", got)
+
+	for _, values := range [][]string{nil, {"c"}, {"missing"}} {
+		_, err = tmpl.RenderForm([][]string{values}, files)
+		var fieldErr *FieldError
+		require.ErrorAs(t, err, &fieldErr, values)
+	}
+
+	// Without uploads, the field cannot be filled in, so it is not required.
+	got, err = tmpl.RenderForm([][]string{nil}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "### Screenshots\n\n_No response_", got)
 }
 
 func TestParseForm_SingleDropdown(t *testing.T) {
@@ -267,7 +304,7 @@ body:
       options: [x, y]
 `))
 	require.NoError(t, err)
-	_, err = tmpl.RenderForm([][]string{{"x", "y"}})
+	_, err = tmpl.RenderForm([][]string{{"x", "y"}}, nil)
 	var fieldErr *FieldError
 	require.ErrorAs(t, err, &fieldErr)
 }

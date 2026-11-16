@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -11,9 +11,18 @@ export interface PendingFile {
   uuid?: string;
 }
 
+// UploadLinker places the files being uploaded in content, e.g., a Markdown
+// editor that links them where they are dropped like on GitHub.
+export interface UploadLinker {
+  start: (file: File) => void;
+  // done gets the URL of the uploaded file, or nothing when it failed.
+  done: (file: File, url?: string) => void;
+}
+
 // useAttachmentUploads uploads the files picked to attach to an issue, a
 // comment or a release of the repository, or to commit with the editor, as
-// soon as they are picked, within the limits of the settings.
+// soon as they are picked, within the limits of the settings. When a linker
+// is set, it places the files in content.
 export function useAttachmentUploads(
   owner: string,
   name: string,
@@ -22,9 +31,10 @@ export function useAttachmentUploads(
 ) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<PendingFile[]>([]);
+  const linker = useRef<UploadLinker | null>(null);
   const uploaded = files.flatMap((f) => (f.uuid ? [f.uuid] : []));
 
-  const add = (list: FileList) => {
+  const add = (list: FileList | File[]) => {
     if (!settings) return;
     const room = settings.maxFiles - files.length;
     for (const file of Array.from(list).slice(0, Math.max(room, 0))) {
@@ -38,12 +48,18 @@ export function useAttachmentUploads(
         continue;
       }
       const key = crypto.randomUUID();
+      const link = linker.current;
       setFiles((prev) => [...prev, { key, name: file.name }]);
+      link?.start(file);
       uploadRepoAttachment(owner, name, kind, file).then(
-        (uuid) => setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, uuid } : f))),
+        ({ uuid, url }) => {
+          setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, uuid } : f)));
+          link?.done(file, url);
+        },
         (err: Error) => {
           toast.error(`${file.name}: ${err.message}`);
           setFiles((prev) => prev.filter((f) => f.key !== key));
+          link?.done(file);
         },
       );
     }
@@ -55,9 +71,18 @@ export function useAttachmentUploads(
     uploaded,
     uploading: files.length !== uploaded.length,
     add,
+    setLinker: (l: UploadLinker | null) => {
+      linker.current = l;
+    },
     remove: (key: string) => setFiles((prev) => prev.filter((f) => f.key !== key)),
     clear: () => setFiles([]),
   };
 }
 
 export type AttachmentUploads = ReturnType<typeof useAttachmentUploads>;
+
+// linkedUploads returns the uploaded files the content links to, so files
+// whose links were removed before submitting are not attached.
+export function linkedUploads(uploaded: string[], content: string) {
+  return uploaded.filter((uuid) => content.includes(`/attachments/${uuid}`));
+}

@@ -643,7 +643,7 @@ export interface IssueTemplateSummary {
 }
 
 export interface IssueTemplateField {
-  type: "markdown" | "textarea" | "input" | "dropdown" | "checkboxes";
+  type: "markdown" | "textarea" | "input" | "dropdown" | "checkboxes" | "upload";
   label?: string;
   // descriptionHTML and html are rendered Markdown.
   descriptionHTML?: string;
@@ -657,6 +657,8 @@ export interface IssueTemplateField {
   // default is the index of the option a dropdown starts with.
   default?: number;
   required?: boolean;
+  // accept is the comma-separated file extensions an upload takes.
+  accept?: string;
 }
 
 export interface IssueTemplate extends IssueTemplateSummary {
@@ -706,11 +708,12 @@ export function createRepoIssue(owner: string, name: string, form: RepoNewIssueF
   return submit<{ index: number }>("POST", repoURL(owner, name, "/issues"), form);
 }
 
+// attachments are the UUIDs of the files uploaded while editing the content.
 export function updateRepoIssue(
   owner: string,
   name: string,
   index: number,
-  form: { title?: string; content?: string },
+  form: { title?: string; content?: string; attachments?: string[] },
 ) {
   return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}`), form);
 }
@@ -728,8 +731,15 @@ export function createRepoIssueComment(
   return submit<{ id: number }>("POST", repoURL(owner, name, `/issues/${index}/comments`), form);
 }
 
-export function updateRepoIssueComment(owner: string, name: string, index: number, id: number, content: string) {
-  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content });
+export function updateRepoIssueComment(
+  owner: string,
+  name: string,
+  index: number,
+  id: number,
+  content: string,
+  attachments: string[] = [],
+) {
+  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content, attachments });
 }
 
 export function deleteRepoIssueComment(owner: string, name: string, index: number, id: number) {
@@ -763,7 +773,8 @@ export async function renderRepoMarkdown(
 }
 
 // uploadRepoAttachment uploads a file to attach to an issue, a comment or a
-// release, or to commit with the editor, and returns its UUID.
+// release, or to commit with the editor, and returns its UUID and, except for
+// the editor, the URL content links to it with.
 export async function uploadRepoAttachment(
   owner: string,
   name: string,
@@ -778,7 +789,7 @@ export async function uploadRepoAttachment(
     body,
   });
   if (!res.ok) throw await loaderResponseError(res);
-  return ((await res.json()) as { uuid: string }).uuid;
+  return (await res.json()) as { uuid: string; url?: string };
 }
 
 export interface RepoReleaseAttachment {
