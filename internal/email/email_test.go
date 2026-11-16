@@ -96,7 +96,8 @@ func TestMessageLogo(t *testing.T) {
 		msg, err := newMessage([]string{"bob@example.test"}, m)
 		require.NoError(t, err)
 		var buf strings.Builder
-		_, err = msg.msg.WriteTo(&buf)
+		require.Len(t, msg.msgs, 1)
+		_, err = msg.msgs[0].WriteTo(&buf)
 		require.NoError(t, err)
 		return buf.String()
 	}
