@@ -118,7 +118,9 @@ func requireAuthenticated(c flamego.Context, viewer *database.User) {
 // as JSON, the only content type the browser client sends them as. Browsers
 // let any site send a form or another simple request, e.g., text/plain or no
 // body at all, without asking first. Sending JSON from another site needs a
-// CORS preflight, which Gogs does not grant.
+// CORS preflight, which Gogs only grants to the origin set by
+// `[http] ACCESS_CONTROL_ALLOW_ORIGIN`, and the cross-origin protection turns
+// that origin away from these routes too.
 func requireJSON(c flamego.Context) {
 	r := c.Request()
 	switch r.Method {
