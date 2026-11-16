@@ -440,15 +440,24 @@ diffs-container {
     border-radius: 0.25rem;
     padding: 0.25rem;
     color: var(--color-muted-foreground);
-    opacity: 0;
   }
-  .markdown :where(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
-  .markdown .heading-anchor:focus-visible {
-    opacity: 1;
-  }
-  /* Touch screens cannot hover, so the links stay visible there. */
-  @media (hover: none) {
-    .markdown .heading-anchor {
+  /* With a mouse, the link sits in the margin left of the heading and shows
+     on hover, so the heading text stays in place. Touch screens cannot hover,
+     so they keep it visible after the text. */
+  @media (hover: hover) {
+    .markdown :where(h1, h2, h3, h4, h5, h6):has(> .heading-anchor) {
+      position: relative;
+    }
+    .markdown :where(.heading-anchor) {
+      position: absolute;
+      /* Centers the link on the first line of a heading that wraps. */
+      top: calc(0.625em - 0.75rem);
+      right: 100%;
+      margin-left: 0;
+      opacity: 0;
+    }
+    .markdown :where(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
+    .markdown .heading-anchor:focus-visible {
       opacity: 1;
     }
   }
