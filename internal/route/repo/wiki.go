@@ -1,22 +1,16 @@
 package repo
 
 import (
+	"mime"
 	"net/http"
+	"path"
 	"strings"
-	"time"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/markup"
-)
-
-const (
-	tmplRepoWikiStart = "repo/wiki/start"
-	tmplRepoWikiView  = "repo/wiki/view"
-	tmplRepoWikiNew   = "repo/wiki/new"
-	tmplRepoWikiPages = "repo/wiki/pages"
+	"gogs.io/gogs/internal/tool"
 )
 
 func MustEnableWiki(c *context.Context) {
@@ -31,239 +25,53 @@ func MustEnableWiki(c *context.Context) {
 	}
 }
 
-type PageMeta struct {
-	Name    string
-	URL     string
-	Updated time.Time
-}
+// ServeWikiPage serves a file of the wiki that is not a page, e.g., an image
+// that a page links to relatively, and hands everything else to the web
+// frontend.
+func ServeWikiPage(c *context.Context) {
+	name := c.Params(":page")
+	if !c.Repo.Repository.HasWiki() || path.Ext(name) == "" || strings.EqualFold(path.Ext(name), ".md") {
+		c.ServeWeb()
+		return
+	}
 
-func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, string) {
+	ctx := c.Req.Context()
 	wikiPath := c.Repo.Repository.WikiPath()
 	wikiRepo, err := git.Open(wikiPath)
 	if err != nil {
-		c.Error(err, "open repository")
-		return nil, ""
+		c.Error(err, "open wiki repository")
+		return
 	}
-	commit, err := wikiRepo.BranchCommit(c.Req.Context(), database.WikiBranch(c.Req.Context(), wikiPath))
+	commit, err := wikiRepo.BranchCommit(ctx, database.WikiBranch(ctx, wikiPath))
 	if err != nil {
-		c.Error(err, "get branch commit")
-		return nil, ""
+		c.Error(err, "get wiki branch commit")
+		return
 	}
-
-	// Get page list.
-	if isViewPage {
-		entries, err := commit.Entries(c.Req.Context())
-		if err != nil {
-			c.Error(err, "list entries")
-			return nil, ""
-		}
-		pages := make([]PageMeta, 0, len(entries))
-		for i := range entries {
-			if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
-				name := strings.TrimSuffix(entries[i].Name(), ".md")
-				pages = append(pages, PageMeta{
-					Name: name,
-					URL:  database.ToWikiPageURL(name),
-				})
-			}
-		}
-		c.Data["Pages"] = pages
-	}
-
-	pageURL := c.Params(":page")
-	if pageURL == "" {
-		pageURL = "Home"
-	}
-	c.Data["PageURL"] = pageURL
-
-	pageName := database.ToWikiPageName(pageURL)
-	c.Data["old_title"] = pageName
-	c.Data["Title"] = pageName
-	c.Data["title"] = pageName
-	c.Data["RequireHighlightJS"] = true
-
-	blob, err := commit.Blob(c.Req.Context(), pageName+".md")
+	blob, err := commit.Blob(ctx, name)
 	if err != nil {
 		if git.IsErrRevisionNotExist(err) {
-			c.Redirect(c.Repo.RepoLink + "/wiki/_pages")
-		} else {
-			c.Error(err, "get blob")
+			c.ServeWeb()
+			return
 		}
-		return nil, ""
+		c.Error(err, "get wiki file")
+		return
 	}
-	p, err := blob.Bytes(c.Req.Context())
+	data, err := blob.Bytes(ctx)
 	if err != nil {
-		c.Error(err, "read blob")
-		return nil, ""
-	}
-	if isViewPage {
-		c.Data["content"] = string(markup.Markdown(p, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
-	} else {
-		c.Data["content"] = string(p)
-	}
-
-	return wikiRepo, pageName
-}
-
-func Wiki(c *context.Context) {
-	c.Data["PageIsWiki"] = true
-
-	if !c.Repo.Repository.HasWiki() {
-		c.Data["Title"] = c.Tr("repo.wiki")
-		c.Success(tmplRepoWikiStart)
+		c.Error(err, "read wiki file")
 		return
 	}
 
-	wikiRepo, pageName := renderWikiPage(c, true)
-	if c.Written() {
-		return
-	}
-
-	// Get last change information.
-	branch := database.WikiBranch(c.Req.Context(), c.Repo.Repository.WikiPath())
-	commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: pageName + ".md"})
-	if err != nil {
-		c.Error(err, "get commits by path")
-		return
-	}
-	c.Data["Author"] = commits[0].Author
-
-	c.Success(tmplRepoWikiView)
-}
-
-func WikiPages(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.wiki.pages")
-	c.Data["PageIsWiki"] = true
-
-	if !c.Repo.Repository.HasWiki() {
-		c.Redirect(c.Repo.RepoLink + "/wiki")
-		return
-	}
-
-	wikiPath := c.Repo.Repository.WikiPath()
-	wikiRepo, err := git.Open(wikiPath)
-	if err != nil {
-		c.Error(err, "open repository")
-		return
-	}
-
-	branch := database.WikiBranch(c.Req.Context(), wikiPath)
-	commit, err := wikiRepo.BranchCommit(c.Req.Context(), branch)
-	if err != nil {
-		c.Error(err, "get branch commit")
-		return
-	}
-
-	entries, err := commit.Entries(c.Req.Context())
-	if err != nil {
-		c.Error(err, "list entries")
-		return
-	}
-	pages := make([]PageMeta, 0, len(entries))
-	for i := range entries {
-		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
-			commits, err := wikiRepo.Log(c.Req.Context(), git.RefsHeads+branch, git.LogOptions{Path: entries[i].Name()})
-			if err != nil {
-				c.Error(err, "get commits by path")
-				return
-			}
-			name := strings.TrimSuffix(entries[i].Name(), ".md")
-			pages = append(pages, PageMeta{
-				Name:    name,
-				URL:     database.ToWikiPageURL(name),
-				Updated: commits[0].Author.When,
-			})
+	// Like raw repository files, only images are shown inline, and text is
+	// served as plain text so it never runs as a page of this site.
+	if !tool.IsTextFile(data) {
+		if !tool.IsImageFile(data) {
+			c.Resp.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
+			c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
+	} else if !conf.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
+		c.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
-	c.Data["Pages"] = pages
-
-	c.Success(tmplRepoWikiPages)
-}
-
-func NewWiki(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.wiki.new_page")
-	c.Data["PageIsWiki"] = true
-	c.Data["RequireSimpleMDE"] = true
-
-	if !c.Repo.Repository.HasWiki() {
-		c.Data["title"] = "Home"
-	}
-
-	c.Success(tmplRepoWikiNew)
-}
-
-func NewWikiPost(c *context.Context, f form.NewWiki) {
-	c.Data["Title"] = c.Tr("repo.wiki.new_page")
-	c.Data["PageIsWiki"] = true
-	c.Data["RequireSimpleMDE"] = true
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplRepoWikiNew)
-		return
-	}
-
-	if err := c.Repo.Repository.AddWikiPage(c.Req.Context(), c.User, f.Title, f.Content, f.Message); err != nil {
-		if database.IsErrWikiAlreadyExist(err) {
-			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), http.StatusUnprocessableEntity, tmplRepoWikiNew, &f)
-		} else {
-			c.Error(err, "add wiki page")
-		}
-		return
-	}
-
-	c.Redirect(c.Repo.RepoLink + "/wiki/" + database.ToWikiPageURL(database.ToWikiPageName(f.Title)))
-}
-
-func EditWiki(c *context.Context) {
-	c.Data["PageIsWiki"] = true
-	c.Data["PageIsWikiEdit"] = true
-	c.Data["RequireSimpleMDE"] = true
-
-	if !c.Repo.Repository.HasWiki() {
-		c.Redirect(c.Repo.RepoLink + "/wiki")
-		return
-	}
-
-	renderWikiPage(c, false)
-	if c.Written() {
-		return
-	}
-
-	c.Success(tmplRepoWikiNew)
-}
-
-func EditWikiPost(c *context.Context, f form.NewWiki) {
-	c.Data["Title"] = c.Tr("repo.wiki.new_page")
-	c.Data["PageIsWiki"] = true
-	c.Data["RequireSimpleMDE"] = true
-
-	if c.HasError() {
-		c.HTML(http.StatusBadRequest, tmplRepoWikiNew)
-		return
-	}
-
-	if err := c.Repo.Repository.EditWikiPage(c.Req.Context(), c.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
-		c.Error(err, "edit wiki page")
-		return
-	}
-
-	c.Redirect(c.Repo.RepoLink + "/wiki/" + database.ToWikiPageURL(database.ToWikiPageName(f.Title)))
-}
-
-func DeleteWikiPagePost(c *context.Context) {
-	pageURL := c.Params(":page")
-	if pageURL == "" {
-		pageURL = "Home"
-	}
-
-	pageName := database.ToWikiPageName(pageURL)
-	if err := c.Repo.Repository.DeleteWikiPage(c.Req.Context(), c.User, pageName); err != nil {
-		c.Error(err, "delete wiki page")
-		return
-	}
-
-	c.JSONSuccess(map[string]any{
-		"redirect": c.Repo.RepoLink + "/wiki/",
-	})
+	c.Resp.WriteHeader(http.StatusOK)
+	_, _ = c.Resp.Write(data)
 }
