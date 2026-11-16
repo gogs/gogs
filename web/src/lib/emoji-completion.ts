@@ -1,6 +1,11 @@
 import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { syntaxTree } from "@codemirror/language";
 
+// emoji.json lists the names of emoji shortcodes with their text, sorted by
+// name. It is generated from internal/markup/emoji.go, the names that Markdown
+// renders as emoji, and must be regenerated with it.
+import emojiURL from "@/lib/emoji.json?url";
+
 // NOT_TEXT are the Markdown syntax nodes whose text keeps its emoji
 // shortcodes, or that are not text at all.
 const NOT_TEXT = new Set(["InlineCode", "FencedCode", "CodeBlock", "URL", "Autolink", "HTMLTag", "CommentBlock"]);
@@ -8,11 +13,20 @@ const NOT_TEXT = new Set(["InlineCode", "FencedCode", "CodeBlock", "URL", "Autol
 let table: Promise<Completion[]> | undefined;
 
 // options loads the emoji on the first shortcode, so editors that never see
-// one do not pay for the table.
+// one do not pay for the table. It is fetched rather than imported because
+// browsers keep a failed import failed, while a failed fetch, e.g., during a
+// deploy, is tried again on the next shortcode.
 function options() {
-  table ??= import("@/lib/emoji").then(({ EMOJI }) =>
-    EMOJI.map(([name, emoji]) => ({ label: `:${name}:`, displayLabel: `${emoji} ${name}` })),
-  );
+  table ??= fetch(emojiURL)
+    .then((res) => {
+      if (!res.ok) throw new Error(`load emoji: ${res.status}`);
+      return res.json() as Promise<[name: string, emoji: string][]>;
+    })
+    .then((emoji) => emoji.map(([name, text]) => ({ label: `:${name}:`, displayLabel: `${text} ${name}` })))
+    .catch((err: unknown) => {
+      table = undefined;
+      throw err;
+    });
   return table;
 }
 
@@ -34,8 +48,10 @@ export async function emojiCompletion(context: CompletionContext): Promise<Compl
   }
 
   const query = typed.text.slice(1).toLowerCase();
-  const all = await options();
-  if (context.aborted) return null;
+  // A source that rejects is not queried again until the cursor moves, so a
+  // failed load shows no completions instead.
+  const all = await options().catch(() => null);
+  if (!all || context.aborted) return null;
   const prefix: Completion[] = [];
   const inside: Completion[] = [];
   for (const option of all) {

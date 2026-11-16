@@ -1,9 +1,4 @@
-// Code generated from https://github.com/github/gemoji/blob/fadaeaf1f1a9be82b321316a6c5502e43138b2f6/db/emoji.json. DO NOT EDIT.
-
-// EMOJI lists the names of emoji shortcodes, e.g., "tada" in ":tada:", with
-// their text, sorted by name. They are the names that Markdown renders as
-// emoji, see internal/markup/emoji.go.
-export const EMOJI: readonly (readonly [name: string, emoji: string])[] = [
+[
   ["+1", "👍"],
   ["-1", "👎"],
   ["100", "💯"],
@@ -1916,5 +1911,5 @@ export const EMOJI: readonly (readonly [name: string, emoji: string])[] = [
   ["zombie", "🧟"],
   ["zombie_man", "🧟‍♂️"],
   ["zombie_woman", "🧟‍♀️"],
-  ["zzz", "💤"],
-];
+  ["zzz", "💤"]
+]
