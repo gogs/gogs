@@ -294,19 +294,13 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
     onError: (err) => toast.error(err.message),
   });
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--color-border) px-4 py-3 text-sm">
-      {deleted ? (
-        <p className="min-w-0 text-(--color-muted-foreground)">
-          <RichText text={t("repo.pulls.branch_deleted")} code={[branch]} />
-        </p>
-      ) : null}
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-(--color-border) px-4 py-3 text-sm">
       <Button
         type="button"
         variant={deleted ? "outline" : "destructive"}
         size="sm"
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
-        className={cn(!deleted && "ml-auto")}
       >
         {deleted ? (
           <>
@@ -320,6 +314,11 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
           </>
         )}
       </Button>
+      {deleted ? (
+        <p className="min-w-0 text-(--color-muted-foreground)">
+          <RichText text={t("repo.pulls.branch_deleted")} code={[branch]} />
+        </p>
+      ) : null}
     </div>
   );
 }
