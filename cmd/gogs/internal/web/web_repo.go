@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
@@ -211,6 +212,11 @@ func getRepoRawFile(c flamego.Context, repoCtx *repoContext) {
 
 	render, _ := strconv.ParseBool(c.Request().URL.Query().Get("render"))
 	switch {
+	case strings.EqualFold(path.Ext(filepath), ".svg"):
+		// Serve SVG as an image so READMEs can show it, and sandbox it so its
+		// scripts never run when it is opened directly.
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 	case !tool.IsTextFile(data) && !tool.IsImageFile(data):
 		w.Header().Set("Content-Disposition", `attachment; filename="`+path.Base(filepath)+`"`)
 		w.Header().Set("Content-Transfer-Encoding", "binary")

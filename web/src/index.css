@@ -408,6 +408,11 @@ diffs-container {
     display: inline-block;
     max-width: 100%;
   }
+  /* GitHub's convention for images that only fit one theme. */
+  :root:not(.dark) .markdown img[src$="#gh-dark-mode-only"],
+  :root.dark .markdown img[src$="#gh-light-mode-only"] {
+    display: none;
+  }
   .markdown :where(hr) {
     border-color: var(--color-border);
   }
