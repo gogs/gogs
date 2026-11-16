@@ -86,6 +86,22 @@ MODE = file, console, File
 		assert.Len(t, got.Configs, 2)
 	})
 
+	t.Run("format", func(t *testing.T) {
+		for format, wantJSON := range map[string]bool{"": false, "json": true, " JSON ": true, "text": false} {
+			f, err := ini.Load([]byte("[log]\nFORMAT = " + format + "\n[log.console]\n"))
+			require.NoError(t, err)
+
+			got, _, err := initLogConf(f, false)
+			require.NoError(t, err)
+			assert.Equal(t, wantJSON, got.JSON, "format %q", format)
+		}
+
+		f, err := ini.Load([]byte("[log]\nFORMAT = xml\n[log.console]\n"))
+		require.NoError(t, err)
+		_, _, err = initLogConf(f, false)
+		assert.EqualError(t, err, `unknown [log] FORMAT "xml", want "text" or "json"`)
+	})
+
 	t.Run("negative buffer length", func(t *testing.T) {
 		f, err := ini.Load([]byte(`
 [log]

@@ -52,8 +52,10 @@ type loggerConf struct {
 
 type logConf struct {
 	RootPath string
-	Modes    []string
-	Configs  []*loggerConf
+	// JSON is true when console and file sinks write JSON instead of text.
+	JSON    bool
+	Modes   []string
+	Configs []*loggerConf
 }
 
 // Log settings.
@@ -75,6 +77,15 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 		RootPath: ensureAbs(rootPath),
 		Modes:    make([]string, 0, len(modes)),
 		Configs:  make([]*loggerConf, 0, len(modes)),
+	}
+	switch format := strings.ToLower(strings.TrimSpace(cfg.Section("log").Key("FORMAT").String())); format {
+	case "":
+		lc.JSON = IsProdMode()
+	case "json":
+		lc.JSON = true
+	case "text":
+	default:
+		return nil, hasConsole, errors.Errorf(`unknown [log] FORMAT %q, want "text" or "json"`, format)
 	}
 
 	for i := range modes {
@@ -144,14 +155,14 @@ func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 
 	handlers := make([]slog.Handler, 0, len(logConf.Configs))
 	for _, c := range logConf.Configs {
-		h, err := newLogHandler(c)
+		h, err := newLogHandler(c, logConf.JSON)
 		if err != nil {
 			return nil, errors.Wrapf(err, "init %s logger", c.Name)
 		}
 		handlers = append(handlers, h)
 	}
 	if len(handlers) == 0 {
-		handlers = append(handlers, newConsoleHandler(os.Stdout, slog.LevelDebug, IsProdMode()))
+		handlers = append(handlers, newConsoleHandler(os.Stdout, slog.LevelDebug, logConf.JSON))
 	}
 	configured := newLogger(handlers...)
 	for _, c := range logConf.Configs {
@@ -160,17 +171,17 @@ func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 	return configured, nil
 }
 
-func newLogHandler(c *loggerConf) (slog.Handler, error) {
+func newLogHandler(c *loggerConf, json bool) (slog.Handler, error) {
 	level := parseLevel(c.Level)
 	switch c.Name {
 	case ModeConsole:
-		return newConsoleHandler(os.Stdout, level, IsProdMode()), nil
+		return newConsoleHandler(os.Stdout, level, json), nil
 	case ModeFile:
 		w, err := newRotatingWriter(c.Filename, *c.Rotation)
 		if err != nil {
 			return nil, errors.Wrap(err, "create rotating writer")
 		}
-		return newCharmHandler(w, level, IsProdMode()), nil
+		return newCharmHandler(w, level, json), nil
 	case ModeSlack:
 		return newWebhookHandler(level, newSlackHandler(c.URL), c.Buffer), nil
 	case ModeDiscord:
@@ -228,30 +239,29 @@ func (h fatalLevelHandler) WithGroup(name string) slog.Handler {
 
 // newConsoleHandler returns a handler for a terminal. Process managers like moon
 // are not a TTY, so TTY_FORCE opts back in to colors.
-func newConsoleHandler(w io.Writer, level slog.Level, prod bool) slog.Handler {
-	handler := newCharmLogger(w, level, prod)
+func newConsoleHandler(w io.Writer, level slog.Level, json bool) slog.Handler {
+	handler := newCharmLogger(w, level, json)
 	if os.Getenv("TTY_FORCE") != "" {
 		handler.SetColorProfile(colorprofile.Detect(w, append(os.Environ(), "CLICOLOR_FORCE=1")))
 	}
-	return withComponentPrefix(handler, prod)
+	return withComponentPrefix(handler, json)
 }
 
-// newCharmHandler returns a handler that writes text, or JSON in production.
-func newCharmHandler(w io.Writer, level slog.Level, prod bool) slog.Handler {
-	return withComponentPrefix(newCharmLogger(w, level, prod), prod)
+// newCharmHandler returns a handler that writes text or JSON.
+func newCharmHandler(w io.Writer, level slog.Level, json bool) slog.Handler {
+	return withComponentPrefix(newCharmLogger(w, level, json), json)
 }
 
-// newCharmLogger follows setupLogging in pgrok and git-lfs-server. Production
-// output is JSON.
-func newCharmLogger(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
+// newCharmLogger follows setupLogging in pgrok and git-lfs-server.
+func newCharmLogger(w io.Writer, level slog.Level, json bool) *charmlog.Logger {
 	opts := charmlog.Options{
 		TimeFormat:      time.DateTime,
 		Level:           charmlog.Level(level),
 		ReportTimestamp: true,
 	}
-	if prod {
+	if json {
 		opts.Formatter = charmlog.JSONFormatter
-		// Production logs are read by other tools, which need the time zone.
+		// JSON logs are read by other tools, which need the time zone.
 		opts.TimeFormat = time.RFC3339
 	}
 	handler := charmlog.NewWithOptions(w, opts)
