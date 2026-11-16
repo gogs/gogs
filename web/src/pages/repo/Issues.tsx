@@ -77,7 +77,6 @@ export function RepoIssues({
               </Link>
             </Button>
           ) : data.newPullRequestURL ? (
-            // Comparing branches is still served by the server-rendered pages.
             <Button asChild variant="outline" size="sm">
               <a href={data.newPullRequestURL}>
                 <Plus className="size-4" aria-hidden />

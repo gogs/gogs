@@ -79,23 +79,3 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 
 	return remoteAddr, nil
 }
-
-// .___
-// |   | ______ ________ __   ____
-// |   |/  ___//  ___/  |  \_/ __ \
-// |   |\___ \ \___ \|  |  /\  ___/
-// |___/____  >____  >____/  \___  >
-//          \/     \/            \/
-
-type NewIssue struct {
-	Title       string `binding:"Required;MaxSize(255)"`
-	LabelIDs    string `form:"label_ids"`
-	MilestoneID int64
-	AssigneeID  int64
-	Content     string
-	Files       []string
-}
-
-func (f *NewIssue) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}

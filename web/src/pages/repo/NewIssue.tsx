@@ -15,7 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePageTitle } from "@/lib/page-title";
 import {
   type IssueAttachmentSettings,
+  type IssueMetaOptions,
+  type IssueTemplate,
   type IssueTemplateField,
+  type RepoNewIssueForm,
   type RepoNewIssueOptions,
   createRepoIssue,
   repoHeaderQuery,
@@ -47,6 +50,7 @@ export function RepoNewIssue({
   search: RepoNewIssueSearch;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
   usePageTitle(`${t("repo.issues.new")} - ${repo.owner}/${repo.name}`);
   const choosing =
@@ -62,7 +66,25 @@ export function RepoNewIssue({
         {choosing ? (
           <TemplateChooser owner={repo.owner} name={repo.name} options={options} />
         ) : (
-          <NewIssueForm owner={repo.owner} name={repo.name} options={options} search={search} />
+          <NewIssueForm
+            owner={repo.owner}
+            name={repo.name}
+            options={options}
+            template={options.template}
+            label={t("repo.issues.new")}
+            submitLabel={t("repo.issues.create")}
+            title={search.title ?? options.template?.title ?? ""}
+            // Like the server-rendered page, the issue template wins over the
+            // content in the URL.
+            content={options.template ? options.template.body : options.content || (search.content ?? "")}
+            create={(form) => createRepoIssue(repo.owner, repo.name, form)}
+            onCreated={(index) =>
+              navigate({
+                to: "/$owner/$repo/issues/$index",
+                params: { owner: repo.owner, repo: repo.name, index: String(index) },
+              })
+            }
+          />
         )}
       </main>
     </div>
@@ -139,26 +161,38 @@ function initialFieldValues(form: IssueTemplateField[]) {
   });
 }
 
-function NewIssueForm({
+// NewIssueForm is the form to open an issue or a pull request, starting with
+// the title and the content, or the fields of an issue form. Writers also set
+// its labels, milestone and assignee.
+export function NewIssueForm({
   owner,
   name,
   options,
-  search,
+  label,
+  submitLabel,
+  template,
+  title: initialTitle,
+  content: initialContent,
+  create,
+  onCreated,
 }: {
   owner: string;
   name: string;
-  options: RepoNewIssueOptions;
-  search: RepoNewIssueSearch;
+  options: IssueMetaOptions & { attachment?: IssueAttachmentSettings };
+  // template is the issue template the form is made from, if any.
+  template?: IssueTemplate;
+  label: string;
+  submitLabel: string;
+  title: string;
+  content: string;
+  create: (form: RepoNewIssueForm) => Promise<{ index: number }>;
+  onCreated: (index: number) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const repoRef = { owner, name };
-  const template = options.template;
   const form = template?.form;
-  const [title, setTitle] = useState(search.title ?? template?.title ?? "");
-  // Like the server-rendered page, the issue template wins over the content
-  // in the URL.
-  const [content, setContent] = useState(template ? template.body : options.content || (search.content ?? ""));
+  const [title, setTitle] = useState(initialTitle);
+  const [content, setContent] = useState(initialContent);
   const [fieldValues, setFieldValues] = useState(() => initialFieldValues(form ?? []));
   // Writers start with the labels and the assignee of the template, and can
   // change them.
@@ -180,7 +214,7 @@ function NewIssueForm({
 
   const mutation = useMutation({
     mutationFn: () =>
-      createRepoIssue(owner, name, {
+      create({
         title,
         content: form ? "" : content,
         labelIDs,
@@ -190,11 +224,7 @@ function NewIssueForm({
         template: template?.file,
         fields: form ? fieldValues : undefined,
       }),
-    onSuccess: ({ index }) =>
-      navigate({
-        to: "/$owner/$repo/issues/$index",
-        params: { owner, repo: name, index: String(index) },
-      }),
+    onSuccess: ({ index }) => onCreated(index),
     // The first invalid field may be far above the submit button, so it is
     // brought into view below the sticky header.
     onError: (err) => {
@@ -291,7 +321,7 @@ function NewIssueForm({
               ))}
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={fieldsUploading.length > 0}>
-                  {t("repo.issues.create")}
+                  {submitLabel}
                 </Button>
               </div>
             </div>
@@ -299,7 +329,7 @@ function NewIssueForm({
             <div className="mt-4 rounded-md border border-(--color-border) p-3">
               <MarkdownEditor
                 repo={repoRef}
-                label={t("repo.issues.new")}
+                label={label}
                 value={content}
                 onChange={setContent}
                 disabled={mutation.isPending}
@@ -309,7 +339,7 @@ function NewIssueForm({
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <AttachFilesButton uploads={uploads} />
                 <Button type="submit" size="sm" disabled={uploads.uploading}>
-                  {t("repo.issues.create")}
+                  {submitLabel}
                 </Button>
               </div>
             </div>
