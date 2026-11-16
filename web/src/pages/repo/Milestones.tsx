@@ -321,6 +321,7 @@ export function RepoMilestoneEditor({
                 id="description"
                 label={t("repo.milestones.desc")}
                 lang="markdown"
+                repo={{ owner, name }}
                 disabled={save.isPending}
                 value={form.description}
                 onChange={(description) => setForm({ ...form, description })}

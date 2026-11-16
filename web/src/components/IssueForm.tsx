@@ -10,17 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type IssueMetaOptions, type RepoIssueData, renderRepoMarkdown } from "@/lib/queries/repo";
+import type { RepoRef } from "@/lib/reference-completion";
 import type { AttachmentUploads, UploadLinker } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
 // The parts of the forms that open and change issues, shared by the issue page
 // and the form to open one.
-
-interface RepoRef {
-  owner: string;
-  name: string;
-}
 
 // uploadingText is what holds the place of a file in the text while it uploads,
 // like on GitHub.
@@ -137,6 +133,7 @@ export function MarkdownEditor({
             id={`${id}-input`}
             label={label}
             lang="markdown"
+            repo={repo}
             value={value}
             onChange={onChange}
             autoFocus={autoFocus}

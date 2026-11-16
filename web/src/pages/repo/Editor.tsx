@@ -488,6 +488,7 @@ export function RepoFileEditor({
                   id="editor-content"
                   label={path || heading}
                   lang={lang}
+                  repo={{ owner, name }}
                   code={isCode}
                   wrap={wrap}
                   {...indentationOf(indent.data)}

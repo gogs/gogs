@@ -355,6 +355,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 	}, enforceWebAPIMaxBodySize)
 	f.Group("/api/web/{owner}/{repo}", func() {
 		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
+		f.Get("/suggestions/mentions", withIssueTracker, getRepoMentionSuggestions)
+		f.Get("/suggestions/issues", getRepoIssueSuggestions)
 		f.Group("/issues", func() {
 			f.Get("/new", getRepoNewIssue)
 			f.Post("", bindJSON(repoNewIssueRequest{}), postRepoIssue)
