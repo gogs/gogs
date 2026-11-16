@@ -184,7 +184,9 @@ export interface RepoAdvancedSettings {
   externalTrackerStyle: string;
   enablePulls: boolean;
   pullsIgnoreWhitespace: boolean;
+  pullsAllowMerge: boolean;
   pullsAllowRebase: boolean;
+  pullsAllowSquash: boolean;
 }
 
 export interface RepoMirrorSettings {
@@ -795,7 +797,9 @@ export interface RepoPullInfo {
   fileCount: number;
   merger?: IssueUser;
   mergedAt?: string;
+  allowMerge: boolean;
   allowRebase: boolean;
+  allowSquash: boolean;
   viewerCanMerge: boolean;
   viewerCanDeleteBranch: boolean;
   // viewerCanRestoreBranch is whether the viewer can create the deleted head
@@ -819,10 +823,9 @@ export function fetchRepoPullCommits(owner: string, name: string, index: number)
   return fetchJSON<{ commits: RepoCommitListItem[] }>(repoURL(owner, name, `/pulls/${index}/commits`));
 }
 
-export function mergeRepoPull(
-  issue: IssueRef,
-  form: { style: "create_merge_commit" | "rebase_before_merging"; description: string },
-) {
+export type MergeStyle = "create_merge_commit" | "rebase_before_merging" | "squash_and_merge";
+
+export function mergeRepoPull(issue: IssueRef, form: { style: MergeStyle; description: string }) {
   return submit<void>("POST", issueURL(issue, "/merge"), form);
 }
 

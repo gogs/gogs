@@ -57,7 +57,9 @@ type repoPullInfo struct {
 	FileCount    int        `json:"fileCount"`
 	Merger       *issueUser `json:"merger,omitempty"`
 	MergedAt     *time.Time `json:"mergedAt,omitempty"`
+	AllowMerge   bool       `json:"allowMerge"`
 	AllowRebase  bool       `json:"allowRebase"`
+	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
 	ViewerCanMerge bool `json:"viewerCanMerge"`
 	// ViewerCanDeleteBranch is whether the viewer can delete the head branch
@@ -110,7 +112,9 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		BaseBranch:  pull.BaseBranch,
 		HeadLabel:   pull.HeadUserName + "/" + pull.HeadBranch,
 		BaseLabel:   repoCtx.Owner.Name + "/" + pull.BaseBranch,
+		AllowMerge:  repo.PullsAllowMerge,
 		AllowRebase: repo.PullsAllowRebase,
+		AllowSquash: repo.PullsAllowSquash,
 	}
 	if pull.HeadRepo != nil {
 		info.HeadRepoLink = pull.HeadRepo.Link()
@@ -263,13 +267,14 @@ func getRepoPullRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 }
 
 type repoPullMergeRequest struct {
-	// Style is "create_merge_commit" or "rebase_before_merging".
-	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging"`
+	// Style is "create_merge_commit", "rebase_before_merging" or
+	// "squash_and_merge".
+	Style       string `json:"style" validate:"omitempty,oneof=create_merge_commit rebase_before_merging squash_and_merge"`
 	Description string `json:"description"`
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
-func postRepoPullMerge(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
+func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
 	pull := issue.PullRequest
 	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
@@ -288,6 +293,9 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, viewer *database.
 	style := database.MergeStyle(req.Style)
 	if style == "" {
 		style = database.MergeStyleRegular
+	}
+	if !repoCtx.Repo.AllowsMergeStyle(style) {
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_style_not_allowed")}, nil
 	}
 	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, req.Description); err != nil {
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)

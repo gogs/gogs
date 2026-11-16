@@ -209,7 +209,9 @@ type Repository struct {
 	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
 	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsAllowMerge       bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
 	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsAllowSquash      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	ForkID   int64
@@ -1244,6 +1246,8 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Use
 		EnableWiki:   true,
 		EnableIssues: true,
 		EnablePulls:  true,
+		// xorm inserts false for a zero bool instead of the column default.
+		PullsAllowMerge: true,
 	}
 
 	sess := x.NewSession()
@@ -2547,6 +2551,8 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 		IsUnlisted:    baseRepo.IsUnlisted,
 		IsFork:        true,
 		ForkID:        baseRepo.ID,
+		// xorm inserts false for a zero bool instead of the column default.
+		PullsAllowMerge: true,
 	}
 
 	sess := x.NewSession()

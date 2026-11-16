@@ -185,7 +185,23 @@ type MergeStyle string
 const (
 	MergeStyleRegular MergeStyle = "create_merge_commit"
 	MergeStyleRebase  MergeStyle = "rebase_before_merging"
+	MergeStyleSquash  MergeStyle = "squash_and_merge"
 )
+
+// AllowsMergeStyle returns whether pull requests of the repository can be
+// merged with the style.
+func (repo *Repository) AllowsMergeStyle(style MergeStyle) bool {
+	switch style {
+	case MergeStyleRegular:
+		return repo.PullsAllowMerge
+	case MergeStyleRebase:
+		return repo.PullsAllowRebase
+	case MergeStyleSquash:
+		return repo.PullsAllowSquash
+	default:
+		return false
+	}
+}
 
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
@@ -232,11 +248,6 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 	}
 	defer cleanup()
 
-	// Check if merge style is allowed, reset to default style if not
-	if mergeStyle == MergeStyleRebase && !pr.BaseRepo.PullsAllowRebase {
-		mergeStyle = MergeStyleRegular
-	}
-
 	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
 	switch mergeStyle {
@@ -270,6 +281,36 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		mergedCommitID, err = tmpRepo.Rebase(ctx, baseCommitID, headCommitID, committer)
 		if err != nil {
 			return errors.Newf("rebase [%s on %s]: %v", pr.HeadBranch, pr.BaseBranch, err)
+		}
+
+	case MergeStyleSquash: // Squash all changes into one commit on top of the base branch
+		merged, err := tmpRepo.IsAncestor(ctx, headCommitID, baseCommitID)
+		if err != nil {
+			return errors.Newf("check if head branch is merged: %v", err)
+		} else if merged {
+			mergedCommitID = baseCommitID
+			break
+		}
+
+		tree, err := tmpRepo.MergeTree(ctx, baseCommitID, headCommitID)
+		if err != nil {
+			return errors.Newf("merge tree: %v", err)
+		}
+
+		// The squashed changes are attributed to the author of the pull request,
+		// as on GitHub, unless that account no longer exists.
+		author := committer
+		if pr.Issue.Poster != nil && pr.Issue.Poster.ID > 0 {
+			author = &git.Signature{Name: pr.Issue.Poster.DisplayName(), Email: pr.Issue.Poster.Email}
+		}
+		message := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index) + "\n\n" + commitDescription
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+			Parents:   []string{baseCommitID},
+			Author:    author,
+			Committer: committer,
+		})
+		if err != nil {
+			return errors.Newf("commit tree: %v", err)
 		}
 
 	default:
@@ -331,8 +372,12 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		logger.Error("Failed to get base branch commit", "baseBranch", pr.BaseBranch, "error", err)
 		return nil
 	}
-	if mergeStyle == MergeStyleRegular {
+	switch mergeStyle {
+	case MergeStyleRegular:
 		commits = append([]*git.Commit{mergeCommit}, commits...)
+	case MergeStyleSquash:
+		// Only the squashed commit lands on the base branch.
+		commits = []*git.Commit{mergeCommit}
 	}
 
 	pcs, err := CommitsToPushCommits(commits).APIFormat(ctx, Handle.Users(), pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
