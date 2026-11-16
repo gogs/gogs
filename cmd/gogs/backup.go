@@ -1,8 +1,11 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/unknwon/cae/zip"
 	"github.com/urfave/cli/v3"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
@@ -49,7 +51,6 @@ var backupDataDirs = []string{"ssh", "attachments", "avatars", "repo-avatars"}
 
 func runBackup(ctx context.Context, cmd *cli.Command) error {
 	logger := conf.NewConsoleLogger(os.Stdout)
-	zip.Verbose = cmd.Bool("verbose")
 
 	err := conf.Init(logger, configFromLineage(cmd))
 	if err != nil {
@@ -87,11 +88,12 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
 	logger.Info("Packing backup files", "archivePath", archiveName)
 
-	z, err := zip.Create(archiveName)
+	f, err := os.Create(archiveName)
 	if err != nil {
 		logger.FatalContext(ctx, "Failed to create backup archive", "archivePath", archiveName, "error", err)
 	}
-	if err = z.AddFile(archiveRootDir+"/metadata.ini", metaFile); err != nil {
+	z := &archiveWriter{Writer: zip.NewWriter(f), logger: logger, verbose: cmd.Bool("verbose")}
+	if err = z.add(archiveRootDir+"/metadata.ini", metaFile); err != nil {
 		logger.FatalContext(ctx, "Failed to include 'metadata.ini'", "error", err)
 	}
 
@@ -100,7 +102,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	if err = database.DumpDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
 		logger.FatalContext(ctx, "Failed to dump database", "error", err)
 	}
-	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
+	if err = z.add(archiveRootDir+"/db", dbDir); err != nil {
 		logger.FatalContext(ctx, "Failed to include 'db'", "error", err)
 	}
 
@@ -118,7 +120,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 				continue
 			}
 
-			if err = z.AddDir(path.Join(archiveRootDir+"/data", dir), dirPath); err != nil {
+			if err = z.add(path.Join(archiveRootDir+"/data", dir), dirPath); err != nil {
 				logger.FatalContext(ctx, "Failed to include 'data'", "error", err)
 			}
 		}
@@ -126,40 +128,16 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 
 	// Repositories
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") {
-		reposDump := filepath.Join(rootDir, "repositories.zip")
 		logger.Info("Dumping repositories", "repoRoot", conf.Repository.Root)
-		if cmd.Bool("exclude-mirror-repos") {
-			repos, err := database.Handle.Repositories().ListNonMirrors(ctx)
-			if err != nil {
-				logger.FatalContext(ctx, "Failed to get non-mirror repositories", "error", err)
-			}
-			reposZip, err := zip.Create(reposDump)
-			if err != nil {
-				logger.FatalContext(ctx, "Failed to create repositories archive", "reposArchivePath", reposDump, "error", err)
-			}
-			baseDir := filepath.Base(conf.Repository.Root)
-			for _, r := range repos {
-				name := r.FullName() + ".git"
-				if err := reposZip.AddDir(filepath.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
-					logger.FatalContext(ctx, "Failed to add repository to archive", "repoPath", name, "error", err)
-				}
-			}
-			if err = reposZip.Close(); err != nil {
-				logger.FatalContext(ctx, "Failed to save repositories archive", "reposArchivePath", reposDump, "error", err)
-			}
-		} else {
-			if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
-				logger.FatalContext(ctx, "Failed to dump repositories", "error", err)
-			}
-		}
-		logger.Info("Repositories dumped", "reposArchivePath", reposDump)
-
-		if err = z.AddFile(archiveRootDir+"/repositories.zip", reposDump); err != nil {
-			logger.FatalContext(ctx, "Failed to include repositories archive", "reposArchivePath", reposDump, "error", err)
+		if err = addRepositoriesToBackup(ctx, z, cmd.Bool("exclude-mirror-repos")); err != nil {
+			logger.FatalContext(ctx, "Failed to dump repositories", "error", err)
 		}
 	}
 
 	if err = z.Close(); err != nil {
+		logger.FatalContext(ctx, "Failed to save backup archive", "archivePath", archiveName, "error", err)
+	}
+	if err = f.Close(); err != nil {
 		logger.FatalContext(ctx, "Failed to save backup archive", "archivePath", archiveName, "error", err)
 	}
 
@@ -169,7 +147,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func addCustomDirToBackup(logger *logx.Logger, z *zip.ZipArchive) error {
+func addCustomDirToBackup(logger *logx.Logger, z *archiveWriter) error {
 	customDir := conf.CustomDir()
 	entries, err := os.ReadDir(customDir)
 	if err != nil {
@@ -184,11 +162,7 @@ func addCustomDirToBackup(logger *logx.Logger, z *zip.ZipArchive) error {
 			continue
 		}
 
-		add := z.AddFile
-		if e.IsDir() {
-			add = z.AddDir
-		}
-		err = add(
+		err = z.add(
 			fmt.Sprintf("%s/custom/%s", archiveRootDir, e.Name()),
 			filepath.Join(customDir, e.Name()),
 		)
@@ -197,4 +171,104 @@ func addCustomDirToBackup(logger *logx.Logger, z *zip.ZipArchive) error {
 		}
 	}
 	return nil
+}
+
+// addRepositoriesToBackup writes "repositories.zip" into the backup archive as
+// it packs the repositories, so it takes no temporary space. Like the
+// repository root, its entries start with the name of the root directory.
+func addRepositoriesToBackup(ctx context.Context, z *archiveWriter, excludeMirrors bool) error {
+	fh := &zip.FileHeader{
+		Name:     archiveRootDir + "/repositories.zip",
+		Method:   zip.Store, // The entries of the inner archive are already compressed.
+		Modified: time.Now(),
+	}
+	fh.SetMode(0o644)
+	w, err := z.CreateHeader(fh)
+	if err != nil {
+		return errors.Wrap(err, "create entry")
+	}
+
+	repos := &archiveWriter{Writer: zip.NewWriter(w), logger: z.logger, verbose: z.verbose}
+	baseDir := filepath.Base(conf.Repository.Root)
+	if excludeMirrors {
+		nonMirrors, err := database.Handle.Repositories().ListNonMirrors(ctx)
+		if err != nil {
+			return errors.Wrap(err, "get non-mirror repositories")
+		}
+		for _, r := range nonMirrors {
+			name := r.FullName() + ".git"
+			if err = repos.add(path.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
+				return errors.Wrapf(err, "add %q", name)
+			}
+		}
+	} else if err = repos.add(baseDir, conf.Repository.Root); err != nil {
+		return errors.Wrap(err, "add repositories")
+	}
+	return repos.Close()
+}
+
+// archiveWriter writes files to a zip archive as they are added. Symbolic links
+// are stored as links, with their target as the content.
+type archiveWriter struct {
+	*zip.Writer
+	logger  *logx.Logger
+	verbose bool
+}
+
+// add adds the file or the directory tree at absPath to the archive under
+// name. A symbolic link at absPath itself is followed.
+func (z *archiveWriter) add(name, absPath string) error {
+	root, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return errors.Wrap(err, "resolve path")
+	}
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		fi, err := d.Info()
+		if err != nil {
+			return errors.Wrap(err, "get file info")
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return errors.Wrap(err, "get relative path")
+		}
+
+		fh, err := zip.FileInfoHeader(fi)
+		if err != nil {
+			return errors.Wrap(err, "create header")
+		}
+		fh.Name = path.Join(name, filepath.ToSlash(rel))
+		if z.verbose {
+			z.logger.Debug("Adding to archive", "name", fh.Name)
+		}
+		if d.IsDir() {
+			fh.Name += "/"
+			_, err = z.CreateHeader(fh)
+			return err
+		}
+
+		fh.Method = zip.Deflate
+		w, err := z.CreateHeader(fh)
+		if err != nil {
+			return errors.Wrap(err, "create entry")
+		}
+		if fi.Mode()&fs.ModeSymlink != 0 {
+			target, err := os.Readlink(p)
+			if err != nil {
+				return errors.Wrap(err, "read link")
+			}
+			_, err = io.WriteString(w, target)
+			return err
+		}
+
+		src, err := os.Open(p)
+		if err != nil {
+			return errors.Wrap(err, "open")
+		}
+		defer func() { _ = src.Close() }()
+		_, err = io.Copy(w, src)
+		return err
+	})
 }
