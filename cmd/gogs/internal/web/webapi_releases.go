@@ -271,6 +271,10 @@ type repoReleaseRequest struct {
 	IsDraft      bool     `json:"isDraft"`
 	IsPrerelease bool     `json:"isPrerelease"`
 	Attachments  []string `json:"attachments"`
+	// RemovedAttachments are the UUIDs of the downloads the editor removed. The
+	// others it does not send were attached after it loaded, e.g., by someone
+	// else, and stay.
+	RemovedAttachments []string `json:"removedAttachments"`
 }
 
 func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoReleaseRequest) (statusCode int, resp any, err error) {
@@ -401,17 +405,19 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
-	// The editor only sends the downloads it keeps and the new files, so the
-	// files the note still links to stay, and the others are deleted rather than
-	// left without a release.
+	// The editor sends the downloads it keeps and the new files. The files the
+	// note no longer links to and the downloads the editor removed are deleted
+	// rather than left without a release, and the others stay.
 	var unlinked []*database.Attachment
 	for _, a := range rel.Attachments {
 		switch {
 		case slices.Contains(req.Attachments, a.UUID):
 		case linksAttachment(req.Content, a.UUID):
 			req.Attachments = append(req.Attachments, a.UUID)
-		default:
+		case linksAttachment(rel.Note, a.UUID), slices.Contains(req.RemovedAttachments, a.UUID):
 			unlinked = append(unlinked, a)
+		default:
+			req.Attachments = append(req.Attachments, a.UUID)
 		}
 	}
 

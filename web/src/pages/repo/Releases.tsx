@@ -379,6 +379,7 @@ export function RepoReleaseEditor({
         isDraft,
         isPrerelease,
         attachments: [...kept.map((a) => a.uuid), ...uploads.uploaded, ...linkedUploads(noteUploads.uploaded, content)],
+        removedAttachments: (release?.attachments ?? []).filter((a) => !kept.includes(a)).map((a) => a.uuid),
       };
       return release
         ? updateRepoRelease(owner, name, release.tagName, form)

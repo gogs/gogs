@@ -2,12 +2,14 @@ package web
 
 import (
 	stdctx "context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
+	macaronsession "github.com/go-macaron/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
@@ -384,6 +386,64 @@ func TestCrossOriginProtection(t *testing.T) {
 			m.ServeHTTP(resp, req)
 			assert.Equal(t, tc.wantCode, resp.Code)
 			assert.Equal(t, tc.wantCode != http.StatusForbidden, reached, "route reached")
+		})
+	}
+}
+
+func TestCompleteSignInRegeneratesSessionID(t *testing.T) {
+	beforeName := conf.Session.CookieName
+	t.Cleanup(func() { conf.Session.CookieName = beforeName })
+	conf.Session.CookieName = "i_like_gogs"
+
+	for _, provider := range []string{"memory", "file"} {
+		t.Run(provider, func(t *testing.T) {
+			m := macaron.New()
+			m.Use(macaronsession.Sessioner(macaronsession.Options{
+				Provider:       provider,
+				ProviderConfig: t.TempDir(),
+				CookieName:     conf.Session.CookieName,
+			}))
+			m.Get("/plant", func(sess macaronsession.Store) { _ = sess.Set("mfaUserID", int64(7)) })
+			m.Get("/sign-in", func(c *macaron.Context, sess macaronsession.Store) {
+				require.NoError(t, completeSignIn(flamegoSessionAdapter{sess: sess}, c, &database.User{ID: 7, Name: "alice"}))
+			})
+			m.Get("/whoami", func(c *macaron.Context, sess macaronsession.Store) {
+				uid, _ := sess.Get("uid").(int64)
+				_, mfa := sess.Get("mfaUserID").(int64)
+				_, _ = fmt.Fprintf(c.Resp, "%d %v", uid, mfa)
+			})
+			get := func(path, sid string) *httptest.ResponseRecorder {
+				req := httptest.NewRequest(http.MethodGet, path, nil)
+				if sid != "" {
+					req.AddCookie(&http.Cookie{Name: conf.Session.CookieName, Value: sid})
+				}
+				resp := httptest.NewRecorder()
+				m.ServeHTTP(resp, req)
+				return resp
+			}
+			sessionCookie := func(resp *httptest.ResponseRecorder) *http.Cookie {
+				var found *http.Cookie
+				for _, c := range resp.Result().Cookies() {
+					if c.Name == conf.Session.CookieName {
+						require.Nil(t, found, "session cookie set more than once")
+						found = c
+					}
+				}
+				return found
+			}
+
+			// The attacker's session ID, planted in the victim's browser.
+			planted := sessionCookie(get("/plant", ""))
+			require.NotNil(t, planted)
+
+			signedIn := sessionCookie(get("/sign-in", planted.Value))
+			require.NotNil(t, signedIn)
+			assert.NotEqual(t, planted.Value, signedIn.Value)
+			assert.Equal(t, http.SameSiteLaxMode, signedIn.SameSite)
+			assert.Equal(t, "/", signedIn.Path)
+
+			assert.Equal(t, "7 false", get("/whoami", signedIn.Value).Body.String())
+			assert.Equal(t, "0 false", get("/whoami", planted.Value).Body.String())
 		})
 	}
 }

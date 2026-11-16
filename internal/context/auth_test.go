@@ -13,6 +13,7 @@ import (
 	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
@@ -95,6 +96,48 @@ func TestAuthenticatedUserIDAccessToken(t *testing.T) {
 			m.ServeHTTP(httptest.NewRecorder(), req)
 			assert.Equal(t, tc.wantUserID, gotUserID)
 			assert.Equal(t, tc.wantTokenAuth, gotTokenAuth)
+		})
+	}
+}
+
+type basicAuthStore struct {
+	AuthStore
+	user *database.User
+}
+
+func (s basicAuthStore) AuthenticateUser(_ context.Context, login, password string, _ int64) (*database.User, error) {
+	if login != s.user.Name || password != "secret" {
+		return nil, auth.ErrBadCredentials{}
+	}
+	return s.user, nil
+}
+
+func TestAuthenticatedUserBasicAuth(t *testing.T) {
+	store := basicAuthStore{user: &database.User{ID: 7, Name: "alice", IsActive: true}}
+
+	tests := []struct {
+		path     string
+		wantUser bool
+	}{
+		{path: "/api/v1/user", wantUser: true},
+		{path: "/alice/repo/raw/main/README.md", wantUser: true},
+		{path: "/api/web/user/settings/two-factor", wantUser: false},
+		{path: "/api/web/user/settings/passkeys/registration", wantUser: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
+			m := macaron.New()
+			m.Use(session.Sessioner())
+			var got *database.User
+			var gotBasicAuth bool
+			m.Any("/*", func(c *macaron.Context, sess session.Store) {
+				got, gotBasicAuth, _ = authenticatedUser(logx.NewNoopLogger(), store, c, sess)
+			})
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			req.SetBasicAuth("alice", "secret")
+			m.ServeHTTP(httptest.NewRecorder(), req)
+			assert.Equal(t, tc.wantUser, got != nil)
+			assert.Equal(t, tc.wantUser, gotBasicAuth)
 		})
 	}
 }

@@ -333,6 +333,9 @@ func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, sess session.
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "mark passkey used")
 	}
 
-	completeSignIn(sess, mc, owner.User)
+	if err = completeSignIn(sess, mc, owner.User); err != nil {
+		logger.Error("Failed to complete sign-in", "userID", owner.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
+	}
 	return http.StatusNoContent, nil, nil
 }

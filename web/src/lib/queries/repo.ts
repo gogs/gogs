@@ -986,6 +986,9 @@ export interface RepoReleaseForm {
   isDraft: boolean;
   isPrerelease: boolean;
   attachments: string[];
+  // removedAttachments are the downloads removed in the editor, which are
+  // deleted.
+  removedAttachments?: string[];
 }
 
 export function createRepoRelease(owner: string, name: string, form: RepoReleaseForm) {
