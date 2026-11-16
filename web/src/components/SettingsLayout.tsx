@@ -1,6 +1,6 @@
-import { Slot } from "@radix-ui/react-slot";
-import { ChevronDown } from "lucide-react";
-import { type MouseEvent, type ReactElement, type ReactNode, useState } from "react";
+import { Slot, Slottable } from "@radix-ui/react-slot";
+import { ChevronDown, type LucideIcon } from "lucide-react";
+import { type MouseEvent, type ReactElement, type ReactNode, useId, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -47,14 +47,14 @@ export function SettingsLayout({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="flex w-(--radix-popover-trigger-width) flex-col gap-0.5"
+            className="flex w-(--radix-popover-trigger-width) flex-col gap-0.5 pl-3"
             onClick={closeOnLink}
           >
             {nav}
           </PopoverContent>
         </Popover>
       </nav>
-      <nav aria-label={label} className="hidden flex-col gap-1 md:flex">
+      <nav aria-label={label} className="hidden flex-col gap-0.5 pl-2 md:flex">
         {nav}
       </nav>
       <section className="min-w-0">{children}</section>
@@ -62,14 +62,18 @@ export function SettingsLayout({
   );
 }
 
-// SettingsNavItem styles its link as an item of the settings navigation.
-// Links to destructive pages are red until they are the current page.
+// SettingsNavItem styles its link as an item of the settings navigation,
+// with a leading icon. The current page gets a bar in the primary color beside
+// it, so it does not rely on the subtle surface fill alone. Links to
+// destructive pages are red until they are the current page.
 export function SettingsNavItem({
   active,
+  icon: Icon,
   destructive = false,
   children,
 }: {
   active: boolean;
+  icon: LucideIcon;
   destructive?: boolean;
   children: ReactElement;
 }) {
@@ -77,15 +81,37 @@ export function SettingsNavItem({
     <Slot
       aria-current={active ? "page" : undefined}
       className={cn(
-        "rounded-md px-3 py-1.5 text-sm hover:bg-(--color-surface)",
+        "relative flex items-center gap-2 rounded-md px-3 py-1.5 text-sm wrap-anywhere hover:bg-(--color-surface)",
         active
-          ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
+          ? "bg-(--color-surface) font-semibold text-(--color-foreground) before:absolute before:inset-y-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-(--color-primary)"
           : destructive
             ? "text-(--color-destructive)"
             : "text-(--color-muted-foreground)",
       )}
     >
-      {children}
+      <Icon className="size-4 shrink-0" aria-hidden />
+      <Slottable>{children}</Slottable>
     </Slot>
   );
+}
+
+// SettingsNavGroup puts related items of the settings navigation under a
+// heading. The first group of a menu goes without one.
+export function SettingsNavGroup({ title, children }: { title?: string; children: ReactNode }) {
+  const id = useId();
+  return (
+    <div role="group" aria-labelledby={title ? id : undefined} className="flex flex-col gap-0.5">
+      {title ? (
+        <div id={id} className="mt-3 mb-0.5 px-3 text-xs font-semibold text-(--color-muted-foreground)">
+          {title}
+        </div>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+// SettingsNavDivider sets the danger zone apart at the end of the menu.
+export function SettingsNavDivider() {
+  return <hr className="my-2 border-(--color-border)" />;
 }

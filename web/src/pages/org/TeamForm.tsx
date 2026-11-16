@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Settings, TriangleAlert } from "lucide-react";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -7,7 +8,7 @@ import { toast } from "sonner";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { FormField } from "@/components/FormField";
 import { OrgHeader } from "@/components/OrgHeader";
-import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
+import { SettingsLayout, SettingsNavDivider, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/lib/page-title";
@@ -183,24 +184,27 @@ function TeamSettingsLayout({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const titles = { options: t("org.settings.options"), delete: t("org.teams.delete_team_title") };
+  const titles = { options: t("repo.settings.general"), delete: t("repo.settings.danger_zone") };
   return (
     <SettingsLayout
       label={t("org.teams.settings")}
       current={titles[active]}
       nav={
         <>
-          <SettingsNavItem active={active === "options"}>
+          <SettingsNavItem active={active === "options"} icon={Settings}>
             <Link to="/org/$org/teams/$team/edit" params={{ org, team: team.lowerName }}>
               {titles.options}
             </Link>
           </SettingsNavItem>
           {team.isOwnerTeam ? null : (
-            <SettingsNavItem active={active === "delete"} destructive>
-              <Link to="/org/$org/teams/$team/delete" params={{ org, team: team.lowerName }}>
-                {titles.delete}
-              </Link>
-            </SettingsNavItem>
+            <>
+              <SettingsNavDivider />
+              <SettingsNavItem active={active === "delete"} icon={TriangleAlert} destructive>
+                <Link to="/org/$org/teams/$team/delete" params={{ org, team: team.lowerName }}>
+                  {titles.delete}
+                </Link>
+              </SettingsNavItem>
+            </>
           )}
         </>
       }

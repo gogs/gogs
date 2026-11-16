@@ -102,7 +102,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: User *****
 		m.Group("/user/settings", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(avatar|password|email|ssh|security|repositories|organizations|applications|delete)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(email|ssh|security|repositories|organizations|applications|delete)$", func(c *context.Context) { c.ServeWeb() })
 			// Like the server-rendered pages, these pages are only found in the
 			// two-factor authentication state they apply to.
 			m.Get("/security/two_factor_enable", func(c *context.Context) {
@@ -138,7 +138,7 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Admin *****
 		m.Group("/admin", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|cron|processes)$", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/:userid", func(c *context.Context) {
 				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
@@ -339,6 +339,20 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 			m.Group("/settings", func() {
 				m.Get("", func(c *context.Context) { c.ServeWeb() })
 				m.Get("/collaboration", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/mirror", func(c *context.Context) {
+					if !c.Repo.Repository.IsMirror {
+						c.NotFound()
+						return
+					}
+					c.ServeWeb()
+				})
+				m.Get("/danger", func(c *context.Context) {
+					if !c.Repo.IsOwner() {
+						c.NotFound()
+						return
+					}
+					c.ServeWeb()
+				})
 				m.Group("/branches", func() {
 					m.Get("", func(c *context.Context) { c.ServeWeb() })
 					m.Get("/*", func(c *context.Context) { c.ServeWeb() })

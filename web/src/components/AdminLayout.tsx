@@ -1,8 +1,21 @@
 import { Link } from "@tanstack/react-router";
+import {
+  Bell,
+  BookMarked,
+  Building2,
+  Clock,
+  Cpu,
+  LayoutDashboard,
+  type LucideIcon,
+  Play,
+  Settings,
+  ShieldCheck,
+  User,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
+import { SettingsLayout, SettingsNavGroup, SettingsNavItem } from "@/components/SettingsLayout";
 import { usePageTitle } from "@/lib/page-title";
 
 export type AdminPage =
@@ -14,37 +27,66 @@ export type AdminPage =
   | "auths"
   | "config"
   | "notices"
-  | "monitor";
+  | "cron"
+  | "processes";
 
-// NAV lists the pages of the admin panel.
-const NAV: { page: AdminPage; path: string; label: string }[] = [
-  { page: "dashboard", path: "", label: "admin.dashboard" },
-  { page: "operations", path: "/operations", label: "admin.dashboard.operations" },
-  { page: "users", path: "/users", label: "admin.users" },
-  { page: "orgs", path: "/orgs", label: "admin.organizations" },
-  { page: "repos", path: "/repos", label: "admin.repositories" },
-  { page: "auths", path: "/auths", label: "admin.authentication" },
-  { page: "config", path: "/config", label: "admin.config" },
-  { page: "notices", path: "/notices", label: "admin.notices" },
-  { page: "monitor", path: "/monitor", label: "admin.monitor" },
+type NavItem = { page: AdminPage; path: string; label: string; icon: LucideIcon };
+
+// NAV lists the pages of the admin panel in groups. The first group has no
+// heading.
+const NAV: { title?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { page: "dashboard", path: "", label: "admin.overview", icon: LayoutDashboard },
+      { page: "users", path: "/users", label: "admin.users", icon: User },
+      { page: "orgs", path: "/orgs", label: "admin.organizations", icon: Building2 },
+      { page: "repos", path: "/repos", label: "admin.repositories", icon: BookMarked },
+    ],
+  },
+  {
+    title: "admin.group_settings",
+    items: [
+      { page: "auths", path: "/auths", label: "admin.authentication", icon: ShieldCheck },
+      { page: "config", path: "/config", label: "admin.config", icon: Settings },
+    ],
+  },
+  {
+    title: "admin.group_monitoring",
+    items: [
+      { page: "processes", path: "/processes", label: "admin.processes", icon: Cpu },
+      { page: "notices", path: "/notices", label: "admin.notices", icon: Bell },
+    ],
+  },
+  {
+    title: "admin.group_maintenance",
+    items: [
+      { page: "operations", path: "/operations", label: "admin.dashboard.operations", icon: Play },
+      { page: "cron", path: "/cron", label: "admin.monitor.cron", icon: Clock },
+    ],
+  },
 ];
 
 // AdminLayout heads the pages of the admin panel, with links between them.
 export function AdminLayout({ active, children }: { active: AdminPage; children: ReactNode }) {
   const { t } = useTranslation();
-  const current = t(NAV.find((item) => item.page === active)?.label ?? "admin_panel");
+  const label = NAV.flatMap((group) => group.items).find((item) => item.page === active)?.label;
+  const current = t(label ?? "admin_panel");
   usePageTitle(current);
   return (
     <main className="flex-1">
       <SettingsLayout
         label={t("admin_panel")}
         current={current}
-        nav={NAV.map((item) => (
-          <SettingsNavItem key={item.page} active={item.page === active}>
-            <Link to={`/admin${item.path}`} activeOptions={{ exact: true }}>
-              {t(item.label)}
-            </Link>
-          </SettingsNavItem>
+        nav={NAV.map((group, i) => (
+          <SettingsNavGroup key={i} title={group.title ? t(group.title) : undefined}>
+            {group.items.map((item) => (
+              <SettingsNavItem key={item.page} active={item.page === active} icon={item.icon}>
+                <Link to={`/admin${item.path}`} activeOptions={{ exact: true }}>
+                  {t(item.label)}
+                </Link>
+              </SettingsNavItem>
+            ))}
+          </SettingsNavGroup>
         ))}
       >
         {children}

@@ -52,10 +52,12 @@ import {
   RepoBranchProtection,
   RepoBranchSettings,
   RepoCollaboration,
+  RepoDangerZone,
   RepoDeployKeys,
+  RepoGeneral,
   RepoGitHookEdit,
   RepoGitHooks,
-  RepoOptions,
+  RepoMirror,
 } from "@/pages/repo/Settings";
 import { RepoWiki, RepoWikiEditor, RepoWikiPages } from "@/pages/repo/Wiki";
 import { wikiPageName } from "@/pages/repo/Wiki.path";
@@ -289,7 +291,29 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     component: function Settings() {
       const { owner, repo } = repoSettingsRoute.useParams();
       // Start over when the repository changes, e.g., after renaming it.
-      return <RepoOptions key={`${owner}/${repo}`} owner={owner} name={repo} />;
+      return <RepoGeneral key={`${owner}/${repo}`} owner={owner} name={repo} />;
+    },
+  });
+
+  const repoMirrorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/mirror",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () => Promise.resolve()),
+    component: function Mirror() {
+      const { owner, repo } = repoMirrorRoute.useParams();
+      return <RepoMirror owner={owner} name={repo} />;
+    },
+  });
+
+  const repoDangerZoneRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/danger",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () => Promise.resolve()),
+    component: function DangerZone() {
+      const { owner, repo } = repoDangerZoneRoute.useParams();
+      return <RepoDangerZone owner={owner} name={repo} />;
     },
   });
 
@@ -794,6 +818,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoMigrateRoute,
     repoForkRoute,
     repoSettingsRoute,
+    repoMirrorRoute,
+    repoDangerZoneRoute,
     repoCollaborationRoute,
     repoBranchSettingsRoute,
     repoBranchProtectionRoute,
