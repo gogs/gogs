@@ -28,6 +28,8 @@ export interface RepoCommitPage {
   body: string;
   author: RepoCommitSignature;
   parents: string[];
+  // markdownExtensions are the extensions of files that show a rich diff.
+  markdownExtensions: string[];
   patch: string;
 }
 
@@ -58,7 +60,7 @@ function CommitBody({ body }: { body: string }) {
 
 export function RepoCommit() {
   const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
-  const { sha, subject, body, author, parents, patch } = data;
+  const { sha, subject, body, author, parents, markdownExtensions, patch } = data;
   const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
   const search: RepoCommitSearch = useSearch({ from: "/$owner/$repo/commit/$sha" });
   const { data: repoHeader } = useSuspenseQuery(repoHeaderQuery(owner, repo));
@@ -173,7 +175,15 @@ export function RepoCommit() {
         </div>
       </section>
 
-      <DiffWorkspace owner={owner} repo={repo} patch={patch} oldRef={parents[0]} newRef={sha} search={search} />
+      <DiffWorkspace
+        owner={owner}
+        repo={repo}
+        patch={patch}
+        oldRef={parents[0]}
+        newRef={sha}
+        markdownExtensions={markdownExtensions}
+        search={search}
+      />
     </div>
   );
 }

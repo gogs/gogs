@@ -245,6 +245,8 @@ type repoCompareResponse struct {
 	// TotalCommits is the number of commits after Base up to After, which is
 	// more than len(Commits) when the list is cut off.
 	TotalCommits int64 `json:"totalCommits"`
+	// MarkdownExtensions are the extensions of files that show a rich diff.
+	MarkdownExtensions []string `json:"markdownExtensions"`
 }
 
 // compareMaxCommits is the most commits a comparison lists, so that comparing
@@ -333,11 +335,12 @@ func getRepoCompare(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list commits")
 	}
 	return http.StatusOK, &repoCompareResponse{
-		Before:          before,
-		After:           after,
-		Base:            r.base,
-		BaseIsEmptyTree: r.baseIsEmptyTree,
-		Commits:         toCommitListItems(ctx, repo, commits),
-		TotalCommits:    total,
+		Before:             before,
+		After:              after,
+		Base:               r.base,
+		BaseIsEmptyTree:    r.baseIsEmptyTree,
+		Commits:            toCommitListItems(ctx, repo, commits),
+		TotalCommits:       total,
+		MarkdownExtensions: conf.Markdown.FileExtensions,
 	}, nil
 }
