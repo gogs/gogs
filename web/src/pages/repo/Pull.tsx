@@ -109,6 +109,7 @@ export function RepoPull({
               repo={repo.name}
               stack={pull.stack}
               current={data.index}
+              cardSide="bottom"
               className="rounded-md border border-(--color-border) px-3 py-2 md:hidden"
             />
           ) : null}

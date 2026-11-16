@@ -743,6 +743,9 @@ export interface PullStackNode {
   status: PullStackStatus;
   // parents are the numbers of the pull requests it depends on.
   parents: number[];
+  poster: IssueUser;
+  updatedAt: string;
+  comments: number;
 }
 
 // PullStack is the pull requests connected by dependencies, parents first.
