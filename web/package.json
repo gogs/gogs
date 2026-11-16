@@ -34,6 +34,7 @@
     "clsx": "^2.1.1",
     "i18next": "^26.2.0",
     "lucide-react": "^1.16.0",
+    "mermaid": "^11.17.2",
     "react": "^19.2.6",
     "react-day-picker": "^10.0.2",
     "react-dom": "^19.2.6",

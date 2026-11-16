@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { MermaidDiagram } from "@/components/MermaidDiagram";
 import { cn } from "@/lib/utils";
 
 interface CodeBlockContent {
@@ -43,7 +44,8 @@ function extractCodeBlocks(html: string, anchorLabel: string): { html: string; b
 }
 
 // Markdown shows Markdown that the server rendered and sanitized, e.g., the
-// content of an issue, highlighting its code blocks like CodeBlock.
+// content of an issue, highlighting its code blocks like CodeBlock and drawing
+// Mermaid code blocks as diagrams.
 export function Markdown({ html, className }: { html: string; className?: string }) {
   const { t } = useTranslation();
   const anchorLabel = t("link_to_section");
@@ -69,7 +71,13 @@ export function Markdown({ html, className }: { html: string; className?: string
         ? placeholders.elements.map((element) => {
             const index = Number(element.dataset.codeBlock);
             const block = content.blocks[index];
-            return createPortal(<CodeBlock code={block.code} lang={block.lang} />, element, index);
+            const node =
+              block.lang === "mermaid" ? (
+                <MermaidDiagram code={block.code} />
+              ) : (
+                <CodeBlock code={block.code} lang={block.lang} />
+              );
+            return createPortal(node, element, index);
           })
         : null}
     </div>
