@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/cockroachdb/errors"
 )
 
 // Repository contains information of a Git repository.
@@ -36,14 +38,36 @@ func (r *Repository) parsePrettyFormatLogToList(ctx context.Context, logs []byte
 		return []*Commit{}, nil
 	}
 
-	var err error
+	// One "git cat-file --batch" reads all the commits, which is much faster
+	// than a process for each of them in long lists.
+	stdout, err := execInput(ctx, r.path, []string{"cat-file", "--batch"}, nil, bytes.NewReader(append(logs, '\n')))
+	if err != nil {
+		return nil, err
+	}
+
 	ids := bytes.Split(logs, []byte{'\n'})
 	commits := make([]*Commit, len(ids))
 	for i, id := range ids {
-		commits[i], err = r.CatFileCommit(ctx, string(id))
+		// Each object is "<id> <type> <size>\n<content>\n", and a missing one is
+		// "<id> missing\n".
+		header, rest, _ := bytes.Cut(stdout, []byte{'\n'})
+		fields := strings.Fields(string(header))
+		if len(fields) != 3 || fields[1] != "commit" {
+			return nil, ErrRevisionNotExist
+		}
+		size, err := strconv.Atoi(fields[2])
+		if err != nil || size >= len(rest) {
+			return nil, errors.Newf("malformed cat-file output for %q", header)
+		}
+
+		commits[i], err = parseCommit(rest[:size])
 		if err != nil {
 			return nil, err
 		}
+		commits[i].repo = r
+		commits[i].ID = MustIDFromString(string(id))
+		r.cachedCommits.Store(commits[i].ID.String(), commits[i])
+		stdout = rest[size+1:]
 	}
 	return commits, nil
 }
