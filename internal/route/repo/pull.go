@@ -514,7 +514,7 @@ func setTemplateIfExists(c *context.Context, ctxDataKey string, find func(ctx go
 	}
 	content, found, err := find(c.Req.Context(), c.Repo.Commit)
 	if err != nil {
-		log.Error("Failed to read %q template of repository %d: %v", ctxDataKey, c.Repo.Repository.ID, err)
+		c.Logger.Error("Failed to read template", "dataKey", ctxDataKey, "repoID", c.Repo.Repository.ID, "error", err)
 		return
 	}
 	if found {

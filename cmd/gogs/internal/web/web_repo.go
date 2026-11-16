@@ -90,7 +90,7 @@ func getRepoCommitRaw(logger *logx.Logger, c flamego.Context, repoCtx *repoConte
 }
 
 // getRepoCompareRaw writes the diff from one commit to another as text.
-func getRepoCompareRaw(c flamego.Context, repoCtx *repoContext) {
+func getRepoCompareRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -102,7 +102,7 @@ func getRepoCompareRaw(c flamego.Context, repoCtx *repoContext) {
 	before, after := c.Param("before"), c.Param("after")
 	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
 	if err != nil {
-		log.Error("getRepoCompareRaw: open repository %q/%q: %v", owner.Name, repo.Name, err)
+		logger.Error("Failed to open repository", "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
 		return
 	}
@@ -112,7 +112,7 @@ func getRepoCompareRaw(c flamego.Context, repoCtx *repoContext) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("commit does not exist"))
 			return
 		}
-		log.Error("getRepoCompareRaw: compare %q to %q in %q/%q: %v", before, after, owner.Name, repo.Name, err)
+		logger.Error("Failed to compare commits", "before", before, "after", after, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "compare commits"))
 		return
 	}
@@ -124,7 +124,7 @@ func getRepoCompareRaw(c flamego.Context, repoCtx *repoContext) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	if err = gitRepo.RawDiff(c.Request().Context(), after, git.RawDiffNormal, w, opt); err != nil {
-		log.Error("getRepoCompareRaw: get raw diff %s...%s: %v", before, after, err)
+		logger.Error("Failed to get raw diff", "before", before, "after", after, "error", err)
 	}
 }
 

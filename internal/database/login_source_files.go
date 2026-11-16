@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
@@ -108,7 +108,7 @@ func (s *loginSourceFiles) Update(source *LoginSource) {
 }
 
 // loadLoginSourceFiles loads login sources from file system.
-func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSourceFilesStore, error) {
+func loadLoginSourceFiles(logger *logx.Logger, authdPath string, clock func() time.Time) (loginSourceFilesStore, error) {
 	if !osx.IsDir(authdPath) {
 		return &loginSourceFiles{clock: clock}, nil
 	}
@@ -190,7 +190,7 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			loginSource.Provider = pam.NewProvider(&cfg)
 
 		case "github":
-			log.Warn("Ignored login source file %q: GitHub sources are no longer supported", path)
+			logger.Warn("Ignored login source file because GitHub sources are no longer supported", "path", path)
 			return nil
 
 		default:

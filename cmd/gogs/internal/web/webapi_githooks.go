@@ -8,7 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
@@ -20,7 +20,7 @@ const gitHooksDir = "custom_hooks"
 
 // withRepoGitHooks lets through the users who may edit Git hooks, which run
 // arbitrary code on the server: site admins and the users they allow.
-func withRepoGitHooks(c flamego.Context, viewer *database.User, repoCtx *repoContext) {
+func withRepoGitHooks(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !viewer.CanEditGitHook() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("page does not exist"))
@@ -28,7 +28,7 @@ func withRepoGitHooks(c flamego.Context, viewer *database.User, repoCtx *repoCon
 	}
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("withRepoGitHooks: open repository %d: %v", repoCtx.Repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
 		return
 	}
@@ -45,10 +45,10 @@ type repoGitHooks struct {
 	Items []repoGitHook `json:"items"`
 }
 
-func getRepoGitHooks(gitRepo *git.Repository) (statusCode int, resp *repoGitHooks, err error) {
+func getRepoGitHooks(logger *logx.Logger, gitRepo *git.Repository) (statusCode int, resp *repoGitHooks, err error) {
 	hooks, err := gitRepo.Hooks(gitHooksDir)
 	if err != nil {
-		log.Error("getRepoGitHooks: list hooks of %q: %v", gitRepo.Path(), err)
+		logger.Error("Failed to list hooks", "repoPath", gitRepo.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list hooks")
 	}
 	items := make([]repoGitHook, 0, len(hooks))
@@ -59,7 +59,7 @@ func getRepoGitHooks(gitRepo *git.Repository) (statusCode int, resp *repoGitHook
 }
 
 // withRepoGitHook injects the server-side hook named in the route.
-func withRepoGitHook(c flamego.Context, gitRepo *git.Repository) {
+func withRepoGitHook(c flamego.Context, logger *logx.Logger, gitRepo *git.Repository) {
 	w := c.ResponseWriter()
 	name := git.HookName(c.Param("name"))
 	if !slices.Contains(git.ServerSideHooks, name) {
@@ -68,7 +68,7 @@ func withRepoGitHook(c flamego.Context, gitRepo *git.Repository) {
 	}
 	hook, err := gitRepo.Hook(gitHooksDir, name)
 	if err != nil {
-		log.Error("withRepoGitHook: get hook %q of %q: %v", name, gitRepo.Path(), err)
+		logger.Error("Failed to get hook", "hookName", name, "repoPath", gitRepo.Path(), "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get hook"))
 		return
 	}
@@ -91,22 +91,22 @@ type repoGitHookRequest struct {
 
 // putRepoGitHook saves the content of the hook. Empty content is refused,
 // because an empty executable fails to run and would reject every push.
-func putRepoGitHook(l i18n.Locale, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
+func putRepoGitHook(logger *logx.Logger, l i18n.Locale, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("repo.settings.githook_content_required")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if err = hook.Update(req.Content); err != nil {
-		log.Error("putRepoGitHook: update hook %q: %v", hook.Path(), err)
+		logger.Error("Failed to update hook", "hookPath", hook.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update hook")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
 // deleteRepoGitHook removes the hook, which makes it inactive again.
-func deleteRepoGitHook(hook *git.Hook) (statusCode int, resp any, err error) {
+func deleteRepoGitHook(logger *logx.Logger, hook *git.Hook) (statusCode int, resp any, err error) {
 	if err = hook.Delete(); err != nil {
-		log.Error("deleteRepoGitHook: delete hook %q: %v", hook.Path(), err)
+		logger.Error("Failed to delete hook", "hookPath", hook.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete hook")
 	}
 	return http.StatusNoContent, nil, nil

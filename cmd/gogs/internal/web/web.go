@@ -218,7 +218,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 						c.NotFound()
 						return
 					}
-				} else if !repo.HasAccess(c.UserID()) {
+				} else if !repo.HasAccess(logger, c.UserID()) {
 					c.NotFound()
 					return
 				}
@@ -339,7 +339,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 				c.ServeWeb()
 			})
 			m.Get("/fork/:repoid", func(c *context.Context) {
-				_, err := forkBaseRepo(c.User, c.ParamsInt64(":repoid"))
+				_, err := forkBaseRepo(c.Logger, c.User, c.ParamsInt64(":repoid"))
 				if errors.Is(err, errForkBaseNotFound) {
 					c.NotFound()
 					return
@@ -401,7 +401,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 			m.Get("/issues", repo.MustEnableIssues, repo.ServeIssueList)
 			m.Get("/issues/:index", repo.ServeIssue)
 			m.Get("/^:page(labels|milestones)$", func(c *context.Context) { c.ServeWeb() })
-		}, ignSignIn, context.RepoAssignment(true))
+		}, ignSignIn, context.RepoAssignment(logger, true))
 		m.Group("/:username/:reponame", func() {
 			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
 			// So they can apply their own enable/disable logic on routers.
@@ -424,7 +424,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 				m.Get("/?:page", repo.ServeWikiPage)
 				m.Get("/_pages", func(c *context.Context) { c.ServeWeb() })
 			}, repo.MustEnableWiki)
-		}, ignSignIn, context.RepoAssignment(false, true))
+		}, ignSignIn, context.RepoAssignment(logger, false, true))
 
 		m.Group("/:username/:reponame", func() {
 			// FIXME: should use different URLs but mostly same logic for comments of issue and pull request.
@@ -525,7 +525,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 
 			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})\\.diff", flamegoBridger(webHandler))
 			m.Get("/compare/:before([a-f0-9]{64}|[a-f0-9]{40})\\.\\.\\.:after([a-f0-9]{64}|[a-f0-9]{40})$", repo.MustBeNotEmpty, func(c *context.Context) { c.ServeWeb() })
-		}, ignSignIn, context.RepoAssignment())
+		}, ignSignIn, context.RepoAssignment(logger))
 		m.Group("/:username/:reponame", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/^:type(stars|watchers)$", func(c *context.Context) { c.ServeWeb() })

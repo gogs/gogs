@@ -174,7 +174,7 @@ type repoMarkdownFile struct {
 
 // getRepoMarkdownFile renders the Markdown file at the path in the commit the
 // way the file view does, e.g., to show the rich diff of a commit.
-func getRepoMarkdownFile(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoMarkdownFile, err error) {
+func getRepoMarkdownFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMarkdownFile, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	sha := c.Param("sha")
@@ -185,7 +185,7 @@ func getRepoMarkdownFile(c flamego.Context, repoCtx *repoContext) (statusCode in
 
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoMarkdownFile: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	commit, err := gitRepo.CatFileCommit(ctx, sha)
@@ -193,7 +193,7 @@ func getRepoMarkdownFile(c flamego.Context, repoCtx *repoContext) (statusCode in
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("commit does not exist")
 		}
-		log.Error("getRepoMarkdownFile: get commit %q of repo %d: %v", sha, repo.ID, err)
+		logger.Error("Failed to get commit", "commitID", sha, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get commit")
 	}
 	blob, err := commit.Blob(ctx, treePath)
@@ -201,12 +201,12 @@ func getRepoMarkdownFile(c flamego.Context, repoCtx *repoContext) (statusCode in
 		if git.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
 			return http.StatusNotFound, nil, errors.New("file does not exist")
 		}
-		log.Error("getRepoMarkdownFile: get blob %s:%s of repo %d: %v", sha, treePath, repo.ID, err)
+		logger.Error("Failed to get blob", "commitID", sha, "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get blob")
 	}
 	p, err := blob.Bytes(ctx)
 	if err != nil {
-		log.Error("getRepoMarkdownFile: read blob %s:%s of repo %d: %v", sha, treePath, repo.ID, err)
+		logger.Error("Failed to read blob", "commitID", sha, "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "read blob")
 	}
 

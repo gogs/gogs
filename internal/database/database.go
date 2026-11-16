@@ -94,7 +94,7 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 		logger.Debug("Auto migrated table", "tableName", name)
 	}
 
-	loadedLoginSourceFilesStore, err = loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)
+	loadedLoginSourceFilesStore, err = loadLoginSourceFiles(logger, filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)
 	if err != nil {
 		return nil, errors.Wrap(err, "load login source files")
 	}

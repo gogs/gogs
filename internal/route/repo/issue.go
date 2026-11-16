@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"

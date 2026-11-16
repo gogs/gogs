@@ -10,7 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -35,7 +35,7 @@ func withRepoCode(c flamego.Context, repoCtx *repoContext) {
 }
 
 // withRepoRelease injects the release of the tag in the route.
-func withRepoRelease(c flamego.Context, repoCtx *repoContext) {
+func withRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	tag := c.Param("tag")
 	rel, err := database.GetRelease(repoCtx.Repo.ID, tag)
@@ -44,12 +44,12 @@ func withRepoRelease(c flamego.Context, repoCtx *repoContext) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("release does not exist"))
 			return
 		}
-		log.Error("withRepoRelease: get release %q of repo %d: %v", tag, repoCtx.Repo.ID, err)
+		logger.Error("Failed to get release", "tagName", tag, "repoID", repoCtx.Repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get release"))
 		return
 	}
 	if err = rel.LoadAttributes(); err != nil {
-		log.Error("withRepoRelease: load attributes of release %d: %v", rel.ID, err)
+		logger.Error("Failed to load release attributes", "releaseID", rel.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "load release"))
 		return
 	}
@@ -109,23 +109,23 @@ type repoReleasesResponse struct {
 	IsMirror       bool   `json:"isMirror"`
 }
 
-func getRepoReleases(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoReleasesResponse, err error) {
+func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoReleasesResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoReleases: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
 	page, err := gitRepo.TagsAfter(ctx, c.Query("after"), releasesPageSize)
 	if err != nil {
-		log.Error("getRepoReleases: list tags of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list tags", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list tags")
 	}
 	published, err := database.GetPublishedReleasesByRepoID(repo.ID, page.Tags...)
 	if err != nil {
-		log.Error("getRepoReleases: list published releases of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list published releases", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list releases")
 	}
 	byTag := make(map[string]*database.Release, len(published))
@@ -143,12 +143,12 @@ func getRepoReleases(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 
 		commit, err := gitRepo.TagCommit(ctx, tag)
 		if err != nil {
-			log.Error("getRepoReleases: get commit of tag %q in repo %d: %v", tag, repo.ID, err)
+			logger.Error("Failed to get tag commit", "tagName", tag, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get tag commit")
 		}
 		numCommits, err := commit.CommitsCount(ctx)
 		if err != nil {
-			log.Error("getRepoReleases: count commits of tag %q in repo %d: %v", tag, repo.ID, err)
+			logger.Error("Failed to count commits", "tagName", tag, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "count commits")
 		}
 		releases = append(releases, &database.Release{
@@ -165,7 +165,7 @@ func getRepoReleases(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 	if viewerCanWrite && page.HasLatest {
 		drafts, err := database.GetDraftReleasesByRepoID(repo.ID)
 		if err != nil {
-			log.Error("getRepoReleases: list draft releases of repo %d: %v", repo.ID, err)
+			logger.Error("Failed to list draft releases", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "list drafts")
 		}
 		releases = append(drafts, releases...)
@@ -182,7 +182,7 @@ func getRepoReleases(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 		item := repoRelease{TagName: r.TagName, Sha: r.Sha1}
 		if r.ID > 0 {
 			if err = r.LoadAttributes(); err != nil {
-				log.Error("getRepoReleases: load attributes of release %d: %v", r.ID, err)
+				logger.Error("Failed to load release attributes", "releaseID", r.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "load release")
 			}
 			publisher := toIssueUser(r.Publisher)
@@ -198,7 +198,7 @@ func getRepoReleases(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 			}
 			count, err := counter.count(ctx, r)
 			if err != nil {
-				log.Error("getRepoReleases: count commits of %q in repo %d: %v", r.Target, repo.ID, err)
+				logger.Error("Failed to count commits", "branch", r.Target, "repoID", repo.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "count commits")
 			}
 			item.NumCommitsBehind = count - r.NumCommits
@@ -244,15 +244,15 @@ type repoReleaseFormOptions struct {
 	Attachment    *issueAttachmentSettings `json:"attachment,omitempty"`
 }
 
-func getRepoNewRelease(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoReleaseFormOptions, err error) {
+func getRepoNewRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoReleaseFormOptions, err error) {
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoNewRelease: open repository %d: %v", repoCtx.Repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	branches, err := gitRepo.Branches(c.Request().Context())
 	if err != nil {
-		log.Error("getRepoNewRelease: list branches of repo %d: %v", repoCtx.Repo.ID, err)
+		logger.Error("Failed to list branches", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
 	return http.StatusOK, &repoReleaseFormOptions{
@@ -273,7 +273,7 @@ type repoReleaseRequest struct {
 	Attachments  []string `json:"attachments"`
 }
 
-func postRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoReleaseRequest) (statusCode int, resp any, err error) {
+func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoReleaseRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	if strings.TrimSpace(req.TagName) == "" {
@@ -285,14 +285,14 @@ func postRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, re
 	}
 	if statusCode, err = checkNewAttachments(releaseAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
-			log.Error("postRepoRelease: %v", err)
+			logger.Error("Failed to check attachments", "error", err)
 		}
 		return statusCode, nil, err
 	}
 
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("postRepoRelease: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if !gitRepo.HasBranch(ctx, req.Target) {
@@ -309,12 +309,12 @@ func postRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, re
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Target)
 	if err != nil {
-		log.Error("postRepoRelease: get commit of branch %q in repo %d: %v", req.Target, repo.ID, err)
+		logger.Error("Failed to get branch commit", "branch", req.Target, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get branch commit")
 	}
 	numCommits, err := commit.CommitsCount(ctx)
 	if err != nil {
-		log.Error("postRepoRelease: count commits of branch %q in repo %d: %v", req.Target, repo.ID, err)
+		logger.Error("Failed to count commits", "branch", req.Target, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "count commits")
 	}
 
@@ -331,7 +331,7 @@ func postRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, re
 		IsPrerelease: req.IsPrerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = database.NewRelease(ctx, gitRepo, rel, req.Attachments); err != nil {
+	if err = database.NewRelease(ctx, logger, gitRepo, rel, req.Attachments); err != nil {
 		var msg string
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
@@ -339,12 +339,12 @@ func postRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, re
 		case database.IsErrInvalidTagName(err):
 			statusCode, msg = http.StatusBadRequest, l.Tr("repo.release.tag_name_invalid")
 		default:
-			log.Error("postRepoRelease: create release %q in repo %d: %v", req.TagName, repo.ID, err)
+			logger.Error("Failed to create release", "tagName", req.TagName, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "create release")
 		}
 		return statusCode, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
 	}
-	log.Trace("Release created: %s/%s:%s", viewer.LowerName, repo.Name, rel.TagName)
+	logger.Debug("Release created", "userName", viewer.LowerName, "repoName", repo.Name, "tagName", rel.TagName)
 	return http.StatusCreated, nil, nil
 }
 
@@ -372,7 +372,7 @@ func getRepoRelease(rel *database.Release) (statusCode int, resp *repoReleaseEdi
 	}, nil
 }
 
-func patchRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, repoCtx *repoContext, rel *database.Release, req repoReleaseRequest) (statusCode int, resp any, err error) {
+func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, rel *database.Release, req repoReleaseRequest) (statusCode int, resp any, err error) {
 	if resp := textFieldError(l, "title", "repo.release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
@@ -390,14 +390,14 @@ func patchRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, r
 	}
 	if statusCode, err = checkNewAttachments(lim, added); err != nil {
 		if statusCode == http.StatusInternalServerError {
-			log.Error("patchRepoRelease: %v", err)
+			logger.Error("Failed to check attachments", "error", err)
 		}
 		return statusCode, nil, err
 	}
 
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("patchRepoRelease: open repository %d: %v", repoCtx.Repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 
@@ -421,34 +421,34 @@ func patchRepoRelease(c flamego.Context, l i18n.Locale, viewer *database.User, r
 	rel.Note = req.Content
 	rel.IsDraft = rel.IsDraft && req.IsDraft
 	rel.IsPrerelease = req.IsPrerelease
-	if err = database.UpdateRelease(c.Request().Context(), viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
+	if err = database.UpdateRelease(c.Request().Context(), logger, viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
 		if database.IsErrInvalidTagName(err) {
 			msg := l.Tr("repo.release.tag_name_invalid")
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
 		}
-		log.Error("patchRepoRelease: update release %d: %v", rel.ID, err)
+		logger.Error("Failed to update release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update release")
 	}
 	if _, err = database.DeleteAttachments(unlinked, true); err != nil {
-		log.Error("patchRepoRelease: delete unlinked files of release %d: %v", rel.ID, err)
+		logger.Error("Failed to delete unlinked files", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete unlinked files")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoRelease(c flamego.Context, repoCtx *repoContext, rel *database.Release) (statusCode int, resp any, err error) {
+func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, rel *database.Release) (statusCode int, resp any, err error) {
 	if err = database.DeleteReleaseOfRepoByID(c.Request().Context(), repoCtx.Repo.ID, rel.ID); err != nil {
-		log.Error("deleteRepoRelease: delete release %d: %v", rel.ID, err)
+		logger.Error("Failed to delete release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete release")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
 // postRepoReleaseAttachment stores a file to attach to a release.
-func postRepoReleaseAttachment(c flamego.Context, l i18n.Locale) (statusCode int, resp any, err error) {
+func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
 	statusCode, resp, err = storeAttachment(c, l, releaseAttachmentLimits())
 	if statusCode == http.StatusInternalServerError {
-		log.Error("postRepoReleaseAttachment: %v", err)
+		logger.Error("Failed to store attachment", "error", err)
 	}
 	return statusCode, resp, err
 }

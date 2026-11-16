@@ -10,7 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
@@ -143,7 +143,7 @@ func protectedBranchNames(repoID int64) (map[string]bool, error) {
 // given by the "view" query parameter: "overview" (the default), "yours",
 // "active", "stale" or "all". Every view but the overview is paged. Signed-out
 // viewers have no branches of their own, so "yours" is empty for them.
-func getRepoBranches(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoBranchesResponse, err error) {
+func getRepoBranches(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoBranchesResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	view := c.Query("view")
@@ -156,17 +156,17 @@ func getRepoBranches(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoBranches: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	branches, err := gitRepo.BranchesByCommitterDate(ctx)
 	if err != nil {
-		log.Error("getRepoBranches: list branches of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
 	protected, err := protectedBranchNames(repo.ID)
 	if err != nil {
-		log.Error("getRepoBranches: list protected branches of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list protected branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list protected branches")
 	}
 
@@ -179,7 +179,7 @@ func getRepoBranches(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 	if repoCtx.Viewer.Authenticated() && (view == "overview" || view == "yours") {
 		emails, err := database.Handle.Users().ListEmails(ctx, repoCtx.Viewer.ID())
 		if err != nil {
-			log.Error("getRepoBranches: list emails of user %d: %v", repoCtx.Viewer.ID(), err)
+			logger.Error("Failed to list emails", "userID", repoCtx.Viewer.ID(), "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "list emails")
 		}
 		for _, email := range emails {
@@ -252,7 +252,7 @@ type repoBranchSettings struct {
 	ProtectedBranches []string `json:"protectedBranches"`
 }
 
-func getRepoBranchSettings(c flamego.Context, repoCtx *repoContext, rc *repoAdminContext) (statusCode int, resp *repoBranchSettings, err error) {
+func getRepoBranchSettings(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, rc *repoAdminContext) (statusCode int, resp *repoBranchSettings, err error) {
 	repo := rc.Repo
 	resp = &repoBranchSettings{
 		IsEmpty:           repo.IsEmpty,
@@ -266,16 +266,16 @@ func getRepoBranchSettings(c flamego.Context, repoCtx *repoContext, rc *repoAdmi
 
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoBranchSettings: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if resp.Branches, err = gitRepo.Branches(c.Request().Context()); err != nil {
-		log.Error("getRepoBranchSettings: list branches of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
 	protected, err := database.GetProtectBranchesByRepoID(repo.ID)
 	if err != nil {
-		log.Error("getRepoBranchSettings: list protected branches of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list protected branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list protected branches")
 	}
 	// Protection outlives deleted branches, which are not listed.
@@ -291,12 +291,12 @@ type repoDefaultBranchRequest struct {
 	Branch string `json:"branch"`
 }
 
-func putRepoDefaultBranch(c flamego.Context, l i18n.Locale, repoCtx *repoContext, rc *repoAdminContext, req repoDefaultBranchRequest) (statusCode int, resp any, err error) {
+func putRepoDefaultBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, rc *repoAdminContext, req repoDefaultBranchRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := rc.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("putRepoDefaultBranch: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if repo.IsEmpty || !gitRepo.HasBranch(ctx, req.Branch) {
@@ -308,12 +308,12 @@ func putRepoDefaultBranch(c flamego.Context, l i18n.Locale, repoCtx *repoContext
 	}
 
 	if _, err = gitRepo.SymbolicRef(ctx, git.SymbolicRefOptions{Ref: git.RefsHeads + req.Branch}); err != nil {
-		log.Error("putRepoDefaultBranch: point HEAD of repo %d to %q: %v", repo.ID, req.Branch, err)
+		logger.Error("Failed to point HEAD to branch", "repoID", repo.ID, "branch", req.Branch, "error", err)
 		return http.StatusInternalServerError, nil, errors.New(l.Tr("repo.settings.update_default_branch_unsupported"))
 	}
 	repo.DefaultBranch = req.Branch
-	if err = database.UpdateRepository(repo, false); err != nil {
-		log.Error("putRepoDefaultBranch: update repository %d: %v", repo.ID, err)
+	if err = database.UpdateRepository(logger, repo, false); err != nil {
+		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
 	return http.StatusNoContent, nil, nil
@@ -345,7 +345,7 @@ type repoProtectedBranch struct {
 
 // withRepoProtectedBranch injects the protection of the branch in the route,
 // which defaults to none.
-func withRepoProtectedBranch(c flamego.Context, repoCtx *repoContext, rc *repoAdminContext) {
+func withRepoProtectedBranch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, rc *repoAdminContext) {
 	w := c.ResponseWriter()
 	repo := rc.Repo
 	branch := c.Param("branch")
@@ -355,7 +355,7 @@ func withRepoProtectedBranch(c flamego.Context, repoCtx *repoContext, rc *repoAd
 	}
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("withRepoProtectedBranch: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
 		return
 	}
@@ -367,7 +367,7 @@ func withRepoProtectedBranch(c flamego.Context, repoCtx *repoContext, rc *repoAd
 	protectBranch, err := database.GetProtectBranchOfRepoByName(repo.ID, branch)
 	if err != nil {
 		if !database.IsErrBranchNotExist(err) {
-			log.Error("withRepoProtectedBranch: get protection of branch %q in repo %d: %v", branch, repo.ID, err)
+			logger.Error("Failed to get branch protection", "repoID", repo.ID, "branch", branch, "error", err)
 			writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get protected branch"))
 			return
 		}
@@ -394,7 +394,7 @@ func joinIDs(ids []int64) string {
 	return strings.Join(strs, ",")
 }
 
-func getRepoProtectedBranch(rc *repoAdminContext, protectBranch *database.ProtectBranch) (statusCode int, resp *repoProtectedBranch, err error) {
+func getRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch) (statusCode int, resp *repoProtectedBranch, err error) {
 	resp = &repoProtectedBranch{
 		Name:               protectBranch.Name,
 		Protected:          protectBranch.Protected,
@@ -409,7 +409,7 @@ func getRepoProtectedBranch(rc *repoAdminContext, protectBranch *database.Protec
 
 	writers, err := rc.Repo.GetWriters()
 	if err != nil {
-		log.Error("getRepoProtectedBranch: list writers of repo %d: %v", rc.Repo.ID, err)
+		logger.Error("Failed to list writers", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list writers")
 	}
 	resp.UserOptions = make([]repoProtectedBranchUser, 0, len(writers))
@@ -418,7 +418,7 @@ func getRepoProtectedBranch(rc *repoAdminContext, protectBranch *database.Protec
 	}
 	teams, err := rc.Owner.TeamsHaveAccessToRepo(rc.Repo.ID, database.AccessModeWrite)
 	if err != nil {
-		log.Error("getRepoProtectedBranch: list teams of repo %d: %v", rc.Repo.ID, err)
+		logger.Error("Failed to list teams with write access", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list teams")
 	}
 	resp.TeamOptions = make([]repoProtectedBranchTeam, 0, len(teams))
@@ -436,19 +436,19 @@ type repoProtectedBranchRequest struct {
 	WhitelistTeamIDs   []int64 `json:"whitelistTeamIDs"`
 }
 
-func putRepoProtectedBranch(rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
+func putRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
 	protectBranch.Protected = req.Protected
 	protectBranch.RequirePullRequest = req.RequirePullRequest
 	if rc.Owner.IsOrganization() {
 		protectBranch.EnableWhitelist = req.EnableWhitelist
 		// People and teams who cannot write are dropped.
-		err = database.UpdateOrgProtectBranch(rc.Repo, protectBranch, joinIDs(req.WhitelistUserIDs), joinIDs(req.WhitelistTeamIDs))
+		err = database.UpdateOrgProtectBranch(logger, rc.Repo, protectBranch, joinIDs(req.WhitelistUserIDs), joinIDs(req.WhitelistTeamIDs))
 	} else {
 		protectBranch.EnableWhitelist = false
 		err = database.UpdateProtectBranch(protectBranch)
 	}
 	if err != nil {
-		log.Error("putRepoProtectedBranch: update protection of branch %q in repo %d: %v", protectBranch.Name, rc.Repo.ID, err)
+		logger.Error("Failed to update branch protection", "repoID", rc.Repo.ID, "branch", protectBranch.Name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update protected branch")
 	}
 	return http.StatusNoContent, nil, nil

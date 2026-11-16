@@ -1,8 +1,6 @@
 package repo
 
 import (
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"

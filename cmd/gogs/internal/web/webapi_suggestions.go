@@ -5,7 +5,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 )
@@ -22,10 +22,10 @@ type repoMentionSuggestions struct {
 
 // getRepoMentionSuggestions lists the users to suggest when mentioning someone
 // in the Markdown of the repository, i.e., the users who can read it.
-func getRepoMentionSuggestions(repoCtx *repoContext) (statusCode int, resp *repoMentionSuggestions, err error) {
+func getRepoMentionSuggestions(logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMentionSuggestions, err error) {
 	users, err := repoCtx.Repo.GetAssignees()
 	if err != nil {
-		log.Error("getRepoMentionSuggestions: list users of repository %d: %v", repoCtx.Repo.ID, err)
+		logger.Error("Failed to list repository users", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list users")
 	}
 	resp = &repoMentionSuggestions{Items: make([]repoMentionSuggestion, 0, len(users))}
@@ -50,7 +50,7 @@ type repoIssueSuggestions struct {
 // to suggest when referencing one by the `q` query parameter. The repository
 // is not found when it uses an external issue tracker, because the numbers in
 // its Markdown link there.
-func getRepoIssueSuggestions(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoIssueSuggestions, err error) {
+func getRepoIssueSuggestions(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoIssueSuggestions, err error) {
 	repo := repoCtx.Repo
 	includeIssues := repo.EnableIssues && (repoCtx.Viewer.CanRead() || repo.CanGuestViewIssues())
 	includePulls := repoCtx.Viewer.CanRead() && repo.AllowsPulls()
@@ -66,7 +66,7 @@ func getRepoIssueSuggestions(c flamego.Context, repoCtx *repoContext) (statusCod
 		Limit:         10,
 	})
 	if err != nil {
-		log.Error("getRepoIssueSuggestions: suggest issues of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to suggest issues", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "suggest issues")
 	}
 	resp = &repoIssueSuggestions{Items: make([]repoIssueSuggestion, 0, len(issues))}

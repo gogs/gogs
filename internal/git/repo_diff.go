@@ -51,7 +51,7 @@ func (r *Repository) Diff(ctx context.Context, logger *logx.Logger, rev string, 
 	return r.parseDiff(ctx, logger, args, nil, maxFiles, maxFileLines, maxLineChars)
 }
 
-func (r *Repository) parseDiff(ctx context.Context, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+func (r *Repository) parseDiff(ctx context.Context, logger *logx.Logger, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
 	stdout, w := io.Pipe()
 	done := make(chan streamParseDiffResult)
 	go streamParseDiff(logger, stdout, done, maxFiles, maxFileLines, maxLineChars)

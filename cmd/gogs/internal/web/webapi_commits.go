@@ -9,7 +9,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -98,8 +98,9 @@ func resolveRepoRef(ctx context.Context, repo *database.Repository, gitRepo *git
 // commitAuthors looks up the users of commit authors by their emails, once
 // per email.
 type commitAuthors struct {
-	ctx   context.Context
-	users map[string]*database.User
+	ctx    context.Context
+	logger *logx.Logger
+	users  map[string]*database.User
 }
 
 func (a *commitAuthors) signature(s *git.Signature) repoCommitSignature {
@@ -112,7 +113,7 @@ func (a *commitAuthors) signature(s *git.Signature) repoCommitSignature {
 		Name:      s.Name,
 		Email:     s.Email,
 		When:      s.When.UTC(),
-		AvatarURL: tool.AvatarLink(s.Email),
+		AvatarURL: tool.AvatarLink(a.logger, s.Email),
 	}
 	if u != nil {
 		sig.AvatarURL = u.AvatarURLPath()
@@ -130,8 +131,8 @@ type repoCommitListItem struct {
 	Author      repoCommitSignature `json:"author"`
 }
 
-func toCommitListItems(ctx context.Context, repo *database.Repository, commits []*git.Commit) []repoCommitListItem {
-	authors := &commitAuthors{ctx: ctx, users: map[string]*database.User{}}
+func toCommitListItems(ctx context.Context, logger *logx.Logger, repo *database.Repository, commits []*git.Commit) []repoCommitListItem {
+	authors := &commitAuthors{ctx: ctx, logger: logger, users: map[string]*database.User{}}
 	metas := repo.ComposeMetas()
 	items := make([]repoCommitListItem, 0, len(commits))
 	for _, commit := range commits {
@@ -167,17 +168,17 @@ type repoCommitsResponse struct {
 // getRepoCommits lists the commits of the ref in the route, newest first:
 // those that changed the path after the ref, or those whose messages match
 // the "q" query when the path is "search", like the server-rendered page.
-func getRepoCommits(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCommitsResponse, err error) {
+func getRepoCommits(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCommitsResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoCommits: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	ref, err := resolveRepoRef(ctx, repo, gitRepo, c.Param("path"))
 	if err != nil {
-		log.Error("getRepoCommits: resolve ref %q in repo %d: %v", c.Param("path"), repo.ID, err)
+		logger.Error("Failed to resolve ref", "path", c.Param("path"), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "resolve ref")
 	} else if ref == nil {
 		return http.StatusNotFound, nil, errors.New("ref does not exist")
@@ -196,7 +197,7 @@ func getRepoCommits(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		if resp.Keyword != "" {
 			commits, err = ref.Commit.SearchCommits(ctx, resp.Keyword)
 			if err != nil {
-				log.Error("getRepoCommits: search commits of %q in repo %d: %v", ref.Name, repo.ID, err)
+				logger.Error("Failed to search commits", "ref", ref.Name, "repoID", repo.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "search commits")
 			}
 		}
@@ -211,20 +212,20 @@ func getRepoCommits(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		}
 		commits, err = ref.Commit.CommitsByPage(ctx, resp.Page, resp.PageSize, git.CommitsByPageOptions{Path: resp.Path})
 		if err != nil {
-			log.Error("getRepoCommits: list commits of %q in repo %d: %v", ref.Name, repo.ID, err)
+			logger.Error("Failed to list commits", "ref", ref.Name, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "list commits")
 		}
 		resp.HasNext = len(commits) == resp.PageSize
 	}
 
-	resp.Commits = toCommitListItems(ctx, repo, commits)
+	resp.Commits = toCommitListItems(ctx, logger, repo, commits)
 
 	if resp.Branches, err = gitRepo.Branches(ctx); err != nil {
-		log.Error("getRepoCommits: list branches of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
 	if resp.Tags, err = gitRepo.Tags(ctx); err != nil {
-		log.Error("getRepoCommits: list tags of repo %d: %v", repo.ID, err)
+		logger.Error("Failed to list tags", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list tags")
 	}
 	return http.StatusOK, resp, nil
@@ -312,12 +313,12 @@ func resolveCompareRange(ctx context.Context, gitRepo *git.Repository, defaultBr
 
 // getRepoCompare describes the changes from one commit to another, e.g., of a
 // push. The diff itself is served as text by getRepoCompareRaw.
-func getRepoCompare(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCompareResponse, err error) {
+func getRepoCompare(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCompareResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoCompare: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	before, after := c.Param("before"), c.Param("after")
@@ -326,12 +327,12 @@ func getRepoCompare(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("commit does not exist")
 		}
-		log.Error("getRepoCompare: compare %q to %q in repo %d: %v", before, after, repo.ID, err)
+		logger.Error("Failed to compare commits", "before", before, "after", after, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "compare commits")
 	}
 	commits, total, err := r.listCommits(ctx, gitRepo)
 	if err != nil {
-		log.Error("getRepoCompare: list commits from %q to %q in repo %d: %v", r.base, after, repo.ID, err)
+		logger.Error("Failed to list commits", "base", r.base, "after", after, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list commits")
 	}
 	return http.StatusOK, &repoCompareResponse{
@@ -339,7 +340,7 @@ func getRepoCompare(c flamego.Context, repoCtx *repoContext) (statusCode int, re
 		After:              after,
 		Base:               r.base,
 		BaseIsEmptyTree:    r.baseIsEmptyTree,
-		Commits:            toCommitListItems(ctx, repo, commits),
+		Commits:            toCommitListItems(ctx, logger, repo, commits),
 		TotalCommits:       total,
 		MarkdownExtensions: conf.Markdown.FileExtensions,
 	}, nil
