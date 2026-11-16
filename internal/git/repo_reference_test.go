@@ -347,6 +347,27 @@ func TestRepository_BranchesByCommitterDate(t *testing.T) {
 	}
 }
 
+func TestRepository_CreateBranch(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// An older commit than the tip, so the branch must not just follow HEAD.
+	parent, err := r.RevParse(ctx, "master~1")
+	require.NoError(t, err)
+	require.NoError(t, r.CreateBranch(ctx, "restored", parent))
+	got, err := r.BranchCommitID(ctx, "restored")
+	require.NoError(t, err)
+	assert.Equal(t, parent, got)
+
+	// An existing branch is left where it is.
+	assert.Error(t, r.CreateBranch(ctx, "restored", "master"))
+	got, err = r.BranchCommitID(ctx, "restored")
+	require.NoError(t, err)
+	assert.Equal(t, parent, got)
+}
+
 func TestRepository_DeleteBranch(t *testing.T) {
 	ctx := context.Background()
 	r, cleanup, err := setupTempRepo()

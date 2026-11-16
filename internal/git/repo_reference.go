@@ -306,6 +306,16 @@ func (r *Repository) BranchesByCommitterDate(ctx context.Context) ([]*Branch, er
 	return branches, nil
 }
 
+// CreateBranch creates the branch at the revision. It fails when the branch
+// exists.
+func (r *Repository) CreateBranch(ctx context.Context, name, rev string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.CreateBranch")
+	defer span.End()
+
+	_, err := exec(ctx, r.path, []string{"branch", "--no-track", "--end-of-options", name, rev}, nil)
+	return err
+}
+
 // DeleteBranchOptions contains optional arguments for deleting a branch.
 //
 // Docs: https://git-scm.com/docs/git-branch
