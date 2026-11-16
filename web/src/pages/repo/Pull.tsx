@@ -297,10 +297,11 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-(--color-border) px-4 py-3 text-sm">
       <Button
         type="button"
-        variant={deleted ? "outline" : "destructive"}
+        variant="outline"
         size="sm"
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
+        className={cn(!deleted && "text-(--color-destructive)")}
       >
         {deleted ? (
           <>
