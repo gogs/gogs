@@ -77,10 +77,15 @@ func apiV1Bridger(apiHandler http.Handler) func(c *context.Context, l i18n.Local
 		u.Path = strings.Join(segments, "/")
 		u.RawPath = ""
 
-		r := c.Req.WithContext(stdctx.WithValue(c.Req.Context(), apiV1RequestKey{}, info))
+		orig := c.Req.Request
+		r := orig.WithContext(stdctx.WithValue(orig.Context(), apiV1RequestKey{}, info))
 		r.URL = &u
 		c.Req.Request = r
 		bridge(c, l)
+		// The bridge copies the Flamego route to the request it was given, so
+		// hand it on to the request the tracing handler reads.
+		orig.Pattern = r.Pattern
+		c.Req.Request = orig
 	}
 }
 
