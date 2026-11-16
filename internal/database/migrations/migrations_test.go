@@ -82,6 +82,18 @@ func TestMigrate(t *testing.T) {
 		assert.Equal(t, int64(1), count)
 	})
 
+	t.Run("MySQL database with another default character set", func(t *testing.T) {
+		db := dbtest.NewDB(t, "migrateCharset")
+		if db.Name() != "mysql" {
+			t.Skip("MySQL only")
+		}
+		require.NoError(t, db.Exec("ALTER DATABASE `"+db.Migrator().CurrentDatabase()+"` CHARACTER SET latin1 COLLATE latin1_swedish_ci").Error)
+		require.NoError(t, Migrate(logx.NewNoopLogger(), db))
+
+		// Tables that XORM used to create stay utf8mb4, as XORM created them.
+		require.NoError(t, db.Exec("INSERT INTO issue (repo_id, `index`, name) VALUES (1, 1, ?)", "Emoji \U0001F600").Error)
+	})
+
 	t.Run("pool of one connection", func(t *testing.T) {
 		db := dbtest.NewDB(t, "migrateOneConn")
 		sqlDB, err := db.DB()

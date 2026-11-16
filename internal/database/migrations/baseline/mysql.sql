@@ -54,7 +54,7 @@ CREATE TABLE `attachment` (
   UNIQUE KEY `UQE_attachment_uuid` (`uuid`),
   KEY `IDX_attachment_issue_id` (`issue_id`),
   KEY `IDX_attachment_release_id` (`release_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `collaboration` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -65,7 +65,7 @@ CREATE TABLE `collaboration` (
   UNIQUE KEY `UQE_collaboration_s` (`user_id`,`repo_id`),
   KEY `IDX_collaboration_user_id` (`user_id`),
   KEY `IDX_collaboration_repo_id` (`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `comment` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -80,7 +80,7 @@ CREATE TABLE `comment` (
   `commit_sha` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_comment_issue_id` (`issue_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `deploy_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -94,7 +94,7 @@ CREATE TABLE `deploy_key` (
   UNIQUE KEY `UQE_deploy_key_s` (`key_id`,`repo_id`),
   KEY `IDX_deploy_key_repo_id` (`repo_id`),
   KEY `IDX_deploy_key_key_id` (`key_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `email_address` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -133,7 +133,7 @@ CREATE TABLE `hook_task` (
   `response_content` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_hook_task_repo_id` (`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `issue` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -154,7 +154,7 @@ CREATE TABLE `issue` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_issue_repo_index` (`repo_id`,`index`),
   KEY `IDX_issue_repo_id` (`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `issue_label` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -162,7 +162,7 @@ CREATE TABLE `issue_label` (
   `label_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_issue_label_s` (`issue_id`,`label_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `issue_user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -178,7 +178,7 @@ CREATE TABLE `issue_user` (
   PRIMARY KEY (`id`),
   KEY `IDX_issue_user_uid` (`uid`),
   KEY `IDX_issue_user_repo_id` (`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `label` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -189,7 +189,7 @@ CREATE TABLE `label` (
   `num_closed_issues` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_label_repo_id` (`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `lfs_object` (
   `repo_id` bigint NOT NULL,
@@ -226,7 +226,7 @@ CREATE TABLE `milestone` (
   `closed_date_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_milestone_repo_id` (`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `mirror` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -236,7 +236,7 @@ CREATE TABLE `mirror` (
   `updated_unix` bigint DEFAULT NULL,
   `next_update_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `notice` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -257,7 +257,7 @@ CREATE TABLE `org_user` (
   UNIQUE KEY `UQE_org_user_s` (`uid`,`org_id`),
   KEY `IDX_org_user_uid` (`uid`),
   KEY `IDX_org_user_org_id` (`org_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `protect_branch` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -270,7 +270,7 @@ CREATE TABLE `protect_branch` (
   `whitelist_team_i_ds` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_protect_branch_protect_branch` (`repo_id`,`name`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `protect_branch_whitelist` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -280,7 +280,7 @@ CREATE TABLE `protect_branch_whitelist` (
   `user_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_protect_branch_whitelist_protect_branch_whitelist` (`repo_id`,`name`,`user_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `public_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -294,7 +294,7 @@ CREATE TABLE `public_key` (
   `updated_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_public_key_owner_id` (`owner_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `pull_request` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -314,7 +314,7 @@ CREATE TABLE `pull_request` (
   `merged_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_pull_request_issue_id` (`issue_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `release` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -331,7 +331,7 @@ CREATE TABLE `release` (
   `is_prerelease` tinyint(1) DEFAULT NULL,
   `created_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `repository` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -377,7 +377,7 @@ CREATE TABLE `repository` (
   UNIQUE KEY `UQE_repository_s` (`owner_id`,`lower_name`),
   KEY `IDX_repository_lower_name` (`lower_name`),
   KEY `IDX_repository_name` (`name`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `star` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -385,7 +385,7 @@ CREATE TABLE `star` (
   `repo_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_star_s` (`uid`,`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `team` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -398,7 +398,7 @@ CREATE TABLE `team` (
   `num_members` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_team_org_id` (`org_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `team_repo` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -408,7 +408,7 @@ CREATE TABLE `team_repo` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_team_repo_s` (`team_id`,`repo_id`),
   KEY `IDX_team_repo_org_id` (`org_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `team_user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -418,7 +418,7 @@ CREATE TABLE `team_user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_team_user_s` (`team_id`,`uid`),
   KEY `IDX_team_user_org_id` (`org_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `two_factor` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -427,7 +427,7 @@ CREATE TABLE `two_factor` (
   `created_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_two_factor_user_id` (`user_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `two_factor_recovery_code` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -435,7 +435,7 @@ CREATE TABLE `two_factor_recovery_code` (
   `code` varchar(11) DEFAULT NULL,
   `is_used` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `upload` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -443,7 +443,7 @@ CREATE TABLE `upload` (
   `name` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_upload_uuid` (`uuid`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -481,7 +481,7 @@ CREATE TABLE `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_user_lower_name` (`lower_name`),
   UNIQUE KEY `UQE_user_name` (`name`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `watch` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -489,7 +489,7 @@ CREATE TABLE `watch` (
   `repo_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQE_watch_watch` (`user_id`,`repo_id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `webhook` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -507,4 +507,4 @@ CREATE TABLE `webhook` (
   `created_unix` bigint DEFAULT NULL,
   `updated_unix` bigint DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
