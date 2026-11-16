@@ -10,6 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
+	macaronsession "github.com/go-macaron/session"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -402,15 +403,15 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	}
 
 	// The editor only sends the downloads it keeps and the new files, so the
-	// files the note still links to stay, and those whose links were removed
-	// are deleted.
+	// files the note still links to stay, and the others are deleted rather than
+	// left without a release.
 	var unlinked []*database.Attachment
 	for _, a := range rel.Attachments {
 		switch {
 		case slices.Contains(req.Attachments, a.UUID):
 		case linksAttachment(req.Content, a.UUID):
 			req.Attachments = append(req.Attachments, a.UUID)
-		case linksAttachment(rel.Note, a.UUID):
+		default:
 			unlinked = append(unlinked, a)
 		}
 	}
@@ -445,8 +446,8 @@ func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 }
 
 // postRepoReleaseAttachment stores a file to attach to a release.
-func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, releaseAttachmentLimits())
+func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, sess macaronsession.Store) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, sess, releaseAttachmentLimits())
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}

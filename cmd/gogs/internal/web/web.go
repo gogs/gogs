@@ -206,11 +206,13 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 					}
 					repo = release.Repo
 				}
-				// A file that is not attached yet was just uploaded, e.g., to preview
-				// it before the issue or comment is created. Only its uploader knows
-				// the random UUID.
+				// A file that is not attached was either just uploaded, e.g., to
+				// preview it before the issue or comment is created, or left out of a
+				// release by an earlier edit. Only the session that uploaded it can
+				// download it.
 				if repo == nil {
-					if !c.IsLogged {
+					uploaded, _ := c.Session.Get(uploadedAttachmentsSessionKey).([]string)
+					if !slices.Contains(uploaded, attach.UUID) {
 						c.NotFound()
 						return
 					}

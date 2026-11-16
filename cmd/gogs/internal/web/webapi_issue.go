@@ -16,6 +16,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
+	macaronsession "github.com/go-macaron/session"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -807,9 +808,18 @@ func readUploadedFile(c flamego.Context, l i18n.Locale, lim attachmentLimits) (_
 	return &uploadedFile{File: file, Header: header, Head: buf}, http.StatusOK, nil
 }
 
+// uploadedAttachmentsSessionKey is the session key of the UUIDs of the files
+// uploaded in the session. Until a file is attached to an issue, a comment or
+// a release, only the session that uploaded it can download it.
+const uploadedAttachmentsSessionKey = "uploadedAttachments"
+
+// maxUploadedAttachmentsInSession is how many of the latest uploads of a
+// session stay downloadable before they are attached.
+const maxUploadedAttachmentsInSession = 100
+
 // storeAttachment stores the file uploaded as the "file" form field, and
 // returns its UUID.
-func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (statusCode int, resp any, err error) {
+func storeAttachment(c flamego.Context, l i18n.Locale, sess macaronsession.Store, lim attachmentLimits) (statusCode int, resp any, err error) {
 	f, statusCode, err := readUploadedFile(c, l, lim)
 	if err != nil {
 		return statusCode, nil, err
@@ -820,12 +830,20 @@ func storeAttachment(c flamego.Context, l i18n.Locale, lim attachmentLimits) (st
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}
+	uploaded, _ := sess.Get(uploadedAttachmentsSessionKey).([]string)
+	uploaded = append(uploaded, attachment.UUID)
+	if len(uploaded) > maxUploadedAttachmentsInSession {
+		uploaded = uploaded[len(uploaded)-maxUploadedAttachmentsInSession:]
+	}
+	if err = sess.Set(uploadedAttachmentsSessionKey, uploaded); err != nil {
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "remember uploaded attachment")
+	}
 	return http.StatusCreated, map[string]string{"uuid": attachment.UUID, "url": attachmentURL(attachment.UUID)}, nil
 }
 
 // postRepoIssueAttachment stores a file to attach to an issue or a comment.
-func postRepoIssueAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, issueAttachmentLimits())
+func postRepoIssueAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, sess macaronsession.Store) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, sess, issueAttachmentLimits())
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}

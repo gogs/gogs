@@ -194,7 +194,9 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 			}
 		}
 
-		if _, err := x.Delete(a); err != nil {
+		// Delete by ID alone, because the other fields may be stale, e.g., a release
+		// detaches its files before deleting those that were left out.
+		if _, err := x.ID(a.ID).Delete(new(Attachment)); err != nil {
 			return i, err
 		}
 	}
