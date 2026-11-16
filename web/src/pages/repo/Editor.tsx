@@ -410,8 +410,8 @@ export function RepoFileEditor({
     placeholderData: keepPreviousData,
   });
   const preview = useQuery({
-    queryKey: ["markdown", owner, name, content],
-    queryFn: () => renderRepoMarkdown(owner, name, content),
+    queryKey: ["markdown", owner, name, target.branch, path, content],
+    queryFn: () => renderRepoMarkdown(owner, name, content, { branch: target.branch, path }),
     enabled: tab === "preview" && content.trim() !== "",
     staleTime: Infinity,
   });

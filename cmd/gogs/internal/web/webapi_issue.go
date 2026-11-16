@@ -5,6 +5,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/pathx"
 )
 
 // withRepoIssues lets through viewers who can see the issues of the
@@ -617,15 +619,25 @@ type markdownRequest struct {
 	// Wiki resolves relative links against the wiki instead of the
 	// repository.
 	Wiki bool `json:"wiki"`
+	// Branch and Path render the text as the Markdown file at Path in Branch,
+	// with relative links resolved against its directory.
+	Branch string `json:"branch"`
+	Path   string `json:"path"`
 }
 
 // postRepoMarkdown renders Markdown the way the issues of the repository are,
-// or the way its wiki pages are.
+// the way its wiki pages are, or the way one of its files is.
 func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
-	html := markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas())
-	if req.Wiki {
+	var html []byte
+	switch {
+	case req.Wiki:
 		html = markup.MarkdownFile(req.Text, repo.Link()+"/wiki", repo.ComposeMetas())
+	case req.Path != "":
+		fileLink := repo.Link() + "/src/" + escapePath(req.Branch) + "/" + escapePath(pathx.Clean(req.Path))
+		html = markup.MarkdownFile(req.Text, path.Dir(fileLink), repo.ComposeMetas())
+	default:
+		html = markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas())
 	}
 	return http.StatusOK, map[string]string{"html": string(html)}, nil
 }
