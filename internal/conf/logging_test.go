@@ -87,13 +87,27 @@ MODE = file, console, File
 	})
 
 	t.Run("format", func(t *testing.T) {
-		for format, wantJSON := range map[string]bool{"": false, "json": true, " JSON ": true, "text": false} {
-			f, err := ini.Load([]byte("[log]\nFORMAT = " + format + "\n[log.console]\n"))
+		before := App.RunMode
+		defer func() { App.RunMode = before }()
+
+		tests := []struct {
+			runMode  string
+			format   string
+			wantJSON bool
+		}{
+			{runMode: "dev", format: "", wantJSON: false},
+			{runMode: "prod", format: "", wantJSON: true},
+			{runMode: "prod", format: "text", wantJSON: false},
+			{runMode: "dev", format: " JSON ", wantJSON: true},
+		}
+		for _, test := range tests {
+			App.RunMode = test.runMode
+			f, err := ini.Load([]byte("[log]\nFORMAT = " + test.format + "\n[log.console]\n"))
 			require.NoError(t, err)
 
 			got, _, err := initLogConf(f, false)
 			require.NoError(t, err)
-			assert.Equal(t, wantJSON, got.JSON, "format %q", format)
+			assert.Equal(t, test.wantJSON, got.JSON, "run mode %q, format %q", test.runMode, test.format)
 		}
 
 		f, err := ini.Load([]byte("[log]\nFORMAT = xml\n[log.console]\n"))
