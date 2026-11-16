@@ -9,23 +9,23 @@ import (
 	"gogs.io/gogs/internal/dbtest"
 )
 
-type teamV25 struct {
+type orphanedTeamReposTeam struct {
 	ID    int64
 	OrgID int64
 }
 
-func (*teamV25) TableName() string {
+func (*orphanedTeamReposTeam) TableName() string {
 	return "team"
 }
 
-type teamRepoV25 struct {
+type orphanedTeamReposTeamRepo struct {
 	ID     int64
 	OrgID  int64
 	TeamID int64
 	RepoID int64
 }
 
-func (*teamRepoV25) TableName() string {
+func (*orphanedTeamReposTeamRepo) TableName() string {
 	return "team_repo"
 }
 
@@ -35,9 +35,9 @@ func TestDeleteOrphanedTeamRepos(t *testing.T) {
 	}
 	t.Parallel()
 
-	db := dbtest.NewDB(t, "deleteOrphanedTeamRepos", new(teamV25), new(teamRepoV25))
-	require.NoError(t, db.Create([]*teamV25{{ID: 1, OrgID: 10}, {ID: 3, OrgID: 10}}).Error)
-	require.NoError(t, db.Create([]*teamRepoV25{
+	db := dbtest.NewDB(t, "deleteOrphanedTeamRepos", new(orphanedTeamReposTeam), new(orphanedTeamReposTeamRepo))
+	require.NoError(t, db.Create([]*orphanedTeamReposTeam{{ID: 1, OrgID: 10}, {ID: 3, OrgID: 10}}).Error)
+	require.NoError(t, db.Create([]*orphanedTeamReposTeamRepo{
 		{ID: 1, OrgID: 10, TeamID: 1, RepoID: 100},
 		{ID: 2, OrgID: 10, TeamID: 2, RepoID: 100},
 		{ID: 3, OrgID: 10, TeamID: 3, RepoID: 101},
@@ -49,7 +49,7 @@ func TestDeleteOrphanedTeamRepos(t *testing.T) {
 		require.NoError(t, deleteOrphanedTeamRepos(db))
 
 		var gotIDs []int64
-		require.NoError(t, db.Model(new(teamRepoV25)).Order("id").Pluck("id", &gotIDs).Error)
+		require.NoError(t, db.Model(new(orphanedTeamReposTeamRepo)).Order("id").Pluck("id", &gotIDs).Error)
 		assert.Equal(t, wantIDs, gotIDs)
 	}
 }
