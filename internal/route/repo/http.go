@@ -61,9 +61,13 @@ func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
 	return ""
 }
 
+// 🚨 SECURITY: The access mode decided here must agree with the service that
+// HTTP dispatches to, so both sides compare the same action and service
+// exactly.
 func gitHTTPIsPull(c *macaron.Context, action string) bool {
 	if action == "info/refs" {
-		return c.Query("service") != "git-receive-pack"
+		service, _ := getServiceType(c.Req.Request)
+		return service != "receive-pack"
 	}
 	return action != "git-receive-pack"
 }
@@ -313,12 +317,18 @@ func serviceReceivePack(h serviceHandler) {
 	serviceRPC(h, "receive-pack")
 }
 
-func getServiceType(r *http.Request) string {
-	serviceType := r.FormValue("service")
-	if !strings.HasPrefix(serviceType, "git-") {
-		return ""
+// getServiceType returns the Git service requested by the "service" query
+// without the "git-" prefix, or an empty string if no service is requested. It
+// returns false if the requested service is not exactly a known one.
+func getServiceType(r *http.Request) (string, bool) {
+	switch serviceType := r.FormValue("service"); serviceType {
+	case "":
+		return "", true
+	case "git-upload-pack", "git-receive-pack":
+		return strings.TrimPrefix(serviceType, "git-"), true
+	default:
+		return "", false
 	}
-	return strings.TrimPrefix(serviceType, "git-")
 }
 
 // FIXME: use process module
@@ -345,9 +355,14 @@ func packetWrite(str string) []byte {
 }
 
 func getInfoRefs(h serviceHandler) {
+	service, ok := getServiceType(h.r)
+	if !ok {
+		h.w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	h.setHeaderNoCache()
-	service := getServiceType(h.r)
-	if service != "upload-pack" && service != "receive-pack" {
+	if service == "" {
 		updateServerInfo(h.dir)
 		h.sendFile("text/plain; charset=utf-8")
 		return
@@ -391,17 +406,17 @@ var routes = []struct {
 	method  string
 	handler func(serviceHandler)
 }{
-	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
-	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
-	{lazyregexp.New("(.*?)/info/refs$"), "GET", getInfoRefs},
-	{lazyregexp.New("(.*?)/HEAD$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/alternates$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
-	{lazyregexp.New("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
-	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
-	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
-	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
+	{lazyregexp.New("^git-upload-pack$"), "POST", serviceUploadPack},
+	{lazyregexp.New("^git-receive-pack$"), "POST", serviceReceivePack},
+	{lazyregexp.New("^info/refs$"), "GET", getInfoRefs},
+	{lazyregexp.New("^HEAD$"), "GET", getTextFile},
+	{lazyregexp.New("^objects/info/alternates$"), "GET", getTextFile},
+	{lazyregexp.New("^objects/info/http-alternates$"), "GET", getTextFile},
+	{lazyregexp.New("^objects/info/packs$"), "GET", getInfoPacks},
+	{lazyregexp.New("^objects/info/[^/]*$"), "GET", getTextFile},
+	{lazyregexp.New("^objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
+	{lazyregexp.New("^objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
+	{lazyregexp.New("^objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
 }
 
 func getGitRepoPath(dir string) (string, error) {
@@ -418,10 +433,12 @@ func getGitRepoPath(dir string) (string, error) {
 }
 
 func HTTP(c *HTTPContext) {
+	// 🚨 SECURITY: Dispatch on the same action that HTTPContexter used to decide
+	// the required access mode, and match it exactly. Normalizing it here, e.g.,
+	// by lowercasing, would let a push be authorized as a pull.
+	action := gitHTTPAction(c.Context)
 	for _, route := range routes {
-		reqPath := strings.ToLower(c.Req.URL.Path)
-		m := route.re.FindStringSubmatch(reqPath)
-		if m == nil {
+		if !route.re.MatchString(action) {
 			continue
 		}
 
@@ -438,14 +455,16 @@ func HTTP(c *HTTPContext) {
 			return
 		}
 
+		// Repositories are stored on disk with lowercase owner and repository names.
+		repoPath := strings.ToLower("/" + c.Params(":username") + "/" + c.Params(":reponame"))
 		// 🚨 SECURITY: Prevent path traversal.
-		cleaned := pathutil.Clean(m[1])
-		if m[1] != "/"+cleaned {
+		cleaned := pathutil.Clean(repoPath)
+		if repoPath != "/"+cleaned {
 			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
 			return
 		}
 
-		file := strings.TrimPrefix(reqPath, cleaned)
+		file := "/" + action
 		// 🚨 SECURITY: Prevent path traversal, e.g., via backslashes on Windows.
 		if file != "/"+pathutil.Clean(file) {
 			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
