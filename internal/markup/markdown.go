@@ -326,16 +326,16 @@ func isMentionChar(c byte) bool {
 	return isASCIIAlnum(c) || c == '-' || c == '_' || c == '.'
 }
 
-// Markdown takes a string or []byte of Markdown written in Gogs, e.g., an
+// Markdown takes a string or []byte of Markdown that is not a file, e.g., an
 // issue, a comment or a release note, and renders it to HTML with special
-// links. Like GitHub, it renders every line break as written.
+// links. It renders every line break as written.
 func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
 	return renderInput(TypeMarkdown, input, urlPrefix, metas, true)
 }
 
 // MarkdownFile is Markdown for Markdown files, e.g., READMEs and wiki pages.
-// Like GitHub, it joins the lines of a paragraph, unless [markdown]
-// ENABLE_HARD_LINE_BREAK is set.
+// It joins the lines of a paragraph, unless [markdown] ENABLE_HARD_LINE_BREAK
+// is set.
 func MarkdownFile(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
 }

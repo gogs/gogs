@@ -24,7 +24,7 @@ All notable changes to Gogs are documented in this file.
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 - New repositories now use `main` as the default branch. Existing repositories keep their current default branch. Set `[repository] DEFAULT_BRANCH = master` to keep the previous behavior. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
-- Issues, comments, release notes and milestone descriptions keep their line breaks, like GitHub. `[markdown] ENABLE_HARD_LINE_BREAK` now only applies to Markdown files, e.g., READMEs and wiki pages. [#8607](https://github.com/gogs/gogs/pull/8607)
+- Issues, comments, release notes and milestone descriptions keep their line breaks. `[markdown] ENABLE_HARD_LINE_BREAK` now only applies to Markdown files, e.g., READMEs and wiki pages. [#8607](https://github.com/gogs/gogs/pull/8607)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
 

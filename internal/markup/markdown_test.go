@@ -177,9 +177,8 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 	}
 }
 
-// TestMarkdown_LineBreaks checks that text written in Gogs keeps its line
-// breaks, and files keep them only with [markdown] ENABLE_HARD_LINE_BREAK, as
-// GitHub renders comments and files.
+// TestMarkdown_LineBreaks checks that Markdown other than files keeps its line
+// breaks, and files keep them only with [markdown] ENABLE_HARD_LINE_BREAK.
 func TestMarkdown_LineBreaks(t *testing.T) {
 	NewSanitizer()
 	defer func(old bool) { conf.Markdown.EnableHardLineBreak = old }(conf.Markdown.EnableHardLineBreak)
@@ -196,7 +195,7 @@ func TestMarkdown_LineBreaks(t *testing.T) {
 
 // TestMarkdown_Emoji checks that emoji shortcodes render as on GitHub, with
 // and without raw HTML in the document. It renders files, whose line endings
-// do not split text, the way GitHub renders files.
+// do not split text.
 func TestMarkdown_Emoji(t *testing.T) {
 	conf.Server.ExternalURL = "http://localhost:3000/"
 	NewSanitizer()
