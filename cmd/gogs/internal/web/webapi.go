@@ -226,6 +226,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/forks", getRepoForks)
 			f.Get("/releases", withRepoCode, getRepoReleases)
 			f.Get("/branches", withRepoCode, getRepoBranches)
+			f.Get("/src", getRepoSrc)
+			f.Get("/src/{path: **}", getRepoSrc)
 			f.Get("/commits/{path: **}", withRepoCode, getRepoCommits)
 			f.Get("/markdown/{sha: /[0-9a-f]{7,64}/}/{path: **}", withRepoCode, getRepoMarkdownFile)
 			f.Get("/compare/"+compareRangeRoute, withRepoCode, getRepoCompare)
