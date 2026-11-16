@@ -53,16 +53,22 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function InlineCode({ children }: { children: ReactNode }) {
+  return (
+    // Cloned decoration keeps the chip's padding and corners on every line a
+    // long value wraps to.
+    <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
+      {children}
+    </code>
+  );
+}
+
 function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
     case "code":
       return row.value ? (
         <>
-          {/* Cloned decoration keeps the chip's padding and corners on every
-              line a long value wraps to. */}
-          <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
-            {row.value}
-          </code>
+          <InlineCode>{row.value}</InlineCode>
           {row.unit && ` ${row.unit}`}
         </>
       ) : null;
@@ -136,19 +142,27 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
       <h1 className="mb-4 text-xl font-semibold">{t("admin.overview")}</h1>
       <Section id="build-info" title={t("admin.dashboard.build_info")}>
         <Facts>
-          <Fact label={t("admin.dashboard.app_ver")}>{dashboard.appVersion}</Fact>
-          <Fact label={t("admin.dashboard.git_version")}>{dashboard.gitVersion}</Fact>
-          <Fact label={t("admin.dashboard.go_version")}>{dashboard.goVersion}</Fact>
-          <Fact label={t("admin.dashboard.build_time")}>{dashboard.buildTime || "N/A"}</Fact>
+          <Fact label={t("admin.dashboard.app_ver")}>
+            <InlineCode>{dashboard.appVersion}</InlineCode>
+          </Fact>
+          <Fact label={t("admin.dashboard.git_version")}>
+            <InlineCode>{dashboard.gitVersion}</InlineCode>
+          </Fact>
+          <Fact label={t("admin.dashboard.go_version")}>
+            <InlineCode>{dashboard.goVersion}</InlineCode>
+          </Fact>
+          <Fact label={t("admin.dashboard.build_time")}>
+            {dashboard.buildTime ? <InlineCode>{dashboard.buildTime}</InlineCode> : "N/A"}
+          </Fact>
           <Fact label={t("admin.dashboard.build_commit")}>
             {dashboard.buildCommit ? (
               <a
                 href={`https://github.com/gogs/gogs/commit/${dashboard.buildCommit}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-(--color-primary) hover:underline"
+                className="inline-flex items-center gap-1 text-(--color-primary) hover:underline"
               >
-                {dashboard.buildCommit}
+                <InlineCode>{dashboard.buildCommit}</InlineCode>
                 <ExternalLink className="size-3.5 shrink-0" aria-hidden />
               </a>
             ) : (
