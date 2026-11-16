@@ -210,8 +210,15 @@ function NewIssueForm({
     },
   });
   const { fields, formError } = formErrors(mutation.error);
+  // edited has the fields changed since the last submit, whose errors are
+  // hidden until the form is submitted again.
+  const [edited, setEdited] = useState<string[]>([]);
+  const markEdited = (key: string) => setEdited((keys) => (keys.includes(key) ? keys : [...keys, key]));
+  const fieldError = (key: string) => (edited.includes(key) ? undefined : fields[key]);
+  const titleError = fieldError("title");
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
+    setEdited([]);
     mutation.mutate();
   };
   const milestone = options.milestoneOptions?.find((m) => m.id === milestoneID);
@@ -221,8 +228,10 @@ function NewIssueForm({
     set(id);
     return Promise.resolve();
   };
-  const setFieldValue = (index: number, value: string[]) =>
+  const setFieldValue = (index: number, value: string[]) => {
     setFieldValues((values) => values.map((v, i) => (i === index ? value : v)));
+    markEdited(`field-${index}`);
+  };
   // fieldsUploading has the upload fields whose files are still uploading.
   const [fieldsUploading, setFieldsUploading] = useState<number[]>([]);
   const setFieldUploading = (index: number, uploading: boolean) =>
@@ -253,13 +262,16 @@ function NewIssueForm({
               value={title}
               maxLength={255}
               autoFocus
-              aria-invalid={Boolean(fields.title) || undefined}
-              aria-describedby={fields.title ? "new-issue-title-error" : undefined}
-              onChange={(e) => setTitle(e.target.value)}
+              aria-invalid={Boolean(titleError) || undefined}
+              aria-describedby={titleError ? "new-issue-title-error" : undefined}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                markEdited("title");
+              }}
             />
-            {fields.title ? (
+            {titleError ? (
               <p id="new-issue-title-error" className="text-sm text-(--color-destructive)">
-                {fields.title}
+                {titleError}
               </p>
             ) : null}
           </div>
@@ -272,7 +284,7 @@ function NewIssueForm({
                   field={field}
                   value={fieldValues[i]}
                   onChange={(value) => setFieldValue(i, value)}
-                  error={fields[`field-${i}`]}
+                  error={fieldError(`field-${i}`)}
                   upload={{ owner, name, settings: options.attachment }}
                   onUploading={(uploading) => setFieldUploading(i, uploading)}
                 />
