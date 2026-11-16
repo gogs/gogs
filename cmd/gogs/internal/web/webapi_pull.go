@@ -323,7 +323,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	}
 	canMerge, err := canMergeInto(repoCtx, pull.BaseBranch)
 	if err != nil {
-		log.Error("postRepoPullMerge: check merge permission of pull request %d: %v", pull.ID, err)
+		logger.Error("Failed to check merge permission", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check merge permission")
 	} else if !canMerge {
 		return http.StatusForbidden, nil, errors.New("branch is protected and you are not in the push whitelist")
