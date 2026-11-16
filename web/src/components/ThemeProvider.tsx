@@ -21,26 +21,33 @@ function applyTheme(theme: ThemeContextValue["theme"]) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeContextValue["theme"]>(readStoredTheme);
+  // systemDark is part of the context value, so components that resolve the
+  // "system" theme while rendering, e.g., highlighted code, render again
+  // when the OS switches.
+  const [systemDark, setSystemDark] = useState(systemPrefersDark);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => setSystemDark(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
-    if (theme !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyTheme("system");
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [theme]);
+  }, [theme, systemDark]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
+      systemDark,
       setTheme: (next) => {
         localStorage.setItem(STORAGE_KEY, next);
         setThemeState(next);
         applyTheme(next);
       },
     }),
-    [theme],
+    [theme, systemDark],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
