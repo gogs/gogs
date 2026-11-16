@@ -81,15 +81,18 @@ func (w *rotatingWriter) initRotation() error {
 		w.openDay = now.Day()
 		last := fi.ModTime()
 		if last.Year() != now.Year() || last.Month() != now.Month() || last.Day() != now.Day() {
-			if err := w.rotate(last); err != nil {
-				return err
+			// Another process can hold the file, e.g., the running web server on
+			// Windows, where an open file cannot be renamed. Keep appending to it
+			// rather than failing to start, and rotate on the next day instead.
+			if err := w.rotate(last); err != nil && w.file == nil {
+				if err = w.open(); err != nil {
+					return err
+				}
 			}
 		}
 	}
 	if w.config.MaxDays > 0 {
-		if err := w.deleteOutdated(); err != nil {
-			return errors.Wrap(err, "delete outdated files")
-		}
+		_ = w.deleteOutdated()
 	}
 	return nil
 }
@@ -163,11 +166,18 @@ func (w *rotatingWriter) deleteOutdated() error {
 	cutoff := time.Now().Add(-24 * time.Hour * time.Duration(w.config.MaxDays))
 	base := filepath.Base(w.filename)
 	return filepath.Walk(filepath.Dir(w.filename), func(path string, fi os.FileInfo, err error) error {
-		if err != nil || fi == nil || fi.IsDir() {
+		// Another process sharing the log directory may have deleted the file
+		// first.
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil || fi.IsDir() {
 			return err
 		}
 		if fi.ModTime().Before(cutoff) && strings.HasPrefix(filepath.Base(path), base) {
-			return os.Remove(path)
+			if err = os.Remove(path); err != nil && !os.IsNotExist(err) {
+				return err
+			}
 		}
 		return nil
 	})
