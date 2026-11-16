@@ -1,14 +1,17 @@
 package context
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-macaron/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -47,6 +50,51 @@ func TestIsRequestFromTrustedProxy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &http.Request{RemoteAddr: tc.remoteAddr}
 			require.Equal(t, tc.want, isRequestFromTrustedProxy(req))
+		})
+	}
+}
+
+type tokenAuthStore struct {
+	AuthStore
+	token *database.AccessToken
+}
+
+func (s tokenAuthStore) GetAccessTokenBySHA1(_ context.Context, sha1 string) (*database.AccessToken, error) {
+	if sha1 != s.token.Sha1 {
+		return nil, database.ErrAccessTokenNotExist{}
+	}
+	return s.token, nil
+}
+
+func (tokenAuthStore) TouchAccessTokenByID(context.Context, int64) error { return nil }
+
+func TestAuthenticatedUserIDAccessToken(t *testing.T) {
+	store := tokenAuthStore{token: &database.AccessToken{ID: 1, UserID: 7, Sha1: "0123456789abcdef"}}
+
+	tests := []struct {
+		path          string
+		wantUserID    int64
+		wantTokenAuth bool
+	}{
+		{path: "/api/v1/user", wantUserID: 7, wantTokenAuth: true},
+		{path: "/api/web/user/settings/tokens", wantUserID: 0, wantTokenAuth: false},
+		{path: "/api/web/user/settings/two-factor/recovery-codes", wantUserID: 0, wantTokenAuth: false},
+		{path: "/api/web/admin/auths", wantUserID: 0, wantTokenAuth: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
+			m := macaron.New()
+			m.Use(session.Sessioner())
+			var gotUserID int64
+			var gotTokenAuth bool
+			m.Any("/*", func(c *macaron.Context, sess session.Store) {
+				gotUserID, gotTokenAuth = authenticatedUserID(logx.NewNoopLogger(), store, c, sess)
+			})
+			req := httptest.NewRequest(http.MethodPost, tc.path, nil)
+			req.Header.Set("Authorization", "token "+store.token.Sha1)
+			m.ServeHTTP(httptest.NewRecorder(), req)
+			assert.Equal(t, tc.wantUserID, gotUserID)
+			assert.Equal(t, tc.wantTokenAuth, gotTokenAuth)
 		})
 	}
 }

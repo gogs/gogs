@@ -158,8 +158,10 @@ type AuthStore interface {
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
 func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
-	// Check access token.
-	if isAPIPath(c.Req.URL.Path) {
+	// Access tokens are for API v1 only. The web API under "/api/web" serves the
+	// browser, including the routes that change the credentials and two-factor
+	// authentication of an account, which a leaked token must not reach.
+	if strings.HasPrefix(c.Req.URL.Path, "/api/v1/") {
 		var tokenSHA string
 		auHead := c.Req.Header.Get("Authorization")
 		if auHead != "" {
